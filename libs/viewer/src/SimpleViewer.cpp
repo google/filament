@@ -53,6 +53,14 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
         mSidebarWidth(sidebarWidth) {
+
+    mViewSettings.shadowType = ShadowType::PCF;
+    mViewSettings.dithering = Dithering::TEMPORAL;
+    mViewSettings.antiAliasing = AntiAliasing::FXAA;
+    mViewSettings.sampleCount = 4;
+    mViewSettings.ssao.enabled = true;
+    mViewSettings.bloom.enabled = true;
+
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSunlightColor)
@@ -117,7 +125,7 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
-    mFogOptions.color = sh3[0];
+    mViewSettings.fog.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
@@ -262,41 +270,59 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
-        ImGui::Checkbox("Dithering", &mEnableDithering);
-        ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
-        ImGui::Checkbox("TAA", &mTAAOptions.enabled);
+
+        bool dither = mViewSettings.dithering == Dithering::TEMPORAL;
+        ImGui::Checkbox("Dithering", &dither);
+        enableDithering(dither);
+
+        bool msaa = mViewSettings.sampleCount != 1;
+        ImGui::Checkbox("MSAA 4x", &msaa);
+        enableMsaa(msaa);
+
+        ImGui::Checkbox("TAA", &mViewSettings.taa.enabled);
+
         // this clutters the UI and isn't that useful (except when working on TAA)
         //ImGui::Indent();
-        //ImGui::SliderFloat("feedback", &mTAAOptions.feedback, 0.0f, 1.0f);
-        //ImGui::SliderFloat("filter", &mTAAOptions.filterWidth, 0.0f, 2.0f);
+        //ImGui::SliderFloat("feedback", &mViewSettings.taa.feedback, 0.0f, 1.0f);
+        //ImGui::SliderFloat("filter", &mViewSettings.taa.filterWidth, 0.0f, 2.0f);
         //ImGui::Unindent();
-        ImGui::Checkbox("FXAA", &mEnableFxaa);
-        ImGui::Checkbox("SSAO", &mSSAOOptions.enabled);
-        ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
+
+        bool fxaa = mViewSettings.antiAliasing == AntiAliasing::FXAA;
+        ImGui::Checkbox("FXAA", &fxaa);
+        enableFxaa(fxaa);
+
+        ImGui::Checkbox("SSAO", &mViewSettings.ssao.enabled);
+        ImGui::Checkbox("Bloom", &mViewSettings.bloom.enabled);
+
         if (ImGui::CollapsingHeader("SSAO Options")) {
-            int quality = (int) mSSAOOptions.quality;
-            int lowpass = (int) mSSAOOptions.lowPassFilter;
-            bool upsampling = mSSAOOptions.upsampling != View::QualityLevel::LOW;
+            auto& ssao = mViewSettings.ssao;
+
+            int quality = (int) ssao.quality;
+            int lowpass = (int) ssao.lowPassFilter;
+            bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
+
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("High quality upsampling", &upsampling);
-            ImGui::SliderFloat("Min Horizon angle", &mSSAOOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4);
-            mSSAOOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
-            mSSAOOptions.quality = (View::QualityLevel) quality;
-            mSSAOOptions.lowPassFilter = (View::QualityLevel) lowpass;
+            ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+
+            ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
+            ssao.lowPassFilter = (View::QualityLevel) lowpass;
+            ssao.quality = (View::QualityLevel) quality;
+
             if (ImGui::CollapsingHeader("Dominant Light Shadows (experimental)")) {
-                int sampleCount = mSSAOOptions.ssct.sampleCount;
-                ImGui::Checkbox("Enabled##dls", &mSSAOOptions.ssct.enabled);
-                ImGui::SliderFloat("Cone angle", &mSSAOOptions.ssct.lightConeRad, 0.0f, (float)M_PI_2);
-                ImGui::SliderFloat("Start dist", &mSSAOOptions.ssct.startTraceDistance, 0.0f, 1.0f);
-                ImGui::SliderFloat("Contact dist max", &mSSAOOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
-                ImGui::SliderFloat("Intensity##dls", &mSSAOOptions.ssct.intensity, 0.0f, 10.0f);
-                ImGui::SliderFloat("Depth bias", &mSSAOOptions.ssct.depthBias, 0.0f, 1.0f);
-                ImGui::SliderFloat("Depth slope bias", &mSSAOOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
-                ImGui::SliderFloat("Scale", &mSSAOOptions.ssct.scale, 0.0f, 10.0f);
+                int sampleCount = ssao.ssct.sampleCount;
+                ImGui::Checkbox("Enabled##dls", &ssao.ssct.enabled);
+                ImGui::SliderFloat("Cone angle", &ssao.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+                ImGui::SliderFloat("Start dist", &ssao.ssct.startTraceDistance, 0.0f, 1.0f);
+                ImGui::SliderFloat("Contact dist max", &ssao.ssct.contactDistanceMax, 0.0f, 100.0f);
+                ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
+                ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);
+                ImGui::SliderFloat("Depth slope bias", &ssao.ssct.depthSlopeBias, 0.0f, 1.0f);
+                ImGui::SliderFloat("Scale", &ssao.ssct.scale, 0.0f, 10.0f);
                 ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
-                ImGuiExt::DirectionWidget("Direction##dls", mSSAOOptions.ssct.lightDirection.v);
-                mSSAOOptions.ssct.sampleCount = sampleCount;
+                ImGuiExt::DirectionWidget("Direction##dls", ssao.ssct.lightDirection.v);
+                ssao.ssct.sampleCount = sampleCount;
             }
         }
         ImGui::Unindent();
@@ -310,9 +336,14 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
-        ImGui::Checkbox("Enable VSM", &mEnableVsm);
+
+        bool enableVsm = mViewSettings.shadowType == ShadowType::VSM;
+        ImGui::Checkbox("Enable VSM", &enableVsm);
+        mViewSettings.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
-        ImGui::Checkbox("Debug cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
+        ImGui::Checkbox("Debug cascades",
+                debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
         ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
         ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
@@ -322,25 +353,25 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("Fog")) {
         ImGui::Indent();
-        ImGui::Checkbox("Enable fog", &mFogOptions.enabled);
-        ImGui::SliderFloat("Start", &mFogOptions.distance, 0.0f, 100.0f);
-        ImGui::SliderFloat("Density", &mFogOptions.density, 0.0f, 1.0f);
-        ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
-        ImGui::SliderFloat("Height falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
-        ImGui::SliderFloat("Scattering start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering size", &mFogOptions.inScatteringSize, 0.1f, 100.0f);
-        ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
-        ImGui::ColorPicker3("Color", mFogOptions.color.v);
+        ImGui::Checkbox("Enable fog", &mViewSettings.fog.enabled);
+        ImGui::SliderFloat("Start", &mViewSettings.fog.distance, 0.0f, 100.0f);
+        ImGui::SliderFloat("Density", &mViewSettings.fog.density, 0.0f, 1.0f);
+        ImGui::SliderFloat("Height", &mViewSettings.fog.height, 0.0f, 100.0f);
+        ImGui::SliderFloat("Height falloff", &mViewSettings.fog.heightFalloff, 0.0f, 10.0f);
+        ImGui::SliderFloat("Scattering start", &mViewSettings.fog.inScatteringStart, 0.0f, 100.0f);
+        ImGui::SliderFloat("Scattering size", &mViewSettings.fog.inScatteringSize, 0.1f, 100.0f);
+        ImGui::Checkbox("Color from IBL", &mViewSettings.fog.fogColorFromIbl);
+        ImGui::ColorPicker3("Color", mViewSettings.fog.color.v);
         ImGui::Unindent();
     }
 
-    mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
-    mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
-    mView->setSampleCount(mEnableMsaa ? 4 : 1);
-    mView->setAmbientOcclusionOptions(mSSAOOptions);
-    mView->setBloomOptions(mBloomOptions);
-    mView->setFogOptions(mFogOptions);
-    mView->setTemporalAntiAliasingOptions(mTAAOptions);
+    mView->setDithering(mViewSettings.dithering);
+    mView->setAntiAliasing(mViewSettings.antiAliasing);
+    mView->setSampleCount(mViewSettings.sampleCount);
+    mView->setAmbientOcclusionOptions(mViewSettings.ssao);
+    mView->setBloomOptions(mViewSettings.bloom);
+    mView->setFogOptions(mViewSettings.fog);
+    mView->setTemporalAntiAliasingOptions(mViewSettings.taa);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
@@ -362,7 +393,7 @@ void SimpleViewer::updateUserInterface() {
         lm.setShadowCaster(ci, mEnableShadows);
     });
 
-    mView->setShadowType(mEnableVsm ? View::ShadowType::VSM : View::ShadowType::PCF);
+    mView->setShadowType(mViewSettings.shadowType);
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
