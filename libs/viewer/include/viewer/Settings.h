@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <string>
+
 #include <filament/ColorGrading.h>
 #include <filament/View.h>
 
