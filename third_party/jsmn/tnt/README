@@ -1,0 +1,7 @@
+This folder was created as follows:
+
+curl -L -O https://github.com/zserge/jsmn/archive/053d3cd.zip
+unzip 053d3cd.zip
+mv jsmn-* jsmn
+rm -rf example test library.json
+rsync -r ./ ~/github/filament/third_party/jsmn/ --delete --exclude tnt

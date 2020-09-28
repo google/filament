@@ -23,9 +23,7 @@
 
 #include <assert.h>
 
-// NOTE: We are including cgltf only to get JSMN. We should consider adding jsmn to third_party.
-#define CGLTF_IMPLEMENTATION
-#include <cgltf.h>
+#include <jsmn.h>
 
 #define CHECK_TOKTYPE(tok_, type_) if ((tok_).type != (type_)) { return -1; }
 #define CHECK_KEY(tok_) if ((tok_).type != JSMN_STRING || (tok_).size == 0) { return -1; }
