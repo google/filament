@@ -65,7 +65,19 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "intensity": 1.0,
             "quality": "LOW",
             "upsampling": "LOW",
-            "minHorizonAngleRad": 0.0
+            "minHorizonAngleRad": 0.0,
+            "ssct": {
+                "enabled": false,
+                "lightConeRad": 1.0,
+                "startTraceDistance": 0.01,
+                "contactDistanceMax": 1.0,
+                "intensity": 0.8,
+                "lightDirection": [0, -1, 0],
+                "depthBias": 0.1,
+                "depthSlopeBias": 0.1,
+                "scale": 1.0,
+                "sampleCount": 4
+            }
         },
         "bloom": {
             "enabled": false,

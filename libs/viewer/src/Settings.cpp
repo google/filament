@@ -283,6 +283,45 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        AmbientOcclusionOptions::Ssct* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "lightConeRad") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lightConeRad);
+        } else if (compare(tok, jsonChunk, "startTraceDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->startTraceDistance);
+        } else if (compare(tok, jsonChunk, "contactDistanceMax") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->contactDistanceMax);
+        } else if (compare(tok, jsonChunk, "intensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->intensity);
+        } else if (compare(tok, jsonChunk, "lightDirection") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lightDirection);
+        } else if (compare(tok, jsonChunk, "depthBias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->depthBias);
+        } else if (compare(tok, jsonChunk, "depthSlopeBias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->depthSlopeBias);
+        } else if (compare(tok, jsonChunk, "scale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->scale);
+        } else if (compare(tok, jsonChunk, "sampleCount") == 0){
+            i = parse(tokens, i + 1, jsonChunk, &out->sampleCount);
+        } else {
+            slog.w << "Invalid SSCT key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid SSCT value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         AmbientOcclusionOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -307,6 +346,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "minHorizonAngleRad") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->minHorizonAngleRad);
+        } else if (compare(tok, jsonChunk, "ssct") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ssct);
         } else {
             slog.w << "Invalid AO key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -718,6 +759,23 @@ std::string writeJson(const ColorGradingSettings& in) {
     return oss.str();
 }
 
+std::string writeJson(const AmbientOcclusionOptions::Ssct& in) {
+    std::ostringstream oss;
+    oss << "{\n"
+        << "\"enabled\": " << writeJson(in.enabled) << ",\n"
+        << "\"lightConeRad\": " << writeJson(in.lightConeRad) << ",\n"
+        << "\"startTraceDistance\": " << writeJson(in.startTraceDistance) << ",\n"
+        << "\"contactDistanceMax\": " << writeJson(in.contactDistanceMax) << ",\n"
+        << "\"intensity\": " << writeJson(in.intensity) << ",\n"
+        << "\"lightDirection\": " << writeJson(in.lightDirection) << ",\n"
+        << "\"depthBias\": " << writeJson(in.depthBias) << ",\n"
+        << "\"depthSlopeBias\": " << writeJson(in.depthSlopeBias) << ",\n"
+        << "\"scale\": " << writeJson(in.scale) << ",\n"
+        << "\"sampleCount\": " << writeJson(in.sampleCount) << "\n"
+        << "}";
+    return oss.str();
+}
+
 std::string writeJson(const AmbientOcclusionOptions& in) {
     std::ostringstream oss;
     oss << "{\n"
@@ -729,7 +787,8 @@ std::string writeJson(const AmbientOcclusionOptions& in) {
         << "\"quality\": " << writeJson(in.quality) << ",\n"
         << "\"upsampling\": " << writeJson(in.upsampling) << ",\n"
         << "\"enabled\": " << writeJson(in.enabled) << ",\n"
-        << "\"minHorizonAngleRad\": " << writeJson(in.minHorizonAngleRad) << "\n"
+        << "\"minHorizonAngleRad\": " << writeJson(in.minHorizonAngleRad) << ",\n"
+        << "\"ssct\": " << writeJson(in.ssct) << "\n"
         << "}";
     return oss.str();
 }

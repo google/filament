@@ -229,7 +229,7 @@ public:
          * Screen Space Cone Tracing (SSCT) options
          * Ambient shadows from dominant light
          */
-        struct {
+        struct Ssct {
             float lightConeRad = 1.0f;          //!< full cone angle in radian, between 0 and pi/2
             float startTraceDistance = 0.01f;   //!< distance where tracing starts
             float contactDistanceMax = 1.0f;    //!< max distance shadows are cast
