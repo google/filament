@@ -101,6 +101,9 @@ public:
     void postExecuteDestroy(FrameGraph& fg) noexcept override {
         if (!imported) {
             resource.destroy(getResourceAllocator(fg));
+            // make sure to clear the resource as some code might rely on e.g. handles to know
+            // if they need to be set or not
+            resource = {};
         }
     }
 };

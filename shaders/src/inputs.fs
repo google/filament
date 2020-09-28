@@ -2,9 +2,7 @@
 // Attributes and uniforms
 //------------------------------------------------------------------------------
 
-#if !defined(DEPTH_PREPASS)
 LAYOUT_LOCATION(4) in highp vec3 vertex_worldPosition;
-#endif
 
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(5) SHADING_INTERPOLATION in mediump vec3 vertex_worldNormal;

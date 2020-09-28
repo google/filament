@@ -23,7 +23,6 @@
 
 #include <filament/Viewport.h>
 
-#include <utils/Allocator.h>
 #include <utils/BinaryTreeArray.h>
 #include <utils/Systrace.h>
 
@@ -208,7 +207,7 @@ void Froxelizer::computeFroxelLayout(
         //            |  froxelCountX / froxelCountY == width / height
         size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
         size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
-        // - copmute the froxels dimensions, rounded up
+        // - compute the froxels dimensions, rounded up
         size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
         size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
         // - and since our froxels must be square, only keep the largest dimension
@@ -598,7 +597,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
     constexpr bool SINGLE_THREADED = false;
     if (!SINGLE_THREADED) {
-        auto parent = js.createJob();
+        auto *parent = js.createJob();
         for (size_t i = 0; i < GROUP_COUNT; i++) {
             js.run(jobs::createJob(js, parent, std::cref(process),
                     lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT, i, GROUP_COUNT));
@@ -720,7 +719,7 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
     const float w = p[0].w*vx + p[1].w*vy + p[2].w*vz + p[3].w;
 #else
     // We know we're using a projection matrix (which has a bunch of zeros)
-    // But we need to handle asymetric frustums and orthographic projections.
+    // But we need to handle asymmetric frustums and orthographic projections.
     //       orthographic ------------------------+
     //  asymmetric frustum ---------+             |
     //                              v             v
@@ -765,7 +764,7 @@ void Froxelizer::froxelizePointAndSpotLight(
     float2 xyRightNear = project(p, { aabb.center.xy + aabb.halfExtent.xy, znear });
     float2 xyRightFar  = project(p, { aabb.center.xy + aabb.halfExtent.xy, zfar  });
 
-    // handle inverted frustums (e.g. x or y symetries)
+    // handle inverted frustums (e.g. x or y symmetries)
     if (xyLeftNear.x > xyRightNear.x)   std::swap(xyLeftNear.x, xyRightNear.x);
     if (xyLeftNear.y > xyRightNear.y)   std::swap(xyLeftNear.y, xyRightNear.y);
     if (xyLeftFar.x  > xyRightFar.x)    std::swap(xyLeftFar.x, xyRightFar.x);

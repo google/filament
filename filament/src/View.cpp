@@ -98,7 +98,6 @@ void FView::terminate(FEngine& engine) {
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
     drainFrameHistory(engine);
-    mShadowMapManager.terminate(driver);
     mFroxelizer.terminate(driver);
 }
 
@@ -213,14 +212,13 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     SYSTRACE_CALL();
 
     mHasShadowing = false;
+    mNeedsShadowMap = false;
 
     if (!mShadowingEnabled) {
         return;
     }
 
     mShadowMapManager.reset();
-
-    mShadowMapManager.setVsm(hasVsm());
 
     auto& lcm = engine.getLightManager();
 
@@ -258,11 +256,10 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
         }
     }
 
-    // allocates shadowmap driver resources
-    mShadowMapManager.prepare(engine, driver, mPerViewSb, lightData);
-
-    mHasShadowing = mShadowMapManager.update(engine, *this, mPerViewUb, mShadowUb, renderableData,
-            lightData);
+    auto shadowTechnique = mShadowMapManager.update(engine, *this,
+            mPerViewUb, mShadowUb, renderableData,lightData);
+    mHasShadowing = any(shadowTechnique);
+    mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
 }
 
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
@@ -290,7 +287,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
     // associated with the skybox.
     FIndirectLight const* ibl = scene->getIndirectLight();
-    float intensity;
+    float intensity{};
     if (UTILS_LIKELY(ibl)) {
         intensity = ibl->getIntensity();
     } else {
@@ -444,7 +441,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
         /*
-         * Parition the SoA so that renderables are partitioned w.r.t their visibility into the
+         * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
          * following groups:
          *
          * 1. renderables
@@ -670,6 +667,10 @@ void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) cons
     mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
 }
 
+void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
+    mShadowMapManager.prepareShadow(texture, mPerViewSb);
+}
+
 void FView::cleanupRenderPasses() const noexcept {
     auto& samplerGroup = mPerViewSb;
     samplerGroup.setSampler(PerViewSib::SSAO, {}, {});
@@ -736,7 +737,7 @@ void FView::cullRenderables(JobSystem& js,
     };
 
     // launch the computation on multiple threads
-    auto job = jobs::parallel_for(js, nullptr, 0, (uint32_t)renderableData.size(),
+    auto *job = jobs::parallel_for(js, nullptr, 0, (uint32_t)renderableData.size(),
             std::ref(functor), jobs::CountSplitter<Culler::MODULO * Culler::MIN_LOOP_COUNT_HINT, 8>());
     js.runAndWait(job);
 }
@@ -808,8 +809,9 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-void FView::renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept {
-    mShadowMapManager.render(engine, *this, driver, pass);
+void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+        RenderPass& pass) noexcept {
+    mShadowMapManager.render(fg, engine, *this, driver, pass);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {

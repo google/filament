@@ -52,7 +52,7 @@ namespace utils {
 class JobSystem;
 } // namespace utils;
 
-// Avoid warnings for using the ToneMapping API, which has been publically deprecated.
+// Avoid warnings for using the ToneMapping API, which has been publicly deprecated.
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -62,10 +62,6 @@ class JobSystem;
 #endif
 
 namespace filament {
-
-namespace fg {
-class ResourceAllocator;
-} // namespace fg;
 
 class FEngine;
 class FMaterialInstance;
@@ -166,6 +162,7 @@ public:
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void cleanupRenderPasses() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
@@ -174,10 +171,12 @@ public:
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
     bool hasShadowing() const noexcept { return mHasShadowing; }
+    bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
 
-    void renderShadowMaps(FEngine& engine, FEngine::DriverApi& driver, RenderPass& pass) noexcept;
+    void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+            RenderPass& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
@@ -289,6 +288,7 @@ public:
         options.resolution = std::floor(
                 math::clamp(1.0f, 2.0f, options.resolution * 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
+        options.minHorizonAngleRad = math::clamp(0.0f, math::f::PI_2, options.minHorizonAngleRad);
         mAmbientOcclusionOptions = options;
     }
 
@@ -331,7 +331,7 @@ public:
 
     void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
         options.focusDistance = std::max(0.0f, options.focusDistance);
-        options.blurScale = std::max(0.0f, options.blurScale);
+        options.cocScale = std::max(0.0f, options.cocScale);
         options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
         mDepthOfFieldOptions = options;
     }
@@ -491,6 +491,7 @@ private:
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
+    mutable bool mNeedsShadowMap = false;
 
     ShadowMapManager mShadowMapManager;
 };

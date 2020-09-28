@@ -23,8 +23,6 @@
 #include <geometry/SurfaceOrientation.h>
 
 #include <math/quat.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
 
 #include <utils/Panic.h>
 

@@ -62,7 +62,7 @@ public:
     }
 
     // detach() is used to detach (export) a resource from the framegraph, at which point its
-    // lifetime is no longer managed by the FrameGraph. Tihs resource can later be used by
+    // lifetime is no longer managed by the FrameGraph. This resource can later be used by
     // the FrameGraph again using FrameGraph::import() -- but note that this will not transfer
     // lifetime management back to the FrameGraph.
     template<typename T>

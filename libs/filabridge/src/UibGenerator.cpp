@@ -95,7 +95,6 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("fogDensity",              1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogInscatteringStart",    1, UniformInterfaceBlock::Type::FLOAT)
             .add("fogInscatteringSize",     1, UniformInterfaceBlock::Type::FLOAT)
-            // more camera stuff
             .add("fogColorFromIbl",         1, UniformInterfaceBlock::Type::FLOAT)
 
             // CSM information

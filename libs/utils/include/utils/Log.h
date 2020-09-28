@@ -59,7 +59,7 @@ struct UTILS_PUBLIC Loggers {
     io::LogStream& i;
 };
 
-extern UTILS_PUBLIC Loggers slog;
+extern UTILS_PUBLIC const Loggers slog;
 
 } // namespace utils
 

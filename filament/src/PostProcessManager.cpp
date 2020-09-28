@@ -38,8 +38,6 @@
 #include <math/half.h>
 #include <math/mat2.h>
 
-#include <utils/Log.h>
-
 #include <algorithm>
 #include <limits>
 
@@ -226,14 +224,20 @@ void PostProcessManager::init() noexcept {
     mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mDummyOneTextureArray = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
     mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    PixelBufferDescriptor dataOneArray(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     *static_cast<uint32_t *>(dataOne.buffer) = 0xFFFFFFFF;
+    *static_cast<uint32_t *>(dataOneArray.buffer) = 0xFFFFFFFF;
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
+    driver.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1, std::move(dataOneArray));
     driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
 }
 
@@ -359,7 +363,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
     return depthMipmapPass.getData().out;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
+FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         FrameGraph& fg, RenderPass& pass,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         View::AmbientOcclusionOptions options) noexcept {
@@ -478,6 +482,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOclusion(
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
+                mi->setParameter("minHorizonAngleSineSquared", std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
                 mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
                 mi->setParameter("depthParams", cameraInfo.projection[3][2] * 0.5f);
 
@@ -786,8 +791,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     float2 cocParams{
             // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
             // a projection with an infinite far plane
-            (dofOptions.blurScale * Ks * Kc) * focusDistance / cameraInfo.zn,
-            (dofOptions.blurScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
+            (dofOptions.cocScale * Ks * Kc) * focusDistance / cameraInfo.zn,
+            (dofOptions.cocScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
     };
     // handle reversed z
     cocParams = float2{ -cocParams.x, cocParams.x + cocParams.y };
@@ -893,8 +898,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 for (size_t i = 0; i < mipmapCount - 1u; i++) {
                     // make sure inputs are always multiple of two (should be true by construction)
                     // (this is so that we can compute clean mip levels)
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1) == 0);
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1) == 0);
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1u) == 0);
+                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1u) == 0);
                     using Attachment = FrameGraphRenderTarget::Attachments::AttachmentInfo;
                     data.rt[i] = builder.createRenderTarget("DoF Target", {
                             .attachments = {
@@ -1023,7 +1028,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         return ppDoFDilate.getData().outTilesCocMaxMin;
     };
 
-    // Tiles of 16 pixels requires two dilate rounds to accomodate our max Coc of 32 pixels
+    // Tiles of 16 pixels requires two dilate rounds to accommodate our max Coc of 32 pixels
     auto dilated = dilate(inTilesCocMaxMin);
     dilated = dilate(dilated);
 
@@ -1599,7 +1604,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
 void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
         CameraInfo const& cameraInfo,
-        View::TemporalAntiAliasingOptions const& taaOptions) noexcept {
+        View::TemporalAntiAliasingOptions const& taaOptions) const noexcept {
     auto const& previous = frameHistory[0];
     auto& current = frameHistory.getCurrent();
     // get sample position within a pixel [-0.5, 0.5]
@@ -1688,7 +1693,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 for (size_t i = 0; i < 9; i++) {
                     float2 d = sampleOffsets[i] - current.jitter;
                     d *= 1.0f / taaOptions.filterWidth;
-                    // this is a gaussian fit of a 3.3 blackman harris window
+                    // this is a gaussian fit of a 3.3 Blackman Harris window
                     // see: "High Quality Temporal Supersampling" by Bruan Karis
                     weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
                     sum += weights[i];

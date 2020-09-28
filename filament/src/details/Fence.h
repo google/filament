@@ -29,8 +29,6 @@
 
 namespace filament {
 
-struct HwFence;
-
 class FEngine;
 
 class FFence : public Fence {

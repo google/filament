@@ -169,7 +169,7 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
         assert(any(attachments));
 
         // TODO: we could cache the result of this loop
-        backend::TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
+        backend::TargetBufferInfo info[FrameGraphRenderTarget::Attachments::COUNT];
         for (size_t i = 0, c = descriptor.attachments.textures.size(); i < c; i++) {
             auto const& attachmentInfo = descriptor.attachments.textures[i];
 #ifndef NDEBUG
@@ -187,12 +187,13 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
             if (attachmentInfo.isValid()) {
                 fg::ResourceEntry<FrameGraphTexture> const& entry =
                         fg.getResourceEntryUnchecked(attachmentInfo.getHandle());
-                infos[i].handle = entry.getResource().texture;
-                infos[i].level = attachmentInfo.getLevel();
+                info[i].handle = entry.getResource().texture;
+                info[i].level = attachmentInfo.getLevel();
+                info[i].layer = attachmentInfo.getLayer();
                 // the attachment buffer (texture or renderbuffer) must be valid
-                assert(infos[i].handle);
+                assert(info[i].handle);
                 // the attachment level must be within range
-                assert(infos[i].level < entry.descriptor.levels);
+                assert(info[i].level < entry.descriptor.levels);
                 // if the attachment is multisampled, then the rendertarget must be too
                 assert(entry.descriptor.samples <= 1 || entry.descriptor.samples == descriptor.samples);
             }
@@ -201,8 +202,8 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
         auto& resource = getResource();
         resource.target = fg.getResourceAllocator().createRenderTarget(name,
                 attachments, width, height, descriptor.samples,
-                { infos[0], infos[1], infos[2], infos[3] },
-                infos[4], infos[5]);
+                { info[0], info[1], info[2], info[3] },
+                info[4], info[5]);
     }
 }
 
@@ -234,7 +235,7 @@ void RenderTargetResourceEntry::postExecuteDevirtualize(FrameGraph& fg) noexcept
         // FIXME: (workaround) imported targets currently don't have attachments associated to
         //        them, so the discard flags can't be calculated. So if the target is used
         //        several times, discardStart must be cleared after the first time.
-        //        (technically, discardEnd should be reset to it's inital value -- we don't do
+        //        (technically, discardEnd should be reset to it's initial value -- we don't do
         //        this here, because we never modified it in the first place)
         resource.params.flags.discardStart = TargetBufferFlags::NONE;
     }

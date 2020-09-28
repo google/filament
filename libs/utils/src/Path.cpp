@@ -194,7 +194,7 @@ std::vector<std::string> Path::split() const {
 
     do {
       current = size_t(next + 1);
-      next = m_path.find_first_of(SEPARATOR_STR, current);
+      next = m_path.find_first_of(SEPARATOR, current);
 
       std::string segment(m_path.substr(current, next - current));
       if (!segment.empty()) segments.push_back(segment);
@@ -227,7 +227,7 @@ std::string Path::getCanonicalPath(const std::string& path) {
         std::string segment(path.substr(current, next - current));
         size_t size = segment.length();
 
-        // skip empty (keedp initial)
+        // skip empty (keep initial)
         if (size == 0 && !segments.empty()) {
             continue;
         }

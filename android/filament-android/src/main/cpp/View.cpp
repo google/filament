@@ -196,7 +196,7 @@ Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlon
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
     jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
-    jint quality, jint upsampling, jboolean enabled) {
+    jint quality, jint upsampling, jboolean enabled, jfloat minHorizonAngleRad) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = {
             .radius = radius,
@@ -206,7 +206,8 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
             .intensity = intensity,
             .quality = (View::QualityLevel)quality,
             .upsampling = (View::QualityLevel)upsampling,
-            .enabled = (bool)enabled
+            .enabled = (bool)enabled,
+            .minHorizonAngleRad = minHorizonAngleRad
     };
     view->setAmbientOcclusionOptions(options);
 }
@@ -262,9 +263,9 @@ Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nat
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
-        jlong nativeView, jfloat focusDistance, jfloat blurScale, jfloat maxApertureDiameter, jboolean enabled) {
+        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled) {
     View* view = (View*) nativeView;
-    view->setDepthOfFieldOptions({.focusDistance = focusDistance, .blurScale = blurScale,
+    view->setDepthOfFieldOptions({.focusDistance = focusDistance, .cocScale = cocScale,
             .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled});
 }
 

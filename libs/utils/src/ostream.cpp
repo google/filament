@@ -19,10 +19,6 @@
 #include <string>
 #include <utils/compiler.h>
 
-#include <iostream>
-
-#include <utils/trap.h>
-
 namespace utils {
 
 namespace io {

@@ -36,7 +36,7 @@ inline void* aligned_alloc(size_t size, size_t align) noexcept {
 
     // must be a power of two and >= sizeof(void*)
     while (align < sizeof(void*)) {
-        align <<= 1;
+        align <<= 1u;
     }
 
 #if defined(WIN32)
@@ -60,7 +60,7 @@ inline void aligned_free(void* p) noexcept {
  * to their alignof(). e.g.
  *
  *      template<typename T>
- *      usign aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
+ *      using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
  *
  *      aligned_vector<Foo> foos;
  *
@@ -83,7 +83,6 @@ public:
     template<typename T>
     struct rebind { using other = STLAlignedAllocator<T>; };
 
-public:
     inline STLAlignedAllocator() noexcept = default;
 
     template<typename T>

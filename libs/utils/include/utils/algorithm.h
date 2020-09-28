@@ -200,8 +200,8 @@ RandomAccessIterator lower_bound(
         // The number of repetitions here doesn't affect the result. We manually unroll the loop
         // twice, to guarantee we have at least two iterations without branches (for the case
         // where the size is not known at compile time
-        first += comp(first[len>>=1], value) ? len : 0;
-        first += comp(first[len>>=1], value) ? len : 0;
+        first += comp(first[len >>= 1u], value) ? len : 0;
+        first += comp(first[len >>= 1u], value) ? len : 0;
     }
     first += comp(*first, value);
     return first;
@@ -229,8 +229,8 @@ RandomAccessIterator upper_bound(
         // The number of repetitions here doesn't affect the result. We manually unroll the loop
         // twice, to guarantee we have at least two iterations without branches (for the case
         // where the size is not known at compile time
-        first += !comp(value, first[len>>=1]) ? len : 0;
-        first += !comp(value, first[len>>=1]) ? len : 0;
+        first += !comp(value, first[len >>= 1u]) ? len : 0;
+        first += !comp(value, first[len >>= 1u]) ? len : 0;
     }
     first += !comp(value, *first);
     return first;

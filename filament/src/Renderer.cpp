@@ -40,7 +40,6 @@
 #include <utils/Systrace.h>
 #include <utils/vector.h>
 
-#include <random>
 #include <assert.h>
 
 // this helps visualize what dynamic-scaling is doing
@@ -172,7 +171,7 @@ void FRenderer::render(FView const* view) {
         JobSystem& js = engine.getJobSystem();
 
         // create a root job so no other job can escape
-        auto rootJob = js.setRootJob(js.createJob());
+        auto *rootJob = js.setRootJob(js.createJob());
 
         // execute the render pass
         renderJob(rootArena, const_cast<FView&>(*view));
@@ -254,21 +253,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.setRenderFlags(renderFlags);
 
     /*
-     * Shadow pass
-     */
-
-    if (view.hasShadowing()) {
-        // TODO: use the framegraph for the shadow passes
-        RenderPass shadowMapPass = pass;
-        view.renderShadowMaps(engine, driver, shadowMapPass);
-        engine.flush(); // Wake-up the driver thread
-    }
-
-    /*
      * Frame graph
      */
 
     FrameGraph fg(engine.getResourceAllocator());
+
+    /*
+     * Shadow pass
+     */
+
+    if (view.needsShadowMap()) {
+        view.renderShadowMaps(fg, engine, driver, pass);
+    }
 
     const TargetBufferFlags discardedFlags = mDiscardedFlags;
     const TargetBufferFlags clearFlags = mClearFlags;
@@ -337,34 +333,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
+    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), view.getVisibleRenderables());
 
-    view.updatePrimitivesLod(engine, cameraInfo,scene.getRenderableData(), view.getVisibleRenderables());
-    view.prepareCamera(cameraInfo);
-    view.prepareViewport(svp);
-    view.commitUniforms(driver);
-
-    // offset camera for taa
-    if (taaOptions.enabled) {
-        auto& history = view.getFrameHistory();
-        ppm.prepareTaa(history, cameraInfo, taaOptions);
-        // convert the sample position to jitter in clip-space
-        float2 jitterInClipSpace =
-                history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
-        // update projection matrix
-        cameraInfo.projection[2].xy -= jitterInClipSpace;
-
-        // FIXME: We're relying on a very fragile behaviour (a quasi bug actually):
-        //  View uniforms have been uploaded to the GPU at this point (see previous call to
-        //  view.commitUniforms()), they will be uploaded again as a side-effect of the color
-        //  pass, which will be executed after the structure pass above.
-        //  By update the UBO content now (without uploading), we're allowing the structure pass
-        //  to take place before the TAA jitter, while still applying the jitter to everything
-        //  from the color pass.
-        //  All this should be more explicit and be part of the framegraph.
-        //  Note: if we called view.commitUniforms() here, the structure pass above would
-        //  be executed with the new values (because passes are executed much later).
+    fg.addTrivialSideEffectPass("Prepare View Uniforms", [svp, &view] (DriverApi& driver) {
+        CameraInfo cameraInfo = view.getCameraInfo();
         view.prepareCamera(cameraInfo);
-    }
+        view.prepareViewport(svp);
+        view.commitUniforms(driver);
+    });
 
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
@@ -379,13 +355,29 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // TODO: the scaling should depends on all passes that need the structure pass
     ppm.structure(fg, pass, svp.width, svp.height, aoOptions.resolution);
 
+    // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
+    if (taaOptions.enabled) {
+        auto& history = view.getFrameHistory();
+        ppm.prepareTaa(history, cameraInfo, taaOptions);
+        // convert the sample position to jitter in clip-space
+        float2 jitterInClipSpace =
+                history.getCurrent().jitter * (2.0f / float2{ svp.width, svp.height });
+        // update projection matrix
+        cameraInfo.projection[2].xy -= jitterInClipSpace;
+
+        fg.addTrivialSideEffectPass("Jitter Camera", [=, &view] (DriverApi& driver) {
+            view.prepareCamera(cameraInfo);
+            view.commitUniforms(driver);
+        });
+    }
+
     // --------------------------------------------------------------------------------------------
     // SSAO pass
 
     const bool useSSAO = aoOptions.enabled;
     if (useSSAO) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
-        ppm.screenSpaceAmbientOclusion(fg, pass, svp, cameraInfo, aoOptions);
+        ppm.screenSpaceAmbientOcclusion(fg, pass, svp, cameraInfo, aoOptions);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -668,6 +660,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         RenderPass const& pass, FView const& view) const noexcept {
 
     struct ColorPassData {
+        FrameGraphId<FrameGraphTexture> shadows;
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> depth;
@@ -686,6 +679,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 data.clearColor = config.clearColor;
 
+                data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
@@ -695,6 +689,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 if (config.hasContactShadows) {
                     assert(data.structure.isValid());
                     data.structure = builder.sample(data.structure);
+                }
+
+                if (data.shadows.isValid()) {
+                    data.shadows = builder.sample(data.shadows);
                 }
 
                 if (data.ssr.isValid()) {
@@ -768,6 +766,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
                 view.prepareSSAO(data.ssao.isValid() ?
                         resources.getTexture(data.ssao) : ppm.getOneTexture());
+
+                // set shadow sampler
+                view.prepareShadow(data.shadows.isValid() ?
+                        resources.getTexture(data.shadows) : ppm.getOneTextureArray());
 
                 assert(data.structure.isValid());
                 if (data.structure.isValid()) {
@@ -1022,7 +1024,7 @@ void FRenderer::endFrame() {
     // WARNING: while doing this we can't access any component manager
     auto& js = engine.getJobSystem();
 
-    auto job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 
     engine.flush();     // flush command stream
 

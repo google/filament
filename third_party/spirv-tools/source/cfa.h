@@ -127,7 +127,7 @@ class CFA {
 template <class BB>
 bool CFA<BB>::FindInWorkList(const std::vector<block_info>& work_list,
                              uint32_t id) {
-  for (const auto b : work_list) {
+  for (const auto& b : work_list) {
     if (b.block->id() == id) return true;
   }
   return false;

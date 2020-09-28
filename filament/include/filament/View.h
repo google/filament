@@ -160,17 +160,23 @@ public:
         LinearColor color{0.5f};            //!< fog's color (linear), see fogColorFromIbl
         float density = 0.1f;               //!< fog's density at altitude given by 'height'
         float inScatteringStart = 0.0f;     //!< distance in world units from the camera where in-scattering starts
-        float inScatteringSize = -1.0f;     //!< size of in-scattering (>=0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+        float inScatteringSize = -1.0f;     //!< size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
         bool fogColorFromIbl = false;       //!< Fog color will be modulated by the IBL color in the view direction.
         bool enabled = false;               //!< enable or disable fog
     };
 
     /**
      * Options to control Depth of Field (DoF) effect in the scene.
+     *
+     * cocScale can be used to set the depth of field blur independently from the camera
+     * aperture, e.g. for artistic reasons. This can be achieved by setting:
+     *      cocScale = cameraAperture / desiredDoFAperture
+     *
+     * @see Camera
      */
     struct DepthOfFieldOptions {
         float focusDistance = 10.0f;        //!< focus distance in world units
-        float blurScale = 1.0f;             //!< a scale factor for the amount of blur
+        float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
     };
@@ -217,6 +223,7 @@ public:
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
         QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality.
         bool enabled = false;    //!< enables or disables screen-space ambient occlusion
+        float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
     };
 
     /**

@@ -122,7 +122,7 @@ void TPanic<T>::buildMessage() {
 #else
     type = "Panic";
 #endif
-    m_msg = panicString(std::move(type), m_function, m_line, m_file, m_reason.c_str());
+    m_msg = panicString(type, m_function, m_line, m_file, m_reason.c_str());
 }
 
 UTILS_ALWAYS_INLINE

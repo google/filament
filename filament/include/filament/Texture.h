@@ -86,7 +86,7 @@ public:
 
 
     /**
-     * Options for enviornment prefiltering into reflection map
+     * Options for environment prefiltering into reflection map
      *
      * @see generatePrefilterMipmap()
      */

@@ -478,6 +478,7 @@ void SimpleViewer::updateUserInterface() {
             bool upsampling = mSSAOOptions.upsampling != View::QualityLevel::LOW;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::Checkbox("High quality upsampling", &upsampling);
+            ImGui::SliderFloat("Min Horizon angle", &mSSAOOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4);
             mSSAOOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             mSSAOOptions.quality = (View::QualityLevel) quality;
         }
@@ -510,7 +511,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
         ImGui::SliderFloat("Height falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
         ImGui::SliderFloat("Scattering start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering size", &mFogOptions.inScatteringSize, 0.0f, 100.0f);
+        ImGui::SliderFloat("Scattering size", &mFogOptions.inScatteringSize, 0.1f, 100.0f);
         ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mFogOptions.color.v);
         ImGui::Unindent();

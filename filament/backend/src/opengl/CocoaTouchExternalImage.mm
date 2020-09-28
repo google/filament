@@ -258,7 +258,7 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     CHECK_GL_ERROR(utils::slog.e)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
 
     // geometry
     glBindVertexArray(0);

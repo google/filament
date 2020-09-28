@@ -142,7 +142,7 @@ inline float3 ACES(float3 color, float brightness) {
     constexpr float RRT_RED_HUE   = 0.0f;
     constexpr float RRT_RED_WIDTH = 135.0f;
 
-    // Desaturation contants
+    // Desaturation constants
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 

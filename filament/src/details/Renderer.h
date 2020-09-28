@@ -187,8 +187,8 @@ private:
     DisplayInfo mDisplayInfo;
     FrameRateOptions mFrameRateOptions;
     ClearOptions mClearOptions;
-    backend::TargetBufferFlags mDiscardedFlags;
-    backend::TargetBufferFlags mClearFlags;
+    backend::TargetBufferFlags mDiscardedFlags{};
+    backend::TargetBufferFlags mClearFlags{};
     std::function<void()> mBeginFrameInternal;
 
     // per-frame arena for this Renderer

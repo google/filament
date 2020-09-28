@@ -608,6 +608,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
+                ImGui::SliderFloat("Min Horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
@@ -656,7 +657,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Height", &params.fogOptions.height, 0.0f, 100.0f);
             ImGui::SliderFloat("Height Falloff", &params.fogOptions.heightFalloff, 0.0f, 10.0f);
             ImGui::SliderFloat("Scattering Start", &params.fogOptions.inScatteringStart, 0.0f, 100.0f);
-            ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.0f, 100.0f);
+            ImGui::SliderFloat("Scattering Size", &params.fogOptions.inScatteringSize, 0.1f, 100.0f);
             ImGui::Checkbox("Color from IBL", &params.fogOptions.fogColorFromIbl);
             ImGui::ColorPicker3("Color", params.fogOptions.color.v);
             ImGui::Unindent();
