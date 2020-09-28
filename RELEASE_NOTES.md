@@ -3,9 +3,17 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release
+## Next release (v1.9.4)
+
+## v1.9.3
 
 ## v1.9.2
+
+- Fixes / improvements for contact shadows, fog, and DOF
+- Reduce SSAO creases caused by geometry tessellation
+- Fix compilation warnings and issue with Clang 12
+- Fix JNI crashes
+- Rename .blurScale to .cocScale in DOF options
 
 ## v1.9.1
 
