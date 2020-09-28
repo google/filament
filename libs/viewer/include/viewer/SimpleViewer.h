@@ -27,6 +27,8 @@
 #include <gltfio/Animator.h>
 #include <gltfio/FilamentAsset.h>
 
+#include <viewer/Settings.h>
+
 #include <utils/Entity.h>
 
 #include <math/vec3.h>
@@ -133,33 +135,35 @@ public:
      * Enables dithering on the view.
      * Defaults to true.
      */
-    void enableDithering(bool b) { mEnableDithering = b; }
+    void enableDithering(bool b) {
+        mViewSettings.dithering = b ? Dithering::TEMPORAL : Dithering::NONE;
+    }
 
     /**
      * Enables FXAA antialiasing in the post-process pipeline.
      * Defaults to true.
      */
-    void enableFxaa(bool b) { mEnableFxaa = b; }
+    void enableFxaa(bool b) {
+        mViewSettings.antiAliasing = b ? AntiAliasing::FXAA : AntiAliasing::NONE;
+    }
 
     /**
      * Enables hardware-based MSAA antialiasing.
      * Defaults to true.
      */
-    void enableMsaa(bool b) { mEnableMsaa = b; }
+    void enableMsaa(bool b) { mViewSettings.sampleCount = b ? 4 : 1; }
 
     /**
      * Enables screen-space ambient occlusion in the post-process pipeline.
      * Defaults to true.
      */
-    void enableSSAO(bool b) { mSSAOOptions.enabled = b; }
+    void enableSSAO(bool b) { mViewSettings.ssao.enabled = b; }
 
     /**
      * Enables Bloom.
      * Defaults to true.
      */
-    void enableBloom(bool bloom) {
-        mBloomOptions.enabled = bloom;
-    }
+    void enableBloom(bool bloom) { mViewSettings.bloom.enabled = bloom; }
 
     /**
      * Adjusts the intensity of the IBL.
@@ -167,6 +171,11 @@ public:
      * Defaults to 30000.0.
      */
     void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
+
+    /**
+     * Gets a modifiable reference to stashed View state.
+     */
+    ViewSettings& getViewSettings() { return mViewSettings; }
 
 private:
     void updateIndirectLight();
@@ -193,18 +202,11 @@ private:
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
     bool mEnableSunlight = true;
-    bool mEnableVsm = false;
     bool mEnableShadows = true;
     int mShadowCascades = 1;
     bool mEnableContactShadows = false;
     std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
-    bool mEnableDithering = true;
-    bool mEnableFxaa = true;
-    bool mEnableMsaa = true;
-    filament::View::AmbientOcclusionOptions mSSAOOptions = { .enabled = true };
-    filament::View::BloomOptions mBloomOptions = { .enabled = true };
-    filament::View::FogOptions mFogOptions = {};
-    filament::View::TemporalAntiAliasingOptions mTAAOptions = {};
+    ViewSettings mViewSettings;
     int mSidebarWidth;
     uint32_t mFlags;
 };

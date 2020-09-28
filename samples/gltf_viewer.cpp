@@ -101,60 +101,8 @@ struct App {
         Material* groundMaterial;
     } scene;
 
-    struct ColorGradingOptions {
-        bool enabled = true;
-        int quality = static_cast<int>(ColorGrading::QualityLevel::MEDIUM);
-        int toneMapping = static_cast<int>(ColorGrading::ToneMapping::ACES_LEGACY);
-        int temperature = 0;
-        int tint = 0;
-        math::float3 outRed{1.0f, 0.0f, 0.0f};
-        math::float3 outGreen{0.0f, 1.0f, 0.0f};
-        math::float3 outBlue{0.0f, 0.0f, 1.0f};
-        math::float4 shadows{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 midtones{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 highlights{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 ranges{0.0f, 0.333f, 0.550f, 1.0f};
-        float contrast = 1.0f;
-        float vibrance = 1.0f;
-        float saturation = 1.0f;
-        math::float3 slope{1.0f};
-        math::float3 offset{0.0f};
-        math::float3 power{1.0f};
-        math::float3 gamma{1.0f};
-        math::float3 midPoint{1.0f};
-        math::float3 scale{1.0f};
-        bool linkedCurves = false;
-
-        bool operator!=(const ColorGradingOptions &rhs) const {
-            return !(rhs == *this);
-        }
-
-        bool operator==(const ColorGradingOptions &rhs) const {
-            return enabled == rhs.enabled &&
-                   quality == rhs.quality &&
-                   toneMapping == rhs.toneMapping &&
-                   temperature == rhs.temperature &&
-                   outRed == rhs.outRed &&
-                   outGreen == rhs.outGreen &&
-                   outBlue == rhs.outBlue &&
-                   shadows == rhs.shadows &&
-                   midtones == rhs.midtones &&
-                   highlights == rhs.highlights &&
-                   ranges == rhs.ranges &&
-                   slope == rhs.slope &&
-                   offset == rhs.offset &&
-                   power == rhs.power &&
-                   contrast == rhs.contrast &&
-                   vibrance == rhs.vibrance &&
-                   saturation == rhs.saturation &&
-                   gamma == rhs.gamma &&
-                   midPoint == rhs.midPoint &&
-                   scale == rhs.scale;
-        }
-    } colorGradingOptions;
-
     // zero-initialized so that the first time through is always dirty.
-    ColorGradingOptions lastColorGradingOptions = { 0 };
+    ColorGradingSettings lastColorGradingOptions = { 0 };
 
     ColorGrading* colorGrading = nullptr;
 
@@ -355,7 +303,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 }
 
 static void computeRangePlot(App& app, float* rangePlot) {
-    float4& ranges = app.colorGradingOptions.ranges;
+    float4& ranges = app.viewer->getViewSettings().colorGrading.ranges;
     ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
 
@@ -405,12 +353,13 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 }
 
 static void computeCurvePlot(App& app, float* curvePlot) {
+    const auto& colorGradingOptions = app.viewer->getViewSettings().colorGrading;
     for (size_t i = 0; i < 1024; i++) {
         float3 x{i / 1024.0f * 2.0f};
         float3 y = curves(x,
-                app.colorGradingOptions.gamma,
-                app.colorGradingOptions.midPoint,
-                app.colorGradingOptions.scale);
+                colorGradingOptions.gamma,
+                colorGradingOptions.midPoint,
+                colorGradingOptions.scale);
         curvePlot[i]        = y.r;
         curvePlot[1024 + i] = y.g;
         curvePlot[2048 + i] = y.b;
@@ -438,14 +387,20 @@ static void colorGradingUI(App& app) {
     const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
 
     if (ImGui::CollapsingHeader("Color grading")) {
-        App::ColorGradingOptions& colorGrading = app.colorGradingOptions;
+        ColorGradingSettings& colorGrading = app.viewer->getViewSettings().colorGrading;
 
         ImGui::Indent();
         ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
-        ImGui::Combo("Quality##colorGradingQuality", &colorGrading.quality,
-                "Low\0Medium\0High\0Ultra\0\0");
-        ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
+
+        int quality = (int) colorGrading.quality;
+        ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
+        colorGrading.quality = (decltype(colorGrading.quality)) quality;
+
+        int toneMapping = (int) colorGrading.toneMapping;
+        ImGui::Combo("Tone-mapping", &toneMapping,
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+        colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+
         if (ImGui::CollapsingHeader("White balance")) {
             ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
             ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
@@ -868,11 +823,13 @@ int main(int argc, char** argv) {
                 .clear = true
         });
 
-        if (app.colorGradingOptions.enabled) {
-            if (app.colorGradingOptions != app.lastColorGradingOptions) {
-                App::ColorGradingOptions &options = app.colorGradingOptions;
+        ColorGradingSettings& options = app.viewer->getViewSettings().colorGrading;
+        if (options.enabled) {
+            // An inefficient but simple way of detecting change is to serialize to JSON, then
+            // do a string comparison.
+            if (writeJson(options) != writeJson(app.lastColorGradingOptions)) {
                 ColorGrading *colorGrading = ColorGrading::Builder()
-                        .quality(static_cast<ColorGrading::QualityLevel>(options.quality))
+                        .quality(options.quality)
                         .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                         .channelMixer(options.outRed, options.outGreen, options.outBlue)
                         .shadowsMidtonesHighlights(
@@ -886,7 +843,7 @@ int main(int argc, char** argv) {
                         .vibrance(options.vibrance)
                         .saturation(options.saturation)
                         .curves(options.gamma, options.midPoint, options.scale)
-                        .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
+                        .toneMapping(options.toneMapping)
                         .build(*engine);
 
                 if (app.colorGrading) {
@@ -894,7 +851,7 @@ int main(int argc, char** argv) {
                 }
 
                 app.colorGrading = colorGrading;
-                app.lastColorGradingOptions = app.colorGradingOptions;
+                app.lastColorGradingOptions = options;
             }
             view->setColorGrading(app.colorGrading);
         } else {
