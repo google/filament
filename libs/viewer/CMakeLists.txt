@@ -8,13 +8,15 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/viewer/SimpleViewer.h
+        include/viewer/Automation.h
         include/viewer/Settings.h
+        include/viewer/SimpleViewer.h
 )
 
 set(SRCS
-        src/SimpleViewer.cpp
+        src/Automation.cpp
         src/Settings.cpp
+        src/SimpleViewer.cpp
 )
 
 # ==================================================================================================

@@ -46,7 +46,6 @@ using ToneMapping = filament::ColorGrading::ToneMapping;
 using VignetteOptions = filament::View::VignetteOptions;
 
 // Reads the given JSON blob and updates the corresponding fields in the given Settings object.
-//
 // - The given JSON blob need not specify all settings.
 // - Returns true if successful.
 // - This function writes warnings and error messages into the utils log.

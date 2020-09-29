@@ -37,7 +37,7 @@ namespace filament {
 namespace viewer {
 
 /**
- * \class SimpleViewer SimpleViewer.h gltfio/SimpleViewer.h
+ * \class SimpleViewer SimpleViewer.h viewer/SimpleViewer.h
  * \brief Manages the state for a simple glTF viewer with imgui controls and a tree view.
  *
  * This is a utility that can be used across multiple platforms, including web.
