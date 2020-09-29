@@ -16,13 +16,13 @@ material {
             precision: high
         },
         {
-            type : float,
-            name : depthParams,
+            type : float2,
+            name : positionParams,
             precision: high
         },
         {
-            type : float2,
-            name : positionParams,
+            type : float,
+            name : depthParams,
             precision: high
         },
         {
@@ -36,6 +36,10 @@ material {
         {
             type : float,
             name : peak2
+        },
+        {
+            type : float,
+            name : projectionScale
         },
         {
             type : float,
@@ -54,12 +58,12 @@ material {
             name : intensity
         },
         {
-            type : float2,
-            name : sampleCount
-        },
-        {
             type : float,
             name : spiralTurns
+        },
+        {
+            type : float2,
+            name : sampleCount
         },
         {
             type : float2,
@@ -72,6 +76,10 @@ material {
         {
             type : int,
             name : maxLevel
+        },
+        {
+            type : float2,
+            name : reserved
         },
         {
             type : float4,
@@ -90,16 +98,12 @@ material {
             name : ssctDepthBias
         },
         {
-            type : float,
-            name : ssctInvZoom
+            type : float2,
+            name : ssctRayCount
         },
         {
             type : uint,
             name : ssctSampleCount
-        },
-        {
-            type : float2,
-            name : ssctRayCount
         }
     ],
     variables : [
@@ -118,10 +122,9 @@ vertex {
 
 fragment {
     #include "ssaoUtils.fs"
-    #include "dominantLightShadowing.fs"
+    #include "ssct.fs"
 
     const float kLog2LodRate = 3.0;
-    const float kEdgeDistance = 0.0625; // this shouldn't be hardcoded
 
     vec2 sq(const vec2 a) {
         return a * a;
@@ -253,18 +256,20 @@ fragment {
 
     float dominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal) {
         ConeTraceSetup cone;
-        cone.ssStartPos = uv;
+        cone.ssStartPos = uv * materialParams.resolution.xy;
         cone.vsStartPos = origin;
         cone.vsNormal = normal;
         cone.screenFromViewMatrix = materialParams.screenFromViewMatrix;
         cone.depthParams = materialParams.depthParams;
         cone.vsConeDirection = materialParams.ssctVsLightDirection;
+        cone.projectionScale = materialParams.projectionScale;
+        cone.resolution = materialParams.resolution;
         cone.coneTraceParams = materialParams.ssctConeTraceParams;
         cone.intensity = materialParams.ssctIntensity;
-        cone.invZoom = materialParams.ssctInvZoom;
         cone.depthBias = materialParams.ssctDepthBias.x;
         cone.slopeScaledDepthBias = materialParams.ssctDepthBias.y;
         cone.sampleCount = materialParams.ssctSampleCount;
+        cone.maxLevel = float(materialParams.maxLevel);
         float occlusion = 0.0;
         for (float i = 1.0; i <= materialParams.ssctRayCount.x; i += 1.0) {
             cone.jitterOffset.x = random(gl_FragCoord.xy * i) * 2.0 - 1.0;      // direction

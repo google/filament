@@ -217,7 +217,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong nativeView,
         jfloat ssctLightConeRad, jfloat ssctStartTraceDistance, jfloat ssctContactDistanceMax,
         jfloat ssctIntensity, jfloat ssctLightDirX, jfloat ssctLightDirY, jfloat ssctLightDirZ,
-        jfloat ssctDepthBias, jfloat ssctDepthSlopeBias, jfloat ssctScale, jint ssctSampleCount,
+        jfloat ssctDepthBias, jfloat ssctDepthSlopeBias, jint ssctSampleCount,
         jint ssctRayCount, jboolean ssctEnabled) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
@@ -228,7 +228,6 @@ Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong na
     options.ssct.lightDirection = math::float3{ ssctLightDirX, ssctLightDirY, ssctLightDirZ };
     options.ssct.depthBias = ssctDepthBias;
     options.ssct.depthSlopeBias = ssctDepthSlopeBias;
-    options.ssct.scale = ssctScale;
     options.ssct.sampleCount = (uint8_t)ssctSampleCount;
     options.ssct.rayCount = (uint8_t)ssctRayCount;
     options.ssct.enabled = (bool)ssctEnabled;

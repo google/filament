@@ -235,9 +235,8 @@ public:
             float contactDistanceMax = 1.0f;    //!< max distance shadows are cast
             float intensity = 0.8f;             //!< intensity
             math::float3 lightDirection{ 0, -1, 0 };    //!< light direction
-            float depthBias = 0.1f;         //!< depth bias in world units (mitigate self shadowing)
-            float depthSlopeBias = 0.1f;    //!< depth slope bias (mitigate self shadowing)
-            float scale = 1.0f;             //!< cast shadows scaling
+            float depthBias = 0.01f;        //!< depth bias in world units (mitigate self shadowing)
+            float depthSlopeBias = 0.01f;   //!< depth slope bias (mitigate self shadowing)
             uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
             uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
             bool enabled = false;           //!< enables or disables SSCT

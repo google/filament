@@ -5,20 +5,28 @@
 
 #include "ssaoUtils.fs"
 
+const float kSSCTLog2LodRate = 4.0;
+
 struct ConeTraceSetup {
-    // runtime parameters
+    // fragment info
     highp vec2 ssStartPos;
     highp vec3 vsStartPos;
     vec3 vsNormal;
-    highp mat4 screenFromViewMatrix;
-    vec2 jitterOffset;          // (x = direction offset, y = step offset)
-    highp float depthParams;
+
+    // light (cone) info
     vec3 vsConeDirection;
+    vec4 coneTraceParams;       // { tan(angle), sin(angle), start trace distance, inverse max contact distance }
+    vec2 jitterOffset;          // (x = direction offset, y = step offset)
+
+    // scene infos
+    highp mat4 screenFromViewMatrix;
+    highp float depthParams;
+    float projectionScale;
+    vec4 resolution;
+    float maxLevel;
 
     // artistic/quality parameters
-    vec4 coneTraceParams;       // { tan(angle), sin(angle), start trace distance, inverse max contact distance }
     float intensity;
-    float invZoom;
     float depthBias;
     float slopeScaledDepthBias;
     uint sampleCount;
@@ -50,16 +58,16 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
     highp vec2 ssEndPos = (setup.screenFromViewMatrix * vec4(vsEndPos, 1.0)).xy * ssEndPosInvW;
 
     // cone trace direction in screen-space
-    float ssConeLength = length(ssEndPos.xy - ssStartPos);
+    float ssConeLength = length(ssEndPos - ssStartPos);
     float ssInvConeLength = 1.0 / ssConeLength;
-    vec2 ssConeDirection = (ssEndPos.xy - ssStartPos) * ssInvConeLength;
+    vec2 ssConeDirection = (ssEndPos - ssStartPos) * ssInvConeLength;
 
     // direction perpendicular to cone trace direction
     vec2 perpConeDir = vec2(ssConeDirection.y, -ssConeDirection.x);
 
     // avoid self-occlusion and reduce banding artifacts by normal variation
     vec3 vsViewVector = normalize(vsStartPos);
-    float minTraceDistance = (1.0 - abs(dot(setup.vsNormal, vsViewVector))) * 0.005;
+    float minTraceDistance = (1.0 - abs(dot(setup.vsNormal, vsViewVector))) * setup.projectionScale * 0.005;
 
     // init trace distance and sample radius
     highp float invLinearDepth = 1.0 / -setup.vsStartPos.z;
@@ -67,7 +75,7 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
 
     float ssSampleRadius = setup.coneTraceParams.y * ssTracedDistance;
     float ssEndRadius    = setup.coneTraceParams.y * ssConeLength;
-    float vsEndRadius    = ssEndRadius * setup.invZoom * invLinearDepth * ssEndPosW;
+    float vsEndRadius    = ssEndRadius * (1.0 / setup.projectionScale) * invLinearDepth * ssEndPosW;
 
     // calculate depth bias
     float vsDepthBias = saturate(1.0 - NoL) * setup.slopeScaledDepthBias + setup.depthBias;
@@ -85,9 +93,10 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
         float ssJitteredSampleRadius = setup.jitterOffset.x * setup.coneTraceParams.x * ssJitteredTracedDistance;
         ssTracedDistance += ssStepDistance;
 
-        // sample depth buffer
+        // sample depth buffer, using lower LOD as the radius (i.e. distance from origin) grows
         highp vec2 ssSamplePos = perpConeDir * ssJitteredSampleRadius + ssConeDirection * ssJitteredTracedDistance + ssStartPos;
-        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos, 0.0, setup.depthParams);
+        float level = clamp(floor(log2(ssJitteredTracedDistance)) - kSSCTLog2LodRate, 0.0, setup.maxLevel);
+        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos * setup.resolution.zw, level, setup.depthParams);
 
         // calculate depth of cone center
         float ratio = ssJitteredTracedDistance * ssInvConeLength;

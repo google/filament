@@ -319,7 +319,6 @@ void SimpleViewer::updateUserInterface() {
                 ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
                 ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);
                 ImGui::SliderFloat("Depth slope bias", &ssao.ssct.depthSlopeBias, 0.0f, 1.0f);
-                ImGui::SliderFloat("Scale", &ssao.ssct.scale, 0.0f, 10.0f);
                 ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
                 ImGuiExt::DirectionWidget("Direction##dls", ssao.ssct.lightDirection.v);
                 ssao.ssct.sampleCount = sampleCount;

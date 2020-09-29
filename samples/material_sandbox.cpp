@@ -628,7 +628,6 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
                     ImGui::SliderFloat("Depth bias", &params.ssaoOptions.ssct.depthBias, 0.0f, 1.0f);
                     ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Scale", &params.ssaoOptions.ssct.scale, 0.0f, 10.0f);
                     ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
                     ImGui::SliderInt("Ray Count", &rayCount, 1, 8);
                     ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);

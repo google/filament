@@ -298,7 +298,7 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/sao.filamat"
-        DEPENDS src/materials/ssao/dominantLightShadowing.fs
+        DEPENDS src/materials/ssao/ssct.fs
         APPEND
 )
 
