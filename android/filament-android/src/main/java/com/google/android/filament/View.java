@@ -238,17 +238,12 @@ public class View {
        /**
         * Depth bias in world units (mitigate self shadowing)
         */
-       public float ssctDepthBias = 0.1f;
+       public float ssctDepthBias = 0.01f;
 
        /**
         * Depth slope bias (mitigate self shadowing)
         */
-       public float ssctDepthSlopeBias = 0.1f;
-
-       /**
-        * Shadows scaling.
-        */
-       public float ssctScale = 1.0f;
+       public float ssctDepthSlopeBias = 0.01f;
 
        /**
         * Tracing sample count, between 1 and 255. This affects the quality as well as the
@@ -1184,7 +1179,7 @@ public class View {
                 options.enabled, options.minHorizonAngleRad);
         nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance, options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
-                options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctScale, options.ssctSampleCount,
+                options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
                 options.ssctRayCount, options.ssctEnabled);
     }
 
@@ -1350,7 +1345,7 @@ public class View {
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
-    private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, float ssctScale, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
+    private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);

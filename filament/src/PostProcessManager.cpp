@@ -473,7 +473,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
-
                 // Where the falloff function peaks
                 const float peak = 0.1f * options.radius;
                 const float intensity = (f::TAU * peak) * options.intensity;
@@ -483,9 +482,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 const auto invProjection = inverse(cameraInfo.projection);
                 const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
-                constexpr mat4 screenFromClipMatrix{ mat4::row_major_init{
-                        0.5, 0.0, 0.0, 0.5,
-                        0.0, 0.5, 0.0, 0.5,
+                const mat4 screenFromClipMatrix{ mat4::row_major_init{
+                        0.5 * desc.width, 0.0, 0.0, 0.5 * desc.width,
+                        0.0, 0.5 * desc.height, 0.0, 0.5 * desc.height,
                         0.0, 0.0, 0.5, 0.5,
                         0.0, 0.0, 0.0, 1.0
                 }};
@@ -502,11 +501,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         1.0f / (options.radius * options.radius));
                 mi->setParameter("minHorizonAngleSineSquared",
                         std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
+                mi->setParameter("projectionScale",
+                        projectionScale);
                 mi->setParameter("projectionScaleRadius",
                         projectionScale * options.radius);
                 mi->setParameter("depthParams",
                         cameraInfo.projection[3][2] * 0.5f);
-
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
@@ -522,7 +522,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("ssctConeTraceParams", float4{
                         options.ssct.enabled ? std::tan(options.ssct.lightConeRad * 0.5f) : 0.0f,
                         std::sin(options.ssct.lightConeRad * 0.5f),
-                        options.ssct.startTraceDistance,
+                        options.ssct.startTraceDistance * projectionScale,
                         1.0f / options.ssct.contactDistanceMax
                 });
 
@@ -539,7 +539,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("ssctVsLightDirection", -l);
                 mi->setParameter("ssctDepthBias",
                         float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });
-                mi->setParameter("ssctInvZoom", options.ssct.scale);
                 mi->setParameter("ssctSampleCount", uint32_t(options.ssct.sampleCount));
                 mi->setParameter("ssctRayCount",
                         float2{ options.ssct.rayCount, 1.0 / options.ssct.rayCount });
