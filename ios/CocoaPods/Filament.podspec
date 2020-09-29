@@ -8,6 +8,12 @@ Pod::Spec.new do |spec|
   spec.platform = :ios, "11.0"
   spec.source = { :http => "https://github.com/google/filament/releases/download/v1.9.2/filament-v1.9.2-ios.tgz" }
 
+  # Fix linking error with Xcode 12; we do not yet support the simulator on Apple silicon.
+  spec.pod_target_xcconfig = {
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64'
+  }
+  spec.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+
   spec.subspec "filament" do |ss|
     ss.source_files =
         "include/filament/*.h",
