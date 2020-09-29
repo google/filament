@@ -427,17 +427,7 @@ void ShadowMap::computeShadowCameraDirectional(
         }
         mLightSpace = St;
 
-        // The mLightSpace matrix transforms coordinates from world space into (u, v, z)
-        // coordinates, where (u, v) are used to access the shadow map, and z is the PCF
-        // comparison value between 0 and 1.
-        // For VSM, we don't want to project the z coordinate, but do want to transform it to linear
-        // light space. We then scale the z by zfar, which prevents us from overflowing when we
-        // square z in the depth shader.
-        mLightSpaceVsm = mLightSpace;
-        mLightSpaceVsm[0][2] = Mv[0][2] / std::abs(zfar);
-        mLightSpaceVsm[1][2] = Mv[1][2] / std::abs(zfar);
-        mLightSpaceVsm[2][2] = Mv[2][2] / std::abs(zfar);
-        mLightSpaceVsm[3][2] = Mv[3][2] / std::abs(zfar);
+        mLightSpaceVsm = computeVsmLightSpaceMatrix(mLightSpace, Mv, zfar);
 
         // We apply the constant bias in world space (as opposed to light-space) to account
         // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
@@ -491,17 +481,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
     mLightSpace = St;
 
-    // The mLightSpace matrix transforms coordinates from world space into (u, v, z) coordinates,
-    // where (u, v) are used to access the shadow map, and z is the PCF comparison value between 0
-    // and 1.
-    // For VSM, we don't want to project the z coordinate, but do want to transform it to linear
-    // light space. We then scale the z by farPlane, which prevents us from overflowing when we
-    // square z in the depth shader.
-    mLightSpaceVsm = mLightSpace;
-    mLightSpaceVsm[0][2] = Mv[0][2] / farPlane;
-    mLightSpaceVsm[1][2] = Mv[1][2] / farPlane;
-    mLightSpaceVsm[2][2] = Mv[2][2] / farPlane;
-    mLightSpaceVsm[3][2] = Mv[3][2] / farPlane;
+    mLightSpaceVsm = computeVsmLightSpaceMatrix(mLightSpace, Mv, farPlane);
 
     const mat4f b = mat4f::translation(dir * params.options.constantBias);
     const mat4f Sb = S * b;
@@ -639,6 +619,25 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
 
     // Compute shadow-map texture access transform
     return Mf * Mb * Mv * Mt;
+}
+
+math::mat4f ShadowMap::computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf, const
+        math::mat4f& Mv, float zfar) noexcept {
+    // The lightSpacePcf matrix transforms coordinates from world space into (u, v, z) coordinates,
+    // where (u, v) are used to access the shadow map, and z is the PCF comparison value between 0
+    // and 1.
+    // For VSM, we want to leave the z coordinate in linear light space, with a few adjustments:
+    //   - We scale the z by zfar, which prevents us from overflowing when we square z in the depth
+    //     shader.
+    //   - The negative sign accounts for our right-handed coordinate system, where -z is forward.
+    // When sampling a VSM shadow map, the shader follows suit, and doesn't divide by w for the z
+    // coordinate. See getters.fs.
+    math::mat4f lightSpaceVsm = lightSpacePcf;
+    lightSpaceVsm[0][2] = Mv[0][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[1][2] = Mv[1][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[2][2] = Mv[2][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[3][2] = Mv[3][2] * (-1.0f / std::abs(zfar));
+    return lightSpaceVsm;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except

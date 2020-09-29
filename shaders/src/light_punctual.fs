@@ -172,10 +172,8 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
         if (light.NoL > 0.0){
             if (light.castsShadows) {
 #if defined(HAS_VSM)
-                highp vec3 lightSpacePosition = getSpotLightSpacePosition(light.shadowIndex);
-                // Flip the sign of the Z coordinate; -Z is forward in light space.
-                lightSpacePosition.z *= -1.0;
-                visibility = shadowVsm(light_shadowMap, light.shadowLayer, lightSpacePosition);
+                visibility = shadowVsm(light_shadowMap, light.shadowLayer,
+                        getSpotLightSpacePosition(light.shadowIndex));
 #else
                 visibility = shadow(light_shadowMap, light.shadowLayer,
                     getSpotLightSpacePosition(light.shadowIndex));

@@ -46,10 +46,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
 #if defined(HAS_VSM)
-            highp vec3 lightSpacePosition = getCascadeLightSpacePosition(cascade);
-            // Flip the sign of the Z coordinate; -Z is forward in light space.
-            lightSpacePosition.z *= -1.0;
-            visibility = shadowVsm(light_shadowMap, layer, lightSpacePosition);
+            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #else
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #endif
