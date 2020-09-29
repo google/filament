@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
+#include <viewer/Automation.h>
 #include <viewer/Settings.h>
 
 #include <gtest/gtest.h>
 
 using namespace filament::viewer;
+
+using std::vector;
 
 class ViewSettingsTest : public testing::Test {};
 
@@ -127,6 +130,30 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
 }
 )TXT";
 
+static const char* JSON_AUTOMATION_TEST = R"TXT([
+    {
+        "name": "ppoff",
+        "base": {
+            "view.postProcessingEnabled": false
+        }
+    },
+    {
+        "name": "viewopts",
+        "base": {
+            "view.postProcessingEnabled": true
+        }
+        "permute": {
+            "view.dithering": ["NONE", "TEMPORAL"],
+            "view.sampleCount": [1, 4],
+            "view.taa.enabled": [false, true],
+            "view.antiAliasing": ["FXAA", "NONE"],
+            "view.ssao.enabled": [false, true],
+            "view.bloom.enabled": [false, true]
+        }
+    }
+]
+)TXT";
+
 TEST_F(ViewSettingsTest, JsonTestDefaults) {
     Settings settings1 = {0};
     ASSERT_TRUE(readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
@@ -135,10 +162,18 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
 
     Settings settings2;
     ASSERT_TRUE(readJson("{}", strlen("{}"), &settings2));
-    ASSERT_EQ(writeJson(settings1), writeJson(settings2));
+    ASSERT_FALSE(readJson("{ badly_formed }", strlen("{ badly_formed }"), &settings2));
 
     Settings settings3;
-    ASSERT_EQ(writeJson(settings1), writeJson(settings3));
+    ASSERT_EQ(writeJson(settings2), writeJson(settings3));
+}
+
+TEST_F(ViewSettingsTest, AutomationSpec) {
+    vector<AutomationSpec> specs;
+    ASSERT_TRUE(generate(JSON_AUTOMATION_TEST, strlen(JSON_AUTOMATION_TEST), &specs));
+    ASSERT_EQ(specs.size(), 2);
+    ASSERT_EQ(specs[0].cases.size(), 1);
+    ASSERT_EQ(specs[1].cases.size(), 1 << 6);
 }
 
 int main(int argc, char** argv) {

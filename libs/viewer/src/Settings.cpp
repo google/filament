@@ -18,16 +18,12 @@
 
 #include <utils/Log.h>
 
-#include <sstream>
-#include <string>
+#include "parse.h"
 
 #include <assert.h>
 
-#include <jsmn.h>
-
-#define CHECK_TOKTYPE(tok_, type_) if ((tok_).type != (type_)) { return -1; }
-#define CHECK_KEY(tok_) if ((tok_).type != JSMN_STRING || (tok_).size == 0) { return -1; }
-#define STR(tok, jsonChunk) std::string(jsonChunk + tok.start, tok.end - tok.start)
+#include <sstream>
+#include <string>
 
 using namespace utils;
 
@@ -35,14 +31,14 @@ namespace filament {
 namespace viewer {
 
 // Compares a JSON string token against a C string.
-static int compare(jsmntok_t tok, const char* jsonChunk, const char* str) {
+int compare(jsmntok_t tok, const char* jsonChunk, const char* str) {
     size_t slen = strlen(str);
     size_t tlen = tok.end - tok.start;
     return (slen == tlen) ? strncmp(jsonChunk + tok.start, str, slen) : 128;
 }
 
 // Skips over an unused token.
-static int parse(jsmntok_t const* tokens, int i) {
+int parse(jsmntok_t const* tokens, int i) {
     int end = i + 1;
     while (i < end) {
         switch (tokens[i].type) {
@@ -573,7 +569,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
     return i;
 }
 
-static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
