@@ -305,8 +305,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->depthBias);
         } else if (compare(tok, jsonChunk, "depthSlopeBias") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->depthSlopeBias);
-        } else if (compare(tok, jsonChunk, "scale") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->scale);
         } else if (compare(tok, jsonChunk, "sampleCount") == 0){
             i = parse(tokens, i + 1, jsonChunk, &out->sampleCount);
         } else {
@@ -770,7 +768,6 @@ std::string writeJson(const AmbientOcclusionOptions::Ssct& in) {
         << "\"lightDirection\": " << writeJson(in.lightDirection) << ",\n"
         << "\"depthBias\": " << writeJson(in.depthBias) << ",\n"
         << "\"depthSlopeBias\": " << writeJson(in.depthSlopeBias) << ",\n"
-        << "\"scale\": " << writeJson(in.scale) << ",\n"
         << "\"sampleCount\": " << writeJson(in.sampleCount) << "\n"
         << "}";
     return oss.str();

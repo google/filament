@@ -75,7 +75,6 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
                 "lightDirection": [0, -1, 0],
                 "depthBias": 0.1,
                 "depthSlopeBias": 0.1,
-                "scale": 1.0,
                 "sampleCount": 4
             }
         },
