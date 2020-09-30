@@ -393,16 +393,19 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 renderer->render(view->getView());
             }
             renderer->endFrame();
-        } else {
-            ++mSkippedFrames;
-        }
 
-        if (postRender) {
-            for (auto const& view : window->mViews) {
-                if (view.get() != window->mUiView) {
-                    postRender(mEngine, view->getView(), mScene, renderer);
+            // We call PostRender only when the frame has not been skipped. It might be used
+            // for taking screenshots under the assumption that a state change has taken effect.
+            if (postRender) {
+                for (auto const& view : window->mViews) {
+                    if (view.get() != window->mUiView) {
+                        postRender(mEngine, view->getView(), mScene, renderer);
+                    }
                 }
             }
+
+        } else {
+            ++mSkippedFrames;
         }
     }
 
