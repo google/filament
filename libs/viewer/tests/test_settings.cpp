@@ -21,8 +21,6 @@
 
 using namespace filament::viewer;
 
-using std::vector;
-
 class ViewSettingsTest : public testing::Test {};
 
 static const char* JSON_TEST_DEFAULTS = R"TXT(
@@ -169,11 +167,13 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
 }
 
 TEST_F(ViewSettingsTest, AutomationSpec) {
-    vector<AutomationSpec> specs;
-    ASSERT_TRUE(generate(JSON_AUTOMATION_TEST, strlen(JSON_AUTOMATION_TEST), &specs));
-    ASSERT_EQ(specs.size(), 2);
-    ASSERT_EQ(specs[0].cases.size(), 1);
-    ASSERT_EQ(specs[1].cases.size(), 1 << 6);
+    AutomationList* specs = AutomationList::generate(JSON_AUTOMATION_TEST,
+            strlen(JSON_AUTOMATION_TEST));
+    ASSERT_TRUE(specs);
+    ASSERT_EQ(specs->size(), 2);
+    ASSERT_EQ(specs->get(0).count, 1);
+    ASSERT_EQ(specs->get(1).count, 1 << 6);
+    delete specs;
 }
 
 int main(int argc, char** argv) {

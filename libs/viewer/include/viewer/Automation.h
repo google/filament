@@ -17,30 +17,46 @@
 #ifndef VIEWER_AUTOMATION_H
 #define VIEWER_AUTOMATION_H
 
-#include <string>
-#include <vector>
-
 #include <viewer/Settings.h>
 
 namespace filament {
 namespace viewer {
 
-// Named list of settings permutations.
+// Immutable list of settings permutations that are created and owned by AutomationList.
 struct AutomationSpec {
-    std::string name;
-    std::vector<Settings> cases;
+    char const* name;
+    size_t count;
+    Settings const* settings;
 };
 
-// Consumes a JSON string and produces a list of automation specs using a counting algorithm.
+// List of automation specs constructed from a JSON string.
 //
 // Each top-level item in the JSON is an object with "name", "base" and "permute".
 // The "base" object specifies a single set of changes to apply to default settings.
 // The optional "permute" object specifies a cross product of changes to apply to the base.
 // See the unit test for an example.
-//
-// - Returns true if successful.
-// - This function writes warnings and error messages into the utils log.
-bool generate(const char* jsonChunk, size_t size, std::vector<AutomationSpec>* out);
+class AutomationList {
+public:
+
+    // Parses a JSON spec, then generates a set of Settings lists.
+    // Returns null on failure (see utils log for warnings and errors).
+    // Clients should release memory using "delete".
+    static AutomationList* generate(const char* jsonChunk, size_t size);
+
+    // Returns the number of generated Settings lists.
+    size_t size() const;
+
+    // Returns a view onto a generated Settings list.
+    AutomationSpec get(size_t index) const;
+
+    // Frees all Settings objects and name strings.
+    ~AutomationList();
+
+private:
+    struct Impl;
+    AutomationList(Impl*);
+    Impl* mImpl;
+};
 
 } // namespace viewer
 } // namespace filament

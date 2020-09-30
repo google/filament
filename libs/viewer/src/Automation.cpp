@@ -23,6 +23,8 @@
 #include <assert.h>
 
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include <utils/Log.h>
 
@@ -34,6 +36,15 @@ static const bool VERBOSE = false;
 
 namespace filament {
 namespace viewer {
+
+struct SpecImpl {
+    std::string name;
+    std::vector<Settings> cases;
+};
+
+struct AutomationList::Impl {
+    std::vector<SpecImpl> specs;
+};
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, std::string* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_STRING);
@@ -100,7 +111,7 @@ static int parsePermutationsSpec(jsmntok_t const* tokens, int i, const char* jso
 }
 
 static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonChunk,
-        AutomationSpec* out) {
+        SpecImpl* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
     Settings base;
@@ -193,8 +204,7 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
     return i;
 }
 
-static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
-        vector<AutomationSpec>* out) {
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, vector<SpecImpl>* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_ARRAY);
     int size = tokens[i++].size;
     out->resize(size);
@@ -204,12 +214,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
-bool generate(const char* jsonChunk, size_t size, vector<AutomationSpec>* out) {
+AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
     jsmn_parser parser = { 0, 0, 0 };
 
     int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
     if (tokenCount <= 0) {
-        return false;
+        return nullptr;
     }
 
     jsmntok_t* tokens = (jsmntok_t*) malloc(sizeof(jsmntok_t) * tokenCount);
@@ -220,13 +230,33 @@ bool generate(const char* jsonChunk, size_t size, vector<AutomationSpec>* out) {
 
     if (tokenCount <= 0) {
         free(tokens);
-        return false;
+        return nullptr;
     }
 
-    int i = parse(tokens, 0, jsonChunk, out);
+    AutomationList::Impl* impl = new AutomationList::Impl();
+    int i = parse(tokens, 0, jsonChunk, &impl->specs);
     free(tokens);
-    return i >= 0;
+
+    if (i < 0) {
+        delete impl;
+        return nullptr;
+    }
+
+    return new AutomationList(impl);
 }
+
+AutomationSpec AutomationList::get(size_t index) const {
+    const SpecImpl& spec = mImpl->specs[index];
+    return {
+        .name = spec.name.c_str(),
+        .count = spec.cases.size(),
+        .settings = spec.cases.data()
+    };
+}
+
+size_t AutomationList::size() const { return mImpl->specs.size(); }
+AutomationList::AutomationList(Impl* impl) : mImpl(impl) {}
+AutomationList::~AutomationList() { delete mImpl; }
 
 } // namespace viewer
 } // namespace filament
