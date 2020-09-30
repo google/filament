@@ -18,7 +18,7 @@
 
 #include <viewer/Automation.h>
 
-#include "parse.h"
+#include "jsonParseUtils.h"
 
 #include <assert.h>
 
