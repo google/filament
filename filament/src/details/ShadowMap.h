@@ -98,6 +98,10 @@ public:
     // Valid after calling update().
     math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
 
+    // Computes the transform to use in the shader to access the shadow map for VSM.
+    // Valid after calling update().
+    math::mat4f const& getLightSpaceMatrixVsm() const noexcept { return mLightSpaceVsm; }
+
     // return the size of a texel in world space (pre-warping)
     float getTexelSizeWorldSpace() const noexcept { return mTexelSizeWs; }
 
@@ -205,6 +209,9 @@ private:
 
     math::mat4f getTextureCoordsMapping() const noexcept;
 
+    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpace,
+            const math::mat4f& Mv, float zfar) noexcept;
+
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
 
@@ -225,6 +232,7 @@ private:
     FCamera* mCamera = nullptr;
     FCamera* mDebugCamera = nullptr;
     math::mat4f mLightSpace;
+    math::mat4f mLightSpaceVsm;
     float mTexelSizeWs = 0.0f;
 
     // set-up in update()

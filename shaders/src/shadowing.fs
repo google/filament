@@ -355,14 +355,15 @@ float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec
 #endif
 }
 
-float shadowVsm(const highp sampler2DArray shadowMap, const uint layer, const highp vec3 shadowPosition,
-        const highp float fragDepth) {
+highp float shadowVsm(const highp sampler2DArray shadowMap, const uint layer,
+        const highp vec3 shadowPosition) {
     highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
+    highp float depth = shadowPosition.z;
 
     // TODO: bias and lightBleedReduction should be uniforms
     const float bias = 0.01;
     const float lightBleedReduction = 0.2;
 
-    const float minVariance = bias * 0.01;
-    return chebyshevUpperBound(moments, fragDepth, minVariance, lightBleedReduction);
+    const float minVariance = bias * 0.001;
+    return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
 }

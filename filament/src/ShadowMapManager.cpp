@@ -155,6 +155,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                     if (view.hasVsm()) {
                         renderTarget.attachments = { { data.shadows, 0u, i }, { data.tempShadow } };
                         renderTarget.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+                        renderTarget.clearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
                     } else {
                         renderTarget.attachments = { {}, { data.shadows, 0u, i } };
                         renderTarget.clearFlags = TargetBufferFlags::DEPTH;
@@ -350,7 +351,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         if (shadowMap.hasVisibleShadows()) {
             entry.setHasVisibleShadows(true);
 
-            mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
+            mat4f const& lightFromWorldMatrix =
+                view.hasVsm() ? shadowMap.getLightSpaceMatrixVsm() : shadowMap.getLightSpaceMatrix();
             perViewUb.setUniform(offsetof(PerViewUib, lightFromWorldMatrix) +
                     sizeof(mat4f) * i, lightFromWorldMatrix);
 
@@ -426,9 +428,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_SPOT_SHADOW_CASTER_N_BIT(i));
 
-            mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
+            mat4f const& lightFromWorldMatrix =
+                view.hasVsm() ? shadowMap.getLightSpaceMatrixVsm() : shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(ShadowUib, spotLightFromWorldMatrix) +
-                         sizeof(mat4f) * i, lightFromWorldMatrix);
+                    sizeof(mat4f) * i, lightFromWorldMatrix);
 
             shadowInfo[l].castsShadows = true;
             shadowInfo[l].index = i;

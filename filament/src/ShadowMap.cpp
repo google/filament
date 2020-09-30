@@ -91,35 +91,9 @@ void ShadowMap::computeSceneCascadeParams(const FScene::LightSoa& lightData, siz
         FView const& view, filament::CameraInfo const& camera, uint8_t visibleLayers,
         CascadeParameters& cascadeParams) {
     // Calculate the directional light's "position".
-    // For VSM, we pick a point on the sphere that bounds the camera's culling frustum.
-    if (view.hasVsm()) {
-        // Calculate view frustum vertices in world-space.
-        // TODO: take shadowFar into account.
-        float3 wsViewFrustumVertices[8];
-        computeFrustumCorners(wsViewFrustumVertices,
-                camera.model * FCamera::inverseProjection(camera.cullingProjection));
-
-        // Find the centroid of the frustum in world-space.
-        float3 wsCentroid { 0.0, 0.0, 0.0 };
-        for (float3 v : wsViewFrustumVertices) {
-            wsCentroid += v;
-        }
-        wsCentroid *= (1.0 / 8.0);
-
-        // Find the radius of the frustum's bounding sphere.
-        float wsRadius = 0.0f;
-        for (float3 v : wsViewFrustumVertices) {
-            float distance = length(v - wsCentroid);
-            wsRadius = max(wsRadius, distance);
-        }
-
-        const float3 l = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
-        cascadeParams.wsLightPosition = wsCentroid - (l * wsRadius);
-    } else {
-        // For PCF, we could choose any position; we pick the camera position so we have a fixed
-        // reference -- that's "not too far" from the scene.
-        cascadeParams.wsLightPosition = camera.getPosition();
-    }
+    // We could choose any position; we pick the camera position so we have a fixed
+    // reference -- that's "not too far" from the scene.
+    cascadeParams.wsLightPosition = camera.getPosition();
 
     // Compute the light's model matrix.
     const float3 lightPosition = cascadeParams.wsLightPosition;
@@ -453,6 +427,8 @@ void ShadowMap::computeShadowCameraDirectional(
         }
         mLightSpace = St;
 
+        mLightSpaceVsm = computeVsmLightSpaceMatrix(mLightSpace, Mv, zfar);
+
         // We apply the constant bias in world space (as opposed to light-space) to account
         // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
         // by baking it in the shadow-map itself.
@@ -485,13 +461,14 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
 
     // Choose a reasonable value for the near plane.
     const float nearPlane = 0.1f;
+    const float farPlane = radius;
 
     const float3 lightPosition = position;
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{0, 1, 0});
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
     float outerConeAngleDegrees = outerConeAngle * f::RAD_TO_DEG;
-    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, radius,
+    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2, 1.0f, nearPlane, farPlane,
             mat4f::Fov::HORIZONTAL);
 
     const mat4f MpMv(Mp * Mv);
@@ -504,6 +481,8 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
     mLightSpace = St;
 
+    mLightSpaceVsm = computeVsmLightSpaceMatrix(mLightSpace, Mv, farPlane);
+
     const mat4f b = mat4f::translation(dir * params.options.constantBias);
     const mat4f Sb = S * b;
 
@@ -513,7 +492,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     // baked in.
 
     mCamera->setModelMatrix(FCamera::rigidTransformInverse(b) * M);
-    mCamera->setCustomProjection(mat4(Mp), nearPlane, radius);
+    mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
@@ -640,6 +619,25 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
 
     // Compute shadow-map texture access transform
     return Mf * Mb * Mv * Mt;
+}
+
+math::mat4f ShadowMap::computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf, const
+        math::mat4f& Mv, float zfar) noexcept {
+    // The lightSpacePcf matrix transforms coordinates from world space into (u, v, z) coordinates,
+    // where (u, v) are used to access the shadow map, and z is the PCF comparison value between 0
+    // and 1.
+    // For VSM, we want to leave the z coordinate in linear light space, with a few adjustments:
+    //   - We scale the z by zfar, which prevents us from overflowing when we square z in the depth
+    //     shader.
+    //   - The negative sign accounts for our right-handed coordinate system, where -z is forward.
+    // When sampling a VSM shadow map, the shader follows suit, and doesn't divide by w for the z
+    // coordinate. See getters.fs.
+    math::mat4f lightSpaceVsm = lightSpacePcf;
+    lightSpaceVsm[0][2] = Mv[0][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[1][2] = Mv[1][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[2][2] = Mv[2][2] * (-1.0f / std::abs(zfar));
+    lightSpaceVsm[3][2] = Mv[3][2] * (-1.0f / std::abs(zfar));
+    return lightSpaceVsm;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except
