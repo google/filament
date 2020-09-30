@@ -22,12 +22,32 @@
 namespace filament {
 namespace viewer {
 
-// Immutable list of Settings objects generated from a JSON spec.
-//
-// Each top-level item in the JSON spec is an object with "name", "base" and "permute".
-// The "base" object specifies a single set of changes to apply to default settings.
-// The optional "permute" object specifies a cross product of changes to apply to the base.
-// See the unit test for an example.
+/**
+ * Immutable list of Settings objects generated from a JSON spec.
+ *
+ * Each top-level item in the JSON spec is an object with "name", "base" and "permute".
+ * The "base" object specifies a single set of changes to apply to default settings.
+ * The optional "permute" object specifies a cross product of changes to apply to the base.
+ *
+ * The following example generates a total of 5 test cases.
+ * [{
+ *    "name": "simple",
+ *    "base": {
+ *      "view.dof.focusDistance": 0.1,
+ *      "view.bloom.strength": 0.5
+ *   },
+ *   "permute": {
+ *     "view.bloom.enabled": [false, true],
+ *     "view.dof.enabled": [false, true]
+ *   }
+ * },
+ * {
+ *   "name": "ppoff",
+ *   "base": {
+ *     "view.postProcessingEnabled": false
+ *   }
+ * }]
+ */
 class AutomationSpec {
 public:
 
