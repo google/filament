@@ -340,6 +340,10 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Enable VSM", &enableVsm);
         mViewSettings.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
 
+        char label[32];
+        snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
+        ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug cascades",
                 debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
@@ -379,6 +383,9 @@ void SimpleViewer::updateUserInterface() {
         lm.setDirection(sun, normalize(mSunlightDirection));
         lm.setColor(sun, mSunlightColor);
         lm.setShadowCaster(sun, mEnableShadows);
+        auto options = lm.getShadowOptions(sun);
+        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
+        lm.setShadowOptions(sun, options);
     } else {
         mScene->remove(mSunlight);
     }
@@ -387,6 +394,7 @@ void SimpleViewer::updateUserInterface() {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
         options.shadowCascades = mShadowCascades;
+        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
         std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
