@@ -625,74 +625,74 @@ static std::string writeJson(uint8_t v) {  return std::to_string((int)v); }
 
 static const char* writeJson(AntiAliasing in) {
     switch (in) {
-        case AntiAliasing::NONE: return "NONE";
-        case AntiAliasing::FXAA: return "FXAA";
+        case AntiAliasing::NONE: return "\"NONE\"";
+        case AntiAliasing::FXAA: return "\"FXAA\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(Dithering in) {
     switch (in) {
-        case Dithering::NONE: return "NONE";
-        case Dithering::TEMPORAL: return "TEMPORAL";
+        case Dithering::NONE: return "\"NONE\"";
+        case Dithering::TEMPORAL: return "\"TEMPORAL\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(ShadowType in) {
     switch (in) {
-        case ShadowType::PCF: return "PCF";
-        case ShadowType::VSM: return "VSM";
+        case ShadowType::PCF: return "\"PCF\"";
+        case ShadowType::VSM: return "\"VSM\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(BlendMode in) {
     switch (in) {
-        case BlendMode::ADD: return "ADD";
-        case BlendMode::INTERPOLATE: return "INTERPOLATE";
+        case BlendMode::ADD: return "\"ADD\"";
+        case BlendMode::INTERPOLATE: return "\"INTERPOLATE\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(VQL in) {
     switch (in) {
-        case VQL::LOW: return "LOW";
-        case VQL::MEDIUM: return "MEDIUM";
-        case VQL::HIGH: return "HIGH";
-        case VQL::ULTRA: return "ULTRA";
+        case VQL::LOW: return "\"LOW\"";
+        case VQL::MEDIUM: return "\"MEDIUM\"";
+        case VQL::HIGH: return "\"HIGH\"";
+        case VQL::ULTRA: return "\"ULTRA\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(CGQL in) {
     switch (in) {
-        case CGQL::LOW: return "LOW";
-        case CGQL::MEDIUM: return "MEDIUM";
-        case CGQL::HIGH: return "HIGH";
-        case CGQL::ULTRA: return "ULTRA";
+        case CGQL::LOW: return "\"LOW\"";
+        case CGQL::MEDIUM: return "\"MEDIUM\"";
+        case CGQL::HIGH: return "\"HIGH\"";
+        case CGQL::ULTRA: return "\"ULTRA\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static const char* writeJson(ToneMapping in) {
     switch (in) {
-        case ToneMapping::LINEAR: return "LINEAR";
-        case ToneMapping::ACES_LEGACY: return "ACES_LEGACY";
-        case ToneMapping::ACES: return "ACES";
-        case ToneMapping::FILMIC: return "FILMIC";
-        case ToneMapping::UCHIMURA: return "UCHIMURA";
-        case ToneMapping::REINHARD: return "REINHARD";
-        case ToneMapping::DISPLAY_RANGE: return "DISPLAY_RANGE";
+        case ToneMapping::LINEAR: return "\"LINEAR\"";
+        case ToneMapping::ACES_LEGACY: return "\"ACES_LEGACY\"";
+        case ToneMapping::ACES: return "\"ACES\"";
+        case ToneMapping::FILMIC: return "\"FILMIC\"";
+        case ToneMapping::UCHIMURA: return "\"UCHIMURA\"";
+        case ToneMapping::REINHARD: return "\"REINHARD\"";
+        case ToneMapping::DISPLAY_RANGE: return "\"DISPLAY_RANGE\"";
     }
-    return "INVALID";
+    return "\"INVALID\"";
 }
 
 static std::string writeJson(const float* v, int count) {
     std::ostringstream oss;
     oss << "[";
     for (int i = 0; i < count; i++) {
-        oss << v;
+        oss << v[i];
         if (i < count - 1) {
             oss << ", ";
         }

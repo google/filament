@@ -53,17 +53,17 @@ using VignetteOptions = filament::View::VignetteOptions;
 bool readJson(const char* jsonChunk, size_t size, Settings* out);
 
 // Generates human-readable JSON strings from settings objects.
-std::string writeJson(const AmbientOcclusionOptions& out);
-std::string writeJson(const BloomOptions& out);
-std::string writeJson(const ColorGradingSettings& out);
-std::string writeJson(const DepthOfFieldOptions& out);
-std::string writeJson(const DynamicLightingSettings& out);
-std::string writeJson(const FogOptions& out);
-std::string writeJson(const RenderQuality& out);
-std::string writeJson(const Settings& out);
-std::string writeJson(const TemporalAntiAliasingOptions& out);
-std::string writeJson(const ViewSettings& out);
-std::string writeJson(const VignetteOptions& out);
+std::string writeJson(const AmbientOcclusionOptions& in);
+std::string writeJson(const BloomOptions& in);
+std::string writeJson(const ColorGradingSettings& in);
+std::string writeJson(const DepthOfFieldOptions& in);
+std::string writeJson(const DynamicLightingSettings& in);
+std::string writeJson(const FogOptions& in);
+std::string writeJson(const RenderQuality& in);
+std::string writeJson(const Settings& in);
+std::string writeJson(const TemporalAntiAliasingOptions& in);
+std::string writeJson(const ViewSettings& in);
+std::string writeJson(const VignetteOptions& in);
 
 struct ColorGradingSettings {
     bool enabled = true;
