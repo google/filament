@@ -130,6 +130,12 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jcla
     view->setDynamicResolutionOptions(options);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetShadowType(JNIEnv*, jclass, jlong nativeView, jint type) {
+    View* view = (View*) nativeView;
+    view->setShadowType((View::ShadowType) type);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderQuality(JNIEnv*, jclass,

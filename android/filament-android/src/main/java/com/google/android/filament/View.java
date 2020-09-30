@@ -566,6 +566,23 @@ public class View {
     }
 
     /**
+     * List of available shadow mapping techniques.
+     *
+     * @see #setShadowType
+     */
+    public enum ShadowType {
+        /**
+         * Percentage-closer filtered shadows (default).
+         */
+        PCF,
+
+        /**
+         * Variance shadows.
+         */
+        VSM
+    }
+
+    /**
      * Used to select buffers.
      */
     public enum TargetBufferFlags {
@@ -1147,6 +1164,17 @@ public class View {
     }
 
     /**
+     * Sets the shadow mapping technique this View uses.
+     *
+     * The ShadowType affects all the shadows seen within the View.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     */
+    public void setShadowType(ShadowType type) {
+        nSetShadowType(getNativeObject(), type.ordinal());
+    }
+
+    /**
      * Activates or deactivates ambient occlusion.
      * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
@@ -1337,6 +1365,7 @@ public class View {
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
+    private static native void nSetShadowType(long nativeView, int type);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
