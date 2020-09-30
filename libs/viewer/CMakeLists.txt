@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/jsonParseUtils.h
         src/Automation.cpp
         src/Settings.cpp
         src/SimpleViewer.cpp

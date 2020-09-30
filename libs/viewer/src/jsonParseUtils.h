@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#ifndef VIEWER_JSON_PARSE_UTILS_H
+#define VIEWER_JSON_PARSE_UTILS_H
+
 #include <jsmn.h>
 
 namespace filament {
@@ -31,3 +34,5 @@ int compare(jsmntok_t tok, const char* jsonChunk, const char* str);
 
 } // namespace viewer
 } // namespace filament
+
+#endif // VIEWER_JSON_PARSE_UTILS_H

@@ -18,7 +18,7 @@
 
 #include <utils/Log.h>
 
-#include "parse.h"
+#include "jsonParseUtils.h"
 
 #include <assert.h>
 
