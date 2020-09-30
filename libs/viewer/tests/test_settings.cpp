@@ -73,8 +73,8 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
                 "contactDistanceMax": 1.0,
                 "intensity": 0.8,
                 "lightDirection": [0, -1, 0],
-                "depthBias": 0.1,
-                "depthSlopeBias": 0.1,
+                "depthBias": 0.01,
+                "depthSlopeBias": 0.01,
                 "sampleCount": 4
             }
         },
