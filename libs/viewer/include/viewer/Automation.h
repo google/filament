@@ -22,38 +22,32 @@
 namespace filament {
 namespace viewer {
 
-// Immutable list of settings permutations that are created and owned by AutomationList.
-struct AutomationSpec {
-    char const* name;
-    size_t count;
-    Settings const* settings;
-};
-
-// List of automation specs constructed from a JSON string.
+// Immutable list of Settings objects generated from a JSON spec.
 //
-// Each top-level item in the JSON is an object with "name", "base" and "permute".
+// Each top-level item in the JSON spec is an object with "name", "base" and "permute".
 // The "base" object specifies a single set of changes to apply to default settings.
 // The optional "permute" object specifies a cross product of changes to apply to the base.
 // See the unit test for an example.
 class AutomationList {
 public:
 
-    // Parses a JSON spec, then generates a set of Settings lists.
+    // Parses a JSON spec, then generates a list of Settings objects.
     // Returns null on failure (see utils log for warnings and errors).
     // Clients should release memory using "delete".
-    static AutomationList* generate(const char* jsonChunk, size_t size);
+    static AutomationList* generate(const char* jsonSpec, size_t size);
 
-    // Generates a default list of cases using an embedded JSON spec.
-    static AutomationList* generateDefault();
+    // Generates a list of Settings objects using an embedded JSON spec.
+    static AutomationList* generateDefaultTestCases();
 
-    // Returns the number of generated Settings lists.
+    // Returns the number of generated Settings objects.
     size_t size() const;
 
-    // Returns a view onto a generated Settings list.
-    AutomationSpec get(size_t index) const;
+    // Gets a generated Settings object and copies it out.
+    // Returns false if the given index is out of bounds.
+    bool get(size_t index, Settings* out) const;
 
-    // Returns the total number of Settings objects.
-    size_t totalCount() const;
+    // Returns the name of the JSON group for a given Settings object.
+    char const* getName(size_t index) const;
 
     // Frees all Settings objects and name strings.
     ~AutomationList();

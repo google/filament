@@ -143,12 +143,23 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
 }
 
 TEST_F(ViewSettingsTest, AutomationSpec) {
-    AutomationList* specs = AutomationList::generateDefault();
+    AutomationList* specs = AutomationList::generateDefaultTestCases();
     ASSERT_TRUE(specs);
-    ASSERT_EQ(specs->size(), 2);
-    ASSERT_EQ(specs->get(0).count, 1);
-    ASSERT_EQ(specs->get(1).count, 1 << 6);
-    ASSERT_EQ(specs->totalCount(), 1 + (1 << 6));
+    ASSERT_EQ(specs->size(), 65);
+
+    Settings settings;
+
+    ASSERT_TRUE(specs->get(0, &settings));
+    ASSERT_FALSE(settings.view.postProcessingEnabled);
+    ASSERT_EQ(settings.view.dithering, Dithering::TEMPORAL);
+
+    ASSERT_TRUE(specs->get(1, &settings));
+    ASSERT_TRUE(settings.view.postProcessingEnabled);
+    ASSERT_EQ(settings.view.dithering, Dithering::NONE);
+
+    ASSERT_TRUE(specs->get(64, &settings));
+    ASSERT_FALSE(specs->get(65, &settings));
+
     delete specs;
 }
 
