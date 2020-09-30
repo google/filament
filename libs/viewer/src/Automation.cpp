@@ -46,9 +46,6 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
     },
     {
         "name": "viewopts",
-        "base": {
-            "view.postProcessingEnabled": true
-        }
         "permute": {
             "view.dithering": ["NONE", "TEMPORAL"],
             "view.sampleCount": [1, 4],
@@ -61,13 +58,19 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
 ]
 )TXT";
 
-struct SpecImpl {
+struct Case {
+    Settings settings;
+    char const* name;
+};
+
+struct CaseGroup {
     std::string name;
     std::vector<Settings> cases;
 };
 
 struct AutomationList::Impl {
-    std::vector<SpecImpl> specs;
+    std::vector<Case> cases;
+    std::vector<std::string> names;
 };
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, std::string* val) {
@@ -135,7 +138,7 @@ static int parsePermutationsSpec(jsmntok_t const* tokens, int i, const char* jso
 }
 
 static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonChunk,
-        SpecImpl* out) {
+        CaseGroup* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
     Settings base;
@@ -162,6 +165,13 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
         }
     }
 
+    // Leave early if there are no permutations.
+    if (permute.empty()) {
+        out->cases.resize(1);
+        out->cases[0] = base;
+        return i;
+    }
+
     // Determine the number of permutations.
     size_t caseCount = 1;
     size_t propIndex = 0;
@@ -176,50 +186,45 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
         iters[propIndex++] = prop.begin();
     }
     out->cases.resize(caseCount);
-
     if (VERBOSE) {
         slog.i << "  Case count: " << caseCount << io::endl;
     }
 
     size_t caseIndex = 0;
     while (true) {
-
-        // Append a copy of the current Settings object to the case list.
         if (VERBOSE) {
-            slog.i << "  Appending case " << caseIndex << io::endl;
-        }
-        out->cases[caseIndex++] = base;
-
-        // Leave early if there are no permutations.
-        if (iters.empty()) {
-            return i;
+            slog.i << "  Generating test case " << caseIndex << io::endl;
         }
 
-        // Use a basic counting algorithm to generate the next test case.
+        // Use a basic counting algorithm to select the next combination of property values.
         // Bump the first digit, if it rolls back to 0 then bump the next digit, etc.
-        // In this case, the "digit" is an iterator into a vector of JSON strings.
-        propIndex = 0;
-        for (auto& iter : iters) {
-            const auto& prop = permute[propIndex++];
-            if (++iter != prop.end()) {
-                break;
-            }
-            iter = prop.begin();
+        // In this case, each "digit" is an iterator into a vector of JSON strings.
+        if (caseIndex > 0) {
+            propIndex = 0;
+            for (auto& iter : iters) {
+                const auto& prop = permute[propIndex++];
+                if (++iter != prop.end()) {
+                    break;
+                }
+                iter = prop.begin();
 
-            // Check if all permutations have been generated.
-            if (propIndex == permute.size()) {
-                assert(caseIndex == out->cases.size());
-                return i;
+                // Check if all permutations have been generated.
+                if (propIndex == permute.size()) {
+                    assert(caseIndex == caseCount);
+                    return i;
+                }
             }
         }
 
-        // Apply changes to the settings object.
+        // Copy the base settings object, then apply changes.
+        Settings& testCase = out->cases[caseIndex++];
+        testCase = base;
         for (const auto& iter : iters) {
             const std::string& jsonString = *iter;
             if (VERBOSE) {
-                slog.i << "  Applying " << jsonString.c_str() << io::endl;
+                slog.i << "    Applying " << jsonString.c_str() << io::endl;
             }
-            if (!readJson(jsonString.c_str(), jsonString.size(), &base)) {
+            if (!readJson(jsonString.c_str(), jsonString.size(), &testCase)) {
                 return -1;
             }
         }
@@ -228,7 +233,7 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
     return i;
 }
 
-static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, vector<SpecImpl>* out) {
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, vector<CaseGroup>* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_ARRAY);
     int size = tokens[i++].size;
     out->resize(size);
@@ -257,40 +262,63 @@ AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
         return nullptr;
     }
 
-    AutomationList::Impl* impl = new AutomationList::Impl();
-    int i = parse(tokens, 0, jsonChunk, &impl->specs);
+    vector<CaseGroup> groups;
+    int i = parse(tokens, 0, jsonChunk, &groups);
     free(tokens);
 
     if (i < 0) {
-        delete impl;
         return nullptr;
+    }
+
+    AutomationList::Impl* impl = new AutomationList::Impl();
+
+    // Compute the flattened number of Settings objects.
+    size_t total = 0;
+    for (const auto& group : groups) {
+        total += group.cases.size();
+    }
+
+    impl->names.resize(groups.size());
+    impl->cases.resize(total);
+
+    // Flatten the groups.
+    size_t caseIndex = 0, groupIndex = 0;
+    for (const auto& group : groups) {
+        impl->names[groupIndex] = group.name;
+        for (const auto& settings : group.cases) {
+            impl->cases[caseIndex].name = impl->names[groupIndex].c_str();
+            impl->cases[caseIndex].settings = settings;
+            ++caseIndex;
+        }
+        ++groupIndex;
     }
 
     return new AutomationList(impl);
 }
 
-AutomationList* AutomationList::generateDefault() {
+AutomationList* AutomationList::generateDefaultTestCases() {
     return generate(DEFAULT_AUTOMATION, strlen(DEFAULT_AUTOMATION));
 }
 
-AutomationSpec AutomationList::get(size_t index) const {
-    const SpecImpl& spec = mImpl->specs[index];
-    return {
-        .name = spec.name.c_str(),
-        .count = spec.cases.size(),
-        .settings = spec.cases.data()
-    };
-}
-
-size_t AutomationList::totalCount() const {
-    size_t count = 0;
-    for (const auto& spec : mImpl->specs) {
-        count += spec.cases.size();
+bool AutomationList::get(size_t index, Settings* out) const {
+    if (index >= mImpl->cases.size()) {
+        return false;
     }
-    return count;
+    if (out == nullptr) {
+        return true;
+    }
+    *out = mImpl->cases.at(index).settings;
+    return true;
 }
 
-size_t AutomationList::size() const { return mImpl->specs.size(); }
+char const* AutomationList::getName(size_t index) const {
+    if (index >= mImpl->cases.size()) {
+        return nullptr;
+    }
+    return mImpl->cases.at(index).name;
+}
+
+size_t AutomationList::size() const { return mImpl->cases.size(); }
 AutomationList::AutomationList(Impl* impl) : mImpl(impl) {}
 AutomationList::~AutomationList() { delete mImpl; }
 
