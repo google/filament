@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (v1.9.4)
 
+- New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental).
+
 ## v1.9.3
 
 ## v1.9.2
@@ -21,8 +23,6 @@ A new header is inserted each time a *tag* is created.
 - Fix unoptimized shader crashes with certain OpenGL drivers
 - Add float versions of math constants to libmath
 - filament-utils: fix, `CoroutineScope` job should be canceled before destroy
-
-- New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental).
 
 ## v1.9.0
 
