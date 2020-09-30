@@ -128,30 +128,6 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
 }
 )TXT";
 
-static const char* JSON_AUTOMATION_TEST = R"TXT([
-    {
-        "name": "ppoff",
-        "base": {
-            "view.postProcessingEnabled": false
-        }
-    },
-    {
-        "name": "viewopts",
-        "base": {
-            "view.postProcessingEnabled": true
-        }
-        "permute": {
-            "view.dithering": ["NONE", "TEMPORAL"],
-            "view.sampleCount": [1, 4],
-            "view.taa.enabled": [false, true],
-            "view.antiAliasing": ["FXAA", "NONE"],
-            "view.ssao.enabled": [false, true],
-            "view.bloom.enabled": [false, true]
-        }
-    }
-]
-)TXT";
-
 TEST_F(ViewSettingsTest, JsonTestDefaults) {
     Settings settings1 = {0};
     ASSERT_TRUE(readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
@@ -167,12 +143,12 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
 }
 
 TEST_F(ViewSettingsTest, AutomationSpec) {
-    AutomationList* specs = AutomationList::generate(JSON_AUTOMATION_TEST,
-            strlen(JSON_AUTOMATION_TEST));
+    AutomationList* specs = AutomationList::generateDefault();
     ASSERT_TRUE(specs);
     ASSERT_EQ(specs->size(), 2);
     ASSERT_EQ(specs->get(0).count, 1);
     ASSERT_EQ(specs->get(1).count, 1 << 6);
+    ASSERT_EQ(specs->totalCount(), 1 + (1 << 6));
     delete specs;
 }
 
