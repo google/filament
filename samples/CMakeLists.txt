@@ -240,7 +240,7 @@ if (NOT ANDROID)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
-    target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio viewer imageio)
+    target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)

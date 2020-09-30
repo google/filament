@@ -23,21 +23,18 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
-#include <filament/Renderer.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
 
-#include <image/ColorTransform.h>
-
-#include <imageio/ImageEncoder.h>
-
+#include <viewer/AutomationEngine.h>
 #include <viewer/AutomationSpec.h>
 #include <viewer/SimpleViewer.h>
 
@@ -57,7 +54,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 #include "generated/resources/gltf_viewer.h"
@@ -67,7 +63,6 @@ using namespace filament::math;
 using namespace filament::viewer;
 
 using namespace gltfio;
-using namespace image;
 using namespace utils;
 
 struct App {
@@ -118,6 +113,10 @@ struct App {
 
     std::string messageBoxText;
     std::string settingsFile;
+    std::string batchFile;
+
+    AutomationSpec* automationSpec = nullptr;
+    AutomationEngine* automationEngine = nullptr;
 };
 
 static const char* DEFAULT_IBL = "default_env";
@@ -133,6 +132,8 @@ static void printUsage(char* name) {
         "       Prints this message\n\n"
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+        "   --batch=<path to JSON file or 'default'>, -b\n"
+        "       Start automation using the given JSON spec, then quit the app\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
         "   --actual-size, -s\n"
@@ -159,17 +160,23 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
+static std::ifstream::pos_type getFileSize(const char* filename) {
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
+}
+
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
+        { "batch",        required_argument, nullptr, 'b' },
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
         { "recompute-aabb", no_argument,     nullptr, 'r' },
-        { "settings",       optional_argument, nullptr, 't' },
+        { "settings",       required_argument, nullptr, 't' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -214,19 +221,15 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->recomputeAabb = true;
                 break;
             case 't':
-                if (arg.empty()) {
-                    arg = "settings.json";
-                }
                 app->settingsFile = arg;
                 break;
+            case 'b': {
+                app->batchFile = arg;
+                break;
+            }
         }
     }
     return optind;
-}
-
-static std::ifstream::pos_type getFileSize(const char* filename) {
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
 }
 
 static bool loadSettings(const char* filename, Settings* out) {
@@ -586,6 +589,7 @@ int main(int argc, char** argv) {
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     int optionIndex = handleCommandLineArguments(argc, argv, &app);
+
     utils::Path filename;
     int num_args = argc - optionIndex;
     if (num_args >= 1) {
@@ -668,6 +672,44 @@ int main(int argc, char** argv) {
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view, 410);
 
+        const bool batchMode = !app.batchFile.empty();
+
+        // First check if a custom automation spec has been provided. If it fails to load, the app
+        // must be closed since it could be invoked from a script.
+        if (batchMode && app.batchFile != "default") {
+            auto size = getFileSize(app.batchFile.c_str());
+            if (size > 0) {
+                std::ifstream in(app.batchFile, std::ifstream::binary | std::ifstream::in);
+                std::vector<char> json(static_cast<unsigned long>(size));
+                in.read(json.data(), size);
+                app.automationSpec = AutomationSpec::generate(json.data(), size);
+                if (!app.automationSpec) {
+                    std::cerr << "Unable to parse automation spec: " << app.batchFile << std::endl;
+                    exit(1);
+                }
+            } else {
+                std::cerr << "Unable to load automation spec: " << app.batchFile << std::endl;
+                exit(1);
+            }
+        }
+
+        // If no custom spec has been provided, or if in interactive mode, load the default spec.
+        if (!app.automationSpec) {
+            app.automationSpec = AutomationSpec::generateDefaultTestCases();
+        }
+
+        app.automationEngine = new AutomationEngine(app.automationSpec, &app.viewer->getSettings());
+
+        if (batchMode) {
+            app.automationEngine->startBatchMode();
+            auto options = app.automationEngine->getOptions();
+            options.sleepDuration = 0.0;
+            options.exportScreenshots = true;
+            options.exportSettings = true;
+            app.automationEngine->setOptions(options);
+            app.viewer->stopAnimation();
+        }
+
         if (app.settingsFile.size() > 0) {
             bool success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
             if (success) {
@@ -693,10 +735,62 @@ int main(int argc, char** argv) {
 
         createGroundPlane(engine, scene, app);
 
-        app.viewer->setUiCallback([&app, scene] () {
+        app.viewer->setUiCallback([&app, scene, view] () {
+            auto& automation = *app.automationEngine;
+
             float progress = app.resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
+            } else {
+                // The model is now fully loaded, so let automation know.
+                automation.signalBatchMode();
+            }
+
+            // The screenshots do not include the UI, but we auto-open the Automation UI group
+            // when in batch mode. This is useful when a human is observing progress.
+            const int flags = automation.isBatchModeEnabled() ? ImGuiTreeNodeFlags_DefaultOpen : 0;
+
+            if (ImGui::CollapsingHeader("Automation", flags)) {
+                ImGui::Indent();
+
+                const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
+                if (automation.isRunning()) {
+                    ImGui::TextColored(yellow, "Test case %zu / %zu",
+                            automation.currentTest(), automation.testCount());
+                } else {
+                    ImGui::TextColored(yellow, "%zu test cases", automation.testCount());
+                }
+
+                auto options = automation.getOptions();
+
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
+                ImGui::PopItemWidth();
+
+                // Hide the tooltip during automation to avoid photobombing the screenshot.
+                if (ImGui::IsItemHovered() && !automation.isRunning()) {
+                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
+                }
+
+                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
+                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
+
+                automation.setOptions(options);
+
+                if (automation.isRunning()) {
+                    if (ImGui::Button("Stop batch test")) {
+                        automation.stopRunning();
+                    }
+                } else if (ImGui::Button("Run batch test")) {
+                    automation.startRunning();
+                }
+
+                if (ImGui::Button("Export view settings")) {
+                    automation.exportSettings(app.viewer->getSettings(), "settings.json");
+                    app.messageBoxText = automation.getStatusMessage();
+                    ImGui::OpenPopup("MessageBox");
+                }
+                ImGui::Unindent();
             }
 
             if (ImGui::CollapsingHeader("Stats")) {
@@ -886,6 +980,15 @@ int main(int argc, char** argv) {
         }
     };
 
+    auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        if (app.automationEngine->shouldClose()) {
+            FilamentApp::get().close();
+            return;
+        }
+        Settings* settings = &app.viewer->getSettings();
+        app.automationEngine->tick(view, renderer, ImGui::GetIO().DeltaTime);
+    };
+
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.animate(animate);
     filamentApp.resize(resize);
@@ -897,7 +1000,7 @@ int main(int argc, char** argv) {
         loadResources(path);
     });
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
 
     return 0;
 }

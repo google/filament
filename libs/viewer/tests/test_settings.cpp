@@ -155,7 +155,6 @@ TEST_F(ViewSettingsTest, AutomationSpec) {
 
     ASSERT_TRUE(specs->get(1, &settings));
     ASSERT_TRUE(settings.view.postProcessingEnabled);
-    ASSERT_EQ(settings.view.dithering, Dithering::NONE);
 
     ASSERT_TRUE(specs->get(64, &settings));
     ASSERT_FALSE(specs->get(65, &settings));
