@@ -37,6 +37,30 @@ static const bool VERBOSE = false;
 namespace filament {
 namespace viewer {
 
+static const char* DEFAULT_AUTOMATION = R"TXT([
+    {
+        "name": "ppoff",
+        "base": {
+            "view.postProcessingEnabled": false
+        }
+    },
+    {
+        "name": "viewopts",
+        "base": {
+            "view.postProcessingEnabled": true
+        }
+        "permute": {
+            "view.dithering": ["NONE", "TEMPORAL"],
+            "view.sampleCount": [1, 4],
+            "view.taa.enabled": [false, true],
+            "view.antiAliasing": ["FXAA", "NONE"],
+            "view.ssao.enabled": [false, true],
+            "view.bloom.enabled": [false, true]
+        }
+    }
+]
+)TXT";
+
 struct SpecImpl {
     std::string name;
     std::vector<Settings> cases;
@@ -245,6 +269,10 @@ AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
     return new AutomationList(impl);
 }
 
+AutomationList* AutomationList::generateDefault() {
+    return generate(DEFAULT_AUTOMATION, strlen(DEFAULT_AUTOMATION));
+}
+
 AutomationSpec AutomationList::get(size_t index) const {
     const SpecImpl& spec = mImpl->specs[index];
     return {
@@ -252,6 +280,14 @@ AutomationSpec AutomationList::get(size_t index) const {
         .count = spec.cases.size(),
         .settings = spec.cases.data()
     };
+}
+
+size_t AutomationList::totalCount() const {
+    size_t count = 0;
+    for (const auto& spec : mImpl->specs) {
+        count += spec.cases.size();
+    }
+    return count;
 }
 
 size_t AutomationList::size() const { return mImpl->specs.size(); }

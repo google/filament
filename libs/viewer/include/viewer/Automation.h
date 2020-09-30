@@ -43,11 +43,17 @@ public:
     // Clients should release memory using "delete".
     static AutomationList* generate(const char* jsonChunk, size_t size);
 
+    // Generates a default list of cases using an embedded JSON spec.
+    static AutomationList* generateDefault();
+
     // Returns the number of generated Settings lists.
     size_t size() const;
 
     // Returns a view onto a generated Settings list.
     AutomationSpec get(size_t index) const;
+
+    // Returns the total number of Settings objects.
+    size_t totalCount() const;
 
     // Frees all Settings objects and name strings.
     ~AutomationList();
