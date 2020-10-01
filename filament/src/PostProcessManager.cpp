@@ -519,13 +519,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
 
-                mi->setParameter("ssctConeTraceParams", float4{
-                        options.ssct.enabled ? std::tan(options.ssct.lightConeRad * 0.5f) : 0.0f,
-                        std::sin(options.ssct.lightConeRad * 0.5f),
-                        options.ssct.startTraceDistance * projectionScale,
-                        1.0f / options.ssct.contactDistanceMax
-                });
-
+                mi->setParameter("ssctShadowDistance", options.ssct.shadowDistance);
+                mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
+                mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
                 // light direction in view space
                 // (note: this is actually equivalent to using the camera view matrix -- before the
                 // world matrix is accounted for)
@@ -533,9 +529,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 const float3 l = normalize(
                         mat3f::getTransformForNormals(m.upperLeft())
                                 * options.ssct.lightDirection);
-
                 mi->setParameter("ssctIntensity",
-                        options.ssct.intensity);
+                        options.ssct.enabled ? options.ssct.intensity : 0.0f);
                 mi->setParameter("ssctVsLightDirection", -l);
                 mi->setParameter("ssctDepthBias",
                         float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });

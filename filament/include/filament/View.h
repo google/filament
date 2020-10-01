@@ -231,8 +231,8 @@ public:
          */
         struct Ssct {
             float lightConeRad = 1.0f;          //!< full cone angle in radian, between 0 and pi/2
-            float startTraceDistance = 0.01f;   //!< distance where tracing starts
-            float contactDistanceMax = 1.0f;    //!< max distance shadows are cast
+            float shadowDistance = 0.3f;        //!< how far shadows can be cast
+            float contactDistanceMax = 1.0f;    //!< max distance for contact
             float intensity = 0.8f;             //!< intensity
             math::float3 lightDirection{ 0, -1, 0 };    //!< light direction
             float depthBias = 0.01f;        //!< depth bias in world units (mitigate self shadowing)

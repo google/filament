@@ -296,7 +296,7 @@ public:
         options.intensity = std::max(0.0f, options.intensity);
         options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
         options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
-        options.ssct.startTraceDistance = std::max(0.0f, options.ssct.startTraceDistance);
+        options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);
         options.ssct.contactDistanceMax = std::max(0.0f, options.ssct.contactDistanceMax);
         options.ssct.intensity = std::max(0.0f, options.ssct.intensity);
         options.ssct.lightDirection = normalize(options.ssct.lightDirection);
