@@ -218,6 +218,12 @@ public:
 
         /**
          * Controls if this renderable casts shadows, false by default.
+         *
+         * If the View's shadow type is set to ShadowType::VSM, castShadows should only be disabled
+         * if either is true:
+         *   - receiveShadows is also disabled
+         *   - the object is guaranteed to not cast shadows on other objects (for example, a ground
+         *     plane)
          */
         Builder& castShadows(bool enable) noexcept;
 

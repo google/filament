@@ -1168,6 +1168,14 @@ public class View {
      *
      * The ShadowType affects all the shadows seen within the View.
      *
+     * <p>
+     * {@link ShadowType#VSM} imposes a restriction on marking renderables as only shadow receivers
+     * (but not casters). To ensure correct shadowing with VSM, all shadow participant renderables
+     * should be marked as both receivers and casters. Objects that are guaranteed to not cast
+     * shadows on other objects (such as flat ground planes) can be set to not cast shadows, which
+     * might improve shadow quality.
+     * </p>
+     *
      * <strong>Warning: This API is still experimental and subject to change.</strong>
      */
     public void setShadowType(ShadowType type) {

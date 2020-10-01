@@ -268,6 +268,14 @@ public class RenderableManager {
 
         /**
          * Controls if this renderable casts shadows, false by default.
+         *
+         * If the View's shadow type is set to {@link View.ShadowType#VSM}, castShadows should only
+         * be disabled if either is true:
+         * <ul>
+         *   <li>{@link RenderableManager#setReceiveShadows} is also disabled</li>
+         *   <li>the object is guaranteed to not cast shadows on other objects (for example, a
+         *   ground plane)</li>
+         * </ul>
          */
         @NonNull
         public Builder castShadows(boolean enabled) {
