@@ -51,6 +51,12 @@ using VignetteOptions = filament::View::VignetteOptions;
 // - This function writes warnings and error messages into the utils log.
 bool readJson(const char* jsonChunk, size_t size, Settings* out);
 
+// Pushes all properties to a Filament View modulo the immutable ones (e.g. ColorGrading).
+void applySettings(const ViewSettings& settings, View* dest);
+
+// Creates a new ColorGrading object based on the given settings.
+ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine);
+
 // Generates human-readable JSON strings from settings objects.
 std::string writeJson(const AmbientOcclusionOptions& in);
 std::string writeJson(const BloomOptions& in);
@@ -68,8 +74,8 @@ struct ColorGradingSettings {
     bool enabled = true;
     filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
-    int temperature = 0;
-    int tint = 0;
+    float temperature = 0;
+    float tint = 0;
     math::float3 outRed{1.0f, 0.0f, 0.0f};
     math::float3 outGreen{0.0f, 1.0f, 0.0f};
     math::float3 outBlue{0.0f, 0.0f, 1.0f};

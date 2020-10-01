@@ -613,6 +613,43 @@ bool readJson(const char* jsonChunk, size_t size, Settings* out) {
     return i >= 0;
 }
 
+void applySettings(const ViewSettings& settings, View* dest) {
+    dest->setSampleCount(settings.sampleCount);
+    dest->setAntiAliasing(settings.antiAliasing);
+    dest->setTemporalAntiAliasingOptions(settings.taa);
+    dest->setAmbientOcclusionOptions(settings.ssao);
+    dest->setBloomOptions(settings.bloom);
+    dest->setFogOptions(settings.fog);
+    dest->setDepthOfFieldOptions(settings.dof);
+    dest->setVignetteOptions(settings.vignette);
+    dest->setDithering(settings.dithering);
+    dest->setRenderQuality(settings.renderQuality);
+    dest->setDynamicLightingOptions(settings.dynamicLighting.zLightNear,
+            settings.dynamicLighting.zLightFar);
+    dest->setShadowType(settings.shadowType);
+    dest->setPostProcessingEnabled(settings.postProcessingEnabled);
+}
+
+ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
+    return ColorGrading::Builder()
+        .quality(settings.quality)
+        .whiteBalance(settings.temperature, settings.tint)
+        .channelMixer(settings.outRed, settings.outGreen, settings.outBlue)
+        .shadowsMidtonesHighlights(
+                Color::toLinear(settings.shadows),
+                Color::toLinear(settings.midtones),
+                Color::toLinear(settings.highlights),
+                settings.ranges
+        )
+        .slopeOffsetPower(settings.slope, settings.offset, settings.power)
+        .contrast(settings.contrast)
+        .vibrance(settings.vibrance)
+        .saturation(settings.saturation)
+        .curves(settings.gamma, settings.midPoint, settings.scale)
+        .toneMapping(settings.toneMapping)
+        .build(*engine);
+}
+
 static std::string writeJson(bool v) { return v ? "true" : "false"; }
 static std::string writeJson(float v) { return std::to_string(v); }
 static std::string writeJson(int v) {  return std::to_string(v); }

@@ -368,13 +368,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
-    mView->setDithering(mViewSettings.dithering);
-    mView->setAntiAliasing(mViewSettings.antiAliasing);
-    mView->setSampleCount(mViewSettings.sampleCount);
-    mView->setAmbientOcclusionOptions(mViewSettings.ssao);
-    mView->setBloomOptions(mViewSettings.bloom);
-    mView->setFogOptions(mViewSettings.fog);
-    mView->setTemporalAntiAliasingOptions(mViewSettings.taa);
+    // At this point, all View settings have been modified,
+    //  so we can now push them into the Filament View.
+    applySettings(mViewSettings, mView);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
@@ -399,8 +395,6 @@ void SimpleViewer::updateUserInterface() {
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });
-
-    mView->setShadowType(mViewSettings.shadowType);
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {

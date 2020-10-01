@@ -50,7 +50,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
             "view.dithering": ["NONE", "TEMPORAL"],
             "view.sampleCount": [1, 4],
             "view.taa.enabled": [false, true],
-            "view.antiAliasing": ["FXAA", "NONE"],
+            "view.antiAliasing": ["NONE", "FXAA"],
             "view.ssao.enabled": [false, true],
             "view.bloom.enabled": [false, true]
         }

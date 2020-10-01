@@ -12,3 +12,4 @@ filament/docs/html/**
 *tmp*.png
 civetweb.txt
 /TAGS
+settings.json
