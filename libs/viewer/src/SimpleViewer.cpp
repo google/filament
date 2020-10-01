@@ -314,7 +314,7 @@ void SimpleViewer::updateUserInterface() {
                 int sampleCount = ssao.ssct.sampleCount;
                 ImGui::Checkbox("Enabled##dls", &ssao.ssct.enabled);
                 ImGui::SliderFloat("Cone angle", &ssao.ssct.lightConeRad, 0.0f, (float)M_PI_2);
-                ImGui::SliderFloat("Start dist", &ssao.ssct.startTraceDistance, 0.0f, 1.0f);
+                ImGui::SliderFloat("Shadow Distance", &ssao.ssct.shadowDistance, 0.0f, 10.0f);
                 ImGui::SliderFloat("Contact dist max", &ssao.ssct.contactDistanceMax, 0.0f, 100.0f);
                 ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
                 ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);

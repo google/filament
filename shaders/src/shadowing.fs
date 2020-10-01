@@ -256,9 +256,9 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
     highp vec4 csViewRayEnd = csRayStart + viewToClip * vec4(0.0, 0.0, wsRayLength, 0.0);
 
     // ray start/end in screen space
-    ray.ssRayStart = csRayStart.xyz * 1.0 / csRayStart.w;
-    ray.ssRayEnd = csRayEnd.xyz * 1.0 / csRayEnd.w;
-    ray.ssViewRayEnd = csViewRayEnd.xyz * 1.0 / csViewRayEnd.w;
+    ray.ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
+    ray.ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
+    ray.ssViewRayEnd = csViewRayEnd.xyz * (1.0 / csViewRayEnd.w);
 
     // convert all to uv (texture) space
     highp vec3 uvRayEnd = ray.ssRayEnd.xyz * 0.5 + 0.5;

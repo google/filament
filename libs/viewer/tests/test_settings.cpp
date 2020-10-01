@@ -70,7 +70,7 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "ssct": {
                 "enabled": false,
                 "lightConeRad": 1.0,
-                "startTraceDistance": 0.01,
+                "shadowDistance": 0.3,
                 "contactDistanceMax": 1.0,
                 "intensity": 0.8,
                 "lightDirection": [0, -1, 0],

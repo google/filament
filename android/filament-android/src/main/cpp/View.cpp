@@ -228,7 +228,7 @@ Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong na
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
     options.ssct.lightConeRad = ssctLightConeRad;
-    options.ssct.startTraceDistance = ssctStartTraceDistance;
+    options.ssct.shadowDistance = ssctStartTraceDistance;
     options.ssct.contactDistanceMax = ssctContactDistanceMax;
     options.ssct.intensity = ssctIntensity;
     options.ssct.lightDirection = math::float3{ ssctLightDirX, ssctLightDirY, ssctLightDirZ };

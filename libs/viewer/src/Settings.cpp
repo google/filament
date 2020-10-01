@@ -289,8 +289,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "lightConeRad") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->lightConeRad);
-        } else if (compare(tok, jsonChunk, "startTraceDistance") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->startTraceDistance);
+        } else if (compare(tok, jsonChunk, "shadowDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowDistance);
         } else if (compare(tok, jsonChunk, "contactDistanceMax") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->contactDistanceMax);
         } else if (compare(tok, jsonChunk, "intensity") == 0) {
@@ -758,7 +758,7 @@ std::string writeJson(const AmbientOcclusionOptions::Ssct& in) {
     oss << "{\n"
         << "\"enabled\": " << writeJson(in.enabled) << ",\n"
         << "\"lightConeRad\": " << writeJson(in.lightConeRad) << ",\n"
-        << "\"startTraceDistance\": " << writeJson(in.startTraceDistance) << ",\n"
+        << "\"shadowDistance\": " << writeJson(in.shadowDistance) << ",\n"
         << "\"contactDistanceMax\": " << writeJson(in.contactDistanceMax) << ",\n"
         << "\"intensity\": " << writeJson(in.intensity) << ",\n"
         << "\"lightDirection\": " << writeJson(in.lightDirection) << ",\n"
