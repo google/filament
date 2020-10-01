@@ -111,7 +111,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
             continue;
         }
 
-        pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_CASTER_N(i));
+        pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_RENDERABLE_N(i));
         map.getShadowMap()->render(driver, view.getVisibleSpotShadowCasters(), pass, view);
         pass.clearVisibilityMask();
 
@@ -288,7 +288,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
                 layout, cascadeParams);
         Frustum const& frustum = map.getCamera().getFrustum();
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
-                VISIBLE_DIR_SHADOW_CASTER_BIT);
+                VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
 
         // Set shadowBias, using the first directional cascade.
         const float texelSizeWorldSpace = map.getTexelSizeWorldSpace();
@@ -447,7 +447,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
             UniformBuffer& u = shadowUb;
             Frustum const& frustum = shadowMap.getCamera().getFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
-                    VISIBLE_SPOT_SHADOW_CASTER_N_BIT(i));
+                    VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(i));
 
             mat4f const& lightFromWorldMatrix =
                 view.hasVsm() ? shadowMap.getLightSpaceMatrixVsm() : shadowMap.getLightSpaceMatrix();
