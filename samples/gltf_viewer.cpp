@@ -431,9 +431,14 @@ static void colorGradingUI(App& app) {
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
 
         if (ImGui::CollapsingHeader("White balance")) {
-            ImGui::SliderFloat("Temperature", &colorGrading.temperature, -1.0f, 1.0f);
-            ImGui::SliderFloat("Tint", &colorGrading.tint, -1.0f, 1.0f);
+            int temperature = colorGrading.temperature * 100.0f;
+            int tint = colorGrading.tint * 100.0f;
+            ImGui::SliderInt("Temperature", &temperature, -100, 100);
+            ImGui::SliderInt("Tint", &tint, -100, 100);
+            colorGrading.temperature = temperature / 100.0f;
+            colorGrading.tint = tint / 100.0f;
         }
+
         if (ImGui::CollapsingHeader("Channel mixer")) {
             pushSliderColors(0.0f / 7.0f);
             ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
