@@ -34,6 +34,11 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
 
+#include <image/ColorTransform.h>
+
+#include <imageio/ImageEncoder.h>
+
+#include <viewer/Automation.h>
 #include <viewer/SimpleViewer.h>
 
 #include <camutils/Manipulator.h>
@@ -52,6 +57,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "generated/resources/gltf_viewer.h"
@@ -61,6 +67,7 @@ using namespace filament::math;
 using namespace filament::viewer;
 
 using namespace gltfio;
+using namespace image;
 using namespace utils;
 
 struct App {
@@ -91,9 +98,6 @@ struct App {
         sRGBColor backgroundColor = { 0.0f };
     } viewOptions;
 
-    View::DepthOfFieldOptions dofOptions;
-    View::VignetteOptions vignetteOptions;
-
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -111,6 +115,9 @@ struct App {
 
     // 0 is the default "free camera". Additional cameras come from the gltf file.
     int currentCamera = 0;
+
+    std::string messageBoxText;
+    std::string settingsFile;
 };
 
 static const char* DEFAULT_IBL = "default_env";
@@ -132,6 +139,8 @@ static void printUsage(char* name) {
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
+        "   --settings=<path to JSON file>, -t\n"
+        "       Apply the settings in the given JSON file.\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
         "   --camera=<camera mode>, -c <camera mode>\n"
@@ -151,7 +160,7 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:r";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
@@ -160,6 +169,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
         { "recompute-aabb", no_argument,     nullptr, 'r' },
+        { "settings",       optional_argument, nullptr, 't' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -203,6 +213,12 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             case 'r':
                 app->recomputeAabb = true;
                 break;
+            case 't':
+                if (arg.empty()) {
+                    arg = "settings.json";
+                }
+                app->settingsFile = arg;
+                break;
         }
     }
     return optind;
@@ -211,6 +227,19 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
+}
+
+static bool loadSettings(const char* filename, Settings* out) {
+    auto contentSize = getFileSize(filename);
+    if (contentSize <= 0) {
+        return false;
+    }
+    std::ifstream in(filename, std::ifstream::binary | std::ifstream::in);
+    std::vector<char> json(static_cast<unsigned long>(contentSize));
+    if (!in.read(json.data(), contentSize)) {
+        return false;
+    }
+    return readJson(json.data(), contentSize, out);
 }
 
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
@@ -402,8 +431,8 @@ static void colorGradingUI(App& app) {
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
 
         if (ImGui::CollapsingHeader("White balance")) {
-            ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
-            ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
+            ImGui::SliderFloat("Temperature", &colorGrading.temperature, -1.0f, 1.0f);
+            ImGui::SliderFloat("Tint", &colorGrading.tint, -1.0f, 1.0f);
         }
         if (ImGui::CollapsingHeader("Channel mixer")) {
             pushSliderColors(0.0f / 7.0f);
@@ -633,6 +662,18 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view, 410);
+
+        if (app.settingsFile.size() > 0) {
+            Settings settings;
+            bool success = loadSettings(app.settingsFile.c_str(), &settings);
+            if (success) {
+                std::cout << "Loaded settings from " << app.settingsFile << std::endl;
+                app.viewer->getViewSettings() = settings.view;
+            } else {
+                std::cerr << "Failed to load settings from " << app.settingsFile << std::endl;
+            }
+        }
+
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
@@ -675,21 +716,23 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Camera")) {
+                ViewSettings& settings = app.viewer->getViewSettings();
+
                 ImGui::Indent();
                 ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
                 ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
                 ImGui::SliderFloat("Speed (1/s)", &app.viewOptions.cameraSpeed, 1000.0f, 1.0f);
                 ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
-                ImGui::Checkbox("DoF", &app.dofOptions.enabled);
-                ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
-                ImGui::SliderFloat("Blur scale", &app.dofOptions.cocScale, 0.1f, 10.0f);
+                ImGui::Checkbox("DoF", &settings.dof.enabled);
+                ImGui::SliderFloat("Focus distance", &settings.dof.focusDistance, 0.0f, 30.0f);
+                ImGui::SliderFloat("Blur scale", &settings.dof.cocScale, 0.1f, 10.0f);
 
                 if (ImGui::CollapsingHeader("Vignette")) {
-                    ImGui::Checkbox("Enabled##vignetteEnabled", &app.vignetteOptions.enabled);
-                    ImGui::SliderFloat("Mid point", &app.vignetteOptions.midPoint, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Roundness", &app.vignetteOptions.roundness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Feather", &app.vignetteOptions.feather, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("Color##vignetteColor", &app.vignetteOptions.color.r);
+                    ImGui::Checkbox("Enabled##vignetteEnabled", &settings.vignette.enabled);
+                    ImGui::SliderFloat("Mid point", &settings.vignette.midPoint, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roundness", &settings.vignette.roundness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Feather", &settings.vignette.feather, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Color##vignetteColor", &settings.vignette.color.r);
                 }
 
                 const utils::Entity* cameras = app.asset->getCameraEntities();
@@ -721,11 +764,15 @@ int main(int argc, char** argv) {
             }
 
             colorGradingUI(app);
-        });
 
-        // Leave FXAA enabled but we also enable MSAA for a nice result. The wireframe looks
-        // much better with MSAA enabled.
-        view->setSampleCount(4);
+            if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("%s", app.messageBoxText.c_str());
+                if (ImGui::Button("OK", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        });
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -805,9 +852,6 @@ int main(int argc, char** argv) {
                 1.0f / app.viewOptions.cameraSpeed,
                 app.viewOptions.cameraISO);
 
-        view->setDepthOfFieldOptions(app.dofOptions);
-        view->setVignetteOptions(app.vignetteOptions);
-
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);
 
@@ -828,28 +872,8 @@ int main(int argc, char** argv) {
             // An inefficient but simple way of detecting change is to serialize to JSON, then
             // do a string comparison.
             if (writeJson(options) != writeJson(app.lastColorGradingOptions)) {
-                ColorGrading *colorGrading = ColorGrading::Builder()
-                        .quality(options.quality)
-                        .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
-                        .channelMixer(options.outRed, options.outGreen, options.outBlue)
-                        .shadowsMidtonesHighlights(
-                                Color::toLinear(options.shadows),
-                                Color::toLinear(options.midtones),
-                                Color::toLinear(options.highlights),
-                                options.ranges
-                        )
-                        .slopeOffsetPower(options.slope, options.offset, options.power)
-                        .contrast(options.contrast)
-                        .vibrance(options.vibrance)
-                        .saturation(options.saturation)
-                        .curves(options.gamma, options.midPoint, options.scale)
-                        .toneMapping(options.toneMapping)
-                        .build(*engine);
-
-                if (app.colorGrading) {
-                    engine->destroy(app.colorGrading);
-                }
-
+                ColorGrading *colorGrading = createColorGrading(options, engine);
+                engine->destroy(app.colorGrading);
                 app.colorGrading = colorGrading;
                 app.lastColorGradingOptions = options;
             }
