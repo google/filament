@@ -698,9 +698,6 @@ public:
      * themselves or other objects (such as flat ground planes) can be set to not cast shadows,
      * which might improve shadow quality.
      *
-     * (see LightManager::setReceiveShadows and LightManager::setCastShadows).
-     *
-     *
      * @warning This API is still experimental and subject to change.
      */
     void setShadowType(ShadowType shadow) noexcept;
