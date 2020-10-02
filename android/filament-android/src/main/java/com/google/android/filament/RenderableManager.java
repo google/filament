@@ -273,8 +273,8 @@ public class RenderableManager {
          * be disabled if either is true:
          * <ul>
          *   <li>{@link RenderableManager#setReceiveShadows} is also disabled</li>
-         *   <li>the object is guaranteed to not cast shadows on other objects (for example, a
-         *   ground plane)</li>
+         *   <li>the object is guaranteed to not cast shadows on themselves or other objects (for
+         *   example, a ground plane)</li>
          * </ul>
          */
         @NonNull
