@@ -569,6 +569,61 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
     return i;
 }
 
+template <typename T>
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MaterialProperty<T>* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        const std::string name = STR(tok, jsonChunk);
+
+        // Find the first unused slot, or the first slot that matches the given name.
+        size_t k = 0;
+        for (; k < MaterialSettings::MAX_COUNT; ++k) {
+            if (out[k].name == name || out[k].name.empty()) {
+                break;
+            }
+        }
+        if (k == MaterialSettings::MAX_COUNT) {
+            slog.e << "Too many material settings." << io::endl;
+            return i;
+        }
+
+        out[k].name = name;
+        i = parse(tokens, i + 1, jsonChunk, &out[k].value);
+        if (i < 0) {
+            slog.e << "Invalid materials value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MaterialSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "scalar") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, out->scalar);
+        } else if (compare(tok, jsonChunk, "float3") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, out->float3);
+        } else if (compare(tok, jsonChunk, "float4") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, out->float4);
+        } else {
+            slog.w << "Invalid materials key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid materials value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -577,6 +632,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "view") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->view);
+        } else if (compare(tok, jsonChunk, "material") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->material);
         } else {
             slog.w << "Invalid group key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -594,6 +651,7 @@ bool readJson(const char* jsonChunk, size_t size, Settings* out) {
 
     int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
     if (tokenCount <= 0) {
+        slog.e << "Badly formed JSON." << io::endl;
         return false;
     }
 
@@ -605,6 +663,7 @@ bool readJson(const char* jsonChunk, size_t size, Settings* out) {
 
     if (tokenCount <= 0) {
         free(tokens);
+        slog.e << "Badly formed JSON." << io::endl;
         return false;
     }
 
@@ -628,6 +687,19 @@ void applySettings(const ViewSettings& settings, View* dest) {
             settings.dynamicLighting.zLightFar);
     dest->setShadowType(settings.shadowType);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
+}
+
+template <typename T>
+static void apply(MaterialProperty<T> prop, MaterialInstance* dest) {
+    if (!prop.name.empty()) {
+        dest->setParameter(prop.name.c_str(), prop.value);
+    }
+}
+
+void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
+    for (auto prop : settings.scalar) { apply(prop, dest); }
+    for (auto prop : settings.float3) { apply(prop, dest); }
+    for (auto prop : settings.float4) { apply(prop, dest); }
 }
 
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
@@ -745,8 +817,8 @@ static std::string writeJson(math::float4 v) {
 std::string writeJson(const Settings& in) {
     std::ostringstream oss;
     oss << "{\n"
-        << "\"view\": "
-        << writeJson(in.view)
+        << "\"view\": " << writeJson(in.view) << ",\n"
+        << "\"material\": " << writeJson(in.material)
         << "}";
     return oss.str();
 }
@@ -853,6 +925,46 @@ std::string writeJson(const FogOptions& in) {
         << "\"enabled\": " << writeJson(in.enabled) << "\n"
         << "}";
     return oss.str();
+}
+
+template <typename T>
+static void writeJson(MaterialProperty<T> prop, std::ostringstream& oss) {
+    if (!prop.name.empty()) {
+        oss << "\"" << prop.name << "\": " << writeJson(prop.value) << ",\n";
+    }
+}
+
+std::string writeJson(const MaterialSettings& in) {
+    std::ostringstream oss;
+    oss << "{\n";
+    oss << "\"scalar\": {\n";
+    for (auto prop : in.scalar) { writeJson(prop, oss); }
+    oss << "},\n";
+    oss << "\"float3\": {\n";
+    for (auto prop : in.float3) { writeJson(prop, oss); }
+    oss << "},\n";
+    oss << "\"float4\": {\n";
+    for (auto prop : in.float4) { writeJson(prop, oss); }
+    oss << "},\n";
+    oss << "}";
+    std::string result = oss.str();
+
+    const auto replace = [&result](std::string s, std::string t) {
+        std::string::size_type n = 0;
+        while ((n = result.find(s, n )) != std::string::npos) {
+            result.replace(n, s.size(), t);
+            n += t.size();
+        }
+    };
+
+    // Remove empty objects and trailing commas.
+    replace("\"scalar\": {\n},\n", "");
+    replace("\"float3\": {\n},\n", "");
+    replace("\"float4\": {\n},\n", "");
+    replace(",\n}", "\n}");
+    replace("{\n}", "{}");
+
+    return result;
 }
 
 std::string writeJson(const DepthOfFieldOptions& in) {

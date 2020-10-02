@@ -17,19 +17,24 @@
 #ifndef VIEWER_SETTINGS_H
 #define VIEWER_SETTINGS_H
 
+#include <filament/ColorGrading.h>
+#include <filament/MaterialInstance.h>
+#include <filament/View.h>
+
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include <stddef.h>
 #include <stdint.h>
 
 #include <string>
-
-#include <filament/ColorGrading.h>
-#include <filament/View.h>
 
 namespace filament {
 namespace viewer {
 
 struct ColorGradingSettings;
 struct DynamicLightingSettings;
+struct MaterialSettings;
 struct Settings;
 struct ViewSettings;
 
@@ -51,8 +56,9 @@ using VignetteOptions = filament::View::VignetteOptions;
 // - This function writes warnings and error messages into the utils log.
 bool readJson(const char* jsonChunk, size_t size, Settings* out);
 
-// Pushes all properties to a Filament View modulo the immutable ones (e.g. ColorGrading).
+// These functions push all editable property values to their respective Filament objects.
 void applySettings(const ViewSettings& settings, View* dest);
+void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
 
 // Creates a new ColorGrading object based on the given settings.
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine);
@@ -64,6 +70,7 @@ std::string writeJson(const ColorGradingSettings& in);
 std::string writeJson(const DepthOfFieldOptions& in);
 std::string writeJson(const DynamicLightingSettings& in);
 std::string writeJson(const FogOptions& in);
+std::string writeJson(const MaterialSettings& in);
 std::string writeJson(const RenderQuality& in);
 std::string writeJson(const Settings& in);
 std::string writeJson(const TemporalAntiAliasingOptions& in);
@@ -118,8 +125,20 @@ struct ViewSettings {
     bool postProcessingEnabled = true;
 };
 
+template <typename T>
+struct MaterialProperty { std::string name; T value; };
+
+// This struct has a fixed size for simplicity. Each non-empty property name is an override.
+struct MaterialSettings {
+    static constexpr size_t MAX_COUNT = 4;
+    MaterialProperty<float> scalar[MAX_COUNT];
+    MaterialProperty<math::float3> float3[MAX_COUNT];
+    MaterialProperty<math::float4> float4[MAX_COUNT];
+};
+
 struct Settings {
     ViewSettings view;
+    MaterialSettings material;
 };
 
 } // namespace viewer

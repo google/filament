@@ -113,18 +113,25 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
-void AutomationEngine::tick(View* view, Renderer* renderer, float deltaTime) {
+void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
+        Renderer* renderer, float deltaTime) {
+    const auto activateTest = [this, view, materials, materialCount]() {
+        mElapsedTime = 0;
+        mElapsedFrames = 0;
+        mSpec->get(mCurrentTest, mSettings);
+        applySettings(mSettings->view, view);
+        for (size_t i = 0; i < materialCount; i++) {
+            applySettings(mSettings->material, materials[i]);
+        }
+    };
+
     if (!mIsRunning) {
         if (mRequestStart) {
             if ((mBatchModeEnabled && mBatchModeAllowed) || !mBatchModeEnabled) {
                 mIsRunning = true;
-                mCurrentTest = 0;
-                mElapsedTime = 0;
-                mElapsedFrames = 0;
-
-                mSpec->get(mCurrentTest, mSettings);
-                applySettings(mSettings->view, view);
                 mRequestStart = false;
+                mCurrentTest = 0;
+                activateTest();
             }
         }
         return;
@@ -165,11 +172,8 @@ void AutomationEngine::tick(View* view, Renderer* renderer, float deltaTime) {
     }
 
     // Increment the case number and apply the next round of settings.
-    mElapsedTime = 0;
-    mElapsedFrames = 0;
     mCurrentTest++;
-    mSpec->get(mCurrentTest, mSettings);
-    applySettings(mSettings->view, view);
+    activateTest();
 }
 
 const char* AutomationEngine::getStatusMessage() const {

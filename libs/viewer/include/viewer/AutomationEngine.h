@@ -21,6 +21,7 @@
 
 namespace filament {
 
+class MaterialInstance;
 class Renderer;
 class View;
 
@@ -57,7 +58,8 @@ public:
 
     // Notifies the engine that time has passed and a new frame has been rendered.
     // This is when settings get applied, screenshots are (optionally) exported, etc.
-    void tick(View* view, Renderer* renderer, float deltaTime);
+    void tick(View* view, MaterialInstance* const* materials, size_t materialCount,
+            Renderer* renderer, float deltaTime);
 
     // Signals that batch mode can begin. Call this after all meshes and textures finish loading.
     void signalBatchMode() { mBatchModeAllowed = true; }
