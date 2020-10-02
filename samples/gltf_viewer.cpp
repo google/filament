@@ -38,7 +38,7 @@
 
 #include <imageio/ImageEncoder.h>
 
-#include <viewer/Automation.h>
+#include <viewer/AutomationSpec.h>
 #include <viewer/SimpleViewer.h>
 
 #include <camutils/Manipulator.h>

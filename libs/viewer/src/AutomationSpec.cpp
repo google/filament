@@ -16,7 +16,7 @@
 
 #define JSMN_HEADER
 
-#include <viewer/Automation.h>
+#include <viewer/AutomationSpec.h>
 
 #include "jsonParseUtils.h"
 
@@ -68,7 +68,7 @@ struct CaseGroup {
     std::vector<Settings> cases;
 };
 
-struct AutomationList::Impl {
+struct AutomationSpec::Impl {
     std::vector<Case> cases;
     std::vector<std::string> names;
 };
@@ -243,7 +243,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, vector<C
     return i;
 }
 
-AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
+AutomationSpec* AutomationSpec::generate(const char* jsonChunk, size_t size) {
     jsmn_parser parser = { 0, 0, 0 };
 
     int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
@@ -270,7 +270,7 @@ AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
         return nullptr;
     }
 
-    AutomationList::Impl* impl = new AutomationList::Impl();
+    AutomationSpec::Impl* impl = new AutomationSpec::Impl();
 
     // Compute the flattened number of Settings objects.
     size_t total = 0;
@@ -293,14 +293,14 @@ AutomationList* AutomationList::generate(const char* jsonChunk, size_t size) {
         ++groupIndex;
     }
 
-    return new AutomationList(impl);
+    return new AutomationSpec(impl);
 }
 
-AutomationList* AutomationList::generateDefaultTestCases() {
+AutomationSpec* AutomationSpec::generateDefaultTestCases() {
     return generate(DEFAULT_AUTOMATION, strlen(DEFAULT_AUTOMATION));
 }
 
-bool AutomationList::get(size_t index, Settings* out) const {
+bool AutomationSpec::get(size_t index, Settings* out) const {
     if (index >= mImpl->cases.size()) {
         return false;
     }
@@ -311,16 +311,16 @@ bool AutomationList::get(size_t index, Settings* out) const {
     return true;
 }
 
-char const* AutomationList::getName(size_t index) const {
+char const* AutomationSpec::getName(size_t index) const {
     if (index >= mImpl->cases.size()) {
         return nullptr;
     }
     return mImpl->cases.at(index).name;
 }
 
-size_t AutomationList::size() const { return mImpl->cases.size(); }
-AutomationList::AutomationList(Impl* impl) : mImpl(impl) {}
-AutomationList::~AutomationList() { delete mImpl; }
+size_t AutomationSpec::size() const { return mImpl->cases.size(); }
+AutomationSpec::AutomationSpec(Impl* impl) : mImpl(impl) {}
+AutomationSpec::~AutomationSpec() { delete mImpl; }
 
 } // namespace viewer
 } // namespace filament

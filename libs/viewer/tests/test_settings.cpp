@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <viewer/Automation.h>
+#include <viewer/AutomationSpec.h>
 #include <viewer/Settings.h>
 
 #include <gtest/gtest.h>
@@ -143,7 +143,7 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
 }
 
 TEST_F(ViewSettingsTest, AutomationSpec) {
-    AutomationList* specs = AutomationList::generateDefaultTestCases();
+    AutomationSpec* specs = AutomationSpec::generateDefaultTestCases();
     ASSERT_TRUE(specs);
     ASSERT_EQ(specs->size(), 65);
 

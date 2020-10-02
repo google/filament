@@ -8,14 +8,14 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/viewer/Automation.h
+        include/viewer/AutomationSpec.h
         include/viewer/Settings.h
         include/viewer/SimpleViewer.h
 )
 
 set(SRCS
         src/jsonParseUtils.h
-        src/Automation.cpp
+        src/AutomationSpec.cpp
         src/Settings.cpp
         src/SimpleViewer.cpp
 )

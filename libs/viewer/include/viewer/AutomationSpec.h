@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef VIEWER_AUTOMATION_H
-#define VIEWER_AUTOMATION_H
+#ifndef VIEWER_AUTOMATION_SPEC_H
+#define VIEWER_AUTOMATION_SPEC_H
 
 #include <viewer/Settings.h>
 
@@ -28,16 +28,16 @@ namespace viewer {
 // The "base" object specifies a single set of changes to apply to default settings.
 // The optional "permute" object specifies a cross product of changes to apply to the base.
 // See the unit test for an example.
-class AutomationList {
+class AutomationSpec {
 public:
 
     // Parses a JSON spec, then generates a list of Settings objects.
     // Returns null on failure (see utils log for warnings and errors).
     // Clients should release memory using "delete".
-    static AutomationList* generate(const char* jsonSpec, size_t size);
+    static AutomationSpec* generate(const char* jsonSpec, size_t size);
 
     // Generates a list of Settings objects using an embedded JSON spec.
-    static AutomationList* generateDefaultTestCases();
+    static AutomationSpec* generateDefaultTestCases();
 
     // Returns the number of generated Settings objects.
     size_t size() const;
@@ -50,11 +50,11 @@ public:
     char const* getName(size_t index) const;
 
     // Frees all Settings objects and name strings.
-    ~AutomationList();
+    ~AutomationSpec();
 
 private:
     struct Impl;
-    AutomationList(Impl*);
+    AutomationSpec(Impl*);
     Impl* mImpl;
 };
 
