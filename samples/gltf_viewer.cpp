@@ -986,7 +986,10 @@ int main(int argc, char** argv) {
             return;
         }
         Settings* settings = &app.viewer->getSettings();
-        app.automationEngine->tick(view, renderer, ImGui::GetIO().DeltaTime);
+        MaterialInstance* const* materials = app.asset->getMaterialInstances();
+        size_t materialCount = app.asset->getMaterialInstanceCount();
+        app.automationEngine->tick(view, materials, materialCount, renderer,
+                ImGui::GetIO().DeltaTime);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
