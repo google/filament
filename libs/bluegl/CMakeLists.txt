@@ -17,28 +17,6 @@ set(SRCS
     src/BlueGL.cpp
 )
 
-# detect aarch64 (ref: https://stackoverflow.com/a/12024211/1255535)
-set(DETECT_ARCH_SRC "
-#if defined(__ARMv8_A__) || defined(__ARM64_ARCH_8__) || \
-    defined(__aarch64__) || defined(__ARMv8__) || defined(_M_ARM64)
-    #define PROCESSOR_ARCH \"aarch64\"
-#else
-    #define PROCESSOR_ARCH \"other\"
-#endif
-
-#include <iostream>
-int main() {
-    std::cout << PROCESSOR_ARCH;
-    return 0;
-}")
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/detect_arch.cpp" "${DETECT_ARCH_SRC}")
-try_run(
-    run_result                                     # <runResultVar>
-    compile_result                                 # <compileResultVar>
-    "${CMAKE_CURRENT_BINARY_DIR}"                  # <bindir>
-    "${CMAKE_CURRENT_BINARY_DIR}/detect_arch.cpp"  # <srcfile>
-    RUN_OUTPUT_VARIABLE PROCESSOR_ARCH)
-
 if (WIN32)
     set(SRCS ${SRCS} src/BlueGLWindows.cpp)
     set(SRCS ${SRCS} src/BlueGLCoreWindowsImpl.S)
@@ -47,7 +25,7 @@ elseif (APPLE AND NOT IOS)
     set(SRCS ${SRCS} src/BlueGLCoreDarwinImpl.S)
 elseif(LINUX)
     set(SRCS ${SRCS} src/BlueGLLinux.cpp)
-    if ("${PROCESSOR_ARCH}" STREQUAL "aarch64")
+    if (LINUX_AARCH64)
         set(SRCS ${SRCS} src/BlueGLCoreLinuxAArch64Impl.S)
     else()
         set(SRCS ${SRCS} src/BlueGLCoreLinuxImpl.S)
