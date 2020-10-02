@@ -140,7 +140,7 @@ static void printUsage(char* name) {
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
         "   --settings=<path to JSON file>, -t\n"
-        "       Apply the settings in the given JSON file.\n\n"
+        "       Apply the settings in the given JSON file\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
         "   --camera=<camera mode>, -c <camera mode>\n"
@@ -332,7 +332,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 }
 
 static void computeRangePlot(App& app, float* rangePlot) {
-    float4& ranges = app.viewer->getViewSettings().colorGrading.ranges;
+    float4& ranges = app.viewer->getSettings().view.colorGrading.ranges;
     ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
 
@@ -382,7 +382,7 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 }
 
 static void computeCurvePlot(App& app, float* curvePlot) {
-    const auto& colorGradingOptions = app.viewer->getViewSettings().colorGrading;
+    const auto& colorGradingOptions = app.viewer->getSettings().view.colorGrading;
     for (size_t i = 0; i < 1024; i++) {
         float3 x{i / 1024.0f * 2.0f};
         float3 y = curves(x,
@@ -416,7 +416,7 @@ static void colorGradingUI(App& app) {
     const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
 
     if (ImGui::CollapsingHeader("Color grading")) {
-        ColorGradingSettings& colorGrading = app.viewer->getViewSettings().colorGrading;
+        ColorGradingSettings& colorGrading = app.viewer->getSettings().view.colorGrading;
 
         ImGui::Indent();
         ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
@@ -669,11 +669,9 @@ int main(int argc, char** argv) {
         app.viewer = new SimpleViewer(engine, scene, view, 410);
 
         if (app.settingsFile.size() > 0) {
-            Settings settings;
-            bool success = loadSettings(app.settingsFile.c_str(), &settings);
+            bool success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
             if (success) {
                 std::cout << "Loaded settings from " << app.settingsFile << std::endl;
-                app.viewer->getViewSettings() = settings.view;
             } else {
                 std::cerr << "Failed to load settings from " << app.settingsFile << std::endl;
             }
@@ -721,7 +719,7 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Camera")) {
-                ViewSettings& settings = app.viewer->getViewSettings();
+                ViewSettings& settings = app.viewer->getSettings().view;
 
                 ImGui::Indent();
                 ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
@@ -872,7 +870,7 @@ int main(int argc, char** argv) {
                 .clear = true
         });
 
-        ColorGradingSettings& options = app.viewer->getViewSettings().colorGrading;
+        ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
         if (options.enabled) {
             // An inefficient but simple way of detecting change is to serialize to JSON, then
             // do a string comparison.

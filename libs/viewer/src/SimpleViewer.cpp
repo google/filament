@@ -54,12 +54,12 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mSunlight(utils::EntityManager::get().create()),
         mSidebarWidth(sidebarWidth) {
 
-    mViewSettings.shadowType = ShadowType::PCF;
-    mViewSettings.dithering = Dithering::TEMPORAL;
-    mViewSettings.antiAliasing = AntiAliasing::FXAA;
-    mViewSettings.sampleCount = 4;
-    mViewSettings.ssao.enabled = true;
-    mViewSettings.bloom.enabled = true;
+    mSettings.view.shadowType = ShadowType::PCF;
+    mSettings.view.dithering = Dithering::TEMPORAL;
+    mSettings.view.antiAliasing = AntiAliasing::FXAA;
+    mSettings.view.sampleCount = 4;
+    mSettings.view.ssao.enabled = true;
+    mSettings.view.bloom.enabled = true;
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
@@ -125,7 +125,7 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
-    mViewSettings.fog.color = sh3[0];
+    mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
@@ -271,31 +271,31 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
 
-        bool dither = mViewSettings.dithering == Dithering::TEMPORAL;
+        bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
         ImGui::Checkbox("Dithering", &dither);
         enableDithering(dither);
 
-        bool msaa = mViewSettings.sampleCount != 1;
+        bool msaa = mSettings.view.sampleCount != 1;
         ImGui::Checkbox("MSAA 4x", &msaa);
         enableMsaa(msaa);
 
-        ImGui::Checkbox("TAA", &mViewSettings.taa.enabled);
+        ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
 
         // this clutters the UI and isn't that useful (except when working on TAA)
         //ImGui::Indent();
-        //ImGui::SliderFloat("feedback", &mViewSettings.taa.feedback, 0.0f, 1.0f);
-        //ImGui::SliderFloat("filter", &mViewSettings.taa.filterWidth, 0.0f, 2.0f);
+        //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
+        //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
         //ImGui::Unindent();
 
-        bool fxaa = mViewSettings.antiAliasing == AntiAliasing::FXAA;
+        bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
         ImGui::Checkbox("FXAA", &fxaa);
         enableFxaa(fxaa);
 
-        ImGui::Checkbox("SSAO", &mViewSettings.ssao.enabled);
-        ImGui::Checkbox("Bloom", &mViewSettings.bloom.enabled);
+        ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
+        ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
 
         if (ImGui::CollapsingHeader("SSAO Options")) {
-            auto& ssao = mViewSettings.ssao;
+            auto& ssao = mSettings.view.ssao;
 
             int quality = (int) ssao.quality;
             int lowpass = (int) ssao.lowPassFilter;
@@ -336,9 +336,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
 
-        bool enableVsm = mViewSettings.shadowType == ShadowType::VSM;
+        bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
-        mViewSettings.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+        mSettings.view.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
 
         char label[32];
         snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
@@ -356,21 +356,21 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("Fog")) {
         ImGui::Indent();
-        ImGui::Checkbox("Enable fog", &mViewSettings.fog.enabled);
-        ImGui::SliderFloat("Start", &mViewSettings.fog.distance, 0.0f, 100.0f);
-        ImGui::SliderFloat("Density", &mViewSettings.fog.density, 0.0f, 1.0f);
-        ImGui::SliderFloat("Height", &mViewSettings.fog.height, 0.0f, 100.0f);
-        ImGui::SliderFloat("Height falloff", &mViewSettings.fog.heightFalloff, 0.0f, 10.0f);
-        ImGui::SliderFloat("Scattering start", &mViewSettings.fog.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering size", &mViewSettings.fog.inScatteringSize, 0.1f, 100.0f);
-        ImGui::Checkbox("Color from IBL", &mViewSettings.fog.fogColorFromIbl);
-        ImGui::ColorPicker3("Color", mViewSettings.fog.color.v);
+        ImGui::Checkbox("Enable fog", &mSettings.view.fog.enabled);
+        ImGui::SliderFloat("Start", &mSettings.view.fog.distance, 0.0f, 100.0f);
+        ImGui::SliderFloat("Density", &mSettings.view.fog.density, 0.0f, 1.0f);
+        ImGui::SliderFloat("Height", &mSettings.view.fog.height, 0.0f, 100.0f);
+        ImGui::SliderFloat("Height falloff", &mSettings.view.fog.heightFalloff, 0.0f, 10.0f);
+        ImGui::SliderFloat("Scattering start", &mSettings.view.fog.inScatteringStart, 0.0f, 100.0f);
+        ImGui::SliderFloat("Scattering size", &mSettings.view.fog.inScatteringSize, 0.1f, 100.0f);
+        ImGui::Checkbox("Color from IBL", &mSettings.view.fog.fogColorFromIbl);
+        ImGui::ColorPicker3("Color", mSettings.view.fog.color.v);
         ImGui::Unindent();
     }
 
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
-    applySettings(mViewSettings, mView);
+    applySettings(mSettings.view, mView);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);

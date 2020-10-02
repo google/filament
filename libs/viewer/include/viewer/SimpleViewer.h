@@ -136,7 +136,7 @@ public:
      * Defaults to true.
      */
     void enableDithering(bool b) {
-        mViewSettings.dithering = b ? Dithering::TEMPORAL : Dithering::NONE;
+        mSettings.view.dithering = b ? Dithering::TEMPORAL : Dithering::NONE;
     }
 
     /**
@@ -144,26 +144,26 @@ public:
      * Defaults to true.
      */
     void enableFxaa(bool b) {
-        mViewSettings.antiAliasing = b ? AntiAliasing::FXAA : AntiAliasing::NONE;
+        mSettings.view.antiAliasing = b ? AntiAliasing::FXAA : AntiAliasing::NONE;
     }
 
     /**
      * Enables hardware-based MSAA antialiasing.
      * Defaults to true.
      */
-    void enableMsaa(bool b) { mViewSettings.sampleCount = b ? 4 : 1; }
+    void enableMsaa(bool b) { mSettings.view.sampleCount = b ? 4 : 1; }
 
     /**
      * Enables screen-space ambient occlusion in the post-process pipeline.
      * Defaults to true.
      */
-    void enableSSAO(bool b) { mViewSettings.ssao.enabled = b; }
+    void enableSSAO(bool b) { mSettings.view.ssao.enabled = b; }
 
     /**
      * Enables Bloom.
      * Defaults to true.
      */
-    void enableBloom(bool bloom) { mViewSettings.bloom.enabled = bloom; }
+    void enableBloom(bool bloom) { mSettings.view.bloom.enabled = bloom; }
 
     /**
      * Adjusts the intensity of the IBL.
@@ -173,9 +173,9 @@ public:
     void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
 
     /**
-     * Gets a modifiable reference to stashed View state.
+     * Gets a modifiable reference to stashed state.
      */
-    ViewSettings& getViewSettings() { return mViewSettings; }
+    Settings& getSettings() { return mSettings; }
 
 private:
     void updateIndirectLight();
@@ -207,7 +207,7 @@ private:
     bool mEnableContactShadows = false;
     int mVsmMsaaSamplesLog2 = 1;
     std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
-    ViewSettings mViewSettings;
+    Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
 };
