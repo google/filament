@@ -85,6 +85,9 @@ public:
         // Similar to sleepDuration, but expressed as a frame count. Both the minimum sleep time
         // and the minimum frame count must be elapsed before the engine advances to the next test.
         int minFrameCount = 2;
+
+        // If true, test progress is dumped to the utils Log (info priority).
+        bool verbose = true;
     };
 
     Options getOptions() const { return mOptions; }

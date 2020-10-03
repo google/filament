@@ -134,6 +134,8 @@ static void printUsage(char* name) {
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
         "       Start automation using the given JSON spec, then quit the app\n\n"
+        "   --headless, -e\n"
+        "       Use a headless swapchain; ignored if --batch is not present\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
         "   --actual-size, -s\n"
@@ -166,11 +168,12 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:e";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
         { "batch",        required_argument, nullptr, 'b' },
+        { "headless",     no_argument,       nullptr, 'e' },
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
@@ -208,6 +211,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
+            case 'e':
+                app->config.headless = true;
+                break;
             case 'i':
                 app->config.iblDirectory = arg;
                 break;
@@ -228,6 +234,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             }
         }
+    }
+    if (app->config.headless && app->batchFile.empty()) {
+        std::cerr << "--headless is allowed only when --batch is present." << std::endl;
+        app->config.headless = false;
     }
     return optind;
 }
