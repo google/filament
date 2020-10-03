@@ -25,6 +25,7 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/Log.h>
 #include <utils/Path.h>
 
 #include <iomanip>
@@ -132,6 +133,9 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
         applySettings(mSettings->view, view);
         for (size_t i = 0; i < materialCount; i++) {
             applySettings(mSettings->material, materials[i]);
+        }
+        if (mOptions.verbose) {
+            utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;
         }
     };
 
