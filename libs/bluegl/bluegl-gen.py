@@ -243,10 +243,10 @@ def generateProxies(api, functions, output_dir, platforms):
 	.global	%(function)s
 	.type	%(function)s, %%function
 %(function)s:
-	adrp	x0, :got:__blue_gl%(suffix)s_%(function)s
-	ldr	x0, [x0, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
-	ldr	x0, [x0]
-	br	x0
+	adrp	x16, :got:__blue_gl%(suffix)s_%(function)s
+	ldr	x16, [x16, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
+	ldr	x16, [x16]
+	br	x16
 	.size	%(function)s, .-%(function)s
 ''',
         'Darwin': '''
