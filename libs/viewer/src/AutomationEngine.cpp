@@ -73,6 +73,11 @@ void exportScreenshot(View* view, Renderer* renderer, std::string filename,
         backend::PixelBufferDescriptor::PixelDataType::UBYTE,
         [](void* buffer, size_t size, void* user) {
             ScreenshotState* state = static_cast<ScreenshotState*>(user);
+            if (state->engine->isTerminated()) {
+                delete[] static_cast<uint8_t*>(buffer);
+                delete state;
+                return;
+            }
             const Viewport& vp = state->view->getViewport();
             LinearImage image(toLinear<uint8_t>(vp.width, vp.height, vp.width * 3,
                     static_cast<uint8_t*>(buffer)));
@@ -101,6 +106,11 @@ void AutomationEngine::startRunning() {
 void AutomationEngine::startBatchMode() {
     mRequestStart = true;
     mBatchModeEnabled = true;
+}
+
+void AutomationEngine::terminate() {
+    stopRunning();
+    mTerminated = true;
 }
 
 void AutomationEngine::exportSettings(const Settings& settings, const char* filename) {

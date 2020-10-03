@@ -67,6 +67,9 @@ public:
     // Cancels an in-progress automation session.
     void stopRunning() { mIsRunning = false; }
 
+    // Signals that the application is closing, so all pending screenshots should be cancelled.
+    void terminate();
+
     // Convenience function that writes out a JSON file to disk.
     static void exportSettings(const Settings& settings, const char* filename);
 
@@ -109,10 +112,12 @@ private:
     bool mRequestStart = false;
     bool mShouldClose = false;
     bool mBatchModeAllowed = false;
+    bool mTerminated = false;
 
 public:
     // For internal use from a screenshot callback.
     void requestClose() { mShouldClose = true; }
+    bool isTerminated() const { return mTerminated; }
 };
 
 } // namespace viewer
