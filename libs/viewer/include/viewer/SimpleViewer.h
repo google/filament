@@ -177,6 +177,8 @@ public:
      */
     Settings& getSettings() { return mSettings; }
 
+    void stopAnimation() { mCurrentAnimation = 0; }
+
 private:
     void updateIndirectLight();
 

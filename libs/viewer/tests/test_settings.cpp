@@ -128,6 +128,22 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
 }
 )TXT";
 
+static const char* JSON_TEST_MATERIAL = R"TXT(
+"material": {
+  "scalar": { "foo": 5.0, "bar": 2.0 },
+  "float3": { "baz": [1, 2, 3] }
+})TXT";
+
+static const char* JSON_TEST_AUTOMATION = R"TXT([{
+    "name": "test_72_cases",
+    "base": { "view.bloom.strength": 0.5 },
+    "permute": {
+        "view.bloom.enabled": [false, true],
+        "material.scalar.metallicFactor": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+        "material.scalar.roughnessFactor": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    }
+}])TXT";
+
 TEST_F(ViewSettingsTest, JsonTestDefaults) {
     Settings settings1 = {0};
     ASSERT_TRUE(readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
@@ -142,7 +158,15 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
     ASSERT_EQ(writeJson(settings2), writeJson(settings3));
 }
 
-TEST_F(ViewSettingsTest, AutomationSpec) {
+TEST_F(ViewSettingsTest, JsonTestMaterial) {
+    Settings settings = {0};
+    std::string js = "{" + std::string(JSON_TEST_MATERIAL) + "}";
+    ASSERT_TRUE(readJson(js.c_str(), js.size(), &settings));
+    std::string serialized = writeJson(settings);
+    ASSERT_PRED_FORMAT2(testing::IsSubstring, "\"baz\": [1, 2, 3]", serialized);
+}
+
+TEST_F(ViewSettingsTest, DefaultAutomationSpec) {
     AutomationSpec* specs = AutomationSpec::generateDefaultTestCases();
     ASSERT_TRUE(specs);
     ASSERT_EQ(specs->size(), 65);
@@ -155,12 +179,19 @@ TEST_F(ViewSettingsTest, AutomationSpec) {
 
     ASSERT_TRUE(specs->get(1, &settings));
     ASSERT_TRUE(settings.view.postProcessingEnabled);
-    ASSERT_EQ(settings.view.dithering, Dithering::NONE);
 
     ASSERT_TRUE(specs->get(64, &settings));
     ASSERT_FALSE(specs->get(65, &settings));
 
     delete specs;
+}
+
+TEST_F(ViewSettingsTest, CustomAutomationSpec) {
+    AutomationSpec* spec = AutomationSpec::generate(JSON_TEST_AUTOMATION,
+            strlen(JSON_TEST_AUTOMATION));
+    ASSERT_TRUE(spec);
+    ASSERT_EQ(spec->size(), 72);
+    delete spec;
 }
 
 int main(int argc, char** argv) {

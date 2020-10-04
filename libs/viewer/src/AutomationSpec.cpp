@@ -46,13 +46,16 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
     },
     {
         "name": "viewopts",
+        "base": {
+            "view.dof.focusDistance": 0.1
+        }
         "permute": {
-            "view.dithering": ["NONE", "TEMPORAL"],
             "view.sampleCount": [1, 4],
             "view.taa.enabled": [false, true],
             "view.antiAliasing": ["NONE", "FXAA"],
             "view.ssao.enabled": [false, true],
-            "view.bloom.enabled": [false, true]
+            "view.bloom.enabled": [false, true],
+            "view.dof.enabled": [false, true]
         }
     }
 ]
