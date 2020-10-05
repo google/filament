@@ -145,18 +145,19 @@ struct VulkanSurfaceContext {
     VkExtent2D clientSize;
     std::vector<VkSurfaceFormatKHR> surfaceFormats;
     VkQueue presentQueue;
+    VkQueue headlessQueue;
     std::vector<SwapContext> swapContexts;
     uint32_t currentSwapIndex;
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
     VulkanAttachment depth;
     bool suboptimal;
-    void* nativeWindow;
 };
 
 void selectPhysicalDevice(VulkanContext& context);
 void createLogicalDevice(VulkanContext& context);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
+void getHeadlessQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDisposer& disposer);

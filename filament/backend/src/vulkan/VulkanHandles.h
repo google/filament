@@ -72,6 +72,8 @@ private:
 };
 
 struct VulkanSwapChain : public HwSwapChain {
+    VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface);
+    VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height);
     VulkanSurfaceContext surfaceContext;
 };
 

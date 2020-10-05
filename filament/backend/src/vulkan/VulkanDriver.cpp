@@ -17,7 +17,7 @@
 #include "vulkan/VulkanDriver.h"
 
 #include "CommandStreamDispatcher.h"
-
+#include "DataReshaper.h"
 #include "VulkanBuffer.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
@@ -553,22 +553,19 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
-    VulkanSurfaceContext& sc = swapChain->surfaceContext;
-    sc.suboptimal = false;
-    sc.surface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, mContext.instance);
-    sc.nativeWindow = nativeWindow;
-    getPresentationQueue(mContext, sc);
-    createSwapChain(mContext, sc);
+    const VkInstance instance = mContext.instance;
+    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance);
+    auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, vksurface);
 
     // TODO: move the following line into makeCurrent.
-    mContext.currentSurface = &sc;
+    mContext.currentSurface = &swapChain->surfaceContext;
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    //auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
-    // TODO: implement headless swapchain
+    assert(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
+    auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, width, height);
+    mContext.currentSurface = &swapChain->surfaceContext;
 }
 
 void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
@@ -1174,6 +1171,12 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             .signalSemaphoreCount = 1u,
             .pSignalSemaphores = &surfaceContext.renderingFinished,
     };
+    if (surfaceContext.headlessQueue) {
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitSemaphores = nullptr;
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = nullptr;
+    }
 
     auto& cmdfence = swapContext.commands.fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
@@ -1183,6 +1186,10 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
     swapContext.invalid = true;
     cmdfence->condition.notify_all();
+
+    if (surfaceContext.headlessQueue) {
+        return;
+    }
 
     // Present the backbuffer.
     VulkanSurfaceContext& surface = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
@@ -1288,8 +1295,172 @@ void VulkanDriver::stopCapture(int) {
 
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
-    scheduleDestroy(std::move(p));
+        PixelBufferDescriptor&& pbd) {
+    // TODO: add support for all types listed in the Renderer docstring for readPixels.
+    assert(pbd.type == PixelBufferDescriptor::PixelDataType::UBYTE);
+
+    const VkDevice device = mContext.device;
+
+    // Create a host visible, linearly tiled image as a staging area.
+
+    VkImageCreateInfo imageInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .extent.width = width,
+        .extent.height = height,
+        .extent.depth = 1,
+        .arrayLayers = 1,
+        .mipLevels = 1,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT
+    };
+
+    VkImage stagingImage;
+    vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
+
+    VkMemoryRequirements memReqs;
+    VkDeviceMemory stagingMemory;
+    vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = selectMemoryType(mContext, memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    };
+
+    vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
+    vkBindImageMemory(device, stagingImage, stagingMemory, 0);
+
+    // TODO: Should we allow readPixels within beginFrame / endFrame?
+
+    assert(mContext.currentCommands == nullptr);
+    acquireWorkCommandBuffer(mContext);
+
+    // Transition the staging image layout.
+
+    VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, stagingImage,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 1,
+            VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VkImageCopy imageCopyRegion = {
+        .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .srcSubresource.layerCount = 1,
+        .srcOffset.x = (int32_t) x,
+        .srcOffset.y = (int32_t) y,
+        .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .dstSubresource.layerCount = 1,
+        .extent.width = width,
+        .extent.height = height,
+        .extent.depth = 1
+    };
+
+    // Transition the source image layout (which might be the swap chain)
+
+    VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
+    VkImage srcImage = srcTarget->getColor(0).image;
+    VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Perform the blit.
+
+    vkCmdCopyImage(mContext.work.cmdbuffer, srcTarget->getColor(0).image,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &imageCopyRegion);
+
+    // Restore the source image layout.
+
+    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    if (srcTexture || mContext.currentSurface->presentQueue) {
+        const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
+                VK_IMAGE_LAYOUT_UNDEFINED, srcTexture ? getTextureLayout(srcTexture->usage) : present,
+                0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+    } else {
+        VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+
+    // Transition the staging image layout to GENERAL.
+
+    VkImageMemoryBarrier barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = stagingImage,
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1
+    };
+
+    vkCmdPipelineBarrier(mContext.work.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    flushWorkCommandBuffer(mContext);
+
+    // Create a closure-friendly pointer that holds the rvalue reference.
+
+    PixelBufferDescriptor* closure = new PixelBufferDescriptor();
+    *closure = std::move(pbd);
+
+    // Create a disposable to defer execution of the following code until after
+    // the work command buffer has completed.
+
+    mDisposer.createDisposable(stagingImage, [=] () {
+
+        VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
+        VkSubresourceLayout subResourceLayout;
+        vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
+
+        // Map image memory so we can start copying from it.
+
+        const uint8_t* srcPixels;
+        vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
+        srcPixels += subResourceLayout.offset;
+
+        uint8_t* dstPixels = (uint8_t*) closure->buffer;
+        const uint32_t dstStride = closure->stride ? closure->stride : width;
+        const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(closure->format,
+                closure->type, dstStride, 1, closure->alignment);
+        const int srcBytesPerRow = subResourceLayout.rowPitch;
+
+        switch (closure->format) {
+            case PixelDataFormat::RGB:
+            case PixelDataFormat::RGB_INTEGER:
+                DataReshaper::reshapeImage<uint8_t, 4, 3>(dstPixels, srcPixels, srcBytesPerRow,
+                        dstBytesPerRow, height);
+                break;
+            case PixelDataFormat::RGBA:
+            case PixelDataFormat::RGBA_INTEGER:
+                DataReshaper::reshapeImage<uint8_t, 4, 4>(dstPixels, srcPixels, srcBytesPerRow,
+                        dstBytesPerRow, height);
+                break;
+            default:
+                utils::slog.e << "ReadPixels: invalid PixelDataFormat" << utils::io::endl;
+                break;
+        }
+
+        vkUnmapMemory(device, stagingMemory);
+        vkFreeMemory(device, stagingMemory, nullptr);
+        vkDestroyImage(device, stagingImage, nullptr);
+
+        scheduleDestroy(std::move(*closure));
+        delete closure;
+    });
+
+    // Next we reduce the ref count of the image to zero, which schedules the above callback to be
+    // executed on the next beginFrame(), after the work command buffer is completed.
+    mDisposer.removeReference(stagingImage);
 }
 
 void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
@@ -1297,13 +1468,10 @@ void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y,
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::blit(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, backend::Viewport dstRect,
-        Handle<HwRenderTarget> src, backend::Viewport srcRect,
-        SamplerMagFilter filter) {
-    auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
-    auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
-
+void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
+        Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
+    VulkanRenderTarget* dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
+    VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const int targetIndex = 0; // TODO: support MRT in blit
 
     // In debug builds, verify that the two render targets have blittable formats.
@@ -1371,9 +1539,7 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1, 1, aspect);
 
-        assert(srcTexture && "Blit source does not have an attached color texture.");
-
-        if (srcTexture->samples > 1 && dstTexture && dstTexture->samples == 1) {
+        if (srcTexture && srcTexture->samples > 1 && dstTexture && dstTexture->samples == 1) {
             vkCmdResolveImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
         } else {
@@ -1382,8 +1548,13 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
                     filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
         }
 
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(srcTexture->usage), srcLevel, 1, 1, aspect);
+        if (srcTexture) {
+            VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                    getTextureLayout(srcTexture->usage), srcLevel, 1, 1, aspect);
+        } else if  (!mContext.currentSurface->headlessQueue) {
+            VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, srcLevel, 1, 1, aspect);
+        }
 
         // Determine the desired texture layout for the destination while ensuring that the default
         // render target is supported, which has no associated texture.
@@ -1581,6 +1752,7 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void VulkanDriver::refreshSwapChain() {
     VulkanSurfaceContext& surface = *mContext.currentSurface;
 
+    assert(!surface.headlessQueue && "Resizing headless swap chains is not supported.");
     backend::destroySwapChain(mContext, surface, mDisposer);
     createSwapChain(mContext, surface);
 
