@@ -71,26 +71,30 @@ class FScene;
 // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
 // (either camera or light).
 //
-// bits                          7 6 5 4 3 2 1 0
-// +-------------------------------------------+
-// VISIBLE_RENDERABLE                          X
-// VISIBLE_DIR_SHADOW_CASTER                 X
-// VISIBLE_SPOT_SHADOW_CASTER_0            X
-// VISIBLE_SPOT_SHADOW_CASTER_1          X
+// bits                               7 6 5 4 3 2 1 0
+// +------------------------------------------------+
+// VISIBLE_RENDERABLE                               X
+// VISIBLE_DIR_SHADOW_RENDERABLE                  X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_0             X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_1           X
 // ...
 
+// A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
+// PCF shadows: only shadow casters
+// VSM shadows: both shadow casters and shadow receivers
+
 static constexpr size_t VISIBLE_RENDERABLE_BIT = 0u;
-static constexpr size_t VISIBLE_DIR_SHADOW_CASTER_BIT = 1u;
-static constexpr size_t VISIBLE_SPOT_SHADOW_CASTER_N_BIT(size_t n) { return n + 2; }
+static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT = 1u;
+static constexpr size_t VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(size_t n) { return n + 2; }
 
 static constexpr uint8_t VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_DIR_SHADOW_CASTER = 1u << VISIBLE_DIR_SHADOW_CASTER_BIT;
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER_N(size_t n) {
-    return 1u << VISIBLE_SPOT_SHADOW_CASTER_N_BIT(n);
+static constexpr uint8_t VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
+    return 1u << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(n);
 }
 
-// ORing of all the VISIBLE_SPOT_SHADOW_CASTER bits
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_CASTER =
+// ORing of all the VISIBLE_SPOT_SHADOW_RENDERABLE bits
+static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE =
         (0xFFu >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
 // Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
@@ -423,7 +427,7 @@ private:
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
             FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
-            size_t count);
+            size_t count, bool hasVsm);
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);

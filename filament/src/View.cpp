@@ -463,17 +463,17 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
         auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
         computeVisibilityMasks(getVisibleLayers(), layers, visibility, cullingMask.begin(),
-                renderableData.size());
+                renderableData.size(), hasVsm());
 
         auto const beginRenderables = renderableData.begin();
         auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
         auto beginCastersOnly = partition(beginCasters, renderableData.end(),
-                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_CASTER);
+                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE);
         auto beginSpotLightCastersOnly = partition(beginCastersOnly, renderableData.end(),
-                VISIBLE_DIR_SHADOW_CASTER);
+                VISIBLE_DIR_SHADOW_RENDERABLE);
         auto endSpotLightCastersOnly = std::partition(beginSpotLightCastersOnly,
                 renderableData.end(), [](auto it) {
-                    return (it.template get<FScene::VISIBLE_MASK>() & VISIBLE_SPOT_SHADOW_CASTER);
+                    return (it.template get<FScene::VISIBLE_MASK>() & VISIBLE_SPOT_SHADOW_RENDERABLE);
                 });
 
         // convert to indices
@@ -555,7 +555,7 @@ void FView::computeVisibilityMasks(
         uint8_t visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
-        uint8_t* UTILS_RESTRICT visibleMask, size_t count) {
+        uint8_t* UTILS_RESTRICT visibleMask, size_t count, bool hasVsm) {
     // __restrict__ seems to only be taken into account as function parameters. This is very
     // important here, otherwise, this loop doesn't get vectorized.
     // This is vectorized 16x.
@@ -573,18 +573,27 @@ void FView::computeVisibilityMasks(
         // else:
         //     set all bits in visibleMask to 0
         // if !v.castShadows:
-        //     set shadow visibility bits in visibleMask to 0
+        //     if !vsm or !v.receivesShadows:       // with vsm, we also render shadow receivers
+        //         set shadow visibility bits in visibleMask to 0
         //
         // It is written without if statements to avoid branches, which allows it to be vectorized 16x.
 
-        bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
-        bool visShadowCasters = (!v.culling || (mask & VISIBLE_DIR_SHADOW_CASTER)) && inVisibleLayer && v.castShadows;
+        const bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
+        const bool vvsmRenderShadow = hasVsm && v.receiveShadows;
+        const bool visShadowParticipant = v.castShadows || vvsmRenderShadow;
+        const bool visShadowRenderable =
+            (!v.culling || (mask & VISIBLE_DIR_SHADOW_RENDERABLE)) && inVisibleLayer && visShadowParticipant;
         visibleMask[i] = Culler::result_type(visRenderables) |
-                Culler::result_type(visShadowCasters << 1u);
+                Culler::result_type(visShadowRenderable << 1u);
         // this loop gets fully unrolled
         for (size_t j = 0; j < CONFIG_MAX_SHADOW_CASTING_SPOTS; ++j) {
-            bool vIsSpotShadowCaster = (!v.culling || (mask & VISIBLE_SPOT_SHADOW_CASTER_N(j))) && inVisibleLayer && v.castShadows;
-            visibleMask[i] |= Culler::result_type(vIsSpotShadowCaster << (j + 2));
+            const bool vvsmSpotRenderShadow = hasVsm && v.receiveShadows;
+            const bool visSpotShadowParticipant = v.castShadows || vvsmSpotRenderShadow;
+            const bool visSpotShadowRenderable =
+                (!v.culling || (mask & VISIBLE_SPOT_SHADOW_RENDERABLE_N(j))) &&
+                        inVisibleLayer && visSpotShadowParticipant;
+            visibleMask[i] |=
+                Culler::result_type(visSpotShadowRenderable << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(j));
         }
     }
 }
@@ -598,7 +607,7 @@ UTILS_NOINLINE
         // Mask VISIBLE_MASK to ignore higher bits related to spot shadows. We only partition based
         // on renderable and directional shadow visibility.
         return (it.template get<FScene::VISIBLE_MASK>() &
-                (VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_CASTER)) == mask;
+                (VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE)) == mask;
     });
 }
 
