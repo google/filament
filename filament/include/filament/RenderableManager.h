@@ -222,8 +222,8 @@ public:
          * If the View's shadow type is set to ShadowType::VSM, castShadows should only be disabled
          * if either is true:
          *   - receiveShadows is also disabled
-         *   - the object is guaranteed to not cast shadows on themselves or other objects (for
-         *     example, a ground plane)
+         *   - the object is guaranteed to not cast shadows on itself or other objects (for example,
+         *     a ground plane)
          */
         Builder& castShadows(bool enable) noexcept;
 
