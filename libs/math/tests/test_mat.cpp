@@ -588,6 +588,34 @@ do {                                                            \
     }                                                           \
 } while(0)
 
+TYPED_TEST(MatTestT, NormalsNegativeScale) {
+    typedef filament::math::details::TMat33<TypeParam> M33T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
+
+    M33T m(-1,  0,  0,
+            0,  1,  0,
+            0,  0,  1);
+
+    V3T n = V3T(0, 0, 1);
+    V3T n_prime = M33T::getTransformForNormals(m) * n;
+
+    // The normal should be flipped for mirroring transformations (ie when the det < 0).
+    //
+    // This is intuitive using Grassmann algebra, or when visualizing the mirroring of the
+    // tangent + bivector pair rather than the normal itself.
+    //
+    // Another way of thinking about this is in terms of polygon winding: since the winding is
+    // flipped, we render its underside and thus need to flip the shading normal.
+    //
+    // The following shadertoy is illuminating: https://www.shadertoy.com/view/3s33zj.
+    // The shadertoy is interesting for several reasons: (1) it uses the adjoint matrix for
+    // transforming normals and (2) it negates the normal when scale is negative (look for
+    // "isFlipped") and (3) it demonstrates that inverse-transpose computation is slow.
+
+    ASSERT_LT(det(m), 0);
+    EXPECT_VEC_EQ(n_prime, -n);
+}
+
 //------------------------------------------------------------------------------
 // Test some translation stuff.
 TYPED_TEST(MatTestT, Translation4) {

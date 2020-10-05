@@ -20,7 +20,10 @@
 #include <image/KtxBundle.h>
 #include <image/LinearImage.h>
 
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
 #include <imageio/BlockCompression.h>
+#endif
+
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -89,6 +92,9 @@ Options:
        if 0 (default), all levels are generated
    --compression=COMPRESSION, -c COMPRESSION
        format specific compression:
+)TXT"
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
+R"TXT(
            KTX:
              astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size
              s3tc_rgb_dxt1, s3tc_rgba_dxt5
@@ -97,6 +103,9 @@ Options:
                          srgb8_alpha, rgba8, or srgb8_alpha8
                METRIC is rgba, rgbx, rec709, numeric, or normalxyz
                EFFORT is an integer between 0 and 100
+)TXT"
+#endif
+R"TXT(
            PNG: Ignored
            Radiance: Ignored
            Photoshop: 16 (default), 32
@@ -319,7 +328,6 @@ int main(int argc, char* argv[]) {
         // bundle, we want to include level 0, so add 1 to the KTX level count.
         KtxBundle container(1 + miplevels.size(), 1, false);
         auto& info = container.info();
-        CompressionConfig config {};
         info = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
             .glType = KtxBundle::UNSIGNED_BYTE,
@@ -339,6 +347,8 @@ int main(int argc, char* argv[]) {
             info.glFormat = info.glBaseInternalFormat = KtxBundle::RGBA;
             info.glInternalFormat = KtxBundle::RGBA8;
         }
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
+        CompressionConfig config {};
         if (!g_compression.empty()) {
             bool valid = parseOptionString(g_compression, &config);
             if (!valid) {
@@ -350,12 +360,19 @@ int main(int argc, char* argv[]) {
             // The glInternalFormat field is the only field that specifies the actual format.
             info.glFormat = 0;
         }
+#else
+        if (!g_compression.empty()) {
+            cerr << "Compression not supported in this build." << endl;
+            return 1;
+        }
+#endif
         uint32_t mip = 0;
         auto addLevel = [&](LinearImage image) {
             if (g_filter == Filter::GAUSSIAN_NORMALS) {
                 image = vectorsToColors(image);
             }
             std::unique_ptr<uint8_t[]> data;
+#ifdef IMAGEIO_SUPPORTS_BLOCK_COMPRESSION
             if (config.type != CompressionConfig::INVALID) {
                 // Some encoders call exit(1) upon failure, so it's very useful to print some
                 // source image information here for when this is invoked from a build script.
@@ -369,6 +386,7 @@ int main(int argc, char* argv[]) {
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;
             }
+#endif
             if (g_grayscale && g_linearized) {
                 data = fromLinearToGrayscale<uint8_t>(image);
             } else if (g_grayscale) {

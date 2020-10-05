@@ -1423,7 +1423,7 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
             .filterMin = SamplerMinFilter::LINEAR
     });
 
-    const float temporalNoise = mUniformDistribution(mRandomEngine);
+    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
 
     mi->setParameter("vignette", vignetteParameters);
     mi->setParameter("vignetteColor", vignetteOptions.color);
@@ -1539,7 +1539,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 float4 vignetteParameters = getVignetteParameters(
                         vignetteOptions, output.width, output.height);
 
-                const float temporalNoise = mUniformDistribution(mRandomEngine);
+                const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
 
                 mi->setParameter("dithering", dithering);
                 mi->setParameter("bloom", bloomParameters);

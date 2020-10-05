@@ -93,6 +93,10 @@ private:
     utils::CString mHtml;
     utils::CString mJavascript;
     utils::CString mCss;
+
+    utils::CString mChunkedMessage;
+    size_t mChunkedMessageRemaining = 0;
+
     EditCallback mEditCallback = nullptr;
     QueryCallback mQueryCallback = nullptr;
 

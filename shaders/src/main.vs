@@ -33,7 +33,7 @@ void main() {
 
         // We don't need to normalize here, even if there's a scale in the matrix
         // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
-        // all its components are < 1.0. This precents the bitangent to exceed the range of fp16
+        // all its components are < 1.0. This prevents the bitangent to exceed the range of fp16
         // in the fragment shader, where we renormalize after interpolation
         vertex_worldTangent.xyz = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent.xyz;
         vertex_worldTangent.w = mesh_tangents.w;

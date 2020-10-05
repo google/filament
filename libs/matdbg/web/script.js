@@ -15,6 +15,7 @@
  */
 
 const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.17.1/min/';
+const kUntitledPlaceholder = "untitled";
 
 const materialList = document.getElementById("material-list");
 const materialDetail = document.getElementById("material-detail");
@@ -52,8 +53,9 @@ function rebuildMaterial() {
     if ("glindex" in gCurrentShader)    { api = 1; index = gCurrentShader.glindex; }
     if ("vkindex" in gCurrentShader)    { api = 2; index = gCurrentShader.vkindex; }
     if ("metalindex" in gCurrentShader) { api = 3; index = gCurrentShader.metalindex; }
-    const text = getShaderRecord(gCurrentShader).text;
-    gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${text}`);
+    const editedText = getShaderRecord(gCurrentShader).text;
+    const byteCount = new Blob([editedText]).size;
+    gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
 }
 
 document.querySelector("body").addEventListener("click", (evt) => {
@@ -86,7 +88,7 @@ document.querySelector("body").addEventListener("click", (evt) => {
 // TODO: this function could be vastly simplified by changing the format of the shader selector.
 function selectNextShader(materialStep, shaderStep) {
     if (materialStep !== 0) {
-        const matids = Object.keys(gMaterialDatabase);
+        const matids = getDisplayedMaterials().map(m => m.matid).filter(m => m);
         const currentIndex = matids.indexOf(gCurrentMaterial);
         const nextIndex = currentIndex + materialStep;
         if (nextIndex >= 0 && nextIndex < matids.length) {
@@ -236,10 +238,25 @@ function fetchShader(selection, matinfo, onDone) {
     });
 }
 
-function renderMaterialList() {
+function getDisplayedMaterials() {
     const items = [];
 
-    for (const matid in gMaterialDatabase) {
+    // Names need not be unique, so we display a numeric suffix for non-unique names.
+    // To achieve stable ordering of anonymous materials, we first sort by matid.
+    const labels = new Set();
+    const matids = Object.keys(gMaterialDatabase).sort();
+    const duplicatedLabels = {};
+    for (const matid of matids) {
+        const name = gMaterialDatabase[matid].name || kUntitledPlaceholder;
+        if (labels.has(name)) {
+            duplicatedLabels[name] = 0;
+        } else {
+            labels.add(name);
+        }
+    }
+
+    // Build a list of objects to pass into the template string.
+    for (const matid of matids) {
         const item =  Object.assign({}, gMaterialDatabase[matid]);
         item.classes = matid === gCurrentMaterial ? "current " : "";
         if (!item.active) {
@@ -247,13 +264,26 @@ function renderMaterialList() {
         }
         item.domain = item.shading.material_domain === "surface" ? "surface" : "postpro";
         item.is_material = true;
+
+        const name = item.name || kUntitledPlaceholder;
+        if (name in duplicatedLabels) {
+            const index = duplicatedLabels[name];
+            item.name = `${name} (${index})`;
+            duplicatedLabels[name] = index + 1;
+        } else {
+            item.name = name;
+        }
+
         items.push(item);
     }
 
-    const label = {"is_label": true, "name": "0"};
-    items.push(Object.assign({"label": "Surface materials", "domain": "surface"}, label));
-    items.push(Object.assign({"label": "PostProcess materials", "domain": "postpro"}, label));
+    // The template takes a flat list of items, so here we insert items for section headers using
+    // blank names, which causes them to sort to the top of their respective sections.
+    const sectionLabel = {"is_label": true, "name": ""};
+    items.push(Object.assign({"label": "Surface materials", "domain": "surface"}, sectionLabel));
+    items.push(Object.assign({"label": "PostProcess materials", "domain": "postpro"}, sectionLabel));
 
+    // Next, sort all materials and section headers.
     items.sort((a, b) => {
         if (a.domain > b.domain) return -1;
         if (a.domain < b.domain) return +1;
@@ -261,7 +291,11 @@ function renderMaterialList() {
         if (a.name > b.name) return +1;
         return 0;
     });
+    return items;
+}
 
+function renderMaterialList() {
+    const items = getDisplayedMaterials();
     materialList.innerHTML = Mustache.render(matListTemplate.innerHTML, { "item": items } );
 }
 
@@ -298,11 +332,14 @@ function getShaderRecord(selection) {
 
 function renderShaderStatus() {
     const shader = getShaderRecord(gCurrentShader);
+    let statusString = "";
     if (shader && shader.modified) {
-        header.innerHTML = "matdbg &nbsp; <a class='rebuild'>[rebuild]</a>";
-    } else {
-        header.innerHTML = "matdbg";
+        statusString += " &nbsp; <a class='rebuild'>[rebuild]</a>";
     }
+    if (shader && !shader.active) {
+        statusString += " &nbsp; <span class='warning'> selected variant is inactive </span>";
+    }
+    header.innerHTML = "matdbg" + statusString;
 }
 
 function selectShader(selection) {
@@ -369,11 +406,14 @@ function init() {
             minimap: { enabled: false }
         });
         gEditor.onDidChangeModelContent((e) => { onEdit(e.changes); });
+
         gEditor.addCommand(KeyMod.CtrlCmd | KeyCode.KEY_S, () => rebuildMaterial());
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.UpArrow, () => selectNextShader(-1, 0));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.DownArrow, () => selectNextShader(+1, 0));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.LeftArrow, () => selectNextShader(0, -1));
-        gEditor.addCommand(KeyMod.WinCtrl | KeyCode.RightArrow, () => selectNextShader(0, +1));
+
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.UpArrow, () => selectNextShader(-1, 0));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.DownArrow, () => selectNextShader(+1, 0));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.LeftArrow, () => selectNextShader(0, -1));
+        gEditor.addCommand(KeyMod.Shift | KeyMod.WinCtrl | KeyCode.RightArrow, () => selectNextShader(0, +1));
+
         fetchMaterials();
     });
 

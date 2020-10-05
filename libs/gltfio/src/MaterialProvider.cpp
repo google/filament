@@ -26,25 +26,28 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.unlit == k2.unlit) &&
         (k1.hasVertexColors == k2.hasVertexColors) &&
         (k1.hasBaseColorTexture == k2.hasBaseColorTexture) &&
-        (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
         (k1.hasNormalTexture == k2.hasNormalTexture) &&
         (k1.hasOcclusionTexture == k2.hasOcclusionTexture) &&
         (k1.hasEmissiveTexture == k2.hasEmissiveTexture) &&
+        (k1.useSpecularGlossiness == k2.useSpecularGlossiness) &&
         (k1.alphaMode == k2.alphaMode) &&
-        (k1.baseColorUV == k2.baseColorUV) &&
+        (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
         (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
+        (k1.baseColorUV == k2.baseColorUV) &&
+        (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
+        (k1.clearCoatUV == k2.clearCoatUV) &&
+        (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
+        (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
+        (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
+        (k1.clearCoatNormalUV == k2.clearCoatNormalUV) &&
+        (k1.hasClearCoat == k2.hasClearCoat) &&
+        (k1.hasTransmission == k2.hasTransmission) &&
+        (k1.hasTextureTransforms == k2.hasTextureTransforms) &&
         (k1.emissiveUV == k2.emissiveUV) &&
         (k1.aoUV == k2.aoUV) &&
         (k1.normalUV == k2.normalUV) &&
-        (k1.hasClearCoat == k2.hasClearCoat) &&
-        (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
-        (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
-        (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
-        (k1.hasTransmission == k2.hasTransmission) &&
         (k1.hasTransmissionTexture == k2.hasTransmissionTexture) &&
-        (k1.clearCoatUV == k2.clearCoatUV) &&
-        (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
-        (k1.clearCoatNormalUV == k2.clearCoatNormalUV);
+        (k1.transmissionUV == k2.transmissionUV);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows

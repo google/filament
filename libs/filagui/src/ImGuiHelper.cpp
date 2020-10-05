@@ -61,7 +61,7 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     view->setPostProcessingEnabled(false);
     view->setBlendMode(View::BlendMode::TRANSLUCENT);
-    view->setShadowsEnabled(false);
+    view->setShadowingEnabled(false);
 
     // Attach a scene for our one and only Renderable.
     view->setScene(mScene);

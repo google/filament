@@ -723,8 +723,41 @@ public class View {
      * @see RenderableManager.Builder#receiveShadows
      * @see RenderableManager.Builder#castShadows
      */
+    public void setShadowingEnabled(boolean enabled) {
+        nSetShadowingEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * Enables or disables shadow mapping. Enabled by default.
+     *
+     * @deprecated Use {@link #setShadowingEnabled}
+     */
+    @Deprecated
     public void setShadowsEnabled(boolean enabled) {
-        nSetShadowsEnabled(getNativeObject(), enabled);
+        setShadowingEnabled(enabled);
+    }
+
+    /**
+     * @return whether shadowing is enabled
+     */
+    boolean isShadowingEnabled() {
+        return nIsShadowingEnabled(getNativeObject());
+    }
+
+    /**
+     * Enables or disables screen space refraction. Enabled by default.
+     *
+     * @param enabled true enables screen space refraction, false disables it.
+     */
+    public void setScreenSpaceRefractionEnabled(boolean enabled) {
+        nSetScreenSpaceRefractionEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * @return whether screen space refraction is enabled
+     */
+    boolean isScreenSpaceRefractionEnabled() {
+        return nIsScreenSpaceRefractionEnabled(getNativeObject());
     }
 
     /**
@@ -1223,7 +1256,7 @@ public class View {
     private static native void nSetCamera(long nativeView, long nativeCamera);
     private static native void nSetViewport(long nativeView, int left, int bottom, int width, int height);
     private static native void nSetVisibleLayers(long nativeView, int select, int value);
-    private static native void nSetShadowsEnabled(long nativeView, boolean enabled);
+    private static native void nSetShadowingEnabled(long nativeView, boolean enabled);
     private static native void nSetRenderTarget(long nativeView, long nativeRenderTarget);
     private static native void nSetSampleCount(long nativeView, int count);
     private static native int nGetSampleCount(long nativeView);
@@ -1248,4 +1281,7 @@ public class View {
     private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native boolean nIsShadowingEnabled(long nativeView);
+    private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
 }
