@@ -578,19 +578,22 @@ void FView::computeVisibilityMasks(
         //
         // It is written without if statements to avoid branches, which allows it to be vectorized 16x.
 
-        bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
-        bool visShadowRenderable =
-            (!v.culling || (mask & VISIBLE_DIR_SHADOW_RENDERABLE)) && inVisibleLayer
-            && (v.castShadows || (hasVsm && v.receiveShadows));
+        const bool visRenderables   = (!v.culling || (mask & VISIBLE_RENDERABLE))    && inVisibleLayer;
+        const bool vvsmRenderShadow = hasVsm && v.receiveShadows;
+        const bool visShadowParticipant = v.castShadows || vvsmRenderShadow;
+        const bool visShadowRenderable =
+            (!v.culling || (mask & VISIBLE_DIR_SHADOW_RENDERABLE)) && inVisibleLayer && visShadowParticipant;
         visibleMask[i] = Culler::result_type(visRenderables) |
                 Culler::result_type(visShadowRenderable << 1u);
         // this loop gets fully unrolled
         for (size_t j = 0; j < CONFIG_MAX_SHADOW_CASTING_SPOTS; ++j) {
-            bool vIsSpotShadowRenderable =
-                (!v.culling || (mask & VISIBLE_SPOT_SHADOW_RENDERABLE_N(j))) && inVisibleLayer
-                && (v.castShadows || (hasVsm && v.receiveShadows));
+            const bool vvsmSpotRenderShadow = hasVsm && v.receiveShadows;
+            const bool visSpotShadowParticipant = v.castShadows || vvsmSpotRenderShadow;
+            const bool visSpotShadowRenderable =
+                (!v.culling || (mask & VISIBLE_SPOT_SHADOW_RENDERABLE_N(j))) &&
+                        inVisibleLayer && visSpotShadowParticipant;
             visibleMask[i] |=
-                Culler::result_type(vIsSpotShadowRenderable << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(j));
+                Culler::result_type(visSpotShadowRenderable << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(j));
         }
     }
 }
