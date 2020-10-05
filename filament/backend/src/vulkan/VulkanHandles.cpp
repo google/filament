@@ -191,6 +191,119 @@ VulkanRenderTarget::~VulkanRenderTarget() {
     }
 }
 
+// Primary SwapChain constructor. (not headless)
+VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface) {
+    surfaceContext.suboptimal = false;
+    surfaceContext.surface = vksurface;
+    getPresentationQueue(context, surfaceContext);
+    createSwapChain(context, surfaceContext);
+}
+
+// Headless SwapChain constructor. (does not create a VkSwapChainKHR)
+VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height) {
+    surfaceContext.surface = nullptr;
+    getHeadlessQueue(context, surfaceContext);
+
+    surfaceContext.surfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
+    surfaceContext.swapchain = VK_NULL_HANDLE;
+
+    // Somewhat arbitrarily, headless rendering is double-buffered.
+    surfaceContext.swapContexts.resize(2);
+
+    // Allocate a command buffer for each swap context, just like a real swap chain.
+    VkCommandBufferAllocateInfo allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = context.commandPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = (uint32_t) surfaceContext.swapContexts.size()
+    };
+    std::vector<VkCommandBuffer> cmdbufs(allocateInfo.commandBufferCount);
+    vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
+    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
+        surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
+    }
+
+    // Begin a new command buffer in order to transition image layouts via vkCmdPipelineBarrier.
+    VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
+
+    for (size_t i = 0; i < surfaceContext.swapContexts.size(); ++i) {
+        VkImage image;
+        VkImageCreateInfo iCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = surfaceContext.surfaceFormat.format,
+            .extent.width = width,
+            .extent.height = height,
+            .extent.depth = 1,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        };
+        assert(iCreateInfo.extent.width > 0);
+        assert(iCreateInfo.extent.height > 0);
+        vkCreateImage(context.device, &iCreateInfo, VKALLOC, &image);
+
+        VkMemoryRequirements memReqs = {};
+        vkGetImageMemoryRequirements(context.device, image, &memReqs);
+        VkMemoryAllocateInfo allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = memReqs.size,
+            .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        };
+        VkDeviceMemory imageMemory;
+        vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
+        vkBindImageMemory(context.device, image, imageMemory, 0);
+
+        surfaceContext.swapContexts[i].attachment = {
+            .format = surfaceContext.surfaceFormat.format, .image = image,
+            .view = {}, .memory = {}, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
+        };
+        VkImageViewCreateInfo ivCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = surfaceContext.surfaceFormat.format,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.layerCount = 1,
+            .image = image,
+        };
+        vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
+                    &surfaceContext.swapContexts[i].attachment.view);
+
+        VkImageMemoryBarrier barrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1,
+            },
+        };
+        vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    }
+
+    flushWorkCommandBuffer(context);
+
+    surfaceContext.surfaceCapabilities.currentExtent.width = width;
+    surfaceContext.surfaceCapabilities.currentExtent.height = height;
+
+    surfaceContext.clientSize.width = width;
+    surfaceContext.clientSize.height = height;
+
+    surfaceContext.imageAvailable = VK_NULL_HANDLE;
+    surfaceContext.renderingFinished = VK_NULL_HANDLE;
+
+    createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
+}
+
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
     // For the backbuffer, there are corner cases where the platform's surface resolution does not
     // match what Filament expects, so we need to make an appropriate transformation (e.g. create a
@@ -687,7 +800,16 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             break;
+
+        // We support PRESENT as a target layout to allow blitting from the swap chain.
+        // See also makeSwapChainPresentable().
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = 0;
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+
         default:
            PANIC_POSTCONDITION("Unsupported layout transition.");
     }
