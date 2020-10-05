@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.9.4
 
 - New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental).
+- `UiHelper` now supports managing a `SurfaceHolder`.
 
 ## v1.9.3
 
