@@ -7,6 +7,17 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.3
 
+- engine: Added new APIs to enable/disable screen space refraction
+- engine: Fix, flip the shading normal when det < 0.
+- gltfio: Fix animation by clamping the per-channel interpolant.
+- gltfio: add async cancellation API
+- gltfio: Fix "uniform not found" errors.
+- gltfio: Disable clear coat layer IOR change in glTF files (#3104)
+- Vulkan: fix final image barrier used for swap chain.
+- matdbg: Various improvements
+- JavaScript bindings: fix TextureUsage bitmask.
+- cmgen / mipgen: add opt-in for ASTC / ETC support.
+
 ## v1.9.2
 
 - Fixes / improvements for contact shadows, fog, and DOF
