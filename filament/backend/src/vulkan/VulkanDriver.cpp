@@ -1445,17 +1445,19 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
         const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(closure->format,
                 closure->type, dstStride, 1, closure->alignment);
         const int srcBytesPerRow = subResourceLayout.rowPitch;
+        const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
+        const bool swizzle = !srcTexture && swapChainFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
         switch (closure->format) {
             case PixelDataFormat::RGB:
             case PixelDataFormat::RGB_INTEGER:
                 DataReshaper::reshapeImage<uint8_t, 4, 3>(dstPixels, srcPixels, srcBytesPerRow,
-                        dstBytesPerRow, height);
+                        dstBytesPerRow, height, swizzle);
                 break;
             case PixelDataFormat::RGBA:
             case PixelDataFormat::RGBA_INTEGER:
                 DataReshaper::reshapeImage<uint8_t, 4, 4>(dstPixels, srcPixels, srcBytesPerRow,
-                        dstBytesPerRow, height);
+                        dstBytesPerRow, height, swizzle);
                 break;
             default:
                 utils::slog.e << "ReadPixels: invalid PixelDataFormat" << utils::io::endl;
