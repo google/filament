@@ -15,6 +15,12 @@ Demonstrates how to create a light and a mesh with the attributes required for l
 
 ![Lit Cube](../../docs/images/samples/sample_lit_cube.jpg)
 
+### `live-wallpaper`
+
+Demonstrates how to use Filament as renderer for an Android Live Wallpaper.
+
+![Live Wallpaper](../../docs/images/samples/sample_live_wallpaper.jpg)
+
 ### `image-based-lighting`
 
 Demonstrates how to create image-based lights and load complex meshes:
