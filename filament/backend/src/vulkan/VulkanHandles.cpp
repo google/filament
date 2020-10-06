@@ -232,9 +232,11 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
             .format = surfaceContext.surfaceFormat.format,
-            .extent.width = width,
-            .extent.height = height,
-            .extent.depth = 1,
+            .extent = {
+                .width = width,
+                .height = height,
+                .depth = 1,
+            },
             .mipLevels = 1,
             .arrayLayers = 1,
             .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -263,12 +265,14 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
         };
         VkImageViewCreateInfo ivCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = surfaceContext.surfaceFormat.format,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .subresourceRange.levelCount = 1,
-            .subresourceRange.layerCount = 1,
-            .image = image,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1,
+            }
         };
         vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
                     &surfaceContext.swapContexts[i].attachment.view);

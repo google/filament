@@ -1307,15 +1307,17 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = VK_FORMAT_R8G8B8A8_UNORM,
-        .extent.width = width,
-        .extent.height = height,
-        .extent.depth = 1,
-        .arrayLayers = 1,
+        .extent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
         .mipLevels = 1,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
     VkImage stagingImage;
@@ -1346,15 +1348,23 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
             VK_IMAGE_ASPECT_COLOR_BIT);
 
     VkImageCopy imageCopyRegion = {
-        .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .srcSubresource.layerCount = 1,
-        .srcOffset.x = (int32_t) x,
-        .srcOffset.y = (int32_t) y,
-        .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .dstSubresource.layerCount = 1,
-        .extent.width = width,
-        .extent.height = height,
-        .extent.depth = 1
+        .srcSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .layerCount = 1,
+        },
+        .srcOffset = {
+            .x = (int32_t) x,
+            .y = (int32_t) y,
+        },
+        .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .layerCount = 1,
+        },
+        .extent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
     };
 
     // Transition the source image layout (which might be the swap chain)
@@ -1389,18 +1399,20 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
 
     VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_GENERAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = stagingImage,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.baseArrayLayer = 0,
-        .subresourceRange.layerCount = 1
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        }
     };
 
     vkCmdPipelineBarrier(mContext.work.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
