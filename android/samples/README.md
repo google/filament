@@ -19,7 +19,7 @@ Demonstrates how to create a light and a mesh with the attributes required for l
 
 Demonstrates how to use Filament as renderer for an Android Live Wallpaper.
 
-![Live Wallpaper](../../docs/images/samples/sample_live_wallpaper.jpg)
+![Live Wallpaper](../../docs/images/samples/example_live_wallpaper.jpg)
 
 ### `image-based-lighting`
 
