@@ -51,15 +51,21 @@ public:
     template<typename componentType, size_t srcChannelCount, size_t dstChannelCount,
             componentType maxValue = std::numeric_limits<componentType>::max()>
     static void reshapeImage(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow,
-            size_t dstBytesPerRow, size_t height) {
+            size_t dstBytesPerRow, size_t height, bool swizzle03) {
         const size_t srcWordCount = (srcBytesPerRow / sizeof(componentType)) / srcChannelCount;
         const int minChannelCount = filament::math::min(srcChannelCount, dstChannelCount);
+        assert(minChannelCount <= 4);
+        int inds[4] = {0, 1, 2, 3};
+        if (swizzle03) {
+            inds[0] = 2;
+            inds[2] = 0;
+        }
         for (size_t row = 0; row < height; ++row) {
             const componentType* in = (const componentType*) src;
             componentType* out = (componentType*) dest;
             for (size_t word = 0; word < srcWordCount; ++word) {
                 for (size_t channel = 0; channel < minChannelCount; ++channel) {
-                    out[channel] = in[channel];
+                    out[channel] = in[inds[channel]];
                 }
                 for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
                     out[channel] = maxValue;
