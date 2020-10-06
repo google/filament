@@ -58,8 +58,8 @@ public:
     static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
 
 private:
-    FTexture const* mReflectionsTexture;
-    FTexture const* mIrradianceTexture;
+    FTexture const* mReflectionsTexture = nullptr;
+    FTexture const* mIrradianceTexture = nullptr;
     std::array<math::float3, 9> mIrradianceCoefs;
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
