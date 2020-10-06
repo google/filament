@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (v1.9.5)
 
+- Added a new Live Wallpaper Android sample
+
 ## v1.9.4
 
 - New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental).
