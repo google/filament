@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name = "Filament"
-  spec.version = "1.9.3"
+  spec.version = "1.9.4"
   spec.license = { :type => "Apache 2.0", :file => "LICENSE" }
   spec.homepage = "https://google.github.io/filament"
   spec.authors = "Google LLC."
