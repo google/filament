@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Added a new Live Wallpaper Android sample
 - `UiHelper` now supports managing a `SurfaceHolder`.
+- Fix: an internal texture resource was never destroyed
 
 ## v1.9.4
 
