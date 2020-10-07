@@ -43,7 +43,7 @@ struct X11Functions {
     X11_OPEN_DISPLAY openDisplay;
     X11_CLOSE_DISPLAY closeDisplay;
     X11_GET_GEOMETRY getGeometry;
-    void* library;
+    void* library = nullptr;
 } g_x11;
 
 Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
@@ -51,22 +51,25 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     const char* requiredInstanceExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_xlib_surface",
+        "VK_KHR_get_physical_device_properties2",
 #if VK_ENABLE_VALIDATION
         "VK_EXT_debug_utils",
 #endif
     };
-    g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
-    ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");
-    g_x11.openDisplay  = (X11_OPEN_DISPLAY)  dlsym(g_x11.library, "XOpenDisplay");
-    g_x11.closeDisplay = (X11_CLOSE_DISPLAY) dlsym(g_x11.library, "XCloseDisplay");
-    g_x11.getGeometry = (X11_GET_GEOMETRY) dlsym(g_x11.library, "XGetGeometry");
-    mDisplay = g_x11.openDisplay(NULL);
-    ASSERT_PRECONDITION(mDisplay, "Unable to open X11 display.");
     return VulkanDriverFactory::create(this, requiredInstanceExtensions,
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
 void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
+    if (g_x11.library == nullptr) {
+        g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
+        ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");
+        g_x11.openDisplay  = (X11_OPEN_DISPLAY)  dlsym(g_x11.library, "XOpenDisplay");
+        g_x11.closeDisplay = (X11_CLOSE_DISPLAY) dlsym(g_x11.library, "XCloseDisplay");
+        g_x11.getGeometry = (X11_GET_GEOMETRY) dlsym(g_x11.library, "XGetGeometry");
+        mDisplay = g_x11.openDisplay(NULL);
+        ASSERT_PRECONDITION(mDisplay, "Unable to open X11 display.");
+    }
     ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR, "Unable to load vkCreateXlibSurfaceKHR function.");
     VkSurfaceKHR surface = nullptr;
     VkXlibSurfaceCreateInfoKHR createInfo = {};
