@@ -499,6 +499,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     }
     if (target == SamplerType::SAMPLER_2D_ARRAY) {
         imageInfo.arrayLayers = depth;
+        imageInfo.extent.depth = 1;
         // NOTE: We do not use VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT here because:
         //
         //  (a) MoltenVK does not support it, and
@@ -600,8 +601,11 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         auto transition = [=](VulkanCommandBuffer commands) {
+            // If this is a SAMPLER_2D_ARRAY texture, then the depth argument stores the number of
+            // texture layers.
+            const uint32_t layers = target == SamplerType::SAMPLER_2D_ARRAY ? depth : 1;
             VulkanTexture::transitionImageLayout(commands.cmdbuffer, textureImage,
-                    VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, 1, levels, mAspect);
+                    VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
         };
         if (mContext.currentCommands) {
             transition(*mContext.currentCommands);
