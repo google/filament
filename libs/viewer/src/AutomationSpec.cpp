@@ -48,7 +48,7 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
         "name": "viewopts",
         "base": {
             "view.dof.focusDistance": 0.1
-        }
+        },
         "permute": {
             "view.sampleCount": [1, 4],
             "view.taa.enabled": [false, true],
