@@ -244,6 +244,7 @@ void PostProcessManager::init() noexcept {
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
     FEngine& engine = mEngine;
     driver.destroyTexture(mDummyOneTexture);
+    driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
     auto first = mMaterialRegistry.begin();
     auto last = mMaterialRegistry.end();
