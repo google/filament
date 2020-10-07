@@ -46,6 +46,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <string.h>
+
 #include <getopt/getopt.h>
 
 

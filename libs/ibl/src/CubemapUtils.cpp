@@ -27,6 +27,7 @@
 #include <algorithm>
 
 #include <math.h>
+#include <string.h> // for memset
 
 using namespace filament::math;
 using namespace utils;

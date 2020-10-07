@@ -22,6 +22,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <string.h>
+
 #include <sstream>
 
 namespace filament {

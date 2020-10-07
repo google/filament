@@ -85,7 +85,7 @@ public:
     ~LinearAllocator() noexcept = default;
 
     // our allocator concept
-    void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) UTILS_RESTRICT {
+    void* alloc(size_t size, size_t alignment = alignof(max_align_t), size_t extra = 0) UTILS_RESTRICT {
         // branch-less allocation
         void* const p = pointermath::align(current(), alignment, extra);
         void* const c = pointermath::add(p, size);
@@ -150,7 +150,7 @@ public:
     explicit HeapAllocator(const AREA&) { }
 
     // our allocator concept
-    void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) {
+    void* alloc(size_t size, size_t alignment = alignof(max_align_t), size_t extra = 0) {
         // this allocator doesn't support 'extra'
         assert(extra == 0);
         return aligned_alloc(size, alignment);
@@ -327,7 +327,7 @@ private:
 
 template <
         size_t ELEMENT_SIZE,
-        size_t ALIGNMENT = alignof(std::max_align_t),
+        size_t ALIGNMENT = alignof(max_align_t),
         size_t OFFSET = 0,
         typename FREELIST = FreeList>
 class PoolAllocator {
@@ -539,7 +539,7 @@ public:
 
     // allocate memory from arena with given size and alignment
     // (acceptable size/alignment may depend on the allocator provided)
-    void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) noexcept {
+    void* alloc(size_t size, size_t alignment = alignof(max_align_t), size_t extra = 0) noexcept {
         std::lock_guard<LockingPolicy> guard(mLock);
         void* p = mAllocator.alloc(size, alignment, extra);
         mListener.onAlloc(p, size, alignment, extra);

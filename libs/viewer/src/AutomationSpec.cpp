@@ -21,6 +21,7 @@
 #include "jsonParseUtils.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include <sstream>
 #include <string>

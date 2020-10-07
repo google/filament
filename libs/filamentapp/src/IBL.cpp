@@ -31,6 +31,8 @@
 
 #include <stb_image.h>
 
+#include <string.h>
+
 #include <utils/Path.h>
 #include <filament/IndirectLight.h>
 

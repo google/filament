@@ -29,6 +29,7 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <array>
+#include <memory>
 #include <mutex>
 #include <utility>
 
