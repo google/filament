@@ -162,10 +162,8 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
 
     const int digits = (int) log10 ((double) mSpec->size()) + 1;
     std::ostringstream stringStream;
-    stringStream << "test"
-            << std::setfill('0') << std::setw(digits)
-            << std::to_string(mCurrentTest) << "_"
-            << mSpec->getName(mCurrentTest);
+    stringStream << mSpec->getName(mCurrentTest)
+            << std::setfill('0') << std::setw(digits) << mCurrentTest;
     std::string prefix = stringStream.str();
 
     if (mOptions.exportSettings) {
