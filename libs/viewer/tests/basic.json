@@ -1,0 +1,22 @@
+[
+    {
+        "name": "view",
+        "base": {
+            "view.dof.focusDistance": 0.1,
+            "view.sampleCount": 1,
+            "view.taa.enabled": false
+        },
+        "permute": {
+            "view.antiAliasing": [ "NONE", "FXAA" ],
+            "view.ssao.enabled": [ false, true ],
+            "view.bloom.enabled": [ false, true ],
+            "view.dof.enabled": [ false, true ]
+        }
+    },
+    {
+        "name": "ppoff",
+        "base": {
+            "view.postProcessingEnabled": false
+        }
+    }
+]
