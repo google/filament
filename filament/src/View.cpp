@@ -677,7 +677,7 @@ void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) cons
 }
 
 void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
-    mShadowMapManager.prepareShadow(texture, mPerViewSb);
+    mShadowMapManager.prepareShadow(texture, *this);
 }
 
 void FView::cleanupRenderPasses() const noexcept {
@@ -993,6 +993,14 @@ void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
+void View::setShadowOptions(ShadowOptions const& options) noexcept {
+    upcast(this)->setShadowOptions(options);
+}
+
+View::ShadowOptions View::getShadowOptions() const noexcept {
+    return upcast(this)->getShadowOptions();
+}
+
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {
     upcast(this)->setAmbientOcclusion(ambientOcclusion);
 }
@@ -1003,10 +1011,6 @@ View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
 
 void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
     upcast(this)->setAmbientOcclusionOptions(options);
-}
-
-void View::setShadowType(View::ShadowType shadow) noexcept {
-    upcast(this)->setShadowType(shadow);
 }
 
 View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {

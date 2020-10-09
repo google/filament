@@ -272,11 +272,44 @@ public:
 
     /**
      * List of available shadow mapping techniques.
-     * @see setShadowType
+     * @see ShadowOptions
      */
     enum class ShadowType : uint8_t {
         PCF,        //!< percentage-closer filtered shadows (default)
         VSM         //!< variance shadows
+    };
+
+    /**
+     * View-level options for Shadowing.
+     * @see setShadowOptions()
+     */
+    struct ShadowOptions {
+        /*
+         * The shadow mapping technique this View uses.
+         *
+         * The ShadowType affects all the shadows seen within the View.
+         *
+         * ShadowType::VSM imposes a restriction on marking renderables as only shadow receivers
+         * (but not casters). To ensure correct shadowing with VSM, all shadow participant
+         * renderables should be marked as both receivers and casters. Objects that are guaranteed
+         * to not cast shadows on themselves or other objects (such as flat ground planes) can be
+         * set to not cast shadows, which might improve shadow quality.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        ShadowType shadowType = ShadowType::PCF;
+
+        /**
+         * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+         * than 0, mipmaps will automatically be generated each frame for all lights.
+         *
+         * The number of anisotropic samples = 2 ^ vsmAnisotropyLog2.
+         *
+         * Only applicable when shadowType is set to ShadowType::VSM.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        uint8_t vsmAnisotropyLog2 = 0;
     };
 
     /**
@@ -687,20 +720,21 @@ public:
      */
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
-    /*
-     * Set the shadow mapping technique this View uses.
+    /**
+     * Sets shadowing options that apply across the entire View.
      *
-     * The ShadowType affects all the shadows seen within the View.
+     * Additional light-specific shadow options can be set with LightManager::setShadowOptions.
      *
-     * ShadowType::VSM imposes a restriction on marking renderables as only shadow receivers (but
-     * not casters). To ensure correct shadowing with VSM, all shadow participant renderables should
-     * be marked as both receivers and casters. Objects that are guaranteed to not cast shadows on
-     * themselves or other objects (such as flat ground planes) can be set to not cast shadows,
-     * which might improve shadow quality.
-     *
-     * @warning This API is still experimental and subject to change.
+     * @param options Options for shadowing.
      */
-    void setShadowType(ShadowType shadow) noexcept;
+    void setShadowOptions(ShadowOptions const& options) noexcept;
+
+    /**
+     * Returns the shadow options associated with this View.
+     *
+     * @return value set by setShadowOptions().
+     */
+    ShadowOptions getShadowOptions() const noexcept;
 
     /**
      * Enables or disables post processing. Enabled by default.

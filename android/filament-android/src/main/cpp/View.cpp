@@ -131,9 +131,13 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jcla
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetShadowType(JNIEnv*, jclass, jlong nativeView, jint type) {
+Java_com_google_android_filament_View_nSetShadowOptions(JNIEnv*, jclass, jlong nativeView, jint type,
+        jint vsmAnisotropyLog2) {
     View* view = (View*) nativeView;
-    view->setShadowType((View::ShadowType) type);
+    View::ShadowOptions options;
+    options.shadowType = (View::ShadowType) type;
+    options.vsmAnisotropyLog2 = (uint8_t) vsmAnisotropyLog2;
+    view->setShadowOptions(options);
 }
 
 extern "C"

@@ -74,8 +74,8 @@ public:
             RenderPass& pass) noexcept;
 
     // Prepares the shadow sampler.
-    void prepareShadow(backend::Handle<backend::HwTexture> texture,
-            backend::SamplerGroup& viewSib) const noexcept;
+    void prepareShadow(backend::Handle<backend::HwTexture> texture, FView const& view)
+        const noexcept;
 
     const ShadowMap* getCascadeShadowMap(size_t c) const noexcept {
         return mCascadeShadowMapCache[c].get();
@@ -92,6 +92,7 @@ private:
     struct TextureRequirements {
         uint16_t size = 0;
         uint8_t layers = 0;
+        uint8_t levels = 0;
     } mTextureRequirements;
 
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view, UniformBuffer& perViewUb,
@@ -101,7 +102,7 @@ private:
     static void fillWithDebugPattern(backend::DriverApi& driverApi,
             backend::Handle<backend::HwTexture> texture, size_t dimensions) noexcept;
 
-    void calculateTextureRequirements(FEngine& engine, FScene::LightSoa& lightData) noexcept;
+    void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 
     class ShadowMapEntry {
     public:

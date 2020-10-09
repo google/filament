@@ -193,6 +193,7 @@ void PostProcessManager::init() noexcept {
 
     registerPostProcessMaterial("sao", MATERIAL(SAO));
     registerPostProcessMaterial("mipmapDepth", MATERIAL(MIPMAPDEPTH));
+    registerPostProcessMaterial("vsmMipmap", MATERIAL(VSMMIPMAP));
     registerPostProcessMaterial("bilateralBlur", MATERIAL(BILATERALBLUR));
     registerPostProcessMaterial("separableGaussianBlur", MATERIAL(SEPARABLEGAUSSIANBLUR));
     registerPostProcessMaterial("bloomDownsample", MATERIAL(BLOOMDOWNSAMPLE));
@@ -336,7 +337,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> in;
         FrameGraphId<FrameGraphTexture> out;
         FrameGraphRenderTargetHandle rt;
-
     };
 
     auto& depthMipmapPass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
@@ -1943,6 +1943,57 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                         SamplerMagFilter::NEAREST);
             });
     return ppResolve.getData().output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level) noexcept {
+
+    struct VsmMipData {
+        FrameGraphId<FrameGraphTexture> in;
+        FrameGraphId<FrameGraphTexture> out;
+        FrameGraphRenderTargetHandle rt;
+    };
+
+    auto& depthMipmapPass = fg.addPass<VsmMipData>("VSM Generate Mipmap Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                const char* name = builder.getName(input);
+                data.in = builder.sample(input);
+                data.out = builder.write(data.in);
+
+                data.rt = builder.createRenderTarget(name, {
+                    .attachments = {{ data.out, uint8_t(level + 1), layer }},
+                    .clearFlags = TargetBufferFlags::COLOR,
+                    .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f }
+                });
+            },
+            [=](FrameGraphPassResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                auto in = resources.getTexture(data.in);
+                auto out = resources.get(data.rt);
+
+                auto width = resources.getDescriptor(data.in).width;
+                UTILS_UNUSED_IN_RELEASE auto height = resources.getDescriptor(data.in).height;
+                assert(width == height);
+                int dim = width >> (level + 1);
+
+                auto& material = getPostProcessMaterial("vsmMipmap");
+                FMaterialInstance* const mi = material.getMaterialInstance();
+                mi->setParameter("color", in, {
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST,
+                        .filterMag = SamplerMagFilter::LINEAR
+                        });
+                mi->setParameter("level", uint32_t(level));
+                mi->setParameter("layer", uint32_t(layer));
+
+                // When generating shadow map mip levels, we want to preserve the 1 texel border.
+                auto vpWidth = (uint32_t) std::max(0, dim - 2);
+                out.params.viewport = { 1, 1, vpWidth, vpWidth };
+
+                commitAndRender(out, material, driver);
+            });
+
+    return depthMipmapPass.getData().out;
 }
 
 } // namespace filament

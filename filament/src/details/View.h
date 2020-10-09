@@ -177,7 +177,7 @@ public:
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
-    bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasVsm() const noexcept { return mShadowOptions.shadowType == ShadowType::VSM; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
             RenderPass& pass) noexcept;
@@ -312,11 +312,15 @@ public:
     }
 
     ShadowType getShadowType() const noexcept {
-        return mShadowType;
+        return mShadowOptions.shadowType;
     }
 
-    void setShadowType(ShadowType shadow) noexcept {
-        mShadowType = shadow;
+    void setShadowOptions(ShadowOptions const& options) noexcept {
+        mShadowOptions = options;
+    }
+
+    ShadowOptions getShadowOptions() const noexcept {
+        return mShadowOptions;
     }
 
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
@@ -478,7 +482,7 @@ private:
     bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
-    ShadowType mShadowType = ShadowType::PCF;
+    ShadowOptions mShadowOptions = {};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
