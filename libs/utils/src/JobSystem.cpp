@@ -119,8 +119,8 @@ JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreads
             // since we assumed HT, always round-up to an even number of cores (to play it safe)
             hwThreads = (hwThreads + 1) / 2;
         }
-        // make sure we have at least one h/w thread (could be an assert instead)
-        hwThreads = std::max(0, hwThreads);
+        // make sure we have at least one thread in the thread pool
+        hwThreads = std::max(2, hwThreads);
         // one of the thread will be the user thread
         threadPoolCount = hwThreads - 1;
     }
