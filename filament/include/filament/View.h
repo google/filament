@@ -211,8 +211,8 @@ public:
     };
 
     /**
-     * Options for screen space Ambient Occlusion (SSAO)
-     * @see setAmbientOcclusion()
+     * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
+     * @see setAmbientOcclusionOptions()
      */
     struct AmbientOcclusionOptions {
         float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
@@ -221,9 +221,26 @@ public:
         float resolution = 0.5f;//!< How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
         float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
-        QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality.
+        QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
+        QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
         bool enabled = false;    //!< enables or disables screen-space ambient occlusion
         float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        struct Ssct {
+            float lightConeRad = 1.0f;          //!< full cone angle in radian, between 0 and pi/2
+            float shadowDistance = 0.3f;        //!< how far shadows can be cast
+            float contactDistanceMax = 1.0f;    //!< max distance for contact
+            float intensity = 0.8f;             //!< intensity
+            math::float3 lightDirection{ 0, -1, 0 };    //!< light direction
+            float depthBias = 0.01f;        //!< depth bias in world units (mitigate self shadowing)
+            float depthSlopeBias = 0.01f;   //!< depth slope bias (mitigate self shadowing)
+            uint8_t sampleCount = 4;        //!< tracing sample count, between 1 and 255
+            uint8_t rayCount = 1;           //!< # of rays to trace, between 1 and 255
+            bool enabled = false;           //!< enables or disables SSCT
+        } ssct;
     };
 
     /**

@@ -391,32 +391,41 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     switch (options.quality) {
         default:
         case View::QualityLevel::LOW:
-            config.kernelSize = 11;
-            config.standardDeviation = 4.0f;
-            config.scale = 2.0f;
             sampleCount = 7.0f;
             spiralTurns = 5.0f;
+            break;
+        case View::QualityLevel::MEDIUM:
+            sampleCount = 11.0f;
+            spiralTurns = 9.0f;
+            break;
+        case View::QualityLevel::HIGH:
+            sampleCount = 16.0f;
+            spiralTurns = 10.0f;
+            break;
+        case View::QualityLevel::ULTRA:
+            sampleCount = 32.0f;
+            spiralTurns = 14.0f;
+            break;
+    }
+
+    switch (options.lowPassFilter) {
+        default:
+        case View::QualityLevel::LOW:
+            // no filtering, values don't matter
+            config.kernelSize = 1;
+            config.standardDeviation = 1.0f;
+            config.scale = 1.0f;
             break;
         case View::QualityLevel::MEDIUM:
             config.kernelSize = 11;
             config.standardDeviation = 4.0f;
             config.scale = 2.0f;
-            sampleCount = 11.0f;
-            spiralTurns = 9.0f;
             break;
         case View::QualityLevel::HIGH:
+        case View::QualityLevel::ULTRA:
             config.kernelSize = 23;
             config.standardDeviation = 8.0f;
             config.scale = 1.0f;
-            sampleCount = 16.0f;
-            spiralTurns = 10.0f;
-            break;
-        case View::QualityLevel::ULTRA:
-            config.kernelSize = 23;
-            config.standardDeviation = 8.0;
-            config.scale = 1.0f;
-            sampleCount = 32.0f;
-            spiralTurns = 14.0f;
             break;
     }
 
@@ -438,7 +447,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
-                        .format = TextureFormat::RGB8
+                        .format = (options.lowPassFilter == View::QualityLevel::LOW) ? TextureFormat::R8 : TextureFormat::RGB8
                 });
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
@@ -464,7 +473,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
-
                 // Where the falloff function peaks
                 const float peak = 0.1f * options.radius;
                 const float intensity = (f::TAU * peak) * options.intensity;
@@ -474,18 +482,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 const auto invProjection = inverse(cameraInfo.projection);
                 const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
+                const mat4 screenFromClipMatrix{ mat4::row_major_init{
+                        0.5 * desc.width, 0.0, 0.0, 0.5 * desc.width,
+                        0.0, 0.5 * desc.height, 0.0, 0.5 * desc.height,
+                        0.0, 0.0, 0.5, 0.5,
+                        0.0, 0.0, 0.0, 1.0
+                }};
+
                 auto& material = getPostProcessMaterial("sao");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("depth", depth, {
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
-                });
+                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->setParameter("screenFromViewMatrix",
+                        mat4f(screenFromClipMatrix * cameraInfo.projection));
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
-                mi->setParameter("minHorizonAngleSineSquared", std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
-                mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
-                mi->setParameter("depthParams", cameraInfo.projection[3][2] * 0.5f);
-
+                mi->setParameter("invRadiusSquared",
+                        1.0f / (options.radius * options.radius));
+                mi->setParameter("minHorizonAngleSineSquared",
+                        std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
+                mi->setParameter("projectionScale",
+                        projectionScale);
+                mi->setParameter("projectionScaleRadius",
+                        projectionScale * options.radius);
+                mi->setParameter("depthParams",
+                        cameraInfo.projection[3][2] * 0.5f);
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
@@ -497,6 +518,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("spiralTurns", spiralTurns);
                 mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
+
+                mi->setParameter("ssctShadowDistance", options.ssct.shadowDistance);
+                mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
+                mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
+                // light direction in view space
+                // (note: this is actually equivalent to using the camera view matrix -- before the
+                // world matrix is accounted for)
+                auto m = cameraInfo.view * cameraInfo.worldOrigin;
+                const float3 l = normalize(
+                        mat3f::getTransformForNormals(m.upperLeft())
+                                * options.ssct.lightDirection);
+                mi->setParameter("ssctIntensity",
+                        options.ssct.enabled ? options.ssct.intensity : 0.0f);
+                mi->setParameter("ssctVsLightDirection", -l);
+                mi->setParameter("ssctDepthBias",
+                        float2{ options.ssct.depthBias, options.ssct.depthSlopeBias });
+                mi->setParameter("ssctSampleCount", uint32_t(options.ssct.sampleCount));
+                mi->setParameter("ssctRayCount",
+                        float2{ options.ssct.rayCount, 1.0 / options.ssct.rayCount });
+
                 mi->commit(driver);
                 mi->use(driver);
 
@@ -514,16 +555,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
      * Final separable bilateral blur pass
      */
 
-    const bool highQualitySampling =
-            options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
+    if (options.lowPassFilter != View::QualityLevel::LOW) {
+        const bool highQualitySampling =
+                options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
 
-    ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
-            TextureFormat::RGB8,
-            config);
+        ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
+                TextureFormat::RGB8,
+                config);
 
-    ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
-            highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
-            config);
+        ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
+                highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
+                config);
+    }
 
     fg.getBlackboard().put("ssao", ssao);
     return ssao;

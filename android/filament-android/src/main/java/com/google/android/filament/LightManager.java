@@ -305,6 +305,25 @@ public class LightManager {
          *</p>
          */
         public float maxShadowDistance = 0.3f;
+
+        /*
+         * Options prefixed with 'vsm' are available when the View's ShadowType is set to VSM.
+         *
+         * @see View#setShadowType
+         */
+
+        /**
+         * The number of MSAA samples to use when rendering VSM shadow maps.
+         * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
+         * off MSAA.
+         * Higher values may not be available depending on the underlying hardware.
+         *
+         * <p>
+         * <strong>Warning: This API is still experimental and subject to change.</strong>
+         * </p>
+         */
+        @IntRange(from = 1)
+        public int vsmMsaaSamples = 1;
     }
 
     public static class ShadowCascades {
@@ -433,7 +452,7 @@ public class LightManager {
                     options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
                     options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
                     options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
-                    options.stepCount, options.maxShadowDistance);
+                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples);
             return this;
         }
 
@@ -1059,7 +1078,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

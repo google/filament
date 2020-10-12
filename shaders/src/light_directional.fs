@@ -46,8 +46,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
 #if defined(HAS_VSM)
-            highp float fragDepth = length(vertex_worldPosition - frameUniforms.lightPosition.xyz);
-            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade), fragDepth);
+            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #else
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #endif

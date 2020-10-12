@@ -256,9 +256,9 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
     highp vec4 csViewRayEnd = csRayStart + viewToClip * vec4(0.0, 0.0, wsRayLength, 0.0);
 
     // ray start/end in screen space
-    ray.ssRayStart = csRayStart.xyz * 1.0 / csRayStart.w;
-    ray.ssRayEnd = csRayEnd.xyz * 1.0 / csRayEnd.w;
-    ray.ssViewRayEnd = csViewRayEnd.xyz * 1.0 / csViewRayEnd.w;
+    ray.ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
+    ray.ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
+    ray.ssViewRayEnd = csViewRayEnd.xyz * (1.0 / csViewRayEnd.w);
 
     // convert all to uv (texture) space
     highp vec3 uvRayEnd = ray.ssRayEnd.xyz * 0.5 + 0.5;
@@ -355,14 +355,15 @@ float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec
 #endif
 }
 
-float shadowVsm(const highp sampler2DArray shadowMap, const uint layer, const highp vec3 shadowPosition,
-        const highp float fragDepth) {
+highp float shadowVsm(const highp sampler2DArray shadowMap, const uint layer,
+        const highp vec3 shadowPosition) {
     highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
+    highp float depth = shadowPosition.z;
 
     // TODO: bias and lightBleedReduction should be uniforms
     const float bias = 0.01;
     const float lightBleedReduction = 0.2;
 
-    const float minVariance = bias * 0.01;
-    return chebyshevUpperBound(moments, fragDepth, minVariance, lightBleedReduction);
+    const float minVariance = bias * 0.001;
+    return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
 }

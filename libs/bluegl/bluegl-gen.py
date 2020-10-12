@@ -218,12 +218,14 @@ def generateProxies(api, functions, output_dir, platforms):
 
     osSpecificHeader = {
         'Linux': header ,
+        'LinuxAArch64': header ,
         'Darwin': header ,
         'Windows': headerMasM
     }
 
     osSpecificFooter = {
         'Linux': '',
+        'LinuxAArch64': '' ,
         'Darwin': '',
         'Windows': 'end\n'
     }
@@ -235,6 +237,17 @@ def generateProxies(api, functions, output_dir, platforms):
 %(function)s:
     mov __blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
+''',
+        'LinuxAArch64': '''
+	.align	2
+	.global	%(function)s
+	.type	%(function)s, %%function
+%(function)s:
+	adrp	x16, :got:__blue_gl%(suffix)s_%(function)s
+	ldr	x16, [x16, #:got_lo12:__blue_gl%(suffix)s_%(function)s]
+	ldr	x16, [x16]
+	br	x16
+	.size	%(function)s, .-%(function)s
 ''',
         'Darwin': '''
 .private_extern _%(function)s
@@ -326,7 +339,7 @@ struct {
 
 
 def generateApis(apis, include_dir, output_dir):
-    platforms = ['Linux', 'Darwin', 'Windows']
+    platforms = ['Linux', 'LinuxAArch64', 'Darwin', 'Windows']
 
     for api in apis:
         functions = []

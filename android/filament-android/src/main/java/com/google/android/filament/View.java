@@ -177,6 +177,14 @@ public class View {
         public QualityLevel quality = QualityLevel.LOW;
 
         /**
+         * The lowPassFilter setting controls the quality of the low pass filter applied to
+         * AO estimation. The default is QualityLevel.MEDIUM which is sufficient for most mobile
+         * applications. QualityLevel.LOW disables the filter entirely.
+         */
+        @NonNull
+        public QualityLevel lowPassFilter = QualityLevel.MEDIUM;
+
+        /**
          * The upsampling setting controls the quality of the ambient occlusion buffer upsampling.
          * The default is QualityLevel.LOW and uses bilinear filtering, a value of
          * QualityLevel.HIGH or more enables a better bilateral filter.
@@ -195,6 +203,64 @@ public class View {
          * For e.g. a good values to try could be around 0.2.
          */
         public float minHorizonAngleRad = 0.0f;
+
+
+       /**
+        * Full cone angle in radian, between 0 and pi/2. This affects the softness of the shadows,
+        * as well as how far they are cast. A smaller angle yields to sharper and shorter shadows.
+        * The default angle is about 60 degrees.
+        */
+       public float ssctLightConeRad = 1.0f;
+
+       /**
+        * Distance from where tracing starts.
+        * This affects how far shadows are cast.
+        */
+       public float ssctStartTraceDistance = 0.01f;
+
+       /**
+        * Maximum contact distance with the cone. Intersections between the traced cone and
+        * geometry samller than this distance are ignored.
+        */
+       public float ssctContactDistanceMax = 1.0f;
+
+       /**
+        * Intensity of the shadows.
+        */
+       public float ssctIntensity = 0.8f;
+
+       /**
+        * Light direction.
+        */
+       @NonNull @Size(min = 3)
+       public float[] ssctLightDirection = { 0, -1, 0 };
+
+       /**
+        * Depth bias in world units (mitigate self shadowing)
+        */
+       public float ssctDepthBias = 0.01f;
+
+       /**
+        * Depth slope bias (mitigate self shadowing)
+        */
+       public float ssctDepthSlopeBias = 0.01f;
+
+       /**
+        * Tracing sample count, between 1 and 255. This affects the quality as well as the
+        * distance of the shadows.
+        */
+       public int ssctSampleCount = 4;
+
+       /**
+        * Numbers of rays to trace, between 1 and 255. This affects the noise of the shadows.
+        * Performance degrades quickly with this value.
+        */
+       public int ssctRayCount = 1;
+
+       /**
+        * Enables or disables SSCT.
+        */
+       public boolean ssctEnabled = false;
     }
 
     /**
@@ -497,6 +563,23 @@ public class View {
     public enum Dithering {
         NONE,
         TEMPORAL
+    }
+
+    /**
+     * List of available shadow mapping techniques.
+     *
+     * @see #setShadowType
+     */
+    public enum ShadowType {
+        /**
+         * Percentage-closer filtered shadows (default).
+         */
+        PCF,
+
+        /**
+         * Variance shadows.
+         */
+        VSM
     }
 
     /**
@@ -1081,6 +1164,17 @@ public class View {
     }
 
     /**
+     * Sets the shadow mapping technique this View uses.
+     *
+     * The ShadowType affects all the shadows seen within the View.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     */
+    public void setShadowType(ShadowType type) {
+        nSetShadowType(getNativeObject(), type.ordinal());
+    }
+
+    /**
      * Activates or deactivates ambient occlusion.
      * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
@@ -1109,8 +1203,12 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity, options.quality.ordinal(), options.upsampling.ordinal(),
+                options.resolution, options.intensity, options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
                 options.enabled, options.minHorizonAngleRad);
+        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance, options.ssctContactDistanceMax,  options.ssctIntensity,
+                options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
+                options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
+                options.ssctRayCount, options.ssctEnabled);
     }
 
     /**
@@ -1267,6 +1365,7 @@ public class View {
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
+    private static native void nSetShadowType(long nativeView, int type);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
@@ -1274,7 +1373,8 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int upsampling, boolean enabled, float minHorizonAngleRad);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
+    private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);

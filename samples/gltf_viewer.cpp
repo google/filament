@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -24,16 +22,21 @@
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
-#include <filament/Renderer.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
-#include <gltfio/SimpleViewer.h>
+
+#include <viewer/AutomationEngine.h>
+#include <viewer/AutomationSpec.h>
+#include <viewer/SimpleViewer.h>
 
 #include <camutils/Manipulator.h>
 
@@ -46,6 +49,9 @@
 #include <math/mat3.h>
 #include <math/norm.h>
 
+#include <imgui.h>
+#include <filagui/ImGuiExtensions.h>
+
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -54,6 +60,8 @@
 
 using namespace filament;
 using namespace filament::math;
+using namespace filament::viewer;
+
 using namespace gltfio;
 using namespace utils;
 
@@ -85,9 +93,6 @@ struct App {
         sRGBColor backgroundColor = { 0.0f };
     } viewOptions;
 
-    View::DepthOfFieldOptions dofOptions;
-    View::VignetteOptions vignetteOptions;
-
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -95,60 +100,8 @@ struct App {
         Material* groundMaterial;
     } scene;
 
-    struct ColorGradingOptions {
-        bool enabled = true;
-        int quality = static_cast<int>(ColorGrading::QualityLevel::MEDIUM);
-        int toneMapping = static_cast<int>(ColorGrading::ToneMapping::ACES_LEGACY);
-        int temperature = 0;
-        int tint = 0;
-        math::float3 outRed{1.0f, 0.0f, 0.0f};
-        math::float3 outGreen{0.0f, 1.0f, 0.0f};
-        math::float3 outBlue{0.0f, 0.0f, 1.0f};
-        math::float4 shadows{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 midtones{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 highlights{1.0f, 1.0f, 1.0f, 0.0f};
-        math::float4 ranges{0.0f, 0.333f, 0.550f, 1.0f};
-        float contrast = 1.0f;
-        float vibrance = 1.0f;
-        float saturation = 1.0f;
-        math::float3 slope{1.0f};
-        math::float3 offset{0.0f};
-        math::float3 power{1.0f};
-        math::float3 gamma{1.0f};
-        math::float3 midPoint{1.0f};
-        math::float3 scale{1.0f};
-        bool linkedCurves = false;
-
-        bool operator!=(const ColorGradingOptions &rhs) const {
-            return !(rhs == *this);
-        }
-
-        bool operator==(const ColorGradingOptions &rhs) const {
-            return enabled == rhs.enabled &&
-                   quality == rhs.quality &&
-                   toneMapping == rhs.toneMapping &&
-                   temperature == rhs.temperature &&
-                   outRed == rhs.outRed &&
-                   outGreen == rhs.outGreen &&
-                   outBlue == rhs.outBlue &&
-                   shadows == rhs.shadows &&
-                   midtones == rhs.midtones &&
-                   highlights == rhs.highlights &&
-                   ranges == rhs.ranges &&
-                   slope == rhs.slope &&
-                   offset == rhs.offset &&
-                   power == rhs.power &&
-                   contrast == rhs.contrast &&
-                   vibrance == rhs.vibrance &&
-                   saturation == rhs.saturation &&
-                   gamma == rhs.gamma &&
-                   midPoint == rhs.midPoint &&
-                   scale == rhs.scale;
-        }
-    } colorGradingOptions;
-
     // zero-initialized so that the first time through is always dirty.
-    ColorGradingOptions lastColorGradingOptions = { 0 };
+    ColorGradingSettings lastColorGradingOptions = { 0 };
 
     ColorGrading* colorGrading = nullptr;
 
@@ -157,6 +110,13 @@ struct App {
 
     // 0 is the default "free camera". Additional cameras come from the gltf file.
     int currentCamera = 0;
+
+    std::string messageBoxText;
+    std::string settingsFile;
+    std::string batchFile;
+
+    AutomationSpec* automationSpec = nullptr;
+    AutomationEngine* automationEngine = nullptr;
 };
 
 static const char* DEFAULT_IBL = "default_env";
@@ -172,12 +132,18 @@ static void printUsage(char* name) {
         "       Prints this message\n\n"
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+        "   --batch=<path to JSON file or 'default'>, -b\n"
+        "       Start automation using the given JSON spec, then quit the app\n\n"
+        "   --headless, -e\n"
+        "       Use a headless swapchain; ignored if --batch is not present\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
         "   --actual-size, -s\n"
         "       Do not scale the model to fit into a unit cube\n\n"
         "   --recompute-aabb, -r\n"
         "       Ignore the min/max attributes in the glTF file\n\n"
+        "   --settings=<path to JSON file>, -t\n"
+        "       Apply the settings in the given JSON file\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
         "   --camera=<camera mode>, -c <camera mode>\n"
@@ -196,16 +162,24 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
+static std::ifstream::pos_type getFileSize(const char* filename) {
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
+}
+
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:r";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:e";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
+        { "batch",        required_argument, nullptr, 'b' },
+        { "headless",     no_argument,       nullptr, 'e' },
         { "ibl",          required_argument, nullptr, 'i' },
         { "ubershader",   no_argument,       nullptr, 'u' },
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
         { "recompute-aabb", no_argument,     nullptr, 'r' },
+        { "settings",       required_argument, nullptr, 't' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -237,6 +211,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
+            case 'e':
+                app->config.headless = true;
+                break;
             case 'i':
                 app->config.iblDirectory = arg;
                 break;
@@ -249,14 +226,33 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             case 'r':
                 app->recomputeAabb = true;
                 break;
+            case 't':
+                app->settingsFile = arg;
+                break;
+            case 'b': {
+                app->batchFile = arg;
+                break;
+            }
         }
+    }
+    if (app->config.headless && app->batchFile.empty()) {
+        std::cerr << "--headless is allowed only when --batch is present." << std::endl;
+        app->config.headless = false;
     }
     return optind;
 }
 
-static std::ifstream::pos_type getFileSize(const char* filename) {
-    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
-    return in.tellg();
+static bool loadSettings(const char* filename, Settings* out) {
+    auto contentSize = getFileSize(filename);
+    if (contentSize <= 0) {
+        return false;
+    }
+    std::ifstream in(filename, std::ifstream::binary | std::ifstream::in);
+    std::vector<char> json(static_cast<unsigned long>(contentSize));
+    if (!in.read(json.data(), contentSize)) {
+        return false;
+    }
+    return readJson(json.data(), contentSize, out);
 }
 
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
@@ -349,7 +345,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 }
 
 static void computeRangePlot(App& app, float* rangePlot) {
-    float4& ranges = app.colorGradingOptions.ranges;
+    float4& ranges = app.viewer->getSettings().view.colorGrading.ranges;
     ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
 
@@ -399,12 +395,13 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 }
 
 static void computeCurvePlot(App& app, float* curvePlot) {
+    const auto& colorGradingOptions = app.viewer->getSettings().view.colorGrading;
     for (size_t i = 0; i < 1024; i++) {
         float3 x{i / 1024.0f * 2.0f};
         float3 y = curves(x,
-                app.colorGradingOptions.gamma,
-                app.colorGradingOptions.midPoint,
-                app.colorGradingOptions.scale);
+                colorGradingOptions.gamma,
+                colorGradingOptions.midPoint,
+                colorGradingOptions.scale);
         curvePlot[i]        = y.r;
         curvePlot[1024 + i] = y.g;
         curvePlot[2048 + i] = y.b;
@@ -432,18 +429,29 @@ static void colorGradingUI(App& app) {
     const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
 
     if (ImGui::CollapsingHeader("Color grading")) {
-        App::ColorGradingOptions& colorGrading = app.colorGradingOptions;
+        ColorGradingSettings& colorGrading = app.viewer->getSettings().view.colorGrading;
 
         ImGui::Indent();
         ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
-        ImGui::Combo("Quality##colorGradingQuality", &colorGrading.quality,
-                "Low\0Medium\0High\0Ultra\0\0");
-        ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
+
+        int quality = (int) colorGrading.quality;
+        ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
+        colorGrading.quality = (decltype(colorGrading.quality)) quality;
+
+        int toneMapping = (int) colorGrading.toneMapping;
+        ImGui::Combo("Tone-mapping", &toneMapping,
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+        colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+
         if (ImGui::CollapsingHeader("White balance")) {
-            ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
-            ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
+            int temperature = colorGrading.temperature * 100.0f;
+            int tint = colorGrading.tint * 100.0f;
+            ImGui::SliderInt("Temperature", &temperature, -100, 100);
+            ImGui::SliderInt("Tint", &tint, -100, 100);
+            colorGrading.temperature = temperature / 100.0f;
+            colorGrading.tint = tint / 100.0f;
         }
+
         if (ImGui::CollapsingHeader("Channel mixer")) {
             pushSliderColors(0.0f / 7.0f);
             ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
@@ -591,6 +599,7 @@ int main(int argc, char** argv) {
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
     int optionIndex = handleCommandLineArguments(argc, argv, &app);
+
     utils::Path filename;
     int num_args = argc - optionIndex;
     if (num_args >= 1) {
@@ -672,6 +681,54 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view, 410);
+
+        const bool batchMode = !app.batchFile.empty();
+
+        // First check if a custom automation spec has been provided. If it fails to load, the app
+        // must be closed since it could be invoked from a script.
+        if (batchMode && app.batchFile != "default") {
+            auto size = getFileSize(app.batchFile.c_str());
+            if (size > 0) {
+                std::ifstream in(app.batchFile, std::ifstream::binary | std::ifstream::in);
+                std::vector<char> json(static_cast<unsigned long>(size));
+                in.read(json.data(), size);
+                app.automationSpec = AutomationSpec::generate(json.data(), size);
+                if (!app.automationSpec) {
+                    std::cerr << "Unable to parse automation spec: " << app.batchFile << std::endl;
+                    exit(1);
+                }
+            } else {
+                std::cerr << "Unable to load automation spec: " << app.batchFile << std::endl;
+                exit(1);
+            }
+        }
+
+        // If no custom spec has been provided, or if in interactive mode, load the default spec.
+        if (!app.automationSpec) {
+            app.automationSpec = AutomationSpec::generateDefaultTestCases();
+        }
+
+        app.automationEngine = new AutomationEngine(app.automationSpec, &app.viewer->getSettings());
+
+        if (batchMode) {
+            app.automationEngine->startBatchMode();
+            auto options = app.automationEngine->getOptions();
+            options.sleepDuration = 0.0;
+            options.exportScreenshots = true;
+            options.exportSettings = true;
+            app.automationEngine->setOptions(options);
+            app.viewer->stopAnimation();
+        }
+
+        if (app.settingsFile.size() > 0) {
+            bool success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
+            if (success) {
+                std::cout << "Loaded settings from " << app.settingsFile << std::endl;
+            } else {
+                std::cerr << "Failed to load settings from " << app.settingsFile << std::endl;
+            }
+        }
+
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
@@ -688,10 +745,62 @@ int main(int argc, char** argv) {
 
         createGroundPlane(engine, scene, app);
 
-        app.viewer->setUiCallback([&app, scene] () {
+        app.viewer->setUiCallback([&app, scene, view] () {
+            auto& automation = *app.automationEngine;
+
             float progress = app.resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
+            } else {
+                // The model is now fully loaded, so let automation know.
+                automation.signalBatchMode();
+            }
+
+            // The screenshots do not include the UI, but we auto-open the Automation UI group
+            // when in batch mode. This is useful when a human is observing progress.
+            const int flags = automation.isBatchModeEnabled() ? ImGuiTreeNodeFlags_DefaultOpen : 0;
+
+            if (ImGui::CollapsingHeader("Automation", flags)) {
+                ImGui::Indent();
+
+                const ImVec4 yellow(1.0f,1.0f,0.0f,1.0f);
+                if (automation.isRunning()) {
+                    ImGui::TextColored(yellow, "Test case %zu / %zu",
+                            automation.currentTest(), automation.testCount());
+                } else {
+                    ImGui::TextColored(yellow, "%zu test cases", automation.testCount());
+                }
+
+                auto options = automation.getOptions();
+
+                ImGui::PushItemWidth(150);
+                ImGui::SliderFloat("Sleep (seconds)", &options.sleepDuration, 0.0, 5.0);
+                ImGui::PopItemWidth();
+
+                // Hide the tooltip during automation to avoid photobombing the screenshot.
+                if (ImGui::IsItemHovered() && !automation.isRunning()) {
+                    ImGui::SetTooltip("Specifies the amount of time to sleep between test cases.");
+                }
+
+                ImGui::Checkbox("Export screenshot for each test", &options.exportScreenshots);
+                ImGui::Checkbox("Export settings JSON for each test", &options.exportSettings);
+
+                automation.setOptions(options);
+
+                if (automation.isRunning()) {
+                    if (ImGui::Button("Stop batch test")) {
+                        automation.stopRunning();
+                    }
+                } else if (ImGui::Button("Run batch test")) {
+                    automation.startRunning();
+                }
+
+                if (ImGui::Button("Export view settings")) {
+                    automation.exportSettings(app.viewer->getSettings(), "settings.json");
+                    app.messageBoxText = automation.getStatusMessage();
+                    ImGui::OpenPopup("MessageBox");
+                }
+                ImGui::Unindent();
             }
 
             if (ImGui::CollapsingHeader("Stats")) {
@@ -714,21 +823,23 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Camera")) {
+                ViewSettings& settings = app.viewer->getSettings().view;
+
                 ImGui::Indent();
                 ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
                 ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
                 ImGui::SliderFloat("Speed (1/s)", &app.viewOptions.cameraSpeed, 1000.0f, 1.0f);
                 ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
-                ImGui::Checkbox("DoF", &app.dofOptions.enabled);
-                ImGui::SliderFloat("Focus distance", &app.dofOptions.focusDistance, 0.0f, 30.0f);
-                ImGui::SliderFloat("Blur scale", &app.dofOptions.cocScale, 0.1f, 10.0f);
+                ImGui::Checkbox("DoF", &settings.dof.enabled);
+                ImGui::SliderFloat("Focus distance", &settings.dof.focusDistance, 0.0f, 30.0f);
+                ImGui::SliderFloat("Blur scale", &settings.dof.cocScale, 0.1f, 10.0f);
 
                 if (ImGui::CollapsingHeader("Vignette")) {
-                    ImGui::Checkbox("Enabled##vignetteEnabled", &app.vignetteOptions.enabled);
-                    ImGui::SliderFloat("Mid point", &app.vignetteOptions.midPoint, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Roundness", &app.vignetteOptions.roundness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Feather", &app.vignetteOptions.feather, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("Color##vignetteColor", &app.vignetteOptions.color.r);
+                    ImGui::Checkbox("Enabled##vignetteEnabled", &settings.vignette.enabled);
+                    ImGui::SliderFloat("Mid point", &settings.vignette.midPoint, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Roundness", &settings.vignette.roundness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Feather", &settings.vignette.feather, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("Color##vignetteColor", &settings.vignette.color.r);
                 }
 
                 const utils::Entity* cameras = app.asset->getCameraEntities();
@@ -760,14 +871,19 @@ int main(int argc, char** argv) {
             }
 
             colorGradingUI(app);
-        });
 
-        // Leave FXAA enabled but we also enable MSAA for a nice result. The wireframe looks
-        // much better with MSAA enabled.
-        view->setSampleCount(4);
+            if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("%s", app.messageBoxText.c_str());
+                if (ImGui::Button("OK", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+        });
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+        app.automationEngine->terminate();
         app.loader->destroyAsset(app.asset);
         app.materials->destroyMaterials();
 
@@ -844,9 +960,6 @@ int main(int argc, char** argv) {
                 1.0f / app.viewOptions.cameraSpeed,
                 app.viewOptions.cameraISO);
 
-        view->setDepthOfFieldOptions(app.dofOptions);
-        view->setVignetteOptions(app.vignetteOptions);
-
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", app.viewOptions.groundShadowStrength);
 
@@ -862,38 +975,32 @@ int main(int argc, char** argv) {
                 .clear = true
         });
 
-        if (app.colorGradingOptions.enabled) {
-            if (app.colorGradingOptions != app.lastColorGradingOptions) {
-                App::ColorGradingOptions &options = app.colorGradingOptions;
-                ColorGrading *colorGrading = ColorGrading::Builder()
-                        .quality(static_cast<ColorGrading::QualityLevel>(options.quality))
-                        .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
-                        .channelMixer(options.outRed, options.outGreen, options.outBlue)
-                        .shadowsMidtonesHighlights(
-                                Color::toLinear(options.shadows),
-                                Color::toLinear(options.midtones),
-                                Color::toLinear(options.highlights),
-                                options.ranges
-                        )
-                        .slopeOffsetPower(options.slope, options.offset, options.power)
-                        .contrast(options.contrast)
-                        .vibrance(options.vibrance)
-                        .saturation(options.saturation)
-                        .curves(options.gamma, options.midPoint, options.scale)
-                        .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
-                        .build(*engine);
-
-                if (app.colorGrading) {
-                    engine->destroy(app.colorGrading);
-                }
-
+        ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
+        if (options.enabled) {
+            // An inefficient but simple way of detecting change is to serialize to JSON, then
+            // do a string comparison.
+            if (writeJson(options) != writeJson(app.lastColorGradingOptions)) {
+                ColorGrading *colorGrading = createColorGrading(options, engine);
+                engine->destroy(app.colorGrading);
                 app.colorGrading = colorGrading;
-                app.lastColorGradingOptions = app.colorGradingOptions;
+                app.lastColorGradingOptions = options;
             }
             view->setColorGrading(app.colorGrading);
         } else {
             view->setColorGrading(nullptr);
         }
+    };
+
+    auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        if (app.automationEngine->shouldClose()) {
+            FilamentApp::get().close();
+            return;
+        }
+        Settings* settings = &app.viewer->getSettings();
+        MaterialInstance* const* materials = app.asset->getMaterialInstances();
+        size_t materialCount = app.asset->getMaterialInstanceCount();
+        app.automationEngine->tick(view, materials, materialCount, renderer,
+                ImGui::GetIO().DeltaTime);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
@@ -907,7 +1014,7 @@ int main(int argc, char** argv) {
         loadResources(path);
     });
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
 
     return 0;
 }

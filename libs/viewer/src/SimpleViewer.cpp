@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7,216 +7,14 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by mIcable law or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
-#ifndef GLTFIO_SIMPLEVIEWER_H
-#define GLTFIO_SIMPLEVIEWER_H
-
-// NOTE: This is an optional header-only utility to avoid a hard dependency on imgui. To use
-// SimpleViewer, please add:
-//
-//      #define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-//
-// to one of your CPP source files to create the implementation. See gltf_viewer.cpp for an example.
-
-#include <filament/Box.h>
-#include <filament/DebugRegistry.h>
-#include <filament/Engine.h>
-#include <filament/IndirectLight.h>
-#include <filament/Scene.h>
-#include <filament/View.h>
-
-#include <gltfio/Animator.h>
-#include <gltfio/FilamentAsset.h>
-
-#include <utils/Entity.h>
-
-#include <math/vec3.h>
-
-namespace gltfio {
-
-/**
- * \class SimpleViewer SimpleViewer.h gltfio/SimpleViewer.h
- * \brief Manages the state for a simple glTF viewer with imgui controls and a tree view.
- *
- * This is a utility that can be used across multiple platforms, including web.
- *
- * \note If you don't need ImGui controls, there is no need to use this class, just use AssetLoader
- * instead.
- */
-class SimpleViewer {
-public:
-
-    static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
-
-    /**
-     * Constructs a SimpleViewer that has a fixed association with the given Filament objects.
-     *
-     * Upon construction, the simple viewer may create some additional Filament objects (such as
-     * light sources) that it owns.
-     */
-    SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-            int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
-
-    /**
-     * Destroys the SimpleViewer and any Filament entities that it owns.
-     */
-    ~SimpleViewer();
-
-    /**
-     * Adds the asset's ready-to-render entities into the scene and optionally transforms the root
-     * node to make it fit into a unit cube at the origin.
-     *
-     * The viewer does not claim ownership over the asset or its entities. Clients should use
-     * AssetLoader and ResourceLoader to load an asset before passing it in.
-     *
-     * @param asset The asset to view.
-     * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
-     * @param instanceToAnimate Optional instance from which to get the animator.
-     */
-    void populateScene(FilamentAsset* asset, bool scale,
-            FilamentInstance* instanceToAnimate = nullptr);
-
-    /**
-     * Removes the current asset from the viewer.
-     *
-     * This removes all the asset entities from the Scene, but does not destroy them.
-     */
-    void removeAsset();
-
-    /**
-     * Sets or changes the current scene's IBL to allow the UI manipulate it.
-     */
-    void setIndirectLight(filament::IndirectLight* ibl, filament::math::float3 const* sh3);
-
-    /**
-     * Applies the currently-selected glTF animation to the transformation hierarchy and updates
-     * the bone matrices on all renderables.
-     */
-    void applyAnimation(double currentTime);
-
-    /**
-     * Constructs ImGui controls for the current frame and responds to everything that the user has
-     * changed since the previous frame.
-     *
-     * If desired this can be used in conjunction with the filagui library, which allows clients to
-     * render ImGui controls with Filament.
-     */
-    void updateUserInterface();
-
-    /**
-     * Retrieves the current width of the ImGui "window" which we are using as a sidebar.
-     * Clients can monitor this value to adjust the size of the view.
-     */
-    int getSidebarWidth() const { return mSidebarWidth; }
-
-    /**
-     * Allows clients to inject custom UI.
-     */
-    void setUiCallback(std::function<void()> callback) { mCustomUI = callback; }
-
-    /**
-     * Draws the bounding box of each renderable.
-     * Defaults to false.
-     */
-    void enableWireframe(bool b) { mEnableWireframe = b; }
-
-    /**
-     * Enables a built-in light source (useful for creating shadows).
-     * Defaults to true.
-     */
-    void enableSunlight(bool b) { mEnableSunlight = b; }
-
-    /**
-     * Enables dithering on the view.
-     * Defaults to true.
-     */
-    void enableDithering(bool b) { mEnableDithering = b; }
-
-    /**
-     * Enables FXAA antialiasing in the post-process pipeline.
-     * Defaults to true.
-     */
-    void enableFxaa(bool b) { mEnableFxaa = b; }
-
-    /**
-     * Enables hardware-based MSAA antialiasing.
-     * Defaults to true.
-     */
-    void enableMsaa(bool b) { mEnableMsaa = b; }
-
-    /**
-     * Enables screen-space ambient occlusion in the post-process pipeline.
-     * Defaults to true.
-     */
-    void enableSSAO(bool b) { mSSAOOptions.enabled = b; }
-
-    /**
-     * Enables Bloom.
-     * Defaults to true.
-     */
-    void enableBloom(bool bloom) {
-        mBloomOptions.enabled = bloom;
-    }
-
-    /**
-     * Adjusts the intensity of the IBL.
-     * See also filament::IndirectLight::setIntensity().
-     * Defaults to 30000.0.
-     */
-    void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
-
-private:
-    void updateIndirectLight();
-
-    // Immutable properties set from the constructor.
-    filament::Engine* const mEngine;
-    filament::Scene* const mScene;
-    filament::View* const mView;
-    const utils::Entity mSunlight;
-
-    // Properties that can be changed from the application.
-    FilamentAsset* mAsset = nullptr;
-    Animator* mAnimator = nullptr;
-    filament::IndirectLight* mIndirectLight = nullptr;
-    std::function<void()> mCustomUI;
-
-    // Properties that can be changed from the UI.
-    int mCurrentAnimation = 1;
-    bool mResetAnimation = true;
-    float mIblIntensity = 30000.0f;
-    float mIblRotation = 0.0f;
-    float mSunlightIntensity = 100000.0f; // <-- This value is overridden when loading an IBL.
-    filament::math::float3 mSunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
-    filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
-    bool mEnableWireframe = false;
-    bool mEnableSunlight = true;
-    bool mEnableVsm = false;
-    bool mEnableShadows = true;
-    int mShadowCascades = 1;
-    bool mEnableContactShadows = false;
-    std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
-    bool mEnableDithering = true;
-    bool mEnableFxaa = true;
-    bool mEnableMsaa = true;
-    filament::View::AmbientOcclusionOptions mSSAOOptions = { .enabled = true };
-    filament::View::BloomOptions mBloomOptions = { .enabled = true };
-    filament::View::FogOptions mFogOptions = {};
-    filament::View::TemporalAntiAliasingOptions mTAAOptions = {};
-    int mSidebarWidth;
-    uint32_t mFlags;
-};
-
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
-
-} // namespace gltfio
-
-#ifdef GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
+#include <viewer/SimpleViewer.h>
 
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
@@ -231,9 +29,11 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <string>
 #include <vector>
 
-namespace gltfio {
+namespace filament {
+namespace viewer {
 
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
     using namespace filament::math;
@@ -253,6 +53,14 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mEngine(engine), mScene(scene), mView(view),
         mSunlight(utils::EntityManager::get().create()),
         mSidebarWidth(sidebarWidth) {
+
+    mSettings.view.shadowType = ShadowType::PCF;
+    mSettings.view.dithering = Dithering::TEMPORAL;
+    mSettings.view.antiAliasing = AntiAliasing::FXAA;
+    mSettings.view.sampleCount = 4;
+    mSettings.view.ssao.enabled = true;
+    mSettings.view.bloom.enabled = true;
+
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSunlightColor)
@@ -317,7 +125,7 @@ void SimpleViewer::removeAsset() {
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
-    mFogOptions.color = sh3[0];
+    mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
@@ -462,25 +270,59 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
-        ImGui::Checkbox("Dithering", &mEnableDithering);
-        ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
-        ImGui::Checkbox("TAA", &mTAAOptions.enabled);
+
+        bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
+        ImGui::Checkbox("Dithering", &dither);
+        enableDithering(dither);
+
+        bool msaa = mSettings.view.sampleCount != 1;
+        ImGui::Checkbox("MSAA 4x", &msaa);
+        enableMsaa(msaa);
+
+        ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
+
         // this clutters the UI and isn't that useful (except when working on TAA)
         //ImGui::Indent();
-        //ImGui::SliderFloat("feedback", &mTAAOptions.feedback, 0.0f, 1.0f);
-        //ImGui::SliderFloat("filter", &mTAAOptions.filterWidth, 0.0f, 2.0f);
+        //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
+        //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
         //ImGui::Unindent();
-        ImGui::Checkbox("FXAA", &mEnableFxaa);
-        ImGui::Checkbox("SSAO", &mSSAOOptions.enabled);
-        ImGui::Checkbox("Bloom", &mBloomOptions.enabled);
+
+        bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
+        ImGui::Checkbox("FXAA", &fxaa);
+        enableFxaa(fxaa);
+
+        ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
+        ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
+
         if (ImGui::CollapsingHeader("SSAO Options")) {
-            int quality = (int) mSSAOOptions.quality;
-            bool upsampling = mSSAOOptions.upsampling != View::QualityLevel::LOW;
+            auto& ssao = mSettings.view.ssao;
+
+            int quality = (int) ssao.quality;
+            int lowpass = (int) ssao.lowPassFilter;
+            bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
+
             ImGui::SliderInt("Quality", &quality, 0, 3);
+            ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("High quality upsampling", &upsampling);
-            ImGui::SliderFloat("Min Horizon angle", &mSSAOOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4);
-            mSSAOOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
-            mSSAOOptions.quality = (View::QualityLevel) quality;
+            ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+
+            ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
+            ssao.lowPassFilter = (View::QualityLevel) lowpass;
+            ssao.quality = (View::QualityLevel) quality;
+
+            if (ImGui::CollapsingHeader("Dominant Light Shadows (experimental)")) {
+                int sampleCount = ssao.ssct.sampleCount;
+                ImGui::Checkbox("Enabled##dls", &ssao.ssct.enabled);
+                ImGui::SliderFloat("Cone angle", &ssao.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+                ImGui::SliderFloat("Shadow Distance", &ssao.ssct.shadowDistance, 0.0f, 10.0f);
+                ImGui::SliderFloat("Contact dist max", &ssao.ssct.contactDistanceMax, 0.0f, 100.0f);
+                ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
+                ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);
+                ImGui::SliderFloat("Depth slope bias", &ssao.ssct.depthSlopeBias, 0.0f, 1.0f);
+                ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+                ImGuiExt::DirectionWidget("Direction##dls", ssao.ssct.lightDirection.v);
+                ssao.ssct.sampleCount = sampleCount;
+            }
         }
         ImGui::Unindent();
     }
@@ -493,9 +335,18 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
-        ImGui::Checkbox("Enable VSM", &mEnableVsm);
+
+        bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
+        ImGui::Checkbox("Enable VSM", &enableVsm);
+        mSettings.view.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+
+        char label[32];
+        snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
+        ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
-        ImGui::Checkbox("Debug cascades", debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
+        ImGui::Checkbox("Debug cascades",
+                debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
         ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
         ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
         ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
@@ -505,25 +356,21 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("Fog")) {
         ImGui::Indent();
-        ImGui::Checkbox("Enable fog", &mFogOptions.enabled);
-        ImGui::SliderFloat("Start", &mFogOptions.distance, 0.0f, 100.0f);
-        ImGui::SliderFloat("Density", &mFogOptions.density, 0.0f, 1.0f);
-        ImGui::SliderFloat("Height", &mFogOptions.height, 0.0f, 100.0f);
-        ImGui::SliderFloat("Height falloff", &mFogOptions.heightFalloff, 0.0f, 10.0f);
-        ImGui::SliderFloat("Scattering start", &mFogOptions.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering size", &mFogOptions.inScatteringSize, 0.1f, 100.0f);
-        ImGui::Checkbox("Color from IBL", &mFogOptions.fogColorFromIbl);
-        ImGui::ColorPicker3("Color", mFogOptions.color.v);
+        ImGui::Checkbox("Enable fog", &mSettings.view.fog.enabled);
+        ImGui::SliderFloat("Start", &mSettings.view.fog.distance, 0.0f, 100.0f);
+        ImGui::SliderFloat("Density", &mSettings.view.fog.density, 0.0f, 1.0f);
+        ImGui::SliderFloat("Height", &mSettings.view.fog.height, 0.0f, 100.0f);
+        ImGui::SliderFloat("Height falloff", &mSettings.view.fog.heightFalloff, 0.0f, 10.0f);
+        ImGui::SliderFloat("Scattering start", &mSettings.view.fog.inScatteringStart, 0.0f, 100.0f);
+        ImGui::SliderFloat("Scattering size", &mSettings.view.fog.inScatteringSize, 0.1f, 100.0f);
+        ImGui::Checkbox("Color from IBL", &mSettings.view.fog.fogColorFromIbl);
+        ImGui::ColorPicker3("Color", mSettings.view.fog.color.v);
         ImGui::Unindent();
     }
 
-    mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
-    mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
-    mView->setSampleCount(mEnableMsaa ? 4 : 1);
-    mView->setAmbientOcclusionOptions(mSSAOOptions);
-    mView->setBloomOptions(mBloomOptions);
-    mView->setFogOptions(mFogOptions);
-    mView->setTemporalAntiAliasingOptions(mTAAOptions);
+    // At this point, all View settings have been modified,
+    //  so we can now push them into the Filament View.
+    applySettings(mSettings.view, mView);
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
@@ -532,6 +379,9 @@ void SimpleViewer::updateUserInterface() {
         lm.setDirection(sun, normalize(mSunlightDirection));
         lm.setColor(sun, mSunlightColor);
         lm.setShadowCaster(sun, mEnableShadows);
+        auto options = lm.getShadowOptions(sun);
+        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
+        lm.setShadowOptions(sun, options);
     } else {
         mScene->remove(mSunlight);
     }
@@ -540,12 +390,11 @@ void SimpleViewer::updateUserInterface() {
         auto options = lm.getShadowOptions(ci);
         options.screenSpaceContactShadows = mEnableContactShadows;
         options.shadowCascades = mShadowCascades;
+        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
         std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
         lm.setShadowOptions(ci, options);
         lm.setShadowCaster(ci, mEnableShadows);
     });
-
-    mView->setShadowType(mEnableVsm ? View::ShadowType::VSM : View::ShadowType::PCF);
 
     if (mAsset != nullptr) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
@@ -586,8 +435,5 @@ void SimpleViewer::updateUserInterface() {
     updateIndirectLight();
 }
 
-} // namespace gltfio
-
-#endif // GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-
-#endif // GLTFIO_SIMPLEVIEWER_H
+} // namespace viewer
+} // namespace filament

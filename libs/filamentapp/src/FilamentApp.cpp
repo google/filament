@@ -323,13 +323,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         if (mImGuiHelper) {
 
             // Inform ImGui of the current window size in case it was resized.
-            int windowWidth, windowHeight;
-            int displayWidth, displayHeight;
-            SDL_GetWindowSize(window->mWindow, &windowWidth, &windowHeight);
-            SDL_GL_GetDrawableSize(window->mWindow, &displayWidth, &displayHeight);
-            mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
-                    windowWidth > 0 ? ((float)displayWidth / windowWidth) : 0,
-                    displayHeight > 0 ? ((float)displayHeight / windowHeight) : 0);
+            if (config.headless) {
+                mImGuiHelper->setDisplaySize(window->mWidth, window->mHeight);
+            } else {
+                int windowWidth, windowHeight;
+                int displayWidth, displayHeight;
+                SDL_GetWindowSize(window->mWindow, &windowWidth, &windowHeight);
+                SDL_GL_GetDrawableSize(window->mWindow, &displayWidth, &displayHeight);
+                mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
+                        windowWidth > 0 ? ((float)displayWidth / windowWidth) : 0,
+                        displayHeight > 0 ? ((float)displayHeight / windowHeight) : 0);
+            }
 
             // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
             // from our event handler)
@@ -393,16 +397,19 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 renderer->render(view->getView());
             }
             renderer->endFrame();
-        } else {
-            ++mSkippedFrames;
-        }
 
-        if (postRender) {
-            for (auto const& view : window->mViews) {
-                if (view.get() != window->mUiView) {
-                    postRender(mEngine, view->getView(), mScene, renderer);
+            // We call PostRender only when the frame has not been skipped. It might be used
+            // for taking screenshots under the assumption that a state change has taken effect.
+            if (postRender) {
+                for (auto const& view : window->mViews) {
+                    if (view.get() != window->mUiView) {
+                        postRender(mEngine, view->getView(), mScene, renderer);
+                    }
                 }
             }
+
+        } else {
+            ++mSkippedFrames;
         }
     }
 

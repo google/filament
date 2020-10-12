@@ -1,0 +1,54 @@
+cmake_minimum_required(VERSION 3.10)
+project(viewer)
+
+set(TARGET viewer)
+set(PUBLIC_HDR_DIR include)
+
+# ==================================================================================================
+# Sources and headers
+# ==================================================================================================
+set(PUBLIC_HDRS
+        include/viewer/AutomationEngine.h
+        include/viewer/AutomationSpec.h
+        include/viewer/Settings.h
+        include/viewer/SimpleViewer.h
+)
+
+set(SRCS
+        src/jsonParseUtils.h
+        src/AutomationEngine.cpp
+        src/AutomationSpec.cpp
+        src/Settings.cpp
+        src/SimpleViewer.cpp
+)
+
+# ==================================================================================================
+# Include and target definitions
+# ==================================================================================================
+add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+target_link_libraries(${TARGET} PUBLIC imgui filament gltfio filagui jsmn imageio)
+target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+# ==================================================================================================
+# Compiler flags
+# ==================================================================================================
+if (MSVC)
+    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+else()
+    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/viewer DESTINATION include)
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+    add_executable(test_settings tests/test_settings.cpp)
+    target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
+endif()

@@ -15,11 +15,13 @@ void main() {
 #endif
 
 #if defined(HAS_VSM)
-    // Since we're rendering from the perspective of the light, frameUniforms.cameraPosition is the
-    // light position, in world space.
-    // We use "distance to the light" as the depth metric, which works for both directional and spot
-    // lights.
-    highp float depth = length(frameUniforms.cameraPosition.xyz - vertex_worldPosition);
+    // For VSM, we use the linear light space Z coordinate as the depth metric, which works for both
+    // directional and spot lights.
+    // We negate it, because we're using a right-handed coordinate system (-Z points forward).
+    highp float depth = -mulMat4x4Float3(frameUniforms.viewFromWorldMatrix, vertex_worldPosition).z;
+
+    // Scale by cameraFar to help prevent a floating point overflow below when squaring the depth.
+    depth /= abs(frameUniforms.cameraFar);
 
     highp float dx = dFdx(depth);
     highp float dy = dFdy(depth);

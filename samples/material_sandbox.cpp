@@ -603,6 +603,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
                 int quality = (int)params.ssaoOptions.quality;
+                int lowpass = (int)params.ssaoOptions.lowPassFilter;
                 bool upsampling = params.ssaoOptions.upsampling != View::QualityLevel::LOW;
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
@@ -612,9 +613,27 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
+                ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
                 params.ssaoOptions.quality = (View::QualityLevel)quality;
+                params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
+                if (ImGui::CollapsingHeader("Dominant Light Shadows")) {
+                    int sampleCount = params.ssaoOptions.ssct.sampleCount;
+                    int rayCount = params.ssaoOptions.ssct.rayCount;
+                    ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
+                    ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+                    ImGui::SliderFloat("Shadow Distance", &params.ssaoOptions.ssct.shadowDistance, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Contact dist max", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
+                    ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
+                    ImGui::SliderFloat("Depth bias", &params.ssaoOptions.ssct.depthBias, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Depth slope bias", &params.ssaoOptions.ssct.depthSlopeBias, 0.0f, 1.0f);
+                    ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+                    ImGui::SliderInt("Ray Count", &rayCount, 1, 8);
+                    ImGuiExt::DirectionWidget("Direction##dls", params.ssaoOptions.ssct.lightDirection.v);
+                    params.ssaoOptions.ssct.sampleCount = sampleCount;
+                    params.ssaoOptions.ssct.rayCount = rayCount;
+                }
             }
             ImGui::Unindent();
         }
