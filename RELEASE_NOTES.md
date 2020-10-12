@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Removed View::setShadowType in favor of View::setShadowOptions (experimental)
+- Add anisotropic shadow map sampling with VSM (experimental)
+
 ## v1.9.5
 
 - Added a new Live Wallpaper Android sample
