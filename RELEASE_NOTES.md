@@ -7,7 +7,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.4
 
-- New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental).
+- Add screen space cone tracing (SSCT)
+- Improvements to VSM shadow quality
+- New `ShadowOptions` control to render Variance Shadow Maps (VSM) with MSAA (experimental)
+- Improvements and fixes to screen-space ambient occlusion
+- gltf_viewer: add --headless option
+- gltf_viewer: Add new automation UI and functionality
 
 ## v1.9.3
 
