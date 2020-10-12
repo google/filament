@@ -23,7 +23,6 @@ import android.view.Choreographer
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceView
-import com.google.android.filament.View
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
@@ -73,11 +72,6 @@ class MainActivity : Activity() {
         val bloomOptions = modelViewer.view.bloomOptions
         bloomOptions.enabled = true
         modelViewer.view.bloomOptions = bloomOptions
-
-        val shadowOptions = View.ShadowOptions()
-        shadowOptions.shadowType = View.ShadowType.VSM
-        shadowOptions.vsmAnisotropyLog2 = 1
-        modelViewer.view.shadowOptions = shadowOptions
     }
 
     private fun createRenderables() {
