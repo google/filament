@@ -442,6 +442,14 @@ void Scene::setSkybox(Skybox* skybox) noexcept {
     upcast(this)->setSkybox(upcast(skybox));
 }
 
+Skybox* Scene::getSkybox() noexcept {
+    return upcast(this)->getSkybox();
+}
+
+Skybox const* Scene::getSkybox() const noexcept {
+    return upcast(this)->getSkybox();
+}
+
 void Scene::setIndirectLight(IndirectLight const* ibl) noexcept {
     upcast(this)->setIndirectLight(upcast(ibl));
 }

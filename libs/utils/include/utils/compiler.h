@@ -190,7 +190,7 @@
 
 // ssize_t is a POSIX type.
 #if defined(WIN32) || defined(_WIN32)
-#include <BaseTsd.h>
+#include <Basetsd.h>
 typedef SSIZE_T ssize_t;
 #endif
 

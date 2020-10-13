@@ -23,6 +23,8 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+#include <utils/compiler.h>
+
 struct timespec;
 
 namespace utils {
