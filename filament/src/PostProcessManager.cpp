@@ -1980,8 +1980,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto& material = getPostProcessMaterial("vsmMipmap");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", in, {
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST,
-                        .filterMag = SamplerMagFilter::LINEAR
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                         });
                 mi->setParameter("level", uint32_t(level));
                 mi->setParameter("layer", uint32_t(layer));

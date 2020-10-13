@@ -303,13 +303,13 @@ public:
          * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
          * than 0, mipmaps will automatically be generated each frame for all lights.
          *
-         * The number of anisotropic samples = 2 ^ vsmAnisotropyLog2.
+         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
          *
          * Only applicable when shadowType is set to ShadowType::VSM.
          *
          * @warning This API is still experimental and subject to change.
          */
-        uint8_t vsmAnisotropyLog2 = 0;
+        uint8_t vsmAnisotropy = 0;
     };
 
     /**

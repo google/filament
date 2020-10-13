@@ -200,8 +200,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         CHECK_KEY(tok);
         if (0 == compare(tok, jsonChunk, "shadowType")) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowType);
-        } else if (0 == compare(tok, jsonChunk, "vsmAnisotropyLog2")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->vsmAnisotropyLog2);
+        } else if (0 == compare(tok, jsonChunk, "vsmAnisotropy")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->vsmAnisotropy);
         } else {
             slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1034,7 +1034,7 @@ std::string writeJson(const ShadowOptions& in) {
     std::ostringstream oss;
     oss << "{\n"
         << "\"shadowType\": " << writeJson(in.shadowType) << ",\n"
-        << "\"vsmAnisotropyLog2\": " << writeJson(in.vsmAnisotropyLog2) << "\n"
+        << "\"vsmAnisotropy\": " << writeJson(in.vsmAnisotropy) << "\n"
         << "}";
     return oss.str();
 }

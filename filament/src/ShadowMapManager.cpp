@@ -260,7 +260,7 @@ void ShadowMapManager::prepareShadow(backend::Handle<backend::HwTexture> texture
     uint8_t anisotropy = 0;
     SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
     if (view.hasVsm()) {
-        anisotropy = view.getShadowOptions().vsmAnisotropyLog2;
+        anisotropy = view.getShadowOptions().vsmAnisotropy;
         if (anisotropy > 0) {
             filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
         }
@@ -569,7 +569,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     const uint8_t layersNeeded = layer;
 
     // Only generate mipmaps for VSM when anisotropy is enabled.
-    const bool useMipmapping = view.hasVsm() && view.getShadowOptions().vsmAnisotropyLog2 > 0;
+    const bool useMipmapping = view.hasVsm() && view.getShadowOptions().vsmAnisotropy > 0;
 
     uint8_t mipLevels = 1u;
     if (useMipmapping) {

@@ -604,14 +604,14 @@ public class View {
          *
          * <strong>Warning: This API is still experimental and subject to change.</strong>
          */
-        public ShadowType shadowType;
+        public @NonNull ShadowType shadowType = ShadowType.PCF;
 
         /**
          * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
          * than 0, mipmaps will automatically be generated each frame for all lights.
          *
          * <p>
-         * The number of anisotropic samples = 2 ^ vsmAnisotropyLog2.
+         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
          * </p>
          *
          * <p>
@@ -620,7 +620,7 @@ public class View {
          *
          * <strong>Warning: This API is still experimental and subject to change.</strong>
          */
-        public int vsmAnisotropyLog2;
+        public int vsmAnisotropy = 0;
     }
 
     /**
@@ -1215,7 +1215,7 @@ public class View {
     public void setShadowOptions(@NonNull ShadowOptions options) {
         mShadowOptions = options;
         nSetShadowOptions(getNativeObject(), options.shadowType.ordinal(),
-                options.vsmAnisotropyLog2);
+                options.vsmAnisotropy);
     }
 
     /**
@@ -1422,7 +1422,7 @@ public class View {
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
-    private static native void nSetShadowOptions(long nativeView, int type, int vsmAnisotropyLog2);
+    private static native void nSetShadowOptions(long nativeView, int type, int vsmAnisotropy);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
