@@ -66,13 +66,27 @@ class UTILS_PUBLIC Scene : public FilamentAPI {
 public:
 
     /**
-     * Sets the SkyBox.
+     * Sets the Skybox.
      *
      * The Skybox is drawn last and covers all pixels not touched by geometry.
      *
      * @param skybox The Skybox to use to fill untouched pixels, or nullptr to unset the Skybox.
      */
     void setSkybox(Skybox* skybox) noexcept;
+
+    /**
+     * Returns the Skybox associated with the Scene.
+     *
+     * @return The associated Skybox, or nullptr if there is none.
+     */
+    Skybox* getSkybox() noexcept;
+
+    /**
+     * Returns an immutable Skybox associated with the Scene.
+     *
+     * @return The associated Skybox, or nullptr if there is none.
+     */
+    Skybox const* getSkybox() const noexcept;
 
     /**
      * Set the IndirectLight to use when rendering the Scene.

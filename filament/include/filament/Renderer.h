@@ -25,6 +25,8 @@
 
 #include <backend/PresentCallable.h>
 
+#include <math/vec4.h>
+
 #include <stdint.h>
 
 namespace filament {
