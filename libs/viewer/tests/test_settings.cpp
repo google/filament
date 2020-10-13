@@ -123,6 +123,9 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "zLightFar": 100,
         },
         "shadowType": "PCF",
+        "vsmShadowOptions": {
+            "anisotropy": 1
+        },
         "postProcessingEnabled": true
     }
 }

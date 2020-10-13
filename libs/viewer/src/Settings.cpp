@@ -192,16 +192,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowTy
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
-        ShadowOptions* out) {
+        VsmShadowOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (0 == compare(tok, jsonChunk, "shadowType")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shadowType);
-        } else if (0 == compare(tok, jsonChunk, "vsmAnisotropy")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->vsmAnisotropy);
+        if (0 == compare(tok, jsonChunk, "anisotropy")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else {
             slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -576,8 +574,10 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->renderQuality);
         } else if (compare(tok, jsonChunk, "dynamicLighting") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->dynamicLighting);
-        } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else if (compare(tok, jsonChunk, "shadowType") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowType);
+        } else if (compare(tok, jsonChunk, "vsmShadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
         } else {
@@ -708,7 +708,8 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setRenderQuality(settings.renderQuality);
     dest->setDynamicLightingOptions(settings.dynamicLighting.zLightNear,
             settings.dynamicLighting.zLightFar);
-    dest->setShadowOptions(settings.shadowOptions);
+    dest->setShadowType(settings.shadowType);
+    dest->setVsmShadowOptions(settings.vsmShadowOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
 }
 
@@ -1030,11 +1031,10 @@ std::string writeJson(const DynamicLightingSettings& in) {
     return oss.str();
 }
 
-std::string writeJson(const ShadowOptions& in) {
+std::string writeJson(const VsmShadowOptions& in) {
     std::ostringstream oss;
     oss << "{\n"
-        << "\"shadowType\": " << writeJson(in.shadowType) << ",\n"
-        << "\"vsmAnisotropy\": " << writeJson(in.vsmAnisotropy) << "\n"
+        << "\"anisotropy\": " << writeJson(in.anisotropy) << "\n"
         << "}";
     return oss.str();
 }
@@ -1054,7 +1054,8 @@ std::string writeJson(const ViewSettings& in) {
         << "\"dithering\": " << writeJson(in.dithering) << ",\n"
         << "\"renderQuality\": " << writeJson(in.renderQuality) << ",\n"
         << "\"dynamicLighting\": " << writeJson(in.dynamicLighting) << ",\n"
-        << "\"shadowOptions\": " << writeJson(in.shadowOptions) << ",\n"
+        << "\"shadowType\": " << writeJson(in.shadowType) << ",\n"
+        << "\"vsmShadowOptions\": " << writeJson(in.vsmShadowOptions) << ",\n"
         << "\"postProcessingEnabled\": " << writeJson(in.postProcessingEnabled) << "\n"
         << "}";
     return oss.str();

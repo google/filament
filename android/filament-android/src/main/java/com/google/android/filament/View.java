@@ -75,7 +75,7 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
-    private ShadowOptions mShadowOptions;
+    private VsmShadowOptions mVsmShadowOptions;
 
     /**
      * Generic quality level.
@@ -569,7 +569,7 @@ public class View {
     /**
      * List of available shadow mapping techniques.
      *
-     * @see ShadowOptions
+     * @see #setShadowType
      */
     public enum ShadowType {
         /**
@@ -584,28 +584,11 @@ public class View {
     }
 
     /**
-     * View-level options for Shadowing.
+     * View-level options for VSM shadowing.
      *
-     * @see View#setShadowOptions
+     * @see View#setVsmShadowOptions
      */
-    public static class ShadowOptions {
-        /**
-         * The shadow mapping technique this View uses.
-         *
-         * The ShadowType affects all the shadows seen within the View.
-         *
-         * <p>
-         * {@link ShadowType#VSM} imposes a restriction on marking renderables as only shadow
-         * receivers (but not casters). To ensure correct shadowing with VSM, all shadow participant
-         * renderables should be marked as both receivers and casters. Objects that are guaranteed
-         * to not cast shadows on themselves or other objects (such as flat ground planes) can be
-         * set to not cast shadows, which might improve shadow quality.
-         * </p>
-         *
-         * <strong>Warning: This API is still experimental and subject to change.</strong>
-         */
-        public @NonNull ShadowType shadowType = ShadowType.PCF;
-
+    public static class VsmShadowOptions {
         /**
          * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
          * than 0, mipmaps will automatically be generated each frame for all lights.
@@ -614,13 +597,9 @@ public class View {
          * The number of anisotropic samples = 2 ^ vsmAnisotropy.
          * </p>
          *
-         * <p>
-         * Only applicable when shadowType is set to ShadowType::VSM.
-         * </p>
-         *
          * <strong>Warning: This API is still experimental and subject to change.</strong>
          */
-        public int vsmAnisotropy = 0;
+        public int anisotropy = 0;
     }
 
     /**
@@ -1205,30 +1184,53 @@ public class View {
     }
 
     /**
-     * Sets shadowing options that apply across the entire View.
+     * Sets the shadow mapping technique this View uses.
      *
-     * Additional light-specific shadow options can be set with
-     * {@link LightManager.Builder#shadowOptions}.
+     * The ShadowType affects all the shadows seen within the View.
      *
-     * @param options Options for shadowing.
+     * <p>
+     * {@link ShadowType#VSM} imposes a restriction on marking renderables as only shadow receivers
+     * (but not casters). To ensure correct shadowing with VSM, all shadow participant renderables
+     * should be marked as both receivers and casters. Objects that are guaranteed to not cast
+     * shadows on themselves or other objects (such as flat ground planes) can be set to not cast
+     * shadows, which might improve shadow quality.
+     * </p>
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
      */
-    public void setShadowOptions(@NonNull ShadowOptions options) {
-        mShadowOptions = options;
-        nSetShadowOptions(getNativeObject(), options.shadowType.ordinal(),
-                options.vsmAnisotropy);
+    public void setShadowType(ShadowType type) {
+        nSetShadowType(getNativeObject(), type.ordinal());
     }
 
     /**
-     * Gets the shadow options.
-     * @see #setShadowOptions
-     * @return shadow options currently set.
+     * Sets VSM shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType::VSM.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
+        mVsmShadowOptions = options;
+        nSetVsmShadowOptions(getNativeObject(), options.anisotropy);
+    }
+
+    /**
+     * Gets the VSM shadowing options.
+     * @see #setVsmShadowOptions
+     * @return VSM shadow options currently set.
      */
     @NonNull
-    public ShadowOptions getShadowOptions() {
-        if (mShadowOptions == null) {
-            mShadowOptions = new ShadowOptions();
+    public VsmShadowOptions getVsmShadowOptions() {
+        if (mVsmShadowOptions == null) {
+            mVsmShadowOptions = new VsmShadowOptions();
         }
-        return mShadowOptions;
+        return mVsmShadowOptions;
     }
 
     /**
@@ -1422,7 +1424,8 @@ public class View {
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
-    private static native void nSetShadowOptions(long nativeView, int type, int vsmAnisotropy);
+    private static native void nSetShadowType(long nativeView, int type);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

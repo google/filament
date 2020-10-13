@@ -993,12 +993,16 @@ void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
-void View::setShadowOptions(ShadowOptions const& options) noexcept {
-    upcast(this)->setShadowOptions(options);
+void View::setShadowType(View::ShadowType shadow) noexcept {
+    upcast(this)->setShadowType(shadow);
 }
 
-View::ShadowOptions View::getShadowOptions() const noexcept {
-    return upcast(this)->getShadowOptions();
+void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
+    upcast(this)->setVsmShadowOptions(options);
+}
+
+View::VsmShadowOptions View::getVsmShadowOptions() const noexcept {
+    return upcast(this)->getVsmShadowOptions();
 }
 
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {

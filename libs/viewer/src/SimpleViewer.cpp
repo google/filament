@@ -54,8 +54,8 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mSunlight(utils::EntityManager::get().create()),
         mSidebarWidth(sidebarWidth) {
 
-    mSettings.view.shadowOptions.shadowType = ShadowType::PCF;
-    mSettings.view.shadowOptions.vsmAnisotropy = 0;
+    mSettings.view.shadowType = ShadowType::PCF;
+    mSettings.view.vsmShadowOptions.anisotropy = 0;
     mSettings.view.dithering = Dithering::TEMPORAL;
     mSettings.view.antiAliasing = AntiAliasing::FXAA;
     mSettings.view.sampleCount = 4;
@@ -337,18 +337,18 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
         ImGui::Checkbox("Enable shadows", &mEnableShadows);
 
-        bool enableVsm = mSettings.view.shadowOptions.shadowType == ShadowType::VSM;
+        bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
-        mSettings.view.shadowOptions.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+        mSettings.view.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
 
         char label[32];
         snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
         ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
 
-        int vsmAnisotropy = mSettings.view.shadowOptions.vsmAnisotropy;
+        int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
         snprintf(label, 32, "%d", 1 << vsmAnisotropy);
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
-        mSettings.view.shadowOptions.vsmAnisotropy = vsmAnisotropy;
+        mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
 
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug cascades",
