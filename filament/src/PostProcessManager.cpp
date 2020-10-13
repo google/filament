@@ -1985,6 +1985,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                         });
                 mi->setParameter("level", uint32_t(level));
                 mi->setParameter("layer", uint32_t(layer));
+                mi->setParameter("uvscale", 1.0f / dim);
 
                 // When generating shadow map mip levels, we want to preserve the 1 texel border.
                 auto vpWidth = (uint32_t) std::max(0, dim - 2);
