@@ -1962,8 +1962,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
                 data.rt = builder.createRenderTarget(name, {
                     .attachments = {{ data.out, uint8_t(level + 1), layer }},
-                    .clearFlags = TargetBufferFlags::COLOR,
-                    .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f }
+                    .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f },
+                    .clearFlags = TargetBufferFlags::COLOR
                 });
             },
             [=](FrameGraphPassResources const& resources,

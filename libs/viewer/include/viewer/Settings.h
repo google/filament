@@ -122,7 +122,7 @@ struct ViewSettings {
     Dithering dithering = Dithering::TEMPORAL;
     RenderQuality renderQuality;
     DynamicLightingSettings dynamicLighting;
-    ShadowType shadowType = ShadowTypePCF;
+    ShadowType shadowType = ShadowType::PCF;
     VsmShadowOptions vsmShadowOptions;
     bool postProcessingEnabled = true;
 };
