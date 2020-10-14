@@ -410,7 +410,12 @@ public:
         struct {
             bool camera_at_origin = true;
         } view;
-         matdbg::DebugServer* server = nullptr;
+        struct {
+            // When set to true, the backend will attempt to capture the next frame and write the
+            // capture to file. At the moment, only supported by the Metal backend.
+            bool doFrameCapture = false;
+        } renderer;
+        matdbg::DebugServer* server = nullptr;
     } debug;
 };
 
