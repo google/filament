@@ -49,6 +49,7 @@ using ShadowType = filament::View::ShadowType;
 using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using ToneMapping = filament::ColorGrading::ToneMapping;
 using VignetteOptions = filament::View::VignetteOptions;
+using VsmShadowOptions = filament::View::VsmShadowOptions;
 
 // Reads the given JSON blob and updates the corresponding fields in the given Settings object.
 // - The given JSON blob need not specify all settings.
@@ -122,6 +123,7 @@ struct ViewSettings {
     RenderQuality renderQuality;
     DynamicLightingSettings dynamicLighting;
     ShadowType shadowType = ShadowType::PCF;
+    VsmShadowOptions vsmShadowOptions;
     bool postProcessingEnabled = true;
 };
 

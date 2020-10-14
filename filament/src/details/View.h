@@ -319,6 +319,14 @@ public:
         mShadowType = shadow;
     }
 
+    void setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
+        mVsmShadowOptions = options;
+    }
+
+    VsmShadowOptions getVsmShadowOptions() const noexcept {
+        return mVsmShadowOptions;
+    }
+
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
         return mAmbientOcclusionOptions;
     }
@@ -479,6 +487,7 @@ private:
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
+    VsmShadowOptions mVsmShadowOptions = {};
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;

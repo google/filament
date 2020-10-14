@@ -75,6 +75,7 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private VsmShadowOptions mVsmShadowOptions;
 
     /**
      * Generic quality level.
@@ -580,6 +581,25 @@ public class View {
          * Variance shadows.
          */
         VSM
+    }
+
+    /**
+     * View-level options for VSM shadowing.
+     *
+     * @see View#setVsmShadowOptions
+     */
+    public static class VsmShadowOptions {
+        /**
+         * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+         * than 0, mipmaps will automatically be generated each frame for all lights.
+         *
+         * <p>
+         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+         * </p>
+         *
+         * <strong>Warning: This API is still experimental and subject to change.</strong>
+         */
+        public int anisotropy = 0;
     }
 
     /**
@@ -1183,6 +1203,37 @@ public class View {
     }
 
     /**
+     * Sets VSM shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType::VSM.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
+        mVsmShadowOptions = options;
+        nSetVsmShadowOptions(getNativeObject(), options.anisotropy);
+    }
+
+    /**
+     * Gets the VSM shadowing options.
+     * @see #setVsmShadowOptions
+     * @return VSM shadow options currently set.
+     */
+    @NonNull
+    public VsmShadowOptions getVsmShadowOptions() {
+        if (mVsmShadowOptions == null) {
+            mVsmShadowOptions = new VsmShadowOptions();
+        }
+        return mVsmShadowOptions;
+    }
+
+    /**
      * Activates or deactivates ambient occlusion.
      * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
@@ -1374,6 +1425,7 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

@@ -16,6 +16,7 @@
 
 #include "details/ShadowMap.h"
 #include "details/ShadowMapManager.h"
+#include "details/Texture.h"
 #include "details/View.h"
 
 #include "RenderPass.h"
@@ -47,7 +48,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
         FEngine& engine, FView& view, UniformBuffer& perViewUb,
         UniformBuffer& shadowUb, FScene::RenderableSoa& renderableData,
         FScene::LightSoa& lightData) noexcept {
-    calculateTextureRequirements(engine, lightData);
+    calculateTextureRequirements(engine, view, lightData);
     ShadowTechnique shadowTechnique = {};
     shadowTechnique |= updateCascadeShadowMaps(engine, view, perViewUb, renderableData, lightData);
     shadowTechnique |= updateSpotShadowMaps(engine, view, shadowUb, renderableData, lightData);
@@ -131,7 +132,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                 FrameGraphTexture::Descriptor shadowTextureDesc {
                     .width = mTextureRequirements.size, .height = mTextureRequirements.size,
                     .depth = mTextureRequirements.layers,
-                    .levels = 1,
+                    .levels = mTextureRequirements.levels,
                     .type = SamplerType::SAMPLER_2D_ARRAY,
                     .format = mTextureFormat,
                     .usage = TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE
@@ -240,15 +241,35 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         shadows = debugPatternPass.getData().shadows;
     }
 
+    // If the shadow texture has more than one level, then anisotropy was specified and we should
+    // generate VSM mipmaps.
+    if (mTextureRequirements.levels > 1) {
+        auto& ppm = engine.getPostProcessManager();
+        for (uint8_t layer = 0; layer < mTextureRequirements.layers; layer++) {
+            for (size_t level = 0; level < mTextureRequirements.levels - 1; level++) {
+                shadows = ppm.vsmMipmapPass(fg, shadows, layer, level);
+            }
+        }
+    }
+
     fg.getBlackboard().put("shadows", shadows);
 }
 
 void ShadowMapManager::prepareShadow(backend::Handle<backend::HwTexture> texture,
-        backend::SamplerGroup& viewSib) const noexcept {
-    viewSib.setSampler(PerViewSib::SHADOW_MAP, {
+        FView const& view) const noexcept {
+    uint8_t anisotropy = 0;
+    SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
+    if (view.hasVsm()) {
+        anisotropy = view.getVsmShadowOptions().anisotropy;
+        if (anisotropy > 0) {
+            filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
+        }
+    }
+    view.getViewSamplers().setSampler(PerViewSib::SHADOW_MAP, {
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR,
+                    .filterMin = filterMin,
+                    .anisotropyLog2 = anisotropy,
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
                     .compareFunc = SamplerCompareFunc::GE
             }});
@@ -500,7 +521,7 @@ void ShadowMapManager::fillWithDebugPattern(backend::DriverApi& driverApi,
     }
 }
 
-void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
+void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view,
         FScene::LightSoa& lightData) noexcept {
     auto& lcm = engine.getLightManager();
 
@@ -546,9 +567,22 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine,
     }
 
     const uint8_t layersNeeded = layer;
+
+    // Only generate mipmaps for VSM when anisotropy is enabled.
+    const bool useMipmapping = view.hasVsm() && view.getVsmShadowOptions().anisotropy > 0;
+
+    uint8_t mipLevels = 1u;
+    if (useMipmapping) {
+        // Limit the lowest mipmap level to 256x256.
+        // This avoids artifacts on high derivative tangent surfaces.
+        int lowMipmapLevel = 7;    // log2(256) - 1
+        mipLevels = std::max(1, FTexture::maxLevelCount(maxDimension) - lowMipmapLevel);
+    }
+
     mTextureRequirements = {
         maxDimension,
-        layersNeeded
+        layersNeeded,
+        mipLevels
     };
 }
 

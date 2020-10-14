@@ -136,6 +136,15 @@ Java_com_google_android_filament_View_nSetShadowType(JNIEnv*, jclass, jlong nati
     view->setShadowType((View::ShadowType) type);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetVsmShadowOptions(JNIEnv*, jclass, jlong nativeView,
+        jint anisotropy) {
+    View* view = (View*) nativeView;
+    View::VsmShadowOptions options;
+    options.anisotropy = (uint8_t) anisotropy;
+    view->setVsmShadowOptions(options);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderQuality(JNIEnv*, jclass,
