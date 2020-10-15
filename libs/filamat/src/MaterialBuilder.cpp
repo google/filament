@@ -813,11 +813,15 @@ Package MaterialBuilder::build() noexcept {
         determinePostProcessVariants();
     bool success = generateShaders(variants, container, info);
 
+    if (!success) {
+        // Return an empty package to signal a failure to build the material.
+        return Package::invalidPackage();
+    }
+
     // Flatten all chunks in the container into a Package.
     Package package(container.getSize());
     Flattener f(package);
     container.flatten(f);
-    package.setValid(success);
 
     return package;
 }

@@ -42,15 +42,18 @@ public:
     }
 
     // Move Constructor
-    Package(Package&& other) noexcept : mPayload(other.mPayload), mSize(other.mSize) {
+    Package(Package&& other) noexcept : mPayload(other.mPayload), mSize(other.mSize),
+            mValid(other.mValid) {
         other.mPayload = nullptr;
         other.mSize = 0;
+        other.mValid = false;
     }
 
     // Move assignment
     Package& operator=(Package&& other) noexcept {
         std::swap(mPayload, other.mPayload);
         std::swap(mSize, other.mSize);
+        std::swap(mValid, other.mValid);
         return *this;
     }
 

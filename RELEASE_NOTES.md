@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Added View::setVsmShadowOptions (experimental)
 - Add anisotropic shadow map sampling with VSM (experimental)
+- matc: fixed bug where some compilation failures still exited with code 0
 
 ## v1.9.5
 
