@@ -346,7 +346,7 @@ utils::io::sstream& CodeGenerator::generateSubpass(utils::io::sstream& out,
     }
 
     CString subpassName =
-            SamplerInterfaceBlock::getUniformName("MaterialParams", subpass.name.c_str());
+            SamplerInterfaceBlock::getUniformName(subpass.block.c_str(), subpass.name.c_str());
 
     char const* const typeName = "subpassInput";
     // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)

@@ -412,9 +412,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             ibb.add(param.name, param.size, param.uniformType);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
+            // Subpasses blong to the "MaterialParams" block.
             const uint8_t attachmentIndex = 0;
             const uint8_t binding = 0;
-            info.subpass = { param.name, param.subpassType,
+            info.subpass = { utils::CString("MaterialParams"), param.name, param.subpassType,
                 param.format, param.precision, attachmentIndex, binding };
         }
     }
@@ -893,6 +894,9 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     // SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
+
+    // Subpass
+    container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
 
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);

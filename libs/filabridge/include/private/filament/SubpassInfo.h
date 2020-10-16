@@ -29,11 +29,13 @@ using Precision = backend::Precision;
 
 struct SubpassInfo {
     SubpassInfo() noexcept = default;
-    SubpassInfo(utils::CString name, Type type, Format format,
+    SubpassInfo(utils::CString block, utils::CString name, Type type, Format format,
             Precision precision, uint8_t attachmentIndex, uint8_t binding) noexcept
-            : name(std::move(name)), type(type), format(format), precision(precision),
-            attachmentIndex(attachmentIndex), binding(binding), isValid(true) {
+            : block(std::move(block)), name(std::move(name)), type(type), format(format),
+            precision(precision), attachmentIndex(attachmentIndex), binding(binding),
+            isValid(true) {
     }
+    utils::CString block;   // name of the block this subpass belongs to
     utils::CString name;    // name of this subpass
     Type type;              // type of this subpass
     Format format;          // format of this subpass
