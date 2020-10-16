@@ -188,17 +188,24 @@ static bool reflectParameters(const MaterialBuilder& builder) {
         const MaterialBuilder::Parameter& parameter = parameters[i];
         std::cout << "    {" << std::endl;
         std::cout << R"(      "name": ")" << parameter.name.c_str() << "\"," << std::endl;
-        if (parameter.isSampler) {
+        if (parameter.isSampler()) {
             std::cout << R"(      "type": ")" <<
                       Enums::toString(parameter.samplerType) << "\"," << std::endl;
             std::cout << R"(      "format": ")" <<
-                      Enums::toString(parameter.samplerFormat) << "\"," << std::endl;
+                      Enums::toString(parameter.format) << "\"," << std::endl;
             std::cout << R"(      "precision": ")" <<
-                      Enums::toString(parameter.samplerPrecision) << "\"" << std::endl;
-        } else {
+                      Enums::toString(parameter.precision) << "\"" << std::endl;
+        } else if (parameter.isUniform()) {
             std::cout << R"(      "type": ")" <<
                       Enums::toString(parameter.uniformType) << "\"," << std::endl;
             std::cout << R"(      "size": ")" << parameter.size << "\"" << std::endl;
+        } else if (parameter.isSubpass()) {
+            std::cout << R"(      "type": ")" <<
+                      Enums::toString(parameter.subpassType) << "\"," << std::endl;
+            std::cout << R"(      "format": ")" <<
+                      Enums::toString(parameter.format) << "\"," << std::endl;
+            std::cout << R"(      "precision": ")" <<
+                      Enums::toString(parameter.precision) << "\"" << std::endl;
         }
         std::cout << "    }";
         if (i < count - 1) std::cout << ",";

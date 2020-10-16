@@ -26,10 +26,24 @@ material {
         {
             type : float4,
             name : vignetteColor
+        },
+        {
+            type : subpassInput,
+            format : float,
+            precision : medium,
+            name : colorBuffer,
         }
     ],
     variables : [
         vertex
+    ],
+    outputs : [
+        {
+            target : color,
+            type : float4,
+            qualifier : out,
+            name : tonemappedOutput
+        }
     ],
     depthWrite : false,
     depthCulling : false,
@@ -45,10 +59,6 @@ vertex {
 
 fragment {
 
-    // TODO: this should be specified as a parameter
-    // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
-    layout (input_attachment_index = 0, set = 2, binding = 0) uniform mediump subpassInput colorBuffer;
-    layout(location = 1) out vec4 tonemappedOutput;
 
 #include "../../../../shaders/src/dithering.fs"
 #include "../../../../shaders/src/vignette.fs"
@@ -64,11 +74,11 @@ fragment {
     }
 
     vec3 resolveFragment(const ivec2 uv) {
-        return subpassLoad(colorBuffer).rgb;
+        return subpassLoad(materialParams_colorBuffer).rgb;
     }
 
     vec4 resolveAlphaFragment(const ivec2 uv) {
-        return subpassLoad(colorBuffer);
+        return subpassLoad(materialParams_colorBuffer);
     }
 
     vec4 resolve() {
@@ -96,16 +106,15 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        postProcess.color = resolve();
+        postProcess.tonemappedOutput = resolve();
         if (materialParams.dithering > 0) {
-            vec4 dithered = dither(postProcess.color, materialParams.temporalNoise);
+            vec4 dithered = dither(postProcess.tonemappedOutput, materialParams.temporalNoise);
 #if POST_PROCESS_OPAQUE
-            postProcess.color.rgb = dithered.rgb;
+            postProcess.tonemappedOutput.rgb = dithered.rgb;
 #else
-            postProcess.color = dithered;
+            postProcess.tonemappedOutput = dithered;
 #endif
         }
-        tonemappedOutput = postProcess.color;
     }
 
 }

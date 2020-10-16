@@ -339,6 +339,26 @@ io::sstream& CodeGenerator::generateSamplers(
     return out;
 }
 
+utils::io::sstream& CodeGenerator::generateSubpass(utils::io::sstream& out,
+        SubpassInfo subpass) const {
+
+    CString subpassName =
+            SamplerInterfaceBlock::getUniformName("MaterialParams", subpass.name.c_str());
+
+    char const* const typeName = "subpassInput";
+    // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
+    char const* const precision = getPrecisionQualifier(subpass.precision, Precision::DEFAULT);
+    out << "layout(input_attachment_index = " << (int) subpass.attachmentIndex
+        << ", set = 2, binding = " << (int) subpass.binding
+        << ") ";
+    out << "uniform " << precision << " " << typeName << " " << subpassName.c_str();
+    out << ";\n";
+
+    out << "\n";
+
+    return out;
+}
+
 void CodeGenerator::fixupExternalSamplers(
         std::string& shader, SamplerInterfaceBlock const& sib) noexcept {
     auto const& infos = sib.getSamplerInfoList();

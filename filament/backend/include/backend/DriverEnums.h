@@ -215,6 +215,11 @@ enum class SamplerType : uint8_t {
     SAMPLER_3D,         //!< 3D texture
 };
 
+//! Subpass type
+enum class SubpassType : uint8_t {
+    SUBPASS_INPUT
+};
+
 //! Texture sampler format
 enum class SamplerFormat : uint8_t {
     INT = 0,        //!< signed integer sampler

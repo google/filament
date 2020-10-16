@@ -30,6 +30,7 @@
 #include <filament/MaterialEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
 
 #include <utils/sstream.h>
 
@@ -104,6 +105,10 @@ public:
     // generate samplers
     utils::io::sstream& generateSamplers(
         utils::io::sstream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
+
+    // generate subpass
+    utils::io::sstream& generateSubpass(utils::io::sstream& out,
+            filament::SubpassInfo subpass) const;
 
     // generate material properties getters
     utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
