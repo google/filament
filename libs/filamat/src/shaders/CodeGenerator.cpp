@@ -341,6 +341,9 @@ io::sstream& CodeGenerator::generateSamplers(
 
 utils::io::sstream& CodeGenerator::generateSubpass(utils::io::sstream& out,
         SubpassInfo subpass) const {
+    if (!subpass.isValid) {
+        return out;
+    }
 
     CString subpassName =
             SamplerInterfaceBlock::getUniformName("MaterialParams", subpass.name.c_str());
