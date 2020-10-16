@@ -22,7 +22,11 @@
 #include <backend/DriverEnums.h>
 #include "VulkanPlatform.h"
 
+#ifdef FILAMENT_SUPPORTS_XCB
+#include <xcb/xcb.h>
+#else
 #include <X11/Xlib.h>
+#endif
 
 namespace filament {
 
@@ -36,7 +40,11 @@ public:
     int getOSVersion() const noexcept override { return 0; }
 
 private:
+#ifdef FILAMENT_SUPPORTS_XCB
+    xcb_connection_t* mConnection;
+#else
     Display* mDisplay;
+#endif
 };
 
 } // namespace filament
