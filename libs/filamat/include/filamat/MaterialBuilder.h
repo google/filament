@@ -504,7 +504,7 @@ public:
                 : name(paramName), size(1), subpassType(t), format(f), precision(p),
                 parameterType(SUBPASS) { }
         utils::CString name;
-        size_t size = 0;
+        size_t size;
         union {
             UniformType uniformType;
             struct {
