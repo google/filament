@@ -494,7 +494,7 @@ public:
     MaterialBuilder& parameter(SubpassType subpassType, const char* name) noexcept;
 
     struct Parameter {
-        Parameter() noexcept = default;
+        Parameter() noexcept : parameterType(INVALID) {}
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, SamplerPrecision p)
                 : name(paramName), size(1), samplerType(t), format(f), precision(p),
                 parameterType(SAMPLER) { }
@@ -517,6 +517,7 @@ public:
             };
         };
         enum {
+            INVALID,
             UNIFORM,
             SAMPLER,
             SUBPASS

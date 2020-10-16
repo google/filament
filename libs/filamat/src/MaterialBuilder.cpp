@@ -204,7 +204,7 @@ MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerForm
     auto subpassCount = std::count_if(std::begin(mParameters), std::end(mParameters),
             [](const auto& p) { return p.isSubpass(); });
 
-    ASSERT_PRECONDITION(subpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
+    ASSERT_POSTCONDITION(subpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, subpassType, format, precision };
     return *this;

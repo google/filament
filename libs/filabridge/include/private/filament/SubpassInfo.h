@@ -35,7 +35,7 @@ struct SubpassInfo {
             precision(precision), attachmentIndex(attachmentIndex), binding(binding),
             isValid(true) {
     }
-    utils::CString block;   // name of the block this subpass belongs to
+    utils::CString block { "MaterialParams" };   // name of the block this subpass belongs to
     utils::CString name;    // name of this subpass
     Type type;              // type of this subpass
     Format format;          // format of this subpass
