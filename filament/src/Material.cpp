@@ -145,6 +145,11 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     UTILS_UNUSED_IN_RELEASE bool uibOK = parser->getUIB(&mUniformInterfaceBlock);
     assert(uibOK);
 
+    // Older materials will not have a subpass chunk; this should not be an error.
+    if (!parser->getSubpasses(&mSubpassInfo)) {
+        mSubpassInfo.isValid = false;
+    }
+
     // Populate sampler bindings for the backend that will consume this Material.
     mSamplerBindings.populate(&mSamplerInterfaceBlock);
 
@@ -292,10 +297,9 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
-    if (!mUniformInterfaceBlock.hasUniform(name)) {
-        return mSamplerInterfaceBlock.hasSampler(name);
-    }
-    return true;
+    return mUniformInterfaceBlock.hasUniform(name) ||
+            mSamplerInterfaceBlock.hasSampler(name) ||
+            mSubpassInfo.name == utils::CString(name);
 }
 
 bool FMaterial::isSampler(const char* name) const noexcept {
@@ -425,20 +429,34 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
         const auto& uniformInfo = uniforms[i];
         info.name = uniformInfo.name.c_str();
         info.isSampler = false;
+        info.isSubpass = false;
         info.type = uniformInfo.type;
         info.count = uniformInfo.size;
         info.precision = uniformInfo.precision;
     }
 
     const auto& samplers = mSamplerInterfaceBlock.getSamplerInfoList();
-    for (size_t j = 0; i < count; i++, j++) {
+    size_t samplerCount = samplers.size();
+    for (size_t j = 0; i < count && j < samplerCount; i++, j++) {
         ParameterInfo& info = parameters[i];
         const auto& samplerInfo = samplers[j];
         info.name = samplerInfo.name.c_str();
         info.isSampler = true;
+        info.isSubpass = false;
         info.samplerType = samplerInfo.type;
         info.count = 1;
         info.precision = samplerInfo.precision;
+    }
+
+    if (mSubpassInfo.isValid && i < count) {
+        ParameterInfo& info = parameters[i];
+        info.name = mSubpassInfo.name.c_str();
+        info.isSampler = false;
+        info.isSubpass = true;
+        info.subpassType = mSubpassInfo.type;
+        info.count = 1;
+        info.precision = mSubpassInfo.precision;
+        i++;
     }
 
     return count;
