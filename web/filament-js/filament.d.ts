@@ -154,7 +154,7 @@ export class Texture$Builder {
     public levels(levels: number): Texture$Builder;
     public sampler(sampler: Texture$Sampler): Texture$Builder;
     public format(format: Texture$InternalFormat): Texture$Builder;
-    public usage(usage: Texture$Usage): Texture$Builder;
+    public usage(usage: TextureUsage): Texture$Builder;
     public build(engine: Engine) : Texture;
 }
 
