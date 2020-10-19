@@ -28,7 +28,7 @@ using Format = backend::SamplerFormat;
 using Precision = backend::Precision;
 
 struct SubpassInfo {
-    SubpassInfo() noexcept = default;
+    SubpassInfo() = default;
     SubpassInfo(utils::CString block, utils::CString name, Type type, Format format,
             Precision precision, uint8_t attachmentIndex, uint8_t binding) noexcept
             : block(std::move(block)), name(std::move(name)), type(type), format(format),
@@ -36,7 +36,7 @@ struct SubpassInfo {
             isValid(true) {
     }
     // name of the block this subpass belongs to
-    utils::CString block = utils::StaticString("MaterialParams");
+    utils::CString block = utils::CString("MaterialParams");
     utils::CString name;    // name of this subpass
     Type type;              // type of this subpass
     Format format;          // format of this subpass
