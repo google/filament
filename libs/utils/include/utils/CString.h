@@ -215,7 +215,7 @@ public:
             : CString(other, N - 1) {
     }
 
-    CString(StaticString const& s) : CString(s.c_str(), s.size()) {}
+    CString(StaticString const& s) noexcept : CString(s.c_str(), s.size()) {}
 
     CString(const CString& rhs);
 
