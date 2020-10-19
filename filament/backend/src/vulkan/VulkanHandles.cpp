@@ -201,7 +201,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface)
 
 // Headless SwapChain constructor. (does not create a VkSwapChainKHR)
 VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height) {
-    surfaceContext.surface = nullptr;
+    surfaceContext.surface = VK_NULL_HANDLE;
     getHeadlessQueue(context, surfaceContext);
 
     surfaceContext.surfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
