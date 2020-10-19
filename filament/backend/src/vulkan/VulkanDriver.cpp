@@ -1428,7 +1428,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
     // Create a disposable to defer execution of the following code until after
     // the work command buffer has completed.
 
-    mDisposer.createDisposable(stagingImage, [=] () {
+    mDisposer.createDisposable((VulkanDisposer::Key) stagingImage, [=] () {
 
         VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
         VkSubresourceLayout subResourceLayout;
@@ -1474,7 +1474,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
 
     // Next we reduce the ref count of the image to zero, which schedules the above callback to be
     // executed on the next beginFrame(), after the work command buffer is completed.
-    mDisposer.removeReference(stagingImage);
+    mDisposer.removeReference((VulkanDisposer::Key) stagingImage);
 }
 
 void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
