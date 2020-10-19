@@ -244,6 +244,7 @@ void createLogicalDevice(VulkanContext& context) {
         .vkDestroyBuffer = vkDestroyBuffer,
         .vkCreateImage = vkCreateImage,
         .vkDestroyImage = vkDestroyImage,
+        .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
     };
