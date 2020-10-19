@@ -196,6 +196,20 @@ MaterialBuilder& MaterialBuilder::parameter(
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
+        SamplerPrecision precision, const char* name) noexcept {
+    ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
+            "Subpass parameters must have FLOAT format.");
+
+    auto subpassCount = std::count_if(std::begin(mParameters), std::end(mParameters),
+            [](const auto& p) { return p.isSubpass(); });
+
+    ASSERT_POSTCONDITION(subpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
+    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
+    mParameters[mParameterCount++] = { name, subpassType, format, precision };
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::parameter(
         SamplerType samplerType, SamplerFormat format, const char* name) noexcept {
     return parameter(samplerType, format, SamplerPrecision::DEFAULT, name);
@@ -209,6 +223,20 @@ MaterialBuilder& MaterialBuilder::parameter(
 MaterialBuilder& MaterialBuilder::parameter(
         SamplerType samplerType, const char* name) noexcept {
     return parameter(samplerType, SamplerFormat::FLOAT, SamplerPrecision::DEFAULT, name);
+}
+
+MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
+        const char* name) noexcept {
+    return parameter(subpassType, format, SamplerPrecision::DEFAULT, name);
+}
+
+MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerPrecision precision,
+        const char* name) noexcept {
+    return parameter(subpassType, SamplerFormat::FLOAT, precision, name);
+}
+
+MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, const char* name) noexcept {
+    return parameter(subpassType, SamplerFormat::FLOAT, SamplerPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) noexcept {
@@ -363,7 +391,7 @@ MaterialBuilder& MaterialBuilder::shaderDefine(const char* name, const char* val
 bool MaterialBuilder::hasExternalSampler() const noexcept {
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
-        if (param.isSampler && param.samplerType == SamplerType::SAMPLER_EXTERNAL) {
+        if (param.isSampler() && param.samplerType == SamplerType::SAMPLER_EXTERNAL) {
             return  true;
         }
     }
@@ -378,10 +406,17 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     filament::UniformInterfaceBlock::Builder ibb;
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
-        if (param.isSampler) {
-            sbb.add(param.name, param.samplerType, param.samplerFormat, param.samplerPrecision);
-        } else {
+        if (param.isSampler()) {
+            sbb.add(param.name, param.samplerType, param.format, param.precision);
+        } else if (param.isUniform()) {
             ibb.add(param.name, param.size, param.uniformType);
+        } else if (param.isSubpass()) {
+            // For now, we only support a single subpass for attachment 0.
+            // Subpasses blong to the "MaterialParams" block.
+            const uint8_t attachmentIndex = 0;
+            const uint8_t binding = 0;
+            info.subpass = { utils::CString("MaterialParams"), param.name, param.subpassType,
+                param.format, param.precision, attachmentIndex, binding };
         }
     }
 
@@ -863,6 +898,9 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     // SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
+
+    // Subpass
+    container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
 
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
     container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);

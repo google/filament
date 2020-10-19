@@ -39,7 +39,7 @@ namespace filament {
 namespace matdbg {
 
 constexpr int alignment = 32;
-constexpr int shortAlignment = 12;
+constexpr int shortAlignment = 15;
 
 static string arraySizeToString(uint64_t size) {
     if (size > 1) {
@@ -247,6 +247,60 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
                 << setw(shortAlignment) << toString(Precision(fieldPrecision))
                 << toString(SamplerFormat(fieldFormat))
                 << endl;
+    }
+
+    // Subpasses are optional.
+    if (container.hasChunk(ChunkType::MaterialSubpass)) {
+        Unflattener subpasses(
+                container.getChunkStart(ChunkType::MaterialSubpass),
+                container.getChunkEnd(ChunkType::MaterialSubpass));
+
+        CString name;
+        if (!subpasses.read(&name)) {
+            return false;
+        }
+
+        uint64_t subpassCount;
+        subpasses.read(&subpassCount);
+
+        for (uint64_t i = 0; i < subpassCount; i++) {
+            CString fieldName;
+            uint8_t fieldType;
+            uint8_t fieldFormat;
+            uint8_t fieldPrecision;
+            uint8_t attachmentIndex;
+            uint8_t binding;
+
+            if (!subpasses.read(&fieldName)) {
+                return false;
+            }
+
+            if (!subpasses.read(&fieldType)) {
+                return false;
+            }
+
+            if (!subpasses.read(&fieldFormat))
+                return false;
+
+            if (!subpasses.read(&fieldPrecision)) {
+                return false;
+            }
+
+            if (!subpasses.read(&attachmentIndex)) {
+                return false;
+            }
+
+            if (!subpasses.read(&binding)) {
+                return false;
+            }
+
+            text << "    "
+                    << setw(alignment) << fieldName.c_str()
+                    << setw(shortAlignment) << toString(SubpassType(fieldType))
+                    << setw(shortAlignment) << toString(Precision(fieldPrecision))
+                    << toString(SamplerFormat(fieldFormat))
+                    << endl;
+        }
     }
 
     text << endl;

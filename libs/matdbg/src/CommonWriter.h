@@ -197,6 +197,13 @@ const char* toString(backend::SamplerType type) noexcept {
 }
 
 inline
+const char* toString(backend::SubpassType type) noexcept {
+    switch (type) {
+        case backend::SubpassType::SUBPASS_INPUT: return "subpassInput";
+    }
+}
+
+inline
 const char* toString(backend::Precision precision) noexcept {
     switch (precision) {
         case backend::Precision::LOW: return "lowp";

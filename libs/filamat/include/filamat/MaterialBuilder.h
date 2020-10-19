@@ -189,6 +189,7 @@ public:
 
     using UniformType = filament::backend::UniformType;
     using SamplerType = filament::backend::SamplerType;
+    using SubpassType = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
     using SamplerPrecision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
@@ -481,24 +482,50 @@ public:
     // The methods and types below are for internal use
     /// @cond never
 
+    /**
+     * Add a subpass parameter to this material.
+     */
+    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, SamplerPrecision
+            precision, const char* name) noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType, SamplerFormat format, const char* name)
+        noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType, SamplerPrecision precision,
+            const char* name) noexcept;
+    MaterialBuilder& parameter(SubpassType subpassType, const char* name) noexcept;
+
     struct Parameter {
-        Parameter() noexcept = default;
+        Parameter() noexcept : parameterType(INVALID) {}
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, SamplerPrecision p)
-                : name(paramName), size(1), samplerType(t), samplerFormat(f), samplerPrecision(p),
-                isSampler(true) { }
+                : name(paramName), size(1), samplerType(t), format(f), precision(p),
+                parameterType(SAMPLER) { }
         Parameter(const char* paramName, UniformType t, size_t typeSize)
-                : name(paramName), size(typeSize), uniformType(t), isSampler(false) { }
+                : name(paramName), size(typeSize), uniformType(t), parameterType(UNIFORM) { }
+        Parameter(const char* paramName, SubpassType t, SamplerFormat f, SamplerPrecision p)
+                : name(paramName), size(1), subpassType(t), format(f), precision(p),
+                parameterType(SUBPASS) { }
         utils::CString name;
         size_t size;
         union {
             UniformType uniformType;
             struct {
-                SamplerType samplerType;
-                SamplerFormat samplerFormat;
-                SamplerPrecision samplerPrecision;
+                union {
+                    SamplerType samplerType;
+                    SubpassType subpassType;
+                };
+                SamplerFormat format;
+                SamplerPrecision precision;
             };
         };
-        bool isSampler;
+        enum {
+            INVALID,
+            UNIFORM,
+            SAMPLER,
+            SUBPASS
+        } parameterType;
+
+        bool isSampler() const { return parameterType == SAMPLER; }
+        bool isUniform() const { return parameterType == UNIFORM; }
+        bool isSubpass() const { return parameterType == SUBPASS; }
     };
 
     struct Output {
@@ -535,6 +562,7 @@ public:
     bool hasExternalSampler() const noexcept;
 
     static constexpr size_t MAX_PARAMETERS_COUNT = 48;
+    static constexpr size_t MAX_SUBPASS_COUNT = 1;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
 
     // returns the number of parameters declared in this material

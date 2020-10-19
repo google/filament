@@ -56,4 +56,22 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener &f) {
     }
 }
 
+MaterialSubpassInterfaceBlockChunk::MaterialSubpassInterfaceBlockChunk(SubpassInfo& subpass) :
+        Chunk(ChunkType::MaterialSubpass),
+        mSubpass(subpass) {
+}
+
+void MaterialSubpassInterfaceBlockChunk::flatten(Flattener &f) {
+    f.writeString(mSubpass.block.c_str());
+    f.writeUint64(mSubpass.isValid ? 1 : 0);   // only ever a single subpass for now
+    if (mSubpass.isValid) {
+        f.writeString(mSubpass.name.c_str());
+        f.writeUint8(static_cast<uint8_t>(mSubpass.type));
+        f.writeUint8(static_cast<uint8_t>(mSubpass.format));
+        f.writeUint8(static_cast<uint8_t>(mSubpass.precision));
+        f.writeUint8(static_cast<uint8_t>(mSubpass.attachmentIndex));
+        f.writeUint8(static_cast<uint8_t>(mSubpass.binding));
+    }
+}
+
 }

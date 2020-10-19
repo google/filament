@@ -22,6 +22,7 @@
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
 
 #include <utils/compiler.h>
 
@@ -51,6 +52,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::Shading shading;
     filament::UniformInterfaceBlock uib;
     filament::SamplerInterfaceBlock sib;
+    filament::SubpassInfo subpass;
     filament::SamplerBindingMap samplerBindings;
 };
 

@@ -535,6 +535,9 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
+    // subpass
+    cg.generateSubpass(fs, material.subpass);
+
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generatePostProcessGetters(fs, ShaderType::FRAGMENT);
 
