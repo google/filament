@@ -29,7 +29,7 @@
 
 #include <gtest/gtest.h>
 
-#include <strstream>
+#include <sstream>
 
 using namespace filament;
 using namespace filamesh;

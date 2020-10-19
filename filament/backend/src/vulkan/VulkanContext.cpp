@@ -316,6 +316,13 @@ void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
         sc.presentQueue = context.graphicsQueue;
     }
     ASSERT_POSTCONDITION(sc.presentQueue, "Unable to obtain presentation queue.");
+    sc.headlessQueue = VK_NULL_HANDLE;
+}
+
+void getHeadlessQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
+    vkGetDeviceQueue(context.device, context.graphicsQueueFamilyIndex, 0, &sc.headlessQueue);
+    ASSERT_POSTCONDITION(sc.headlessQueue, "Unable to obtain graphics queue.");
+    sc.presentQueue = VK_NULL_HANDLE;
 }
 
 static VkSurfaceCapabilitiesKHR getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
@@ -377,7 +384,9 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
         .imageColorSpace = surfaceContext.surfaceFormat.colorSpace,
         .imageExtent = size,
         .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | // Allows use as a blit destination.
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT,  // Allows use as a blit source (for readPixels)
 
         // TODO: Setting the preTransform to IDENTITY means we are letting the Android Compositor
         // handle the rotation. In some situations it might be more efficient to handle this
@@ -502,6 +511,9 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
 // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL on the subsequent frame that writes to it.
 void makeSwapChainPresentable(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
+    if (surface.headlessQueue) {
+        return;
+    }
     SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -578,29 +590,37 @@ void waitForIdle(VulkanContext& context) {
 bool acquireSwapCommandBuffer(VulkanContext& context) {
     // Ask Vulkan for the next image in the swap chain and update the currentSwapIndex.
     VulkanSurfaceContext& surface = *context.currentSurface;
-    VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
-            UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
 
-    // We should be notified of a suboptimal surface, but it should not cause a cascade of
-    // log messages or a loop of re-creations.
-    if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
-        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
-        surface.suboptimal = true;
+    if (surface.headlessQueue) {
+
+        surface.currentSwapIndex = (surface.currentSwapIndex + 1) % surface.swapContexts.size();
+
+    } else {
+
+        VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
+                UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
+
+        // We should be notified of a suboptimal surface, but it should not cause a cascade of
+        // log messages or a loop of re-creations.
+        if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
+            utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+            surface.suboptimal = true;
+        }
+
+        // The surface can be "out of date" when it has been resized, which is not an error.
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            return false;
+        }
+
+        assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
     }
-
-    // The surface can be "out of date" when it has been resized, which is not an error.
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        return false;
-    }
-
-    assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
 
     SwapContext& swap = getSwapContext(context);
 
     // Ensure that the previous submission of this command buffer has finished.
     auto& cmdfence = swap.commands.fence;
     if (cmdfence) {
-        result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
+        VkResult result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
     }
 

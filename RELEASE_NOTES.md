@@ -3,7 +3,20 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release (v1.9.5)
+## Next release (main branch)
+
+## v1.9.5
+
+- Added a new Live Wallpaper Android sample
+- `UiHelper` now supports managing a `SurfaceHolder`
+- Fix: an internal texture resource was never destroyed
+- Fix: hang on 2-CPU machines
+- Fix: Vulkan crash when using shadow cascades
+- Linux fixes for headless SwiftShader
+- Fix null pointer dereference in `FIndirectLight`
+- Fix Windows build by avoiding nested initializers
+- Vulkan: support readPixels and headless swap chains
+- VSM improvements
 
 ## v1.9.4
 

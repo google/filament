@@ -360,6 +360,11 @@ highp float shadowVsm(const highp sampler2DArray shadowMap, const uint layer,
     highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
     highp float depth = shadowPosition.z;
 
+    // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
+    // value from the depth texture (which is never greater than 1.0) with a greater-than-one
+    // comparison value (which is possible with floating-point formats).
+    depth = min(depth, 1.0f);
+
     // TODO: bias and lightBleedReduction should be uniforms
     const float bias = 0.01;
     const float lightBleedReduction = 0.2;

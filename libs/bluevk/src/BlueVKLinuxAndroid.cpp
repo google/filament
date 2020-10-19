@@ -30,7 +30,11 @@ static const char* VKLIBRARY_PATH = "libvulkan.so.1";
 static void* module = nullptr;
 
 bool loadLibrary() {
+#ifndef FILAMENT_VKLIBRARY_PATH
     module = dlopen(VKLIBRARY_PATH, RTLD_NOW | RTLD_LOCAL);
+#else
+    module = dlopen(FILAMENT_VKLIBRARY_PATH, RTLD_NOW | RTLD_LOCAL);
+#endif
     return module != nullptr;
 }
 
