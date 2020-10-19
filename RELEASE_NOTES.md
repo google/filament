@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.6
+
 - Added View::setVsmShadowOptions (experimental)
 - Add anisotropic shadow map sampling with VSM (experimental)
 - matc: fixed bug where some compilation failures still exited with code 0
@@ -12,8 +14,15 @@ A new header is inserted each time a *tag* is created.
 ## v1.9.5
 
 - Added a new Live Wallpaper Android sample
-- `UiHelper` now supports managing a `SurfaceHolder`.
+- `UiHelper` now supports managing a `SurfaceHolder`
 - Fix: an internal texture resource was never destroyed
+- Fix: hang on 2-CPU machines
+- Fix: Vulkan crash when using shadow cascades
+- Linux fixes for headless SwiftShader
+- Fix null pointer dereference in `FIndirectLight`
+- Fix Windows build by avoiding nested initializers
+- Vulkan: support readPixels and headless swap chains
+- VSM improvements
 
 ## v1.9.4
 
