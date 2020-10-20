@@ -307,6 +307,8 @@ if (APPLE)
         filabridge
         getopt
         gtest
+        image
+        imageio
         SPIRV
         spirv-cross-glsl)
 
@@ -321,6 +323,8 @@ if (APPLE)
             getopt
             gtest
             glslang
+            image
+            imageio
             spirv-cross-core
             spirv-cross-glsl
             spirv-cross-msl
