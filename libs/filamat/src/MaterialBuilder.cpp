@@ -761,15 +761,24 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 }
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
-        OutputType type, const char* name) noexcept {
+        OutputType type, const char* name, int location) noexcept {
 
     ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
             "Depth outputs must be of type FLOAT.");
     ASSERT_PRECONDITION(target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT,
             "Depth outputs must use OUT qualifier.");
 
+    ASSERT_PRECONDITION(location >= -1,
+            "Output location must be >= 0 (or use -1 for default location).");
+
+    // A location value of -1 signals using the default location. We'll simply take the previous
+    // output's location and add 1.
+    if (location == -1) {
+        location = mOutputs.empty() ? 0 : mOutputs.back().location + 1;
+    }
+
     // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
-    mOutputs.emplace_back(name, qualifier, target, type);
+    auto& output = mOutputs.emplace_back(name, qualifier, target, type, location);
 
     uint8_t colorOutputCount = 0;
     uint8_t depthOutputCount = 0;

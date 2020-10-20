@@ -470,7 +470,7 @@ public:
 
     //! Add a new fragment shader output variable. Only valid for materials in the POST_PROCESS domain.
     MaterialBuilder& output(VariableQualifier qualifier, OutputTarget target,
-            OutputType type, const char* name) noexcept;
+            OutputType type, const char* name, int location = -1) noexcept;
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
@@ -531,13 +531,15 @@ public:
     struct Output {
         Output() noexcept = default;
         Output(const char* outputName, VariableQualifier qualifier, OutputTarget target,
-                OutputType type)
-            : name(outputName), qualifier(qualifier), target(target), type(type) { }
+                OutputType type, int location) noexcept
+            : name(outputName), qualifier(qualifier), target(target), type(type),
+            location(location) { }
 
         utils::CString name;
         VariableQualifier qualifier;
         OutputTarget target;
         OutputType type;
+        int location;
     };
 
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
