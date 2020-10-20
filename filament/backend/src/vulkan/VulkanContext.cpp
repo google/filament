@@ -367,7 +367,6 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (const VkSurfaceFormatKHR& format : surfaceContext.surfaceFormats) {
         if (format.format == VK_FORMAT_R8G8B8A8_UNORM) {
             surfaceContext.surfaceFormat = format;
-            break;
         }
     }
     const auto compositionCaps = caps.supportedCompositeAlpha;
