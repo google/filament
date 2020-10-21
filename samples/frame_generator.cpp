@@ -345,21 +345,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
 }
 
-template<typename T>
-static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
-    LinearImage result(w, h, 3);
-    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 3) {
-            filament::math::float3 sRGB(p[0], p[1], p[2]);
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = sRGBToLinear(sRGB);
-        }
-    }
-    return result;
-}
-
 static void render(Engine*, View*, Scene*, Renderer*) {
     int frame = g_currentFrame - FRAME_TO_SKIP - 1;
     if (frame >= 0 && frame < g_materialVariantCount) {

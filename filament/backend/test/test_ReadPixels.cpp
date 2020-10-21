@@ -33,21 +33,6 @@ using namespace image;
 
 namespace {
 
-template<typename T>
-static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
-    LinearImage result(w, h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef(0, 0));
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float3 sRGB(p[0], p[1], p[2]);
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = math::float4(sRGBToLinear(sRGB), 1.0f);
-        }
-    }
-    return result;
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
