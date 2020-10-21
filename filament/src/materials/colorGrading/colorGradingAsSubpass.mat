@@ -34,6 +34,20 @@ material {
             name : colorBuffer,
         }
     ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4,
+            location : 0
+        },
+        {
+            name : tonemappedOutput,
+            target : color,
+            type : float4,
+            location : 1
+        }
+    ],
     variables : [
         vertex
     ],
@@ -50,9 +64,6 @@ vertex {
 }
 
 fragment {
-
-    // TODO: specify an output for this at location 1.
-    layout(location = 1) out vec4 tonemappedOutput;
 
 #include "../../../../shaders/src/dithering.fs"
 #include "../../../../shaders/src/vignette.fs"
@@ -108,8 +119,8 @@ fragment {
 #else
             postProcess.color = dithered;
 #endif
+            postProcess.tonemappedOutput = postProcess.color;
         }
-        tonemappedOutput = postProcess.color;
     }
 
 }
