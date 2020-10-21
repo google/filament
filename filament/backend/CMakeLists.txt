@@ -337,7 +337,7 @@ if (APPLE)
     endif()
 endif()
 
-if (APPLE AND NOT IOS AND NOT FILAMENT_USE_SWIFTSHADER)
+if (APPLE AND NOT IOS)
     add_executable(backend_test_mac test/mac_runner.mm)
     target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
