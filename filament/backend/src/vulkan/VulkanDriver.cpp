@@ -379,7 +379,7 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count)
 void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
-            mStagePool, size, usage);
+            mStagePool, mDisposer, size, usage);
     mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
         destruct_handle<VulkanUniformBuffer>(mHandleMap, ubh);
     });
@@ -394,16 +394,12 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
-    auto renderPrimitive = construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
-    mDisposer.createDisposable(renderPrimitive, [this, rph] () {
-        destruct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
-    });
+    construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
-        auto renderPrimitive = handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
-        mDisposer.removeReference(renderPrimitive);
+        destruct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
     }
 }
 
@@ -411,7 +407,7 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffe
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
         BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            bufferCount, attributeCount, elementCount, attributes);
+            mDisposer, bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -428,7 +424,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
         ElementType elementType, uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
-            elementSize, indexCount);
+            mDisposer, elementSize, indexCount);
     mDisposer.createDisposable(indexBuffer, [this, ibh] () {
         destruct_handle<VulkanIndexBuffer>(mHandleMap, ibh);
     });
@@ -1579,6 +1575,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
     mDisposer.acquire(program, commands->resources);
+    mDisposer.acquire(prim.indexBuffer, commands->resources);
+    mDisposer.acquire(prim.vertexBuffer, commands->resources);
 
     // If this is a debug build, validate the current shader.
 #if !defined(NDEBUG)

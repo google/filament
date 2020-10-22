@@ -396,8 +396,8 @@ bool VulkanRenderTarget::invalidate() {
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-        AttributeArray const& attributes) :
+        VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
+        uint32_t elementCount, AttributeArray const& attributes) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes) {
     buffers.reserve(bufferCount);
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
@@ -408,14 +408,14 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
                 size = std::max(size, end);
             }
         }
-        buffers.emplace_back(new VulkanBuffer(context, stagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                size));
+        buffers.emplace_back(new VulkanBuffer(context, stagePool, disposer, this,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, size));
     }
 }
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool) {
+        VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage)
+        : mContext(context), mStagePool(stagePool), mDisposer(disposer) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -439,6 +439,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
         vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+        mDisposer.acquire(this, commands.resources);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
