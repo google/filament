@@ -16,10 +16,6 @@
 
 #include "BackendTest.h"
 
-#include <imageio/ImageEncoder.h>
-
-#include <image/ColorTransform.h>
-
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -29,7 +25,13 @@
 
 using namespace filament;
 using namespace filament::backend;
+
+#ifndef IOS
+#include <imageio/ImageEncoder.h>
+#include <image/ColorTransform.h>
+
 using namespace image;
+#endif
 
 namespace {
 
@@ -123,6 +125,7 @@ TEST_F(BackendTest, ReadPixels) {
         }
 
         void exportScreenshot(void* pixelData) const {
+            #ifndef IOS
             const size_t width = readRect.width, height = readRect.height;
             LinearImage image(width, height, 4);
             if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
@@ -135,6 +138,7 @@ TEST_F(BackendTest, ReadPixels) {
             std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
             ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
                     png.c_str());
+            #endif
         }
 
         PixelDataFormat format = PixelDataFormat::RGBA;

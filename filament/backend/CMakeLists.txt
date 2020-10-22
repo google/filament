@@ -307,8 +307,6 @@ if (APPLE)
         filabridge
         getopt
         gtest
-        image
-        imageio
         SPIRV
         spirv-cross-glsl)
 
@@ -323,12 +321,15 @@ if (APPLE)
             getopt
             gtest
             glslang
-            image
-            imageio
             spirv-cross-core
             spirv-cross-glsl
             spirv-cross-msl
             )
+
+    if (NOT IOS)
+        target_link_libraries(backend_test PRIVATE image imageio)
+        list(APPEND BACKEND_TEST_DEPS image imageio)
+    endif()
 
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
     combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
