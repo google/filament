@@ -51,7 +51,7 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
+void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (__bridge NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");

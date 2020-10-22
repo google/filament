@@ -28,7 +28,8 @@
 #elif defined(__linux__)
 #if defined(FILAMENT_SUPPORTS_XCB)
 #define VK_USE_PLATFORM_XCB_KHR 1
-#else
+#endif
+#if defined(FILAMENT_SUPPORTS_XLIB)
 #define VK_USE_PLATFORM_XLIB_KHR 1
 #endif
 #elif defined(__APPLE__)

@@ -559,7 +559,8 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     const VkInstance instance = mContext.instance;
-    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance);
+    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
+            flags);
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, vksurface);
 
     // TODO: move the following line into makeCurrent.
