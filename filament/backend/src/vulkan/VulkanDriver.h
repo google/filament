@@ -77,17 +77,6 @@ private:
     VulkanDriver(VulkanDriver const&) = delete;
     VulkanDriver& operator = (VulkanDriver const&) = delete;
 
-    void purge() noexcept override {
-        // First we trigger garbage collection of Vulkan resources. This ensures that transient
-        // resources (e.g. the ReadPixels staging buffer) are removed if their refcount is 0, which
-        // allows related BufferDescriptors to move to the purge list.
-        mDisposer.gc();
-
-        // Next, allow the base class to clean up the purge list in order to trigger the
-        // BufferDescriptor destructors, which in turn triggers the user-provided callbacks.
-        DriverBase::purge();
-    }
-
 private:
     backend::VulkanPlatform& mContextManager;
 

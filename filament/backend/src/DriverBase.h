@@ -167,7 +167,7 @@ public:
     explicit DriverBase(Dispatcher* dispatcher) noexcept;
     ~DriverBase() noexcept override;
 
-    void purge() noexcept override;
+    void purge() noexcept final;
 
     Dispatcher& getDispatcher() noexcept final { return *mDispatcher; }
 
