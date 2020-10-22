@@ -33,6 +33,7 @@
 
 struct ImDrawData;
 struct ImGuiIO;
+struct ImGuiContext;
 
 namespace filagui {
 
@@ -87,6 +88,7 @@ public:
       utils::Entity mRenderable;
       filament::Texture* mTexture = nullptr;
       bool mHasSynced = false;
+      ImGuiContext* mImGuiContext;
 };
 
 } // namespace filagui
