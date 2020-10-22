@@ -43,8 +43,8 @@ namespace filagui {
 #include "generated/resources/filagui_resources.h"
 
 ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath) :
-        mEngine(engine), mView(view), mScene(engine->createScene()) {
-    ImGui::CreateContext();
+        mEngine(engine), mView(view), mScene(engine->createScene()),
+        mImGuiContext(ImGui::CreateContext()) {
     ImGuiIO& io = ImGui::GetIO();
 
     // Create a simple alpha-blended 2D blitting material.
@@ -111,7 +111,8 @@ ImGuiHelper::~ImGuiHelper() {
     for (auto& ib : mIndexBuffers) {
         mEngine->destroy(ib);
     }
-    ImGui::DestroyContext();
+    ImGui::DestroyContext(mImGuiContext);
+    mImGuiContext = nullptr;
 }
 
 void ImGuiHelper::setDisplaySize(int width, int height, float scaleX, float scaleY) {
@@ -122,6 +123,7 @@ void ImGuiHelper::setDisplaySize(int width, int height, float scaleX, float scal
 }
 
 void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
+    ImGui::SetCurrentContext(mImGuiContext);
     ImGuiIO& io = ImGui::GetIO();
     io.DeltaTime = timeStepInSeconds;
     // First, let ImGui process events and increment its internal frame count.
@@ -137,6 +139,8 @@ void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
 }
 
 void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) {
+    ImGui::SetCurrentContext(mImGuiContext);
+
     mHasSynced = false;
     auto& rcm = mEngine->getRenderableManager();
 
