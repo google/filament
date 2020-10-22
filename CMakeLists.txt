@@ -21,6 +21,10 @@ option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the c
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 
+option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
+
+option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
+
 set(FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB "2" CACHE STRING
     "Per render pass arena size. Must be roughly 1 MB larger than FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, default 2."
 )
@@ -84,6 +88,15 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (LINUX)
+
+    if (FILAMENT_SUPPORTS_XCB)
+        add_definitions(-DFILAMENT_SUPPORTS_XCB)
+    endif()
+
+    if (FILAMENT_SUPPORTS_XLIB)
+        add_definitions(-DFILAMENT_SUPPORTS_XLIB)
+    endif()
+
     execute_process(COMMAND uname -p
         OUTPUT_VARIABLE PROCESSOR_ARCH
         OUTPUT_STRIP_TRAILING_WHITESPACE
