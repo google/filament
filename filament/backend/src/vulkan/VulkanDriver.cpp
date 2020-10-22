@@ -389,6 +389,15 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (ubh) {
         auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         mBinder.unbindUniformBuffer(buffer->getGpuBuffer());
+
+        // We do not know if any pending draw calls are making use of this uniform buffer,
+        // so assume the worst: that all command buffers are all using it.
+        if (mContext.currentSurface) {
+            for (auto& swapContext : mContext.currentSurface->swapContexts) {
+                mDisposer.acquire(buffer, swapContext.commands.resources);
+            }
+        }
+
         mDisposer.removeReference(buffer);
     }
 }
