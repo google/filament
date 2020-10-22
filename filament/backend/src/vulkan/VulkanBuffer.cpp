@@ -22,7 +22,9 @@ namespace filament {
 namespace backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VkBufferUsageFlags usage, uint32_t numBytes) : mContext(context), mStagePool(stagePool) {
+        VulkanDisposer& disposer, VulkanDisposer::Key key, VkBufferUsageFlags usage,
+        uint32_t numBytes) : mContext(context), mStagePool(stagePool), mDisposer(disposer),
+        mDisposerKey(key) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -51,6 +53,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
         vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+        mDisposer.acquire(mDisposerKey, commands.resources);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
