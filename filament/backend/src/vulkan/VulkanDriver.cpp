@@ -1436,15 +1436,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
         srcPixels += subResourceLayout.offset;
 
-        // TODO: investigate why this Y-flip conditional exists. At least two SwiftShader-based
-        // tests (viewer_basic_test.cc and gltf_viewer batch mode) seem to require "false". However
-        // test_ReadPixels.cpp with MoltenVK requires "true" to be consistent with OpenGL and Metal.
-        // One hypothesis is that this is due to the layout of the SwiftShader backbuffer.
-        #ifdef FILAMENT_USE_SWIFTSHADER
-        constexpr bool flipY = false;
-        #else
+        // TODO: investigate why this Y-flip exists.
         constexpr bool flipY = true;
-        #endif
         if (!DataReshaper::reshapeImage(closure, getComponentType(srcFormat), srcPixels,
                 subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
             utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
