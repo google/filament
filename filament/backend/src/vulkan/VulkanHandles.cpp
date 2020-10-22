@@ -261,7 +261,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
 
         surfaceContext.swapContexts[i].attachment = {
             .format = surfaceContext.surfaceFormat.format, .image = image,
-            .view = {}, .memory = {}, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
+            .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
         };
         VkImageViewCreateInfo ivCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
