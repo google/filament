@@ -1420,46 +1420,36 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkCmdPipelineBarrier(mContext.work.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
+    // Flush and wait.
+
     flushWorkCommandBuffer(mContext);
+    acquireWorkCommandBuffer(mContext);
 
-    // Create a closure-friendly pointer that holds the rvalue reference.
+    VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
+    VkSubresourceLayout subResourceLayout;
+    vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
 
-    PixelBufferDescriptor* closure = new PixelBufferDescriptor();
-    *closure = std::move(pbd);
+    // Map image memory so we can start copying from it.
 
-    // Create a disposable to defer execution of the following code until after
-    // the work command buffer has completed.
+    const uint8_t* srcPixels;
+    vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
+    srcPixels += subResourceLayout.offset;
 
-    mDisposer.createDisposable((VulkanDisposer::Key) stagingImage, [=] () {
+    // TODO: investigate why this Y-flip exists. This conditional seems to work with both
+    // test_ReadPixels.cpp (readpixels from a normal render target with texture attachment) and
+    // viewer_basic_test.cc (readpixels from an offscreen swap chain)
+    const bool flipY = srcTexture ? true : false;
 
-        VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
-        VkSubresourceLayout subResourceLayout;
-        vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
+    if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
+            subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
+        utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+    }
 
-        // Map image memory so we can start copying from it.
+    vkUnmapMemory(device, stagingMemory);
+    vkFreeMemory(device, stagingMemory, nullptr);
+    vkDestroyImage(device, stagingImage, nullptr);
 
-        const uint8_t* srcPixels;
-        vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
-        srcPixels += subResourceLayout.offset;
-
-        // TODO: investigate why this Y-flip exists.
-        constexpr bool flipY = true;
-        if (!DataReshaper::reshapeImage(closure, getComponentType(srcFormat), srcPixels,
-                subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
-            utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
-        }
-
-        vkUnmapMemory(device, stagingMemory);
-        vkFreeMemory(device, stagingMemory, nullptr);
-        vkDestroyImage(device, stagingImage, nullptr);
-
-        scheduleDestroy(std::move(*closure));
-        delete closure;
-    });
-
-    // Next we reduce the ref count of the image to zero, which schedules the above callback to be
-    // executed on the next beginFrame(), after the work command buffer is completed.
-    mDisposer.removeReference((VulkanDisposer::Key) stagingImage);
+    scheduleDestroy(std::move(pbd));
 }
 
 void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
