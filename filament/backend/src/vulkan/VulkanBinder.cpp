@@ -16,6 +16,7 @@
 
 #include "vulkan/VulkanBinder.h"
 
+#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
@@ -478,9 +479,12 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
 }
 
 void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
-    ASSERT_POSTCONDITION(bindingIndex < SAMPLER_BINDING_COUNT,
-            "Sampler bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, SAMPLER_BINDING_COUNT);
+    assert(bindingIndex < SAMPLER_BINDING_COUNT);
+    if (bindingIndex >= SAMPLER_BINDING_COUNT) {
+        utils::slog.w << "Sampler bindings overflow: " << bindingIndex << " / "
+                << SAMPLER_BINDING_COUNT << utils::io::endl;
+        return;
+    }
     VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex];
     if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
         imageInfo.imageLayout != samplerInfo.imageLayout) {
