@@ -119,8 +119,8 @@ fragment {
 #else
             postProcess.color = dithered;
 #endif
-            postProcess.tonemappedOutput = postProcess.color;
         }
+        postProcess.tonemappedOutput = postProcess.color;
     }
 
 }
