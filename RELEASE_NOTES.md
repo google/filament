@@ -5,11 +5,16 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.7
+
 ## v1.9.6
 
 - Added View::setVsmShadowOptions (experimental)
 - Add anisotropic shadow map sampling with VSM (experimental)
 - matc: fixed bug where some compilation failures still exited with code 0
+- Vulkan + Android: fix build break
+- Add optional XCB support to PlatformVkLinux
+- Fix Vulkan black screen on Windows with NVIDIA hardware
 
 ## v1.9.5
 
