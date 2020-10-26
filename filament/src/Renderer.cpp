@@ -61,6 +61,9 @@ FRenderer::FRenderer(FEngine& engine) :
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.ssao.enabled", &engine.debug.ssao.enabled);
+
+    debugRegistry.registerProperty("d.renderer.doFrameCapture",
+            &engine.debug.renderer.doFrameCapture);
 }
 
 void FRenderer::init() noexcept {
@@ -885,6 +888,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
+    // start a frame capture, if requested.
+    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
+        driver.startCapture();
+    }
+
     // latch the frame time
     std::chrono::duration<double> time(appVsync - mUserEpoch);
     float h = float(time.count());
@@ -1016,6 +1024,12 @@ void FRenderer::endFrame() {
 
     // gives the backend a chance to execute periodic tasks
     driver.tick();
+
+    // stop the frame capture, if one was requested
+    if (UTILS_UNLIKELY(engine.debug.renderer.doFrameCapture)) {
+        driver.stopCapture();
+        engine.debug.renderer.doFrameCapture = false;
+    }
 
     // do this before engine.flush()
     engine.getResourceAllocator().gc();

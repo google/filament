@@ -55,6 +55,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         mSidebarWidth(sidebarWidth) {
 
     mSettings.view.shadowType = ShadowType::PCF;
+    mSettings.view.vsmShadowOptions.anisotropy = 0;
     mSettings.view.dithering = Dithering::TEMPORAL;
     mSettings.view.antiAliasing = AntiAliasing::FXAA;
     mSettings.view.sampleCount = 4;
@@ -343,6 +344,11 @@ void SimpleViewer::updateUserInterface() {
         char label[32];
         snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
         ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+
+        int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
+        snprintf(label, 32, "%d", 1 << vsmAnisotropy);
+        ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
+        mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
 
         ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
         ImGui::Checkbox("Debug cascades",

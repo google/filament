@@ -745,7 +745,7 @@ int main(int argc, char** argv) {
 
         createGroundPlane(engine, scene, app);
 
-        app.viewer->setUiCallback([&app, scene, view] () {
+        app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
 
             float progress = app.resourceLoader->asyncGetLoadProgress();
@@ -871,6 +871,15 @@ int main(int argc, char** argv) {
             }
 
             colorGradingUI(app);
+
+            if (ImGui::CollapsingHeader("Debug")) {
+                if (ImGui::Button("Capture frame")) {
+                    auto& debug = engine->getDebugRegistry();
+                    bool* captureFrame =
+                        debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                    *captureFrame = true;
+                }
+            }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("%s", app.messageBoxText.c_str());

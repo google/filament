@@ -849,8 +849,14 @@ void MetalDriver::startCapture(int) {
 #else
     MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
     descriptor.captureObject = mContext->device;
+    descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
+    descriptor.outputURL = [[NSURL alloc] initFileURLWithPath:@"filament.gputrace"];
+    NSError* error = nil;
     [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
-                                                                       error:nil];
+                                                                       error:&error];
+    if (error) {
+        NSLog(@"%@", [error localizedDescription]);
+    }
 #endif
 }
 

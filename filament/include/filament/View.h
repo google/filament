@@ -280,6 +280,22 @@ public:
     };
 
     /**
+     * View-level options for VSM Shadowing.
+     * @see setVsmShadowOptions()
+     */
+    struct VsmShadowOptions {
+        /**
+         * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+         * than 0, mipmaps will automatically be generated each frame for all lights.
+         *
+         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+         *
+         * @warning This API is still experimental and subject to change.
+         */
+        uint8_t anisotropy = 0;
+    };
+
+    /**
      * Sets the View's name. Only useful for debugging.
      * @param name Pointer to the View's name. The string is copied.
      */
@@ -701,6 +717,28 @@ public:
      * @warning This API is still experimental and subject to change.
      */
     void setShadowType(ShadowType shadow) noexcept;
+
+    /**
+     * Sets VSM shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with LightManager::setShadowOptions.
+     *
+     * Only applicable when shadow type is set to ShadowType::VSM.
+     *
+     * @param options Options for shadowing.
+     *
+     * @see setShadowType
+     *
+     * @warning This API is still experimental and subject to change.
+     */
+    void setVsmShadowOptions(VsmShadowOptions const& options) noexcept;
+
+    /**
+     * Returns the VSM shadowing options associated with this View.
+     *
+     * @return value set by setVsmShadowOptions().
+     */
+    VsmShadowOptions getVsmShadowOptions() const noexcept;
 
     /**
      * Enables or disables post processing. Enabled by default.
