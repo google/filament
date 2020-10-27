@@ -97,6 +97,7 @@ struct FAssetLoader : public AssetLoader {
     FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances);
+    FilamentInstance* createInstance(FFilamentAsset* primary);
 
     bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
             size_t numAssets);
@@ -122,6 +123,7 @@ struct FAssetLoader : public AssetLoader {
     }
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
+    FilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
     void createEntity(const cgltf_node* node, Entity parent, bool enableLight,
             FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
@@ -217,6 +219,26 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
     return mResult;
 }
 
+FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
+    if (primary->mIsReleased) {
+        slog.e << "Source data has been released; asset is frozen." << io::endl;
+        return nullptr;
+    }
+    if (!primary->isInstanced()) {
+        slog.e << "Cannot add an instance to a non-instanced asset." << io::endl;
+        return nullptr;
+    }
+    const cgltf_data* srcAsset = primary->mSourceAsset;
+    const cgltf_scene* scene = srcAsset->scene ? srcAsset->scene : srcAsset->scenes;
+    if (!scene) {
+        slog.e << "There is no scene in the asset." << io::endl;
+        return nullptr;
+    }
+    FilamentInstance* instance = createInstance(primary, scene);
+    primary->mDependencyGraph.refinalize();
+    return instance;
+}
+
 void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) {
     SYSTRACE_CALL();
     #if !GLTFIO_DRACO_SUPPORTED
@@ -255,23 +277,9 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
         // needless duplication of resources.
         for (size_t index = 0; index < numInstances; ++index) {
-            // Create a root node within each instance that is a child of the primary root.
-            auto rootTransform = mTransformManager.getInstance(mResult->mRoot);
-            Entity instanceRoot = mEntityManager.create();
-            mTransformManager.create(instanceRoot, rootTransform);
-
-            // Create an instance object, which is a just a lightweight wrapper around a vector of
-            // entities and a lazily created animator.
-            FFilamentInstance* instance = new FFilamentInstance;
-            instance->root = instanceRoot;
-            instance->animator = nullptr;
-            instance->owner = mResult;
-            mResult->mInstances.push_back(instance);
-
-            // For each scene root, recursively create all entities.
-            for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
-                cgltf_node** nodes = scene->nodes;
-                createEntity(nodes[i], instanceRoot, index == 0, instance);
+            if (createInstance(mResult, scene) == nullptr) {
+                mError = true;
+                break;
             }
         }
     }
@@ -300,6 +308,27 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         mResult = nullptr;
         mError = false;
     }
+}
+
+FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary, const cgltf_scene* scene) {
+    auto rootTransform = mTransformManager.getInstance(primary->mRoot);
+    Entity instanceRoot = mEntityManager.create();
+    mTransformManager.create(instanceRoot, rootTransform);
+
+    // Create an instance object, which is a just a lightweight wrapper around a vector of
+    // entities and a lazily created animator.
+    FFilamentInstance* instance = new FFilamentInstance;
+    instance->root = instanceRoot;
+    instance->animator = nullptr;
+    instance->owner = primary;
+    primary->mInstances.push_back(instance);
+
+    // For each scene root, recursively create all entities.
+    for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
+        cgltf_node** nodes = scene->nodes;
+        createEntity(nodes[i], instanceRoot, false, instance);
+    }
+    return instance;
 }
 
 void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enableLight,
@@ -1127,6 +1156,10 @@ FilamentAsset* AssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t
 FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances) {
     return upcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
+}
+
+FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
+    return upcast(this)->createInstance(upcast(asset));
 }
 
 FilamentAsset* AssetLoader::createAssetFromHandle(const void* handle) {

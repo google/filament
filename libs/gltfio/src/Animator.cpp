@@ -223,7 +223,7 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
         // Import each glTF channel into a custom data structure.
         if (instance) {
             addChannels(instance->nodeMap, srcAnim, dstAnim);
-        } else if (asset->mInstances.empty()) {
+        } else if (!asset->isInstanced()) {
             addChannels(asset->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
@@ -413,7 +413,7 @@ void Animator::updateBoneMatrices() {
 
     if (mImpl->instance) {
         update(mImpl->instance->skins, mImpl->boneMatrices);
-    } else if (mImpl->asset->mInstances.empty()) {
+    } else if (!mImpl->asset->isInstanced()) {
         update(mImpl->asset->mSkins, mImpl->boneMatrices);
     } else {
         for (FFilamentInstance* instance : mImpl->asset->mInstances) {

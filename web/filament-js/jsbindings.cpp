@@ -1782,6 +1782,10 @@ class_<AssetLoader>("gltfio$AssetLoader")
                 buffer.bd->size, instances.data(), numInstances);
     }), allow_raw_pointers())
 
+    // createInstance ::method::
+    // Adds a new instance to an instanced asset.
+    .function("createInstance", &AssetLoader::createInstance, allow_raw_pointers())
+
     // destroyAsset ::method::
     // Destroys the given asset and all of its associated Filament objects. This includes
     // components, material instances, vertex buffers, index buffers, and textures.

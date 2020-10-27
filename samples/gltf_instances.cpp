@@ -51,8 +51,6 @@ using namespace filament::viewer;
 using namespace gltfio;
 using namespace utils;
 
-using InstanceHandle = FilamentInstance*;
-
 struct App {
     Engine* engine;
     SimpleViewer* viewer;
@@ -63,9 +61,8 @@ struct App {
     MaterialProvider* materials;
     MaterialSource materialSource = GENERATE_SHADERS;
     ResourceLoader* resourceLoader = nullptr;
-    int numInstances = 5;
     int instanceToAnimate = -1;
-    InstanceHandle* instances;
+    std::vector<FilamentInstance*> instances;
 };
 
 static const char* DEFAULT_IBL = "default_env";
@@ -132,7 +129,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->instanceToAnimate = atoi(arg.c_str());
                 break;
             case 'n':
-                app->numInstances = atoi(arg.c_str());
+                app->instances.resize(atoi(arg.c_str()));
                 break;
             case 'i':
                 app->config.iblDirectory = arg;
@@ -141,6 +138,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->materialSource = LOAD_UBERSHADERS;
                 break;
         }
+    }
+    if (app->instances.empty()) {
+        app->instances.resize(5);
     }
     return optind;
 }
@@ -184,8 +184,8 @@ int main(int argc, char** argv) {
         }
 
         // Parse the glTF file and create Filament entities.
-        app.asset = app.loader->createInstancedAsset(buffer.data(), buffer.size(), app.instances,
-                app.numInstances);
+        app.asset = app.loader->createInstancedAsset(buffer.data(), buffer.size(),
+                app.instances.data(), app.instances.size());
         buffer.clear();
         buffer.shrink_to_fit();
 
@@ -213,11 +213,24 @@ int main(int argc, char** argv) {
         if (app.instanceToAnimate > -1) {
             app.instances[app.instanceToAnimate]->getAnimator();
         }
-        app.asset->releaseSourceData();
 
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+        }
+    };
+
+    auto arrangeIntoCircle = [&app]() {
+        auto& tcm = app.engine->getTransformManager();
+        auto extent = app.asset->getBoundingBox().extent();
+        float max_extent = std::max(std::max(extent.x,  extent.y), extent.z);
+        auto translation = mat4f::translation(float3(max_extent, 0, 0));
+        for (size_t inst = 0; inst < app.instances.size(); ++inst) {
+            FilamentInstance* instance = app.instances[inst];
+            auto transformRoot = tcm.getInstance(instance->getRoot());
+            float theta = inst * 2.0 * M_PI / app.instances.size();
+            auto rotation = mat4f::rotation(theta, float3(0, 0, 1));
+            tcm.setTransform(transformRoot, rotation * translation);
         }
     };
 
@@ -228,28 +241,15 @@ int main(int argc, char** argv) {
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
-        app.instances = new InstanceHandle[app.numInstances];
         if (filename.isEmpty()) {
             app.asset = app.loader->createInstancedAsset(
                     GLTF_VIEWER_DAMAGEDHELMET_DATA, GLTF_VIEWER_DAMAGEDHELMET_SIZE,
-                    app.instances, app.numInstances);
+                    app.instances.data(), app.instances.size());
         } else {
             loadAsset(filename);
         }
 
-        // Arrange all instances into a circle.
-        auto& tcm = engine->getTransformManager();
-        auto extent = app.asset->getBoundingBox().extent();
-        float max_extent = std::max(std::max(extent.x,  extent.y), extent.z);
-        auto translation = mat4f::translation(float3(max_extent, 0, 0));
-        for (size_t inst = 0; inst < app.numInstances; ++inst) {
-            FilamentInstance* instance = app.instances[inst];
-            auto transformRoot = tcm.getInstance(instance->getRoot());
-            float theta = inst * 2.0 * M_PI / app.numInstances;
-            auto rotation = mat4f::rotation(theta, float3(0, 0, 1));
-            tcm.setTransform(transformRoot, rotation * translation);
-        }
-
+        arrangeIntoCircle();
         loadResources(filename);
     };
 
@@ -262,11 +262,9 @@ int main(int argc, char** argv) {
         delete app.names;
 
         AssetLoader::destroy(&app.loader);
-
-        delete[] app.instances;
     };
 
-    auto animate = [&app](Engine* engine, View* view, double now) {
+    auto animate = [&app, arrangeIntoCircle](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
         FilamentInstance* instance = nullptr;
         if (app.instanceToAnimate > -1) {
@@ -274,6 +272,14 @@ int main(int argc, char** argv) {
         }
         app.viewer->populateScene(app.asset, true, instance);
         app.viewer->applyAnimation(now);
+
+        static double previous = 0.0;
+        if (now - previous > 1.0) {
+            FilamentInstance* instance = app.loader->createInstance(app.asset);
+            app.instances.push_back(instance);
+            arrangeIntoCircle();
+            previous = now;
+        }
     };
 
     auto gui = [&app](Engine* engine, View* view) { };
