@@ -388,7 +388,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (pImpl->mNormalizeSkinningWeights) {
             normalizeSkinningWeights(asset);
         }
-        if (asset->mInstances.empty()) {
+        if (!asset->isInstanced()) {
             importSkins(gltf, asset->mNodeMap, asset->mSkins);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
@@ -996,7 +996,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
-    NodeMap& nodeMap = asset->mInstances.empty() ? asset->mNodeMap : asset->mInstances[0]->nodeMap;
+    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the

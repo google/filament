@@ -212,6 +212,10 @@ struct FFilamentAsset : public FilamentAsset {
         mDependencyGraph.addEdge(texture, tb.materialInstance, tb.materialParameter);
     }
 
+    bool isInstanced() const {
+        return mInstances.size() > 0;
+    }
+
     filament::Engine* mEngine;
     utils::NameComponentManager* mNameManager;
     utils::EntityManager* mEntityManager;

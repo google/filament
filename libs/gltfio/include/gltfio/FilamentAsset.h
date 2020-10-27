@@ -215,6 +215,7 @@ public:
      *
      * This should only be called after ResourceLoader::loadResources().
      * If using Animator, this should be called after getAnimator().
+     * If this is an instanced asset, this prevents creation of new instances.
      */
     void releaseSourceData() noexcept;
 
