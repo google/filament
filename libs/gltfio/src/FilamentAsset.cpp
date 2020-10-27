@@ -86,6 +86,8 @@ void FFilamentAsset::releaseSourceData() noexcept {
     // To ensure that all possible memory is freed, we reassign to new containers rather than
     // calling clear(). With many container types (such as robin_map), clearing is a fast
     // operation that merely frees the storage for the items.
+    mMatInstanceCache = {};
+    mMeshCache = {};
     mResourceUris = {};
     mNodeMap = {};
     mPrimitives = {};
