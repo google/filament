@@ -140,6 +140,7 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
 }
 
 Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
+    assert(asset->mResourcesLoaded && !asset->mIsReleased);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;

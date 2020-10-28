@@ -249,6 +249,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<std::pair<const cgltf_primitive*, filament::VertexBuffer*> > mPrimitives;
     MatInstanceCache mMatInstanceCache;
     MeshCache mMeshCache;
+    bool mIsReleased = false;
 };
 
 FILAMENT_UPCAST(FilamentAsset)
