@@ -276,11 +276,6 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         }
     }
 
-    if (mError) {
-        delete mResult;
-        mResult = nullptr;
-    }
-
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
     // that match the URI. These strings get freed during releaseSourceData().
     tsl::robin_map<std::string, const char*> resourceUris;
@@ -300,7 +295,11 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         mResult->mResourceUris.push_back(pair.second);
     }
 
-    mError = false;
+    if (mError) {
+        delete mResult;
+        mResult = nullptr;
+        mError = false;
+    }
 }
 
 void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enableLight,
