@@ -296,7 +296,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     if (asset->mResourcesLoaded) {
         return false;
     }
-    asset->mResourcesLoaded = true;
     mPool->addAsset(asset);
     const cgltf_data* gltf = asset->mSourceAsset;
     cgltf_options options {};
@@ -444,8 +443,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     asset->mDependencyGraph.finalize();
     pImpl->mCurrentAsset = asset;
 
-    // Finally, load image files and create Filament Textures.
-    return pImpl->createTextures(async);
+    // Finally, create Filament Textures and begin loading image files.
+    asset->mResourcesLoaded = pImpl->createTextures(async);
+    return asset->mResourcesLoaded;
 }
 
 bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {

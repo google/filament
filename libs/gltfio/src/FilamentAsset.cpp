@@ -19,6 +19,7 @@
 #include <gltfio/Animator.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Log.h>
 #include <utils/NameComponentManager.h>
 
 #include "Wireframe.h"
@@ -70,6 +71,14 @@ FFilamentAsset::~FFilamentAsset() {
 
 Animator* FFilamentAsset::getAnimator() noexcept {
     if (!mAnimator) {
+        if (!mResourcesLoaded) {
+            slog.e << "Cannot create animator before resource loading." << io::endl;
+            return nullptr;
+        }
+        if (mIsReleased) {
+            slog.e << "Cannot create animator from frozen asset." << io::endl;
+            return nullptr;
+        }
         mAnimator = new Animator(this, nullptr);
     }
     return mAnimator;
@@ -83,6 +92,7 @@ Entity FFilamentAsset::getWireframe() noexcept {
 }
 
 void FFilamentAsset::releaseSourceData() noexcept {
+    mIsReleased = true;
     // To ensure that all possible memory is freed, we reassign to new containers rather than
     // calling clear(). With many container types (such as robin_map), clearing is a fast
     // operation that merely frees the storage for the items.
