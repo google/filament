@@ -1,3 +1,5 @@
+layout(location = 0) out vec4 fragColor;
+
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
 void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 #if defined(POST_LIGHTING_BLEND_MODE_OPAQUE)
