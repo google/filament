@@ -82,11 +82,11 @@ public:
     void resetUserTime();
 
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options);
 
     void readPixels(FRenderTarget* renderTarget,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options);
 
     // Clean-up everything, this is typically called when the client calls Engine::destroyRenderer()
     void terminate(FEngine& engine);
@@ -125,7 +125,7 @@ private:
 
     void readPixels(backend::Handle<backend::HwRenderTarget> renderTargetHandle,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options);
 
     struct ColorPassConfig {
         Viewport vp;

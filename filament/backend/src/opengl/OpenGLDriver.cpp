@@ -2725,7 +2725,8 @@ void OpenGLDriver::stopCapture(int) {
 
 void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
+        PixelBufferDescriptor&& p, backend::TextureSwizzle r, backend::TextureSwizzle g,
+        backend::TextureSwizzle b, backend::TextureSwizzle a) {
     DEBUG_MARKER()
     auto& gl = mContext;
 

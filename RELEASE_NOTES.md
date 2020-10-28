@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Added support for readPixels swizzling (Metal only).
+
 ## v1.9.7
 
 ## v1.9.6

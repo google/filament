@@ -1300,7 +1300,9 @@ void VulkanDriver::stopCapture(int) {
 }
 
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
-        uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
+        uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
     const VkDevice device = mContext.device;
     const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;

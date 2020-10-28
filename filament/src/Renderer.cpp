@@ -1047,19 +1047,20 @@ void FRenderer::endFrame() {
 }
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) {
-    readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
+        PixelBufferDescriptor&& buffer, ReadPixelsOptions options) {
+    readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer), options);
 }
 
 void FRenderer::readPixels(FRenderTarget* renderTarget,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
-    readPixels(renderTarget->getHwHandle(), xoffset, yoffset, width, height, std::move(buffer));
+        backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options) {
+    readPixels(renderTarget->getHwHandle(), xoffset, yoffset, width, height, std::move(buffer),
+            options);
 }
 
 void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options) {
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.type != PixelDataType::COMPRESSED,
             "buffer.format cannot be COMPRESSED")) {
@@ -1091,7 +1092,8 @@ void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
+    driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer),
+            options.swizzle.r, options.swizzle.g, options.swizzle.b, options.swizzle.a);
 }
 
 Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
@@ -1122,15 +1124,15 @@ void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstV
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) {
-    upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
+        PixelBufferDescriptor&& buffer, ReadPixelsOptions options) {
+    upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer), options);
 }
 
 void Renderer::readPixels(RenderTarget* renderTarget,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer, ReadPixelsOptions options) {
     upcast(this)->readPixels(upcast(renderTarget),
-            xoffset, yoffset, width, height, std::move(buffer));
+            xoffset, yoffset, width, height, std::move(buffer), options);
 }
 
 void Renderer::endFrame() {

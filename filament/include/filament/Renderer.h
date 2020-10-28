@@ -20,6 +20,7 @@
 #define TNT_FILAMENT_RENDERER_H
 
 #include <filament/FilamentAPI.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 
@@ -273,6 +274,23 @@ public:
     void copyFrame(SwapChain* dstSwapChain, Viewport const& dstViewport,
             Viewport const& srcViewport, uint32_t flags = 0);
 
+    struct ReadPixelsOptions {
+        ReadPixelsOptions() noexcept {}
+
+        using Swizzle = backend::TextureSwizzle;
+
+        /**
+         * The swizzle to apply to the readPixels operation.
+         * Currently only supported by the Metal backend.
+         */
+        struct {
+            Swizzle r = Swizzle::CHANNEL_0;
+            Swizzle g = Swizzle::CHANNEL_1;
+            Swizzle b = Swizzle::CHANNEL_2;
+            Swizzle a = Swizzle::CHANNEL_3;
+        } swizzle;
+    };
+
     /**
      * Reads back the content of the SwapChain associated with this Renderer.
      *
@@ -295,6 +313,7 @@ public:
      *                  Other combination of format/type may be supported. If a combination is
      *                  not supported, this operation may fail silently. Use a DEBUG build
      *                  to get some logs about the failure.
+     * @param options   Additional options for the read-back operation.
      *
      *
      *  Framebuffer as seen on         User buffer (PixelBufferDescriptor&)
@@ -329,7 +348,7 @@ public:
      *
      */
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options = {});
 
 
     /**
@@ -355,6 +374,7 @@ public:
      *                  Other combination of format/type may be supported. If a combination is
      *                  not supported, this operation may fail silently. Use a DEBUG build
      *                  to get some logs about the failure.
+     * @param options   Additional options for the read-back operation.
      *
      *
      *  Framebuffer as seen on         User buffer (PixelBufferDescriptor&)
@@ -390,7 +410,7 @@ public:
      */
     void readPixels(RenderTarget* renderTarget,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer, ReadPixelsOptions options = {});
 
     /**
      * Set-up a frame for this Renderer.

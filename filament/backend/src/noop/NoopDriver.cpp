@@ -272,7 +272,9 @@ void NoopDriver::stopCapture(int) {
 
 void NoopDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
+        PixelBufferDescriptor&& p, backend::TextureSwizzle r,
+        backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
     scheduleDestroy(std::move(p));
 }
 

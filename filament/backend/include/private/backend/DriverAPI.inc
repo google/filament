@@ -442,7 +442,11 @@ DECL_DRIVER_API_N(readPixels,
         uint32_t, y,
         uint32_t, width,
         uint32_t, height,
-        backend::PixelBufferDescriptor&&, data)
+        backend::PixelBufferDescriptor&&, data,
+        backend::TextureSwizzle, r,
+        backend::TextureSwizzle, g,
+        backend::TextureSwizzle, b,
+        backend::TextureSwizzle, a)
 
 DECL_DRIVER_API_N(readStreamPixels,
         backend::StreamHandle, sh,

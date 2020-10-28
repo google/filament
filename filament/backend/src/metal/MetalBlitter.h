@@ -36,6 +36,29 @@ public:
 
     explicit MetalBlitter(MetalContext& context) noexcept;
 
+    struct SwizzleChannels {
+        TextureSwizzle r = TextureSwizzle::CHANNEL_0;
+        TextureSwizzle g = TextureSwizzle::CHANNEL_1;
+        TextureSwizzle b = TextureSwizzle::CHANNEL_2;
+        TextureSwizzle a = TextureSwizzle::CHANNEL_3;
+
+        SwizzleChannels() noexcept = default;
+
+        bool isDefaultSwizzle() const {
+            return r == TextureSwizzle::CHANNEL_0 &&
+                   g == TextureSwizzle::CHANNEL_1 &&
+                   b == TextureSwizzle::CHANNEL_2 &&
+                   a == TextureSwizzle::CHANNEL_3;
+        }
+
+        bool operator==(const SwizzleChannels& rhs) const noexcept {
+            return r == rhs.r &&
+                g == rhs.g &&
+                b == rhs.b &&
+                a == rhs.a;
+        }
+    };
+
     struct BlitArgs {
         struct Attachment {
             id<MTLTexture> color = nil;
@@ -46,6 +69,7 @@ public:
 
         Attachment source, destination;
         SamplerMagFilter filter;
+        SwizzleChannels swizzle;
 
         bool blitColor() const {
             return source.color != nil && destination.color != nil;
@@ -84,16 +108,22 @@ private:
         bool blitDepth;
         bool msaaColorSource;
         bool msaaDepthSource;
+        SwizzleChannels swizzle;
 
         bool operator==(const BlitFunctionKey& rhs) const noexcept {
             return blitColor == rhs.blitColor &&
                    blitDepth == rhs.blitDepth &&
                    msaaColorSource == rhs.msaaColorSource &&
-                   msaaDepthSource == rhs.msaaDepthSource;
+                   msaaDepthSource == rhs.msaaDepthSource &&
+                   swizzle == rhs.swizzle;
         }
 
         BlitFunctionKey() {
             std::memset(this, 0, sizeof(BlitFunctionKey));
+            swizzle.r = TextureSwizzle::CHANNEL_0;
+            swizzle.g = TextureSwizzle::CHANNEL_1;
+            swizzle.b = TextureSwizzle::CHANNEL_2;
+            swizzle.a = TextureSwizzle::CHANNEL_3;
         }
     };
 

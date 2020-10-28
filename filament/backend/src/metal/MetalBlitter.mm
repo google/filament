@@ -97,6 +97,14 @@ blitterFrag(VertexOut in [[stage_in]],
 #else
     out.color += sourceColor.read(static_cast<uint2>(in.uv), *lod);
 #endif
+
+    float4 swizzled;
+    swizzled.r = SWIZZLE_RED;
+    swizzled.g = SWIZZLE_GREEN;
+    swizzled.b = SWIZZLE_BLUE;
+    swizzled.a = SWIZZLE_ALPHA;
+    out.color = swizzled;
+
 #endif
 
 #ifdef BLIT_DEPTH
@@ -155,6 +163,10 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     key.blitDepth = blitDepth;
     key.msaaColorSource = args.source.color.textureType == MTLTextureType2DMultisample;
     key.msaaDepthSource = args.source.depth.textureType == MTLTextureType2DMultisample;
+    key.swizzle.r = args.swizzle.r;
+    key.swizzle.g = args.swizzle.g;
+    key.swizzle.b = args.swizzle.b;
+    key.swizzle.a = args.swizzle.a;
     id<MTLFunction> fragmentFunction = getBlitFragmentFunction(key);
 
     PipelineState pipelineState {
@@ -254,7 +266,8 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
     if (blitColor) {
         if (args.source.color.sampleCount == args.destination.color.sampleCount &&
             args.source.color.pixelFormat == args.destination.color.pixelFormat &&
-            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+            MTLSizeEqual(args.source.region.size, args.destination.region.size) &&
+            args.swizzle.isDefaultSwizzle()) {
 
             id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
             [blitEncoder copyFromTexture:args.source.color
@@ -341,6 +354,29 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
     if (key.msaaDepthSource) {
         macros[@"MSAA_DEPTH_SOURCE"] = @"1";
     }
+
+    auto getSwizzleDefine = [] (TextureSwizzle s) {
+        switch (s) {
+            case TextureSwizzle::CHANNEL_0:
+                return @"out.color.r";
+            case TextureSwizzle::CHANNEL_1:
+                return @"out.color.g";
+            case TextureSwizzle::CHANNEL_2:
+                return @"out.color.b";
+            case TextureSwizzle::CHANNEL_3:
+                return @"out.color.a";
+            case TextureSwizzle::SUBSTITUTE_ONE:
+                return @"1.0f";
+            case TextureSwizzle::SUBSTITUTE_ZERO:
+                return @"0.0f";
+        }
+    };
+
+    macros[@"SWIZZLE_RED"] = getSwizzleDefine(key.swizzle.r);
+    macros[@"SWIZZLE_GREEN"] = getSwizzleDefine(key.swizzle.g);
+    macros[@"SWIZZLE_BLUE"] = getSwizzleDefine(key.swizzle.b);
+    macros[@"SWIZZLE_ALPHA"] = getSwizzleDefine(key.swizzle.a);
+
     options.preprocessorMacros = macros;
     NSString* objcSource = [NSString stringWithCString:functionLibrary
                                               encoding:NSUTF8StringEncoding];

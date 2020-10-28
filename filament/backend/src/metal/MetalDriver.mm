@@ -865,7 +865,8 @@ void MetalDriver::stopCapture(int) {
 }
 
 void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& data) {
+        uint32_t height, PixelBufferDescriptor&& data, backend::TextureSwizzle r,
+        backend::TextureSwizzle g, backend::TextureSwizzle b, backend::TextureSwizzle a) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
                         "readPixels must be called outside of a render pass.");
 
@@ -913,6 +914,10 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     args.destination.region = MTLRegionMake2D(0, 0, readPixelsTexture.width, readPixelsTexture.height);
     args.source.color = srcTexture;
     args.destination.color = readPixelsTexture;
+    args.swizzle.r = r;
+    args.swizzle.g = g;
+    args.swizzle.b = b;
+    args.swizzle.a = a;
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 

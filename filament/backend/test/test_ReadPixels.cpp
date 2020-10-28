@@ -22,6 +22,7 @@
 #include <utils/Hash.h>
 
 #include <fstream>
+#include <vector>
 
 using namespace filament;
 using namespace filament::backend;
@@ -120,6 +121,9 @@ TEST_F(BackendTest, ReadPixels) {
         // The offset and stride set on the pixel buffer.
         size_t left = 0, top = 0, alignment = 1;
 
+        // Apply a ARGB swizzle to the readPixels operation.
+        bool readARGB = false;
+
         size_t getPixelBufferStride() const {
             return bufferDimension;
         }
@@ -189,7 +193,16 @@ TEST_F(BackendTest, ReadPixels) {
     t5.top = 64;
     t5.hash = 0xbaefdb54;
 
-    TestCase testCases[] = { t, t2, t3, t4, t5 };
+    // Check that readPixels supports argb swizzling (only works with Metal at the moment).
+    TestCase t6;
+    t6.testName = "readPixels_argb";
+    t6.readARGB = true;
+    t6.hash = 0x24b093e3;
+
+    std::vector<TestCase> testCases = { t, t2, t3, t4, t5 };
+    if (sBackend == Backend::METAL) {
+        testCases.push_back(t6);
+    }
 
     for (const auto& t : testCases)
     {
@@ -291,8 +304,18 @@ TEST_F(BackendTest, ReadPixels) {
                     free(buffer);
                 }, (void*) &t);
 
+        backend::TextureSwizzle r = backend::TextureSwizzle::CHANNEL_0;
+        backend::TextureSwizzle g = backend::TextureSwizzle::CHANNEL_1;
+        backend::TextureSwizzle b = backend::TextureSwizzle::CHANNEL_2;
+        backend::TextureSwizzle a = backend::TextureSwizzle::CHANNEL_3;
+        if (t.readARGB) {
+            r = backend::TextureSwizzle::CHANNEL_3;
+            g = backend::TextureSwizzle::CHANNEL_0;
+            b = backend::TextureSwizzle::CHANNEL_1;
+            a = backend::TextureSwizzle::CHANNEL_2;
+        }
         getDriverApi().readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
-                t.readRect.height, std::move(descriptor));
+                t.readRect.height, std::move(descriptor), r, g, b, a);
 
         // Now render red over what was just rendered. This ensures that readPixels captures the
         // state of rendering between render passes.
