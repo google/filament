@@ -44,33 +44,42 @@ namespace metal {
 class MetalSwapChain : public HwSwapChain {
 public:
 
-    MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags);
+    // Instantiate a SwapChain from a CAMetalLayer
+    MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags);
+
+    // Instantiate a SwapChain from a CVPixelBuffer
+    MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags);
 
     // Instantiate a headless SwapChain.
-    MetalSwapChain(int32_t width, int32_t height, uint64_t flags);
+    MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags);
 
-    bool isHeadless() const { return layer == nullptr; }
+    ~MetalSwapChain();
+
+    bool isHeadless() const { return type == SwapChainType::HEADLESS; }
+    bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
+
+    id<MTLTexture> getPixelBufferTexture() const {
+        assert(isPixelBuffer());
+        return externalImage.getMetalTextureForDraw();
+    }
     CAMetalLayer* getLayer() const { return layer; }
 
-    NSUInteger getSurfaceWidth() const {
-        if (isHeadless()) {
-            return headlessWidth;
-        }
-        return (NSUInteger) layer.drawableSize.width;
-    }
-
-    NSUInteger getSurfaceHeight() const {
-        if (isHeadless()) {
-            return headlessHeight;
-        }
-        return (NSUInteger) layer.drawableSize.height;
-    }
+    NSUInteger getSurfaceWidth() const;
+    NSUInteger getSurfaceHeight() const;
 
 private:
+
+    enum class SwapChainType {
+        CAMETALLAYER,
+        CVPIXELBUFFERREF,
+        HEADLESS
+    };
 
     NSUInteger headlessWidth;
     NSUInteger headlessHeight;
     CAMetalLayer* layer = nullptr;
+    MetalExternalImage externalImage;
+    SwapChainType type;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {

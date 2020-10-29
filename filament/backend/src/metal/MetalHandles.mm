@@ -49,8 +49,8 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags)
-        : layer(nativeWindow) {
+MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
+        : layer(nativeWindow), externalImage(context), type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
@@ -68,11 +68,44 @@ MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow,
         nativeWindow.framebufferOnly = NO;
     }
 
-    layer.device = device;
+    layer.device = context.device;
 }
 
-MetalSwapChain::MetalSwapChain(int32_t width, int32_t height, uint64_t flags) : headlessWidth(width),
-        headlessHeight(height) { }
+MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
+        : externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
+    assert(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
+    externalImage.set(pixelBuffer);
+    assert(externalImage.isValid());
+}
+
+MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
+        : headlessWidth(width), headlessHeight(height), externalImage(context),
+        type(SwapChainType::HEADLESS) { }
+
+
+NSUInteger MetalSwapChain::getSurfaceWidth() const {
+    if (isHeadless()) {
+        return headlessWidth;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getWidth();
+    }
+    return (NSUInteger) layer.drawableSize.width;
+}
+
+NSUInteger MetalSwapChain::getSurfaceHeight() const {
+    if (isHeadless()) {
+        return headlessHeight;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getHeight();
+    }
+    return (NSUInteger) layer.drawableSize.height;
+}
+
+MetalSwapChain::~MetalSwapChain() {
+    externalImage.set(nullptr);
+}
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)

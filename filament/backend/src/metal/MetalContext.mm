@@ -57,6 +57,9 @@ id<MTLTexture> acquireDrawable(MetalContext* context) {
         context->headlessDrawable = [context->device newTextureWithDescriptor:textureDescriptor];
         return context->headlessDrawable;
     }
+    if (context->currentSurface->isPixelBuffer()) {
+        return context->currentSurface->getPixelBufferTexture();
+    }
 
     context->currentDrawable = [context->currentSurface->getLayer() nextDrawable];
 

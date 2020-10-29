@@ -63,6 +63,18 @@ public:
     void set(CVPixelBufferRef image, size_t plane) noexcept;
 
     /**
+     * Returns the width of the external image, or 0 if one is not set. For YCbCr images, returns
+     * the width of the luminance plane.
+     */
+    size_t getWidth() const noexcept { return mWidth; }
+
+    /**
+     * Returns the height of the external image, or 0 if one is not set. For YCbCr images, returns
+     * the height of the luminance plane.
+     */
+    size_t getHeight() const noexcept { return mHeight; }
+
+    /**
      * Get a Metal texture used to draw this image and denote that it is used for the current frame.
      * For future frames that use this external image, getMetalTextureForDraw must be called again.
      */
@@ -93,6 +105,8 @@ private:
     // and created Metal texture, respectively.
     CVPixelBufferRef mImage = nullptr;
     CVMetalTextureRef mTexture = nullptr;
+    size_t mWidth = 0;
+    size_t mHeight = 0;
 
     // If the external image is in the YCbCr format, this holds the result of the converted RGB
     // texture.

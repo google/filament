@@ -300,7 +300,9 @@ if (APPLE)
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
-        test/test_MRT.cpp)
+        test/test_MRT.cpp
+        test/test_CVPixelBufferSwapChain.cpp
+        test/WriteVideo.mm)
 
     target_link_libraries(backend_test PRIVATE
         backend
@@ -309,6 +311,8 @@ if (APPLE)
         gtest
         SPIRV
         spirv-cross-glsl)
+
+    target_link_libraries(backend_test PUBLIC "-framework AVFoundation -framework CoreMedia")
 
     set(BACKEND_TEST_DEPS
             OGLCompiler
