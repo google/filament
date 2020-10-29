@@ -374,14 +374,18 @@ VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
     return mMsaaDepthAttachment;
 }
 
-int VulkanRenderTarget::getColorTargetCount() const {
+int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
     int count = 0;
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
-        if (mColor[i].format != VK_FORMAT_UNDEFINED) {
-            ++count;
+        if (mColor[i].format == VK_FORMAT_UNDEFINED) {
+            continue;
+        }
+        // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
+        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+            count++;
         }
     }
     return count;
