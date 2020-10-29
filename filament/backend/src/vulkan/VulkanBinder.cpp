@@ -281,7 +281,7 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     pipelineCreateInfo.pDynamicState = &dynamicState;
 
     // Filament assumes consistent blend state across all color attachments.
-    mColorBlendState.attachmentCount = mPipelineKey.rasterState.getColorTargetCount;
+    mColorBlendState.attachmentCount = mPipelineKey.rasterState.colorTargetCount;
     for (auto& target : mColorBlendAttachments) {
         target = mPipelineKey.rasterState.blending;
     }
@@ -333,7 +333,7 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
     VkPipelineMultisampleStateCreateInfo& ms0 = mPipelineKey.rasterState.multisampling;
     const VkPipelineMultisampleStateCreateInfo& ms1 = rasterState.multisampling;
     if (
-            mPipelineKey.rasterState.getColorTargetCount != rasterState.getColorTargetCount ||
+            mPipelineKey.rasterState.colorTargetCount != rasterState.colorTargetCount ||
             raster0.polygonMode != raster1.polygonMode ||
             raster0.cullMode != raster1.cullMode ||
             raster0.frontFace != raster1.frontFace ||

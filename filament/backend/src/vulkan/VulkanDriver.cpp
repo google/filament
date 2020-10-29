@@ -1622,7 +1622,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkraster.depthBiasConstantFactor = depthOffset.constant;
     vkraster.depthBiasSlopeFactor = depthOffset.slope;
 
-    mContext.rasterState.getColorTargetCount = rt->getColorTargetCount();
+    mContext.rasterState.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
 
     VulkanBinder::ProgramBundle shaderHandles = program->bundle;
 
