@@ -112,6 +112,11 @@ std::ostream& operator<<(std::ostream& out, const details::TMat44<T>& v) noexcep
     return printMatrix(out, v.asArray(), 4, 4);
 }
 
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const details::TQuaternion<T>& v) noexcept {
+    return printQuat(out, v);
+}
+
 template std::ostream& operator<<(std::ostream& out, const details::TVec2<double>& v) noexcept;
 template std::ostream& operator<<(std::ostream& out, const details::TVec2<float>& v) noexcept;
 template std::ostream& operator<<(std::ostream& out, const details::TVec2<half>& v) noexcept;
@@ -153,6 +158,10 @@ template std::ostream& operator<<(std::ostream& out, const details::TMat33<float
 
 template std::ostream& operator<<(std::ostream& out, const details::TMat44<double>& v) noexcept;
 template std::ostream& operator<<(std::ostream& out, const details::TMat44<float>& v) noexcept;
+
+template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<half>& v) noexcept;
 
 }  // namespace math
 }  // namespace filament
