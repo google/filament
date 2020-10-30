@@ -47,6 +47,7 @@ constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 
+struct VulkanRenderTarget;
 struct VulkanSurfaceContext;
 struct VulkanTexture;
 
@@ -175,6 +176,14 @@ VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
 void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 VkImageLayout getTextureLayout(TextureUsage usage);
+
+void blitDepth(VulkanContext* context, const VulkanRenderTarget* dstTarget,
+        const VkOffset3D dstRect[2], const VulkanRenderTarget* srcTarget,
+        const VkOffset3D srcRect[2]);
+
+void blitColor(VulkanContext* context, const VulkanRenderTarget* dstTarget,
+        const VkOffset3D dstRect[2], const VulkanRenderTarget* srcTarget,
+        const VkOffset3D srcRect[2], VkFilter filter, int index);
 
 } // namespace filament
 } // namespace backend

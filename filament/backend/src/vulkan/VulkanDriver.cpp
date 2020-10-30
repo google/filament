@@ -1461,104 +1461,41 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
     VulkanRenderTarget* dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
-    const int targetIndex = 0; // TODO: support MRT in blit
 
-    // In debug builds, verify that the two render targets have blittable formats.
-#ifndef NDEBUG
-    const VkPhysicalDevice gpu = mContext.physicalDevice;
-    VkFormatProperties info;
-    vkGetPhysicalDeviceFormatProperties(gpu, srcTarget->getColor(targetIndex).format, &info);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
-            "Source format is not blittable")) {
-        return;
-    }
-    vkGetPhysicalDeviceFormatProperties(gpu, dstTarget->getColor(targetIndex).format, &info);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
-            "Destination format is not blittable")) {
-        return;
-    }
-    if (any(buffers & TargetBufferFlags::DEPTH)) {
-        utils::slog.w << "Depth blits are not yet supported." << utils::io::endl;
-    }
-#endif
+    VkFilter vkfilter = filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
 
     const VkExtent2D srcExtent = srcTarget->getExtent();
-    const VkExtent2D dstExtent = dstTarget->getExtent();
-
     const int32_t srcLeft = std::min(srcRect.left, (int32_t) srcExtent.width);
     const int32_t srcBottom = std::min(srcRect.bottom, (int32_t) srcExtent.height);
     const int32_t srcRight = std::min(srcRect.left + srcRect.width, srcExtent.width);
     const int32_t srcTop = std::min(srcRect.bottom + srcRect.height, srcExtent.height);
-    const uint32_t srcLevel = srcTarget->getColor(targetIndex).level;
-    const uint32_t srcLayer = srcTarget->getColor(targetIndex).layer;
+    const VkOffset3D srcOffsets[2] = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }};
 
+    const VkExtent2D dstExtent = dstTarget->getExtent();
     const int32_t dstLeft = std::min(dstRect.left, (int32_t) dstExtent.width);
     const int32_t dstBottom = std::min(dstRect.bottom, (int32_t) dstExtent.height);
     const int32_t dstRight = std::min(dstRect.left + dstRect.width, dstExtent.width);
     const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
-    const uint32_t dstLevel = dstTarget->getColor(targetIndex).level;
-    const uint32_t dstLayer = dstTarget->getColor(targetIndex).layer;
+    const VkOffset3D dstOffsets[2] = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }};
 
-    const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    if (any(buffers & TargetBufferFlags::DEPTH) && srcTarget->hasDepth() && dstTarget->hasDepth()) {
+        blitDepth(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets);
+    }
 
-    const VkImageBlit blitRegions[1] = {{
-        .srcSubresource = { aspect, srcLevel, srcLayer, 1 },
-        .srcOffsets = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }},
-        .dstSubresource = { aspect, dstLevel, dstLayer, 1 },
-        .dstOffsets = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }}
-    }};
+    if (any(buffers & TargetBufferFlags::COLOR0)) {
+        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 0);
+    }
 
-    const VkImageResolve resolveRegions[1] = {{
-        .srcSubresource = { aspect, srcLevel, srcLayer, 1 },
-        .srcOffset = { srcLeft, srcBottom, 0 },
-        .dstSubresource = { aspect, dstLevel, dstLayer, 1 },
-        .dstOffset = { dstLeft, dstBottom, 0 },
-        .extent = { srcExtent.width, srcExtent.height, 1 }
-    }};
+    if (any(buffers & TargetBufferFlags::COLOR1)) {
+        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 1);
+    }
 
-    const VulkanTexture* srcTexture = srcTarget->getColor(targetIndex).texture;
-    const VulkanTexture* dstTexture = dstTarget->getColor(targetIndex).texture;
+    if (any(buffers & TargetBufferFlags::COLOR2)) {
+        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 2);
+    }
 
-    auto vkblit = [=](VkCommandBuffer cmdbuffer) {
-        VkImage srcImage = srcTarget->getColor(targetIndex).image;
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1, 1, aspect);
-
-        VkImage dstImage = dstTarget->getColor(targetIndex).image;
-        VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1, 1, aspect);
-
-        if (srcTexture && srcTexture->samples > 1 && dstTexture && dstTexture->samples == 1) {
-            vkCmdResolveImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
-        } else {
-            vkCmdBlitImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
-                    filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
-        }
-
-        if (srcTexture) {
-            VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                    getTextureLayout(srcTexture->usage), srcLevel, 1, 1, aspect);
-        } else if  (!mContext.currentSurface->headlessQueue) {
-            VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, srcLevel, 1, 1, aspect);
-        }
-
-        // Determine the desired texture layout for the destination while ensuring that the default
-        // render target is supported, which has no associated texture.
-        const VkImageLayout desiredLayout = dstTexture ? getTextureLayout(dstTexture->usage) :
-                getSwapContext(mContext).attachment.layout;
-
-        VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                desiredLayout, dstLevel, 1, 1, aspect);
-    };
-
-    if (!mContext.currentCommands) {
-        vkblit(acquireWorkCommandBuffer(mContext));
-        flushWorkCommandBuffer(mContext);
-    } else {
-        vkblit(mContext.currentCommands->cmdbuffer);
+    if (any(buffers & TargetBufferFlags::COLOR3)) {
+        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 3);
     }
 }
 
