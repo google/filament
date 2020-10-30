@@ -871,7 +871,7 @@ static void blit(VkImageAspectFlags aspect, VkFilter filter, VulkanContext* cont
                 getTextureLayout(src.texture->usage), src.level, 1, 1, aspect);
     } else if  (!context->currentSurface->headlessQueue) {
         VulkanTexture::transitionImageLayout(cmdbuffer, src.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, src.level, 1, 1, aspect);
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, src.level, 1, 1, aspect);
     }
 
     // Determine the desired texture layout for the destination while ensuring that the default

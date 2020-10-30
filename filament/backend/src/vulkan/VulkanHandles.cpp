@@ -773,6 +773,7 @@ VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags
 }
 
 // TODO: replace the last 4 args with VkImageSubresourceRange
+// TODO: replace this function with a flexible thin wrapper over image barrier creation
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
         VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
         uint32_t layerCount, uint32_t levelCount, VkImageAspectFlags aspect) {
@@ -816,6 +817,7 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
 
         // We support PRESENT as a target layout to allow blitting from the swap chain.
         // See also makeSwapChainPresentable().
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = 0;
