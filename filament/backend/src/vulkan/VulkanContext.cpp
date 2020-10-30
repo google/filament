@@ -36,6 +36,8 @@
 
 #include <utils/Panic.h>
 
+#define FILAMENT_VULKAN_CHECK_BLIT_FORMAT 0
+
 namespace filament {
 namespace backend {
 
@@ -890,8 +892,7 @@ void blitDepth(VulkanContext* context, const VulkanRenderTarget* dstTarget,
     const VulkanAttachment dst = dstTarget->getDepth();
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-    // In debug builds, verify that the two render targets have blittable formats.
-#ifndef NDEBUG
+#if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
     const VkPhysicalDevice gpu = context->physicalDevice;
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.format, &info);
@@ -923,8 +924,7 @@ void blitColor(VulkanContext* context, const VulkanRenderTarget* dstTarget,
     const VulkanAttachment dst = dstTarget->getColor(0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    // In debug builds, verify that the two render targets have blittable formats.
-#ifndef NDEBUG
+#if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
     const VkPhysicalDevice gpu = context->physicalDevice;
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.format, &info);
