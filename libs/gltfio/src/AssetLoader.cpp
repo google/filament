@@ -483,7 +483,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     };
 
     // In glTF, each primitive may or may not have an index buffer.
-    IndexBuffer* indices;
+    IndexBuffer* indices = nullptr;
     const cgltf_accessor* accessor = inPrim->indices;
     if (accessor) {
         IndexBuffer::IndexType indexType;
@@ -500,7 +500,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         BufferSlot slot = { accessor };
         slot.indexBuffer = indices;
         addBufferSlot(slot);
-    } else {
+    } else if (inPrim->attributes_count > 0) {
         // If a primitive does not have an index buffer, generate a trivial one now.
         const uint32_t vertexCount = inPrim->attributes[0].data->count;
 
@@ -675,6 +675,11 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             vbb.normalized(attr, accessor->normalized);
             addBufferSlot({accessor, atype, slot++, morphId});
         }
+    }
+
+    if (vertexCount == 0) {
+        slog.e << "Empty vertex buffer in " << name << io::endl;
+        return false;
     }
 
     vbb.vertexCount(vertexCount);
