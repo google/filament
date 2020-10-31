@@ -684,6 +684,7 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(macOS 10.14, iOS 12, *)) {
         std::unique_lock<std::mutex> guard(state->mutex);
+        timeoutNs = std::min(timeoutNs, (uint64_t) std::chrono::nanoseconds::max().count());
         while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
             if (timeoutNs == 0 ||
                 state->cv.wait_for(guard, std::chrono::nanoseconds(timeoutNs)) ==
