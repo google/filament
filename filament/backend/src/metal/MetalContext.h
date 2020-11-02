@@ -75,11 +75,7 @@ struct MetalContext {
 
     MetalBufferPool* bufferPool;
 
-    // Surface-related properties.
-    MetalSwapChain* currentSurface = nullptr;
-    id<CAMetalDrawable> currentDrawable = nil;
-    id<MTLTexture> currentDepthTexture = nil;
-    id<MTLTexture> headlessDrawable = nil;
+    MetalSwapChain* currentSurface = nil;
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
@@ -97,14 +93,6 @@ struct MetalContext {
 
     TimerQueryInterface* timerQueryImpl;
 };
-
-// Acquire the current surface's CAMetalDrawable for the current frame if it has not already been
-// acquired. This method stores it in the context's currentDrawable field and returns the
-// drawable's texture.
-// For headless swapchains a new texture is created.
-id<MTLTexture> acquireDrawable(MetalContext* context);
-
-id<MTLTexture> acquireDepthTexture(MetalContext* context);
 
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);
 

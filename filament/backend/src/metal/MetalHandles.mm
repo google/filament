@@ -49,8 +49,8 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags)
-        : layer(nativeWindow) {
+MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
+        : context(context), layer(nativeWindow), type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
@@ -68,11 +68,144 @@ MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow,
         nativeWindow.framebufferOnly = NO;
     }
 
-    layer.device = device;
+    layer.device = context.device;
 }
 
-MetalSwapChain::MetalSwapChain(int32_t width, int32_t height, uint64_t flags) : headlessWidth(width),
-        headlessHeight(height) { }
+MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
+        : context(context), headlessWidth(width), headlessHeight(height),
+        type(SwapChainType::HEADLESS) { }
+
+
+NSUInteger MetalSwapChain::getSurfaceWidth() const {
+    if (isHeadless()) {
+        return headlessWidth;
+    }
+    return (NSUInteger) layer.drawableSize.width;
+}
+
+NSUInteger MetalSwapChain::getSurfaceHeight() const {
+    if (isHeadless()) {
+        return headlessHeight;
+    }
+    return (NSUInteger) layer.drawableSize.height;
+}
+
+id<MTLTexture> MetalSwapChain::acquireDrawable() {
+    if (drawable) {
+        return drawable.texture;
+    }
+
+    if (isHeadless()) {
+        if (headlessDrawable) {
+            return headlessDrawable;
+        }
+        // For headless surfaces we construct a "fake" drawable, which is simply a renderable
+        // texture.
+        MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];
+        textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        textureDescriptor.width = headlessWidth;
+        textureDescriptor.height = headlessHeight;
+        // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
+        textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+#if defined(IOS)
+        textureDescriptor.storageMode = MTLStorageModeShared;
+#else
+        textureDescriptor.storageMode = MTLStorageModeManaged;
+#endif
+        headlessDrawable = [context.device newTextureWithDescriptor:textureDescriptor];
+        return headlessDrawable;
+    }
+
+    assert(isCaMetalLayer());
+    drawable = [layer nextDrawable];
+
+    ASSERT_POSTCONDITION(drawable != nil, "Could not obtain drawable.");
+    return drawable.texture;
+}
+
+void MetalSwapChain::releaseDrawable() {
+    drawable = nil;
+}
+
+id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
+    if (depthTexture) {
+        // If the surface size has changed, we'll need to allocate a new depth texture.
+        if (depthTexture.width != getSurfaceWidth() ||
+            depthTexture.height != getSurfaceHeight()) {
+            depthTexture = nil;
+        } else {
+            return depthTexture;
+        }
+    }
+
+    const MTLPixelFormat depthFormat =
+#if defined(IOS)
+            MTLPixelFormatDepth32Float;
+#else
+    context.device.depth24Stencil8PixelFormatSupported ?
+            MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float;
+#endif
+
+    const NSUInteger width = getSurfaceWidth();
+    const NSUInteger height = getSurfaceHeight();
+    MTLTextureDescriptor* descriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthFormat
+                                                               width:width
+                                                              height:height
+                                                           mipmapped:NO];
+    descriptor.usage = MTLTextureUsageRenderTarget;
+    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+
+    depthTexture = [context.device newTextureWithDescriptor:descriptor];
+
+    return depthTexture;
+}
+
+void MetalSwapChain::setFrameFinishedCallback(FrameFinishedCallback callback, void* user) {
+    frameFinishedCallback = callback;
+    frameFinishedUserData = user;
+}
+
+void MetalSwapChain::present() {
+    if (drawable) {
+        if (context.frameFinishedCallback) {
+            scheduleFrameFinishedCallback();
+        } else  {
+            [getPendingCommandBuffer(&context) presentDrawable:drawable];
+        }
+    }
+}
+
+MetalSwapChain::~MetalSwapChain() {
+}
+
+void presentDrawable(bool presentFrame, void* user) {
+    // CFBridgingRelease here is used to balance the CFBridgingRetain inside of acquireDrawable.
+    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) CFBridgingRelease(user);
+    if (presentFrame) {
+        [drawable present];
+    }
+    // The drawable will be released here when the "drawable" variable goes out of scope.
+}
+
+void MetalSwapChain::scheduleFrameFinishedCallback() {
+    if (!frameFinishedCallback) {
+        return;
+    }
+
+    assert(drawable);
+    backend::FrameFinishedCallback callback = frameFinishedCallback;
+    void* userData = frameFinishedUserData;
+    // This block strongly captures drawable to keep it alive until the handler executes.
+    [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
+        // CFBridgingRetain is used here to give the drawable a +1 retain count before
+        // casting it to a void*.
+        PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            callback(callable, userData);
+        });
+    }];
+}
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
@@ -604,7 +737,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index
     assert(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
-        result.texture = acquireDrawable(context);
+        result.texture = context->currentSurface->acquireDrawable();
     }
     return result;
 }
@@ -612,7 +745,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index
 MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
-        result.texture = acquireDepthTexture(context);
+        result.texture = context->currentSurface->acquireDepthTexture();
     }
     return result;
 }
