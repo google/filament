@@ -535,14 +535,16 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
+    // subpass
+    cg.generateSubpass(fs, material.subpass);
+
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generatePostProcessGetters(fs, ShaderType::FRAGMENT);
 
     // Generate post-process outputs.
-    size_t outputIndex = 0;
     for (const auto& output : mOutputs) {
         if (output.target == MaterialBuilder::OutputTarget::COLOR) {
-            cg.generateOutput(fs, ShaderType::FRAGMENT, output.name, outputIndex++,
+            cg.generateOutput(fs, ShaderType::FRAGMENT, output.name, output.location,
                     output.qualifier, output.type);
         }
         if (output.target == MaterialBuilder::OutputTarget::DEPTH) {

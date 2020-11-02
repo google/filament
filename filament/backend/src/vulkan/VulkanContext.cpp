@@ -244,6 +244,7 @@ void createLogicalDevice(VulkanContext& context) {
         .vkDestroyBuffer = vkDestroyBuffer,
         .vkCreateImage = vkCreateImage,
         .vkDestroyImage = vkDestroyImage,
+        .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
     };
@@ -366,7 +367,6 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (const VkSurfaceFormatKHR& format : surfaceContext.surfaceFormats) {
         if (format.format == VK_FORMAT_R8G8B8A8_UNORM) {
             surfaceContext.surfaceFormat = format;
-            break;
         }
     }
     const auto compositionCaps = caps.supportedCompositeAlpha;
@@ -474,9 +474,10 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
 void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
         VulkanDisposer& disposer) {
     waitForIdle(context);
+    const VkDevice device = context.device;
     for (SwapContext& swapContext : surfaceContext.swapContexts) {
         disposer.release(swapContext.commands.resources);
-        vkFreeCommandBuffers(context.device, context.commandPool, 1,
+        vkFreeCommandBuffers(device, context.commandPool, 1,
                 &swapContext.commands.cmdbuffer);
 
         // The wrapper object for the submission fence has shared ownership semantics, so here
@@ -487,17 +488,23 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
             swapContext.commands.fence.reset();
         }
 
-        vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
+        // If this is headless, then we own the image and need to explicitly destroy it.
+        if (!surfaceContext.swapchain) {
+            vkDestroyImage(device, swapContext.attachment.image, VKALLOC);
+            vkFreeMemory(device, swapContext.attachment.memory, VKALLOC);
+        }
+
+        vkDestroyImageView(device, swapContext.attachment.view, VKALLOC);
         swapContext.commands.fence = VK_NULL_HANDLE;
         swapContext.attachment.view = VK_NULL_HANDLE;
     }
-    vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
-    vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
-    vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
+    vkDestroySwapchainKHR(device, surfaceContext.swapchain, VKALLOC);
+    vkDestroySemaphore(device, surfaceContext.imageAvailable, VKALLOC);
+    vkDestroySemaphore(device, surfaceContext.renderingFinished, VKALLOC);
 
-    vkDestroyImageView(context.device, surfaceContext.depth.view, VKALLOC);
-    vkDestroyImage(context.device, surfaceContext.depth.image, VKALLOC);
-    vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
+    vkDestroyImageView(device, surfaceContext.depth.view, VKALLOC);
+    vkDestroyImage(device, surfaceContext.depth.image, VKALLOC);
+    vkFreeMemory(device, surfaceContext.depth.memory, VKALLOC);
 }
 
 // makeSwapChainPresentable()

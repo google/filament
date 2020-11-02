@@ -24,7 +24,9 @@
 
 #ifdef FILAMENT_SUPPORTS_XCB
 #include <xcb/xcb.h>
-#else
+#endif
+
+#ifdef FILAMENT_SUPPORTS_XLIB
 #include <X11/Xlib.h>
 #endif
 
@@ -35,14 +37,15 @@ public:
 
     backend::Driver* createDriver(void* const sharedContext) noexcept override;
 
-    void* createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept override;
+    void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
 
     int getOSVersion() const noexcept override { return 0; }
 
 private:
 #ifdef FILAMENT_SUPPORTS_XCB
     xcb_connection_t* mConnection;
-#else
+#endif
+#ifdef FILAMENT_SUPPORTS_XLIB
     Display* mDisplay;
 #endif
 };

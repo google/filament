@@ -26,6 +26,26 @@ material {
         {
             type : float4,
             name : vignetteColor
+        },
+        {
+            type : subpassInput,
+            format : float,
+            precision : medium,
+            name : colorBuffer,
+        }
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4,
+            location : 0
+        },
+        {
+            name : tonemappedOutput,
+            target : color,
+            type : float4,
+            location : 1
         }
     ],
     variables : [
@@ -45,11 +65,6 @@ vertex {
 
 fragment {
 
-    // TODO: this should be specified as a parameter
-    // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
-    layout (input_attachment_index = 0, set = 2, binding = 0) uniform mediump subpassInput colorBuffer;
-    layout(location = 1) out vec4 tonemappedOutput;
-
 #include "../../../../shaders/src/dithering.fs"
 #include "../../../../shaders/src/vignette.fs"
 
@@ -64,11 +79,11 @@ fragment {
     }
 
     vec3 resolveFragment(const ivec2 uv) {
-        return subpassLoad(colorBuffer).rgb;
+        return subpassLoad(materialParams_colorBuffer).rgb;
     }
 
     vec4 resolveAlphaFragment(const ivec2 uv) {
-        return subpassLoad(colorBuffer);
+        return subpassLoad(materialParams_colorBuffer);
     }
 
     vec4 resolve() {
@@ -104,8 +119,8 @@ fragment {
 #else
             postProcess.color = dithered;
 #endif
+            postProcess.tonemappedOutput = postProcess.color;
         }
-        tonemappedOutput = postProcess.color;
     }
 
 }

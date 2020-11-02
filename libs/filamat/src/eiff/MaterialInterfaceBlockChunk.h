@@ -21,6 +21,7 @@
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
 
 namespace filamat {
 
@@ -44,6 +45,17 @@ private:
     void flatten(Flattener &) override;
 
     filament::SamplerInterfaceBlock& mSib;
+};
+
+class MaterialSubpassInterfaceBlockChunk final : public Chunk {
+public:
+    explicit MaterialSubpassInterfaceBlockChunk(filament::SubpassInfo& subpass);
+    ~MaterialSubpassInterfaceBlockChunk() = default;
+
+private:
+    void flatten(Flattener &) override;
+
+    filament::SubpassInfo& mSubpass;
 };
 
 } // namespace filamat

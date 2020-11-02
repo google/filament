@@ -468,3 +468,19 @@ export SWIFTSHADER_LD_LIBRARY_PATH=`pwd`
 ```
 
 Next, go to your Filament repo and use the [easy build](#easy-build) script with `-t`.
+
+## SwiftShader for CI
+
+Continuous testing turnaround can be quite slow if you need to build SwiftShader from scratch, so we
+provide an Ubuntu-based Docker image that has it already built. The Docker image also includes
+everything necessary for building Filament. You can fetch and run the image as follows:
+
+```
+docker pull ghcr.io/filament-assets/swiftshader
+docker run -it ghcr.io/filament-assets/swiftshader
+```
+
+To do more with the container, see the helper script at `build/swiftshader/test.sh`.
+
+If you are a team member, you can update the public image to the latest SwiftShader by
+following the instructions at the top of `build/swiftshader/Dockerfile`.

@@ -85,6 +85,12 @@ public class SwapChain {
      */
     public static final long CONFIG_READABLE = 0x2;
 
+    /**
+     * Indicates that the native X11 window is an XCB window rather than an XLIB window.
+     * This is ignored on non-Linux platforms and in builds that support only one X11 API.
+     */
+    public static final long CONFIG_ENABLE_XCB = 0x4;
+
     SwapChain(long nativeSwapChain, Object surface) {
         mNativeObject = nativeSwapChain;
         mSurface = surface;

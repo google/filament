@@ -379,7 +379,7 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count)
 void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
-            mStagePool, size, usage);
+            mStagePool, mDisposer, size, usage);
     mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
         destruct_handle<VulkanUniformBuffer>(mHandleMap, ubh);
     });
@@ -389,21 +389,26 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (ubh) {
         auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         mBinder.unbindUniformBuffer(buffer->getGpuBuffer());
+
+        // We do not know if any pending draw calls are making use of this uniform buffer,
+        // so assume the worst: that all command buffers are all using it.
+        if (mContext.currentSurface) {
+            for (auto& swapContext : mContext.currentSurface->swapContexts) {
+                mDisposer.acquire(buffer, swapContext.commands.resources);
+            }
+        }
+
         mDisposer.removeReference(buffer);
     }
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
-    auto renderPrimitive = construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
-    mDisposer.createDisposable(renderPrimitive, [this, rph] () {
-        destruct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
-    });
+    construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
-        auto renderPrimitive = handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
-        mDisposer.removeReference(renderPrimitive);
+        destruct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
     }
 }
 
@@ -411,7 +416,7 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffe
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
         BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            bufferCount, attributeCount, elementCount, attributes);
+            mDisposer, bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -428,7 +433,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
         ElementType elementType, uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
-            elementSize, indexCount);
+            mDisposer, elementSize, indexCount);
     mDisposer.createDisposable(indexBuffer, [this, ibh] () {
         destruct_handle<VulkanIndexBuffer>(mHandleMap, ibh);
     });
@@ -554,7 +559,8 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     const VkInstance instance = mContext.instance;
-    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance);
+    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
+            flags);
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, vksurface);
 
     // TODO: move the following line into makeCurrent.
@@ -1293,25 +1299,22 @@ void VulkanDriver::stopCapture(int) {
 
 }
 
-void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
-        uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& pbd) {
-    // TODO: add support for all types listed in the Renderer docstring for readPixels.
-    assert(pbd.type == PixelBufferDescriptor::PixelDataType::UBYTE);
-
+void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
+        uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
     const VkDevice device = mContext.device;
+    const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
+    const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
+    const VkFormat srcFormat = srcTexture ? srcTexture->vkformat : swapChainFormat;
+    const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
 
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
-        .extent = {
-            .width = width,
-            .height = height,
-            .depth = 1,
-        },
+        .format = srcFormat,
+        .extent = { width, height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -1336,10 +1339,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
-    // TODO: Should we allow readPixels within beginFrame / endFrame?
-
-    assert(mContext.currentCommands == nullptr);
-    acquireWorkCommandBuffer(mContext);
+    // TODO: replace waitForIdle with an image barrier coupled with acquireWorkCommandBuffer.
+    waitForIdle(mContext);
 
     // Transition the staging image layout.
 
@@ -1347,9 +1348,12 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 1,
             VK_IMAGE_ASPECT_COLOR_BIT);
 
+    const uint8_t srcMipLevel = srcTarget->getColor(0).level;
+
     VkImageCopy imageCopyRegion = {
         .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = srcMipLevel,
             .layerCount = 1,
         },
         .srcOffset = {
@@ -1369,11 +1373,10 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
 
     // Transition the source image layout (which might be the swap chain)
 
-    VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     VkImage srcImage = srcTarget->getColor(0).image;
     VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcMipLevel, 1, 1,
+            VK_IMAGE_ASPECT_COLOR_BIT);
 
     // Perform the blit.
 
@@ -1383,16 +1386,15 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
 
     // Restore the source image layout.
 
-    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
     if (srcTexture || mContext.currentSurface->presentQueue) {
         const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
                 VK_IMAGE_LAYOUT_UNDEFINED, srcTexture ? getTextureLayout(srcTexture->usage) : present,
-                0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
     } else {
         VulkanTexture::transitionImageLayout(mContext.work.cmdbuffer, srcImage,
                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
     // Transition the staging image layout to GENERAL.
@@ -1418,63 +1420,36 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
     vkCmdPipelineBarrier(mContext.work.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
+    // Flush and wait.
+
     flushWorkCommandBuffer(mContext);
+    acquireWorkCommandBuffer(mContext);
 
-    // Create a closure-friendly pointer that holds the rvalue reference.
+    VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
+    VkSubresourceLayout subResourceLayout;
+    vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
 
-    PixelBufferDescriptor* closure = new PixelBufferDescriptor();
-    *closure = std::move(pbd);
+    // Map image memory so we can start copying from it.
 
-    // Create a disposable to defer execution of the following code until after
-    // the work command buffer has completed.
+    const uint8_t* srcPixels;
+    vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
+    srcPixels += subResourceLayout.offset;
 
-    mDisposer.createDisposable((VulkanDisposer::Key) stagingImage, [=] () {
+    // TODO: investigate why this Y-flip exists. This conditional seems to work with both
+    // test_ReadPixels.cpp (readpixels from a normal render target with texture attachment) and
+    // viewer_basic_test.cc (readpixels from an offscreen swap chain)
+    const bool flipY = srcTexture ? true : false;
 
-        VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
-        VkSubresourceLayout subResourceLayout;
-        vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
+    if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), srcPixels,
+            subResourceLayout.rowPitch, width, height, swizzle, flipY)) {
+        utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+    }
 
-        // Map image memory so we can start copying from it.
+    vkUnmapMemory(device, stagingMemory);
+    vkFreeMemory(device, stagingMemory, nullptr);
+    vkDestroyImage(device, stagingImage, nullptr);
 
-        const uint8_t* srcPixels;
-        vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
-        srcPixels += subResourceLayout.offset;
-
-        uint8_t* dstPixels = (uint8_t*) closure->buffer;
-        const uint32_t dstStride = closure->stride ? closure->stride : width;
-        const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(closure->format,
-                closure->type, dstStride, 1, closure->alignment);
-        const int srcBytesPerRow = subResourceLayout.rowPitch;
-        const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
-        const bool swizzle = !srcTexture && swapChainFormat == VK_FORMAT_B8G8R8A8_UNORM;
-
-        switch (closure->format) {
-            case PixelDataFormat::RGB:
-            case PixelDataFormat::RGB_INTEGER:
-                DataReshaper::reshapeImage<uint8_t, 4, 3>(dstPixels, srcPixels, srcBytesPerRow,
-                        dstBytesPerRow, height, swizzle);
-                break;
-            case PixelDataFormat::RGBA:
-            case PixelDataFormat::RGBA_INTEGER:
-                DataReshaper::reshapeImage<uint8_t, 4, 4>(dstPixels, srcPixels, srcBytesPerRow,
-                        dstBytesPerRow, height, swizzle);
-                break;
-            default:
-                utils::slog.e << "ReadPixels: invalid PixelDataFormat" << utils::io::endl;
-                break;
-        }
-
-        vkUnmapMemory(device, stagingMemory);
-        vkFreeMemory(device, stagingMemory, nullptr);
-        vkDestroyImage(device, stagingImage, nullptr);
-
-        scheduleDestroy(std::move(*closure));
-        delete closure;
-    });
-
-    // Next we reduce the ref count of the image to zero, which schedules the above callback to be
-    // executed on the next beginFrame(), after the work command buffer is completed.
-    mDisposer.removeReference((VulkanDisposer::Key) stagingImage);
+    scheduleDestroy(std::move(pbd));
 }
 
 void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
@@ -1600,6 +1575,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
     mDisposer.acquire(program, commands->resources);
+    mDisposer.acquire(prim.indexBuffer, commands->resources);
+    mDisposer.acquire(prim.vertexBuffer, commands->resources);
 
     // If this is a debug build, validate the current shader.
 #if !defined(NDEBUG)

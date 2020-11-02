@@ -40,21 +40,6 @@ namespace viewer {
 
 static std::string gStatus;
 
-template<typename T>
-static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) {
-    LinearImage result(w, h, 3);
-    filament::math::float3* d = reinterpret_cast<filament::math::float3*>(result.getPixelRef(0, 0));
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 3) {
-            filament::math::float3 sRGB(p[0], p[1], p[2]);
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = sRGBToLinear(sRGB);
-        }
-    }
-    return result;
-}
-
 struct ScreenshotState {
     View* view;
     std::string filename;
@@ -162,10 +147,8 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
 
     const int digits = (int) log10 ((double) mSpec->size()) + 1;
     std::ostringstream stringStream;
-    stringStream << "test"
-            << std::setfill('0') << std::setw(digits)
-            << std::to_string(mCurrentTest) << "_"
-            << mSpec->getName(mCurrentTest);
+    stringStream << mSpec->getName(mCurrentTest)
+            << std::setfill('0') << std::setw(digits) << mCurrentTest;
     std::string prefix = stringStream.str();
 
     if (mOptions.exportSettings) {

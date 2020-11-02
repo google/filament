@@ -153,6 +153,12 @@ public:
      */
     static const uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
 
+    /**
+     * Indicates that the native X11 window is an XCB window rather than an XLIB window.
+     * This is ignored on non-Linux platforms and in builds that support only one X11 API.
+     */
+    static const uint64_t CONFIG_ENABLE_XCB = backend::SWAP_CHAIN_CONFIG_ENABLE_XCB;
+
     void* getNativeWindow() const noexcept;
 };
 

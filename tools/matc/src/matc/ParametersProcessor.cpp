@@ -203,6 +203,30 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         } else {
             builder.parameter(type, nameString.c_str());
         }
+    } else if (Enums::isValid<SubpassType>(typeString)) {
+        if (arraySize > 0) {
+            std::cerr << "parameters: the parameter with name '" << nameString << "'"
+                    << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
+                    << " are currently not supported." << std::endl;
+            return false;
+        }
+
+        MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
+        if (precisionValue && formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            auto precision =
+                    Enums::toEnum<SamplerPrecision>(precisionValue->toJsonString()->getString());
+            builder.parameter(type, format, precision, nameString.c_str());
+        } else if (formatValue) {
+            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
+            builder.parameter(type, format, nameString.c_str());
+        } else if (precisionValue) {
+            auto precision =
+                    Enums::toEnum<SamplerPrecision>(precisionValue->toJsonString()->getString());
+            builder.parameter(type, precision, nameString.c_str());
+        } else {
+            builder.parameter(type, nameString.c_str());
+        }
     } else {
         std::cerr << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
@@ -219,7 +243,7 @@ static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
     bool ok = true;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok |= processParameter(builder, *value->toJsonObject());
+            ok &= processParameter(builder, *value->toJsonObject());
             continue;
         }
         std::cerr << "parameters must be an array of OBJECTs." << std::endl;
@@ -404,6 +428,14 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         }
     }
 
+    const JsonishValue* locationValue = jsonObject.getValue("location");
+    if (locationValue) {
+        if (locationValue->getType() != JsonishValue::NUMBER) {
+            std::cerr << "outputs: location must be a NUMBER." << std::endl;
+            return false;
+        }
+    }
+
     const char* name = nameValue->toJsonString()->getString().c_str();
 
     OutputTarget target = OutputTarget::COLOR;
@@ -425,7 +457,12 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         qualifier = Enums::toEnum<OutputQualifier>(qualifierValue->toJsonString()->getString());
     }
 
-    builder.output(qualifier, target, type, name);
+    int location = -1;
+    if (locationValue) {
+        location = static_cast<int>(locationValue->toJsonNumber()->getFloat());
+    }
+
+    builder.output(qualifier, target, type, name, location);
 
     return true;
 }
@@ -436,7 +473,7 @@ static bool processOutputs(MaterialBuilder& builder, const JsonishValue& v) {
     bool ok = true;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok |= processOutput(builder, *value->toJsonObject());
+            ok &= processOutput(builder, *value->toJsonObject());
             continue;
         }
         std::cerr << "outputs must be an array of OBJECTs." << std::endl;

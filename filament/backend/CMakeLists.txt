@@ -326,6 +326,11 @@ if (APPLE)
             spirv-cross-msl
             )
 
+    if (NOT IOS)
+        target_link_libraries(backend_test PRIVATE image imageio)
+        list(APPEND BACKEND_TEST_DEPS image imageio)
+    endif()
+
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
     combine_static_libs(backend_test "${BACKEND_TEST_COMBINED_OUTPUT}" "${BACKEND_TEST_DEPS}")
 
@@ -337,7 +342,7 @@ if (APPLE)
     endif()
 endif()
 
-if (APPLE AND NOT IOS AND NOT FILAMENT_USE_SWIFTSHADER)
+if (APPLE AND NOT IOS)
     add_executable(backend_test_mac test/mac_runner.mm)
     target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the

@@ -43,7 +43,7 @@ namespace backend {
 class VulkanPlatform : public DefaultPlatform {
 public:
     // Given a Vulkan instance and native window handle, creates the platform-specific surface.
-    virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept = 0;
+    virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept = 0;
 
    ~VulkanPlatform() override;
 };
