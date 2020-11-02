@@ -7,6 +7,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.7
 
+- Vulkan: improvements to the ReadPixels implementation.
+- Vulkan: warn instead of panic for sampler overflow.
+- Vulkan: fix leak with headless swap chain.
+- PlatformVkLinux now supports all combos of XLIB and XCB.
+- Fix TypeScript binding for TextureUsage.
+
 ## v1.9.6
 
 - Added View::setVsmShadowOptions (experimental)
