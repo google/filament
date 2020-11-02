@@ -103,7 +103,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
-    mContext->currentSurface->setFrameFinishedCallback(callback, user);
+    mContext->currentDrawSwapChain->setFrameFinishedCallback(callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> fn) noexcept {
@@ -123,7 +123,7 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentSurface->releaseDrawable();
+    mContext->currentDrawSwapChain->releaseDrawable();
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -740,7 +740,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
             mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->getSurfaceHeight() : mContext->currentRenderTarget->height;
+            mContext->currentReadSwapChain->getSurfaceHeight() : mContext->currentRenderTarget->height;
     MTLViewport metalViewport {
             .originX = static_cast<double>(params.viewport.left),
             .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -
@@ -792,7 +792,7 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw, "A draw SwapChain must be set.");
     auto* drawSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
-    mContext->currentSurface = drawSwapChain;
+    mContext->currentDrawSwapChain = drawSwapChain;
 
     if (schRead) {
         auto* readSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schRead);
@@ -976,7 +976,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
     const NSInteger dstHeight =
             dstTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->getSurfaceHeight() : dstTarget->height;
+            mContext->currentDrawSwapChain->getSurfaceHeight() : dstTarget->height;
     MTLRegion dstRegion = MTLRegionMake2D(
             (NSUInteger) dstRect.left,
             dstHeight - (NSUInteger) dstRect.bottom - dstRect.height,

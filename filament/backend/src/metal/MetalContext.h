@@ -66,7 +66,7 @@ struct MetalContext {
 
     MetalBufferPool* bufferPool;
 
-    MetalSwapChain* currentSurface = nil; // TODO: rename to currentDrawSwapChain
+    MetalSwapChain* currentDrawSwapChain = nil;
     MetalSwapChain* currentReadSwapChain = nil;
 
     // External textures.

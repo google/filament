@@ -740,8 +740,8 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t i
     assert(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
-        assert(context->currentSurface);
-        result.texture = context->currentSurface->acquireDrawable();
+        assert(context->currentDrawSwapChain);
+        result.texture = context->currentDrawSwapChain->acquireDrawable();
     }
     return result;
 }
@@ -759,7 +759,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t i
 MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
-        result.texture = context->currentSurface->acquireDepthTexture();
+        result.texture = context->currentDrawSwapChain->acquireDepthTexture();
     }
     return result;
 }
