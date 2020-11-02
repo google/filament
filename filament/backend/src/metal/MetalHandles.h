@@ -92,6 +92,13 @@ private:
     NSUInteger headlessHeight;
     CAMetalLayer* layer = nullptr;
     SwapChainType type;
+
+    // These two fields store a callback and user data to notify the client that a frame is ready
+    // for presentation.
+    // If frameFinishedCallback is nullptr, then the Metal backend automatically calls
+    // presentDrawable when the frame is commited.
+    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
+    // the responsibility of presenting the frame by calling the PresentCallable object.
     FrameFinishedCallback frameFinishedCallback = nullptr;
     void* frameFinishedUserData = nullptr;
 };

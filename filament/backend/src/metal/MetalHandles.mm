@@ -168,7 +168,7 @@ void MetalSwapChain::setFrameFinishedCallback(FrameFinishedCallback callback, vo
 
 void MetalSwapChain::present() {
     if (drawable) {
-        if (context.frameFinishedCallback) {
+        if (frameFinishedCallback) {
             scheduleFrameFinishedCallback();
         } else  {
             [getPendingCommandBuffer(&context) presentDrawable:drawable];
@@ -195,12 +195,15 @@ void MetalSwapChain::scheduleFrameFinishedCallback() {
 
     assert(drawable);
     backend::FrameFinishedCallback callback = frameFinishedCallback;
-    void* userData = frameFinishedUserData;
     // This block strongly captures drawable to keep it alive until the handler executes.
+    // We cannot simply reference this->drawable inside the block because the block would then only
+    // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
+    id<CAMetalDrawable> d = drawable;
+    void* userData = frameFinishedUserData;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         // CFBridgingRetain is used here to give the drawable a +1 retain count before
         // casting it to a void*.
-        PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(drawable));
+        PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(d));
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             callback(callable, userData);
         });

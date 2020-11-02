@@ -45,15 +45,6 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
-    // These two fields store a callback and user data to notify the client that a frame is ready
-    // for presentation.
-    // If frameFinishedCallback is nullptr, then the Metal backend automatically calls
-    // presentDrawable when the frame is commited.
-    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
-    // the responsibility of presenting the frame by calling the PresentCallable object.
-    backend::FrameFinishedCallback frameFinishedCallback = nullptr;
-    void* frameFinishedUserData = nullptr;
-
     // Tracks resources used by command buffers.
     MetalResourceTracker resourceTracker;
 
