@@ -679,7 +679,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     const auto discardFlags = params.flags.discardEnd;
 
     for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
-        Attachment attachment = getColorAttachment(i);
+        Attachment attachment = getDrawColorAttachment(i);
         if (!attachment) {
             continue;
         }
@@ -736,11 +736,22 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 }
 
-MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index) {
+MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
     assert(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
+        assert(context->currentSurface);
         result.texture = context->currentSurface->acquireDrawable();
+    }
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t index) {
+    assert(index < MRT::TARGET_COUNT);
+    Attachment result = color[index];
+    if (index == 0 && defaultRenderTarget) {
+        assert(context->currentReadSwapChain);
+        result.texture = context->currentReadSwapChain->acquireDrawable();
     }
     return result;
 }

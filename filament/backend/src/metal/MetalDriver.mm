@@ -790,10 +790,14 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
-    ASSERT_PRECONDITION_NON_FATAL(schDraw == schRead,
-                                  "Metal driver does not support distinct draw/read swap chains.");
-    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
-    mContext->currentSurface = swapChain;
+    ASSERT_PRECONDITION_NON_FATAL(schDraw, "A draw SwapChain must be set.");
+    auto* drawSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
+    mContext->currentSurface = drawSwapChain;
+
+    if (schRead) {
+        auto* readSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schRead);
+        mContext->currentReadSwapChain = readSwapChain;
+    }
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
@@ -866,7 +870,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     // We always readPixels from the COLOR0 attachment.
-    MetalRenderTarget::Attachment color = srcTarget->getColorAttachment(0);
+    MetalRenderTarget::Attachment color = srcTarget->getDrawColorAttachment(0);
     id<MTLTexture> srcTexture = color.texture;
     size_t miplevel = color.level;
 
@@ -945,8 +949,13 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, backend::Viewport dstRect,
         Handle<HwRenderTarget> src, backend::Viewport srcRect,
         SamplerMagFilter filter) {
-    ASSERT_PRECONDITION(!isInRenderPass(mContext),
-                        "Blitting must be done outside of a render pass.");
+    // If we're the in middle of a render pass, finish it.
+    // This condition should only occur during copyFrame. It's okay to end the render pass because
+    // we don't issue any other rendering commands.
+    if (mContext->currentRenderPassEncoder) {
+        [mContext->currentRenderPassEncoder endEncoding];
+        mContext->currentRenderPassEncoder = nil;
+    }
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     auto dstTarget = handle_cast<MetalRenderTarget>(mHandleMap, dst);
@@ -957,9 +966,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
     // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
     // coordinates have (0, 0) at bottom-left.
+    const NSInteger srcHeight =
+            srcTarget->isDefaultRenderTarget() ?
+            mContext->currentReadSwapChain->getSurfaceHeight() : srcTarget->height;
     MTLRegion srcRegion = MTLRegionMake2D(
             (NSUInteger) srcRect.left,
-            srcTarget->height - (NSUInteger) srcRect.bottom - srcRect.height,
+            srcHeight - (NSUInteger) srcRect.bottom - srcRect.height,
             srcRect.width, srcRect.height);
 
     const NSInteger dstHeight =
@@ -994,10 +1006,10 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             srcAttachIndex = 3;
         }
 
-        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(srcAttachIndex);
+        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getReadColorAttachment(srcAttachIndex);
 
         // We always blit to the COLOR0 attachment.
-        MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getColorAttachment(0);
+        MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getDrawColorAttachment(0);
 
         if (srcColorAttachment && dstColorAttachment) {
             ASSERT_PRECONDITION(isBlitableTextureType(srcColorAttachment.texture.textureType) &&
@@ -1061,7 +1073,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Pipeline state
     MTLPixelFormat colorPixelFormat[4] = { MTLPixelFormatInvalid };
     for (size_t i = 0; i < 4; i++) {
-        const auto& attachment = mContext->currentRenderTarget->getColorAttachment(i);
+        const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
         if (!attachment) {
             continue;
         }
