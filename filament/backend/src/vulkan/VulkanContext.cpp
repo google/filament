@@ -861,6 +861,7 @@ static void blit(VkImageAspectFlags aspect, VkFilter filter, VulkanContext* cont
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst.level, 1, 1, aspect);
 
     if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
+        assert(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
         vkCmdResolveImage(cmdbuffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
     } else {
