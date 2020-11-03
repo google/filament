@@ -19,6 +19,7 @@
 #include "MaterialParser.h"
 #include "ResourceAllocator.h"
 
+#include "backend/DriverEnums.h"
 #include "details/DFG.h"
 #include "details/VertexBuffer.h"
 #include "details/Fence.h"
@@ -634,6 +635,13 @@ FFence* FEngine::createFence(FFence::Type type) noexcept {
 }
 
 FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
+    if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
+        // If this flag is set, then the nativeWindow is a CVPixelBufferRef.
+        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+        // the buffer on this thread.
+        // For non-Metal backends, this is a no-op.
+        getDriverApi().setupExternalImage(nativeWindow);
+    }
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
     if (p) {
         mSwapChains.insert(p);
