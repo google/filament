@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 
 #include "VulkanBinder.h"
+#include "VulkanBlitter.h"
 #include "VulkanDisposer.h"
 #include "VulkanContext.h"
 #include "VulkanFboCache.h"
@@ -149,6 +150,7 @@ private:
 
     VulkanContext mContext = {};
     VulkanBinder mBinder;
+    VulkanBlitter mBlitter;
     VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;

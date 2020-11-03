@@ -128,6 +128,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             src/vulkan/VulkanBinder.cpp
             src/vulkan/VulkanBinder.h
+            src/vulkan/VulkanBlitter.cpp
+            src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
             src/vulkan/VulkanContext.cpp
