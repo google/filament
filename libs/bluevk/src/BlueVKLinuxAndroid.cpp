@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -16,6 +15,7 @@
  */
 
 #include <dlfcn.h>
+#include <stdio.h>
 
 namespace bluevk {
 
@@ -31,10 +31,15 @@ static void* module = nullptr;
 
 bool loadLibrary() {
 #ifndef FILAMENT_VKLIBRARY_PATH
-    module = dlopen(VKLIBRARY_PATH, RTLD_NOW | RTLD_LOCAL);
+    const char* path = VKLIBRARY_PATH;
 #else
-    module = dlopen(FILAMENT_VKLIBRARY_PATH, RTLD_NOW | RTLD_LOCAL);
+    const char* path = FILAMENT_VKLIBRARY_PATH;
 #endif
+    module = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    if (module == nullptr) {
+        printf("Unable to load Vulkan from %s\n", path);
+        fflush(stdout);
+    }
     return module != nullptr;
 }
 
