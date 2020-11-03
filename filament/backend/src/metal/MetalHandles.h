@@ -210,7 +210,8 @@ public:
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
 
-    Attachment getColorAttachment(size_t index);
+    Attachment getDrawColorAttachment(size_t index);
+    Attachment getReadColorAttachment(size_t index);
     Attachment getDepthAttachment();
 
 private:

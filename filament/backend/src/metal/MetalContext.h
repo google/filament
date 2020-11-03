@@ -66,7 +66,8 @@ struct MetalContext {
 
     MetalBufferPool* bufferPool;
 
-    MetalSwapChain* currentSurface = nil;
+    MetalSwapChain* currentDrawSwapChain = nil;
+    MetalSwapChain* currentReadSwapChain = nil;
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
