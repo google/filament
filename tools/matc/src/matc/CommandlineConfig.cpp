@@ -72,6 +72,8 @@ static void usage(char* name) {
             "       Disable all shader optimizations, for debugging\n\n"
             "   --preprocessor-only, -E\n"
             "       Optimize shaders by running only the preprocessor\n\n"
+            "   --raw, -w\n"
+            "       Compile a raw GLSL shader into a SPIRV binary chunk\n\n"
             "   --output-format, -f\n"
             "       Specify output format: blob (default) or header\n\n"
             "   --debug, -d\n"
@@ -151,7 +153,7 @@ static void parseDefine(std::string defineString,
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:D:OSEr:vV:gt";
+    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:D:OSEr:vV:gtw";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'l' },
@@ -170,6 +172,7 @@ bool CommandlineConfig::parse() {
             { "reflect",           required_argument, nullptr, 'r' },
             { "print",                   no_argument, nullptr, 't' },
             { "version",                 no_argument, nullptr, 'v' },
+            { "raw",                     no_argument, nullptr, 'w' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -264,6 +267,9 @@ bool CommandlineConfig::parse() {
                 break;
             case 't':
                 mPrintShaders = true;
+                break;
+            case 'w':
+                mRawShaderMode = true;
                 break;
         }
     }

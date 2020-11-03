@@ -106,6 +106,10 @@ public:
         return mPrintShaders;
     }
 
+    bool rawShaderMode() const noexcept {
+        return mRawShaderMode;
+    }
+
     uint8_t getVariantFilter() const noexcept {
         return mVariantFilter;
     }
@@ -118,6 +122,7 @@ protected:
     bool mDebug = false;
     bool mIsValid = true;
     bool mPrintShaders = false;
+    bool mRawShaderMode = false;
     Optimization mOptimizationLevel = Optimization::PERFORMANCE;
     Metadata mReflectionTarget = Metadata::NONE;
     Platform mPlatform = Platform::ALL;

@@ -16,7 +16,6 @@
 
 #include "MaterialCompiler.h"
 
-#include <functional>
 #include <memory>
 #include <iostream>
 
@@ -32,6 +31,10 @@
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "ParametersProcessor.h"
+
+#include <GlslangToSpv.h>
+
+#include "sca/builtinResource.h"
 
 using namespace utils;
 using namespace filamat;
@@ -260,6 +263,17 @@ bool MaterialCompiler::run(const Config& config) {
     }
     auto buffer = input->read();
 
+    utils::Path materialFilePath = utils::Path(input->getName()).getAbsolutePath();
+    assert(materialFilePath.isFile());
+
+    if (config.rawShaderMode()) {
+        const std::string extension = materialFilePath.getExtension();
+        glslang::InitializeProcess();
+        bool success = compileRawShader(buffer.get(), size, config.getOutput(), extension.c_str());
+        glslang::FinalizeProcess();
+        return success;
+    }
+
     MaterialBuilder::init();
     MaterialBuilder builder;
     // Before attempting an expensive lex, let's find out if we were sent pure JSON.
@@ -283,8 +297,6 @@ bool MaterialCompiler::run(const Config& config) {
 
     // Set the root include directory to the directory containing the material file.
     DirIncluder includer;
-    utils::Path materialFilePath = utils::Path(input->getName()).getAbsolutePath();
-    assert(materialFilePath.isFile());
     includer.setIncludeDirectory(materialFilePath.getParent());
 
     builder
@@ -438,6 +450,60 @@ bool MaterialCompiler::parseMaterial(const char* buffer, size_t size,
             }
         }
     }
+    return true;
+}
+
+bool MaterialCompiler::compileRawShader(const char* glsl, size_t size,
+        Config::Output* output, const char* ext) const noexcept {
+    using namespace glslang;
+    using namespace filament::backend;
+    using SpirvBlob = std::vector<uint32_t>;
+
+    const EShLanguage shLang = !strcmp(ext, "vs") ? EShLangVertex : EShLangFragment;
+
+    TShader tShader(shLang);
+    tShader.setStrings(&glsl, 1);
+
+    const int version = 110;
+    EShMessages msg = EShMessages::EShMsgDefault;
+    msg = (EShMessages) (EShMessages::EShMsgVulkanRules | EShMessages::EShMsgSpvRules);
+
+    tShader.setAutoMapBindings(true);
+
+    bool parseOk = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
+    if (!parseOk) {
+        std::cerr << "ERROR: Unable to parse " << ext << ":" << std::endl;
+        std::cerr << tShader.getInfoLog() << std::endl;
+        return false;
+    }
+
+    // Even though we only have a single shader stage, linking is still necessary to finalize
+    // SPIR-V types
+    TProgram program;
+    program.addShader(&tShader);
+    bool linkOk = program.link(msg);
+    if (!linkOk) {
+        std::cerr << "ERROR: link failed " << std::endl << tShader.getInfoLog() << std::endl;
+        return false;
+    }
+
+    SpirvBlob spirv;
+    SpvOptions options;
+    GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
+
+    if (spirv.size() == 0) {
+        std::cerr << "SPIRV blob is empty." << std::endl;
+        return false;
+    }
+
+    if (!output->open()) {
+        std::cerr << "Unable to create SPIRV file." << std::endl;
+        return false;
+    }
+
+    output->write((const uint8_t*) spirv.data(), sizeof(uint32_t) * spirv.size());
+    output->close();
+
     return true;
 }
 
