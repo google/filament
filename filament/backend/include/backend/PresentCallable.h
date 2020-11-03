@@ -92,18 +92,23 @@ private:
 };
 
 /**
- * FrameFinishedCallback is a callback function that notifies an application when Filament has
- * finished processing a frame and that frame is ready to be scheduled for presentation.
+ * FrameScheduledCallback is a callback function that notifies an application when Filament has
+ * completed processing a frame and that frame is ready to be scheduled for presentation.
  *
- * beginFrame() takes an optional FrameFinishedCallback. If the callback is provided, then that
+ * beginFrame() takes an optional FrameScheduledCallback. If the callback is provided, then that
  * frame will *not* automatically be scheduled for presentation. Instead, the application must call
  * the given PresentCallable.
  *
- * @remark The backend::FrameFinishedCallback is called on an arbitrary thread.
+ * @remark The backend::FrameScheduledCallback is called on an arbitrary thread.
  *
  * @see PresentCallable, beginFrame()
  */
-using FrameFinishedCallback = void(*)(PresentCallable callable, void* user);
+using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
+
+/**
+ * @deprecated, renamed to FrameScheduledCallback
+ */
+using FrameFinishedCallback UTILS_DEPRECATED = FrameScheduledCallback;
 
 } // namespace backend
 } // namespace filament

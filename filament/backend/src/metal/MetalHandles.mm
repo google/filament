@@ -183,15 +183,15 @@ id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
     return depthTexture;
 }
 
-void MetalSwapChain::setFrameFinishedCallback(FrameFinishedCallback callback, void* user) {
-    frameFinishedCallback = callback;
-    frameFinishedUserData = user;
+void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
+    frameScheduledCallback = callback;
+    frameScheduledUserData = user;
 }
 
 void MetalSwapChain::present() {
     if (drawable) {
-        if (frameFinishedCallback) {
-            scheduleFrameFinishedCallback();
+        if (frameScheduledCallback) {
+            scheduleFrameScheduledCallback();
         } else  {
             [getPendingCommandBuffer(&context) presentDrawable:drawable];
         }
@@ -207,18 +207,18 @@ void presentDrawable(bool presentFrame, void* user) {
     // The drawable will be released here when the "drawable" variable goes out of scope.
 }
 
-void MetalSwapChain::scheduleFrameFinishedCallback() {
-    if (!frameFinishedCallback) {
+void MetalSwapChain::scheduleFrameScheduledCallback() {
+    if (!frameScheduledCallback) {
         return;
     }
 
     assert(drawable);
-    backend::FrameFinishedCallback callback = frameFinishedCallback;
+    backend::FrameScheduledCallback callback = frameScheduledCallback;
     // This block strongly captures drawable to keep it alive until the handler executes.
     // We cannot simply reference this->drawable inside the block because the block would then only
     // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
     id<CAMetalDrawable> d = drawable;
-    void* userData = frameFinishedUserData;
+    void* userData = frameScheduledUserData;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         // CFBridgingRetain is used here to give the drawable a +1 retain count before
         // casting it to a void*.

@@ -411,7 +411,7 @@ public:
      * frame and not call endFrame(), or proceed as though true was returned.
      *
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
-     * If a backend::FrameFinishedCallback is provided, however, the application bares the
+     * If a backend::FrameScheduledCallback is provided, however, the application bares the
      * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
      * passed to the callback function. Currently this functionality is only supported by the Metal
      * backend.
@@ -436,11 +436,11 @@ public:
      * All calls to render() must happen *after* beginFrame().
      *
      * @see
-     * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
+     * endFrame(), backend::PresentCallable, backend::FrameSinishedCallback
      */
     bool beginFrame(SwapChain* swapChain,
             uint64_t vsyncSteadyClockTimeNano = 0u,
-            backend::FrameFinishedCallback callback = nullptr, void* user = nullptr);
+            backend::FrameScheduledCallback callback = nullptr, void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

@@ -65,10 +65,10 @@ public:
 
     void releaseDrawable();
 
-    void setFrameFinishedCallback(FrameFinishedCallback callback, void* user);
+    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
-    // FrameFinishedCallback.
+    // FrameScheduledCallback.
     void present();
 
     NSUInteger getSurfaceWidth() const;
@@ -85,7 +85,7 @@ private:
     bool isHeadless() const { return type == SwapChainType::HEADLESS; }
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
-    void scheduleFrameFinishedCallback();
+    void scheduleFrameScheduledCallback();
 
     MetalContext& context;
     id<CAMetalDrawable> drawable = nil;
@@ -99,12 +99,12 @@ private:
 
     // These two fields store a callback and user data to notify the client that a frame is ready
     // for presentation.
-    // If frameFinishedCallback is nullptr, then the Metal backend automatically calls
+    // If frameScheduledCallback is nullptr, then the Metal backend automatically calls
     // presentDrawable when the frame is commited.
     // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
     // the responsibility of presenting the frame by calling the PresentCallable object.
-    FrameFinishedCallback frameFinishedCallback = nullptr;
-    void* frameFinishedUserData = nullptr;
+    FrameScheduledCallback frameScheduledCallback = nullptr;
+    void* frameScheduledUserData = nullptr;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {

@@ -102,8 +102,8 @@ void MetalDriver::tick(int) {
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback callback, void* user) {
-    mContext->currentDrawSwapChain->setFrameFinishedCallback(callback, user);
+        backend::FrameScheduledCallback callback, void* user) {
+    mContext->currentDrawSwapChain->setFrameScheduledCallback(callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> fn) noexcept {

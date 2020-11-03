@@ -866,7 +866,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     assert(swapChain);
 
     SYSTRACE_CALL();
@@ -1112,7 +1112,7 @@ void Renderer::render(View const* view) {
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
 }
 

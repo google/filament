@@ -2858,7 +2858,7 @@ void OpenGLDriver::tick(int) {
 }
 
 void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback, void*) {
+        backend::FrameScheduledCallback, void*) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {

@@ -293,7 +293,7 @@ void VulkanDriver::tick(int) {
 }
 
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback, void*) {
+        backend::FrameScheduledCallback, void*) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.currentCommands) {

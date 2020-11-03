@@ -134,7 +134,7 @@ DECL_DRIVER_API_0(tick)
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
         uint32_t, frameId,
-        backend::FrameFinishedCallback, callback,
+        backend::FrameScheduledCallback, callback,
         void*, user)
 
 DECL_DRIVER_API_N(setPresentationTime,
