@@ -41,11 +41,14 @@ public:
     void shutdown() noexcept;
 
 private:
+    void lazyInit() noexcept;
 
     void blitFast(VkImageAspectFlags aspect, VkFilter filter, const VulkanRenderTarget* srcTarget,
         VulkanAttachment src, VulkanAttachment dst, const VkOffset3D srcRect[2],
         const VkOffset3D dstRect[2], VkCommandBuffer cmdBuffer);
 
+    VkShaderModule mVertex = VK_NULL_HANDLE;
+    VkShaderModule mFragment = VK_NULL_HANDLE;
     VulkanContext& mContext;
 };
 

@@ -20,6 +20,8 @@
 
 #include <utils/Panic.h>
 
+#include "generated/vkshaders/vkshaders.h"
+
 #define FILAMENT_VULKAN_CHECK_BLIT_FORMAT 0
 
 using namespace bluevk;
@@ -28,6 +30,7 @@ namespace filament {
 namespace backend {
 
 void VulkanBlitter::blitColor(VkCommandBuffer cmdBuffer, BlitArgs args) {
+    lazyInit();
     const VulkanAttachment src = args.srcTarget->getColor(args.targetIndex);
     const VulkanAttachment dst = args.dstTarget->getColor(0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -52,6 +55,7 @@ void VulkanBlitter::blitColor(VkCommandBuffer cmdBuffer, BlitArgs args) {
 }
 
 void VulkanBlitter::blitDepth(VkCommandBuffer cmdBuffer, BlitArgs args) {
+    lazyInit();
     const VulkanAttachment src = args.srcTarget->getDepth();
     const VulkanAttachment dst = args.dstTarget->getDepth();
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -128,7 +132,33 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 }
 
 void VulkanBlitter::shutdown() noexcept {
-    // TODO
+    if (mContext.device) {
+        vkDestroyShaderModule(mContext.device, mVertex, VKALLOC);
+        vkDestroyShaderModule(mContext.device, mFragment, VKALLOC);
+    }
+}
+
+// If we created these shader modules in the constructor, the device might not be ready yet.
+// It is easier to do lazy initialization, which can also improve load time.
+void VulkanBlitter::lazyInit() noexcept {
+    if (mVertex) {
+        return;
+    }
+    assert(mContext.device);
+
+    VkShaderModuleCreateInfo moduleInfo = {};
+    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    VkResult result;
+
+    moduleInfo.codeSize = VKSHADERS_BLITCOLORVS_SIZE;
+    moduleInfo.pCode = (uint32_t*) VKSHADERS_BLITCOLORVS_DATA;
+    result = vkCreateShaderModule(mContext.device, &moduleInfo, VKALLOC, &mVertex);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create vertex shader for blit.");
+
+    moduleInfo.codeSize = VKSHADERS_BLITCOLORFS_SIZE;
+    moduleInfo.pCode = (uint32_t*) VKSHADERS_BLITCOLORFS_DATA;
+    result = vkCreateShaderModule(mContext.device, &moduleInfo, VKALLOC, &mFragment);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create fragment shader for blit.");
 }
 
 } // namespace filament
