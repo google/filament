@@ -103,9 +103,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
-    // If a callback was specified, then the client is responsible for presenting the frame.
-    mContext->frameFinishedCallback = callback;
-    mContext->frameFinishedUserData = user;
+    mContext->currentSurface->setFrameFinishedCallback(callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> fn) noexcept {
@@ -125,8 +123,7 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentDrawable = nil;
-    mContext->headlessDrawable = nil;
+    mContext->currentSurface->releaseDrawable();
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -281,12 +278,12 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer, flags);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, metalLayer, flags);
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height, flags);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, width, height, flags);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
@@ -800,12 +797,10 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    if (mContext->currentDrawable != nil && !mContext->frameFinishedCallback) {
-        [getPendingCommandBuffer(mContext) presentDrawable:mContext->currentDrawable];
-    }
+    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    swapChain->present();
     submitPendingCommands(mContext);
-    mContext->currentDrawable = nil;
-    mContext->headlessDrawable = nil;
+    swapChain->releaseDrawable();
 }
 
 void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
