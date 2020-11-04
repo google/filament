@@ -42,6 +42,7 @@ namespace backend {
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB = 0x4;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16; // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT = 16;          // Matches the Adreno Vulkan driver.

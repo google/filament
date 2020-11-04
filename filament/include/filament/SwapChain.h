@@ -159,6 +159,19 @@ public:
      */
     static const uint64_t CONFIG_ENABLE_XCB = backend::SWAP_CHAIN_CONFIG_ENABLE_XCB;
 
+    /**
+     * Indicates that the native window is a CVPixelBufferRef.
+     *
+     * This is only supported by the Metal backend. The CVPixelBuffer must be in the
+     * kCVPixelFormatType_32BGRA format.
+     *
+     * It is not necessary to add an additional retain call before passing the pixel buffer to
+     * Filament. Filament will call CVPixelBufferRetain during Engine::createSwapChain, and
+     * CVPixelBufferRelease when the swap chain is destroyed.
+     */
+    static const uint64_t CONFIG_APPLE_CVPIXELBUFFER =
+            backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER;
+
     void* getNativeWindow() const noexcept;
 };
 

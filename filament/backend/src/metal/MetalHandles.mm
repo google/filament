@@ -50,7 +50,8 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 }
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
-        : context(context), layer(nativeWindow), type(SwapChainType::CAMETALLAYER) {
+        : context(context), layer(nativeWindow), externalImage(context),
+        type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
@@ -72,13 +73,27 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
 }
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
-        : context(context), headlessWidth(width), headlessHeight(height),
+        : context(context), headlessWidth(width), headlessHeight(height), externalImage(context),
         type(SwapChainType::HEADLESS) { }
 
+MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
+        : context(context), externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
+    assert(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
+    MetalExternalImage::assertWritableImage(pixelBuffer);
+    externalImage.set(pixelBuffer);
+    assert(externalImage.isValid());
+}
+
+MetalSwapChain::~MetalSwapChain() {
+    externalImage.set(nullptr);
+}
 
 NSUInteger MetalSwapChain::getSurfaceWidth() const {
     if (isHeadless()) {
         return headlessWidth;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getWidth();
     }
     return (NSUInteger) layer.drawableSize.width;
 }
@@ -86,6 +101,9 @@ NSUInteger MetalSwapChain::getSurfaceWidth() const {
 NSUInteger MetalSwapChain::getSurfaceHeight() const {
     if (isHeadless()) {
         return headlessHeight;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getHeight();
     }
     return (NSUInteger) layer.drawableSize.height;
 }
@@ -114,6 +132,10 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
 #endif
         headlessDrawable = [context.device newTextureWithDescriptor:textureDescriptor];
         return headlessDrawable;
+    }
+
+    if (isPixelBuffer()) {
+        return externalImage.getMetalTextureForDraw();
     }
 
     assert(isCaMetalLayer());
@@ -174,9 +196,6 @@ void MetalSwapChain::present() {
             [getPendingCommandBuffer(&context) presentDrawable:drawable];
         }
     }
-}
-
-MetalSwapChain::~MetalSwapChain() {
 }
 
 void presentDrawable(bool presentFrame, void* user) {

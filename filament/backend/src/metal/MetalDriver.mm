@@ -277,8 +277,13 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-    construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, metalLayer, flags);
+    if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
+        CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
+        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, pixelBuffer, flags);
+    } else {
+        auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
+        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, metalLayer, flags);
+    }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
@@ -649,8 +654,10 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
 }
 
 void MetalDriver::setupExternalImage(void* image) {
-    // Take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, or when the texture is destroyed.
+    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
+    // Here we take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
+    // destroyed.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }

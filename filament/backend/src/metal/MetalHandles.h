@@ -47,6 +47,9 @@ public:
     // Instantiate a SwapChain from a CAMetalLayer
     MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags);
 
+    // Instantiate a SwapChain from a CVPixelBuffer
+    MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags);
+
     // Instantiate a headless SwapChain.
     MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags);
 
@@ -91,6 +94,7 @@ private:
     NSUInteger headlessWidth;
     NSUInteger headlessHeight;
     CAMetalLayer* layer = nullptr;
+    MetalExternalImage externalImage;
     SwapChainType type;
 
     // These two fields store a callback and user data to notify the client that a frame is ready
