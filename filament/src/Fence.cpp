@@ -71,6 +71,7 @@ FenceStatus FFence::waitAndDestroy(FFence* fence, Mode mode) noexcept {
 UTILS_NOINLINE
 FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
     ASSERT_PRECONDITION(UTILS_HAS_THREADING || timeout == 0, "Non-zero timeout requires threads.");
+    const bool waitForever = timeout == FENCE_WAIT_FOR_EVER;
     timeout = std::min(timeout, (uint64_t) ns::max().count());
 
     FEngine& engine = mEngine;
@@ -97,7 +98,7 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
             }
             engine.pumpPlatformEvents();
             const auto elapsed = std::chrono::system_clock::now() - startTime;
-            if (timeout != Fence::FENCE_WAIT_FOR_EVER && elapsed >= ns(timeout)) {
+            if (!waitForever && elapsed >= ns(timeout)) {
                 break;
             }
         }
