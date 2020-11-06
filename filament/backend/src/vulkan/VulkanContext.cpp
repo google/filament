@@ -25,6 +25,11 @@
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 #pragma clang diagnostic ignored "-Wweak-vtables"
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
+
+static const PFN_vkGetInstanceProcAddr& vkGetInstanceProcAddr = bluevk::vkGetInstanceProcAddr;
+static const PFN_vkGetDeviceProcAddr& vkGetDeviceProcAddr = bluevk::vkGetDeviceProcAddr;
+
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_IMPLEMENTATION
 #include <cstdio>
 #include "vk_mem_alloc.h"
@@ -37,6 +42,8 @@
 #include <utils/Panic.h>
 
 #define FILAMENT_VULKAN_CHECK_BLIT_FORMAT 0
+
+using namespace bluevk;
 
 namespace filament {
 namespace backend {

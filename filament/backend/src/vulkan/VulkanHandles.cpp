@@ -23,6 +23,8 @@
 
 #define FILAMENT_VULKAN_VERBOSE 0
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 

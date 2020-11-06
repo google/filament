@@ -24,6 +24,8 @@
 
 #include <android/native_window.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;

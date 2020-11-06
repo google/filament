@@ -20,6 +20,8 @@
 
 #include "private/backend/BackendUtils.h"
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 
