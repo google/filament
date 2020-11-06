@@ -24,6 +24,8 @@
 
 #include <dlfcn.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;

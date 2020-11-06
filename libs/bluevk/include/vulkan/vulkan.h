@@ -45,7 +45,6 @@
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 #include <windows.h>
-#include <utils/unwindows.h>
 #include "vulkan_win32.h"
 #endif
 

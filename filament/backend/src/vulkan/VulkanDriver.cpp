@@ -31,6 +31,8 @@
 #include <set>
 #endif
 
+using namespace bluevk;
+
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
 #pragma clang diagnostic push

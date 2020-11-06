@@ -35,6 +35,8 @@
 
 #define METALVIEW_TAG 255
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
