@@ -38,6 +38,8 @@
     #include <vulkan/vulkan.h>
 #endif
 
+#include <utils/unwindows.h>
+
 namespace bluevk {
 
     // Returns false if BlueGL could not find the Vulkan shared library.

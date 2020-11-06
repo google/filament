@@ -22,8 +22,6 @@
 
 #include <bluevk/BlueVK.h>
 
-#include <utils/unwindows.h>
-
 using namespace bluevk;
 
 namespace filament {
