@@ -188,7 +188,15 @@ void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, 
     frameScheduledUserData = user;
 }
 
+void MetalSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
+    frameCompletedCallback = callback;
+    frameCompletedUserData = user;
+}
+
 void MetalSwapChain::present() {
+    if (frameCompletedCallback) {
+        scheduleFrameCompletedCallback();
+    }
     if (drawable) {
         if (frameScheduledCallback) {
             scheduleFrameScheduledCallback();
@@ -225,6 +233,20 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
         PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(d));
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             callback(callable, userData);
+        });
+    }];
+}
+
+void MetalSwapChain::scheduleFrameCompletedCallback() {
+    if (!frameCompletedCallback) {
+        return;
+    }
+
+    backend::FrameCompletedCallback callback = frameCompletedCallback;
+    void* userData = frameCompletedUserData;
+    [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            callback(userData);
         });
     }];
 }

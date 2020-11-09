@@ -36,7 +36,7 @@ namespace backend {
  * within a CATransation:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * void myFrameFinishedCallback(PresentCallable presentCallable, void* user) {
+ * void myFrameScheduledCallback(PresentCallable presentCallable, void* user) {
  *     [CATransaction begin];
  *     // Update other UI elements...
  *     presentCallable();
@@ -44,11 +44,13 @@ namespace backend {
  * }
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * To obtain a PresentCallable, pass a backend::FrameFinishedCallback to the beginFrame() function.
- * The callback is called with a PresentCallable object and optional user data:
+ * To obtain a PresentCallable, set a SwapChain::FrameScheduledCallback on a SwapChain with the
+ * SwapChain::setFrameScheduledCallback method. The callback is called with a PresentCallable object
+ * and optional user data:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * if (renderer->beginFrame(swapChain, myFrameFinishedCallback, nullptr)) {
+ * swapChain->setFrameScheduledCallback(myFrameScheduledCallback, nullptr);
+ * if (renderer->beginFrame(swapChain)) {
  *     renderer->render(view);
  *     renderer->endFrame();
  * }
@@ -57,14 +59,14 @@ namespace backend {
  * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
  * backends ignore the callback (which will never be called) and proceed normally.
  *
- * @remark The backend::FrameFinishedCallback is called on an arbitrary thread.
+ * @remark The SwapChain::FrameScheduledCallback is called on an arbitrary thread.
  *
  * Applications *must* call each PresentCallable they receive. Each PresentCallable represents a
  * frame that is waiting to be presented. If an application fails to call a PresentCallable, a
  * memory leak could occur. To "cancel" the presentation of a frame, pass false to the
  * PresentCallable, which will cancel the presentation of the frame and release associated memory.
  *
- * @see Renderer, SwapChain, Renderer.beginFrame
+ * @see Renderer, SwapChain::setFrameScheduledCallback
  */
 class UTILS_PUBLIC PresentCallable {
 public:
@@ -92,23 +94,9 @@ private:
 };
 
 /**
- * FrameScheduledCallback is a callback function that notifies an application when Filament has
- * completed processing a frame and that frame is ready to be scheduled for presentation.
- *
- * beginFrame() takes an optional FrameScheduledCallback. If the callback is provided, then that
- * frame will *not* automatically be scheduled for presentation. Instead, the application must call
- * the given PresentCallable.
- *
- * @remark The backend::FrameScheduledCallback is called on an arbitrary thread.
- *
- * @see PresentCallable, beginFrame()
+ * @deprecated, FrameFinishedCallback has been renamed to SwapChain::FrameScheduledCallback.
  */
-using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
-
-/**
- * @deprecated, renamed to FrameScheduledCallback
- */
-using FrameFinishedCallback UTILS_DEPRECATED = FrameScheduledCallback;
+using FrameFinishedCallback UTILS_DEPRECATED = void(*)(PresentCallable callable, void* user);
 
 } // namespace backend
 } // namespace filament

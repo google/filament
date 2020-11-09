@@ -24,6 +24,7 @@
 #include <utils/compiler.h>
 
 #include <backend/PresentCallable.h>
+#include <backend/DriverEnums.h>
 
 #include <math/vec4.h>
 
@@ -410,6 +411,46 @@ public:
      * However, when beginFrame() returns false, the caller has the choice to either skip the
      * frame and not call endFrame(), or proceed as though true was returned.
      *
+     * @param vsyncSteadyClockTimeNano The time in nanosecond of when the current frame started,
+     *                                 or 0 if unknown. This value should be the timestamp of
+     *                                 the last h/w vsync. It is expressed in the
+     *                                 std::chrono::steady_clock time base.
+     * @param swapChain A pointer to the SwapChain instance to use.
+     *
+     * @return
+     *      *false* the current frame should be skipped,
+     *      *true* the current frame must be drawn and endFrame() must be called.
+     *
+     * @remark
+     * When skipping a frame, the whole frame is canceled, and endFrame() must not be called.
+     *
+     * @note
+     * All calls to render() must happen *after* beginFrame().
+     *
+     * @see
+     * endFrame()
+     */
+    bool beginFrame(SwapChain* swapChain,
+            uint64_t vsyncSteadyClockTimeNano = 0u);
+
+    /**
+     * Set-up a frame for this Renderer.
+     *
+     * beginFrame() manages frame pacing, and returns whether or not a frame should be drawn. The
+     * goal of this is to skip frames when the GPU falls behind in order to keep the frame
+     * latency low.
+     *
+     * If a given frame takes too much time in the GPU, the CPU will get ahead of the GPU. The
+     * display will draw the same frame twice producing a stutter. At this point, the CPU is
+     * ahead of the GPU and depending on how many frames are buffered, latency increases.
+     *
+     * beginFrame() attempts to detect this situation and returns false in that case, indicating
+     * to the caller to skip the current frame.
+     *
+     * When beginFrame() returns true, it is mandatory to render the frame and call endFrame().
+     * However, when beginFrame() returns false, the caller has the choice to either skip the
+     * frame and not call endFrame(), or proceed as though true was returned.
+     *
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
      * If a backend::FrameScheduledCallback is provided, however, the application bares the
      * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
@@ -435,12 +476,15 @@ public:
      * @note
      * All calls to render() must happen *after* beginFrame().
      *
+     * @deprecated, use SwapChain::setFrameScheduledCallback to set the callback instead.
+     *
      * @see
-     * endFrame(), backend::PresentCallable, backend::FrameSinishedCallback
+     * endFrame(), backend::PresentCallable, backend::FrameFinishedCallback
      */
+    UTILS_DEPRECATED
     bool beginFrame(SwapChain* swapChain,
-            uint64_t vsyncSteadyClockTimeNano = 0u,
-            backend::FrameScheduledCallback callback = nullptr, void* user = nullptr);
+            uint64_t vsyncSteadyClockTimeNano,
+            backend::FrameScheduledCallback callback, void* user = nullptr);
 
     /**
      * Finishes the current frame and schedules it for display.

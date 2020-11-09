@@ -22,6 +22,8 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
+#include <backend/PresentCallable.h>
+
 #include <math/vec4.h>
 
 #include <array>    // FIXME: STL headers are not allowed in public headers
@@ -883,6 +885,11 @@ struct PolygonOffset {
     float slope = 0;        // factor in GL-speak
     float constant = 0;     // units in GL-speak
 };
+
+
+using FrameScheduledCallback = void(*)(backend::PresentCallable callable, void* user);
+
+using FrameCompletedCallback = void(*)(void* user);
 
 
 } // namespace backend

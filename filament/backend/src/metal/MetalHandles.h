@@ -66,6 +66,7 @@ public:
     void releaseDrawable();
 
     void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
+    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
     // FrameScheduledCallback.
@@ -86,6 +87,7 @@ private:
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
     void scheduleFrameScheduledCallback();
+    void scheduleFrameCompletedCallback();
 
     MetalContext& context;
     id<CAMetalDrawable> drawable = nil;
@@ -105,6 +107,9 @@ private:
     // the responsibility of presenting the frame by calling the PresentCallable object.
     FrameScheduledCallback frameScheduledCallback = nullptr;
     void* frameScheduledUserData = nullptr;
+
+    FrameCompletedCallback frameCompletedCallback = nullptr;
+    void* frameCompletedUserData = nullptr;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {

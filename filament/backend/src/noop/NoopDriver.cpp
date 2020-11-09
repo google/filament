@@ -48,8 +48,17 @@ void NoopDriver::terminate() {
 void NoopDriver::tick(int) {
 }
 
-void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameScheduledCallback, void*) {
+void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+}
+
+void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        backend::FrameScheduledCallback callback, void* user) {
+
+}
+
+void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
+        backend::FrameCompletedCallback callback, void* user) {
+
 }
 
 void NoopDriver::setPresentationTime(int64_t monotonic_clock_ns) {

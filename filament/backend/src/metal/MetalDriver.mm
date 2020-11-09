@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "backend/PresentCallable.h"
 #include "private/backend/CommandStream.h"
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
@@ -101,9 +102,19 @@ void MetalDriver::debugCommand(const char *methodName) {
 void MetalDriver::tick(int) {
 }
 
-void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
+void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+}
+
+void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
         backend::FrameScheduledCallback callback, void* user) {
-    mContext->currentDrawSwapChain->setFrameScheduledCallback(callback, user);
+    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    swapChain->setFrameScheduledCallback(callback, user);
+}
+
+void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
+        backend::FrameCompletedCallback callback, void* user) {
+    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    swapChain->setFrameCompletedCallback(callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> fn) noexcept {
