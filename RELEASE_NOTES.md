@@ -5,6 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.8
+
+- Fix a few Fence-related bugs
+- gltfio: add createInstance() to AssetLoader.
+- gltfio: fix ASAN issue when consuming invalid animation.
+- gltfio: do not segfault on invalid primitives.
+- gltfio: add safety checks to getAnimator.
+- gltfio: fix segfault when consuming invalid file.
+- Vulkan: various internal refactoring and improvements
+- mathio: add ostream operator for quaternions.
+- Fix color grading not applied when dithering is off.
+
 ## v1.9.7
 
 - Vulkan: improvements to the ReadPixels implementation.

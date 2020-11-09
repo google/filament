@@ -129,7 +129,7 @@ TEST_F(BackendTest, ReadPixels) {
             const size_t width = readRect.width, height = readRect.height;
             LinearImage image(width, height, 4);
             if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                image = toLinear<uint8_t>(width, height, width * 4, (uint8_t*) pixelData);
+                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*) pixelData);
             }
             if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
                 memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));

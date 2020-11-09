@@ -568,6 +568,7 @@ export class gltfio$AssetLoader {
     public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public destroyAsset(asset: gltfio$FilamentAsset): void;
+    public createInstance(asset: gltfio$FilamentAsset): (gltfio$FilamentInstance | null);
     public delete(): void;
 }
 

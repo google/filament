@@ -410,7 +410,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::Unindent();
         }
 
-        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
+        if (mAnimator && mAnimator->getAnimationCount() > 0 &&
+                ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);

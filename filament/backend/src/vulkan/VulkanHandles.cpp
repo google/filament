@@ -77,7 +77,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variant = (" << utils::io::hex
-                << builder.getVariant() << utils::io::dec << "), "
+                << (int) builder.getVariant() << utils::io::dec << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
 #endif
@@ -374,14 +374,18 @@ VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
     return mMsaaDepthAttachment;
 }
 
-int VulkanRenderTarget::getColorTargetCount() const {
+int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
     int count = 0;
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
-        if (mColor[i].format != VK_FORMAT_UNDEFINED) {
-            ++count;
+        if (mColor[i].format == VK_FORMAT_UNDEFINED) {
+            continue;
+        }
+        // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
+        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+            count++;
         }
     }
     return count;
@@ -769,6 +773,7 @@ VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags
 }
 
 // TODO: replace the last 4 args with VkImageSubresourceRange
+// TODO: replace this function with a flexible thin wrapper over image barrier creation
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
         VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
         uint32_t layerCount, uint32_t levelCount, VkImageAspectFlags aspect) {
@@ -812,6 +817,7 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
 
         // We support PRESENT as a target layout to allow blitting from the swap chain.
         // See also makeSwapChainPresentable().
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = 0;

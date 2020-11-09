@@ -154,19 +154,19 @@ public:
 
     /**
      * Consumes the contents of a glTF 2.0 file and produces a primary asset with one or more
-     * instances.
+     * instances. The primary asset has ownership over the instances.
      *
      * The returned instances share their textures, material instances, and vertex buffers with the
-     * primary asset. However each instance has its own unique set of entities, transform components,
-     * and renderable components. Instances are automatically freed when the primary asset is freed.
+     * primary asset. However each instance has its own unique set of entities, transform
+     * components, and renderable components. Instances are freed when the primary asset is freed.
      *
      * Light components are not instanced, they belong only to the primary asset.
      *
      * Clients must use ResourceLoader to load resources on the primary asset.
      *
-     * The entity accessors and renderable stack in the returned FilamentAsset represent the union
-     * of all entities across all instances. Use the individual FilamentInstance objects to access
-     * each partition of entities.  Similarly, the Animator in the primary asset controls all
+     * The entity accessor and renderable stack API in the primary asset can be used to control the
+     * union of all instances. The individual FilamentInstance objects can be used to access each
+     * instance's partition of entities.  Similarly, the Animator in the primary asset controls all
      * instances. To animate instances individually, use FilamentInstance::getAnimator().
      *
      * @param bytes the contents of a glTF 2.0 file (JSON or GLB)
@@ -177,6 +177,24 @@ public:
      */
     FilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
             FilamentInstance** instances, size_t numInstances);
+
+    /**
+     * Adds a new instance to an instanced asset.
+     *
+     * Use this with caution. It is more efficient to pre-allocate a max number of instances, and
+     * gradually add them to the scene as needed. Instances can also be "recycled" by removing and
+     * re-adding them to the scene.
+     *
+     * NOTE: destroyInstance() does not exist because gltfio favors flat arrays for storage of
+     * entity lists and instance lists, which would be slow to shift. We also wish to discourage
+     * create/destroy churn, as noted above.
+     *
+     * This cannot be called after FilamentAsset::releaseSourceData().
+     * This cannot be called on a non-instanced asset.
+     * Animation is not supported in new instances.
+     * See also AssetLoader::createInstancedAsset().
+     */
+    FilamentInstance* createInstance(FilamentAsset* primary);
 
     /**
      * Takes a pointer to an opaque pipeline object and returns a bundle of Filament objects.

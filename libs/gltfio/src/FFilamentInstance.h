@@ -18,7 +18,6 @@
 #define GLTFIO_FFILAMENTINSTANCE_H
 
 #include <gltfio/FilamentInstance.h>
-#include <gltfio/Animator.h>
 
 #include <utils/Entity.h>
 
@@ -36,6 +35,7 @@ struct cgltf_node;
 namespace gltfio {
 
 struct FFilamentAsset;
+class Animator;
 
 struct Skin {
     std::string name;
@@ -54,13 +54,7 @@ struct FFilamentInstance : public FilamentInstance {
     FFilamentAsset* owner;
     SkinVector skins;
     NodeMap nodeMap;
-
-    Animator* getAnimator() noexcept {
-        if (!animator) {
-            animator = new Animator(owner, this);
-        }
-        return animator;
-    }
+    Animator* getAnimator() noexcept;
 };
 
 FILAMENT_UPCAST(FilamentInstance)

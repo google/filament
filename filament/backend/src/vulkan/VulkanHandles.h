@@ -58,9 +58,10 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VulkanAttachment getMsaaColor(int target) const;
     VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
-    int getColorTargetCount() const;
+    int getColorTargetCount(const VulkanRenderPass& pass) const;
     bool invalidate();
     uint8_t getSamples() const { return mSamples; }
+    bool hasDepth() const { return mDepth.format != VK_FORMAT_UNDEFINED; }
 private:
     VulkanAttachment mColor[MRT::TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};

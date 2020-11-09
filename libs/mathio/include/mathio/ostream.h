@@ -20,6 +20,8 @@
 namespace filament {
 namespace math {
 
+namespace details { template<typename T> class TQuaternion; }
+
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const details::TVec2<T>& v) noexcept;
 
@@ -37,6 +39,9 @@ std::ostream& operator<<(std::ostream& out, const details::TMat33<T>& v) noexcep
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const details::TMat44<T>& v) noexcept;
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const details::TQuaternion<T>& v) noexcept;
 
 }  // namespace math
 }  // namespace filament

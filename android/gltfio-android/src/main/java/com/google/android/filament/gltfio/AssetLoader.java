@@ -153,6 +153,32 @@ public class AssetLoader {
     }
 
     /**
+     * Adds a new instance to an instanced asset.
+     *
+     * Use this with caution. It is more efficient to pre-allocate a max number of instances, and
+     * gradually add them to the scene as needed. Instances can also be "recycled" by removing and
+     * re-adding them to the scene.
+     *
+     * NOTE: destroyInstance() does not exist because gltfio favors flat arrays for storage of
+     * entity lists and instance lists, which would be slow to shift. We also wish to discourage
+     * create/destroy churn, as noted above.
+     *
+     * This cannot be called after FilamentAsset#releaseSourceData().
+     * This cannot be called on a non-instanced asset.
+     * Animation is not supported in new instances.
+     * See also AssetLoader#createInstancedAsset().
+     */
+    @Nullable
+    @SuppressWarnings("unused")
+    public FilamentInstance createInstance(@NonNull FilamentAsset asset) {
+        long nativeInstance = nCreateInstance(mNativeObject, asset.getNativeObject());
+        if (nativeInstance == 0) {
+            return null;
+        }
+        return new FilamentInstance(nativeInstance);
+    }
+
+    /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
      */
     @SuppressWarnings("unused")
@@ -175,6 +201,7 @@ public class AssetLoader {
     private static native long nCreateAssetFromJson(long nativeLoader, Buffer buffer, int remaining);
     private static native long nCreateInstancedAsset(long nativeLoader, Buffer buffer, int remaining,
             long[] nativeInstances);
+    private static native long nCreateInstance(long nativeLoader, long nativeAsset);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
 }

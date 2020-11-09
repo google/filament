@@ -197,7 +197,11 @@ public class FilamentAsset {
         if (mAnimator != null) {
             return mAnimator;
         }
-        mAnimator = new Animator(nGetAnimator(getNativeObject()));
+        long nativeAnimator = nGetAnimator(getNativeObject());
+        if (nativeAnimator == 0) {
+            throw new IllegalStateException("Unable to create animator");
+        }
+        mAnimator = new Animator(nativeAnimator);
         return mAnimator;
     }
 
@@ -215,6 +219,7 @@ public class FilamentAsset {
      *
      * This should only be called after ResourceLoader#loadResources().
      * If using Animator, this should be called after getAnimator().
+     * If this is an instanced asset, this prevents creation of new instances.
      */
     public void releaseSourceData() {
         nReleaseSourceData(mNativeObject);

@@ -34,7 +34,12 @@ size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
 }
 
 void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {
-    assert(!mFinalized);
+
+    // Permit adding an Entity-Material edge to a finalized graph as long as the material is already
+    // known. Since we already encountered this material instance, we already know what textures it
+    // is associated with.
+    assert(!mFinalized || mMaterialToEntity.find(mi) != mMaterialToEntity.end());
+
     mMaterialToEntity[mi].insert(entity);
     mEntityToMaterial[entity].materials.insert(mi);
 }
@@ -57,10 +62,40 @@ void DependencyGraph::finalize() {
     mFinalized = true;
 }
 
+void DependencyGraph::refinalize() {
+    assert(mFinalized);
+    for (auto pair : mMaterialToEntity) {
+        auto material = pair.first;
+        if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
+            markAsReady(material);
+        } else {
+            checkReadiness(material);
+        }
+    }
+}
+
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
     assert(mFinalized);
     mTextureToMaterial[texture].insert(material);
     mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
+}
+
+void DependencyGraph::checkReadiness(Material* material) {
+    auto& status = mMaterialToTexture.at(material);
+
+    // Check this material's texture parameters, there are 5 in the worst case.
+    bool materialIsReady = true;
+    for (auto pair : status.params) {
+        if (!pair.second->ready) {
+            materialIsReady = false;
+            break;
+        }
+    }
+
+    // If all of its textures are ready, then the material has become ready.
+    if (materialIsReady) {
+        markAsReady(material);
+    }
 }
 
 void DependencyGraph::markAsReady(Texture* texture) {
@@ -71,21 +106,7 @@ void DependencyGraph::markAsReady(Texture* texture) {
     // This is O(n2) but the inner loop is always small.
     auto& materials = mTextureToMaterial.at(texture);
     for (auto material : materials) {
-        auto& status = mMaterialToTexture.at(material);
-
-        // Check this material's texture parameters, there are 5 in the worst case.
-        bool materialIsReady = true;
-        for (auto pair : status.params) {
-            if (!pair.second->ready) {
-                materialIsReady = false;
-                break;
-            }
-        }
-
-        // If all of its textures are ready, then the material has become ready.
-        if (materialIsReady) {
-            markAsReady(material);
-        }
+        checkReadiness(material);
     }
 }
 
@@ -93,7 +114,10 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
     auto& entities = mMaterialToEntity.at(material);
     for (auto entity : entities) {
         auto& status = mEntityToMaterial.at(entity);
-        assert(status.numReadyMaterials < status.materials.size());
+        assert(status.numReadyMaterials <= status.materials.size());
+        if (status.numReadyMaterials == status.materials.size()) {
+            continue;
+        }
         if (++status.numReadyMaterials == status.materials.size()) {
             mReadyRenderables.push(entity);
         }
