@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+
 ## v1.9.9
 
 ## v1.9.8
