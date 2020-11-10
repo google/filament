@@ -866,7 +866,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     assert(swapChain);
 
     SYSTRACE_CALL();
@@ -928,7 +928,10 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = getEngine();
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId, callback, user);
+        if (callback) {
+            driver.setFrameScheduledCallback(swapChain->getHwHandle(), callback, user);
+        }
+        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
@@ -1111,8 +1114,12 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
+bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, nullptr, nullptr);
+}
+
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
 }
 
