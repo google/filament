@@ -104,6 +104,31 @@ public class SwapChain {
         return mSurface;
     }
 
+    /**
+     * FrameCompletedCallback is a callback function that notifies an application when a frame's
+     * contents have completed rendering on the GPU.
+     *
+     * <p>
+     * Use setFrameCompletedCallback to set a callback on an individual SwapChain. Each time a frame
+     * completes GPU rendering, the callback will be called.
+     * </p>
+     *
+     * <p>
+     * The FrameCompletedCallback is guaranteed to be called on the main Filament thread.
+     * </p>
+     *
+     * <p>
+     * Warning: Only Filament's Metal backend supports frame callbacks. Other backends ignore the
+     * callback (which will never be called) and proceed normally.
+     * </p>
+     *
+     * @param handler     A {@link java.util.concurrent.Executor Executor}.
+     * @param callback    The Runnable callback to invoke.
+     */
+    public void setFrameCompletedCallback(@NonNull Object handler, @NonNull Runnable callback) {
+        nSetFrameCompletedCallback(getNativeObject(), handler, callback);
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed SwapChain");
@@ -114,4 +139,6 @@ public class SwapChain {
     void clearNativeObject() {
         mNativeObject = 0;
     }
+
+    private static native void nSetFrameCompletedCallback(long nativeSwapChain, Object handler, Runnable callback);
 }
