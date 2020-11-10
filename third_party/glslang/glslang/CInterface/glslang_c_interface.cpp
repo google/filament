@@ -160,9 +160,9 @@ private:
     void* context;
 };
 
-int glslang_initialize_process() { return static_cast<int>(glslang::InitializeProcess()); }
+GLSLANG_EXPORT int glslang_initialize_process() { return static_cast<int>(glslang::InitializeProcess()); }
 
-void glslang_finalize_process() { glslang::FinalizeProcess(); }
+GLSLANG_EXPORT void glslang_finalize_process() { glslang::FinalizeProcess(); }
 
 static EShLanguage c_shader_stage(glslang_stage_t stage)
 {
@@ -320,7 +320,7 @@ static EProfile c_shader_profile(glslang_profile_t profile)
     return EProfile();
 }
 
-glslang_shader_t* glslang_shader_create(const glslang_input_t* input)
+GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* input)
 {
     if (!input || !input->code) {
         printf("Error creating shader: null input(%p)/input->code\n", input);
@@ -344,12 +344,12 @@ glslang_shader_t* glslang_shader_create(const glslang_input_t* input)
     return shader;
 }
 
-const char* glslang_shader_get_preprocessed_code(glslang_shader_t* shader)
+GLSLANG_EXPORT const char* glslang_shader_get_preprocessed_code(glslang_shader_t* shader)
 {
     return shader->preprocessedGLSL.c_str();
 }
 
-int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* input)
+GLSLANG_EXPORT int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* input)
 {
     DirStackFileIncluder Includer;
     /* TODO: use custom callbacks if they are available in 'i->callbacks' */
@@ -365,7 +365,7 @@ int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* i
     );
 }
 
-int glslang_shader_parse(glslang_shader_t* shader, const glslang_input_t* input)
+GLSLANG_EXPORT int glslang_shader_parse(glslang_shader_t* shader, const glslang_input_t* input)
 {
     const char* preprocessedCStr = shader->preprocessedGLSL.c_str();
     shader->shader->setStrings(&preprocessedCStr, 1);
@@ -378,11 +378,11 @@ int glslang_shader_parse(glslang_shader_t* shader, const glslang_input_t* input)
     );
 }
 
-const char* glslang_shader_get_info_log(glslang_shader_t* shader) { return shader->shader->getInfoLog(); }
+GLSLANG_EXPORT const char* glslang_shader_get_info_log(glslang_shader_t* shader) { return shader->shader->getInfoLog(); }
 
-const char* glslang_shader_get_info_debug_log(glslang_shader_t* shader) { return shader->shader->getInfoDebugLog(); }
+GLSLANG_EXPORT const char* glslang_shader_get_info_debug_log(glslang_shader_t* shader) { return shader->shader->getInfoDebugLog(); }
 
-void glslang_shader_delete(glslang_shader_t* shader)
+GLSLANG_EXPORT void glslang_shader_delete(glslang_shader_t* shader)
 {
     if (!shader)
         return;
@@ -391,14 +391,14 @@ void glslang_shader_delete(glslang_shader_t* shader)
     delete (shader);
 }
 
-glslang_program_t* glslang_program_create()
+GLSLANG_EXPORT glslang_program_t* glslang_program_create()
 {
     glslang_program_t* p = new glslang_program_t();
     p->program = new glslang::TProgram();
     return p;
 }
 
-void glslang_program_delete(glslang_program_t* program)
+GLSLANG_EXPORT void glslang_program_delete(glslang_program_t* program)
 {
     if (!program)
         return;
@@ -407,22 +407,22 @@ void glslang_program_delete(glslang_program_t* program)
     delete (program);
 }
 
-void glslang_program_add_shader(glslang_program_t* program, glslang_shader_t* shader)
+GLSLANG_EXPORT void glslang_program_add_shader(glslang_program_t* program, glslang_shader_t* shader)
 {
     program->program->addShader(shader->shader);
 }
 
-int glslang_program_link(glslang_program_t* program, int messages)
+GLSLANG_EXPORT int glslang_program_link(glslang_program_t* program, int messages)
 {
     return (int)program->program->link((EShMessages)messages);
 }
 
-const char* glslang_program_get_info_log(glslang_program_t* program)
+GLSLANG_EXPORT const char* glslang_program_get_info_log(glslang_program_t* program)
 {
     return program->program->getInfoLog();
 }
 
-const char* glslang_program_get_info_debug_log(glslang_program_t* program)
+GLSLANG_EXPORT const char* glslang_program_get_info_debug_log(glslang_program_t* program)
 {
     return program->program->getInfoDebugLog();
 }

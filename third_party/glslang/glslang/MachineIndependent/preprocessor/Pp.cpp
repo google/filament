@@ -422,10 +422,10 @@ int TPpContext::eval(int token, int precedence, bool shortCircuit, int& res, boo
             if (! parseContext.isReadingHLSL() && isMacroInput()) {
                 if (parseContext.relaxedErrors())
                     parseContext.ppWarn(ppToken->loc, "nonportable when expanded from macros for preprocessor expression",
-                                                      "defined", "");
+                        "defined", "");
                 else
                     parseContext.ppError(ppToken->loc, "cannot use in preprocessor expression when expanded from macros",
-                                                       "defined", "");
+                        "defined", "");
             }
             bool needclose = 0;
             token = scanToken(ppToken);
@@ -455,6 +455,7 @@ int TPpContext::eval(int token, int precedence, bool shortCircuit, int& res, boo
                 token = scanToken(ppToken);
             }
         } else {
+            token = tokenPaste(token, *ppToken);
             token = evalToToken(token, shortCircuit, res, err, ppToken);
             return eval(token, precedence, shortCircuit, res, err, ppToken);
         }
@@ -1184,7 +1185,9 @@ MacroExpandResult TPpContext::MacroExpand(TPpToken* ppToken, bool expandUndef, b
     int macroAtom = atomStrings.getAtom(ppToken->name);
     switch (macroAtom) {
     case PpAtomLineMacro:
-        ppToken->ival = parseContext.getCurrentLoc().line;
+        // Arguments which are macro have been replaced in the first stage.
+        if (ppToken->ival == 0)
+            ppToken->ival = parseContext.getCurrentLoc().line;
         snprintf(ppToken->name, sizeof(ppToken->name), "%d", ppToken->ival);
         UngetToken(PpAtomConstInt, ppToken);
         return MacroExpandStarted;
@@ -1285,6 +1288,11 @@ MacroExpandResult TPpContext::MacroExpand(TPpToken* ppToken, bool expandUndef, b
                     nestStack.push_back('}');
                 else if (nestStack.size() > 0 && token == nestStack.back())
                     nestStack.pop_back();
+
+                //Macro replacement list is expanded in the last stage.
+                if (atomStrings.getAtom(ppToken->name) == PpAtomLineMacro)
+                    ppToken->ival = parseContext.getCurrentLoc().line;
+
                 in->args[arg]->putToken(token, ppToken);
                 tokenRecorded = true;
             }

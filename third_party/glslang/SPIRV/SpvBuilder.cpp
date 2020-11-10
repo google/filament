@@ -1183,6 +1183,28 @@ void Builder::addExecutionMode(Function* entryPoint, ExecutionMode mode, int val
     executionModes.push_back(std::unique_ptr<Instruction>(instr));
 }
 
+void Builder::addExecutionMode(Function* entryPoint, ExecutionMode mode, const std::vector<unsigned>& literals)
+{
+    Instruction* instr = new Instruction(OpExecutionMode);
+    instr->addIdOperand(entryPoint->getId());
+    instr->addImmediateOperand(mode);
+    for (auto literal : literals)
+        instr->addImmediateOperand(literal);
+
+    executionModes.push_back(std::unique_ptr<Instruction>(instr));
+}
+
+void Builder::addExecutionModeId(Function* entryPoint, ExecutionMode mode, const std::vector<Id>& operandIds)
+{
+    Instruction* instr = new Instruction(OpExecutionModeId);
+    instr->addIdOperand(entryPoint->getId());
+    instr->addImmediateOperand(mode);
+    for (auto operandId : operandIds)
+        instr->addIdOperand(operandId);
+
+    executionModes.push_back(std::unique_ptr<Instruction>(instr));
+}
+
 void Builder::addName(Id id, const char* string)
 {
     Instruction* name = new Instruction(OpName);
@@ -1221,10 +1243,38 @@ void Builder::addDecoration(Id id, Decoration decoration, const char* s)
     if (decoration == spv::DecorationMax)
         return;
 
-    Instruction* dec = new Instruction(OpDecorateStringGOOGLE);
+    Instruction* dec = new Instruction(OpDecorateString);
     dec->addIdOperand(id);
     dec->addImmediateOperand(decoration);
     dec->addStringOperand(s);
+
+    decorations.push_back(std::unique_ptr<Instruction>(dec));
+}
+
+void Builder::addDecoration(Id id, Decoration decoration, const std::vector<unsigned>& literals)
+{
+    if (decoration == spv::DecorationMax)
+        return;
+
+    Instruction* dec = new Instruction(OpDecorate);
+    dec->addIdOperand(id);
+    dec->addImmediateOperand(decoration);
+    for (auto literal : literals)
+        dec->addImmediateOperand(literal);
+
+    decorations.push_back(std::unique_ptr<Instruction>(dec));
+}
+
+void Builder::addDecoration(Id id, Decoration decoration, const std::vector<const char*>& strings)
+{
+    if (decoration == spv::DecorationMax)
+        return;
+
+    Instruction* dec = new Instruction(OpDecorateString);
+    dec->addIdOperand(id);
+    dec->addImmediateOperand(decoration);
+    for (auto string : strings)
+        dec->addStringOperand(string);
 
     decorations.push_back(std::unique_ptr<Instruction>(dec));
 }
@@ -1238,6 +1288,21 @@ void Builder::addDecorationId(Id id, Decoration decoration, Id idDecoration)
     dec->addIdOperand(id);
     dec->addImmediateOperand(decoration);
     dec->addIdOperand(idDecoration);
+
+    decorations.push_back(std::unique_ptr<Instruction>(dec));
+}
+
+void Builder::addDecorationId(Id id, Decoration decoration, const std::vector<Id>& operandIds)
+{
+    if(decoration == spv::DecorationMax)
+        return;
+
+    Instruction* dec = new Instruction(OpDecorateId);
+    dec->addIdOperand(id);
+    dec->addImmediateOperand(decoration);
+
+    for (auto operandId : operandIds)
+        dec->addIdOperand(operandId);
 
     decorations.push_back(std::unique_ptr<Instruction>(dec));
 }
@@ -1267,6 +1332,36 @@ void Builder::addMemberDecoration(Id id, unsigned int member, Decoration decorat
     dec->addImmediateOperand(member);
     dec->addImmediateOperand(decoration);
     dec->addStringOperand(s);
+
+    decorations.push_back(std::unique_ptr<Instruction>(dec));
+}
+
+void Builder::addMemberDecoration(Id id, unsigned int member, Decoration decoration, const std::vector<unsigned>& literals)
+{
+    if (decoration == spv::DecorationMax)
+        return;
+
+    Instruction* dec = new Instruction(OpMemberDecorate);
+    dec->addIdOperand(id);
+    dec->addImmediateOperand(member);
+    dec->addImmediateOperand(decoration);
+    for (auto literal : literals)
+        dec->addImmediateOperand(literal);
+
+    decorations.push_back(std::unique_ptr<Instruction>(dec));
+}
+
+void Builder::addMemberDecoration(Id id, unsigned int member, Decoration decoration, const std::vector<const char*>& strings)
+{
+    if (decoration == spv::DecorationMax)
+        return;
+
+    Instruction* dec = new Instruction(OpMemberDecorateString);
+    dec->addIdOperand(id);
+    dec->addImmediateOperand(member);
+    dec->addImmediateOperand(decoration);
+    for (auto string : strings)
+        dec->addStringOperand(string);
 
     decorations.push_back(std::unique_ptr<Instruction>(dec));
 }
@@ -1356,6 +1451,13 @@ void Builder::makeDiscard()
 {
     buildPoint->addInstruction(std::unique_ptr<Instruction>(new Instruction(OpKill)));
     createAndSetNoPredecessorBlock("post-discard");
+}
+
+// Comments in header
+void Builder::makeTerminateInvocation()
+{
+    buildPoint->addInstruction(std::unique_ptr<Instruction>(new Instruction(OpTerminateInvocation)));
+    createAndSetNoPredecessorBlock("post-terminate-invocation");
 }
 
 // Comments in header
@@ -2666,12 +2768,14 @@ void Builder::accessChainPushSwizzle(std::vector<unsigned>& swizzle, Id preSwizz
 }
 
 // Comments in header
-void Builder::accessChainStore(Id rvalue, spv::MemoryAccessMask memoryAccess, spv::Scope scope, unsigned int alignment)
+void Builder::accessChainStore(Id rvalue, Decoration nonUniform, spv::MemoryAccessMask memoryAccess, spv::Scope scope, unsigned int alignment)
 {
     assert(accessChain.isRValue == false);
 
     transferAccessChainSwizzle(true);
     Id base = collapseAccessChain();
+    addDecoration(base, nonUniform);
+
     Id source = rvalue;
 
     // dynamic component should be gone

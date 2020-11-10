@@ -80,7 +80,7 @@ TEST_P(RemapTest, FromFile)
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ToSpirv, RemapTest,
     ::testing::ValuesIn(std::vector<RemapTestArgs>{
             // GLSL remapper tests

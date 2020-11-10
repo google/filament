@@ -1,4 +1,6 @@
-# Copyright (C) 2018 Google, Inc.
+#!/bin/bash
+
+# Copyright (C) 2020 Google, Inc.
 #
 # All rights reserved.
 #
@@ -31,7 +33,17 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# These are variables that are overridable by projects that include glslang.
+set -e # Fail on any error.
 
-# The path to glslang dependencies.
-glslang_spirv_tools_dir = "//External/spirv-tools"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$( cd "${SCRIPT_DIR}/../.." >/dev/null 2>&1 && pwd )"
+
+docker run --rm -i \
+  --volume "${ROOT_DIR}:${ROOT_DIR}" \
+  --workdir "${ROOT_DIR}" \
+  --env ROOT_DIR="${ROOT_DIR}" \
+  --env SCRIPT_DIR="${SCRIPT_DIR}" \
+  --entrypoint "${SCRIPT_DIR}/build-docker.sh" \
+  "gcr.io/shaderc-build/radial-build:latest"
+
+sudo chown -R "$(id -u):$(id -g)" "${ROOT_DIR}"

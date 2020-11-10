@@ -6,9 +6,9 @@ load(
 
 http_archive(
     name = "com_google_googletest",
-    sha256 = "ef9e2e12e7bf115ee48b427ae171fc869eeaf1b532c0fcfd982f6a353d2471b4",
-    strip_prefix = "googletest-37ae1fc5e6be26f367d76c078beabd7024fed53a",
-    urls = ["https://github.com/google/googletest/archive/37ae1fc5e6be26f367d76c078beabd7024fed53a.zip"],  # 2018-07-16
+    sha256 = "94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91",
+    strip_prefix = "googletest-release-1.10.0",
+    urls = ["https://github.com/google/googletest/archive/release-1.10.0.zip"],  # 3-Oct-2019
 )
 
 http_archive(

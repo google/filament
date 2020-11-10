@@ -1,4 +1,4 @@
-# Copyright (C) 2018 Google, Inc.
+# Copyright (C) 2020 The Khronos Group Inc.
 #
 # All rights reserved.
 #
@@ -14,7 +14,7 @@
 #    disclaimer in the documentation and/or other materials provided
 #    with the distribution.
 #
-#    Neither the name of Google Inc. nor the names of its
+#    Neither the name of The Khronos Group Inc. nor the names of its
 #    contributors may be used to endorse or promote products derived
 #    from this software without specific prior written permission.
 #
@@ -31,7 +31,12 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# These are variables that are overridable by projects that include glslang.
-
-# The path to glslang dependencies.
-glslang_spirv_tools_dir = "//External/spirv-tools"
+solutions = [
+  { "name"        : ".",
+    "url"         : "https://github.com/KhronosGroup/glslang",
+    "deps_file"   : "DEPS",
+    "managed"     : False,
+    "custom_deps" : {
+    },
+  },
+]

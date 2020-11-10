@@ -1,4 +1,6 @@
-# Copyright (C) 2018 Google, Inc.
+#!/bin/bash
+
+# Copyright (C) 2020 Google, Inc.
 #
 # All rights reserved.
 #
@@ -31,7 +33,23 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# These are variables that are overridable by projects that include glslang.
+set -e # Fail on any error.
+set -x # Display commands being run.
 
-# The path to glslang dependencies.
-glslang_spirv_tools_dir = "//External/spirv-tools"
+echo "Fetching external projects..."
+./update_glslang_sources.py
+
+echo "Fetching depot_tools..."
+mkdir -p /tmp/depot_tools
+curl https://storage.googleapis.com/chrome-infra/depot_tools.zip -o /tmp/depot_tools.zip
+unzip /tmp/depot_tools.zip -d /tmp/depot_tools
+rm /tmp/depot_tools.zip
+export PATH="/tmp/depot_tools:$PATH"
+
+echo "Syncing client..."
+gclient sync --gclientfile=standalone.gclient
+gn gen out/Default
+
+echo "Building..."
+cd out/Default
+ninja
