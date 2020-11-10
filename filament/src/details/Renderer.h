@@ -49,6 +49,7 @@ class Driver;
 class View;
 
 class FEngine;
+class FRenderTarget;
 class FView;
 class ShadowMap;
 
@@ -161,6 +162,8 @@ private:
     backend::TextureFormat getHdrFormat(const View& view, bool translucent) const noexcept;
     backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
+    void initializeClearFlags();
+
     using clock = std::chrono::steady_clock;
     using Epoch = clock::time_point;
     using duration = clock::duration;
@@ -189,6 +192,7 @@ private:
     ClearOptions mClearOptions;
     backend::TargetBufferFlags mDiscardedFlags{};
     backend::TargetBufferFlags mClearFlags{};
+    FRenderTarget* mPreviousRenderTarget = nullptr;
     std::function<void()> mBeginFrameInternal;
 
     // per-frame arena for this Renderer
