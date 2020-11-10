@@ -212,13 +212,13 @@ public:
      * Use SwapChain::setFrameCompletedCallback to set a callback on an individual SwapChain. Each
      * time a frame completes GPU rendering, the callback will be called with optional user data.
      *
+     * The FrameCompletedCallback is guaranteed to be called on the main Filament thread.
+     *
      * @param callback    A callback, or nullptr to unset.
      * @param user        An optional pointer to user data passed to the callback function.
      *
      * @remark Only Filament's Metal backend supports frame callbacks. Other backends ignore the
      * callback (which will never be called) and proceed normally.
-     *
-     * @remark The SwapChain::FrameCompletedCallback is called on an arbitrary thread.
      */
     void setFrameCompletedCallback(FrameCompletedCallback callback, void* user = nullptr);
 };

@@ -245,9 +245,23 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     backend::FrameCompletedCallback callback = frameCompletedCallback;
     void* userData = frameCompletedUserData;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            callback(userData);
-        });
+        struct CallbackData {
+            void* userData;
+            backend::FrameCompletedCallback callback;
+        };
+        CallbackData* data = new CallbackData();
+        data->userData = userData;
+        data->callback = callback;
+
+        // Instantiate a BufferDescriptor with a callback for the sole purpose of passing it to
+        // scheduleDestroy. This forces the BufferDescriptor callback (and thus the
+        // FrameCompletedCallback) to be called on the user thread.
+        BufferDescriptor b(nullptr, 0u, [](void* buffer, size_t size, void* user) {
+            CallbackData* data = (CallbackData*) user;
+            data->callback(data->userData);
+            free(data);
+        }, data);
+        context.driver->scheduleDestroy(std::move(b));
     }];
 }
 

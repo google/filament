@@ -54,6 +54,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
         mContext(new MetalContext) {
+    mContext->driver = this;
     mContext->device = MTLCreateSystemDefaultDevice();
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";

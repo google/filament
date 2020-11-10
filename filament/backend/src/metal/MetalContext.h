@@ -28,6 +28,7 @@ namespace filament {
 namespace backend {
 namespace metal {
 
+class MetalDriver;
 class MetalBlitter;
 class MetalBufferPool;
 class MetalRenderTarget;
@@ -39,6 +40,7 @@ struct MetalSamplerGroup;
 struct MetalVertexBuffer;
 
 struct MetalContext {
+    MetalDriver* driver;
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
