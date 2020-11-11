@@ -13,6 +13,10 @@
 // limitations under the License.
 
 #include "source/fuzz/transformation_outline_function.h"
+
+#include "gtest/gtest.h"
+#include "source/fuzz/counter_overflow_id_source.h"
+#include "source/fuzz/fuzzer_util.h"
 #include "test/fuzz/fuzz_test_util.h"
 
 namespace spvtools {
@@ -41,16 +45,19 @@ TEST(TransformationOutlineFunctionTest, TrivialOutline) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(5, 5, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -102,14 +109,16 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(5, 5, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, OutlineInterestingControlFlowNoState) {
@@ -155,16 +164,19 @@ TEST(TransformationOutlineFunctionTest, OutlineInterestingControlFlowNoState) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 13, /* not relevant */
                                                200, 100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -240,16 +252,19 @@ TEST(TransformationOutlineFunctionTest, OutlineCodeThatGeneratesUnusedIds) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 6, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -314,15 +329,18 @@ TEST(TransformationOutlineFunctionTest, OutlineCodeThatGeneratesSingleUsedId) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 6, 99, 100, 101, 102, 103,
                                                105, {}, {{9, 104}});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -409,16 +427,19 @@ TEST(TransformationOutlineFunctionTest, OutlineDiamondThatGeneratesSeveralIds) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       6, 80, 100, 101, 102, 103, 104, 105, {},
       {{15, 106}, {9, 107}, {7, 108}, {8, 109}});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -505,15 +526,18 @@ TEST(TransformationOutlineFunctionTest, OutlineCodeThatUsesASingleId) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 6, 100, 101, 102, 103, 104,
                                                105, {{7, 106}}, {});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -579,15 +603,18 @@ TEST(TransformationOutlineFunctionTest, OutlineCodeThatUsesAVariable) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 6, 100, 101, 102, 103, 104,
                                                105, {{13, 106}}, {});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -663,15 +690,18 @@ TEST(TransformationOutlineFunctionTest, OutlineCodeThatUsesAParameter) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(11, 11, 100, 101, 102, 103, 104,
                                                105, {{9, 106}}, {{14, 107}});
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -749,13 +779,15 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 8, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, DoNotOutlineIfRegionInvolvesReturn) {
@@ -795,14 +827,16 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineIfRegionInvolvesReturn) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 11, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, DoNotOutlineIfRegionInvolvesKill) {
@@ -842,14 +876,16 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineIfRegionInvolvesKill) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 11, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -890,14 +926,16 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 11, /* not relevant */ 200,
                                                100, 101, 102, 103,
                                                /* not relevant */ 201, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -930,13 +968,15 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 8, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, DoNotOutlineIfLoopHeadIsOutsideRegion) {
@@ -970,13 +1010,15 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineIfLoopHeadIsOutsideRegion) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(7, 8, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1009,13 +1051,15 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 7, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1050,13 +1094,15 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(6, 7, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1091,13 +1137,15 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(8, 11, 100, 101, 102, 103, 104,
                                                105, {}, {});
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, OutlineRegionEndingWithReturnVoid) {
@@ -1129,10 +1177,11 @@ TEST(TransformationOutlineFunctionTest, OutlineRegionEndingWithReturnVoid) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 54,
       /*exit_block*/ 58,
@@ -1145,9 +1194,11 @@ TEST(TransformationOutlineFunctionTest, OutlineRegionEndingWithReturnVoid) {
       /*input_id_to_fresh_id*/ {{22, 206}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1216,10 +1267,11 @@ TEST(TransformationOutlineFunctionTest, OutlineRegionEndingWithReturnValue) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 9,
       /*exit_block*/ 10,
@@ -1232,9 +1284,11 @@ TEST(TransformationOutlineFunctionTest, OutlineRegionEndingWithReturnValue) {
       /*input_id_to_fresh_id*/ {{31, 206}},
       /*output_id_to_fresh_id*/ {{32, 207}});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1307,10 +1361,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 54,
       /*exit_block*/ 54,
@@ -1323,9 +1378,11 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {{}},
       /*output_id_to_fresh_id*/ {{6, 206}});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1393,10 +1450,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 54,
       /*exit_block*/ 54,
@@ -1409,9 +1467,11 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1475,10 +1535,11 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineRegionThatStartsWithOpPhi) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 21,
       /*exit_block*/ 21,
@@ -1491,7 +1552,8 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineRegionThatStartsWithOpPhi) {
       /*input_id_to_fresh_id*/ {{22, 207}},
       /*output_id_to_fresh_id*/ {{23, 208}});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1528,10 +1590,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 21,
       /*exit_block*/ 24,
@@ -1544,7 +1607,8 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1581,10 +1645,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 5,
       /*exit_block*/ 22,
@@ -1597,7 +1662,8 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, DoNotOutlineRegionThatUsesAccessChain) {
@@ -1637,10 +1703,11 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineRegionThatUsesAccessChain) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 13,
       /*exit_block*/ 15,
@@ -1653,7 +1720,8 @@ TEST(TransformationOutlineFunctionTest, DoNotOutlineRegionThatUsesAccessChain) {
       /*input_id_to_fresh_id*/ {{12, 207}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1695,10 +1763,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 13,
       /*exit_block*/ 15,
@@ -1711,7 +1780,8 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {{20, 207}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest,
@@ -1758,10 +1828,11 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 11,
       /*exit_block*/ 11,
@@ -1774,9 +1845,11 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {{9, 207}},
       /*output_id_to_fresh_id*/ {{14, 208}});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1827,11 +1900,11 @@ TEST(TransformationOutlineFunctionTest,
 }
 
 TEST(TransformationOutlineFunctionTest, OutlineLivesafe) {
-  // In the following, %30 is a livesafe function, with arbitrary parameter
-  // %200 and arbitrary local variable %201.  Variable %100 is a loop limiter,
-  // which is not arbitrary.  The test checks that the outlined function is
+  // In the following, %30 is a livesafe function, with irrelevant parameter
+  // %200 and irrelevant local variable %201.  Variable %100 is a loop limiter,
+  // which is not irrelevant.  The test checks that the outlined function is
   // livesafe, and that the parameters corresponding to %200 and %201 have the
-  // arbitrary fact associated with them.
+  // irrelevant fact associated with them.
   std::string shader = R"(
                OpCapability Shader
           %1 = OpExtInstImport "GLSL.std.450"
@@ -1910,12 +1983,16 @@ TEST(TransformationOutlineFunctionTest, OutlineLivesafe) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-  fact_manager.AddFactFunctionIsLivesafe(30);
-  fact_manager.AddFactValueOfVariableIsArbitrary(200);
-  fact_manager.AddFactValueOfVariableIsArbitrary(201);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  transformation_context.GetFactManager()->AddFactFunctionIsLivesafe(30);
+  transformation_context.GetFactManager()->AddFactValueOfPointeeIsIrrelevant(
+      200);
+  transformation_context.GetFactManager()->AddFactValueOfPointeeIsIrrelevant(
+      201);
 
   TransformationOutlineFunction transformation(
       /*entry_block*/ 198,
@@ -1929,24 +2006,32 @@ TEST(TransformationOutlineFunctionTest, OutlineLivesafe) {
       /*input_id_to_fresh_id*/ {{100, 407}, {200, 408}, {201, 409}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   // The original function should still be livesafe.
-  ASSERT_TRUE(fact_manager.FunctionIsLivesafe(30));
+  ASSERT_TRUE(transformation_context.GetFactManager()->FunctionIsLivesafe(30));
   // The outlined function should be livesafe.
-  ASSERT_TRUE(fact_manager.FunctionIsLivesafe(402));
-  // The variable and parameter that were originally arbitrary should still be.
-  ASSERT_TRUE(fact_manager.VariableValueIsArbitrary(200));
-  ASSERT_TRUE(fact_manager.VariableValueIsArbitrary(201));
-  // The loop limiter should still be non-arbitrary.
-  ASSERT_FALSE(fact_manager.VariableValueIsArbitrary(100));
-  // The parameters for the original arbitrary variables should be arbitrary.
-  ASSERT_TRUE(fact_manager.VariableValueIsArbitrary(408));
-  ASSERT_TRUE(fact_manager.VariableValueIsArbitrary(409));
-  // The parameter for the loop limiter should not be arbitrary.
-  ASSERT_FALSE(fact_manager.VariableValueIsArbitrary(407));
+  ASSERT_TRUE(transformation_context.GetFactManager()->FunctionIsLivesafe(402));
+  // The variable and parameter that were originally irrelevant should still be.
+  ASSERT_TRUE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(200));
+  ASSERT_TRUE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(201));
+  // The loop limiter should still be non-irrelevant.
+  ASSERT_FALSE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(100));
+  // The parameters for the original irrelevant variables should be irrelevant.
+  ASSERT_TRUE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(408));
+  ASSERT_TRUE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(409));
+  // The parameter for the loop limiter should not be irrelevant.
+  ASSERT_FALSE(
+      transformation_context.GetFactManager()->PointeeValueIsIrrelevant(407));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -2126,11 +2211,13 @@ TEST(TransformationOutlineFunctionTest, OutlineWithDeadBlocks1) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   for (uint32_t block_id : {16u, 23u, 24u, 26u, 27u, 34u, 35u, 50u}) {
-    fact_manager.AddFactBlockIsDead(block_id);
+    transformation_context.GetFactManager()->AddFactBlockIsDead(block_id);
   }
 
   TransformationOutlineFunction transformation(
@@ -2145,12 +2232,14 @@ TEST(TransformationOutlineFunctionTest, OutlineWithDeadBlocks1) {
       /*input_id_to_fresh_id*/ {{9, 206}, {12, 207}, {21, 208}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
   // All the original blocks, plus the new function entry block, should be dead.
   for (uint32_t block_id : {16u, 23u, 24u, 26u, 27u, 34u, 35u, 50u, 203u}) {
-    ASSERT_TRUE(fact_manager.BlockIsDead(block_id));
+    ASSERT_TRUE(transformation_context.GetFactManager()->BlockIsDead(block_id));
   }
 }
 
@@ -2205,11 +2294,13 @@ TEST(TransformationOutlineFunctionTest, OutlineWithDeadBlocks2) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   for (uint32_t block_id : {32u, 34u, 35u}) {
-    fact_manager.AddFactBlockIsDead(block_id);
+    transformation_context.GetFactManager()->AddFactBlockIsDead(block_id);
   }
 
   TransformationOutlineFunction transformation(
@@ -2224,22 +2315,25 @@ TEST(TransformationOutlineFunctionTest, OutlineWithDeadBlocks2) {
       /*input_id_to_fresh_id*/ {{11, 206}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
   // The blocks that were originally dead, but not others, should be dead.
   for (uint32_t block_id : {32u, 34u, 35u}) {
-    ASSERT_TRUE(fact_manager.BlockIsDead(block_id));
+    ASSERT_TRUE(transformation_context.GetFactManager()->BlockIsDead(block_id));
   }
   for (uint32_t block_id : {5u, 30u, 31u, 33u, 36u, 37u, 203u}) {
-    ASSERT_FALSE(fact_manager.BlockIsDead(block_id));
+    ASSERT_FALSE(
+        transformation_context.GetFactManager()->BlockIsDead(block_id));
   }
 }
 
 TEST(TransformationOutlineFunctionTest,
-     OutlineWithArbitraryVariablesAndParameters) {
-  // This checks that if the outlined region uses a mixture of arbitrary and
-  // non-arbitrary variables and parameters, these properties are preserved
+     OutlineWithIrrelevantVariablesAndParameters) {
+  // This checks that if the outlined region uses a mixture of irrelevant and
+  // non-irrelevant variables and parameters, these properties are preserved
   // during outlining.
   std::string shader = R"(
                OpCapability Shader
@@ -2284,11 +2378,14 @@ TEST(TransformationOutlineFunctionTest,
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-  fact_manager.AddFactValueOfVariableIsArbitrary(9);
-  fact_manager.AddFactValueOfVariableIsArbitrary(14);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  transformation_context.GetFactManager()->AddFactValueOfPointeeIsIrrelevant(9);
+  transformation_context.GetFactManager()->AddFactValueOfPointeeIsIrrelevant(
+      14);
 
   TransformationOutlineFunction transformation(
       /*entry_block*/ 50,
@@ -2302,23 +2399,235 @@ TEST(TransformationOutlineFunctionTest,
       /*input_id_to_fresh_id*/ {{9, 206}, {10, 207}, {14, 208}, {20, 209}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
-  // The variables that were originally abitrary, plus input parameters
-  // corresponding to them, should be arbitrary.  The rest should not be.
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  // The variables that were originally irrelevant, plus input parameters
+  // corresponding to them, should be irrelevant.  The rest should not be.
   for (uint32_t variable_id : {9u, 14u, 206u, 208u}) {
-    ASSERT_TRUE(fact_manager.VariableValueIsArbitrary(variable_id));
+    ASSERT_TRUE(
+        transformation_context.GetFactManager()->PointeeValueIsIrrelevant(
+            variable_id));
   }
   for (uint32_t variable_id : {10u, 20u, 207u, 209u}) {
-    ASSERT_FALSE(fact_manager.BlockIsDead(variable_id));
+    ASSERT_FALSE(
+        transformation_context.GetFactManager()->BlockIsDead(variable_id));
   }
 }
 
-TEST(TransformationOutlineFunctionTest, Miscellaneous1) {
-  // This tests outlining of some non-trivial code.
-
+TEST(TransformationOutlineFunctionTest,
+     DoNotOutlineCodeThatProducesUsedPointer) {
+  // This checks that we cannot outline a region of code if it produces a
+  // pointer result id that gets used outside the region.  This avoids creating
+  // a struct with a pointer member.
   std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %6 "main"
+               OpExecutionMode %6 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %21 = OpTypeBool
+        %100 = OpTypeInt 32 0
+         %99 = OpConstant %100 0
+        %101 = OpTypeVector %100 2
+        %102 = OpTypePointer Function %100
+        %103 = OpTypePointer Function %101
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+        %104 = OpVariable %103 Function
+               OpBranch %80
+         %80 = OpLabel
+        %105 = OpAccessChain %102 %104 %99
+               OpBranch %106
+        %106 = OpLabel
+               OpStore %105 %99
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_5;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  TransformationOutlineFunction transformation(
+      /*entry_block*/ 80,
+      /*exit_block*/ 80,
+      /*new_function_struct_return_type_id*/ 300,
+      /*new_function_type_id*/ 301,
+      /*new_function_id*/ 302,
+      /*new_function_region_entry_block*/ 304,
+      /*new_caller_result_id*/ 305,
+      /*new_callee_result_id*/ 306,
+      /*input_id_to_fresh_id*/ {{104, 307}},
+      /*output_id_to_fresh_id*/ {{105, 308}});
+
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
+}
+
+TEST(TransformationOutlineFunctionTest, ExitBlockHeadsLoop) {
+  // This checks that it is not possible outline a region that ends in a loop
+  // head.
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %15 = OpTypeInt 32 1
+         %35 = OpTypeBool
+         %39 = OpConstant %15 1
+         %40 = OpConstantTrue %35
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpBranch %22
+         %22 = OpLabel
+               OpBranch %23
+         %23 = OpLabel
+         %24 = OpPhi %15 %39 %22 %39 %25
+               OpLoopMerge %26 %25 None
+               OpBranchConditional %40 %25 %26
+         %25 = OpLabel
+               OpBranch %23
+         %26 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_5;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  TransformationOutlineFunction transformation(
+      /*entry_block*/ 22,
+      /*exit_block*/ 23,
+      /*new_function_struct_return_type_id*/ 200,
+      /*new_function_type_id*/ 201,
+      /*new_function_id*/ 202,
+      /*new_function_region_entry_block*/ 203,
+      /*new_caller_result_id*/ 204,
+      /*new_callee_result_id*/ 205,
+      /*input_id_to_fresh_id*/ {},
+      /*output_id_to_fresh_id*/ {});
+
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+}
+
+TEST(TransformationOutlineFunctionTest, SkipVoidOutputId) {
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %6 "main"
+               OpExecutionMode %6 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %21 = OpTypeBool
+         %81 = OpConstantTrue %21
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpBranch %80
+         %80 = OpLabel
+         %84 = OpFunctionCall %2 %87
+               OpBranch %90
+         %90 = OpLabel
+         %86 = OpPhi %2 %84 %80
+               OpReturn
+               OpFunctionEnd
+         %87 = OpFunction %2 None %3
+         %88 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_5;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  TransformationOutlineFunction transformation(
+      /*entry_block*/ 80,
+      /*exit_block*/ 80,
+      /*new_function_struct_return_type_id*/ 300,
+      /*new_function_type_id*/ 301,
+      /*new_function_id*/ 302,
+      /*new_function_region_entry_block*/ 304,
+      /*new_caller_result_id*/ 305,
+      /*new_callee_result_id*/ 306,
+      /*input_id_to_fresh_id*/ {},
+      /*output_id_to_fresh_id*/ {{84, 307}});
+
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  std::string after_transformation = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %6 "main"
+               OpExecutionMode %6 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %21 = OpTypeBool
+         %81 = OpConstantTrue %21
+        %300 = OpTypeStruct
+        %301 = OpTypeFunction %300
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpBranch %80
+         %80 = OpLabel
+        %305 = OpFunctionCall %300 %302
+         %84 = OpUndef %2
+               OpBranch %90
+         %90 = OpLabel
+         %86 = OpPhi %2 %84 %80
+               OpReturn
+               OpFunctionEnd
+         %87 = OpFunction %2 None %3
+         %88 = OpLabel
+               OpReturn
+               OpFunctionEnd
+        %302 = OpFunction %300 None %301
+        %304 = OpLabel
+        %307 = OpFunctionCall %2 %87
+        %306 = OpCompositeConstruct %300
+               OpReturnValue %306
+               OpFunctionEnd
+  )";
+  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+}
+
+TEST(TransformationOutlineFunctionTest, Miscellaneous1) {
+  // This tests outlining of some non-trivial code, and also tests the way
+  // overflow ids are used by the transformation.
+
+  std::string reference_shader = R"(
                OpCapability Shader
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
@@ -2419,10 +2728,7 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous1) {
 
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
-  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
+  spvtools::ValidatorOptions validator_options;
 
   TransformationOutlineFunction transformation(
       /*entry_block*/ 150,
@@ -2436,122 +2742,323 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous1) {
       /*input_id_to_fresh_id*/ {{102, 300}, {103, 301}, {40, 302}},
       /*output_id_to_fresh_id*/ {{106, 400}, {107, 401}});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  TransformationOutlineFunction transformation_with_missing_input_id(
+      /*entry_block*/ 150,
+      /*exit_block*/ 1001,
+      /*new_function_struct_return_type_id*/ 200,
+      /*new_function_type_id*/ 201,
+      /*new_function_id*/ 202,
+      /*new_function_region_entry_block*/ 203,
+      /*new_caller_result_id*/ 204,
+      /*new_callee_result_id*/ 205,
+      /*input_id_to_fresh_id*/ {{102, 300}, {40, 302}},
+      /*output_id_to_fresh_id*/ {{106, 400}, {107, 401}});
 
-  std::string after_transformation = R"(
-               OpCapability Shader
-          %1 = OpExtInstImport "GLSL.std.450"
-               OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %4 "main" %85
-               OpExecutionMode %4 OriginUpperLeft
-               OpSource ESSL 310
-               OpName %4 "main"
-               OpName %28 "buf"
-               OpMemberName %28 0 "u1"
-               OpMemberName %28 1 "u2"
-               OpName %30 ""
-               OpName %85 "color"
-               OpMemberDecorate %28 0 Offset 0
-               OpMemberDecorate %28 1 Offset 4
-               OpDecorate %28 Block
-               OpDecorate %30 DescriptorSet 0
-               OpDecorate %30 Binding 0
-               OpDecorate %85 Location 0
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-          %6 = OpTypeFloat 32
-          %7 = OpTypeVector %6 4
-         %10 = OpConstant %6 1
-         %11 = OpConstant %6 2
-         %12 = OpConstant %6 3
-         %13 = OpConstant %6 4
-         %14 = OpConstantComposite %7 %10 %11 %12 %13
-         %15 = OpTypeInt 32 1
-         %18 = OpConstant %15 0
-         %28 = OpTypeStruct %6 %6
-         %29 = OpTypePointer Uniform %28
-         %30 = OpVariable %29 Uniform
-         %31 = OpTypePointer Uniform %6
-         %35 = OpTypeBool
-         %39 = OpConstant %15 1
-         %84 = OpTypePointer Output %7
-         %85 = OpVariable %84 Output
-        %114 = OpConstant %15 8
-        %200 = OpTypeStruct %7 %15
-        %201 = OpTypeFunction %200 %15 %7 %15
-          %4 = OpFunction %2 None %3
-          %5 = OpLabel
-               OpBranch %22
-         %22 = OpLabel
-        %103 = OpPhi %15 %18 %5 %106 %43
-        %102 = OpPhi %7 %14 %5 %107 %43
-        %101 = OpPhi %15 %18 %5 %40 %43
-         %32 = OpAccessChain %31 %30 %18
-         %33 = OpLoad %6 %32
-         %34 = OpConvertFToS %15 %33
-         %36 = OpSLessThan %35 %101 %34
-               OpLoopMerge %24 %43 None
-               OpBranchConditional %36 %23 %24
-         %23 = OpLabel
-         %40 = OpIAdd %15 %101 %39
-               OpBranch %150
-        %150 = OpLabel
-        %204 = OpFunctionCall %200 %202 %103 %102 %40
-        %107 = OpCompositeExtract %7 %204 0
-        %106 = OpCompositeExtract %15 %204 1
-               OpBranch %43
-         %43 = OpLabel
-               OpBranch %22
-         %24 = OpLabel
-         %87 = OpCompositeExtract %6 %102 0
-         %91 = OpConvertSToF %6 %103
-         %92 = OpCompositeConstruct %7 %87 %11 %91 %10
-               OpStore %85 %92
-               OpReturn
-               OpFunctionEnd
-        %202 = OpFunction %200 None %201
-        %301 = OpFunctionParameter %15
-        %300 = OpFunctionParameter %7
-        %302 = OpFunctionParameter %15
-        %203 = OpLabel
-               OpBranch %41
-         %41 = OpLabel
-        %401 = OpPhi %7 %300 %203 %111 %65
-        %400 = OpPhi %15 %301 %203 %110 %65
-        %104 = OpPhi %15 %302 %203 %81 %65
-         %47 = OpAccessChain %31 %30 %39
-         %48 = OpLoad %6 %47
-         %49 = OpConvertFToS %15 %48
-         %50 = OpSLessThan %35 %104 %49
-               OpLoopMerge %1000 %65 None
-               OpBranchConditional %50 %42 %1000
-         %42 = OpLabel
-         %60 = OpIAdd %15 %400 %114
-         %63 = OpSGreaterThan %35 %104 %60
-               OpBranchConditional %63 %64 %65
-         %64 = OpLabel
-         %71 = OpCompositeExtract %6 %401 0
-         %72 = OpFAdd %6 %71 %11
-         %97 = OpCompositeInsert %7 %72 %401 0
-         %76 = OpCompositeExtract %6 %401 3
-         %77 = OpConvertFToS %15 %76
-         %79 = OpIAdd %15 %60 %77
-               OpBranch %65
-         %65 = OpLabel
-        %111 = OpPhi %7 %401 %42 %97 %64
-        %110 = OpPhi %15 %60 %42 %79 %64
-         %81 = OpIAdd %15 %104 %39
-               OpBranch %41
-       %1000 = OpLabel
-               OpBranch %1001
-       %1001 = OpLabel
-        %205 = OpCompositeConstruct %200 %401 %400
-               OpReturnValue %205
-               OpFunctionEnd
-  )";
-  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+  TransformationOutlineFunction transformation_with_missing_output_id(
+      /*entry_block*/ 150,
+      /*exit_block*/ 1001,
+      /*new_function_struct_return_type_id*/ 200,
+      /*new_function_type_id*/ 201,
+      /*new_function_id*/ 202,
+      /*new_function_region_entry_block*/ 203,
+      /*new_caller_result_id*/ 204,
+      /*new_callee_result_id*/ 205,
+      /*input_id_to_fresh_id*/ {{102, 300}, {103, 301}, {40, 302}},
+      /*output_id_to_fresh_id*/ {{106, 400}});
+
+  TransformationOutlineFunction
+      transformation_with_missing_input_and_output_ids(
+          /*entry_block*/ 150,
+          /*exit_block*/ 1001,
+          /*new_function_struct_return_type_id*/ 200,
+          /*new_function_type_id*/ 201,
+          /*new_function_id*/ 202,
+          /*new_function_region_entry_block*/ 203,
+          /*new_caller_result_id*/ 204,
+          /*new_callee_result_id*/ 205,
+          /*input_id_to_fresh_id*/ {{102, 300}, {40, 302}},
+          /*output_id_to_fresh_id*/ {{106, 400}});
+
+  {
+    const auto context =
+        BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+
+    TransformationContext transformation_context(
+        MakeUnique<FactManager>(context.get()), validator_options);
+
+#ifndef NDEBUG
+    // We expect the following applicability checks to lead to assertion
+    // failures since the transformations are missing input or output ids, and
+    // the transformation context does not have a source of overflow ids.
+    ASSERT_DEATH(transformation_with_missing_input_id.IsApplicable(
+                     context.get(), transformation_context),
+                 "Bad attempt to query whether overflow ids are available.");
+    ASSERT_DEATH(transformation_with_missing_output_id.IsApplicable(
+                     context.get(), transformation_context),
+                 "Bad attempt to query whether overflow ids are available.");
+    ASSERT_DEATH(transformation_with_missing_input_and_output_ids.IsApplicable(
+                     context.get(), transformation_context),
+                 "Bad attempt to query whether overflow ids are available.");
+#endif
+
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+
+    std::string variant_shader = R"(
+                 OpCapability Shader
+            %1 = OpExtInstImport "GLSL.std.450"
+                 OpMemoryModel Logical GLSL450
+                 OpEntryPoint Fragment %4 "main" %85
+                 OpExecutionMode %4 OriginUpperLeft
+                 OpSource ESSL 310
+                 OpName %4 "main"
+                 OpName %28 "buf"
+                 OpMemberName %28 0 "u1"
+                 OpMemberName %28 1 "u2"
+                 OpName %30 ""
+                 OpName %85 "color"
+                 OpMemberDecorate %28 0 Offset 0
+                 OpMemberDecorate %28 1 Offset 4
+                 OpDecorate %28 Block
+                 OpDecorate %30 DescriptorSet 0
+                 OpDecorate %30 Binding 0
+                 OpDecorate %85 Location 0
+            %2 = OpTypeVoid
+            %3 = OpTypeFunction %2
+            %6 = OpTypeFloat 32
+            %7 = OpTypeVector %6 4
+           %10 = OpConstant %6 1
+           %11 = OpConstant %6 2
+           %12 = OpConstant %6 3
+           %13 = OpConstant %6 4
+           %14 = OpConstantComposite %7 %10 %11 %12 %13
+           %15 = OpTypeInt 32 1
+           %18 = OpConstant %15 0
+           %28 = OpTypeStruct %6 %6
+           %29 = OpTypePointer Uniform %28
+           %30 = OpVariable %29 Uniform
+           %31 = OpTypePointer Uniform %6
+           %35 = OpTypeBool
+           %39 = OpConstant %15 1
+           %84 = OpTypePointer Output %7
+           %85 = OpVariable %84 Output
+          %114 = OpConstant %15 8
+          %200 = OpTypeStruct %7 %15
+          %201 = OpTypeFunction %200 %15 %7 %15
+            %4 = OpFunction %2 None %3
+            %5 = OpLabel
+                 OpBranch %22
+           %22 = OpLabel
+          %103 = OpPhi %15 %18 %5 %106 %43
+          %102 = OpPhi %7 %14 %5 %107 %43
+          %101 = OpPhi %15 %18 %5 %40 %43
+           %32 = OpAccessChain %31 %30 %18
+           %33 = OpLoad %6 %32
+           %34 = OpConvertFToS %15 %33
+           %36 = OpSLessThan %35 %101 %34
+                 OpLoopMerge %24 %43 None
+                 OpBranchConditional %36 %23 %24
+           %23 = OpLabel
+           %40 = OpIAdd %15 %101 %39
+                 OpBranch %150
+          %150 = OpLabel
+          %204 = OpFunctionCall %200 %202 %103 %102 %40
+          %107 = OpCompositeExtract %7 %204 0
+          %106 = OpCompositeExtract %15 %204 1
+                 OpBranch %43
+           %43 = OpLabel
+                 OpBranch %22
+           %24 = OpLabel
+           %87 = OpCompositeExtract %6 %102 0
+           %91 = OpConvertSToF %6 %103
+           %92 = OpCompositeConstruct %7 %87 %11 %91 %10
+                 OpStore %85 %92
+                 OpReturn
+                 OpFunctionEnd
+          %202 = OpFunction %200 None %201
+          %301 = OpFunctionParameter %15
+          %300 = OpFunctionParameter %7
+          %302 = OpFunctionParameter %15
+          %203 = OpLabel
+                 OpBranch %41
+           %41 = OpLabel
+          %401 = OpPhi %7 %300 %203 %111 %65
+          %400 = OpPhi %15 %301 %203 %110 %65
+          %104 = OpPhi %15 %302 %203 %81 %65
+           %47 = OpAccessChain %31 %30 %39
+           %48 = OpLoad %6 %47
+           %49 = OpConvertFToS %15 %48
+           %50 = OpSLessThan %35 %104 %49
+                 OpLoopMerge %1000 %65 None
+                 OpBranchConditional %50 %42 %1000
+           %42 = OpLabel
+           %60 = OpIAdd %15 %400 %114
+           %63 = OpSGreaterThan %35 %104 %60
+                 OpBranchConditional %63 %64 %65
+           %64 = OpLabel
+           %71 = OpCompositeExtract %6 %401 0
+           %72 = OpFAdd %6 %71 %11
+           %97 = OpCompositeInsert %7 %72 %401 0
+           %76 = OpCompositeExtract %6 %401 3
+           %77 = OpConvertFToS %15 %76
+           %79 = OpIAdd %15 %60 %77
+                 OpBranch %65
+           %65 = OpLabel
+          %111 = OpPhi %7 %401 %42 %97 %64
+          %110 = OpPhi %15 %60 %42 %79 %64
+           %81 = OpIAdd %15 %104 %39
+                 OpBranch %41
+         %1000 = OpLabel
+                 OpBranch %1001
+         %1001 = OpLabel
+          %205 = OpCompositeConstruct %200 %401 %400
+                 OpReturnValue %205
+                 OpFunctionEnd
+    )";
+    ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
+  }
+
+  {
+    const auto context =
+        BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+    auto overflow_ids_unique_ptr = MakeUnique<CounterOverflowIdSource>(2000);
+    auto overflow_ids_ptr = overflow_ids_unique_ptr.get();
+    TransformationContext new_transformation_context(
+        MakeUnique<FactManager>(context.get()), validator_options,
+        std::move(overflow_ids_unique_ptr));
+    ASSERT_TRUE(transformation_with_missing_input_id.IsApplicable(
+        context.get(), new_transformation_context));
+    ASSERT_TRUE(transformation_with_missing_output_id.IsApplicable(
+        context.get(), new_transformation_context));
+    ASSERT_TRUE(transformation_with_missing_input_and_output_ids.IsApplicable(
+        context.get(), new_transformation_context));
+    ApplyAndCheckFreshIds(transformation_with_missing_input_and_output_ids,
+                          context.get(), &new_transformation_context,
+                          overflow_ids_ptr->GetIssuedOverflowIds());
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+
+    std::string variant_shader = R"(
+                 OpCapability Shader
+            %1 = OpExtInstImport "GLSL.std.450"
+                 OpMemoryModel Logical GLSL450
+                 OpEntryPoint Fragment %4 "main" %85
+                 OpExecutionMode %4 OriginUpperLeft
+                 OpSource ESSL 310
+                 OpName %4 "main"
+                 OpName %28 "buf"
+                 OpMemberName %28 0 "u1"
+                 OpMemberName %28 1 "u2"
+                 OpName %30 ""
+                 OpName %85 "color"
+                 OpMemberDecorate %28 0 Offset 0
+                 OpMemberDecorate %28 1 Offset 4
+                 OpDecorate %28 Block
+                 OpDecorate %30 DescriptorSet 0
+                 OpDecorate %30 Binding 0
+                 OpDecorate %85 Location 0
+            %2 = OpTypeVoid
+            %3 = OpTypeFunction %2
+            %6 = OpTypeFloat 32
+            %7 = OpTypeVector %6 4
+           %10 = OpConstant %6 1
+           %11 = OpConstant %6 2
+           %12 = OpConstant %6 3
+           %13 = OpConstant %6 4
+           %14 = OpConstantComposite %7 %10 %11 %12 %13
+           %15 = OpTypeInt 32 1
+           %18 = OpConstant %15 0
+           %28 = OpTypeStruct %6 %6
+           %29 = OpTypePointer Uniform %28
+           %30 = OpVariable %29 Uniform
+           %31 = OpTypePointer Uniform %6
+           %35 = OpTypeBool
+           %39 = OpConstant %15 1
+           %84 = OpTypePointer Output %7
+           %85 = OpVariable %84 Output
+          %114 = OpConstant %15 8
+          %200 = OpTypeStruct %7 %15
+          %201 = OpTypeFunction %200 %15 %7 %15
+            %4 = OpFunction %2 None %3
+            %5 = OpLabel
+                 OpBranch %22
+           %22 = OpLabel
+          %103 = OpPhi %15 %18 %5 %106 %43
+          %102 = OpPhi %7 %14 %5 %107 %43
+          %101 = OpPhi %15 %18 %5 %40 %43
+           %32 = OpAccessChain %31 %30 %18
+           %33 = OpLoad %6 %32
+           %34 = OpConvertFToS %15 %33
+           %36 = OpSLessThan %35 %101 %34
+                 OpLoopMerge %24 %43 None
+                 OpBranchConditional %36 %23 %24
+           %23 = OpLabel
+           %40 = OpIAdd %15 %101 %39
+                 OpBranch %150
+          %150 = OpLabel
+          %204 = OpFunctionCall %200 %202 %103 %102 %40
+          %107 = OpCompositeExtract %7 %204 0
+          %106 = OpCompositeExtract %15 %204 1
+                 OpBranch %43
+           %43 = OpLabel
+                 OpBranch %22
+           %24 = OpLabel
+           %87 = OpCompositeExtract %6 %102 0
+           %91 = OpConvertSToF %6 %103
+           %92 = OpCompositeConstruct %7 %87 %11 %91 %10
+                 OpStore %85 %92
+                 OpReturn
+                 OpFunctionEnd
+          %202 = OpFunction %200 None %201
+         %2000 = OpFunctionParameter %15
+          %300 = OpFunctionParameter %7
+          %302 = OpFunctionParameter %15
+          %203 = OpLabel
+                 OpBranch %41
+           %41 = OpLabel
+         %2001 = OpPhi %7 %300 %203 %111 %65
+          %400 = OpPhi %15 %2000 %203 %110 %65
+          %104 = OpPhi %15 %302 %203 %81 %65
+           %47 = OpAccessChain %31 %30 %39
+           %48 = OpLoad %6 %47
+           %49 = OpConvertFToS %15 %48
+           %50 = OpSLessThan %35 %104 %49
+                 OpLoopMerge %1000 %65 None
+                 OpBranchConditional %50 %42 %1000
+           %42 = OpLabel
+           %60 = OpIAdd %15 %400 %114
+           %63 = OpSGreaterThan %35 %104 %60
+                 OpBranchConditional %63 %64 %65
+           %64 = OpLabel
+           %71 = OpCompositeExtract %6 %2001 0
+           %72 = OpFAdd %6 %71 %11
+           %97 = OpCompositeInsert %7 %72 %2001 0
+           %76 = OpCompositeExtract %6 %2001 3
+           %77 = OpConvertFToS %15 %76
+           %79 = OpIAdd %15 %60 %77
+                 OpBranch %65
+           %65 = OpLabel
+          %111 = OpPhi %7 %2001 %42 %97 %64
+          %110 = OpPhi %15 %60 %42 %79 %64
+           %81 = OpIAdd %15 %104 %39
+                 OpBranch %41
+         %1000 = OpLabel
+                 OpBranch %1001
+         %1001 = OpLabel
+          %205 = OpCompositeConstruct %200 %2001 %400
+                 OpReturnValue %205
+                 OpFunctionEnd
+    )";
+    ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
+  }
 }
 
 TEST(TransformationOutlineFunctionTest, Miscellaneous2) {
@@ -2585,10 +3092,11 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous2) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 38,
       /*exit_block*/ 36,
@@ -2601,7 +3109,8 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous2) {
       /*input_id_to_fresh_id*/ {},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_FALSE(transformation.IsApplicable(context.get(), fact_manager));
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationOutlineFunctionTest, Miscellaneous3) {
@@ -2640,10 +3149,11 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous3) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 80,
       /*exit_block*/ 81,
@@ -2656,9 +3166,11 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous3) {
       /*input_id_to_fresh_id*/ {},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -2729,10 +3241,11 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous4) {
   const auto env = SPV_ENV_UNIVERSAL_1_5;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationOutlineFunction transformation(
       /*entry_block*/ 80,
       /*exit_block*/ 106,
@@ -2745,9 +3258,11 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous4) {
       /*input_id_to_fresh_id*/ {{104, 307}},
       /*output_id_to_fresh_id*/ {});
 
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader

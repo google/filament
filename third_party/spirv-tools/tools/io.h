@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 
 // Appends the content from the file named as |filename| to |data|, assuming

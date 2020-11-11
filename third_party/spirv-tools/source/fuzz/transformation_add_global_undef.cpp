@@ -30,32 +30,36 @@ TransformationAddGlobalUndef::TransformationAddGlobalUndef(uint32_t fresh_id,
 }
 
 bool TransformationAddGlobalUndef::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // A fresh id is required.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
   }
-  auto type = context->get_type_mgr()->GetType(message_.type_id());
+  auto type = ir_context->get_type_mgr()->GetType(message_.type_id());
   // The type must exist, and must not be a function type.
   return type && !type->AsFunction();
 }
 
 void TransformationAddGlobalUndef::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
-  context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context, SpvOpUndef, message_.type_id(), message_.fresh_id(),
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  ir_context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpUndef, message_.type_id(), message_.fresh_id(),
       opt::Instruction::OperandList()));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddGlobalUndef::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_global_undef() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddGlobalUndef::GetFreshIds() const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

@@ -20,11 +20,9 @@
 namespace spvtools {
 namespace reduce {
 
-using opt::IRContext;
-
 std::vector<std::unique_ptr<ReductionOpportunity>>
 OperandToConstReductionOpportunityFinder::GetAvailableOpportunities(
-    IRContext* context) const {
+    opt::IRContext* context, uint32_t target_function) const {
   std::vector<std::unique_ptr<ReductionOpportunity>> result;
   assert(result.empty());
 
@@ -37,8 +35,8 @@ OperandToConstReductionOpportunityFinder::GetAvailableOpportunities(
   // contiguous blocks of opportunities early on, and we want to avoid having a
   // large block of incompatible opportunities if possible.
   for (const auto& constant : context->GetConstants()) {
-    for (auto& function : *context->module()) {
-      for (auto& block : function) {
+    for (auto* function : GetTargetFunctions(context, target_function)) {
+      for (auto& block : *function) {
         for (auto& inst : block) {
           // We iterate through the operands using an explicit index (rather
           // than using a lambda) so that we use said index in the construction

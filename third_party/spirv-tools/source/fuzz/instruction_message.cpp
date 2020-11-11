@@ -36,6 +36,18 @@ protobufs::Instruction MakeInstructionMessage(
   return result;
 }
 
+protobufs::Instruction MakeInstructionMessage(
+    const opt::Instruction* instruction) {
+  opt::Instruction::OperandList input_operands;
+  for (uint32_t input_operand_index = 0;
+       input_operand_index < instruction->NumInOperands();
+       input_operand_index++) {
+    input_operands.push_back(instruction->GetInOperand(input_operand_index));
+  }
+  return MakeInstructionMessage(instruction->opcode(), instruction->type_id(),
+                                instruction->result_id(), input_operands);
+}
+
 std::unique_ptr<opt::Instruction> InstructionFromMessage(
     opt::IRContext* ir_context,
     const protobufs::Instruction& instruction_message) {

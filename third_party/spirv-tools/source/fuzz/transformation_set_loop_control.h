@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_SET_LOOP_CONTROL_H_
 #define SOURCE_FUZZ_TRANSFORMATION_SET_LOOP_CONTROL_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -38,13 +38,14 @@ class TransformationSetLoopControl : public Transformation {
   //   instruction.
   // - |message_.loop_control| must be a legal loop control mask that
   //   only uses controls available in the SPIR-V version associated with
-  //   |context|, and must not add loop controls that are only valid in the
+  //   |ir_context|, and must not add loop controls that are only valid in the
   //   presence of guarantees about what the loop does (e.g. MinIterations).
   // - |message_.peel_count| (respectively |message_.partial_count|) must be
   //   zero PeelCount (respectively PartialCount) is set in
   //   |message_.loop_control|.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // - The loop control operand of the OpLoopMergeInstruction in
   //   |message_.block_id| is overwritten with |message_.loop_control|.
@@ -52,16 +53,19 @@ class TransformationSetLoopControl : public Transformation {
   //   controls with associated literals that have been removed (e.g.
   //   MinIterations), and any that have been added (PeelCount and/or
   //   PartialCount).
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
   // Does the version of SPIR-V being used support the PartialCount loop
   // control?
-  static bool PartialCountIsSupported(opt::IRContext* context);
+  static bool PartialCountIsSupported(opt::IRContext* ir_context);
 
   // Does the version of SPIR-V being used support the PeelCount loop control?
-  static bool PeelCountIsSupported(opt::IRContext* context);
+  static bool PeelCountIsSupported(opt::IRContext* ir_context);
 
  private:
   // Returns true if and only if |loop_single_bit_mask| is *not* set in

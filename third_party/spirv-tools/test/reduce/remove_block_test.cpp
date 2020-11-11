@@ -66,7 +66,7 @@ TEST(RemoveBlockReductionPassTest, BasicCheck) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(2, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -181,7 +181,7 @@ TEST(RemoveBlockReductionPassTest, UnreachableContinueAndMerge) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -209,7 +209,7 @@ TEST(RemoveBlockReductionPassTest, OneBlock) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -247,7 +247,7 @@ TEST(RemoveBlockReductionPassTest, UnreachableBlocksWithOutsideIdUses) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -287,7 +287,7 @@ TEST(RemoveBlockReductionPassTest, UnreachableBlocksWithInsideIdUses) {
   const auto context =
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   auto ops = RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
   ASSERT_EQ(1, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -323,7 +323,7 @@ TEST(RemoveBlockReductionPassTest, UnreachableBlocksWithInsideIdUses) {
   // removed.
 
   ops = RemoveBlockReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 

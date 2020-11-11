@@ -73,7 +73,7 @@ TEST(SimpleConditionalBranchToBranchTest, Diamond) {
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(0, ops.size());
 }
@@ -122,7 +122,7 @@ TEST(SimpleConditionalBranchToBranchTest, DiamondNoSelection) {
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -161,7 +161,7 @@ TEST(SimpleConditionalBranchToBranchTest, DiamondNoSelection) {
   CheckEqual(kEnv, after, context.get());
 
   ops = SimpleConditionalBranchToBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -217,7 +217,7 @@ TEST(SimpleConditionalBranchToBranchTest, ConditionalBranchesButNotSimple) {
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(0, ops.size());
 }
@@ -266,7 +266,7 @@ TEST(SimpleConditionalBranchToBranchTest, SimplifyBackEdge) {
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -303,7 +303,7 @@ TEST(SimpleConditionalBranchToBranchTest, SimplifyBackEdge) {
   CheckEqual(kEnv, after, context.get());
 
   ops = SimpleConditionalBranchToBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -349,7 +349,7 @@ TEST(SimpleConditionalBranchToBranchTest,
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -384,7 +384,7 @@ TEST(SimpleConditionalBranchToBranchTest,
   CheckEqual(kEnv, after, context.get());
 
   ops = SimpleConditionalBranchToBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -438,7 +438,7 @@ TEST(SimpleConditionalBranchToBranchTest, BackEdgeUnreachable) {
   CheckValid(kEnv, context.get());
 
   auto ops = SimpleConditionalBranchToBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -477,7 +477,7 @@ TEST(SimpleConditionalBranchToBranchTest, BackEdgeUnreachable) {
   CheckEqual(kEnv, after, context.get());
 
   ops = SimpleConditionalBranchToBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 

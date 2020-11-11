@@ -154,6 +154,50 @@ TEST_F(LocalRedundancyEliminationTest, KeepInstructionsInDifferentBlocks) {
   SinglePassRunAndMatch<LocalRedundancyEliminationPass>(text, false);
 }
 
+TEST_F(LocalRedundancyEliminationTest, StorageBufferIdentification) {
+  const std::string text = R"(
+; CHECK: [[gep:%\w+]] = OpAccessChain
+; CHECK: [[ld:%\w+]] = OpLoad {{%\w+}} [[gep]]
+; CHECK: [[add:%\w+]] = OpIAdd {{%\w+}} [[ld]]
+; CHECK: OpStore [[gep]] [[add]]
+; CHECK: [[ld:%\w+]] = OpLoad {{%\w+}} [[gep]]
+; CHECK: [[add:%\w+]] = OpIAdd {{%\w+}} [[ld]]
+; CHECK: OpStore [[gep]] [[add]]
+
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %block BufferBlock
+OpMemberDecorate %block 0 Offset 0
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%block = OpTypeStruct %int
+%array = OpTypeArray %block %int_1
+%ptr_ssbo_array = OpTypePointer Uniform %array
+%ptr_ssbo_int = OpTypePointer Uniform %int
+%var = OpVariable %ptr_ssbo_array Uniform
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%gep1 = OpAccessChain %ptr_ssbo_int %var %int_0 %int_0
+%ld1 = OpLoad %int %gep1
+%add1 = OpIAdd %int %ld1 %int_1
+%gep2 = OpAccessChain %ptr_ssbo_int %var %int_0 %int_0
+OpStore %gep2 %add1
+%gep3 = OpAccessChain %ptr_ssbo_int %var %int_0 %int_0
+%ld3 = OpLoad %int %gep3
+%add3 = OpIAdd %int %ld3 %int_1
+%gep4 = OpAccessChain %ptr_ssbo_int %var %int_0 %int_0
+OpStore %gep4 %add3
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<LocalRedundancyEliminationPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

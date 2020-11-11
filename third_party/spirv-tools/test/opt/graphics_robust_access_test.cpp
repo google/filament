@@ -1323,8 +1323,8 @@ TEST_F(GraphicsRobustAccessTest,
   // Split the address calculation across two access chains.  Force
   // the transform to walk up the access chains to find the base variable.
   // This time, put the different access chains in different basic blocks.
-  // This sanity checks that we keep the instruction-to-block mapping
-  // consistent.
+  // This is an integrity check to ensure that we keep the instruction-to-block
+  // mapping consistent.
   for (auto* ac : AccessChains()) {
     std::ostringstream shaders;
     shaders << ShaderPreambleAC({"i", "j", "k", "bb1", "bb2", "ssbo_s",
@@ -1385,6 +1385,167 @@ TEST_F(GraphicsRobustAccessTest,
             << MainSuffix();
     SinglePassRunAndMatch<GraphicsRobustAccessPass>(shaders.str(), true);
   }
+}
+
+TEST_F(GraphicsRobustAccessTest, bug3813) {
+  // This shader comes from Dawn's
+  // TextureViewSamplingTest.TextureCubeMapOnWholeTexture, converted from GLSL
+  // by glslang.
+  // The pass was inserting a signed 32-bit int type, but not correctly marking
+  // the shader as changed.
+  std::string shader = R"(
+; SPIR-V
+; Version: 1.0
+; Generator: Google Shaderc over Glslang; 10
+; Bound: 46
+; Schema: 0
+       OpCapability Shader
+  %1 = OpExtInstImport "GLSL.std.450"
+       OpMemoryModel Logical GLSL450
+       OpEntryPoint Fragment %4 "main" %12 %29
+       OpExecutionMode %4 OriginUpperLeft
+       OpSource GLSL 450
+       OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+       OpSourceExtension "GL_GOOGLE_include_directive"
+       OpName %4 "main"
+       OpName %8 "sc"
+       OpName %12 "texCoord"
+       OpName %21 "tc"
+       OpName %29 "fragColor"
+       OpName %32 "texture0"
+       OpName %36 "sampler0"
+       OpDecorate %12 Location 0
+       OpDecorate %29 Location 0
+       OpDecorate %32 DescriptorSet 0
+       OpDecorate %32 Binding 1
+       OpDecorate %36 DescriptorSet 0
+       OpDecorate %36 Binding 0
+  %2 = OpTypeVoid
+  %3 = OpTypeFunction %2
+  %6 = OpTypeFloat 32
+  %7 = OpTypePointer Function %6
+  %9 = OpConstant %6 2
+ %10 = OpTypeVector %6 2
+ %11 = OpTypePointer Input %10
+ %12 = OpVariable %11 Input
+ %13 = OpTypeInt 32 0
+ %14 = OpConstant %13 0
+ %15 = OpTypePointer Input %6
+ %19 = OpConstant %6 1
+ %22 = OpConstant %13 1
+ %27 = OpTypeVector %6 4
+ %28 = OpTypePointer Output %27
+ %29 = OpVariable %28 Output
+ %30 = OpTypeImage %6 Cube 0 0 0 1 Unknown
+ %31 = OpTypePointer UniformConstant %30
+ %32 = OpVariable %31 UniformConstant
+ %34 = OpTypeSampler
+ %35 = OpTypePointer UniformConstant %34
+ %36 = OpVariable %35 UniformConstant
+ %38 = OpTypeSampledImage %30
+ %43 = OpTypeVector %6 3
+  %4 = OpFunction %2 None %3
+  %5 = OpLabel
+  %8 = OpVariable %7 Function
+ %21 = OpVariable %7 Function
+ %16 = OpAccessChain %15 %12 %14
+ %17 = OpLoad %6 %16
+ %18 = OpFMul %6 %9 %17
+ %20 = OpFSub %6 %18 %19
+       OpStore %8 %20
+ %23 = OpAccessChain %15 %12 %22
+ %24 = OpLoad %6 %23
+ %25 = OpFMul %6 %9 %24
+ %26 = OpFSub %6 %25 %19
+       OpStore %21 %26
+ %33 = OpLoad %30 %32
+ %37 = OpLoad %34 %36
+ %39 = OpSampledImage %38 %33 %37
+ %40 = OpLoad %6 %21
+ %41 = OpLoad %6 %8
+ %42 = OpFNegate %6 %41
+ %44 = OpCompositeConstruct %43 %19 %40 %42
+ %45 = OpImageSampleImplicitLod %27 %39 %44
+       OpStore %29 %45
+       OpReturn
+       OpFunctionEnd
+)";
+
+  std::string expected = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %texCoord %fragColor
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 450
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpName %main "main"
+OpName %sc "sc"
+OpName %texCoord "texCoord"
+OpName %tc "tc"
+OpName %fragColor "fragColor"
+OpName %texture0 "texture0"
+OpName %sampler0 "sampler0"
+OpDecorate %texCoord Location 0
+OpDecorate %fragColor Location 0
+OpDecorate %texture0 DescriptorSet 0
+OpDecorate %texture0 Binding 1
+OpDecorate %sampler0 DescriptorSet 0
+OpDecorate %sampler0 Binding 0
+%void = OpTypeVoid
+%10 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+%float_2 = OpConstant %float 2
+%v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%texCoord = OpVariable %_ptr_Input_v2float Input
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+%float_1 = OpConstant %float 1
+%uint_1 = OpConstant %uint 1
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%fragColor = OpVariable %_ptr_Output_v4float Output
+%23 = OpTypeImage %float Cube 0 0 0 1 Unknown
+%_ptr_UniformConstant_23 = OpTypePointer UniformConstant %23
+%texture0 = OpVariable %_ptr_UniformConstant_23 UniformConstant
+%25 = OpTypeSampler
+%_ptr_UniformConstant_25 = OpTypePointer UniformConstant %25
+%sampler0 = OpVariable %_ptr_UniformConstant_25 UniformConstant
+%27 = OpTypeSampledImage %23
+%v3float = OpTypeVector %float 3
+%int = OpTypeInt 32 1
+%main = OpFunction %void None %10
+%29 = OpLabel
+%sc = OpVariable %_ptr_Function_float Function
+%tc = OpVariable %_ptr_Function_float Function
+%30 = OpAccessChain %_ptr_Input_float %texCoord %uint_0
+%31 = OpLoad %float %30
+%32 = OpFMul %float %float_2 %31
+%33 = OpFSub %float %32 %float_1
+OpStore %sc %33
+%34 = OpAccessChain %_ptr_Input_float %texCoord %uint_1
+%35 = OpLoad %float %34
+%36 = OpFMul %float %float_2 %35
+%37 = OpFSub %float %36 %float_1
+OpStore %tc %37
+%38 = OpLoad %23 %texture0
+%39 = OpLoad %25 %sampler0
+%40 = OpSampledImage %27 %38 %39
+%41 = OpLoad %float %tc
+%42 = OpLoad %float %sc
+%43 = OpFNegate %float %42
+%44 = OpCompositeConstruct %v3float %float_1 %41 %43
+%45 = OpImageSampleImplicitLod %v4float %40 %44
+OpStore %fragColor %45
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<GraphicsRobustAccessPass>(shader, expected, false,
+                                                  true);
 }
 
 // TODO(dneto): Test access chain index wider than 64 bits?

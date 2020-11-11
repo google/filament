@@ -20,4 +20,4 @@
 #include "source/reduce/reduction_opportunity.h"
 #include "source/reduce/reduction_pass.h"
 #include "source/reduce/remove_instruction_reduction_opportunity.h"
-#include "source/reduce/remove_unreferenced_instruction_reduction_opportunity_finder.h"
+#include "source/reduce/remove_unused_instruction_reduction_opportunity_finder.h"

@@ -38,7 +38,8 @@ namespace fuzz {
 // instead become: 'u > v', where 'u' and 'v' are pieces of uniform data for
 // which it is known that 'u < v' holds.
 bool ForceRenderRed(
-    const spv_target_env& target_env, const std::vector<uint32_t>& binary_in,
+    const spv_target_env& target_env, spv_validator_options validator_options,
+    const std::vector<uint32_t>& binary_in,
     const spvtools::fuzz::protobufs::FactSequence& initial_facts,
     std::vector<uint32_t>* binary_out);
 

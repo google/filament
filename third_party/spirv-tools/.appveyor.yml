@@ -46,7 +46,8 @@ install:
 
 before_build:
   - git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers.git external/spirv-headers
-  - git clone --depth=1 https://github.com/google/googletest.git external/googletest
+  - git clone https://github.com/google/googletest.git external/googletest
+  - cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31dc610fec7 && cd .. && cd ..
   - git clone --depth=1 https://github.com/google/effcee.git external/effcee
   - git clone --depth=1 https://github.com/google/re2.git external/re2
   # Set path and environment variables for the current Visual Studio version

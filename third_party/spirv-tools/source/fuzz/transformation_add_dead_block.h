@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_ADD_DEAD_BLOCK_H_
 #define SOURCE_FUZZ_TRANSFORMATION_ADD_DEAD_BLOCK_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -41,15 +41,19 @@ class TransformationAddDeadBlock : public Transformation {
   // - |message_.existing_block| must not be a back-edge block, since in this
   //   case the newly-added block would lead to another back-edge to the
   //   associated loop header
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Changes the OpBranch from |message_.existing_block| to its successor 's'
   // to an OpBranchConditional to either 's' or a new block,
   // |message_.fresh_id|, which itself unconditionally branches to 's'.  The
   // conditional branch uses |message.condition_value| as its condition, and is
   // arranged so that control will pass to 's' at runtime.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 

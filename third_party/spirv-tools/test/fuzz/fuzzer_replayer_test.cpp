@@ -13,8 +13,11 @@
 // limitations under the License.
 
 #include "source/fuzz/fuzzer.h"
-#include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/replayer.h"
+
+#include "gtest/gtest.h"
+#include "source/fuzz/fuzzer_util.h"
+#include "source/fuzz/pseudo_random_generator.h"
 #include "source/fuzz/uniform_buffer_element_descriptor.h"
 #include "test/fuzz/fuzz_test_util.h"
 
@@ -1515,6 +1518,85 @@ const std::string kTestShader4 = R"(
                OpFunctionEnd
   )";
 
+// The SPIR-V comes from the following GLSL:
+//
+// #version 310 es
+// precision highp float;
+//
+// layout(location = 0) out vec4 color;
+//
+// void main()
+// {
+//   color = vec4(1.0, 0.0, 0.0, 1.0);
+// }
+
+const std::string kTestShader5 = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main" %9
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+               OpName %4 "main"
+               OpName %9 "color"
+               OpDecorate %9 Location 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 4
+          %8 = OpTypePointer Output %7
+          %9 = OpVariable %8 Output
+         %10 = OpConstant %6 1
+         %11 = OpConstant %6 0
+         %12 = OpConstantComposite %7 %10 %11 %11 %10
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpStore %9 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+// Some miscellaneous SPIR-V.
+
+const std::string kTestShader6 = R"(
+               OpCapability Shader
+               OpCapability SampledBuffer
+               OpCapability ImageBuffer
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main" %40 %41
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %40 DescriptorSet 0
+               OpDecorate %40 Binding 69
+               OpDecorate %41 DescriptorSet 0
+               OpDecorate %41 Binding 1
+         %54 = OpTypeFloat 32
+         %76 = OpTypeVector %54 4
+         %55 = OpConstant %54 0
+         %56 = OpTypeVector %54 3
+         %94 = OpTypeVector %54 2
+        %112 = OpConstantComposite %94 %55 %55
+         %57 = OpConstantComposite %56 %55 %55 %55
+         %15 = OpTypeImage %54 2D 2 0 0 1 Unknown
+        %114 = OpTypePointer UniformConstant %15
+         %38 = OpTypeSampler
+        %125 = OpTypePointer UniformConstant %38
+        %132 = OpTypeVoid
+        %133 = OpTypeFunction %132
+         %45 = OpTypeSampledImage %15
+         %40 = OpVariable %114 UniformConstant
+         %41 = OpVariable %125 UniformConstant
+          %2 = OpFunction %132 None %133
+        %164 = OpLabel
+        %184 = OpLoad %15 %40
+        %213 = OpLoad %38 %41
+        %216 = OpSampledImage %45 %184 %213
+        %217 = OpImageSampleImplicitLod %76 %216 %112 Bias %55
+               OpReturn
+               OpFunctionEnd
+  )";
+
 void AddConstantUniformFact(protobufs::FactSequence* facts,
                             uint32_t descriptor_set, uint32_t binding,
                             std::vector<uint32_t>&& indices, uint32_t value) {
@@ -1552,48 +1634,61 @@ void RunFuzzerAndReplayer(const std::string& shader,
   ASSERT_TRUE(t.Validate(binary_in));
 
   std::vector<fuzzerutil::ModuleSupplier> donor_suppliers;
-  for (auto donor :
-       {&kTestShader1, &kTestShader2, &kTestShader3, &kTestShader4}) {
+  for (auto donor : {&kTestShader1, &kTestShader2, &kTestShader3, &kTestShader4,
+                     &kTestShader5, &kTestShader6}) {
     donor_suppliers.emplace_back([donor]() {
       return BuildModule(env, kConsoleMessageConsumer, *donor,
                          kFuzzAssembleOption);
     });
   }
 
+  std::vector<Fuzzer::RepeatedPassStrategy> strategies{
+      Fuzzer::RepeatedPassStrategy::kSimple,
+      Fuzzer::RepeatedPassStrategy::kLoopedWithRecommendations,
+      Fuzzer::RepeatedPassStrategy::kRandomWithRecommendations};
+  uint32_t strategy_index = 0;
   for (uint32_t seed = initial_seed; seed < initial_seed + num_runs; seed++) {
-    std::vector<uint32_t> fuzzer_binary_out;
-    protobufs::TransformationSequence fuzzer_transformation_sequence_out;
+    spvtools::ValidatorOptions validator_options;
+    // Every 4th time we run the fuzzer, enable all fuzzer passes.
+    bool enable_all_passes = (seed % 4) == 0;
+    auto fuzzer_result =
+        Fuzzer(env, kConsoleMessageConsumer, binary_in, initial_facts,
+               donor_suppliers, MakeUnique<PseudoRandomGenerator>(seed),
+               enable_all_passes, strategies[strategy_index], true,
+               validator_options)
+            .Run();
 
-    Fuzzer fuzzer(env, seed, true);
-    fuzzer.SetMessageConsumer(kSilentConsumer);
-    auto fuzzer_result_status =
-        fuzzer.Run(binary_in, initial_facts, donor_suppliers,
-                   &fuzzer_binary_out, &fuzzer_transformation_sequence_out);
-    ASSERT_EQ(Fuzzer::FuzzerResultStatus::kComplete, fuzzer_result_status);
-    ASSERT_TRUE(t.Validate(fuzzer_binary_out));
+    // Cycle the repeated pass strategy so that we try a different one next time
+    // we run the fuzzer.
+    strategy_index =
+        (strategy_index + 1) % static_cast<uint32_t>(strategies.size());
 
-    std::vector<uint32_t> replayer_binary_out;
-    protobufs::TransformationSequence replayer_transformation_sequence_out;
+    ASSERT_EQ(Fuzzer::FuzzerResultStatus::kComplete, fuzzer_result.status);
+    ASSERT_TRUE(t.Validate(fuzzer_result.transformed_binary));
 
-    Replayer replayer(env, false);
-    replayer.SetMessageConsumer(kSilentConsumer);
-    auto replayer_result_status = replayer.Run(
-        binary_in, initial_facts, fuzzer_transformation_sequence_out,
-        &replayer_binary_out, &replayer_transformation_sequence_out);
+    auto replayer_result =
+        Replayer(
+            env, kConsoleMessageConsumer, binary_in, initial_facts,
+            fuzzer_result.applied_transformations,
+            static_cast<uint32_t>(
+                fuzzer_result.applied_transformations.transformation_size()),
+            false, validator_options)
+            .Run();
     ASSERT_EQ(Replayer::ReplayerResultStatus::kComplete,
-              replayer_result_status);
+              replayer_result.status);
 
     // After replaying the transformations applied by the fuzzer, exactly those
     // transformations should have been applied, and the binary resulting from
     // replay should be identical to that which resulted from fuzzing.
     std::string fuzzer_transformations_string;
     std::string replayer_transformations_string;
-    fuzzer_transformation_sequence_out.SerializeToString(
+    fuzzer_result.applied_transformations.SerializeToString(
         &fuzzer_transformations_string);
-    replayer_transformation_sequence_out.SerializeToString(
+    replayer_result.applied_transformations.SerializeToString(
         &replayer_transformations_string);
     ASSERT_EQ(fuzzer_transformations_string, replayer_transformations_string);
-    ASSERT_EQ(fuzzer_binary_out, replayer_binary_out);
+    ASSERT_TRUE(IsEqual(env, fuzzer_result.transformed_binary,
+                        replayer_result.transformed_module.get()));
   }
 }
 
@@ -1634,6 +1729,20 @@ TEST(FuzzerReplayerTest, Miscellaneous4) {
   // Do some fuzzer runs, starting from an initial seed of 14 (seed value chosen
   // arbitrarily).
   RunFuzzerAndReplayer(kTestShader4, facts, 14, kNumFuzzerRuns);
+}
+
+TEST(FuzzerReplayerTest, Miscellaneous5) {
+  // Do some fuzzer runs, starting from an initial seed of 29 (seed value chosen
+  // arbitrarily).
+  RunFuzzerAndReplayer(kTestShader5, protobufs::FactSequence(), 29,
+                       kNumFuzzerRuns);
+}
+
+TEST(FuzzerReplayerTest, Miscellaneous6) {
+  // Do some fuzzer runs, starting from an initial seed of 57 (seed value chosen
+  // arbitrarily).
+  RunFuzzerAndReplayer(kTestShader6, protobufs::FactSequence(), 57,
+                       kNumFuzzerRuns);
 }
 
 }  // namespace

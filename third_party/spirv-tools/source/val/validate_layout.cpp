@@ -107,6 +107,11 @@ spv_result_t ModuleScopedInstructions(ValidationState_t& _,
   }
 
   while (_.IsOpcodeInCurrentLayoutSection(opcode) == false) {
+    if (_.IsOpcodeInPreviousLayoutSection(opcode)) {
+      return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
+             << spvOpcodeString(opcode) << " is in an invalid layout section";
+    }
+
     _.ProgressToNextLayoutSectionOrder();
 
     switch (_.current_layout_section()) {
@@ -135,6 +140,20 @@ spv_result_t ModuleScopedInstructions(ValidationState_t& _,
 // encountered inside of a function.
 spv_result_t FunctionScopedInstructions(ValidationState_t& _,
                                         const Instruction* inst, SpvOp opcode) {
+  // Make sure we advance into the function definitions when we hit
+  // non-function declaration instructions.
+  if (_.current_layout_section() == kLayoutFunctionDeclarations &&
+      !_.IsOpcodeInCurrentLayoutSection(opcode)) {
+    _.ProgressToNextLayoutSectionOrder();
+
+    if (_.in_function_body()) {
+      if (auto error = _.current_function().RegisterSetFunctionDeclType(
+              FunctionDecl::kFunctionDeclDefinition)) {
+        return error;
+      }
+    }
+  }
+
   if (_.IsOpcodeInCurrentLayoutSection(opcode)) {
     switch (opcode) {
       case SpvOpFunction: {
@@ -207,12 +226,6 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
         if (_.in_block()) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << "A block must end with a branch instruction.";
-        }
-        if (_.current_layout_section() == kLayoutFunctionDeclarations) {
-          _.ProgressToNextLayoutSectionOrder();
-          if (auto error = _.current_function().RegisterSetFunctionDeclType(
-                  FunctionDecl::kFunctionDeclDefinition))
-            return error;
         }
         break;
 

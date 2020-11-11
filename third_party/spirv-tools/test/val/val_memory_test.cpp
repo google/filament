@@ -57,8 +57,9 @@ OpFunctionEnd
                 "Variables identified with the UniformConstant storage class "
                 "are used only as handles to refer to opaque resources. Such "
                 "variables must be typed as OpTypeImage, OpTypeSampler, "
-                "OpTypeSampledImage, OpTypeAccelerationStructureNV, or an "
-                "array of one of these types."));
+                "OpTypeSampledImage, OpTypeAccelerationStructureNV, "
+                "OpTypeAccelerationStructureKHR, OpTypeRayQueryProvisionalKHR, "
+                "or an array of one of these types."));
 }
 
 TEST_F(ValidateMemory, VulkanUniformConstantOnOpaqueResourceGood) {
@@ -110,8 +111,9 @@ OpFunctionEnd
                 "Variables identified with the UniformConstant storage class "
                 "are used only as handles to refer to opaque resources. Such "
                 "variables must be typed as OpTypeImage, OpTypeSampler, "
-                "OpTypeSampledImage, OpTypeAccelerationStructureNV, or an "
-                "array of one of these types."));
+                "OpTypeSampledImage, OpTypeAccelerationStructureNV, "
+                "OpTypeAccelerationStructureKHR, OpTypeRayQueryProvisionalKHR, "
+                "or an array of one of these types."));
 }
 
 TEST_F(ValidateMemory, VulkanUniformConstantOnOpaqueResourceArrayGood) {

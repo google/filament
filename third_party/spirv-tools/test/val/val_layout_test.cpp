@@ -567,6 +567,26 @@ TEST_F(ValidateLayout, ModuleProcessedValidIn11) {
   EXPECT_THAT(getDiagnosticString(), Eq(""));
 }
 
+TEST_F(ValidateLayout, LayoutOrderMixedUp) {
+  char str[] = R"(
+           OpCapability Shader
+           OpCapability Linkage
+           OpMemoryModel Logical GLSL450
+           OpEntryPoint Fragment %fragmentFloat "fragmentFloat"
+           OpExecutionMode %fragmentFloat OriginUpperLeft
+           OpEntryPoint Fragment %fragmentUint "fragmentUint"
+           OpExecutionMode %fragmentUint OriginUpperLeft
+)";
+
+  CompileSuccessfully(str, SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_LAYOUT,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+  // By the mechanics of the validator, we assume ModuleProcessed is in the
+  // right spot, but then that OpName is in the wrong spot.
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("EntryPoint is in an invalid layout section"));
+}
+
 TEST_F(ValidateLayout, ModuleProcessedBeforeLastNameIsTooEarly) {
   char str[] = R"(
            OpCapability Shader
@@ -583,7 +603,7 @@ TEST_F(ValidateLayout, ModuleProcessedBeforeLastNameIsTooEarly) {
   // By the mechanics of the validator, we assume ModuleProcessed is in the
   // right spot, but then that OpName is in the wrong spot.
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Name cannot appear in a function declaration"));
+              HasSubstr("Name is in an invalid layout section"));
 }
 
 TEST_F(ValidateLayout, ModuleProcessedInvalidAfterFirstAnnotation) {
@@ -599,9 +619,8 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidAfterFirstAnnotation) {
   CompileSuccessfully(str, SPV_ENV_UNIVERSAL_1_1);
   ASSERT_EQ(SPV_ERROR_INVALID_LAYOUT,
             ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("ModuleProcessed cannot appear in a function declaration"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("ModuleProcessed is in an invalid layout section"));
 }
 
 TEST_F(ValidateLayout, ModuleProcessedInvalidInFunctionBeforeLabel) {

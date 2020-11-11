@@ -25,8 +25,12 @@ PseudoRandomGenerator::~PseudoRandomGenerator() = default;
 
 uint32_t PseudoRandomGenerator::RandomUint32(uint32_t bound) {
   assert(bound > 0 && "Bound must be positive");
-  return static_cast<uint32_t>(
-      std::uniform_int_distribution<>(0, bound - 1)(mt_));
+  return std::uniform_int_distribution<uint32_t>(0, bound - 1)(mt_);
+}
+
+uint64_t PseudoRandomGenerator::RandomUint64(uint64_t bound) {
+  assert(bound > 0 && "Bound must be positive");
+  return std::uniform_int_distribution<uint64_t>(0, bound - 1)(mt_);
 }
 
 bool PseudoRandomGenerator::RandomBool() {

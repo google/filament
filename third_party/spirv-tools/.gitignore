@@ -29,3 +29,6 @@ bazel-testlogs
 # C-Lion
 /.idea/
 /cmake-build-*/
+
+# VSCode
+/.vscode/*

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_
-#define SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_
+#ifndef SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_H_
+#define SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_H_
 
 #include <vector>
 
@@ -28,7 +28,7 @@ namespace fuzz {
 class FuzzerPassObfuscateConstants : public FuzzerPass {
  public:
   FuzzerPassObfuscateConstants(
-      opt::IRContext* ir_context, FactManager* fact_manager,
+      opt::IRContext* ir_context, TransformationContext* transformation_context,
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
@@ -99,9 +99,14 @@ class FuzzerPassObfuscateConstants : public FuzzerPass {
       uint32_t base_instruction_result_id,
       const std::map<SpvOp, uint32_t>& skipped_opcode_count,
       std::vector<protobufs::IdUseDescriptor>* constant_uses);
+
+  // Returns a vector of unique words that denote constants. Every such constant
+  // is used in |FactConstantUniform| and has type with id equal to |type_id|.
+  std::vector<std::vector<uint32_t>> GetConstantWordsFromUniformsForType(
+      uint32_t type_id);
 };
 
 }  // namespace fuzz
 }  // namespace spvtools
 
-#endif  // SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_
+#endif  // SOURCE_FUZZ_FUZZER_PASS_OBFUSCATE_CONSTANTS_H_

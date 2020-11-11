@@ -23,7 +23,8 @@ namespace fuzz {
 // A fuzzer pass for adding dead break edges to the module.
 class FuzzerPassAddDeadBreaks : public FuzzerPass {
  public:
-  FuzzerPassAddDeadBreaks(opt::IRContext* ir_context, FactManager* fact_manager,
+  FuzzerPassAddDeadBreaks(opt::IRContext* ir_context,
+                          TransformationContext* transformation_context,
                           FuzzerContext* fuzzer_context,
                           protobufs::TransformationSequence* transformations);
 

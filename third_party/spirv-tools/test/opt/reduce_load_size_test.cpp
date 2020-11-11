@@ -107,6 +107,104 @@ TEST_F(ReduceLoadSizeTest, cbuffer_load_extract) {
   SinglePassRunAndMatch<ReduceLoadSize>(test, false);
 }
 
+TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_not_affected_by_debug_instr) {
+  // Originally from the following HLSL:
+  //   struct S {
+  //     uint f;
+  //   };
+  //
+  //
+  //   cbuffer gBuffer { uint a[32]; };
+  //
+  //   RWStructuredBuffer<S> gRWSBuffer;
+  //
+  //   uint foo(uint p[32]) {
+  //     return p[1];
+  //   }
+  //
+  //   [numthreads(1,1,1)]
+  //   void main() {
+  //      gRWSBuffer[0].f = foo(a);
+  //   }
+  const std::string test =
+      R"(
+               OpCapability Shader
+        %ext = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 600
+  %file_name = OpString "test"
+ %float_name = OpString "float"
+  %main_name = OpString "main"
+     %f_name = OpString "f"
+               OpName %type_gBuffer "type.gBuffer"
+               OpMemberName %type_gBuffer 0 "a"
+               OpName %gBuffer "gBuffer"
+               OpName %S "S"
+               OpMemberName %S 0 "f"
+               OpName %type_RWStructuredBuffer_S "type.RWStructuredBuffer.S"
+               OpName %gRWSBuffer "gRWSBuffer"
+               OpName %main "main"
+               OpDecorate %_arr_uint_uint_32 ArrayStride 16
+               OpMemberDecorate %type_gBuffer 0 Offset 0
+               OpDecorate %type_gBuffer Block
+               OpMemberDecorate %S 0 Offset 0
+               OpDecorate %_runtimearr_S ArrayStride 4
+               OpMemberDecorate %type_RWStructuredBuffer_S 0 Offset 0
+               OpDecorate %type_RWStructuredBuffer_S BufferBlock
+               OpDecorate %gBuffer DescriptorSet 0
+               OpDecorate %gBuffer Binding 0
+               OpDecorate %gRWSBuffer DescriptorSet 0
+               OpDecorate %gRWSBuffer Binding 1
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+%_arr_uint_uint_32 = OpTypeArray %uint %uint_32
+%type_gBuffer = OpTypeStruct %_arr_uint_uint_32
+%_ptr_Uniform_type_gBuffer = OpTypePointer Uniform %type_gBuffer
+          %S = OpTypeStruct %uint
+%_runtimearr_S = OpTypeRuntimeArray %S
+%type_RWStructuredBuffer_S = OpTypeStruct %_runtimearr_S
+%_ptr_Uniform_type_RWStructuredBuffer_S = OpTypePointer Uniform %type_RWStructuredBuffer_S
+        %int = OpTypeInt 32 1
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform__arr_uint_uint_32 = OpTypePointer Uniform %_arr_uint_uint_32
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+    %gBuffer = OpVariable %_ptr_Uniform_type_gBuffer Uniform
+ %gRWSBuffer = OpVariable %_ptr_Uniform_type_RWStructuredBuffer_S Uniform
+  %null_expr = OpExtInst %void %ext DebugExpression
+        %src = OpExtInst %void %ext DebugSource %file_name
+         %cu = OpExtInst %void %ext DebugCompilationUnit 1 4 %src HLSL
+     %dbg_tf = OpExtInst %void %ext DebugTypeBasic %float_name %uint_32 Float
+    %main_ty = OpExtInst %void %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_tf
+   %dbg_main = OpExtInst %void %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %main
+      %dbg_f = OpExtInst %void %ext DebugLocalVariable %f_name %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+       %main = OpFunction %void None %15
+         %20 = OpLabel
+          %s = OpExtInst %void %ext DebugScope %dbg_main
+; CHECK: [[ac1:%\w+]] = OpAccessChain {{%\w+}} %gBuffer %int_0
+; CHECK: [[ac2:%\w+]] = OpAccessChain {{%\w+}} [[ac1]] %uint_1
+; CHECK: [[ld:%\w+]] = OpLoad {{%\w+}} [[ac2]]
+; CHECK: OpStore {{%\w+}} [[ld]]
+         %21 = OpAccessChain %_ptr_Uniform__arr_uint_uint_32 %gBuffer %int_0
+         %22 = OpLoad %_arr_uint_uint_32 %21    ; Load of 32-element array.
+      %value = OpExtInst %void %ext DebugValue %dbg_f %22 %null_expr
+         %23 = OpCompositeExtract %uint %22 1
+         %24 = OpAccessChain %_ptr_Uniform_uint %gRWSBuffer %int_0 %uint_0 %int_0
+               OpStore %24 %23
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<ReduceLoadSize>(test, false);
+}
+
 TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_vector) {
   // Originally from the following HLSL:
   //   struct S {

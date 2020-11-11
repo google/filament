@@ -14,13 +14,39 @@
 
 #include "test/fuzz/fuzz_test_util.h"
 
+#include "gtest/gtest.h"
+
 #include <fstream>
 #include <iostream>
 
+#include "source/opt/def_use_manager.h"
 #include "tools/io.h"
 
 namespace spvtools {
 namespace fuzz {
+
+const spvtools::MessageConsumer kConsoleMessageConsumer =
+    [](spv_message_level_t level, const char*, const spv_position_t& position,
+       const char* message) -> void {
+  switch (level) {
+    case SPV_MSG_FATAL:
+    case SPV_MSG_INTERNAL_ERROR:
+    case SPV_MSG_ERROR:
+      std::cerr << "error: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    case SPV_MSG_WARNING:
+      std::cout << "warning: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    case SPV_MSG_INFO:
+      std::cout << "info: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    default:
+      break;
+  }
+};
 
 bool IsEqual(const spv_target_env env,
              const std::vector<uint32_t>& expected_binary,
@@ -72,12 +98,11 @@ bool IsEqual(const spv_target_env env, const opt::IRContext* ir_1,
   return IsEqual(env, binary_1, binary_2);
 }
 
-bool IsValid(spv_target_env env, const opt::IRContext* ir) {
-  std::vector<uint32_t> binary;
-  ir->module()->ToBinary(&binary, false);
-  SpirvTools t(env);
-  t.SetMessageConsumer(kConsoleMessageConsumer);
-  return t.Validate(binary);
+bool IsEqual(const spv_target_env env, const std::vector<uint32_t>& binary_1,
+             const opt::IRContext* ir_2) {
+  std::vector<uint32_t> binary_2;
+  ir_2->module()->ToBinary(&binary_2, false);
+  return IsEqual(env, binary_1, binary_2);
 }
 
 std::string ToString(spv_target_env env, const opt::IRContext* ir) {
@@ -107,6 +132,15 @@ void DumpShader(const std::vector<uint32_t>& binary, const char* filename) {
   }
 }
 
+void DumpTransformationsBinary(
+    const protobufs::TransformationSequence& transformations,
+    const char* filename) {
+  std::ofstream transformations_file;
+  transformations_file.open(filename, std::ios::out | std::ios::binary);
+  transformations.SerializeToOstream(&transformations_file);
+  transformations_file.close();
+}
+
 void DumpTransformationsJson(
     const protobufs::TransformationSequence& transformations,
     const char* filename) {
@@ -119,6 +153,34 @@ void DumpTransformationsJson(
     std::ofstream transformations_json_file(filename);
     transformations_json_file << json_string;
     transformations_json_file.close();
+  }
+}
+
+void ApplyAndCheckFreshIds(
+    const Transformation& transformation, opt::IRContext* ir_context,
+    TransformationContext* transformation_context,
+    const std::unordered_set<uint32_t>& issued_overflow_ids) {
+  opt::analysis::DefUseManager::IdToDefMap before_transformation =
+      ir_context->get_def_use_mgr()->id_to_defs();
+  transformation.Apply(ir_context, transformation_context);
+  opt::analysis::DefUseManager::IdToDefMap after_transformation =
+      ir_context->get_def_use_mgr()->id_to_defs();
+  std::unordered_set<uint32_t> fresh_ids_for_transformation =
+      transformation.GetFreshIds();
+  for (auto& entry : after_transformation) {
+    uint32_t id = entry.first;
+    bool introduced_by_transformation_message =
+        fresh_ids_for_transformation.count(id);
+    bool introduced_by_overflow_ids = issued_overflow_ids.count(id);
+    ASSERT_FALSE(introduced_by_transformation_message &&
+                 introduced_by_overflow_ids);
+    if (before_transformation.count(entry.first)) {
+      ASSERT_FALSE(introduced_by_transformation_message ||
+                   introduced_by_overflow_ids);
+    } else {
+      ASSERT_TRUE(introduced_by_transformation_message ||
+                  introduced_by_overflow_ids);
+    }
   }
 }
 

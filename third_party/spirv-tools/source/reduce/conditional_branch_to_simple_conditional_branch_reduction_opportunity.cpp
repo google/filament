@@ -19,13 +19,10 @@
 namespace spvtools {
 namespace reduce {
 
-using opt::IRContext;
-using opt::Instruction;
-
 ConditionalBranchToSimpleConditionalBranchReductionOpportunity::
     ConditionalBranchToSimpleConditionalBranchReductionOpportunity(
-        IRContext* context, Instruction* conditional_branch_instruction,
-        bool redirect_to_true)
+        opt::IRContext* context,
+        opt::Instruction* conditional_branch_instruction, bool redirect_to_true)
     : context_(context),
       conditional_branch_instruction_(conditional_branch_instruction),
       redirect_to_true_(redirect_to_true) {}
@@ -63,7 +60,8 @@ void ConditionalBranchToSimpleConditionalBranchReductionOpportunity::Apply() {
       context_->cfg()->block(old_successor_block_id));
 
   // We have changed the CFG.
-  context_->InvalidateAnalysesExceptFor(IRContext::Analysis::kAnalysisNone);
+  context_->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 }  // namespace reduce

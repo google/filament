@@ -22,7 +22,7 @@ namespace spvtools {
 namespace reduce {
 
 std::vector<uint32_t> ReductionPass::TryApplyReduction(
-    const std::vector<uint32_t>& binary) {
+    const std::vector<uint32_t>& binary, uint32_t target_function) {
   // We represent modules as binaries because (a) attempts at reduction need to
   // end up in binary form to be passed on to SPIR-V-consuming tools, and (b)
   // when we apply a reduction step we need to do it on a fresh version of the
@@ -34,7 +34,7 @@ std::vector<uint32_t> ReductionPass::TryApplyReduction(
   assert(context);
 
   std::vector<std::unique_ptr<ReductionOpportunity>> opportunities =
-      finder_->GetAvailableOpportunities(context.get());
+      finder_->GetAvailableOpportunities(context.get(), target_function);
 
   // There is no point in having a granularity larger than the number of
   // opportunities, so reduce the granularity in this case.

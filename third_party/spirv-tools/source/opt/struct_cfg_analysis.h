@@ -53,6 +53,11 @@ class StructuredCFGAnalysis {
   // merge construct.
   uint32_t MergeBlock(uint32_t bb_id);
 
+  // Returns the nesting depth of the given block, i.e. the number of merge
+  // constructs containing it. Headers and merge blocks are not considered part
+  // of the corresponding merge constructs.
+  uint32_t NestingDepth(uint32_t block_id);
+
   // Returns the id of the header of the innermost loop construct
   // that contains |bb_id|.  Return |0| if |bb_id| is not contained in any loop
   // construct.
@@ -73,6 +78,13 @@ class StructuredCFGAnalysis {
   // that contains |bb_id|.  Return |0| if |bb_id| is not contained in any loop
   // construct.
   uint32_t LoopContinueBlock(uint32_t bb_id);
+
+  // Returns the loop nesting depth of |bb_id| within its function, i.e. the
+  // number of loop constructs in which |bb_id| is contained. As per other
+  // functions in StructuredCFGAnalysis, a loop header is not regarded as being
+  // part of the loop that it heads, so that e.g. the nesting depth of an
+  // outer-most loop header is 0.
+  uint32_t LoopNestingDepth(uint32_t bb_id);
 
   // Returns the id of the header of the innermost switch construct
   // that contains |bb_id| as long as there is no intervening loop.  Returns |0|

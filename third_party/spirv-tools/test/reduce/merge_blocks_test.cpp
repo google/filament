@@ -66,7 +66,7 @@ TEST(MergeBlocksReductionPassTest, BasicCheck) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       MergeBlocksReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(5, ops.size());
 
   // Try order 3, 0, 2, 4, 1
@@ -356,7 +356,7 @@ TEST(MergeBlocksReductionPassTest, Loops) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       MergeBlocksReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(11, ops.size());
 
   for (auto& ri : ops) {
@@ -474,7 +474,7 @@ TEST(MergeBlocksReductionPassTest, MergeWithOpPhi) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       MergeBlocksReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(1, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -556,7 +556,7 @@ void MergeBlocksReductionPassTest_LoopReturn_Helper(bool reverse) {
   ASSERT_NE(context.get(), nullptr);
   auto opportunities =
       MergeBlocksReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   // A->B and B->C
   ASSERT_EQ(opportunities.size(), 2);

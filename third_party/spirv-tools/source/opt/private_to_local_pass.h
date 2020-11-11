@@ -63,8 +63,8 @@ class PrivateToLocalPass : public Pass {
 
   // Updates |inst|, and any instruction dependent on |inst|, to reflect the
   // change of the base pointer now pointing to the function storage class.
-  bool UpdateUse(Instruction* inst);
-  bool UpdateUses(uint32_t id);
+  bool UpdateUse(Instruction* inst, Instruction* user);
+  bool UpdateUses(Instruction* inst);
 };
 
 }  // namespace opt

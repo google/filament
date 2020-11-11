@@ -171,8 +171,8 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
           const auto opcode = inst->opcode();
           if (spvOpcodeGeneratesType(def->opcode()) &&
               !spvOpcodeGeneratesType(opcode) && !spvOpcodeIsDebug(opcode) &&
-              !inst->IsNonSemantic() && !spvOpcodeIsDecoration(opcode) &&
-              opcode != SpvOpFunction &&
+              !inst->IsDebugInfo() && !inst->IsNonSemantic() &&
+              !spvOpcodeIsDecoration(opcode) && opcode != SpvOpFunction &&
               opcode != SpvOpCooperativeMatrixLengthNV &&
               !(opcode == SpvOpSpecConstantOp &&
                 inst->word(3) == SpvOpCooperativeMatrixLengthNV)) {
@@ -180,8 +180,8 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
                    << "Operand " << _.getIdName(operand_word)
                    << " cannot be a type";
           } else if (def->type_id() == 0 && !spvOpcodeGeneratesType(opcode) &&
-                     !spvOpcodeIsDebug(opcode) && !inst->IsNonSemantic() &&
-                     !spvOpcodeIsDecoration(opcode) &&
+                     !spvOpcodeIsDebug(opcode) && !inst->IsDebugInfo() &&
+                     !inst->IsNonSemantic() && !spvOpcodeIsDecoration(opcode) &&
                      !spvOpcodeIsBranch(opcode) && opcode != SpvOpPhi &&
                      opcode != SpvOpExtInst && opcode != SpvOpExtInstImport &&
                      opcode != SpvOpSelectionMerge &&

@@ -25,7 +25,7 @@ namespace fuzz {
 class FuzzerPassAdjustMemoryOperandsMasks : public FuzzerPass {
  public:
   FuzzerPassAdjustMemoryOperandsMasks(
-      opt::IRContext* ir_context, FactManager* fact_manager,
+      opt::IRContext* ir_context, TransformationContext* transformation_context,
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 

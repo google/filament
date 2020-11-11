@@ -97,14 +97,26 @@ const (
 	OperandCategoryComposite = "Composite"
 )
 
+// OpcodeMap is a map of opcode name to Opcode type.
+type OpcodeMap map[string]*Opcode
+
 var (
 	// Opcodes is a map of opcode name to Opcode description.
-	Opcodes = map[string]*Opcode {•{{range $i := .Instructions}}
-		"{{$i.Opname}}": {{$i.Opname}},{{end}}
+	Opcodes = OpcodeMap {•{{range $i := .SPIRV.Instructions}}
+		"{{$i.Opname}}": {{Title $i.Opname}},{{end}}
 	}
 
-{{range $i := .Instructions}}	{{$i.Opname}} = &Opcode {
+	// ExtOpcodes is a map of extension name to Opcode description list.
+	ExtOpcodes = map[string]OpcodeMap {•{{range $ext := .Extensions}}
+		"{{$ext.Name}}": {•{{range $i := $ext.Instructions}}
+			"{{$i.Opname}}": {{Global $ext.Name}}_{{$i.Opname}},{{end}}
+		},{{end}}
+	}
+
+{{range $i := .SPIRV.Instructions}}	{{Title $i.Opname}} = &Opcode {
 		Opname:   "{{$i.Opname}}",
+		Class:    "{{$i.Class}}",
+		Opcode:   {{$i.Opcode}},
 		Operands: []Operand {•{{range $i := $i.Operands}}
 			Operand {
 				Kind:       OperandKind{{$i.Kind}},
@@ -114,8 +126,19 @@ var (
 		},
 	}
 {{end}}
+{{range $ext := .Extensions}}{{range $i := $ext.Instructions}}	{{Global $ext.Name}}_{{$i.Opname}} = &Opcode {
+		Opname:   "{{$i.Opname}}",
+		Operands: []Operand {•{{range $i := $i.Operands}}
+			Operand {
+				Kind:       OperandKind{{$i.Kind}},
+				Name:       "{{Replace $i.Name "\n" " "}}",
+				Quantifier: "{{$i.Quantifier}}",
+			}, {{end}}
+		},
+	}
+{{end}}{{end}}
 
-{{range $o := .OperandKinds}}	OperandKind{{$o.Kind}} = &OperandKind {
+{{range $o := .All.OperandKinds}}	OperandKind{{$o.Kind}} = &OperandKind {
 		Kind:       "{{$o.Kind}}",
 		Category:   "{{$o.Category}}",
 		Enumerants: []Enumerant {•{{range $e := $o.Enumerants}}

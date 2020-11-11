@@ -55,11 +55,11 @@ def check_library(library):
     #   _Z[0-9]+spv[A-Z_] :  C++ symbol starting with spv[A-Z_]
     symbol_ok_pattern = re.compile(r'^(spv[A-Z]|_ZN|_Z[0-9]+spv[A-Z_])')
 
-    # In addition, the following pattern whitelists global functions that are added
+    # In addition, the following pattern allowlists global functions that are added
     # by the protobuf compiler:
     #   - AddDescriptors_spvtoolsfuzz_2eproto()
     #   - InitDefaults_spvtoolsfuzz_2eproto()
-    symbol_whitelist_pattern = re.compile(r'_Z[0-9]+(InitDefaults|AddDescriptors)_spvtoolsfuzz_2eprotov')
+    symbol_allowlist_pattern = re.compile(r'_Z[0-9]+(InitDefaults|AddDescriptors)_spvtoolsfuzz_2eprotov')
 
     seen = set()
     result = 0
@@ -70,7 +70,7 @@ def check_library(library):
             if symbol not in seen:
                 seen.add(symbol)
                 #print("look at '{}'".format(symbol))
-                if not (symbol_whitelist_pattern.match(symbol) or symbol_ok_pattern.match(symbol)):
+                if not (symbol_allowlist_pattern.match(symbol) or symbol_ok_pattern.match(symbol)):
                     print('{}: error: Unescaped exported symbol: {}'.format(PROG, symbol))
                     result = 1
     return result

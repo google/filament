@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include "source/fuzz/transformation_add_type_boolean.h"
+
+#include "gtest/gtest.h"
+#include "source/fuzz/fuzzer_util.h"
 #include "test/fuzz/fuzz_test_util.h"
 
 namespace spvtools {
@@ -39,22 +42,25 @@ TEST(TransformationAddTypeBooleanTest, BasicTest) {
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   // Not applicable because id 1 is already in use.
-  ASSERT_FALSE(TransformationAddTypeBoolean(1).IsApplicable(context.get(),
-                                                            fact_manager));
+  ASSERT_FALSE(TransformationAddTypeBoolean(1).IsApplicable(
+      context.get(), transformation_context));
 
   auto add_type_bool = TransformationAddTypeBoolean(100);
-  ASSERT_TRUE(add_type_bool.IsApplicable(context.get(), fact_manager));
-  add_type_bool.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      add_type_bool.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(add_type_bool, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   // Not applicable as we already have this type now.
-  ASSERT_FALSE(TransformationAddTypeBoolean(101).IsApplicable(context.get(),
-                                                              fact_manager));
+  ASSERT_FALSE(TransformationAddTypeBoolean(101).IsApplicable(
+      context.get(), transformation_context));
 
   std::string after_transformation = R"(
                OpCapability Shader

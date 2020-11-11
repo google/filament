@@ -90,7 +90,8 @@ OpFunctionEnd
 )";
 
   const std::string after =
-      R"(%main = OpFunction %void None %12
+      R"(%34 = OpUndef %void
+%main = OpFunction %void None %12
 %28 = OpLabel
 %s0 = OpVariable %_ptr_Function_S_t Function
 %param = OpVariable %_ptr_Function_S_t Function
@@ -102,12 +103,12 @@ OpStore %30 %29
 OpStore %32 %31
 %33 = OpLoad %S_t %s0
 OpStore %param %33
-%41 = OpAccessChain %_ptr_Function_18 %param %int_2
-%42 = OpLoad %18 %41
-%43 = OpAccessChain %_ptr_Function_v2float %param %int_0
-%44 = OpLoad %v2float %43
-%45 = OpImageSampleImplicitLod %v4float %42 %44
-OpStore %outColor %45
+%42 = OpAccessChain %_ptr_Function_18 %param %int_2
+%43 = OpLoad %18 %42
+%44 = OpAccessChain %_ptr_Function_v2float %param %int_0
+%45 = OpLoad %v2float %44
+%46 = OpImageSampleImplicitLod %v4float %43 %45
+OpStore %outColor %46
 OpReturn
 OpFunctionEnd
 )";
@@ -191,10 +192,10 @@ OpFunctionEnd
 %34 = OpVariable %_ptr_Function_20 Function
 %35 = OpVariable %_ptr_Function_20 Function
 %25 = OpVariable %_ptr_Function_20 Function
-%36 = OpLoad %20 %sampler16
-OpStore %34 %36
-%37 = OpLoad %20 %34
-OpStore %35 %37
+%37 = OpLoad %20 %sampler16
+OpStore %34 %37
+%38 = OpLoad %20 %34
+OpStore %35 %38
 %26 = OpLoad %20 %35
 OpStore %25 %26
 %27 = OpLoad %20 %25
@@ -289,7 +290,8 @@ OpFunctionEnd
 )";
 
   const std::string after =
-      R"(%main2 = OpFunction %void None %13
+      R"(%35 = OpUndef %void
+%main2 = OpFunction %void None %13
 %29 = OpLabel
 %s0 = OpVariable %_ptr_Function_S_t Function
 %param = OpVariable %_ptr_Function_S_t Function
@@ -301,12 +303,12 @@ OpStore %31 %30
 OpStore %33 %32
 %34 = OpLoad %S_t %s0
 OpStore %param %34
-%44 = OpAccessChain %_ptr_Function_19 %param %int_2
-%45 = OpLoad %19 %44
-%46 = OpAccessChain %_ptr_Function_v2float %param %int_0
-%47 = OpLoad %v2float %46
-%48 = OpImageSampleImplicitLod %v4float %45 %47
-OpStore %outColor %48
+%45 = OpAccessChain %_ptr_Function_19 %param %int_2
+%46 = OpLoad %19 %45
+%47 = OpAccessChain %_ptr_Function_v2float %param %int_0
+%48 = OpLoad %v2float %47
+%49 = OpImageSampleImplicitLod %v4float %46 %48
+OpStore %outColor %49
 OpReturn
 OpFunctionEnd
 )";

@@ -82,6 +82,13 @@ TEST_P(EnumCapabilityTest, Sample) {
       SpvCapability##CAP1, SpvCapability##CAP2, SpvCapability##CAP3 \
     }                                                               \
   }
+#define CASE4(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4)                   \
+  {                                                                  \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet {   \
+      SpvCapability##CAP1, SpvCapability##CAP2, SpvCapability##CAP3, \
+          SpvCapability##CAP4                                        \
+    }                                                                \
+  }
 #define CASE5(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4, CAP5)             \
   {                                                                  \
     SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet {   \
@@ -491,8 +498,8 @@ INSTANTIATE_TEST_SUITE_P(
             CASE1(BUILT_IN, BuiltInCullDistance, CullDistance),  // Bug 1407, 15234
             CASE1(BUILT_IN, BuiltInVertexId, Shader),
             CASE1(BUILT_IN, BuiltInInstanceId, Shader),
-            CASE3(BUILT_IN, BuiltInPrimitiveId, Geometry, Tessellation,
-                  RayTracingNV),
+            CASE4(BUILT_IN, BuiltInPrimitiveId, Geometry, Tessellation,
+                  RayTracingNV, RayTracingProvisionalKHR),
             CASE2(BUILT_IN, BuiltInInvocationId, Geometry, Tessellation),
             CASE2(BUILT_IN, BuiltInLayer, Geometry, ShaderViewportIndexLayerEXT),
             CASE2(BUILT_IN, BuiltInViewportIndex, MultiViewport, ShaderViewportIndexLayerEXT),  // Bug 15234

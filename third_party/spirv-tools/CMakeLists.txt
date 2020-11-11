@@ -24,19 +24,8 @@ if (POLICY CMP0054)
 endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Filament specific changes
-if (APPLE)
-  set(CMAKE_MACOSX_RPATH ON)
-endif (APPLE)
-set(SPIRV_SKIP_EXECUTABLES_OPTION ON)
-set(SPIRV_SKIP_TESTS_OPTION ON)
-set(SKIP_SPIRV_TOOLS_INSTALL ON)
-# End Filament specific changes
-
 project(spirv-tools)
-# Filament specific changes
-# enable_testing()
-# End Filament specific changes
+enable_testing()
 set(SPIRV_TOOLS "SPIRV-Tools")
 
 include(GNUInstallDirs)
@@ -51,7 +40,7 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   set(SPIRV_TIMER_ENABLED ${SPIRV_ALLOW_TIMERS})
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
     add_definitions(-DSPIRV_EMSCRIPTEN)
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
   add_definitions(-DSPIRV_WINDOWS)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "CYGWIN")
   add_definitions(-DSPIRV_WINDOWS)
@@ -79,9 +68,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-# Filament specific changes
-# option(SKIP_SPIRV_TOOLS_INSTALL "Skip installation" ${SKIP_SPIRV_TOOLS_INSTALL})
-# End Filament specific changes
+option(SKIP_SPIRV_TOOLS_INSTALL "Skip installation" ${SKIP_SPIRV_TOOLS_INSTALL})
 if(NOT ${SKIP_SPIRV_TOOLS_INSTALL})
   set(ENABLE_SPIRV_TOOLS_INSTALL ON)
 endif()
@@ -91,6 +78,8 @@ if(SPIRV_BUILD_COMPRESSION)
   message(FATAL_ERROR "SPIR-V compression codec has been removed from SPIR-V tools. "
           "Please remove SPIRV_BUILD_COMPRESSION from your build options.")
 endif(SPIRV_BUILD_COMPRESSION)
+
+option(SPIRV_BUILD_FUZZER "Build spirv-fuzz" OFF)
 
 option(SPIRV_WERROR "Enable error on warning" ON)
 if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
@@ -142,6 +131,46 @@ endif()
 if (DEFINED SPIRV_TOOLS_EXTRA_DEFINITIONS)
   add_definitions(${SPIRV_TOOLS_EXTRA_DEFINITIONS})
 endif()
+
+# Library build setting definitions:
+#
+# * SPIRV_TOOLS_BUILD_STATIC - ON or OFF - Defaults to ON.
+#   If enabled the following targets will be created:
+#     ${SPIRV_TOOLS}-static - STATIC library.
+#                             Has full public symbol visibility.
+#     ${SPIRV_TOOLS}-shared - SHARED library.
+#                             Has default-hidden symbol visibility.
+#     ${SPIRV_TOOLS}        - will alias to one of above, based on BUILD_SHARED_LIBS.
+#   If disabled the following targets will be created:
+#     ${SPIRV_TOOLS}        - either STATIC or SHARED based on SPIRV_TOOLS_LIBRARY_TYPE.
+#                             Has full public symbol visibility.
+#     ${SPIRV_TOOLS}-shared - SHARED library.
+#                             Has default-hidden symbol visibility.
+#
+# * SPIRV_TOOLS_LIBRARY_TYPE - SHARED or STATIC.
+#   Specifies the library type used for building SPIRV-Tools libraries.
+#   Defaults to SHARED when BUILD_SHARED_LIBS=1, otherwise STATIC.
+#
+# * SPIRV_TOOLS_FULL_VISIBILITY - "${SPIRV_TOOLS}-static" or "${SPIRV_TOOLS}"
+#   Evaluates to the SPIRV_TOOLS target library name that has no hidden symbols.
+#   This is used by internal targets for accessing symbols that are non-public.
+#   Note this target provides no API stability guarantees.
+#
+# Ideally, all of these will go away - see https://github.com/KhronosGroup/SPIRV-Tools/issues/3909.
+option(SPIRV_TOOLS_BUILD_STATIC "Build ${SPIRV_TOOLS}-static target. ${SPIRV_TOOLS} will alias to ${SPIRV_TOOLS}-static or ${SPIRV_TOOLS}-shared based on BUILD_SHARED_LIBS" ON)
+if(SPIRV_TOOLS_BUILD_STATIC)
+  set(SPIRV_TOOLS_FULL_VISIBILITY ${SPIRV_TOOLS}-static)
+  set(SPIRV_TOOLS_LIBRARY_TYPE "STATIC")
+else(SPIRV_TOOLS_BUILD_STATIC)
+  set(SPIRV_TOOLS_FULL_VISIBILITY ${SPIRV_TOOLS})
+  if (NOT DEFINED SPIRV_TOOLS_LIBRARY_TYPE)
+      if(BUILD_SHARED_LIBS)
+        set(SPIRV_TOOLS_LIBRARY_TYPE "SHARED")
+      else()
+        set(SPIRV_TOOLS_LIBRARY_TYPE "STATIC")
+      endif()
+  endif()
+endif(SPIRV_TOOLS_BUILD_STATIC)
 
 function(spvtools_default_compile_options TARGET)
   target_compile_options(${TARGET} PRIVATE ${SPIRV_WARNINGS})
@@ -201,11 +230,7 @@ if(NOT COMMAND find_host_program)
 endif()
 
 # Tests require Python3
-if(CMAKE_VERSION VERSION_LESS "3.12" OR ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  find_host_package(PythonInterp 3 REQUIRED)
-else()
-  find_package(Python3 COMPONENTS Interpreter)
-endif()
+find_host_package(PythonInterp 3 REQUIRED)
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
@@ -248,13 +273,11 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
 endif()
 
 # Defaults to OFF if the user didn't set it.
-# Filament specific changes
 option(SPIRV_SKIP_EXECUTABLES
   "Skip building the executable and tests along with the library"
-  ${SPIRV_SKIP_EXECUTABLES_OPTION})
+  ${SPIRV_SKIP_EXECUTABLES})
 option(SPIRV_SKIP_TESTS
-  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
-# End Filament specific changes
+  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS})
 if ("${SPIRV_SKIP_EXECUTABLES}")
   set(SPIRV_SKIP_TESTS ON)
 endif()
@@ -268,7 +291,7 @@ endif()
 
 # Precompiled header macro. Parameters are source file list and filename for pch cpp file.
 macro(spvtools_pch SRCS PCHPREFIX)
-  if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio")
+  if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio" AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(PCH_NAME "$(IntDir)\\${PCHPREFIX}.pch")
     # make source files use/depend on PCH_NAME
     set_source_files_properties(${${SRCS}} PROPERTIES COMPILE_FLAGS "/Yu${PCHPREFIX}.h /FI${PCHPREFIX}.h /Fp${PCH_NAME} /Zm300" OBJECT_DEPENDS "${PCH_NAME}")
@@ -298,10 +321,8 @@ endif()
 add_subdirectory(source)
 add_subdirectory(tools)
 
-# Filament specific changes
-#add_subdirectory(test)
-#add_subdirectory(examples)
-# End Filament specific changes
+add_subdirectory(test)
+add_subdirectory(examples)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
   install(
@@ -321,35 +342,33 @@ if (NOT "${SPIRV_SKIP_TESTS}")
            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
-set(SPIRV_LIBRARIES "-lSPIRV-Tools -lSPIRV-Tools-link -lSPIRV-Tools-opt")
+set(SPIRV_LIBRARIES "-lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link")
 set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
 
 # Build pkg-config file
 # Use a first-class target so it's regenerated when relevant files are updated.
-# Filament specific changes
-# add_custom_target(spirv-tools-pkg-config ALL
-#         COMMAND ${CMAKE_COMMAND}
-#                       -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
-#                       -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in
-#                       -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
-#                       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-#                       -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
-#                       -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
-#                       -DSPIRV_LIBRARIES=${SPIRV_LIBRARIES}
-#                       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
-#         DEPENDS "CHANGES" "cmake/SPIRV-Tools.pc.in" "cmake/write_pkg_config.cmake")
-# add_custom_target(spirv-tools-shared-pkg-config ALL
-#         COMMAND ${CMAKE_COMMAND}
-#                       -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
-#                       -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in
-#                       -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
-#                       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-#                       -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
-#                       -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
-#                       -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
-#                       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
-#         DEPENDS "CHANGES" "cmake/SPIRV-Tools-shared.pc.in" "cmake/write_pkg_config.cmake")
-# End Filament specific changes
+add_custom_target(spirv-tools-pkg-config ALL
+        COMMAND ${CMAKE_COMMAND}
+                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in
+                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+                      -DSPIRV_LIBRARIES=${SPIRV_LIBRARIES}
+                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+        DEPENDS "CHANGES" "cmake/SPIRV-Tools.pc.in" "cmake/write_pkg_config.cmake")
+add_custom_target(spirv-tools-shared-pkg-config ALL
+        COMMAND ${CMAKE_COMMAND}
+                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in
+                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
+                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+                      -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
+                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+        DEPENDS "CHANGES" "cmake/SPIRV-Tools-shared.pc.in" "cmake/write_pkg_config.cmake")
 
 # Install pkg-config file
 if (ENABLE_SPIRV_TOOLS_INSTALL)

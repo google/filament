@@ -22,15 +22,18 @@
 #include <utility>
 #include <vector>
 
-#include "source/opcode.h"
-#include "source/operand.h"
-#include "source/util/ilist_node.h"
-#include "source/util/small_vector.h"
-
+#include "OpenCLDebugInfo100.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_spirv_header.h"
+#include "source/opcode.h"
+#include "source/operand.h"
 #include "source/opt/reflect.h"
+#include "source/util/ilist_node.h"
+#include "source/util/small_vector.h"
 #include "spirv-tools/libspirv.h"
+
+const uint32_t kNoDebugScope = 0;
+const uint32_t kNoInlinedAt = 0;
 
 namespace spvtools {
 namespace opt {
@@ -80,6 +83,28 @@ struct Operand {
   spv_operand_type_t type;  // Type of this logical operand.
   OperandData words;        // Binary segments of this logical operand.
 
+  // Returns a string operand as a C-style string.
+  const char* AsCString() const {
+    assert(type == SPV_OPERAND_TYPE_LITERAL_STRING);
+    return reinterpret_cast<const char*>(words.data());
+  }
+
+  // Returns a string operand as a std::string.
+  std::string AsString() const { return AsCString(); }
+
+  // Returns a literal integer operand as a uint64_t
+  uint64_t AsLiteralUint64() const {
+    assert(type == SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER);
+    assert(1 <= words.size());
+    assert(words.size() <= 2);
+    // Load the low word.
+    uint64_t result = uint64_t(words[0]);
+    if (words.size() > 1) {
+      result = result | (uint64_t(words[1]) << 32);
+    }
+    return result;
+  }
+
   friend bool operator==(const Operand& o1, const Operand& o2) {
     return o1.type == o2.type && o1.words == o2.words;
   }
@@ -90,6 +115,44 @@ struct Operand {
 inline bool operator!=(const Operand& o1, const Operand& o2) {
   return !(o1 == o2);
 }
+
+// This structure is used to represent a DebugScope instruction from
+// the OpenCL.100.DebugInfo extened instruction set. Note that we can
+// ignore the result id of DebugScope instruction because it is not
+// used for anything. We do not keep it to reduce the size of
+// structure.
+// TODO: Let validator check that the result id is not used anywhere.
+class DebugScope {
+ public:
+  DebugScope(uint32_t lexical_scope, uint32_t inlined_at)
+      : lexical_scope_(lexical_scope), inlined_at_(inlined_at) {}
+
+  inline bool operator!=(const DebugScope& d) const {
+    return lexical_scope_ != d.lexical_scope_ || inlined_at_ != d.inlined_at_;
+  }
+
+  // Accessor functions for |lexical_scope_|.
+  uint32_t GetLexicalScope() const { return lexical_scope_; }
+  void SetLexicalScope(uint32_t scope) { lexical_scope_ = scope; }
+
+  // Accessor functions for |inlined_at_|.
+  uint32_t GetInlinedAt() const { return inlined_at_; }
+  void SetInlinedAt(uint32_t at) { inlined_at_ = at; }
+
+  // Pushes the binary segments for this DebugScope instruction into
+  // the back of *|binary|.
+  void ToBinary(uint32_t type_id, uint32_t result_id, uint32_t ext_set,
+                std::vector<uint32_t>* binary) const;
+
+ private:
+  // The result id of the lexical scope in which this debug scope is
+  // contained. The value is kNoDebugScope if there is no scope.
+  uint32_t lexical_scope_;
+
+  // The result id of DebugInlinedAt if instruction in this debug scope
+  // is inlined. The value is kNoInlinedAt if it is not inlined.
+  uint32_t inlined_at_;
+};
 
 // A SPIR-V instruction. It contains the opcode and any additional logical
 // operand, including the result id (if any) and result type id (if any). It
@@ -111,7 +174,8 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
         opcode_(SpvOpNop),
         has_type_id_(false),
         has_result_id_(false),
-        unique_id_(0) {}
+        unique_id_(0),
+        dbg_scope_(kNoDebugScope, kNoInlinedAt) {}
 
   // Creates a default OpNop instruction.
   Instruction(IRContext*);
@@ -124,6 +188,9 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // instruction, if any.
   Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
               std::vector<Instruction>&& dbg_line = {});
+
+  Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
+              const DebugScope& dbg_scope);
 
   // Creates an instruction with the given opcode |op|, type id: |ty_id|,
   // result id: |res_id| and input operands: |in_operands|.
@@ -172,8 +239,17 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
     return dbg_line_insts_;
   }
 
+  const Instruction* dbg_line_inst() const {
+    return dbg_line_insts_.empty() ? nullptr : &dbg_line_insts_[0];
+  }
+
   // Clear line-related debug instructions attached to this instruction.
   void clear_dbg_line_insts() { dbg_line_insts_.clear(); }
+
+  // Set line-related debug instructions.
+  void set_dbg_line_insts(const std::vector<Instruction>& lines) {
+    dbg_line_insts_ = lines;
+  }
 
   // Same semantics as in the base class except the list the InstructionList
   // containing |pos| will now assume ownership of |this|.
@@ -221,9 +297,25 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Sets the result id
   inline void SetResultId(uint32_t res_id);
   inline bool HasResultId() const { return has_result_id_; }
+  // Sets DebugScope.
+  inline void SetDebugScope(const DebugScope& scope);
+  inline const DebugScope& GetDebugScope() const { return dbg_scope_; }
+  // Updates DebugInlinedAt of DebugScope and OpLine.
+  void UpdateDebugInlinedAt(uint32_t new_inlined_at);
+  inline uint32_t GetDebugInlinedAt() const {
+    return dbg_scope_.GetInlinedAt();
+  }
+  // Updates lexical scope of DebugScope and OpLine.
+  void UpdateLexicalScope(uint32_t scope);
+  // Updates OpLine and DebugScope based on the information of |from|.
+  void UpdateDebugInfoFrom(const Instruction* from);
   // Remove the |index|-th operand
   void RemoveOperand(uint32_t index) {
     operands_.erase(operands_.begin() + index);
+  }
+  // Insert an operand before the |index|-th operand
+  void InsertOperand(uint32_t index, Operand&& operand) {
+    operands_.insert(operands_.begin() + index, operand);
   }
 
   // The following methods are similar to the above, but are for in operands.
@@ -294,6 +386,10 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   inline bool WhileEachInOperand(
       const std::function<bool(const uint32_t*)>& f) const;
 
+  // Returns true if it's an OpBranchConditional instruction
+  // with branch weights.
+  bool HasBranchWeights() const;
+
   // Returns true if any operands can be labels
   inline bool HasLabels() const;
 
@@ -326,8 +422,14 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Memory-to-memory instructions are not considered loads.
   inline bool IsLoad() const;
 
-  // Returns true if the instruction declares a variable that is read-only.
-  bool IsReadOnlyVariable() const;
+  // Returns true if the instruction generates a pointer that is definitely
+  // read-only.  This is determined by analysing the pointer type's storage
+  // class and decorations that target the pointer's id.  It does not analyse
+  // other instructions that the pointer may be derived from.  Thus if 'true' is
+  // returned, the pointer is definitely read-only, while if 'false' is returned
+  // it is possible that the pointer may actually be read-only if it is derived
+  // from another pointer that is decorated as read-only.
+  bool IsReadOnlyPointer() const;
 
   // The following functions check for the various descriptor types defined in
   // the Vulkan specification section 13.1.
@@ -439,6 +541,19 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // rules for physical addressing.
   bool IsValidBasePointer() const;
 
+  // Returns debug opcode of an OpenCL.100.DebugInfo instruction. If
+  // it is not an OpenCL.100.DebugInfo instruction, just returns
+  // OpenCLDebugInfo100InstructionsMax.
+  OpenCLDebugInfo100Instructions GetOpenCL100DebugOpcode() const;
+
+  // Returns true if it is an OpenCL.DebugInfo.100 instruction.
+  bool IsOpenCL100DebugInstr() const {
+    return GetOpenCL100DebugOpcode() != OpenCLDebugInfo100InstructionsMax;
+  }
+
+  // Returns true if this instructions a non-semantic instruction.
+  bool IsNonSemanticInstruction() const;
+
   // Dump this instruction on stderr.  Useful when running interactive
   // debuggers.
   void Dump() const;
@@ -451,11 +566,12 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
     return 0;
   }
 
-  // Returns true if the instruction declares a variable that is read-only.  The
-  // first version assumes the module is a shader module.  The second assumes a
+  // Returns true if the instruction generates a read-only pointer, with the
+  // same caveats documented in the comment for IsReadOnlyPointer.  The first
+  // version assumes the module is a shader module.  The second assumes a
   // kernel.
-  bool IsReadOnlyVariableShaders() const;
-  bool IsReadOnlyVariableKernel() const;
+  bool IsReadOnlyPointerShaders() const;
+  bool IsReadOnlyPointerKernel() const;
 
   // Returns true if the result of |inst| can be used as the base image for an
   // instruction that samples a image, reads an image, or writes to an image.
@@ -472,6 +588,9 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Instructions representing OpLine or OpNonLine itself, this field should be
   // empty.
   std::vector<Instruction> dbg_line_insts_;
+
+  // DebugScope that wraps this instruction.
+  DebugScope dbg_scope_;
 
   friend InstructionList;
 };
@@ -544,6 +663,13 @@ inline void Instruction::SetResultId(uint32_t res_id) {
   operands_[ridx].words = {res_id};
 }
 
+inline void Instruction::SetDebugScope(const DebugScope& scope) {
+  dbg_scope_ = scope;
+  for (auto& i : dbg_line_insts_) {
+    i.dbg_scope_ = scope;
+  }
+}
+
 inline void Instruction::SetResultType(uint32_t ty_id) {
   // TODO(dsinclair): Allow setting a type id if there wasn't one
   // previously. Need to make room in the operands_ array to place the result,
@@ -613,21 +739,21 @@ inline void Instruction::ForEachInst(
 }
 
 inline void Instruction::ForEachId(const std::function<void(uint32_t*)>& f) {
-  for (auto& opnd : operands_)
-    if (spvIsIdType(opnd.type)) f(&opnd.words[0]);
+  for (auto& operand : operands_)
+    if (spvIsIdType(operand.type)) f(&operand.words[0]);
 }
 
 inline void Instruction::ForEachId(
     const std::function<void(const uint32_t*)>& f) const {
-  for (const auto& opnd : operands_)
-    if (spvIsIdType(opnd.type)) f(&opnd.words[0]);
+  for (const auto& operand : operands_)
+    if (spvIsIdType(operand.type)) f(&operand.words[0]);
 }
 
 inline bool Instruction::WhileEachInId(
     const std::function<bool(uint32_t*)>& f) {
-  for (auto& opnd : operands_) {
-    if (spvIsInIdType(opnd.type)) {
-      if (!f(&opnd.words[0])) return false;
+  for (auto& operand : operands_) {
+    if (spvIsInIdType(operand.type) && !f(&operand.words[0])) {
+      return false;
     }
   }
   return true;
@@ -635,9 +761,9 @@ inline bool Instruction::WhileEachInId(
 
 inline bool Instruction::WhileEachInId(
     const std::function<bool(const uint32_t*)>& f) const {
-  for (const auto& opnd : operands_) {
-    if (spvIsInIdType(opnd.type)) {
-      if (!f(&opnd.words[0])) return false;
+  for (const auto& operand : operands_) {
+    if (spvIsInIdType(operand.type) && !f(&operand.words[0])) {
+      return false;
     }
   }
   return true;
@@ -660,13 +786,13 @@ inline void Instruction::ForEachInId(
 
 inline bool Instruction::WhileEachInOperand(
     const std::function<bool(uint32_t*)>& f) {
-  for (auto& opnd : operands_) {
-    switch (opnd.type) {
+  for (auto& operand : operands_) {
+    switch (operand.type) {
       case SPV_OPERAND_TYPE_RESULT_ID:
       case SPV_OPERAND_TYPE_TYPE_ID:
         break;
       default:
-        if (!f(&opnd.words[0])) return false;
+        if (!f(&operand.words[0])) return false;
         break;
     }
   }
@@ -675,13 +801,13 @@ inline bool Instruction::WhileEachInOperand(
 
 inline bool Instruction::WhileEachInOperand(
     const std::function<bool(const uint32_t*)>& f) const {
-  for (const auto& opnd : operands_) {
-    switch (opnd.type) {
+  for (const auto& operand : operands_) {
+    switch (operand.type) {
       case SPV_OPERAND_TYPE_RESULT_ID:
       case SPV_OPERAND_TYPE_TYPE_ID:
         break;
       default:
-        if (!f(&opnd.words[0])) return false;
+        if (!f(&operand.words[0])) return false;
         break;
     }
   }
@@ -690,16 +816,16 @@ inline bool Instruction::WhileEachInOperand(
 
 inline void Instruction::ForEachInOperand(
     const std::function<void(uint32_t*)>& f) {
-  WhileEachInOperand([&f](uint32_t* op) {
-    f(op);
+  WhileEachInOperand([&f](uint32_t* operand) {
+    f(operand);
     return true;
   });
 }
 
 inline void Instruction::ForEachInOperand(
     const std::function<void(const uint32_t*)>& f) const {
-  WhileEachInOperand([&f](const uint32_t* op) {
-    f(op);
+  WhileEachInOperand([&f](const uint32_t* operand) {
+    f(operand);
     return true;
   });
 }

@@ -238,6 +238,120 @@ TEST_F(ValidateAtomics, AtomicLoadInt32VulkanSuccess) {
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
 }
 
+TEST_F(ValidateAtomics, AtomicAddIntVulkanWrongType1) {
+  const std::string body = R"(
+%val1 = OpAtomicIAdd %f32 %f32_var %device %relaxed %f32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicIAdd: "
+                        "expected Result Type to be int scalar type"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddIntVulkanWrongType2) {
+  const std::string body = R"(
+%val1 = OpAtomicIAdd %f32vec4 %f32vec4_var %device %relaxed %f32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicIAdd: "
+                        "expected Result Type to be integer scalar type"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkan) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %f32 %f32_var %device %relaxed %f32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body));
+  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Opcode AtomicFAddEXT requires one of these capabilities: "
+                "AtomicFloat32AddEXT AtomicFloat64AddEXT"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkanWrongType1) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %f32vec4 %f32vec4_var %device %relaxed %f32_1
+)";
+  const std::string extra = R"(
+OpCapability AtomicFloat32AddEXT
+OpExtension "SPV_EXT_shader_atomic_float_add"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extra), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicFAddEXT: "
+                        "expected Result Type to be float scalar type"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkanWrongType2) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %u32 %u32_var %device %relaxed %u32_1
+)";
+  const std::string extra = R"(
+OpCapability AtomicFloat32AddEXT
+OpExtension "SPV_EXT_shader_atomic_float_add"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extra), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicFAddEXT: "
+                        "expected Result Type to be float scalar type"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkanWrongType3) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %u64 %u64_var %device %relaxed %u64_1
+)";
+  const std::string extra = R"(
+OpCapability AtomicFloat32AddEXT
+OpExtension "SPV_EXT_shader_atomic_float_add"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extra), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicFAddEXT: "
+                        "expected Result Type to be float scalar type"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkanWrongCapability) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %f32 %f32_var %device %relaxed %f32_1
+)";
+  const std::string extra = R"(
+OpCapability AtomicFloat64AddEXT
+OpExtension "SPV_EXT_shader_atomic_float_add"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extra), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AtomicFAddEXT: float add atomics "
+                        "require the AtomicFloat32AddEXT capability"));
+}
+
+TEST_F(ValidateAtomics, AtomicAddFloatVulkanSuccess) {
+  const std::string body = R"(
+%val1 = OpAtomicFAddEXT %f32 %f32_var %device %relaxed %f32_1
+)";
+  const std::string extra = R"(
+OpCapability AtomicFloat32AddEXT
+OpExtension "SPV_EXT_shader_atomic_float_add"
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extra), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
 TEST_F(ValidateAtomics, AtomicLoadFloatVulkan) {
   const std::string body = R"(
 %val1 = OpAtomicLoad %f32 %f32_var %device %relaxed
@@ -245,9 +359,25 @@ TEST_F(ValidateAtomics, AtomicLoadFloatVulkan) {
 )";
 
   CompileSuccessfully(GenerateShaderCode(body), SPV_ENV_VULKAN_1_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected Result Type to be int scalar type"));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateAtomics, AtomicStoreFloatVulkan) {
+  const std::string body = R"(
+OpAtomicStore %f32_var %device %relaxed %f32_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+}
+
+TEST_F(ValidateAtomics, AtomicExchangeFloatVulkan) {
+  const std::string body = R"(
+%val2 = OpAtomicExchange %f32 %f32_var %device %relaxed %f32_0
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body), SPV_ENV_VULKAN_1_0);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
 }
 
 TEST_F(ValidateAtomics, AtomicLoadInt64WithCapabilityVulkanSuccess) {
@@ -355,10 +485,7 @@ TEST_F(ValidateAtomics, AtomicLoadShaderFloat) {
 )";
 
   CompileSuccessfully(GenerateShaderCode(body));
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("AtomicLoad: "
-                        "expected Result Type to be int scalar type"));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateAtomics, AtomicLoadVulkanInt64) {
@@ -733,10 +860,7 @@ OpAtomicStore %f32_var %device %relaxed %f32_1
 )";
 
   CompileSuccessfully(GenerateShaderCode(body));
-  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("AtomicExchange: "
-                        "expected Result Type to be int scalar type"));
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 TEST_F(ValidateAtomics, AtomicExchangeWrongResultType) {

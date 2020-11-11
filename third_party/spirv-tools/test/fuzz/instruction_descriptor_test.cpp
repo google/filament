@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include "source/fuzz/instruction_descriptor.h"
+
+#include "gtest/gtest.h"
+#include "source/fuzz/fuzzer_util.h"
 #include "test/fuzz/fuzz_test_util.h"
 
 namespace spvtools {
@@ -51,7 +54,9 @@ TEST(InstructionDescriptorTest, BasicTest) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   for (auto& function : *context->module()) {
     for (auto& block : function) {

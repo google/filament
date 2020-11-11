@@ -52,7 +52,7 @@ protobufs::IdUseDescriptor MakeIdUseDescriptorFromUse(
     opt::IRContext* context, opt::Instruction* inst,
     uint32_t in_operand_index) {
   const auto& in_operand = inst->GetInOperand(in_operand_index);
-  assert(in_operand.type == SPV_OPERAND_TYPE_ID);
+  assert(spvIsInIdType(in_operand.type));
   return MakeIdUseDescriptor(in_operand.words[0],
                              MakeInstructionDescriptor(context, inst),
                              in_operand_index);

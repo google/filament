@@ -29,40 +29,41 @@ TransformationMergeBlocks::TransformationMergeBlocks(uint32_t block_id) {
 }
 
 bool TransformationMergeBlocks::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
-  auto second_block = fuzzerutil::MaybeFindBlock(context, message_.block_id());
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
+  auto second_block =
+      fuzzerutil::MaybeFindBlock(ir_context, message_.block_id());
   // The given block must exist.
   if (!second_block) {
     return false;
   }
   // The block must have just one predecessor.
-  auto predecessors = context->cfg()->preds(second_block->id());
+  auto predecessors = ir_context->cfg()->preds(second_block->id());
   if (predecessors.size() != 1) {
     return false;
   }
-  auto first_block = context->cfg()->block(predecessors.at(0));
+  auto first_block = ir_context->cfg()->block(predecessors.at(0));
 
-  return opt::blockmergeutil::CanMergeWithSuccessor(context, first_block);
+  return opt::blockmergeutil::CanMergeWithSuccessor(ir_context, first_block);
 }
 
-void TransformationMergeBlocks::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
-  auto second_block = fuzzerutil::MaybeFindBlock(context, message_.block_id());
-  auto first_block =
-      context->cfg()->block(context->cfg()->preds(second_block->id()).at(0));
+void TransformationMergeBlocks::Apply(opt::IRContext* ir_context,
+                                      TransformationContext* /*unused*/) const {
+  auto second_block =
+      fuzzerutil::MaybeFindBlock(ir_context, message_.block_id());
+  auto first_block = ir_context->cfg()->block(
+      ir_context->cfg()->preds(second_block->id()).at(0));
 
   auto function = first_block->GetParent();
   // We need an iterator pointing to the predecessor, hence the loop.
   for (auto bi = function->begin(); bi != function->end(); ++bi) {
     if (bi->id() == first_block->id()) {
-      assert(opt::blockmergeutil::CanMergeWithSuccessor(context, &*bi) &&
+      assert(opt::blockmergeutil::CanMergeWithSuccessor(ir_context, &*bi) &&
              "Because 'Apply' should only be invoked if 'IsApplicable' holds, "
              "it must be possible to merge |bi| with its successor.");
-      opt::blockmergeutil::MergeWithSuccessor(context, function, bi);
+      opt::blockmergeutil::MergeWithSuccessor(ir_context, function, bi);
       // Invalidate all analyses, since we have changed the module
       // significantly.
-      context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
+      ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
       return;
     }
   }
@@ -75,6 +76,10 @@ protobufs::Transformation TransformationMergeBlocks::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_merge_blocks() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationMergeBlocks::GetFreshIds() const {
+  return std::unordered_set<uint32_t>();
 }
 
 }  // namespace fuzz

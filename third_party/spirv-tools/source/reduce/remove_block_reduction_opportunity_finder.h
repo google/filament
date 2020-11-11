@@ -34,14 +34,14 @@ class RemoveBlockReductionOpportunityFinder
   std::string GetName() const final;
 
   std::vector<std::unique_ptr<ReductionOpportunity>> GetAvailableOpportunities(
-      opt::IRContext* context) const final;
+      opt::IRContext* context, uint32_t target_function) const final;
 
  private:
   // Returns true if the block |bi| in function |function| is a valid
   // opportunity according to various restrictions.
   static bool IsBlockValidOpportunity(opt::IRContext* context,
-                                      opt::Function& function,
-                                      opt::Function::iterator& bi);
+                                      opt::Function* function,
+                                      opt::Function::iterator* bi);
 
   // Returns true if the instructions (definitions) in block |bi| have no
   // references, except for references from inside the block itself.

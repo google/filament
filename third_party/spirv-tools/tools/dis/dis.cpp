@@ -56,6 +56,8 @@ Options:
   --raw-id        Show raw Id values instead of friendly names.
 
   --offsets       Show byte offsets for each instruction.
+
+  --comment       Add comments to make reading easier
 )",
       argv0, argv0);
 }
@@ -79,6 +81,7 @@ int main(int argc, char** argv) {
   bool show_byte_offsets = false;
   bool no_header = false;
   bool friendly_names = true;
+  bool comments = false;
 
   for (int argi = 1; argi < argc; ++argi) {
     if ('-' == argv[argi][0]) {
@@ -102,6 +105,8 @@ int main(int argc, char** argv) {
           } else if (0 == strcmp(argv[argi], "--color")) {
             force_no_color = false;
             force_color = true;
+          } else if (0 == strcmp(argv[argi], "--comment")) {
+            comments = true;
           } else if (0 == strcmp(argv[argi], "--no-indent")) {
             allow_indent = false;
           } else if (0 == strcmp(argv[argi], "--offsets")) {
@@ -155,6 +160,8 @@ int main(int argc, char** argv) {
   if (no_header) options |= SPV_BINARY_TO_TEXT_OPTION_NO_HEADER;
 
   if (friendly_names) options |= SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
+
+  if (comments) options |= SPV_BINARY_TO_TEXT_OPTION_COMMENT;
 
   if (!outFile || (0 == strcmp("-", outFile))) {
     // Print to standard output.

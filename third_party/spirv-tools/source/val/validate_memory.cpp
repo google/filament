@@ -1,4 +1,6 @@
 // Copyright (c) 2018 Google LLC.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -533,7 +535,9 @@ spv_result_t ValidateVariable(ValidationState_t& _, const Instruction* inst) {
       if (!IsAllowedTypeOrArrayOfSame(
               _, pointee,
               {SpvOpTypeImage, SpvOpTypeSampler, SpvOpTypeSampledImage,
-               SpvOpTypeAccelerationStructureNV})) {
+               SpvOpTypeAccelerationStructureNV,
+               SpvOpTypeAccelerationStructureKHR,
+               SpvOpTypeRayQueryProvisionalKHR})) {
         return _.diag(SPV_ERROR_INVALID_ID, inst)
                << "UniformConstant OpVariable <id> '" << _.getIdName(inst->id())
                << "' has illegal type.\n"
@@ -542,6 +546,8 @@ spv_result_t ValidateVariable(ValidationState_t& _, const Instruction* inst) {
                << "are used only as handles to refer to opaque resources. Such "
                << "variables must be typed as OpTypeImage, OpTypeSampler, "
                << "OpTypeSampledImage, OpTypeAccelerationStructureNV, "
+                  "OpTypeAccelerationStructureKHR, "
+                  "OpTypeRayQueryProvisionalKHR, "
                << "or an array of one of these types.";
       }
     }

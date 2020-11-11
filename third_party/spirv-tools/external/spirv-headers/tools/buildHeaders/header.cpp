@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 The Khronos Group Inc.
+// Copyright (c) 2014-2020 The Khronos Group Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
@@ -70,8 +70,8 @@ namespace {
 
         static const int         DocMagicNumber = 0x07230203;
         static const int         DocVersion     = 0x00010500;
-        static const int         DocRevision    = 1;
-        #define DocRevisionString                "1"
+        static const int         DocRevision    = 4;
+        #define DocRevisionString                "4"
         static const std::string DocCopyright;
         static const std::string DocComment1;
         static const std::string DocComment2;
@@ -169,7 +169,7 @@ namespace {
     }
 
     const std::string TPrinter::DocCopyright =
-        "Copyright (c) 2014-2019 The Khronos Group Inc.\n"
+        "Copyright (c) 2014-2020 The Khronos Group Inc.\n"
         "\n"
         "Permission is hereby granted, free of charge, to any person obtaining a copy\n"
         "of this software and/or associated documentation files (the \"Materials\"),\n"
