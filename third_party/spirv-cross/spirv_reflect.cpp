@@ -267,7 +267,6 @@ string CompilerReflection::compile()
 	json_stream = std::make_shared<simple_json::Stream>();
 	json_stream->set_current_locale_radix_character(current_locale_radix_character);
 	json_stream->begin_json_object();
-	fixup_type_alias();
 	reorder_type_alias();
 	emit_entry_points();
 	emit_types();
@@ -326,9 +325,6 @@ void CompilerReflection::emit_type(uint32_t type_id, bool &emitted_open_tag)
 {
 	auto &type = get<SPIRType>(type_id);
 	auto name = type_to_glsl(type);
-
-	if (type.type_alias != TypeID(0))
-		return;
 
 	if (!emitted_open_tag)
 	{
@@ -651,7 +647,7 @@ void CompilerReflection::emit_specialization_constants()
 		return;
 
 	json_stream->emit_json_key_array("specialization_constants");
-	for (const auto spec_const : specialization_constants)
+	for (const auto &spec_const : specialization_constants)
 	{
 		auto &c = get<SPIRConstant>(spec_const.id);
 		auto type = get<SPIRType>(c.constant_type);

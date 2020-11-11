@@ -55,8 +55,8 @@ float lod_factor(thread const float2& pos_, constant UBO& v_41)
 {
     float2 pos = pos_ * v_41.uScale.xy;
     float3 dist_to_cam = v_41.uCamPos - float3(pos.x, 0.0, pos.y);
-    float level = log2((length(dist_to_cam) + 9.9999997473787516355514526367188e-05) * v_41.uDistanceMod);
-    return fast::clamp(level, 0.0, v_41.uMaxTessLevel.x);
+    float level0 = log2((length(dist_to_cam) + 9.9999997473787516355514526367188e-05) * v_41.uDistanceMod);
+    return fast::clamp(level0, 0.0, v_41.uMaxTessLevel.x);
 }
 
 static inline __attribute__((always_inline))

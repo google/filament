@@ -1,0 +1,55 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_KHR_shader_subgroup_ballot : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) restrict readonly buffer SSBO_Offsets
+{
+    uvec2 _m0[];
+} _7;
+
+layout(push_constant, std430) uniform RootConstants
+{
+    uint _m0;
+    uint _m1;
+    uint _m2;
+    uint _m3;
+    uint _m4;
+    uint _m5;
+    uint _m6;
+    uint _m7;
+} registers;
+
+layout(set = 1, binding = 0) uniform samplerBuffer _8[];
+layout(set = 4, binding = 0, r32f) uniform imageBuffer _9[];
+layout(set = 4, binding = 0, r32ui) uniform uimageBuffer _10[];
+
+void main()
+{
+    uint _60 = registers._m4 + 2u;
+    uint _63 = subgroupBroadcastFirst(_60);
+    uint _70 = subgroupBroadcastFirst(registers._m4);
+    uint _75 = registers._m1 + 1u;
+    uint _78 = subgroupBroadcastFirst(_75);
+    uint _87 = gl_GlobalInvocationID.x + 4u;
+    uint _98 = gl_GlobalInvocationID.x + 1024u;
+    imageStore(_9[registers._m4], int((_98 < _7._m0[_70].y) ? (_98 + _7._m0[_70].x) : 4294967295u), vec4(imageLoad(_9[registers._m4], int((_87 < _7._m0[_70].y) ? (_87 + _7._m0[_70].x) : 4294967295u))));
+    uint _105 = gl_GlobalInvocationID.x + 2u;
+    uint _116 = gl_GlobalInvocationID.x + 2048u;
+    imageStore(_9[registers._m4], int((_116 < _7._m0[_70].y) ? (_116 + _7._m0[_70].x) : 4294967295u), vec4(texelFetch(_8[_75], int((_105 < _7._m0[_78].y) ? (_105 + _7._m0[_78].x) : 4294967295u))));
+    uint _129 = imageAtomicAdd(_10[_60], int((gl_GlobalInvocationID.x < _7._m0[_63].y) ? (gl_GlobalInvocationID.x + _7._m0[_63].x) : 4294967295u), 40u);
+    uint _136 = imageAtomicCompSwap(_10[_60], int((gl_GlobalInvocationID.y < _7._m0[_63].y) ? (gl_GlobalInvocationID.y + _7._m0[_63].x) : 4294967295u), 40u, 50u);
+    imageStore(_9[registers._m4], int((0u < _7._m0[_70].y) ? (0u + _7._m0[_70].x) : 4294967295u), vec4(float(_7._m0[_70].y)));
+    imageStore(_9[registers._m4], int((1u < _7._m0[_70].y) ? (1u + _7._m0[_70].x) : 4294967295u), vec4(float(_7._m0[_78].y)));
+    uint _11 = registers._m4 + (gl_GlobalInvocationID.z + 0u);
+    imageStore(_9[nonuniformEXT(_11)], int((_98 < _7._m0[_11].y) ? (_98 + _7._m0[_11].x) : 4294967295u), vec4(imageLoad(_9[nonuniformEXT(_11)], int((_87 < _7._m0[_11].y) ? (_87 + _7._m0[_11].x) : 4294967295u))));
+    uint _13 = registers._m1 + (gl_GlobalInvocationID.z + 0u);
+    imageStore(_9[nonuniformEXT(_11)], int((_116 < _7._m0[_11].y) ? (_116 + _7._m0[_11].x) : 4294967295u), vec4(texelFetch(_8[nonuniformEXT(_13)], int((_87 < _7._m0[_13].y) ? (_87 + _7._m0[_13].x) : 4294967295u))));
+    uint _15 = registers._m4 + (gl_GlobalInvocationID.z + 0u);
+    uint _208 = imageAtomicAdd(_10[nonuniformEXT(_15)], int((gl_GlobalInvocationID.y < _7._m0[_15].y) ? (gl_GlobalInvocationID.y + _7._m0[_15].x) : 4294967295u), 40u);
+    uint _215 = imageAtomicCompSwap(_10[nonuniformEXT(_15)], int((gl_GlobalInvocationID.y < _7._m0[_15].y) ? (gl_GlobalInvocationID.y + _7._m0[_15].x) : 4294967295u), 40u, 70u);
+    imageStore(_9[registers._m4], int((2u < _7._m0[_70].y) ? (2u + _7._m0[_70].x) : 4294967295u), vec4(float(_7._m0[_11].y)));
+    imageStore(_9[registers._m4], int((3u < _7._m0[_70].y) ? (3u + _7._m0[_70].x) : 4294967295u), vec4(float(_7._m0[_13].y)));
+}
+

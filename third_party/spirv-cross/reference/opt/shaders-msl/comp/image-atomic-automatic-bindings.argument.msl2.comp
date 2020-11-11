@@ -1,0 +1,37 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 outdata;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+struct spvDescriptorSetBuffer0
+{
+    texture2d<uint> uImage [[id(0)]];
+    device atomic_uint* uImage_atomic [[id(1)]];
+    device SSBO* m_31 [[id(2)]];
+    texture2d<float> uTexture [[id(3)]];
+    sampler uTextureSmplr [[id(4)]];
+};
+
+// The required alignment of a linear texture of R32Uint format.
+constant uint spvLinearTextureAlignmentOverride [[function_constant(65535)]];
+constant uint spvLinearTextureAlignment = is_function_constant_defined(spvLinearTextureAlignmentOverride) ? spvLinearTextureAlignmentOverride : 4;
+// Returns buffer coords corresponding to 2D texture coords for emulating 2D texture atomics
+#define spvImage2DAtomicCoord(tc, tex) (((((tex).get_width() +  spvLinearTextureAlignment / 4 - 1) & ~( spvLinearTextureAlignment / 4 - 1)) * (tc).y) + (tc).x)
+
+kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint _26 = atomic_fetch_add_explicit((device atomic_uint*)&spvDescriptorSet0.uImage_atomic[spvImage2DAtomicCoord(int2(gl_GlobalInvocationID.xy), spvDescriptorSet0.uImage)], 10u, memory_order_relaxed);
+    (*spvDescriptorSet0.m_31).outdata = spvDescriptorSet0.uTexture.sample(spvDescriptorSet0.uTextureSmplr, float2(gl_GlobalInvocationID.xy), level(0.0)) + float4(float(_26));
+}
+

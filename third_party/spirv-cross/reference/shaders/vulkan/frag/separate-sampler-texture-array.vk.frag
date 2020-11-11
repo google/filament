@@ -13,20 +13,17 @@ layout(location = 0) out vec4 FragColor;
 
 vec4 sample_func(vec2 uv, mediump sampler2D SPIRV_Cross_CombineduTexturesamp[4])
 {
-    vec4 _46 = texture(SPIRV_Cross_CombineduTexturesamp[2], uv);
-    return _46;
+    return texture(SPIRV_Cross_CombineduTexturesamp[2], uv);
 }
 
 vec4 sample_func_dual(vec2 uv, mediump sampler2D SPIRV_Cross_Combinedtexsamp)
 {
-    vec4 _55 = texture(SPIRV_Cross_Combinedtexsamp, uv);
-    return _55;
+    return texture(SPIRV_Cross_Combinedtexsamp, uv);
 }
 
 vec4 sample_func_dual_array(vec2 uv, mediump sampler2D SPIRV_Cross_Combinedtexsamp[4])
 {
-    vec4 _66 = texture(SPIRV_Cross_Combinedtexsamp[1], uv);
-    return _66;
+    return texture(SPIRV_Cross_Combinedtexsamp[1], uv);
 }
 
 void main()
