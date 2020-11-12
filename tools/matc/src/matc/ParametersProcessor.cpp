@@ -652,6 +652,7 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
         strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
         strToEnum["skinning"] = filament::Variant::SKINNING_OR_MORPHING;
         strToEnum["vsm"] = filament::Variant::VSM;
+        strToEnum["fog"] = filament::Variant::FOG;
         return strToEnum;
     }();
     uint8_t variantFilter = 0;
