@@ -50,6 +50,7 @@ constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 struct VulkanRenderTarget;
 struct VulkanSurfaceContext;
 struct VulkanTexture;
+class VulkanStagePool;
 
 // This wrapper exists so that we can use shared_ptr to implement shared ownership for low-level
 // Vulkan fences.
@@ -111,6 +112,7 @@ struct VulkanContext {
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;
+    VulkanTexture* emptyTexture = nullptr;
 
     // The work context is used for activities unrelated to the swap chain or draw calls, such as
     // uploads, blits, and transitions.
@@ -176,6 +178,7 @@ VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
 void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 VkImageLayout getTextureLayout(TextureUsage usage);
+void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);
 
 void blitDepth(VulkanContext* context, const VulkanRenderTarget* dstTarget,
         const VkOffset3D dstRect[2], const VulkanRenderTarget* srcTarget,
