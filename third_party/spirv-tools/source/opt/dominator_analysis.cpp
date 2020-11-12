@@ -55,12 +55,25 @@ bool DominatorAnalysisBase::Dominates(Instruction* a, Instruction* b) const {
     return tree_.Dominates(bb_a, bb_b);
   }
 
-  Instruction* current_inst = a;
-  while ((current_inst = current_inst->NextNode())) {
-    if (current_inst == b) {
+  const Instruction* current = a;
+  const Instruction* other = b;
+
+  if (tree_.IsPostDominator()) {
+    std::swap(current, other);
+  }
+
+  // We handle OpLabel instructions explicitly since they are not stored in the
+  // instruction list.
+  if (current->opcode() == SpvOpLabel) {
+    return true;
+  }
+
+  while ((current = current->NextNode())) {
+    if (current == other) {
       return true;
     }
   }
+
   return false;
 }
 

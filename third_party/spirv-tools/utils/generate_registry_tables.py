@@ -14,9 +14,28 @@
 # limitations under the License.
 """Generates the vendor tool table from the SPIR-V XML registry."""
 
-import distutils.dir_util
+import errno
 import os.path
 import xml.etree.ElementTree
+
+
+def mkdir_p(directory):
+    """Make the directory, and all its ancestors as required.  Any of the
+    directories are allowed to already exist.
+    This is compatible with Python down to 3.0.
+    """
+
+    if directory == "":
+        # We're being asked to make the current directory.
+        return
+
+    try:
+        os.makedirs(directory)
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(directory):
+            pass
+        else:
+            raise
 
 
 def generate_vendor_table(registry):
@@ -62,7 +81,7 @@ def main():
     with open(args.xml) as xml_in:
        registry = xml.etree.ElementTree.fromstring(xml_in.read())
 
-    distutils.dir_util.mkpath(os.path.dirname(args.generator_output))
+    mkdir_p(os.path.dirname(args.generator_output))
     with open(args.generator_output, 'w') as f:
       f.write(generate_vendor_table(registry))
 

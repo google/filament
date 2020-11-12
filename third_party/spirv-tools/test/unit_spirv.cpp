@@ -47,10 +47,5 @@ TEST(WordVectorPrintTo, PreservesFlagsAndFill) {
   EXPECT_THAT(s.str(), Eq("xx10 0x0000000a 0x00000010 xx11"));
 }
 
-TEST_P(RoundTripTest, Sample) {
-  EXPECT_THAT(EncodeAndDecodeSuccessfully(GetParam()), Eq(GetParam()))
-      << GetParam();
-}
-
 }  // namespace
 }  // namespace spvtools

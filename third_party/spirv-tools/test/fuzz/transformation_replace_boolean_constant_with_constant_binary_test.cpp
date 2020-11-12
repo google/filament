@@ -14,6 +14,7 @@
 
 #include "source/fuzz/transformation_replace_boolean_constant_with_constant_binary.h"
 
+#include "gtest/gtest.h"
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/id_use_descriptor.h"
 #include "source/fuzz/instruction_descriptor.h"
@@ -160,10 +161,11 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   std::vector<protobufs::IdUseDescriptor> uses_of_true = {
       MakeIdUseDescriptor(41, MakeInstructionDescriptor(44, SpvOpStore, 12), 1),
       MakeIdUseDescriptor(41, MakeInstructionDescriptor(46, SpvOpLogicalOr, 0),
@@ -197,10 +199,10 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
 #define CHECK_OPERATOR(USE_DESCRIPTOR, LHS_ID, RHS_ID, OPCODE, FRESH_ID) \
   ASSERT_TRUE(TransformationReplaceBooleanConstantWithConstantBinary(    \
                   USE_DESCRIPTOR, LHS_ID, RHS_ID, OPCODE, FRESH_ID)      \
-                  .IsApplicable(context.get(), fact_manager));           \
+                  .IsApplicable(context.get(), transformation_context)); \
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(   \
                    USE_DESCRIPTOR, RHS_ID, LHS_ID, OPCODE, FRESH_ID)     \
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
 #define CHECK_TRANSFORMATION_APPLICABILITY(GT_OPCODES, LT_OPCODES, SMALL_ID, \
                                            LARGE_ID)                         \
@@ -252,27 +254,27 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   // Target id is not fresh
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                    uses_of_true[0], 15, 17, SpvOpFOrdLessThan, 15)
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
   // LHS id does not exist
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                    uses_of_true[0], 300, 17, SpvOpFOrdLessThan, 200)
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
   // RHS id does not exist
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                    uses_of_true[0], 15, 300, SpvOpFOrdLessThan, 200)
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
   // LHS and RHS ids do not match type
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                    uses_of_true[0], 11, 17, SpvOpFOrdLessThan, 200)
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
   // Opcode not appropriate
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                    uses_of_true[0], 15, 17, SpvOpFDiv, 200)
-                   .IsApplicable(context.get(), fact_manager));
+                   .IsApplicable(context.get(), transformation_context));
 
   auto replace_true_with_double_comparison =
       TransformationReplaceBooleanConstantWithConstantBinary(
@@ -287,22 +289,30 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
       TransformationReplaceBooleanConstantWithConstantBinary(
           uses_of_false[1], 33, 31, SpvOpSLessThan, 103);
 
-  ASSERT_TRUE(replace_true_with_double_comparison.IsApplicable(context.get(),
-                                                               fact_manager));
-  replace_true_with_double_comparison.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
-  ASSERT_TRUE(replace_true_with_uint32_comparison.IsApplicable(context.get(),
-                                                               fact_manager));
-  replace_true_with_uint32_comparison.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
-  ASSERT_TRUE(replace_false_with_float_comparison.IsApplicable(context.get(),
-                                                               fact_manager));
-  replace_false_with_float_comparison.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
-  ASSERT_TRUE(replace_false_with_sint64_comparison.IsApplicable(context.get(),
-                                                                fact_manager));
-  replace_false_with_sint64_comparison.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(replace_true_with_double_comparison.IsApplicable(
+      context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replace_true_with_double_comparison, context.get(),
+                        &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  ASSERT_TRUE(replace_true_with_uint32_comparison.IsApplicable(
+      context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replace_true_with_uint32_comparison, context.get(),
+                        &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  ASSERT_TRUE(replace_false_with_float_comparison.IsApplicable(
+      context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replace_false_with_float_comparison, context.get(),
+                        &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  ASSERT_TRUE(replace_false_with_sint64_comparison.IsApplicable(
+      context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replace_false_with_sint64_comparison, context.get(),
+                        &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after = R"(
                OpCapability Shader
@@ -415,11 +425,12 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
         context.get(), SpvOpConstant, 6, 200, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 200);
-    ASSERT_TRUE(IsValid(env, context.get()));
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
     // The transformation is not applicable because %200 is NaN.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                      uses_of_true[0], 11, 200, SpvOpFOrdLessThan, 300)
-                     .IsApplicable(context.get(), fact_manager));
+                     .IsApplicable(context.get(), transformation_context));
   }
   if (std::numeric_limits<double>::has_infinity) {
     double positive_infinity_double = std::numeric_limits<double>::infinity();
@@ -431,12 +442,13 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
         context.get(), SpvOpConstant, 6, 201, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 201);
-    ASSERT_TRUE(IsValid(env, context.get()));
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
     // Even though the double constant %11 is less than the infinity %201, the
     // transformation is restricted to only apply to finite values.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                      uses_of_true[0], 11, 201, SpvOpFOrdLessThan, 300)
-                     .IsApplicable(context.get(), fact_manager));
+                     .IsApplicable(context.get(), transformation_context));
   }
   if (std::numeric_limits<float>::has_infinity) {
     float positive_infinity_float = std::numeric_limits<float>::infinity();
@@ -455,13 +467,14 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
         context.get(), SpvOpConstant, 12, 203, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 203);
-    ASSERT_TRUE(IsValid(env, context.get()));
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
     // Even though the negative infinity at %203 is less than the positive
     // infinity %202, the transformation is restricted to only apply to finite
     // values.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
                      uses_of_true[0], 203, 202, SpvOpFOrdLessThan, 300)
-                     .IsApplicable(context.get(), fact_manager));
+                     .IsApplicable(context.get(), transformation_context));
   }
 }
 
@@ -528,10 +541,11 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   auto use_of_true_in_if = MakeIdUseDescriptor(
       13, MakeInstructionDescriptor(10, SpvOpBranchConditional, 0), 0);
   auto use_of_false_in_while = MakeIdUseDescriptor(
@@ -542,13 +556,17 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   auto replacement_2 = TransformationReplaceBooleanConstantWithConstantBinary(
       use_of_false_in_while, 9, 11, SpvOpSGreaterThanEqual, 101);
 
-  ASSERT_TRUE(replacement_1.IsApplicable(context.get(), fact_manager));
-  replacement_1.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      replacement_1.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replacement_1, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
-  ASSERT_TRUE(replacement_2.IsApplicable(context.get(), fact_manager));
-  replacement_2.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      replacement_2.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(replacement_2, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after = R"(
                OpCapability Shader
@@ -604,6 +622,93 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest, OpPhi) {
   // Hand-written SPIR-V to check applicability of the transformation on an
   // OpPhi argument.
 
+  std::string reference_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %10 "main"
+
+; Types
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %4 = OpTypeInt 32 0
+          %5 = OpTypeBool
+
+; Constants
+          %6 = OpConstant %4 0
+          %7 = OpConstant %4 1
+          %8 = OpConstantTrue %5
+          %9 = OpConstantFalse %5
+
+; main function
+         %10 = OpFunction %2 None %3
+         %11 = OpLabel
+               OpSelectionMerge %13 None
+               OpBranchConditional %8 %12 %13
+         %12 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+         %14 = OpPhi %5 %8 %11 %9 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  auto instruction_descriptor = MakeInstructionDescriptor(14, SpvOpPhi, 0);
+  auto id_use_descriptor = MakeIdUseDescriptor(8, instruction_descriptor, 0);
+  auto transformation = TransformationReplaceBooleanConstantWithConstantBinary(
+      id_use_descriptor, 6, 7, SpvOpULessThan, 15);
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+
+  std::string variant_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %10 "main"
+
+; Types
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %4 = OpTypeInt 32 0
+          %5 = OpTypeBool
+
+; Constants
+          %6 = OpConstant %4 0
+          %7 = OpConstant %4 1
+          %8 = OpConstantTrue %5
+          %9 = OpConstantFalse %5
+
+; main function
+         %10 = OpFunction %2 None %3
+         %11 = OpLabel
+         %15 = OpULessThan %5 %6 %7
+               OpSelectionMerge %13 None
+               OpBranchConditional %8 %12 %13
+         %12 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+         %14 = OpPhi %5 %15 %11 %9 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
+}
+
+TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
+     DoNotReplaceVariableInitializer) {
   std::string shader = R"(
                OpCapability Shader
           %1 = OpExtInstImport "GLSL.std.450"
@@ -617,21 +722,12 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest, OpPhi) {
           %6 = OpTypeBool
           %7 = OpTypePointer Function %6
           %9 = OpConstantTrue %6
-         %16 = OpConstantFalse %6
          %10 = OpTypeInt 32 1
-         %11 = OpTypePointer Function %10
          %13 = OpConstant %10 0
          %15 = OpConstant %10 1
           %4 = OpFunction %2 None %3
           %5 = OpLabel
-               OpSelectionMerge %20 None
-               OpBranchConditional %9 %21 %22
-         %21 = OpLabel
-               OpBranch %20
-         %22 = OpLabel
-               OpBranch %20
-         %20 = OpLabel
-         %23 = OpPhi %6 %9 %21 %16 %22
+         %50 = OpVariable %7 Function %9
                OpReturn
                OpFunctionEnd
   )";
@@ -639,15 +735,16 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest, OpPhi) {
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
-  auto replacement = TransformationReplaceBooleanConstantWithConstantBinary(
-      MakeIdUseDescriptor(9, MakeInstructionDescriptor(23, SpvOpPhi, 0), 0), 13,
-      15, SpvOpSLessThan, 100);
-
-  ASSERT_FALSE(replacement.IsApplicable(context.get(), fact_manager));
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
+                   MakeIdUseDescriptor(
+                       9, MakeInstructionDescriptor(50, SpvOpVariable, 0), 1),
+                   13, 15, SpvOpSLessThan, 100)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

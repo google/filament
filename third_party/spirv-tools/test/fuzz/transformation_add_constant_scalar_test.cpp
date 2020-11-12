@@ -13,173 +13,342 @@
 // limitations under the License.
 
 #include "source/fuzz/transformation_add_constant_scalar.h"
+
+#include "gtest/gtest.h"
+#include "source/fuzz/fuzzer_util.h"
 #include "test/fuzz/fuzz_test_util.h"
 
 namespace spvtools {
 namespace fuzz {
 namespace {
 
-TEST(TransformationAddConstantScalarTest, BasicTest) {
-  std::string shader = R"(
+TEST(TransformationAddConstantScalarTest, IsApplicable) {
+  std::string reference_shader = R"(
                OpCapability Shader
+               OpCapability Int64
+               OpCapability Float64
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %4 "main"
-               OpExecutionMode %4 OriginUpperLeft
-               OpSource ESSL 310
-               OpName %4 "main"
-               OpName %8 "x"
-               OpName %12 "y"
-               OpName %16 "z"
-               OpDecorate %8 RelaxedPrecision
-               OpDecorate %12 RelaxedPrecision
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-          %6 = OpTypeInt 32 1
-          %7 = OpTypePointer Function %6
-          %9 = OpConstant %6 1
-         %10 = OpTypeInt 32 0
-         %11 = OpTypePointer Function %10
-         %13 = OpConstant %10 2
-         %14 = OpTypeFloat 32
-         %15 = OpTypePointer Function %14
-         %17 = OpConstant %14 3
-          %4 = OpFunction %2 None %3
-          %5 = OpLabel
-          %8 = OpVariable %7 Function
-         %12 = OpVariable %11 Function
-         %16 = OpVariable %15 Function
-               OpStore %8 %9
-               OpStore %12 %13
-               OpStore %16 %17
+               OpEntryPoint Vertex %17 "main"
+
+; Types
+
+  ; 32-bit types
+          %2 = OpTypeInt 32 0
+          %3 = OpTypeInt 32 1
+          %4 = OpTypeFloat 32
+
+  ; 64-bit types
+          %5 = OpTypeInt 64 0
+          %6 = OpTypeInt 64 1
+          %7 = OpTypeFloat 64
+
+          %8 = OpTypePointer Private %2
+          %9 = OpTypeVoid
+         %10 = OpTypeFunction %9
+
+; Constants
+
+  ; 32-bit constants
+         %11 = OpConstant %2 1
+         %12 = OpConstant %3 2
+         %13 = OpConstant %4 3
+
+  ; 64-bit constants
+         %14 = OpConstant %5 1
+         %15 = OpConstant %6 2
+         %16 = OpConstant %7 3
+
+; main function
+         %17 = OpFunction %9 None %10
+         %18 = OpLabel
                OpReturn
                OpFunctionEnd
   )";
 
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
-  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
-  const float float_values[2] = {3.0, 30.0};
-  uint32_t uint_for_float[2];
-  memcpy(uint_for_float, float_values, sizeof(float_values));
-
-  auto add_signed_int_1 = TransformationAddConstantScalar(100, 6, {1});
-  auto add_signed_int_10 = TransformationAddConstantScalar(101, 6, {10});
-  auto add_unsigned_int_2 = TransformationAddConstantScalar(102, 10, {2});
-  auto add_unsigned_int_20 = TransformationAddConstantScalar(103, 10, {20});
-  auto add_float_3 =
-      TransformationAddConstantScalar(104, 14, {uint_for_float[0]});
-  auto add_float_30 =
-      TransformationAddConstantScalar(105, 14, {uint_for_float[1]});
-  auto bad_add_float_30_id_already_used =
-      TransformationAddConstantScalar(104, 14, {uint_for_float[1]});
-  auto bad_id_already_used = TransformationAddConstantScalar(1, 6, {1});
-  auto bad_no_data = TransformationAddConstantScalar(100, 6, {});
-  auto bad_too_much_data = TransformationAddConstantScalar(100, 6, {1, 2});
-  auto bad_type_id_does_not_exist =
-      TransformationAddConstantScalar(108, 2020, {uint_for_float[0]});
-  auto bad_type_id_is_not_a_type = TransformationAddConstantScalar(109, 9, {0});
-  auto bad_type_id_is_void = TransformationAddConstantScalar(110, 2, {0});
-  auto bad_type_id_is_pointer = TransformationAddConstantScalar(111, 11, {0});
-
-  // Id is already in use.
-  ASSERT_FALSE(bad_id_already_used.IsApplicable(context.get(), fact_manager));
-
-  // At least one word of data must be provided.
-  ASSERT_FALSE(bad_no_data.IsApplicable(context.get(), fact_manager));
-
-  // Cannot give two data words for a 32-bit type.
-  ASSERT_FALSE(bad_too_much_data.IsApplicable(context.get(), fact_manager));
-
-  // Type id does not exist
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  // Tests |fresh_id| being non-fresh.
+  auto transformation = TransformationAddConstantScalar(18, 2, {0}, false);
   ASSERT_FALSE(
-      bad_type_id_does_not_exist.IsApplicable(context.get(), fact_manager));
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  // Type id is not a type
+  // Tests undefined |type_id|.
+  transformation = TransformationAddConstantScalar(19, 20, {0}, false);
   ASSERT_FALSE(
-      bad_type_id_is_not_a_type.IsApplicable(context.get(), fact_manager));
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  // Type id is void
-  ASSERT_FALSE(bad_type_id_is_void.IsApplicable(context.get(), fact_manager));
-
-  // Type id is pointer
+  // Tests |type_id| not representing a type instruction.
+  transformation = TransformationAddConstantScalar(19, 11, {0}, false);
   ASSERT_FALSE(
-      bad_type_id_is_pointer.IsApplicable(context.get(), fact_manager));
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(add_signed_int_1.IsApplicable(context.get(), fact_manager));
-  add_signed_int_1.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  // Tests |type_id| representing an OpTypePointer instruction.
+  transformation = TransformationAddConstantScalar(19, 8, {0}, false);
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(add_signed_int_10.IsApplicable(context.get(), fact_manager));
-  add_signed_int_10.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  // Tests |type_id| representing an OpTypeVoid instruction.
+  transformation = TransformationAddConstantScalar(19, 9, {0}, false);
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(add_unsigned_int_2.IsApplicable(context.get(), fact_manager));
-  add_unsigned_int_2.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  // Tests |words| having no words.
+  transformation = TransformationAddConstantScalar(19, 2, {}, false);
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(add_unsigned_int_20.IsApplicable(context.get(), fact_manager));
-  add_unsigned_int_20.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  // Tests |words| having 2 words for a 32-bit type.
+  transformation = TransformationAddConstantScalar(19, 2, {0, 1}, false);
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(add_float_3.IsApplicable(context.get(), fact_manager));
-  add_float_3.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  // Tests |words| having 3 words for a 64-bit type.
+  transformation = TransformationAddConstantScalar(19, 5, {0, 1, 2}, false);
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
+}
 
-  ASSERT_TRUE(add_float_30.IsApplicable(context.get(), fact_manager));
-  add_float_30.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  ASSERT_FALSE(bad_add_float_30_id_already_used.IsApplicable(context.get(),
-                                                             fact_manager));
-
-  std::string after_transformation = R"(
+TEST(TransformationAddConstantScalarTest, Apply) {
+  std::string reference_shader = R"(
                OpCapability Shader
+               OpCapability Int64
+               OpCapability Float64
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %4 "main"
-               OpExecutionMode %4 OriginUpperLeft
-               OpSource ESSL 310
-               OpName %4 "main"
-               OpName %8 "x"
-               OpName %12 "y"
-               OpName %16 "z"
-               OpDecorate %8 RelaxedPrecision
-               OpDecorate %12 RelaxedPrecision
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-          %6 = OpTypeInt 32 1
-          %7 = OpTypePointer Function %6
-          %9 = OpConstant %6 1
-         %10 = OpTypeInt 32 0
-         %11 = OpTypePointer Function %10
-         %13 = OpConstant %10 2
-         %14 = OpTypeFloat 32
-         %15 = OpTypePointer Function %14
-         %17 = OpConstant %14 3
-        %100 = OpConstant %6 1
-        %101 = OpConstant %6 10
-        %102 = OpConstant %10 2
-        %103 = OpConstant %10 20
-        %104 = OpConstant %14 3
-        %105 = OpConstant %14 30
-          %4 = OpFunction %2 None %3
-          %5 = OpLabel
-          %8 = OpVariable %7 Function
-         %12 = OpVariable %11 Function
-         %16 = OpVariable %15 Function
-               OpStore %8 %9
-               OpStore %12 %13
-               OpStore %16 %17
+               OpEntryPoint Vertex %17 "main"
+
+; Types
+
+  ; 32-bit types
+          %2 = OpTypeInt 32 0
+          %3 = OpTypeInt 32 1
+          %4 = OpTypeFloat 32
+
+  ; 64-bit types
+          %5 = OpTypeInt 64 0
+          %6 = OpTypeInt 64 1
+          %7 = OpTypeFloat 64
+
+          %8 = OpTypePointer Private %2
+          %9 = OpTypeVoid
+         %10 = OpTypeFunction %9
+
+; Constants
+
+  ; 32-bit constants
+         %11 = OpConstant %2 1
+         %12 = OpConstant %3 2
+         %13 = OpConstant %4 3
+
+  ; 64-bit constants
+         %14 = OpConstant %5 1
+         %15 = OpConstant %6 2
+         %16 = OpConstant %7 3
+
+; main function
+         %17 = OpFunction %9 None %10
+         %18 = OpLabel
                OpReturn
                OpFunctionEnd
   )";
 
-  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  // Adds 32-bit unsigned integer (1 logical operand with 1 word).
+  auto transformation = TransformationAddConstantScalar(19, 2, {4}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  auto* constant_instruction = context->get_def_use_mgr()->GetDef(19);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds 32-bit signed integer (1 logical operand with 1 word).
+  transformation = TransformationAddConstantScalar(20, 3, {5}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(20);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds 32-bit float (1 logical operand with 1 word).
+  transformation = TransformationAddConstantScalar(
+      21, 4, {0b01000000110000000000000000000000}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(21);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds 64-bit unsigned integer (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(22, 5, {7, 0}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(22);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds 64-bit signed integer (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(23, 6, {8, 0}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(23);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds 64-bit float (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(
+      24, 7, {0, 0b01000000001000100000000000000000}, false);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(24);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 32-bit unsigned integer (1 logical operand with 1 word).
+  transformation = TransformationAddConstantScalar(25, 2, {10}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(25);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 32-bit signed integer (1 logical operand with 1 word).
+  transformation = TransformationAddConstantScalar(26, 3, {11}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(26);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 32-bit float (1 logical operand with 1 word).
+  transformation = TransformationAddConstantScalar(
+      27, 4, {0b01000001010000000000000000000000}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(27);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 1);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 64-bit unsigned integer (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(28, 5, {13, 0}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(28);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 64-bit signed integer (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(29, 6, {14, 0}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(29);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  // Adds irrelevant 64-bit float (1 logical operand with 2 words).
+  transformation = TransformationAddConstantScalar(
+      30, 7, {0, 0b01000000001011100000000000000000}, true);
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  constant_instruction = context->get_def_use_mgr()->GetDef(30);
+  EXPECT_EQ(constant_instruction->NumInOperands(), 1);
+  EXPECT_EQ(constant_instruction->NumInOperandWords(), 2);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  for (uint32_t result_id = 19; result_id <= 24; ++result_id) {
+    ASSERT_FALSE(
+        transformation_context.GetFactManager()->IdIsIrrelevant(result_id));
+  }
+
+  for (uint32_t result_id = 25; result_id <= 30; ++result_id) {
+    ASSERT_TRUE(
+        transformation_context.GetFactManager()->IdIsIrrelevant(result_id));
+  }
+
+  std::string variant_shader = R"(
+               OpCapability Shader
+               OpCapability Int64
+               OpCapability Float64
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %17 "main"
+
+; Types
+
+  ; 32-bit types
+          %2 = OpTypeInt 32 0
+          %3 = OpTypeInt 32 1
+          %4 = OpTypeFloat 32
+
+  ; 64-bit types
+          %5 = OpTypeInt 64 0
+          %6 = OpTypeInt 64 1
+          %7 = OpTypeFloat 64
+
+          %8 = OpTypePointer Private %2
+          %9 = OpTypeVoid
+         %10 = OpTypeFunction %9
+
+; Constants
+
+  ; 32-bit constants
+         %11 = OpConstant %2 1
+         %12 = OpConstant %3 2
+         %13 = OpConstant %4 3
+
+  ; 64-bit constants
+         %14 = OpConstant %5 1
+         %15 = OpConstant %6 2
+         %16 = OpConstant %7 3
+
+  ; added constants
+         %19 = OpConstant %2 4
+         %20 = OpConstant %3 5
+         %21 = OpConstant %4 6
+         %22 = OpConstant %5 7
+         %23 = OpConstant %6 8
+         %24 = OpConstant %7 9
+         %25 = OpConstant %2 10
+         %26 = OpConstant %3 11
+         %27 = OpConstant %4 12
+         %28 = OpConstant %5 13
+         %29 = OpConstant %6 14
+         %30 = OpConstant %7 15
+
+; main function
+         %17 = OpFunction %9 None %10
+         %18 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
 }
 
 }  // namespace

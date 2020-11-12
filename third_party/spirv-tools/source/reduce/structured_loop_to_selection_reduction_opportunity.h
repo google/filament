@@ -72,8 +72,8 @@ class StructuredLoopToSelectionReductionOpportunity
   void ChangeLoopToSelection();
 
   // Fixes any scenarios where, due to CFG changes, ids have uses not dominated
-  // by their definitions, by changing such uses to uses of OpUndef or of dummy
-  // variables.
+  // by their definitions, by changing such uses to uses of OpUndef or of
+  // placeholder variables.
   void FixNonDominatedIdUses();
 
   // Returns true if and only if at least one of the following holds:
@@ -85,20 +85,6 @@ class StructuredLoopToSelectionReductionOpportunity
                                           opt::Instruction* use,
                                           uint32_t use_index,
                                           opt::BasicBlock& def_block);
-
-  // Checks whether the global value list has an OpVariable of the given pointer
-  // type, adding one if not, and returns the id of such an OpVariable.
-  //
-  // TODO(2184): This will likely be used by other reduction passes, so should
-  // be factored out in due course.
-  uint32_t FindOrCreateGlobalVariable(uint32_t pointer_type_id);
-
-  // Checks whether the enclosing function has an OpVariable of the given
-  // pointer type, adding one if not, and returns the id of such an OpVariable.
-  //
-  // TODO(2184): This will likely be used by other reduction passes, so should
-  // be factored out in due course.
-  uint32_t FindOrCreateFunctionVariable(uint32_t pointer_type_id);
 
   opt::IRContext* context_;
   opt::BasicBlock* loop_construct_header_;

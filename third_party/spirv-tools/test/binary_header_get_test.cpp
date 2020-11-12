@@ -81,5 +81,37 @@ TEST_F(BinaryHeaderGet, TruncatedHeader) {
   }
 }
 
+TEST_F(BinaryHeaderGet, VersionNonZeroHighByte) {
+  spv_header_t header;
+  code[1] = 0xFF010300;
+  spv_const_binary_t const_bin = get_const_binary();
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            spvBinaryHeaderGet(&const_bin, SPV_ENDIANNESS_LITTLE, &header));
+}
+
+TEST_F(BinaryHeaderGet, VersionNonZeroLowByte) {
+  spv_header_t header;
+  code[1] = 0x000103F0;
+  spv_const_binary_t const_bin = get_const_binary();
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            spvBinaryHeaderGet(&const_bin, SPV_ENDIANNESS_LITTLE, &header));
+}
+
+TEST_F(BinaryHeaderGet, VersionTooLow) {
+  spv_header_t header;
+  code[1] = 0x00000300;
+  spv_const_binary_t const_bin = get_const_binary();
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            spvBinaryHeaderGet(&const_bin, SPV_ENDIANNESS_LITTLE, &header));
+}
+
+TEST_F(BinaryHeaderGet, VersionTooHigh) {
+  spv_header_t header;
+  code[1] = 0x000F0300;
+  spv_const_binary_t const_bin = get_const_binary();
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            spvBinaryHeaderGet(&const_bin, SPV_ENDIANNESS_LITTLE, &header));
+}
+
 }  // namespace
 }  // namespace spvtools

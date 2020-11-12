@@ -67,7 +67,7 @@ TEST(RemoveFunctionTest, BasicCheck) {
 
   auto ops =
       RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(1, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -97,7 +97,7 @@ TEST(RemoveFunctionTest, BasicCheck) {
   CheckEqual(env, after_first, context.get());
 
   ops = RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -156,7 +156,7 @@ TEST(RemoveFunctionTest, NothingToRemove) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   auto ops =
       RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -193,7 +193,7 @@ TEST(RemoveFunctionTest, TwoRemovableFunctions) {
 
   auto ops =
       RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(2, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -254,7 +254,7 @@ TEST(RemoveFunctionTest, NoRemovalsDueToOpName) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   auto ops =
       RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -286,7 +286,7 @@ TEST(RemoveFunctionTest, NoRemovalDueToLinkageDecoration) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   auto ops =
       RemoveFunctionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 

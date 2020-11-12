@@ -39,8 +39,11 @@ Pass::Status MergeReturnPass::Process() {
       if (!is_shader || return_blocks.size() == 0) {
         return false;
       }
-      if (context()->GetStructuredCFGAnalysis()->ContainingConstruct(
-              return_blocks[0]->id()) == 0) {
+      bool isInConstruct =
+          context()->GetStructuredCFGAnalysis()->ContainingConstruct(
+              return_blocks[0]->id()) != 0;
+      bool endsWithReturn = return_blocks[0] == function->tail();
+      if (!isInConstruct && endsWithReturn) {
         return false;
       }
     }
@@ -108,7 +111,7 @@ bool MergeReturnPass::ProcessStructured(
   }
 
   RecordImmediateDominators(function);
-  AddDummySwitchAroundFunction();
+  AddSingleCaseSwitchAroundFunction();
 
   std::list<BasicBlock*> order;
   cfg()->ComputeStructuredOrder(function, &*function->begin(), &order);
@@ -220,7 +223,8 @@ void MergeReturnPass::ProcessStructuredBlock(BasicBlock* block) {
 
   if (tail_opcode == SpvOpReturn || tail_opcode == SpvOpReturnValue ||
       tail_opcode == SpvOpUnreachable) {
-    assert(CurrentState().InBreakable() && "Should be in the dummy construct.");
+    assert(CurrentState().InBreakable() &&
+           "Should be in the placeholder construct.");
     BranchToBlock(block, CurrentState().BreakMergeId());
     return_blocks_.insert(block->id());
   }
@@ -296,9 +300,6 @@ void MergeReturnPass::CreatePhiNodesForInst(BasicBlock* merge_block,
 
     // There is at least one values that needs to be replaced.
     // First create the OpPhi instruction.
-    InstructionBuilder builder(
-        context(), &*merge_block->begin(),
-        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
     uint32_t undef_id = Type2Undef(inst.type_id());
     std::vector<uint32_t> phi_operands;
     const std::set<uint32_t>& new_edges = new_edges_[merge_block];
@@ -315,7 +316,50 @@ void MergeReturnPass::CreatePhiNodesForInst(BasicBlock* merge_block,
       phi_operands.push_back(pred_id);
     }
 
-    Instruction* new_phi = builder.AddPhi(inst.type_id(), phi_operands);
+    Instruction* new_phi = nullptr;
+    // If the instruction is a pointer and variable pointers are not an option,
+    // then we have to regenerate the instruction instead of creating an OpPhi
+    // instruction.  If not, the Spir-V will be invalid.
+    Instruction* inst_type = get_def_use_mgr()->GetDef(inst.type_id());
+    bool regenerateInstruction = false;
+    if (inst_type->opcode() == SpvOpTypePointer) {
+      if (!context()->get_feature_mgr()->HasCapability(
+              SpvCapabilityVariablePointers)) {
+        regenerateInstruction = true;
+      }
+
+      uint32_t storage_class = inst_type->GetSingleWordInOperand(0);
+      if (storage_class != SpvStorageClassWorkgroup &&
+          storage_class != SpvStorageClassStorageBuffer) {
+        regenerateInstruction = true;
+      }
+    }
+
+    if (regenerateInstruction) {
+      std::unique_ptr<Instruction> regen_inst(inst.Clone(context()));
+      uint32_t new_id = TakeNextId();
+      regen_inst->SetResultId(new_id);
+      Instruction* insert_pos = &*merge_block->begin();
+      while (insert_pos->opcode() == SpvOpPhi) {
+        insert_pos = insert_pos->NextNode();
+      }
+      new_phi = insert_pos->InsertBefore(std::move(regen_inst));
+      get_def_use_mgr()->AnalyzeInstDefUse(new_phi);
+      context()->set_instr_block(new_phi, merge_block);
+
+      new_phi->ForEachInId([dom_tree, merge_block, this](uint32_t* use_id) {
+        Instruction* use = get_def_use_mgr()->GetDef(*use_id);
+        BasicBlock* use_bb = context()->get_instr_block(use);
+        if (use_bb != nullptr && !dom_tree->Dominates(use_bb, merge_block)) {
+          CreatePhiNodesForInst(merge_block, *use);
+        }
+      });
+    } else {
+      InstructionBuilder builder(
+          context(), &*merge_block->begin(),
+          IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+      new_phi = builder.AddPhi(inst.type_id(), phi_operands);
+    }
     uint32_t result_of_phi = new_phi->result_id();
 
     // Update all of the users to use the result of the new OpPhi.
@@ -365,7 +409,7 @@ bool MergeReturnPass::PredicateBlocks(
     if (!predicated->insert(block).second) break;
     // Skip structured subgraphs.
     assert(state->InBreakable() &&
-           "Should be in the dummy construct at the very least.");
+           "Should be in the placeholder construct at the very least.");
     Instruction* break_merge_inst = state->BreakMergeInst();
     uint32_t merge_block_id = break_merge_inst->GetSingleWordInOperand(0);
     while (state->BreakMergeId() == merge_block_id) {
@@ -421,7 +465,6 @@ bool MergeReturnPass::BreakFromConstruct(
   auto old_body_id = TakeNextId();
   BasicBlock* old_body = block->SplitBasicBlock(context(), old_body_id, iter);
   predicated->insert(old_body);
-  cfg()->AddEdges(old_body);
 
   // If a return block is being split, mark the new body block also as a return
   // block.
@@ -726,7 +769,7 @@ void MergeReturnPass::InsertAfterElement(BasicBlock* element,
   list->insert(pos, new_element);
 }
 
-void MergeReturnPass::AddDummySwitchAroundFunction() {
+void MergeReturnPass::AddSingleCaseSwitchAroundFunction() {
   CreateReturnBlock();
   CreateReturn(final_return_block_);
 
@@ -734,7 +777,7 @@ void MergeReturnPass::AddDummySwitchAroundFunction() {
     cfg()->RegisterBlock(final_return_block_);
   }
 
-  CreateDummySwitch(final_return_block_);
+  CreateSingleCaseSwitch(final_return_block_);
 }
 
 BasicBlock* MergeReturnPass::CreateContinueTarget(uint32_t header_label_id) {
@@ -769,7 +812,7 @@ BasicBlock* MergeReturnPass::CreateContinueTarget(uint32_t header_label_id) {
   return new_block;
 }
 
-void MergeReturnPass::CreateDummySwitch(BasicBlock* merge_target) {
+void MergeReturnPass::CreateSingleCaseSwitch(BasicBlock* merge_target) {
   // Insert the switch before any code is run.  We have to split the entry
   // block to make sure the OpVariable instructions remain in the entry block.
   BasicBlock* start_block = &*function_->begin();

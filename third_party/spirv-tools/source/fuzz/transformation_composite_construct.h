@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_COMPOSITE_CONSTRUCT_H_
 #define SOURCE_FUZZ_TRANSFORMATION_COMPOSITE_CONSTRUCT_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -49,15 +49,23 @@ class TransformationCompositeConstruct : public Transformation {
   //   before 'inst'.
   // - Each element of |message_.component| must be available directly before
   //   'inst'.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Inserts a new OpCompositeConstruct instruction, with id
   // |message_.fresh_id|, directly before the instruction identified by
   // |message_.base_instruction_id| and |message_.offset|.  The instruction
   // creates a composite of type |message_.composite_type_id| using the ids of
   // |message_.component|.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  //
+  // Synonym facts are added between the elements of the resulting composite
+  // and the components used to construct it, as long as the associated ids
+  // support synonym creation.
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
@@ -65,19 +73,27 @@ class TransformationCompositeConstruct : public Transformation {
   // Helper to decide whether the components of the transformation are suitable
   // for constructing an array of the given type.
   bool ComponentsForArrayConstructionAreOK(
-      opt::IRContext* context, const opt::analysis::Array& array_type) const;
+      opt::IRContext* ir_context, const opt::analysis::Array& array_type) const;
 
   // Similar, but for matrices.
   bool ComponentsForMatrixConstructionAreOK(
-      opt::IRContext* context, const opt::analysis::Matrix& matrix_type) const;
+      opt::IRContext* ir_context,
+      const opt::analysis::Matrix& matrix_type) const;
 
   // Similar, but for structs.
   bool ComponentsForStructConstructionAreOK(
-      opt::IRContext* context, const opt::analysis::Struct& struct_type) const;
+      opt::IRContext* ir_context,
+      const opt::analysis::Struct& struct_type) const;
 
   // Similar, but for vectors.
   bool ComponentsForVectorConstructionAreOK(
-      opt::IRContext* context, const opt::analysis::Vector& vector_type) const;
+      opt::IRContext* ir_context,
+      const opt::analysis::Vector& vector_type) const;
+
+  // Helper method for adding data synonym facts when applying the
+  // transformation to |ir_context| and |transformation_context|.
+  void AddDataSynonymFacts(opt::IRContext* ir_context,
+                           TransformationContext* transformation_context) const;
 
   protobufs::TransformationCompositeConstruct message_;
 };

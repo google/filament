@@ -92,6 +92,42 @@ OpFunctionEnd
   SinglePassRunAndCheck<CompactIdsPass>(before, after, false, false);
 }
 
+TEST_F(CompactIdsTest, DebugScope) {
+  const std::string text =
+      R"(OpCapability Addresses
+OpCapability Kernel
+OpCapability GenericPointer
+OpCapability Linkage
+%5 = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Physical32 OpenCL
+OpEntryPoint Kernel %3 "simple_kernel"
+%2 = OpString "test"
+%99 = OpTypeInt 32 0
+%10 = OpTypeVector %99 2
+%20 = OpConstant %99 2
+%30 = OpTypeArray %99 %20
+%40 = OpTypeVoid
+%50 = OpTypeFunction %40
+%11 = OpExtInst %40 %5 DebugSource %2
+%12 = OpExtInst %40 %5 DebugCompilationUnit 1 4 %11 HLSL
+%13 = OpExtInst %40 %5 DebugTypeFunction FlagIsProtected|FlagIsPrivate %40
+
+; CHECK: [[fn:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugFunction
+%14 = OpExtInst %40 %5 DebugFunction %2 %13 %11 0 0 %12 %2 FlagIsProtected|FlagIsPrivate 0 %3
+ %3 = OpFunction %40 None %50
+%70 = OpLabel
+
+; CHECK: DebugScope [[fn]]
+%19 = OpExtInst %40 %5 DebugScope %14
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<CompactIdsPass>(text, true);
+}
+
 TEST(CompactIds, InstructionResultIsUpdated) {
   // For https://github.com/KhronosGroup/SPIRV-Tools/issues/827
   // In that bug, the compact Ids pass was directly updating the result Id

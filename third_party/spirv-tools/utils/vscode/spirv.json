@@ -33,7 +33,14 @@
 		{ "include": "#ValueEnum_GroupOperation" },
 		{ "include": "#ValueEnum_KernelEnqueueFlags" },
 		{ "include": "#ValueEnum_Capability" },
+		{ "include": "#BitEnum_DebugInfoFlags" },
+		{ "include": "#ValueEnum_DebugBaseTypeAttributeEncoding" },
+		{ "include": "#ValueEnum_DebugCompositeType" },
+		{ "include": "#ValueEnum_DebugTypeQualifier" },
+		{ "include": "#ValueEnum_DebugOperation" },
+		{ "include": "#ValueEnum_DebugImportedEntity" },
 		{ "include": "#opcode" },
+		{ "include": "#extopcode" },
 		{ "include": "#identifier" },
 		{ "include": "#number" },
 		{ "include": "#string" },
@@ -161,9 +168,37 @@
 			"match": "\\b(Matrix|Shader|Geometry|Tessellation|Addresses|Linkage|Kernel|Vector16|Float16Buffer|Float16|Float64|Int64|Int64Atomics|ImageBasic|ImageReadWrite|ImageMipmap|Pipes|Groups|DeviceEnqueue|LiteralSampler|AtomicStorage|Int16|TessellationPointSize|GeometryPointSize|ImageGatherExtended|StorageImageMultisample|UniformBufferArrayDynamicIndexing|SampledImageArrayDynamicIndexing|StorageBufferArrayDynamicIndexing|StorageImageArrayDynamicIndexing|ClipDistance|CullDistance|ImageCubeArray|SampleRateShading|ImageRect|SampledRect|GenericPointer|Int8|InputAttachment|SparseResidency|MinLod|Sampled1D|Image1D|SampledCubeArray|SampledBuffer|ImageBuffer|ImageMSArray|StorageImageExtendedFormats|ImageQuery|DerivativeControl|InterpolationFunction|TransformFeedback|GeometryStreams|StorageImageReadWithoutFormat|StorageImageWriteWithoutFormat|MultiViewport|SubgroupDispatch|NamedBarrier|PipeStorage|GroupNonUniform|GroupNonUniformVote|GroupNonUniformArithmetic|GroupNonUniformBallot|GroupNonUniformShuffle|GroupNonUniformShuffleRelative|GroupNonUniformClustered|GroupNonUniformQuad|ShaderLayer|ShaderViewportIndex|SubgroupBallotKHR|DrawParameters|SubgroupVoteKHR|StorageBuffer16BitAccess|StorageUniformBufferBlock16|UniformAndStorageBuffer16BitAccess|StorageUniform16|StoragePushConstant16|StorageInputOutput16|DeviceGroup|MultiView|VariablePointersStorageBuffer|VariablePointers|AtomicStorageOps|SampleMaskPostDepthCoverage|StorageBuffer8BitAccess|UniformAndStorageBuffer8BitAccess|StoragePushConstant8|DenormPreserve|DenormFlushToZero|SignedZeroInfNanPreserve|RoundingModeRTE|RoundingModeRTZ|Float16ImageAMD|ImageGatherBiasLodAMD|FragmentMaskAMD|StencilExportEXT|ImageReadWriteLodAMD|ShaderClockKHR|SampleMaskOverrideCoverageNV|GeometryShaderPassthroughNV|ShaderViewportIndexLayerEXT|ShaderViewportIndexLayerNV|ShaderViewportMaskNV|ShaderStereoViewNV|PerViewAttributesNV|FragmentFullyCoveredEXT|MeshShadingNV|ImageFootprintNV|FragmentBarycentricNV|ComputeDerivativeGroupQuadsNV|FragmentDensityEXT|ShadingRateNV|GroupNonUniformPartitionedNV|ShaderNonUniform|ShaderNonUniformEXT|RuntimeDescriptorArray|RuntimeDescriptorArrayEXT|InputAttachmentArrayDynamicIndexing|InputAttachmentArrayDynamicIndexingEXT|UniformTexelBufferArrayDynamicIndexing|UniformTexelBufferArrayDynamicIndexingEXT|StorageTexelBufferArrayDynamicIndexing|StorageTexelBufferArrayDynamicIndexingEXT|UniformBufferArrayNonUniformIndexing|UniformBufferArrayNonUniformIndexingEXT|SampledImageArrayNonUniformIndexing|SampledImageArrayNonUniformIndexingEXT|StorageBufferArrayNonUniformIndexing|StorageBufferArrayNonUniformIndexingEXT|StorageImageArrayNonUniformIndexing|StorageImageArrayNonUniformIndexingEXT|InputAttachmentArrayNonUniformIndexing|InputAttachmentArrayNonUniformIndexingEXT|UniformTexelBufferArrayNonUniformIndexing|UniformTexelBufferArrayNonUniformIndexingEXT|StorageTexelBufferArrayNonUniformIndexing|StorageTexelBufferArrayNonUniformIndexingEXT|RayTracingNV|VulkanMemoryModel|VulkanMemoryModelKHR|VulkanMemoryModelDeviceScope|VulkanMemoryModelDeviceScopeKHR|PhysicalStorageBufferAddresses|PhysicalStorageBufferAddressesEXT|ComputeDerivativeGroupLinearNV|CooperativeMatrixNV|FragmentShaderSampleInterlockEXT|FragmentShaderShadingRateInterlockEXT|ShaderSMBuiltinsNV|FragmentShaderPixelInterlockEXT|DemoteToHelperInvocationEXT|SubgroupShuffleINTEL|SubgroupBufferBlockIOINTEL|SubgroupImageBlockIOINTEL|SubgroupImageMediaBlockIOINTEL|IntegerFunctions2INTEL|SubgroupAvcMotionEstimationINTEL|SubgroupAvcMotionEstimationIntraINTEL|SubgroupAvcMotionEstimationChromaINTEL)\\b",
 			"name": "keyword.spirv"
 		},
+		"BitEnum_DebugInfoFlags": {
+			"match": "\\b(FlagIsProtected|FlagIsPrivate|FlagIsPublic|FlagIsLocal|FlagIsDefinition|FlagFwdDecl|FlagArtificial|FlagExplicit|FlagPrototyped|FlagObjectPointer|FlagStaticMember|FlagIndirectVariable|FlagLValueReference|FlagRValueReference|FlagIsOptimized|FlagIsEnumClass|FlagTypePassByValue|FlagTypePassByReference)\\b",
+			"name": "keyword.spirv"
+		},
+		"ValueEnum_DebugBaseTypeAttributeEncoding": {
+			"match": "\\b(Unspecified|Address|Boolean|Float|Signed|SignedChar|Unsigned|UnsignedChar)\\b",
+			"name": "keyword.spirv"
+		},
+		"ValueEnum_DebugCompositeType": {
+			"match": "\\b(Class|Structure|Union)\\b",
+			"name": "keyword.spirv"
+		},
+		"ValueEnum_DebugTypeQualifier": {
+			"match": "\\b(ConstType|VolatileType|RestrictType|AtomicType)\\b",
+			"name": "keyword.spirv"
+		},
+		"ValueEnum_DebugOperation": {
+			"match": "\\b(Deref|Plus|Minus|PlusUconst|BitPiece|Swap|Xderef|StackValue|Constu|Fragment)\\b",
+			"name": "keyword.spirv"
+		},
+		"ValueEnum_DebugImportedEntity": {
+			"match": "\\b(ImportedModule|ImportedDeclaration)\\b",
+			"name": "keyword.spirv"
+		},
 		"opcode": {
 			"match": "(Op[a-zA-Z]+)",
 			"name": "entity.name.function.spirv"
+		},
+		"extopcode": {
+			"match": "(Round|RoundEven|Trunc|FAbs|SAbs|FSign|SSign|Floor|Ceil|Fract|Radians|Degrees|Sin|Cos|Tan|Asin|Acos|Atan|Sinh|Cosh|Tanh|Asinh|Acosh|Atanh|Atan2|Pow|Exp|Log|Exp2|Log2|Sqrt|InverseSqrt|Determinant|MatrixInverse|Modf|ModfStruct|FMin|UMin|SMin|FMax|UMax|SMax|FClamp|UClamp|SClamp|FMix|IMix|Step|SmoothStep|Fma|Frexp|FrexpStruct|Ldexp|PackSnorm4x8|PackUnorm4x8|PackSnorm2x16|PackUnorm2x16|PackHalf2x16|PackDouble2x32|UnpackSnorm2x16|UnpackUnorm2x16|UnpackHalf2x16|UnpackSnorm4x8|UnpackUnorm4x8|UnpackDouble2x32|Length|Distance|Cross|Normalize|FaceForward|Reflect|Refract|FindILsb|FindSMsb|FindUMsb|InterpolateAtCentroid|InterpolateAtSample|InterpolateAtOffset|NMin|NMax|NClamp|acos|acosh|acospi|asin|asinh|asinpi|atan|atan2|atanh|atanpi|atan2pi|cbrt|ceil|copysign|cos|cosh|cospi|erfc|erf|exp|exp2|exp10|expm1|fabs|fdim|floor|fma|fmax|fmin|fmod|fract|frexp|hypot|ilogb|ldexp|lgamma|lgamma_r|log|log2|log10|log1p|logb|mad|maxmag|minmag|modf|nan|nextafter|pow|pown|powr|remainder|remquo|rint|rootn|round|rsqrt|sin|sincos|sinh|sinpi|sqrt|tan|tanh|tanpi|tgamma|trunc|half_cos|half_divide|half_exp|half_exp2|half_exp10|half_log|half_log2|half_log10|half_powr|half_recip|half_rsqrt|half_sin|half_sqrt|half_tan|native_cos|native_divide|native_exp|native_exp2|native_exp10|native_log|native_log2|native_log10|native_powr|native_recip|native_rsqrt|native_sin|native_sqrt|native_tan|s_abs|s_abs_diff|s_add_sat|u_add_sat|s_hadd|u_hadd|s_rhadd|u_rhadd|s_clamp|u_clamp|clz|ctz|s_mad_hi|u_mad_sat|s_mad_sat|s_max|u_max|s_min|u_min|s_mul_hi|rotate|s_sub_sat|u_sub_sat|u_upsample|s_upsample|popcount|s_mad24|u_mad24|s_mul24|u_mul24|u_abs|u_abs_diff|u_mul_hi|u_mad_hi|fclamp|degrees|fmax_common|fmin_common|mix|radians|step|smoothstep|sign|cross|distance|length|normalize|fast_distance|fast_length|fast_normalize|bitselect|select|vloadn|vstoren|vload_half|vload_halfn|vstore_half|vstore_half_r|vstore_halfn|vstore_halfn_r|vloada_halfn|vstorea_halfn|vstorea_halfn_r|shuffle|shuffle2|printf|prefetch|DebugInfoNone|DebugCompilationUnit|DebugTypeBasic|DebugTypePointer|DebugTypeQualifier|DebugTypeArray|DebugTypeVector|DebugTypedef|DebugTypeFunction|DebugTypeEnum|DebugTypeComposite|DebugTypeMember|DebugTypeInheritance|DebugTypePtrToMember|DebugTypeTemplate|DebugTypeTemplateParameter|DebugTypeTemplateTemplateParameter|DebugTypeTemplateParameterPack|DebugGlobalVariable|DebugFunctionDeclaration|DebugFunction|DebugLexicalBlock|DebugLexicalBlockDiscriminator|DebugScope|DebugNoScope|DebugInlinedAt|DebugLocalVariable|DebugInlinedVariable|DebugDeclare|DebugValue|DebugOperation|DebugExpression|DebugMacroDef|DebugMacroUndef|DebugImportedEntity|DebugSource)",
+			"name": "entity.name.function.ext"
 		},
 		"identifier": {
 			"match": "%[a-zA-Z0-9_]+",

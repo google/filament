@@ -28,13 +28,13 @@ TransformationSetSelectionControl::TransformationSetSelectionControl(
 }
 
 bool TransformationSetSelectionControl::IsApplicable(
-    opt::IRContext* context, const FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   assert((message_.selection_control() == SpvSelectionControlMaskNone ||
           message_.selection_control() == SpvSelectionControlFlattenMask ||
           message_.selection_control() == SpvSelectionControlDontFlattenMask) &&
          "Selection control should never be set to something other than "
          "'None', 'Flatten' or 'DontFlatten'");
-  if (auto block = context->get_instr_block(message_.block_id())) {
+  if (auto block = ir_context->get_instr_block(message_.block_id())) {
     if (auto merge_inst = block->GetMergeInst()) {
       return merge_inst->opcode() == SpvOpSelectionMerge;
     }
@@ -43,9 +43,9 @@ bool TransformationSetSelectionControl::IsApplicable(
   return false;
 }
 
-void TransformationSetSelectionControl::Apply(opt::IRContext* context,
-                                              FactManager* /*unused*/) const {
-  context->get_instr_block(message_.block_id())
+void TransformationSetSelectionControl::Apply(
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  ir_context->get_instr_block(message_.block_id())
       ->GetMergeInst()
       ->SetInOperand(1, {message_.selection_control()});
 }
@@ -54,6 +54,11 @@ protobufs::Transformation TransformationSetSelectionControl::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_set_selection_control() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationSetSelectionControl::GetFreshIds()
+    const {
+  return std::unordered_set<uint32_t>();
 }
 
 }  // namespace fuzz

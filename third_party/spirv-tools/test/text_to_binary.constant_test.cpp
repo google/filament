@@ -485,8 +485,15 @@ const int64_t kMaxUnsigned48Bit = (int64_t(1) << 48) - 1;
 const int64_t kMaxSigned48Bit = (int64_t(1) << 47) - 1;
 const int64_t kMinSigned48Bit = -kMaxSigned48Bit - 1;
 
+using ConstantRoundTripTest = RoundTripTest;
+
+TEST_P(ConstantRoundTripTest, DisassemblyEqualsAssemblyInput) {
+  const std::string assembly = GetParam();
+  EXPECT_THAT(EncodeAndDecodeSuccessfully(assembly), Eq(assembly)) << assembly;
+}
+
 INSTANTIATE_TEST_SUITE_P(
-    OpConstantRoundTrip, RoundTripTest,
+    OpConstantRoundTrip, ConstantRoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         // 16 bit
         "%1 = OpTypeInt 16 0\n%2 = OpConstant %1 0\n",
@@ -529,7 +536,7 @@ INSTANTIATE_TEST_SUITE_P(
     }));
 
 INSTANTIATE_TEST_SUITE_P(
-    OpConstantHalfRoundTrip, RoundTripTest,
+    OpConstantHalfRoundTrip, ConstantRoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 -0x0p+0\n",
         "%1 = OpTypeFloat 16\n%2 = OpConstant %1 0x0p+0\n",
@@ -566,7 +573,7 @@ INSTANTIATE_TEST_SUITE_P(
 // clang-format off
 // (Clang-format really wants to break up these strings across lines.
 INSTANTIATE_TEST_SUITE_P(
-    OpConstantRoundTripNonFinite, RoundTripTest,
+    OpConstantRoundTripNonFinite, ConstantRoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
   "%1 = OpTypeFloat 32\n%2 = OpConstant %1 -0x1p+128\n",         // -inf
   "%1 = OpTypeFloat 32\n%2 = OpConstant %1 0x1p+128\n",          // inf
@@ -596,7 +603,7 @@ INSTANTIATE_TEST_SUITE_P(
 // clang-format on
 
 INSTANTIATE_TEST_SUITE_P(
-    OpSpecConstantRoundTrip, RoundTripTest,
+    OpSpecConstantRoundTrip, ConstantRoundTripTest,
     ::testing::ValuesIn(std::vector<std::string>{
         // 16 bit
         "%1 = OpTypeInt 16 0\n%2 = OpSpecConstant %1 0\n",

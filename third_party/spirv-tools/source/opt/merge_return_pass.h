@@ -48,13 +48,13 @@ namespace opt {
  * is the final return. This block should branch to the new return block (its
  * direct successor). If the current block is within structured control flow,
  * the branch destination should be the innermost construct's merge.  This
- * merge will always exist because a dummy switch is added around the
+ * merge will always exist because a single case switch is added around the
  * entire function. If the merge block produces any live values it will need to
  * be predicated. While the merge is nested in structured control flow, the
  * predication path should branch to the merge block of the inner-most loop
  * (or switch if no loop) it is contained in. Once structured control flow has
- * been exited, it will be at the merge of the dummy switch, which will simply
- * return.
+ * been exited, it will be at the merge of the single case switch, which will
+ * simply return.
  *
  * In the final return block, the return value should be loaded and returned.
  * Memory promotion passes should be able to promote the newly introduced
@@ -73,7 +73,7 @@ namespace opt {
  *         ||
  *         \/
  *
- *          0 (dummy switch header)
+ *          0 (single case switch header)
  *          |
  *          1 (loop header)
  *         / \
@@ -83,7 +83,7 @@ namespace opt {
  *        / \
  *        |  3 (original code in 3)
  *        \ /
- *   (ret) 4 (dummy switch merge)
+ *   (ret) 4 (single case switch merge)
  *
  * In the above (simple) example, the return originally in |2| is passed through
  * the loop merge. That merge is predicated such that the old body of the block
@@ -277,7 +277,7 @@ class MergeReturnPass : public MemPass {
   // current function where the switch and case value are both zero and the
   // default is the merge block. Returns after the switch is executed. Sets
   // |final_return_block_|.
-  void AddDummySwitchAroundFunction();
+  void AddSingleCaseSwitchAroundFunction();
 
   // Creates a new basic block that branches to |header_label_id|.  Returns the
   // new basic block.  The block will be the second last basic block in the
@@ -286,7 +286,7 @@ class MergeReturnPass : public MemPass {
 
   // Creates a one case switch around the executable code of the function with
   // |merge_target| as the merge node.
-  void CreateDummySwitch(BasicBlock* merge_target);
+  void CreateSingleCaseSwitch(BasicBlock* merge_target);
 
   // Returns true if |function| has an unreachable block that is not a continue
   // target that simply branches back to the header, or a merge block containing

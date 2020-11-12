@@ -166,9 +166,9 @@ with `!<integer>` in them:
 
 When a token in the assembly program is a `!<integer>`, that integer value is
 emitted into the binary output, and parsing proceeds differently than before:
-each subsequent token not recognized as an OpCode or a <result-id> is emitted
+each subsequent token not recognized as an OpCode or a `<result-id>` is emitted
 into the binary output without any checking; when a recognizable OpCode or a
-<result-id> is eventually encountered, it begins a new instruction and parsing
+`<result-id>` is eventually encountered, it begins a new instruction and parsing
 returns to normal.  (If a subsequent OpCode is never found, then this alternate
 parsing mode handles all the remaining tokens in the program.)
 

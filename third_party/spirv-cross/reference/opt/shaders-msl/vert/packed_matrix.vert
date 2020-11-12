@@ -3,43 +3,43 @@
 
 using namespace metal;
 
-struct _15
+struct _RESERVED_IDENTIFIER_FIXUP_1365_18812
 {
-    float3x4 _m0;
-    float3x4 _m1;
+    float3x4 _RESERVED_IDENTIFIER_FIXUP_m0;
+    float3x4 _RESERVED_IDENTIFIER_FIXUP_m1;
 };
 
-struct _42
+struct _RESERVED_IDENTIFIER_FIXUP_1126_22044
 {
-    float4x4 _m0;
-    float4x4 _m1;
-    float _m2;
+    float4x4 _RESERVED_IDENTIFIER_FIXUP_m0;
+    float4x4 _RESERVED_IDENTIFIER_FIXUP_m1;
+    float _RESERVED_IDENTIFIER_FIXUP_m9;
     char _m3_pad[12];
-    packed_float3 _m3;
-    float _m4;
-    packed_float3 _m5;
-    float _m6;
-    float _m7;
-    float _m8;
-    float2 _m9;
+    packed_float3 _RESERVED_IDENTIFIER_FIXUP_m10;
+    float _RESERVED_IDENTIFIER_FIXUP_m11;
+    packed_float3 _RESERVED_IDENTIFIER_FIXUP_m12;
+    float _RESERVED_IDENTIFIER_FIXUP_m17;
+    float _RESERVED_IDENTIFIER_FIXUP_m18;
+    float _RESERVED_IDENTIFIER_FIXUP_m19;
+    float2 _RESERVED_IDENTIFIER_FIXUP_m20;
 };
 
 struct main0_out
 {
-    float3 m_72 [[user(locn0)]];
+    float3 _RESERVED_IDENTIFIER_FIXUP_3976 [[user(locn0)]];
     float4 gl_Position [[position]];
 };
 
 struct main0_in
 {
-    float4 m_25 [[attribute(0)]];
+    float4 _RESERVED_IDENTIFIER_FIXUP_5275 [[attribute(0)]];
 };
 
-vertex main0_out main0(main0_in in [[stage_in]], constant _15& _17 [[buffer(0)]], constant _42& _44 [[buffer(1)]])
+vertex main0_out main0(main0_in in [[stage_in]], constant _RESERVED_IDENTIFIER_FIXUP_1365_18812& _RESERVED_IDENTIFIER_FIXUP_18812 [[buffer(0)]], constant _RESERVED_IDENTIFIER_FIXUP_1126_22044& _RESERVED_IDENTIFIER_FIXUP_22044 [[buffer(1)]])
 {
     main0_out out = {};
-    float4 _70 = _44._m0 * float4(float3(_44._m3) + (in.m_25.xyz * (_44._m6 + _44._m7)), 1.0);
-    out.m_72 = normalize(float4(in.m_25.xyz, 0.0) * _17._m1);
+    float4 _70 = _RESERVED_IDENTIFIER_FIXUP_22044._RESERVED_IDENTIFIER_FIXUP_m0 * float4(float3(_RESERVED_IDENTIFIER_FIXUP_22044._RESERVED_IDENTIFIER_FIXUP_m10) + (in._RESERVED_IDENTIFIER_FIXUP_5275.xyz * (_RESERVED_IDENTIFIER_FIXUP_22044._RESERVED_IDENTIFIER_FIXUP_m17 + _RESERVED_IDENTIFIER_FIXUP_22044._RESERVED_IDENTIFIER_FIXUP_m18)), 1.0);
+    out._RESERVED_IDENTIFIER_FIXUP_3976 = normalize(float4(in._RESERVED_IDENTIFIER_FIXUP_5275.xyz, 0.0) * _RESERVED_IDENTIFIER_FIXUP_18812._RESERVED_IDENTIFIER_FIXUP_m1);
     float4 _94 = _70;
     _94.y = -_70.y;
     out.gl_Position = _94;

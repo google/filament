@@ -19,6 +19,8 @@
 #include <vector>
 
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
+#include "source/fuzz/transformation_context.h"
+#include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -29,15 +31,27 @@ namespace fuzz {
 class Replayer {
  public:
   // Possible statuses that can result from running the replayer.
-  enum ReplayerResultStatus {
+  enum class ReplayerResultStatus {
     kComplete,
     kFailedToCreateSpirvToolsInterface,
     kInitialBinaryInvalid,
     kReplayValidationFailure,
+    kTooManyTransformationsRequested,
   };
 
-  // Constructs a replayer from the given target environment.
-  explicit Replayer(spv_target_env env, bool validate_during_replay);
+  struct ReplayerResult {
+    ReplayerResultStatus status;
+    std::unique_ptr<opt::IRContext> transformed_module;
+    std::unique_ptr<TransformationContext> transformation_context;
+    protobufs::TransformationSequence applied_transformations;
+  };
+
+  Replayer(spv_target_env target_env, MessageConsumer consumer,
+           const std::vector<uint32_t>& binary_in,
+           const protobufs::FactSequence& initial_facts,
+           const protobufs::TransformationSequence& transformation_sequence_in,
+           uint32_t num_transformations_to_apply, bool validate_during_replay,
+           spv_validator_options validator_options);
 
   // Disables copy/move constructor/assignment operations.
   Replayer(const Replayer&) = delete;
@@ -47,25 +61,42 @@ class Replayer {
 
   ~Replayer();
 
-  // Sets the message consumer to the given |consumer|. The |consumer| will be
-  // invoked once for each message communicated from the library.
-  void SetMessageConsumer(MessageConsumer consumer);
-
-  // Transforms |binary_in| to |binary_out| by attempting to apply the
-  // transformations from |transformation_sequence_in|.  Initial facts about the
-  // input binary and the context in which it will execute are provided via
-  // |initial_facts|.  The transformations that were successfully applied are
-  // returned via |transformation_sequence_out|.
-  ReplayerResultStatus Run(
-      const std::vector<uint32_t>& binary_in,
-      const protobufs::FactSequence& initial_facts,
-      const protobufs::TransformationSequence& transformation_sequence_in,
-      std::vector<uint32_t>* binary_out,
-      protobufs::TransformationSequence* transformation_sequence_out) const;
+  // Attempts to apply the first |num_transformations_to_apply_| transformations
+  // from |transformation_sequence_in_| to |binary_in_|.  Initial facts about
+  // the input binary and the context in which it will execute are provided via
+  // |initial_facts_|.
+  //
+  // On success, returns a successful result status together with the
+  // transformations that were applied, the IR for the transformed module, and
+  // the transformation context that arises from applying these transformations.
+  // Otherwise, returns an appropriate result status, an empty transformation
+  // sequence, and null pointers for the IR context and transformation context.
+  ReplayerResult Run();
 
  private:
-  struct Impl;                  // Opaque struct for holding internal data.
-  std::unique_ptr<Impl> impl_;  // Unique pointer to internal data.
+  // Target environment.
+  const spv_target_env target_env_;
+
+  // Message consumer.
+  MessageConsumer consumer_;
+
+  // The binary to which transformations are to be applied.
+  const std::vector<uint32_t>& binary_in_;
+
+  // Initial facts known to hold in advance of applying any transformations.
+  const protobufs::FactSequence& initial_facts_;
+
+  // The transformations to be replayed.
+  const protobufs::TransformationSequence& transformation_sequence_in_;
+
+  // The number of transformations that should be replayed.
+  const uint32_t num_transformations_to_apply_;
+
+  // Controls whether the validator should be run after every replay step.
+  const bool validate_during_replay_;
+
+  // Options to control validation
+  spv_validator_options validator_options_;
 };
 
 }  // namespace fuzz

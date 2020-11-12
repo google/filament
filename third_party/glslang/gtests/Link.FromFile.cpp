@@ -86,7 +86,7 @@ TEST_P(LinkTest, FromFile)
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Glsl, LinkTest,
     ::testing::ValuesIn(std::vector<std::vector<std::string>>({
         {"mains1.frag", "mains2.frag", "noMain1.geom", "noMain2.geom"},

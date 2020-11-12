@@ -1,4 +1,6 @@
-// Copyright (c) 2015-2016 The Khronos Group Inc.
+// Copyright (c) 2015-2020 The Khronos Group Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +45,14 @@ spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
   // TODO: Validation checking?
   pHeader->magic = spvFixWord(binary->code[SPV_INDEX_MAGIC_NUMBER], endian);
   pHeader->version = spvFixWord(binary->code[SPV_INDEX_VERSION_NUMBER], endian);
+  // Per 2.3.1 version's high and low bytes are 0
+  if ((pHeader->version & 0x000000ff) || pHeader->version & 0xff000000)
+    return SPV_ERROR_INVALID_BINARY;
+  // Minimum version was 1.0 and max version is defined by SPV_VERSION.
+  if (pHeader->version < SPV_SPIRV_VERSION_WORD(1, 0) ||
+      pHeader->version > SPV_VERSION)
+    return SPV_ERROR_INVALID_BINARY;
+
   pHeader->generator =
       spvFixWord(binary->code[SPV_INDEX_GENERATOR_NUMBER], endian);
   pHeader->bound = spvFixWord(binary->code[SPV_INDEX_BOUND], endian);
@@ -633,6 +643,10 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     case SPV_OPERAND_TYPE_GROUP_OPERATION:
     case SPV_OPERAND_TYPE_KERNEL_ENQ_FLAGS:
     case SPV_OPERAND_TYPE_KERNEL_PROFILING_INFO:
+    case SPV_OPERAND_TYPE_RAY_FLAGS:
+    case SPV_OPERAND_TYPE_RAY_QUERY_INTERSECTION:
+    case SPV_OPERAND_TYPE_RAY_QUERY_COMMITTED_INTERSECTION_TYPE:
+    case SPV_OPERAND_TYPE_RAY_QUERY_CANDIDATE_INTERSECTION_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
     case SPV_OPERAND_TYPE_DEBUG_COMPOSITE_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_TYPE_QUALIFIER:

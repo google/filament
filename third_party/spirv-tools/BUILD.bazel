@@ -59,6 +59,8 @@ generate_vendor_tables("debuginfo")
 
 generate_vendor_tables("opencl.debuginfo.100", "CLDEBUG100_")
 
+generate_vendor_tables("nonsemantic.clspvreflection")
+
 generate_extinst_lang_headers("DebugInfo", DEBUGINFO_GRAMMAR_JSON_FILE)
 
 generate_extinst_lang_headers("OpenCLDebugInfo100", CLDEBUGINFO100_GRAMMAR_JSON_FILE)
@@ -103,6 +105,7 @@ cc_library(
         ":gen_opencl_tables_unified1",
         ":gen_registry_tables",
         ":gen_vendor_tables_debuginfo",
+        ":gen_vendor_tables_nonsemantic_clspvreflection",
         ":gen_vendor_tables_opencl_debuginfo_100",
         ":gen_vendor_tables_spv_amd_gcn_shader",
         ":gen_vendor_tables_spv_amd_shader_ballot",

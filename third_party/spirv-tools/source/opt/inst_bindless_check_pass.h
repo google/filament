@@ -28,19 +28,24 @@ namespace opt {
 // external design may change as the layer evolves.
 class InstBindlessCheckPass : public InstrumentPass {
  public:
-  // Deprecated interface
+  // Old interface to support testing pre-buffer-overrun capability
   InstBindlessCheckPass(uint32_t desc_set, uint32_t shader_id,
-                        bool input_length_enable, bool input_init_enable,
-                        uint32_t version)
-      : InstrumentPass(desc_set, shader_id, kInstValidationIdBindless, version),
-        input_length_enabled_(input_length_enable),
-        input_init_enabled_(input_init_enable) {}
-  // Preferred Interface
+                        bool desc_idx_enable, bool desc_init_enable)
+      : InstrumentPass(desc_set, shader_id, kInstValidationIdBindless, false),
+        desc_idx_enabled_(desc_idx_enable),
+        desc_init_enabled_(desc_init_enable),
+        buffer_bounds_enabled_(false) {}
+
+  // New interface supporting buffer overrun checking
   InstBindlessCheckPass(uint32_t desc_set, uint32_t shader_id,
-                        bool input_length_enable, bool input_init_enable)
-      : InstrumentPass(desc_set, shader_id, kInstValidationIdBindless),
-        input_length_enabled_(input_length_enable),
-        input_init_enabled_(input_init_enable) {}
+                        bool desc_idx_enable, bool desc_init_enable,
+                        bool buffer_bounds_enable)
+      : InstrumentPass(
+            desc_set, shader_id, kInstValidationIdBindless,
+            desc_idx_enable || desc_init_enable || buffer_bounds_enable),
+        desc_idx_enabled_(desc_idx_enable),
+        desc_init_enabled_(desc_init_enable),
+        buffer_bounds_enabled_(buffer_bounds_enable) {}
 
   ~InstBindlessCheckPass() override = default;
 
@@ -53,13 +58,11 @@ class InstBindlessCheckPass : public InstrumentPass {
   // These functions do bindless checking instrumentation on a single
   // instruction which references through a descriptor (ie references into an
   // image or buffer). Refer to Vulkan API for further information on
-  // descriptors. GenBoundsCheckCode checks that an index into a descriptor
-  // array (array of images or buffers) is in-bounds. GenInitCheckCode
+  // descriptors. GenDescIdxCheckCode checks that an index into a descriptor
+  // array (array of images or buffers) is in-bounds. GenDescInitCheckCode
   // checks that the referenced descriptor has been initialized, if the
-  // SPV_EXT_descriptor_indexing extension is enabled.
-  //
-  // TODO(greg-lunarg): Add support for buffers. Currently only does
-  // checking of references of images.
+  // SPV_EXT_descriptor_indexing extension is enabled, and initialized large
+  // enough to handle the reference, if RobustBufferAccess is disabled.
   //
   // The functions are designed to be passed to
   // InstrumentPass::InstProcessEntryPointCallTree(), which applies the
@@ -96,15 +99,15 @@ class InstBindlessCheckPass : public InstrumentPass {
   //
   // The Descriptor Array Size is the size of the descriptor array which was
   // indexed.
-  void GenBoundsCheckCode(BasicBlock::iterator ref_inst_itr,
-                          UptrVectorIterator<BasicBlock> ref_block_itr,
-                          uint32_t stage_idx,
-                          std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+  void GenDescIdxCheckCode(
+      BasicBlock::iterator ref_inst_itr,
+      UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
+      std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
-  void GenInitCheckCode(BasicBlock::iterator ref_inst_itr,
-                        UptrVectorIterator<BasicBlock> ref_block_itr,
-                        uint32_t stage_idx,
-                        std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+  void GenDescInitCheckCode(
+      BasicBlock::iterator ref_inst_itr,
+      UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
+      std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
   // Generate instructions into |builder| to read length of runtime descriptor
   // array |var_id| from debug input buffer and return id of value.
@@ -125,9 +128,19 @@ class InstBindlessCheckPass : public InstrumentPass {
     uint32_t load_id;
     uint32_t ptr_id;
     uint32_t var_id;
-    uint32_t index_id;
+    uint32_t desc_idx_id;
     Instruction* ref_inst;
   } ref_analysis;
+
+  // Return size of type |ty_id| in bytes.
+  uint32_t ByteSize(uint32_t ty_id);
+
+  // Return stride of type |ty_id| with decoration |stride_deco|. Return 0
+  // if not found
+  uint32_t FindStride(uint32_t ty_id, uint32_t stride_deco);
+
+  // Generate index of last byte referenced by buffer reference |ref|
+  uint32_t GenLastByteIdx(ref_analysis* ref, InstructionBuilder* builder);
 
   // Clone original original reference encapsulated by |ref| into |builder|.
   // This may generate more than one instruction if neccessary.
@@ -138,8 +151,8 @@ class InstBindlessCheckPass : public InstrumentPass {
   // references through. Else return 0.
   uint32_t GetImageId(Instruction* inst);
 
-  // Get descriptor type inst of variable |var_inst|.
-  Instruction* GetDescriptorTypeInst(Instruction* var_inst);
+  // Get pointee type inst of pointer value |ptr_inst|.
+  Instruction* GetPointeeTypeInst(Instruction* ptr_inst);
 
   // Analyze descriptor reference |ref_inst| and save components into |ref|.
   // Return true if |ref_inst| is a descriptor reference, false otherwise.
@@ -152,22 +165,25 @@ class InstBindlessCheckPass : public InstrumentPass {
   // writes debug error output utilizing |ref|, |error_id|, |length_id| and
   // |stage_idx|. Generate merge block for valid and invalid branches. Kill
   // original reference.
-  void GenCheckCode(uint32_t check_id, uint32_t error_id, uint32_t length_id,
-                    uint32_t stage_idx, ref_analysis* ref,
+  void GenCheckCode(uint32_t check_id, uint32_t error_id, uint32_t offset_id,
+                    uint32_t length_id, uint32_t stage_idx, ref_analysis* ref,
                     std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
   // Initialize state for instrumenting bindless checking
   void InitializeInstBindlessCheck();
 
-  // Apply GenBoundsCheckCode to every instruction in module. Then apply
-  // GenInitCheckCode to every instruction in module.
+  // Apply GenDescIdxCheckCode to every instruction in module. Then apply
+  // GenDescInitCheckCode to every instruction in module.
   Pass::Status ProcessImpl();
 
   // Enable instrumentation of runtime array length checking
-  bool input_length_enabled_;
+  bool desc_idx_enabled_;
 
   // Enable instrumentation of descriptor initialization checking
-  bool input_init_enabled_;
+  bool desc_init_enabled_;
+
+  // Enable instrumentation of buffer overrun checking
+  bool buffer_bounds_enabled_;
 
   // Mapping from variable to descriptor set
   std::unordered_map<uint32_t, uint32_t> var2desc_set_;

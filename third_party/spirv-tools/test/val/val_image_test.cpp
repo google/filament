@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Google Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +39,8 @@ std::string GenerateShaderCode(
     const std::string& execution_model = "Fragment",
     const std::string& execution_mode = "",
     const spv_target_env env = SPV_ENV_UNIVERSAL_1_0,
-    const std::string& memory_model = "GLSL450") {
+    const std::string& memory_model = "GLSL450",
+    const std::string& declarations = "") {
   std::ostringstream ss;
   ss << R"(
 OpCapability Shader
@@ -163,6 +166,7 @@ OpDecorate %uniform_sampler Binding 0
 %u32_4 = OpConstant %u32 4
 
 %u64_0 = OpConstant %u64 0
+%u64_1 = OpConstant %u64 1
 
 %u32vec2arr4 = OpTypeArray %u32vec2 %u32_4
 %u32vec2arr3 = OpTypeArray %u32vec2 %u32_3
@@ -315,6 +319,8 @@ OpDecorate %uniform_sampler Binding 0
 %type_sampled_image_f32_rect_0001 = OpTypeSampledImage %type_image_f32_rect_0001
 )";
   }
+
+  ss << declarations;
 
   ss << R"(
 %main = OpFunction %void None %func
@@ -737,7 +743,7 @@ TEST_F(ValidateImage, ImageTexelPointerImageNotResultTypePointer) {
 
   CompileSuccessfully(GenerateShaderCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 140[%140] cannot be a "
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 141[%141] cannot be a "
                                                "type"));
 }
 
@@ -4841,8 +4847,331 @@ TEST_F(ValidateImage, ZeroExtendVectorSIntTexelV14Good) {
   EXPECT_THAT(getDiagnosticString(), Eq(""));
 }
 
+TEST_F(ValidateImage, ReadLodAMDSuccess1) {
+  const std::string body = R"(
+%img = OpLoad %type_image_u32_2d_0000 %uniform_image_u32_2d_0000
+%res1 = OpImageRead %u32vec4 %img %u32vec2_01 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability StorageImageReadWithoutFormat\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, ReadLodAMDSuccess2) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_1d_0002_rgba32f %uniform_image_f32_1d_0002_rgba32f
+%res1 = OpImageRead %f32vec4 %img %u32vec2_01 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability Image1D\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, ReadLodAMDSuccess3) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_cube_0102_rgba32f %uniform_image_f32_cube_0102_rgba32f
+%res1 = OpImageRead %f32vec4 %img %u32vec3_012 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability ImageCubeArray\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, ReadLodAMDNeedCapability) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_cube_0102_rgba32f %uniform_image_f32_cube_0102_rgba32f
+%res1 = OpImageRead %f32vec4 %img %u32vec3_012 Lod %u32_0
+)";
+
+  const std::string extra = "\nOpCapability ImageCubeArray\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Image Operand Lod can only be used with ExplicitLod "
+                        "opcodes and OpImageFetch"));
+}
+
+TEST_F(ValidateImage, WriteLodAMDSuccess1) {
+  const std::string body = R"(
+%img = OpLoad %type_image_u32_2d_0000 %uniform_image_u32_2d_0000
+OpImageWrite %img %u32vec2_01 %u32vec4_0123 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability StorageImageWriteWithoutFormat\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, WriteLodAMDSuccess2) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_1d_0002_rgba32f %uniform_image_f32_1d_0002_rgba32f
+OpImageWrite %img %u32_1 %f32vec4_0000 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability Image1D\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, WriteLodAMDSuccess3) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_cube_0102_rgba32f %uniform_image_f32_cube_0102_rgba32f
+OpImageWrite %img %u32vec3_012 %f32vec4_0000 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability ImageCubeArray\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, WriteLodAMDNeedCapability) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_cube_0102_rgba32f %uniform_image_f32_cube_0102_rgba32f
+OpImageWrite %img %u32vec3_012 %f32vec4_0000 Lod %u32_0
+)";
+
+  const std::string extra = "\nOpCapability ImageCubeArray\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Image Operand Lod can only be used with ExplicitLod "
+                        "opcodes and OpImageFetch"));
+}
+
+TEST_F(ValidateImage, SparseReadLodAMDSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0002 %uniform_image_f32_2d_0002
+%res1 = OpImageSparseRead %struct_u32_f32vec4 %img %u32vec2_01 Lod %u32_0
+)";
+
+  const std::string extra =
+      "\nOpCapability StorageImageReadWithoutFormat\n"
+      "OpCapability ImageReadWriteLodAMD\n"
+      "OpExtension \"SPV_AMD_shader_image_load_store_lod\"\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+TEST_F(ValidateImage, SparseReadLodAMDNeedCapability) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0002 %uniform_image_f32_2d_0002
+%res1 = OpImageSparseRead %struct_u32_f32vec4 %img %u32vec2_01 Lod %u32_0
+)";
+
+  const std::string extra = "\nOpCapability StorageImageReadWithoutFormat\n";
+  CompileSuccessfully(
+      GenerateShaderCode(body, extra, "Fragment", "", SPV_ENV_UNIVERSAL_1_1),
+      SPV_ENV_UNIVERSAL_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Image Operand Lod can only be used with ExplicitLod "
+                        "opcodes and OpImageFetch"));
+}
+
+TEST_F(ValidateImage, GatherBiasAMDSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0001 %uniform_image_f32_2d_0001
+%sampler = OpLoad %type_sampler %uniform_sampler
+%simg = OpSampledImage %type_sampled_image_f32_2d_0001 %img %sampler
+%res1 = OpImageGather %f32vec4 %simg %f32vec4_0000 %u32_1 Bias %f32_1
+)";
+
+  const std::string extra = R"(
+OpCapability ImageGatherBiasLodAMD
+OpExtension "SPV_AMD_texture_gather_bias_lod"
+)";
+  CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, GatherLodAMDSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0001 %uniform_image_f32_2d_0001
+%sampler = OpLoad %type_sampler %uniform_sampler
+%simg = OpSampledImage %type_sampled_image_f32_2d_0001 %img %sampler
+%res1 = OpImageGather %f32vec4 %simg %f32vec4_0000 %u32_1 Lod %f32_1
+)";
+
+  const std::string extra = R"(
+OpCapability ImageGatherBiasLodAMD
+OpExtension "SPV_AMD_texture_gather_bias_lod"
+)";
+  CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, SparseGatherBiasAMDSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0001 %uniform_image_f32_2d_0001
+%sampler = OpLoad %type_sampler %uniform_sampler
+%simg = OpSampledImage %type_sampled_image_f32_2d_0001 %img %sampler
+%res1 = OpImageSparseGather %struct_u32_f32vec4 %simg %f32vec4_0000 %u32_1 Bias %f32_1
+)";
+
+  const std::string extra = R"(
+OpCapability ImageGatherBiasLodAMD
+OpExtension "SPV_AMD_texture_gather_bias_lod"
+)";
+  CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, SparseGatherLodAMDSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_f32_2d_0001 %uniform_image_f32_2d_0001
+%sampler = OpLoad %type_sampler %uniform_sampler
+%simg = OpSampledImage %type_sampled_image_f32_2d_0001 %img %sampler
+%res1 = OpImageSparseGather %struct_u32_f32vec4 %simg %f32vec4_0000 %u32_1 Lod %f32_1
+)";
+
+  const std::string extra = R"(
+OpCapability ImageGatherBiasLodAMD
+OpExtension "SPV_AMD_texture_gather_bias_lod"
+)";
+  CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 // No negative tests for ZeroExtend since we don't truly know the
 // texel format.
+
+// Tests for 64-bit images
+static const std::string capabilities_and_extensions_image64 = R"(
+OpCapability Int64ImageEXT
+OpExtension "SPV_EXT_shader_image_int64"
+)";
+static const std::string declarations_image64 = R"(
+%type_image_u64_buffer_0002_r64ui = OpTypeImage %u64 Buffer 0 0 0 2 R64ui
+%ptr_Image_u64 = OpTypePointer Image %u64
+%ptr_image_u64_buffer_0002_r64ui = OpTypePointer Private %type_image_u64_buffer_0002_r64ui
+%private_image_u64_buffer_0002_r64ui = OpVariable %ptr_image_u64_buffer_0002_r64ui Private
+)";
+
+TEST_F(ValidateImage, Image64MissingCapability) {
+  CompileSuccessfully(GenerateShaderCode("", "", "Fragment", "",
+                                         SPV_ENV_UNIVERSAL_1_3, "GLSL450",
+                                         declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, Image64MissingExtension) {
+  const std::string extra = R"(
+OpCapability Int64ImageEXT
+)";
+
+  CompileSuccessfully(GenerateShaderCode("", extra, "Fragment", "",
+                                         SPV_ENV_UNIVERSAL_1_3, "GLSL450",
+                                         declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_ERROR_MISSING_EXTENSION, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, ImageTexelPointer64Success) {
+  const std::string body = R"(
+%texel_ptr = OpImageTexelPointer %ptr_Image_u64 %private_image_u64_buffer_0002_r64ui %u32_0 %u32_0
+%sum = OpAtomicIAdd %u64 %texel_ptr %u32_1 %u32_0 %u64_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body,
+                                         capabilities_and_extensions_image64,
+                                         "Fragment", "", SPV_ENV_UNIVERSAL_1_3,
+                                         "GLSL450", declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateImage, ImageTexelPointer64ResultTypeNotPointer) {
+  const std::string body = R"(
+%texel_ptr = OpImageTexelPointer %type_image_u64_buffer_0002_r64ui %private_image_u64_buffer_0002_r64ui %u32_0 %u32_0
+%sum = OpAtomicIAdd %u64 %texel_ptr %u32_1 %u32_0 %u64_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body,
+                                         capabilities_and_extensions_image64,
+                                         "Fragment", "", SPV_ENV_UNIVERSAL_1_3,
+                                         "GLSL450", declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to be OpTypePointer"));
+}
+
+TEST_F(ValidateImage, ImageTexelPointer64ResultTypeNotImageClass) {
+  const std::string body = R"(
+%texel_ptr = OpImageTexelPointer %ptr_image_f32_cube_0101 %private_image_u64_buffer_0002_r64ui %u32_0 %u32_0
+%sum = OpAtomicIAdd %u64 %texel_ptr %u32_1 %u32_0 %u64_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body,
+                                         capabilities_and_extensions_image64,
+                                         "Fragment", "", SPV_ENV_UNIVERSAL_1_3,
+                                         "GLSL450", declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to be OpTypePointer whose "
+                        "Storage Class operand is Image"));
+}
+
+TEST_F(ValidateImage, ImageTexelPointer64SampleNotZeroForImageWithMSZero) {
+  const std::string body = R"(
+%texel_ptr = OpImageTexelPointer %ptr_Image_u64 %private_image_u64_buffer_0002_r64ui %u32_0 %u32_1
+%sum = OpAtomicIAdd %u64 %texel_ptr %u32_1 %u32_0 %u64_1
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body,
+                                         capabilities_and_extensions_image64,
+                                         "Fragment", "", SPV_ENV_UNIVERSAL_1_3,
+                                         "GLSL450", declarations_image64)
+                          .c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Sample for Image with MS 0 to be a valid "
+                        "<id> for the value 0"));
+}
 
 }  // namespace
 }  // namespace val

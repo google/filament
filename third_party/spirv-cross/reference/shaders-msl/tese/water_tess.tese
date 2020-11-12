@@ -38,11 +38,10 @@ static inline __attribute__((always_inline))
 float2 lod_factor(thread const float2& tess_coord, thread float4& vPatchLods)
 {
     float2 x = mix(vPatchLods.yx, vPatchLods.zw, float2(tess_coord.x));
-    float level = mix(x.x, x.y, tess_coord.y);
-    float floor_level = floor(level);
-    float fract_level = level - floor_level;
-    float2 _74 = float2(floor_level, fract_level);
-    return _74;
+    float level0 = mix(x.x, x.y, tess_coord.y);
+    float floor_level = floor(level0);
+    float fract_level = level0 - floor_level;
+    return float2(floor_level, fract_level);
 }
 
 static inline __attribute__((always_inline))

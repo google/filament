@@ -167,7 +167,7 @@ TEST(OperandToUndefReductionPassTest, BasicCheck) {
       BuildModule(env, consumer, original, kReduceAssembleOption);
   const auto ops =
       OperandToUndefReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   ASSERT_EQ(10, ops.size());
 
@@ -221,7 +221,7 @@ TEST(OperandToUndefReductionPassTest, WithCalledFunction) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       OperandToUndefReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 

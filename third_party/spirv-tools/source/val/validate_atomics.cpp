@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Google Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,11 +56,16 @@ namespace val {
 spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
   const SpvOp opcode = inst->opcode();
   const uint32_t result_type = inst->type_id();
-
+  bool is_atomic_float_opcode = false;
+  if (opcode == SpvOpAtomicLoad || opcode == SpvOpAtomicStore ||
+      opcode == SpvOpAtomicFAddEXT || opcode == SpvOpAtomicExchange) {
+    is_atomic_float_opcode = true;
+  }
   switch (opcode) {
     case SpvOpAtomicLoad:
     case SpvOpAtomicStore:
     case SpvOpAtomicExchange:
+    case SpvOpAtomicFAddEXT:
     case SpvOpAtomicCompareExchange:
     case SpvOpAtomicCompareExchangeWeak:
     case SpvOpAtomicIIncrement:
@@ -92,13 +99,63 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       } else if (opcode == SpvOpAtomicFlagClear || opcode == SpvOpAtomicStore) {
         assert(result_type == 0);
       } else {
-        if (!_.IsIntScalarType(result_type)) {
+        if (_.IsFloatScalarType(result_type)) {
+          if (is_atomic_float_opcode) {
+            if (opcode == SpvOpAtomicFAddEXT) {
+              if ((_.GetBitWidth(result_type) == 32) &&
+                  (!_.HasCapability(SpvCapabilityAtomicFloat32AddEXT))) {
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float add atomics require the AtomicFloat32AddEXT "
+                          "capability";
+              }
+              if ((_.GetBitWidth(result_type) == 64) &&
+                  (!_.HasCapability(SpvCapabilityAtomicFloat64AddEXT))) {
+                return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                       << spvOpcodeString(opcode)
+                       << ": float add atomics require the AtomicFloat64AddEXT "
+                          "capability";
+              }
+            }
+          } else {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << spvOpcodeString(opcode)
+                   << ": expected Result Type to be int scalar type";
+          }
+        } else if (_.IsIntScalarType(result_type) &&
+                   opcode == SpvOpAtomicFAddEXT) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
-                 << ": expected Result Type to be int scalar type";
+                 << ": expected Result Type to be float scalar type";
+        } else if (!_.IsFloatScalarType(result_type) &&
+                   !_.IsIntScalarType(result_type)) {
+          switch (opcode) {
+            case SpvOpAtomicFAddEXT:
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << spvOpcodeString(opcode)
+                     << ": expected Result Type to be float scalar type";
+            case SpvOpAtomicIIncrement:
+            case SpvOpAtomicIDecrement:
+            case SpvOpAtomicIAdd:
+            case SpvOpAtomicISub:
+            case SpvOpAtomicSMin:
+            case SpvOpAtomicSMax:
+            case SpvOpAtomicUMin:
+            case SpvOpAtomicUMax:
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << spvOpcodeString(opcode)
+                     << ": expected Result Type to be integer scalar type";
+            default:
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << spvOpcodeString(opcode)
+                     << ": expected Result Type to be int or float scalar type";
+          }
         }
+
         if (spvIsVulkanEnv(_.context()->target_env) &&
-            _.GetBitWidth(result_type) != 32) {
+            (_.GetBitWidth(result_type) != 32 &&
+             (_.GetBitWidth(result_type) != 64 ||
+              !_.HasCapability(SpvCapabilityInt64ImageEXT)))) {
           switch (opcode) {
             case SpvOpAtomicSMin:
             case SpvOpAtomicUMin:
@@ -108,11 +165,17 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
             case SpvOpAtomicOr:
             case SpvOpAtomicXor:
             case SpvOpAtomicIAdd:
+            case SpvOpAtomicISub:
+            case SpvOpAtomicFAddEXT:
             case SpvOpAtomicLoad:
             case SpvOpAtomicStore:
             case SpvOpAtomicExchange:
+            case SpvOpAtomicIIncrement:
+            case SpvOpAtomicIDecrement:
+            case SpvOpAtomicCompareExchangeWeak:
             case SpvOpAtomicCompareExchange: {
               if (_.GetBitWidth(result_type) == 64 &&
+                  _.IsIntScalarType(result_type) &&
                   !_.HasCapability(SpvCapabilityInt64Atomics))
                 return _.diag(SPV_ERROR_INVALID_DATA, inst)
                        << spvOpcodeString(opcode)

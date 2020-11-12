@@ -24,9 +24,9 @@
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 // MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-#include <spirv/1.0/GLSL.std.450.h>
-#include <spirv/1.0/OpenCL.std.h>
-#include <spirv/1.0/spirv.hpp>
+#include <spirv/unified1/GLSL.std.450.h>
+#include <spirv/unified1/OpenCL.std.h>
+#include <spirv/unified1/spirv.hpp>
 
 namespace {
 

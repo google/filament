@@ -7,7 +7,7 @@ using namespace metal;
 
 struct cb1_struct
 {
-    float4 _m0[1];
+    float4 _RESERVED_IDENTIFIER_FIXUP_m0[1];
 };
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 16u, 1u);
@@ -27,7 +27,7 @@ kernel void main0(constant cb1_struct& cb0_1 [[buffer(0)]], texture2d<float, acc
         {
             int2 param = r0;
             int2 param_1 = int2(i, j);
-            u0.write(cb0_1._m0[0].xxxx, uint2(get_texcoord(param, param_1, gl_LocalInvocationID)));
+            u0.write(cb0_1._RESERVED_IDENTIFIER_FIXUP_m0[0].xxxx, uint2(get_texcoord(param, param_1, gl_LocalInvocationID)));
         }
     }
 }

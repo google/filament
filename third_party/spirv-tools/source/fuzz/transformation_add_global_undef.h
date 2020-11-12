@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_ADD_GLOBAL_UNDEF_H_
 #define SOURCE_FUZZ_TRANSFORMATION_ADD_GLOBAL_UNDEF_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -32,12 +32,16 @@ class TransformationAddGlobalUndef : public Transformation {
 
   // - |message_.fresh_id| must be fresh
   // - |message_.type_id| must be the id of a non-function type
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Adds an OpUndef instruction to the module, with |message_.type_id| as its
   // type.  The instruction has result id |message_.fresh_id|.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 

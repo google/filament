@@ -66,6 +66,7 @@ void frag_main()
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
 {
     gl_FragCoord = stage_input.gl_FragCoord;
+    gl_FragCoord.w = 1.0 / gl_FragCoord.w;
     Input = stage_input.Input;
     InputI = stage_input.InputI;
     InputU = stage_input.InputU;

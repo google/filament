@@ -1158,6 +1158,199 @@ OpFunctionEnd
   SinglePassRunAndCheck<VectorDCE>(text, text, true, true);
 }
 
+TEST_F(VectorDCETest, NotAffectedByDebugValue) {
+  // It tests that an OpenCL.DebugInfo.100 DebugValue instruction does
+  // not change the vector DCE pass result. If the composite used for
+  // the value of DebugValue is killed, the DebugValue must be killed as well.
+  const std::string text = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %In2 %In0 %In1 %OutColor
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 450
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+OpName %main "main"
+OpName %In2 "In2"
+OpName %In0 "In0"
+OpName %In1 "In1"
+OpName %OutColor "OutColor"
+OpName %_Globals_ "_Globals_"
+OpMemberName %_Globals_ 0 "g_b"
+OpMemberName %_Globals_ 1 "g_n"
+OpName %_ ""
+OpDecorate %In2 Location 2
+OpDecorate %In0 Location 0
+OpDecorate %In1 Location 1
+OpDecorate %OutColor Location 0
+OpMemberDecorate %_Globals_ 0 Offset 0
+OpMemberDecorate %_Globals_ 1 Offset 4
+OpDecorate %_Globals_ Block
+OpDecorate %_ DescriptorSet 0
+OpDecorate %_ Binding 0
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%In2 = OpVariable %_ptr_Input_v2float Input
+%_ptr_Input_float = OpTypePointer Input %float
+%In0 = OpVariable %_ptr_Input_float Input
+%In1 = OpVariable %_ptr_Input_float Input
+%uint = OpTypeInt 32 0
+%uint_32 = OpConstant %uint 32
+%_ptr_Function_float = OpTypePointer Function %float
+%float_0 = OpConstant %float 0
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%OutColor = OpVariable %_ptr_Output_v4float Output
+%int = OpTypeInt 32 1
+%_Globals_ = OpTypeStruct %uint %int
+%_ptr_Uniform__Globals_ = OpTypePointer Uniform %_Globals_
+%_ = OpVariable %_ptr_Uniform__Globals_ Uniform
+%null_expr = OpExtInst %void %ext DebugExpression
+%src = OpExtInst %void %ext DebugSource %file_name
+%cu = OpExtInst %void %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %void %ext DebugTypeBasic %float_name %uint_32 Float
+%main_ty = OpExtInst %void %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_tf
+%dbg_main = OpExtInst %void %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %main
+%dbg_f = OpExtInst %void %ext DebugLocalVariable %f_name %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%main = OpFunction %void None %11
+%25 = OpLabel
+%s = OpExtInst %void %ext DebugScope %dbg_main
+
+; CHECK: [[in2:%\w+]] = OpLoad %v2float %In2
+%26 = OpLoad %v2float %In2
+%27 = OpLoad %float %In0
+%28 = OpLoad %float %In1
+%29 = OpFAdd %float %27 %28
+
+; CHECK:      OpCompositeInsert %v2float {{%\w+}} [[in2]] 0
+; CHECK-NEXT: OpCompositeInsert %v2float {{%\w+}} [[in2]] 0
+; CHECK-NOT:  DebugValue
+%35 = OpCompositeInsert %v2float %29 %26 0
+%value = OpExtInst %void %ext DebugValue %dbg_f %35 %null_expr
+%37 = OpCompositeInsert %v2float %float_0 %35 0
+%33 = OpVectorShuffle %v4float %37 %37 0 1 0 1
+OpStore %OutColor %33
+OpReturn
+OpFunctionEnd
+)";
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<VectorDCE>(text, true);
+}
+
+TEST_F(VectorDCETest, RemoveDebugValueUsesKilledInstr) {
+  // It tests that the vector DCE pass removes the OpenCL.DebugInfo.100
+  // DebugValue instruction using a killed instruction.
+  const std::string text = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %In0 %OutColor
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 450
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpName %main "main"
+OpName %In0 "In0"
+OpName %OutColor "OutColor"
+OpDecorate %In0 Location 0
+OpDecorate %OutColor Location 0
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%In0 = OpVariable %_ptr_Input_v4float Input
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_32 = OpConstant %uint 32
+%_ptr_Input_float = OpTypePointer Input %float
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%v3float = OpTypeVector %float 3
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%int_20 = OpConstant %int 20
+%bool = OpTypeBool
+%float_1 = OpConstant %float 1
+%int_1 = OpConstant %int 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%OutColor = OpVariable %_ptr_Output_v4float Output
+%23 = OpUndef %v3float
+%null_expr = OpExtInst %void %ext DebugExpression
+%src = OpExtInst %void %ext DebugSource %file_name
+%cu = OpExtInst %void %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %void %ext DebugTypeBasic %float_name %uint_32 Float
+%main_ty = OpExtInst %void %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_tf
+%dbg_main = OpExtInst %void %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %main
+%dbg_f = OpExtInst %void %ext DebugLocalVariable %f_name %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%main = OpFunction %void None %6
+%24 = OpLabel
+%s0 = OpExtInst %void %ext DebugScope %dbg_main
+%25 = OpAccessChain %_ptr_Input_float %In0 %uint_0
+%26 = OpLoad %float %25
+%27 = OpAccessChain %_ptr_Input_float %In0 %uint_1
+%28 = OpLoad %float %27
+
+; CHECK:     [[undef:%\w+]] = OpUndef %float
+; CHECK-NOT: DebugValue
+%value = OpExtInst %void %ext DebugValue %dbg_f %28 %null_expr
+%29 = OpAccessChain %_ptr_Input_float %In0 %uint_2
+%30 = OpLoad %float %29
+
+; CHECK:      [[composite:%\w+]] = OpCompositeConstruct %v3float {{%\w+}} [[undef]] [[undef]]
+; CHECK-NEXT: DebugValue {{%\w+}} [[composite]]
+%31 = OpCompositeConstruct %v3float %30 %28 %26
+%value_live = OpExtInst %void %ext DebugValue %dbg_f %31 %null_expr
+OpBranch %32
+%32 = OpLabel
+%s1 = OpExtInst %void %ext DebugScope %dbg_main
+%33 = OpPhi %v3float %31 %24 %34 %35
+%36 = OpPhi %int %int_0 %24 %37 %35
+OpLoopMerge %38 %35 None
+OpBranch %39
+%39 = OpLabel
+%s2 = OpExtInst %void %ext DebugScope %dbg_main
+%40 = OpSLessThan %bool %36 %int_20
+OpBranchConditional %40 %41 %38
+%41 = OpLabel
+%s3 = OpExtInst %void %ext DebugScope %dbg_main
+%42 = OpCompositeExtract %float %33 0
+%43 = OpFAdd %float %42 %float_1
+%34 = OpCompositeInsert %v3float %43 %33 0
+OpBranch %35
+%35 = OpLabel
+%s4 = OpExtInst %void %ext DebugScope %dbg_main
+%37 = OpIAdd %int %36 %int_1
+OpBranch %32
+%38 = OpLabel
+%s5 = OpExtInst %void %ext DebugScope %dbg_main
+%44 = OpCompositeExtract %float %33 0
+%45 = OpCompositeConstruct %v4float %44 %44 %44 %44
+OpStore %OutColor %45
+OpReturn
+OpFunctionEnd
+)";
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<VectorDCE>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -501,10 +501,6 @@ spv_result_t ValidateMemoryModel(ValidationState_t& _,
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Addressing model must be Logical for WebGPU environment.";
     }
-    if (_.memory_model() != SpvMemoryModelVulkanKHR) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Memory model must be VulkanKHR for WebGPU environment.";
-    }
   }
 
   if (spvIsOpenCLEnv(_.context()->target_env)) {

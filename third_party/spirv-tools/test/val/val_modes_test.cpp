@@ -714,14 +714,14 @@ INSTANTIATE_TEST_SUITE_P(
                    "SubgroupsPerWorkgroup 1", "SubgroupsPerWorkgroupId %int1"),
             Values(SPV_ENV_UNIVERSAL_1_3)));
 
-INSTANTIATE_TEST_SUITE_P(ValidateModeGLComputeWebGPUWhitelistGood,
+INSTANTIATE_TEST_SUITE_P(ValidateModeGLComputeWebGPUAllowListGood,
                          ValidateModeExecution,
                          Combine(Values(SPV_SUCCESS), Values(""),
                                  Values("GLCompute"), Values("LocalSize 1 1 1"),
                                  Values(SPV_ENV_WEBGPU_0)));
 
 INSTANTIATE_TEST_SUITE_P(
-    ValidateModeGLComputeWebGPUWhitelistBad, ValidateModeExecution,
+    ValidateModeGLComputeWebGPUAllowListBad, ValidateModeExecution,
     Combine(Values(SPV_ERROR_INVALID_DATA),
             Values("Execution mode must be one of OriginUpperLeft, "
                    "DepthReplacing, DepthGreater, DepthLess, DepthUnchanged, "
@@ -730,14 +730,14 @@ INSTANTIATE_TEST_SUITE_P(
             Values(SPV_ENV_WEBGPU_0)));
 
 INSTANTIATE_TEST_SUITE_P(
-    ValidateModeFragmentWebGPUWhitelistGood, ValidateModeExecution,
+    ValidateModeFragmentWebGPUAllowListGood, ValidateModeExecution,
     Combine(Values(SPV_SUCCESS), Values(""), Values("Fragment"),
             Values("OriginUpperLeft", "DepthReplacing", "DepthGreater",
                    "DepthLess", "DepthUnchanged"),
             Values(SPV_ENV_WEBGPU_0)));
 
 INSTANTIATE_TEST_SUITE_P(
-    ValidateModeFragmentWebGPUWhitelistBad, ValidateModeExecution,
+    ValidateModeFragmentWebGPUAllowListBad, ValidateModeExecution,
     Combine(Values(SPV_ERROR_INVALID_DATA),
             Values("Execution mode must be one of OriginUpperLeft, "
                    "DepthReplacing, DepthGreater, DepthLess, DepthUnchanged, "

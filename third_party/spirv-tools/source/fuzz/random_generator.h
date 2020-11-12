@@ -29,6 +29,9 @@ class RandomGenerator {
   // Returns a value in the half-open interval [0, bound).
   virtual uint32_t RandomUint32(uint32_t bound) = 0;
 
+  // Returns a value in the half-open interval [0, bound).
+  virtual uint64_t RandomUint64(uint64_t bound) = 0;
+
   // Returns a value in the closed interval [0, 100].
   virtual uint32_t RandomPercentage() = 0;
 

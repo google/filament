@@ -137,11 +137,16 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl, const GLSLPostProcess
     const CompilerMSL::Options::Platform platform =
         config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
             CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
-    mslCompiler.set_msl_options(CompilerMSL::Options {
-        .platform = platform,
-        .msl_version = CompilerMSL::Options::make_msl_version(1, 1),
-        .ios_use_framebuffer_fetch_subpasses = true
-    });
+
+    CompilerMSL::Options mslOptions = {};
+    mslOptions.platform = platform,
+    mslOptions.msl_version = CompilerMSL::Options::make_msl_version(1, 1);
+
+    if (config.shaderModel == filament::backend::ShaderModel::GL_ES_30) {
+        mslOptions.use_framebuffer_fetch_subpasses = true;
+    }
+
+    mslCompiler.set_msl_options(mslOptions);
 
     auto executionModel = mslCompiler.get_execution_model();
 

@@ -30,8 +30,7 @@ mediump vec2 lod_factor(vec2 tess_coord)
     mediump float level = mix(x.x, x.y, tess_coord.y);
     mediump float floor_level = floor(level);
     mediump float fract_level = level - floor_level;
-    mediump vec2 _74 = vec2(floor_level, fract_level);
-    return _74;
+    return vec2(floor_level, fract_level);
 }
 
 mediump vec3 sample_height_displacement(vec2 uv, vec2 off, mediump vec2 lod)

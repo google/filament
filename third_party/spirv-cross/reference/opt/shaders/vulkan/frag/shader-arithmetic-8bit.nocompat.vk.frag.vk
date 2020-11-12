@@ -1,6 +1,4 @@
 #version 450
-#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
-#extension GL_EXT_shader_16bit_storage : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
 #extension GL_EXT_shader_8bit_storage : require
 
@@ -28,57 +26,18 @@ layout(location = 1) out uvec4 FragColorUint;
 
 void main()
 {
-    int16_t _196 = 10s;
-    int _197 = 20;
-    i8vec2 _202 = unpack8(10s);
-    i8vec2 _198 = _202;
     i8vec4 _199 = unpack8(20);
-    _196 = pack16(_202);
-    _197 = pack32(_199);
     ssbo.i8[0] = _199.x;
     ssbo.i8[1] = _199.y;
     ssbo.i8[2] = _199.z;
     ssbo.i8[3] = _199.w;
-    uint16_t _221 = 10us;
-    uint _222 = 20u;
-    u8vec2 _227 = unpack8(10us);
-    u8vec2 _223 = _227;
     u8vec4 _224 = unpack8(20u);
-    _221 = pack16(_227);
-    _222 = pack32(_224);
     ssbo.u8[0] = _224.x;
     ssbo.u8[1] = _224.y;
     ssbo.u8[2] = _224.z;
     ssbo.u8[3] = _224.w;
     i8vec4 _249 = i8vec4(vColor);
-    i8vec4 _246 = _249;
-    i8vec4 _254 = _249 + i8vec4(registers.i8);
-    _246 = _254;
-    i8vec4 _257 = _254 + i8vec4(-40);
-    _246 = _257;
-    i8vec4 _259 = _257 + i8vec4(-50);
-    _246 = _259;
-    i8vec4 _261 = _259 + i8vec4(int8_t(10), int8_t(20), int8_t(30), int8_t(40));
-    _246 = _261;
-    i8vec4 _266 = _261 + i8vec4(ssbo.i8[4]);
-    _246 = _266;
-    i8vec4 _271 = _266 + i8vec4(ubo.i8);
-    _246 = _271;
-    FragColorInt = ivec4(_271);
-    u8vec4 _278 = u8vec4(_249);
-    u8vec4 _274 = _278;
-    u8vec4 _283 = _278 + u8vec4(registers.u8);
-    _274 = _283;
-    u8vec4 _286 = _283 + u8vec4(216);
-    _274 = _286;
-    u8vec4 _288 = _286 + u8vec4(206);
-    _274 = _288;
-    u8vec4 _290 = _288 + u8vec4(uint8_t(10), uint8_t(20), uint8_t(30), uint8_t(40));
-    _274 = _290;
-    u8vec4 _295 = _290 + u8vec4(ssbo.u8[4]);
-    _274 = _295;
-    u8vec4 _300 = _295 + u8vec4(ubo.u8);
-    _274 = _300;
-    FragColorUint = uvec4(_300);
+    FragColorInt = ivec4((((((_249 + i8vec4(registers.i8)) + i8vec4(-40)) + i8vec4(-50)) + i8vec4(int8_t(10), int8_t(20), int8_t(30), int8_t(40))) + i8vec4(ssbo.i8[4])) + i8vec4(ubo.i8));
+    FragColorUint = uvec4((((((u8vec4(_249) + u8vec4(registers.u8)) + u8vec4(216)) + u8vec4(206)) + u8vec4(uint8_t(10), uint8_t(20), uint8_t(30), uint8_t(40))) + u8vec4(ssbo.u8[4])) + u8vec4(ubo.u8));
 }
 

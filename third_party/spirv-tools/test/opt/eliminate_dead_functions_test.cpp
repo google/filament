@@ -204,6 +204,241 @@ OpFunctionEnd
                                                     /* skip_nop = */ true);
 }
 
+TEST_F(EliminateDeadFunctionsBasicTest, DebugRemoveFunctionFromDebugFunction) {
+  // We want to remove id of OpFunction from DebugFunction.
+  const std::string text = R"(OpCapability Shader
+%1 = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main" %3 %4
+OpExecutionMode %2 OriginUpperLeft
+%5 = OpString "ps.hlsl"
+OpSource HLSL 600 %5 "float4 foo() {
+  return 1;
+}
+float4 main(float4 color : COLOR) : SV_TARGET {
+  return foo() + color;
+}
+"
+%6 = OpString "float"
+%7 = OpString "main"
+%8 = OpString "foo"
+; CHECK: [[foo:%\d+]] = OpString "foo"
+OpDecorate %3 Location 0
+OpDecorate %4 Location 0
+%uint = OpTypeInt 32 0
+%uint_32 = OpConstant %uint 32
+%float = OpTypeFloat 32
+%float_1 = OpConstant %float 1
+%v4float = OpTypeVector %float 4
+%14 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%18 = OpTypeFunction %void
+%19 = OpTypeFunction %v4float
+%3 = OpVariable %_ptr_Input_v4float Input
+%4 = OpVariable %_ptr_Output_v4float Output
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+; CHECK: [[info_none:%\d+]] = OpExtInst %void %1 DebugInfoNone
+%20 = OpExtInst %void %1 DebugSource %5
+%21 = OpExtInst %void %1 DebugCompilationUnit 1 4 %20 HLSL
+%22 = OpExtInst %void %1 DebugTypeBasic %6 %uint_32 Float
+%23 = OpExtInst %void %1 DebugTypeVector %22 4
+%24 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %23 %23
+%25 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %23
+%26 = OpExtInst %void %1 DebugFunction %7 %24 %20 4 1 %21 %7 FlagIsProtected|FlagIsPrivate 4 %2
+%27 = OpExtInst %void %1 DebugFunction %8 %25 %20 1 1 %21 %8 FlagIsProtected|FlagIsPrivate 1 %28
+; CHECK: {{%\d+}} = OpExtInst %void %1 DebugFunction [[foo]] {{%\d+}} {{%\d+}} 1 1 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 1 [[info_none]]
+%29 = OpExtInst %void %1 DebugLexicalBlock %20 1 14 %27
+%40 = OpExtInst %void %1 DebugInlinedAt 4 %26
+%2 = OpFunction %void None %18
+%30 = OpLabel
+%39 = OpVariable %_ptr_Function_v4float Function
+%41 = OpExtInst %void %1 DebugScope %27 %40
+OpStore %39 %14
+%32 = OpLoad %v4float %39
+%42 = OpExtInst %void %1 DebugScope %26
+%33 = OpLoad %v4float %3
+%34 = OpFAdd %v4float %32 %33
+OpStore %4 %34
+%43 = OpExtInst %void %1 DebugNoScope
+OpReturn
+OpFunctionEnd
+%28 = OpFunction %v4float None %19
+%36 = OpLabel
+OpReturnValue %14
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, false);
+}
+
+TEST_F(EliminateDeadFunctionsBasicTest,
+       DebugRemoveFunctionUsingExistingDebugInfoNone) {
+  // We want to remove id of OpFunction from DebugFunction.
+  const std::string text = R"(OpCapability Shader
+%1 = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main" %3 %4
+OpExecutionMode %2 OriginUpperLeft
+%5 = OpString "ps.hlsl"
+OpSource HLSL 600 %5 "float4 foo() {
+  return 1;
+}
+float4 main(float4 color : COLOR) : SV_TARGET {
+  return foo() + color;
+}
+"
+%6 = OpString "float"
+%7 = OpString "main"
+%8 = OpString "foo"
+; CHECK: [[foo:%\d+]] = OpString "foo"
+OpDecorate %3 Location 0
+OpDecorate %4 Location 0
+%uint = OpTypeInt 32 0
+%uint_32 = OpConstant %uint 32
+%float = OpTypeFloat 32
+%float_1 = OpConstant %float 1
+%v4float = OpTypeVector %float 4
+%14 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%18 = OpTypeFunction %void
+%19 = OpTypeFunction %v4float
+%3 = OpVariable %_ptr_Input_v4float Input
+%4 = OpVariable %_ptr_Output_v4float Output
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+; CHECK: [[info_none:%\d+]] = OpExtInst %void %1 DebugInfoNone
+%20 = OpExtInst %void %1 DebugSource %5
+%21 = OpExtInst %void %1 DebugCompilationUnit 1 4 %20 HLSL
+%22 = OpExtInst %void %1 DebugTypeBasic %6 %uint_32 Float
+%23 = OpExtInst %void %1 DebugTypeVector %22 4
+%24 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %23 %23
+%25 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %23
+%26 = OpExtInst %void %1 DebugFunction %7 %24 %20 4 1 %21 %7 FlagIsProtected|FlagIsPrivate 4 %2
+%27 = OpExtInst %void %1 DebugFunction %8 %25 %20 1 1 %21 %8 FlagIsProtected|FlagIsPrivate 1 %28
+; CHECK: {{%\d+}} = OpExtInst %void %1 DebugFunction [[foo]] {{%\d+}} {{%\d+}} 1 1 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 1 [[info_none]]
+%29 = OpExtInst %void %1 DebugLexicalBlock %20 1 14 %27
+%35 = OpExtInst %void %1 DebugInfoNone
+%40 = OpExtInst %void %1 DebugInlinedAt 4 %26
+%2 = OpFunction %void None %18
+%30 = OpLabel
+%39 = OpVariable %_ptr_Function_v4float Function
+%41 = OpExtInst %void %1 DebugScope %27 %40
+OpStore %39 %14
+%32 = OpLoad %v4float %39
+%42 = OpExtInst %void %1 DebugScope %26
+%33 = OpLoad %v4float %3
+%34 = OpFAdd %v4float %32 %33
+OpStore %4 %34
+%43 = OpExtInst %void %1 DebugNoScope
+OpReturn
+OpFunctionEnd
+%28 = OpFunction %v4float None %19
+%36 = OpLabel
+OpReturnValue %14
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, false);
+}
+
+TEST_F(EliminateDeadFunctionsBasicTest, NonSemanticInfoPersists) {
+  const std::string text = R"(
+; CHECK: [[import:%\w+]] = OpExtInstImport
+; CHECK: [[void:%\w+]] = OpTypeVoid
+; CHECK-NOT: OpExtInst [[void]] [[import]] 1
+; CHECK: OpExtInst [[void]] [[import]] 2
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %void None %void_fn
+%foo_entry = OpLabel
+%non_semantic1 = OpExtInst %void %ext 1
+OpReturn
+OpFunctionEnd
+%non_semantic2 = OpExtInst %void %ext 2
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
+TEST_F(EliminateDeadFunctionsBasicTest, NonSemanticInfoRemoveDependent) {
+  const std::string text = R"(
+; CHECK: [[import:%\w+]] = OpExtInstImport
+; CHECK: [[void:%\w+]] = OpTypeVoid
+; CHECK-NOT: OpExtInst [[void]] [[import]] 1
+; CHECK-NOT: OpExtInst [[void]] [[import]] 2
+; CHECK: OpExtInst [[void]] [[import]] 3
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %void None %void_fn
+%foo_entry = OpLabel
+%non_semantic1 = OpExtInst %void %ext 1
+OpReturn
+OpFunctionEnd
+%non_semantic2 = OpExtInst %void %ext 2 %foo
+%non_semantic3 = OpExtInst %void %ext 3 
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
+TEST_F(EliminateDeadFunctionsBasicTest, NonSemanticInfoRemoveDependentTree) {
+  const std::string text = R"(
+; CHECK: [[import:%\w+]] = OpExtInstImport
+; CHECK: [[void:%\w+]] = OpTypeVoid
+; CHECK-NOT: OpExtInst [[void]] [[import]] 1
+; CHECK-NOT: OpExtInst [[void]] [[import]] 2
+; CHECK: OpExtInst [[void]] [[import]] 3
+; CHECK-NOT: OpExtInst [[void]] [[import]] 4
+; CHECK-NOT: OpExtInst [[void]] [[import]] 5
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%foo = OpFunction %void None %void_fn
+%foo_entry = OpLabel
+%non_semantic1 = OpExtInst %void %ext 1
+OpReturn
+OpFunctionEnd
+%non_semantic2 = OpExtInst %void %ext 2 %foo
+%non_semantic3 = OpExtInst %void %ext 3 
+%non_semantic4 = OpExtInst %void %ext 4 %non_semantic2
+%non_semantic5 = OpExtInst %void %ext 5 %non_semantic4
+)";
+
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

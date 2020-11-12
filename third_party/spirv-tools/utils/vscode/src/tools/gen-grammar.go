@@ -34,12 +34,30 @@ import (
 	"../grammar"
 )
 
-const (
-	spirvGrammarURL  = "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json"
-	spirvGrammarName = "spirv.core.grammar.json"
-)
+type grammarDefinition struct {
+	name string
+	url  string
+}
 
 var (
+	spirvGrammar = grammarDefinition{
+		name: "SPIR-V",
+		url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json",
+	}
+
+	extensionGrammars = []grammarDefinition{
+		{
+			name: "GLSL.std.450",
+			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.glsl.std.450.grammar.json",
+		}, {
+			name: "OpenCL.std",
+			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.opencl.std.100.grammar.json",
+		}, {
+			name: "OpenCL.DebugInfo.100",
+			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Tools/master/source/extinst.opencl.debuginfo.100.grammar.json",
+		},
+	}
+
 	templatePath = flag.String("template", "", "Path to input template file (required)")
 	outputPath   = flag.String("out", "", "Path to output generated file (required)")
 	cachePath    = flag.String("cache", "", "Cache directory for downloaded files (optional)")
@@ -67,6 +85,34 @@ func run() error {
 	if err != nil {
 		return errors.Wrap(err, "Could not open template file")
 	}
+
+	type extension struct {
+		grammar.Root
+		Name string
+	}
+
+	args := struct {
+		SPIRV      grammar.Root
+		Extensions []extension
+		All        grammar.Root // Combination of SPIRV + Extensions
+	}{}
+
+	if args.SPIRV, err = parseGrammar(spirvGrammar); err != nil {
+		return errors.Wrap(err, "Failed to parse SPIR-V grammar file")
+	}
+	args.All.Instructions = append(args.All.Instructions, args.SPIRV.Instructions...)
+	args.All.OperandKinds = append(args.All.OperandKinds, args.SPIRV.OperandKinds...)
+
+	for _, ext := range extensionGrammars {
+		root, err := parseGrammar(ext)
+		if err != nil {
+			return errors.Wrap(err, "Failed to parse extension grammar file")
+		}
+		args.Extensions = append(args.Extensions, extension{Root: root, Name: ext.name})
+		args.All.Instructions = append(args.All.Instructions, root.Instructions...)
+		args.All.OperandKinds = append(args.All.OperandKinds, root.OperandKinds...)
+	}
+
 	t, err := template.New("tmpl").
 		Funcs(template.FuncMap{
 			"GenerateArguments": func() string {
@@ -96,24 +142,30 @@ func run() error {
 				}
 				return sb.String()
 			},
+			"AllExtOpcodes": func() string {
+				sb := strings.Builder{}
+				for _, ext := range args.Extensions {
+					for _, inst := range ext.Root.Instructions {
+						if sb.Len() > 0 {
+							sb.WriteString("|")
+						}
+						sb.WriteString(inst.Opname)
+					}
+				}
+				return sb.String()
+			},
+			"Title":   strings.Title,
 			"Replace": strings.ReplaceAll,
+			"Global": func(s string) string {
+				return strings.ReplaceAll(strings.Title(s), ".", "")
+			},
 		}).Parse(string(tf))
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse template")
 	}
 
-	file, err := getOrDownload(spirvGrammarName, spirvGrammarURL)
-	if err != nil {
-		return errors.Wrap(err, "Failed to load grammar file")
-	}
-
-	g := grammar.Root{}
-	if err := json.NewDecoder(bytes.NewReader(file)).Decode(&g); err != nil {
-		return errors.Wrap(err, "Failed to parse grammar file")
-	}
-
 	buf := bytes.Buffer{}
-	if err := t.Execute(&buf, g); err != nil {
+	if err := t.Execute(&buf, args); err != nil {
 		return errors.Wrap(err, "Failed to execute template")
 	}
 
@@ -125,6 +177,22 @@ func run() error {
 	}
 
 	return nil
+}
+
+// parseGrammar downloads (or loads from the cache) the grammar file and returns
+// the parsed grammar.Root.
+func parseGrammar(def grammarDefinition) (grammar.Root, error) {
+	file, err := getOrDownload(def.name, def.url)
+	if err != nil {
+		return grammar.Root{}, errors.Wrap(err, "Failed to load grammar file")
+	}
+
+	g := grammar.Root{}
+	if err := json.NewDecoder(bytes.NewReader(file)).Decode(&g); err != nil {
+		return grammar.Root{}, errors.Wrap(err, "Failed to parse grammar file")
+	}
+
+	return g, nil
 }
 
 // getOrDownload loads the specific file from the cache, or downloads the file

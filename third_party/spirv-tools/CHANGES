@@ -1,5 +1,154 @@
 Revision history for SPIRV-Tools
 
+v2020.6 2020-09-24
+ - Start SPIRV-Tools v2020.6
+
+v2020.5 2020-09-22
+ - General
+   - Enable building with BUILD_SHARED_LIBS=1 (#3490)
+   - Avoid using /MP4 for clang on windows. (#3662)
+   - Fix compiler error on macOS with XCode12. (#3836)
+ - Optimizer
+   - Preserve OpenCL.DebugInfo.100 through private-to-local pass (#3571)
+   - Preserve debug info in scalar replacement pass (#3461)
+   - Debug info preservation in loop-unroll pass (#3548)
+   - Preserve debug info in dead-insert-elim pass (#3652)
+   - Improve non-semantic instruction handling in the optimizer (#3693)
+   - Let ADCE pass check DebugScope (#3703)
+   - Add undef for inlined void function (#3720)
+   - Fix SSA-rewrite to remove DebugDeclare for variables without loads (#3719)
+   - Handle DebugScope in compact-ids pass (#3724)
+   - Add buffer oob check to bindless instrumentation (#3800)
+ - Validator
+   - Update OpenCL capabilities validation (#3149)
+   - Validator support for non-semantic clspv reflection (#3618)
+   - OpenCL.DebugInfo.100 DebugTypeArray with variable size (#3549)
+   - Only validation locations for appropriate execution models (#3656)
+   - Validate more OpenCL.DebugInfo.100 instructions (#3684)
+   - Allow DebugTypeTemplate for Type operand (#3702)
+   - spirv-val: Add Vulkan VUID labels to BuiltIn (#3756)
+   - Allow SPV_KHR_8bit_storage extension. (#3780)
+   - Validate SPIRV Version number when parsing binary header (#3834)
+ - Reduce
+   - Support reducing a specific function (#3774)
+ - Fuzz
+   - adds TransformationReplaceCopyObjectWithStoreLoad (#3567)
+   - adds TransformationReplaceCopyMemoryWithLoadStore (#3575)
+   - adds TransformationReplaceLoadStoreWithCopyMemory (#3586)
+   - Implement the OpOuterProduct linear algebra case (#3617)
+   - Pass to replace int operands with ints of opposite signedness (#3612)
+   - TransformationMoveInstructionDown (#3477)
+   - Add TransformationMakeVectorOperationDynamic (#3597)
+   - TransformationReplaceAddSubMulWithCarryingExtended (#3598)
+   - FuzzerPassPropagateInstructionsUp (#3478)
+   - add FuzzerPassAddCompositeInserts (#3606)
+   - Add inline function transformation (#3517)
+   - Transformation to replace the use of an irrelevant id (#3697)
+   - Add SPIRV_FUZZ_PROTOC_COMMAND (#3789)
+   - Add TransformationDuplicateRegionWithSelection (#3773)
+   - Transformation to flatten conditional branch (#3667)
+   - Handle OpPhis in TransformationInlineFunction (#3833)
+   - Create synonym of int constant using a loop (#3790)
+   - Support dead blocks in TransformationAddSynonym (#3832)
+ - Linker
+
+v2020.4 2020-07-22
+ - General
+   - Changed variable names to be more descriptive (#3433)
+   - Add support to GPU-AV instrumentation for Task and Mesh shaders (#3512)
+   - Permit Simple and GLSL450 memory model in WEBGPU_0 (#3463)
+   - Support SPV_KHR_terminate_invocation (#3568)
+ - Optimizer
+   - Preserving debug information in optimizations
+     (#3389,#3420,#3425,#3356,#3459,#3444,#3492,#3451,#3497i,#3498,#3542)
+   - Eliminate branches with condition of OpConstantNull (#3438)
+   - Use structured order to unroll loops. (#3443)
+   - Updated desc_sroa to support flattening structures (#3448)
+   - Support OpCompositeExtract pattern in desc_sroa (#3456)
+   - Fix ADCE pass bug for mulitple entries (#3470)
+     - Sink pointer instructions in merge return (#3569)
+ - Validator
+   - Validate location assignments (#3308)
+     - Fix reachability in the validator (#3541)
+ - Reduce
+ - Fuzz
+   - Add support for OpSpecConstant* (#3373)
+   - Add replace linear algebra instruction transformation (#3402)
+   - Implement vector shuffle fuzzer pass (#3412)
+   - Swap operands in OpBranchConditional (#3423)
+   - Permute OpPhi instruction operands (#3421)
+   - Add FuzzerPassAddCopyMemoryInstructions (#3391)
+   - TransformationInvertComparisonOperator (#3475)
+   - Add variables with workgroup storage class (#3485)
+   - Add image sample unused components transformation (#3439)
+   - TransformationReplaceParameterWithGlobal (#3434)
+     - Support adding dead break from back-edge block (#3519)
+       - Fuzzer pass to interchange zero-like constants (#3524)
+ - Linker
+
+v2020.3 2020-05-27
+ - General
+   - Prevent Effcee from installing things when building spirv-tools with testing enabled (#3256)
+   - Update acorn version (#3294)
+   - If SPIRV-Headers is in our tree, include it as subproject (#3299)
+   - allow cross compiling for Windows Store, UWP, etc. (#3330)
+ - Optimizer
+   - Remove deprecated interfaces from instrument passes (#3361)
+   - Preserve debug info in inline pass (#3349)
+   - Handle more cases in dead member elim (#3289)
+   - Preserve debug info in eliminate-dead-functions (#3251)
+   - Fix Struct CFG analysis for single block loop (#3293)
+   - Add tests for recently added command line option (#3297)
+   - Consider sampled images as read-only storage (#3295)
+   - Allow various validation options to be passed to spirv-opt (#3314)
+   - Add debug information analysis (#3305)
+   - Preserve debug info for wrap-opkill (#3331)
+   - refactor inlining pass (#3328)
+   - Add unrolling to performance passes (#3082)
+ - Validator
+   - Add validation support for ImageGatherBiasLodAMD (#3363)
+   - Validate ShaderCallKHR memory scope (#3332)
+   - Validate Buffer and BufferBlock apply only to struct types (#3259)
+ - Reduce
+   - increase default step limit (#3327)
+   - Remove unused uniforms and similar (#3321)
+ - Fuzz
+   - Add support for StorageBuffer (#3348)
+   - Add validator options (#3254)
+   - Limit adding of new variables to 'basic' types (#3257)
+   - Transformation to add OpConstantNull (#3273)
+   - Handling of more fuzzing opportunities (#3277, #3280, #3281, #3290, #3292)
+   - Respect rules for OpSampledImage (#3287)
+   - Do not outline regions that produce pointer outputs (#3291)
+ - Linker
+
+v2020.2 2020-03-26
+ - General:
+   - Support extended instructions in the vscode language server
+   - Make spvOpcodeString part of the public API (#3174)
+   - Added guide to writing a spirv-fuzz fuzzer pass (#3190)
+   - Add support for KHR_ray_{query,tracing} extensions (#3235)
+ - Optimizer
+   - Debug Printf support (#3215)
+   - Add data structure for DebugScope, DebugDeclare in spirv-opt (#3183)
+   - Fix identification of Vulkan images and buffers (#3253)
+ - Validator
+   - Add support for SPV_AMD_shader_image_load_store_lod (#3186)
+   - Add validation rules for OpenCL.DebugInfo.100 extension (#3133)
+   - Adding WebGPU specific Workgroup scope rule (#3204)
+   - Disallow phis of images, samplers and sampled images (#3246)
+ - Reduce
+ - Fuzz
+   - Fuzzer passes to add local and global variables (#3175)
+   - Add fuzzer passes to add loads/stores (#3176)
+   - Fuzzer pass to add function calls (#3178)
+   - Fuzzer pass that adds access chains (#3182)
+   - Fuzzer pass to add equation instructions (#3202)
+   - Add swap commutable operands transformation (#3205)
+   - Add fuzzer pass to permute function parameters (#3212)
+   - Allow OpPhi operand to be replaced with a composite synonym (#3221)
+ - Linker
+
 v2020.1 2020-02-03
  - General:
    - Add support for SPV_KHR_non_semantic_info (#3110)
@@ -11,7 +160,7 @@ v2020.1 2020-02-03
  - Optimizer
    - Change default version for CreatInstBindlessCheckPass to 2 (#3096, #3119)
    - Better handling of OpLine on merge blocks (#3130)
-   - Use dummy switch instead of dummy loop in MergeReturn pass. (#3151)
+   - Use placeholder switch instead of placeholder loop in MergeReturn pass. (#3151)
    - Handle TimeAMD in AmdExtensionToKhrPass. (#3168)
  - Validator
    - Fix structured exit validation (#3141)
@@ -338,7 +487,7 @@ v2018.6 2018-11-07
  - Optimizer
    - Unrolling loops marked for unrolling in the legalization passes.
    - Improved the compile time of loop unrolling.
-   - Changee merge-return to create a dummy loop around the function.
+   - Changee merge-return to create a placeholder loop around the function.
    - Small improvement to merge-blocks to allow it to merge more often.
    - Enforce an upper bound for the ids, and add option to set it.
    - #1966: Report error if there are unreachable block before running merge return

@@ -56,9 +56,6 @@ void spvInstructionCopy(const uint32_t* words, const SpvOp opcode,
                         const uint16_t word_count,
                         const spv_endianness_t endian, spv_instruction_t* inst);
 
-// Gets the name of an instruction, without the "Op" prefix.
-const char* spvOpcodeString(const SpvOp opcode);
-
 // Determine if the given opcode is a scalar type. Returns zero if false,
 // non-zero otherwise.
 int32_t spvOpcodeIsScalarType(const SpvOp opcode);
@@ -133,8 +130,24 @@ bool spvOpcodeIsScalarizable(SpvOp opcode);
 // Returns true if the given opcode is a debug instruction.
 bool spvOpcodeIsDebug(SpvOp opcode);
 
+// Returns true for opcodes that are binary operators,
+// where the order of the operands is irrelevant.
+bool spvOpcodeIsCommutativeBinaryOperator(SpvOp opcode);
+
+// Returns true for opcodes that represent linear algebra instructions.
+bool spvOpcodeIsLinearAlgebra(SpvOp opcode);
+
+// Returns true for opcodes that represent image sample instructions.
+bool spvOpcodeIsImageSample(SpvOp opcode);
+
 // Returns a vector containing the indices of the memory semantics <id>
 // operands for |opcode|.
 std::vector<uint32_t> spvOpcodeMemorySemanticsOperandIndices(SpvOp opcode);
+
+// Returns true for opcodes that represent access chain instructions.
+bool spvOpcodeIsAccessChain(SpvOp opcode);
+
+// Returns true for opcodes that represent bit instructions.
+bool spvOpcodeIsBit(SpvOp opcode);
 
 #endif  // SOURCE_OPCODE_H_

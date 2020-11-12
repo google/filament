@@ -1063,7 +1063,7 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: OpTypeForwardPointer [[uniform_ptr]] Uniform
 ; CHECK: OpTypePipeStorage
 ; CHECK: OpTypeNamedBarrier
-; CHECK: OpTypeAccelerationStructureNV
+; CHECK: OpTypeAccelerationStructureKHR
 ; CHECK: OpTypeCooperativeMatrixNV [[f32]] [[uint24]] [[uint24]] [[uint24]]
 OpCapability Shader
 OpCapability Int64

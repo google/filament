@@ -24,6 +24,7 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wshadow"
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -39,6 +40,7 @@
 // where warnings are ignored.
 
 #include "google/protobuf/util/json_util.h"
+#include "google/protobuf/util/message_differencer.h"
 #include "source/fuzz/protobufs/spvtoolsfuzz.pb.h"
 
 #if defined(__clang__)

@@ -21,9 +21,35 @@ namespace eliminatedeadfunctionsutil {
 
 Module::iterator EliminateFunction(IRContext* context,
                                    Module::iterator* func_iter) {
+  bool first_func = *func_iter == context->module()->begin();
+  bool seen_func_end = false;
   (*func_iter)
-      ->ForEachInst([context](Instruction* inst) { context->KillInst(inst); },
-                    true);
+      ->ForEachInst(
+          [context, first_func, func_iter, &seen_func_end](Instruction* inst) {
+            if (inst->opcode() == SpvOpFunctionEnd) {
+              seen_func_end = true;
+            }
+            // Move non-semantic instructions to the previous function or
+            // global values if this is the first function.
+            if (seen_func_end && inst->opcode() == SpvOpExtInst) {
+              assert(inst->IsNonSemanticInstruction());
+              std::unique_ptr<Instruction> clone(inst->Clone(context));
+              context->ForgetUses(inst);
+              context->AnalyzeDefUse(clone.get());
+              if (first_func) {
+                context->AddGlobalValue(std::move(clone));
+              } else {
+                auto prev_func_iter = *func_iter;
+                --prev_func_iter;
+                prev_func_iter->AddNonSemanticInstruction(std::move(clone));
+              }
+              inst->ToNop();
+            } else {
+              context->KillNonSemanticInfo(inst);
+              context->KillInst(inst);
+            }
+          },
+          true, true);
   return func_iter->Erase();
 }
 

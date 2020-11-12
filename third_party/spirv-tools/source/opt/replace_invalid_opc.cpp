@@ -141,6 +141,7 @@ bool ReplaceInvalidOpcodePass::IsFragmentShaderOnlyInstruction(
       // TODO: Teach |ReplaceInstruction| to handle block terminators.  Then
       // uncomment the OpKill case.
       // case SpvOpKill:
+      // case SpvOpTerminateInstruction:
       return true;
     default:
       return false;

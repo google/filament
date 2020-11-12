@@ -212,6 +212,10 @@ public:
 		this->buffer_size = count;
 	}
 
+	SmallVector(std::initializer_list<T> init) SPIRV_CROSS_NOEXCEPT : SmallVector(init.begin(), init.end())
+	{
+	}
+
 	SmallVector(SmallVector &&other) SPIRV_CROSS_NOEXCEPT : SmallVector()
 	{
 		*this = std::move(other);
@@ -328,8 +332,9 @@ public:
 			size_t target_capacity = buffer_capacity;
 			if (target_capacity == 0)
 				target_capacity = 1;
-			if (target_capacity < N)
-				target_capacity = N;
+
+			// Weird parens works around macro issues on Windows if NOMINMAX is not used.
+			target_capacity = (std::max)(target_capacity, N);
 
 			// Need to ensure there is a POT value of target capacity which is larger than count,
 			// otherwise this will overflow.

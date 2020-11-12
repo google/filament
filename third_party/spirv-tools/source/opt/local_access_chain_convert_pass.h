@@ -110,7 +110,7 @@ class LocalAccessChainConvertPass : public MemPass {
   // Returns a status to indicate success or failure, and change or no change.
   Status ConvertLocalAccessChains(Function* func);
 
-  // Initialize extensions whitelist
+  // Initialize extensions allowlist
   void InitExtensions();
 
   // Return true if all extensions in this module are allowed by this pass.
@@ -124,7 +124,7 @@ class LocalAccessChainConvertPass : public MemPass {
   std::unordered_set<uint32_t> supported_ref_ptrs_;
 
   // Extensions supported by this pass.
-  std::unordered_set<std::string> extensions_whitelist_;
+  std::unordered_set<std::string> extensions_allowlist_;
 };
 
 }  // namespace opt

@@ -1118,6 +1118,340 @@ TEST_F(LocalSingleBlockLoadStoreElimTest, VariablePointerTest) {
   )";
   SinglePassRunAndMatch<LocalSingleBlockLoadStoreElimPass>(text, false);
 }
+
+TEST_F(LocalSingleBlockLoadStoreElimTest, DebugDeclareTest) {
+  // If OpenCL.DebugInfo.100 enabled, check that store/load is still
+  // optimized, but stores are not deleted for store/store.
+  //
+  // struct PS_INPUT {
+  //   float4 c0 : COLOR0;
+  //   float4 c1 : COLOR1;
+  // };
+  //
+  // struct PS_OUTPUT {
+  //   float4 vColor : SV_Target0;
+  // };
+  //
+  // PS_OUTPUT MainPs(PS_INPUT i) {
+  //   PS_OUTPUT ps_output;
+  //   float4 c;
+  //   c = i.c0;
+  //   c += i.c1;
+  //   c /= 2.0;
+  //   ps_output.vColor = c;
+  //   return ps_output;
+  // }
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %MainPs "MainPs" %in_var_COLOR0 %in_var_COLOR1 %out_var_SV_Target0
+               OpExecutionMode %MainPs OriginUpperLeft
+          %6 = OpString "foo3.frag"
+          %7 = OpString "PS_OUTPUT"
+          %8 = OpString "float"
+          %9 = OpString "vColor"
+         %10 = OpString "PS_INPUT"
+         %11 = OpString "c1"
+         %12 = OpString "c0"
+         %13 = OpString "src.MainPs"
+         %14 = OpString "c"
+         %15 = OpString "ps_output"
+         %16 = OpString "i"
+               OpName %in_var_COLOR0 "in.var.COLOR0"
+               OpName %in_var_COLOR1 "in.var.COLOR1"
+               OpName %out_var_SV_Target0 "out.var.SV_Target0"
+               OpName %MainPs "MainPs"
+               OpName %PS_INPUT "PS_INPUT"
+               OpMemberName %PS_INPUT 0 "c0"
+               OpMemberName %PS_INPUT 1 "c1"
+               OpName %param_var_i "param.var.i"
+               OpName %PS_OUTPUT "PS_OUTPUT"
+               OpMemberName %PS_OUTPUT 0 "vColor"
+               OpName %src_MainPs "src.MainPs"
+               OpName %i "i"
+               OpName %bb_entry "bb.entry"
+               OpName %ps_output "ps_output"
+               OpName %c "c"
+               OpDecorate %in_var_COLOR0 Location 0
+               OpDecorate %in_var_COLOR1 Location 1
+               OpDecorate %out_var_SV_Target0 Location 0
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+      %float = OpTypeFloat 32
+    %float_2 = OpConstant %float 2
+    %v4float = OpTypeVector %float 4
+         %31 = OpConstantComposite %v4float %float_2 %float_2 %float_2 %float_2
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+   %uint_128 = OpConstant %uint 128
+     %uint_0 = OpConstant %uint 0
+   %uint_256 = OpConstant %uint 256
+         %40 = OpTypeFunction %void
+   %PS_INPUT = OpTypeStruct %v4float %v4float
+%_ptr_Function_PS_INPUT = OpTypePointer Function %PS_INPUT
+  %PS_OUTPUT = OpTypeStruct %v4float
+         %42 = OpTypeFunction %PS_OUTPUT %_ptr_Function_PS_INPUT
+%_ptr_Function_PS_OUTPUT = OpTypePointer Function %PS_OUTPUT
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%in_var_COLOR0 = OpVariable %_ptr_Input_v4float Input
+%in_var_COLOR1 = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target0 = OpVariable %_ptr_Output_v4float Output
+         %45 = OpExtInst %void %1 DebugSource %6
+         %46 = OpExtInst %void %1 DebugCompilationUnit 1 4 %45 HLSL
+         %47 = OpExtInst %void %1 DebugTypeComposite %7 Structure %45 8 1 %46 %7 %uint_128 FlagIsProtected|FlagIsPrivate %48
+         %49 = OpExtInst %void %1 DebugTypeBasic %8 %uint_32 Float
+         %50 = OpExtInst %void %1 DebugTypeVector %49 4
+         %48 = OpExtInst %void %1 DebugTypeMember %9 %50 %45 10 5 %47 %uint_0 %uint_128 FlagIsProtected|FlagIsPrivate
+         %51 = OpExtInst %void %1 DebugTypeComposite %10 Structure %45 2 1 %46 %10 %uint_256 FlagIsProtected|FlagIsPrivate %52 %53
+         %53 = OpExtInst %void %1 DebugTypeMember %11 %50 %45 5 5 %51 %uint_128 %uint_128 FlagIsProtected|FlagIsPrivate
+         %52 = OpExtInst %void %1 DebugTypeMember %12 %50 %45 4 5 %51 %uint_0 %uint_128 FlagIsProtected|FlagIsPrivate
+         %54 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %47 %51
+         %55 = OpExtInst %void %1 DebugFunction %13 %54 %45 13 1 %46 %13 FlagIsProtected|FlagIsPrivate 14 %src_MainPs
+         %56 = OpExtInst %void %1 DebugLexicalBlock %45 14 1 %55
+         %57 = OpExtInst %void %1 DebugLocalVariable %14 %50 %45 16 12 %56 FlagIsLocal
+         %58 = OpExtInst %void %1 DebugLocalVariable %15 %47 %45 15 15 %56 FlagIsLocal
+         %59 = OpExtInst %void %1 DebugExpression
+         %60 = OpExtInst %void %1 DebugLocalVariable %16 %51 %45 13 29 %55 FlagIsLocal 1
+         %61 = OpExtInst %void %1 DebugLocalVariable %14 %50 %45 16 12 %55 FlagIsLocal 1
+     %MainPs = OpFunction %void None %40
+         %62 = OpLabel
+%param_var_i = OpVariable %_ptr_Function_PS_INPUT Function
+         %63 = OpLoad %v4float %in_var_COLOR0
+         %64 = OpLoad %v4float %in_var_COLOR1
+         %65 = OpCompositeConstruct %PS_INPUT %63 %64
+               OpStore %param_var_i %65
+         %66 = OpFunctionCall %PS_OUTPUT %src_MainPs %param_var_i
+         %67 = OpCompositeExtract %v4float %66 0
+               OpStore %out_var_SV_Target0 %67
+               OpReturn
+               OpFunctionEnd
+               OpLine %6 13 1
+ %src_MainPs = OpFunction %PS_OUTPUT None %42
+         %83 = OpExtInst %void %1 DebugScope %55
+               OpLine %6 13 29
+          %i = OpFunctionParameter %_ptr_Function_PS_INPUT
+         %69 = OpExtInst %void %1 DebugDeclare %60 %i %59
+         %84 = OpExtInst %void %1 DebugNoScope
+   %bb_entry = OpLabel
+         %85 = OpExtInst %void %1 DebugScope %56
+  %ps_output = OpVariable %_ptr_Function_PS_OUTPUT Function
+          %c = OpVariable %_ptr_Function_v4float Function
+         %71 = OpExtInst %void %1 DebugDeclare %61 %c %59
+               OpLine %6 18 9
+         %72 = OpAccessChain %_ptr_Function_v4float %i %int_0
+               OpLine %6 18 13
+         %73 = OpLoad %v4float %72
+               OpLine %6 18 5
+               OpStore %c %73
+;CHECK:        OpStore %c %73
+               OpLine %6 19 10
+         %74 = OpAccessChain %_ptr_Function_v4float %i %int_1
+               OpLine %6 19 14
+         %75 = OpLoad %v4float %74
+               OpLine %6 19 5
+         %76 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 19 5
+;CHECK-NOT: %76 = OpLoad %v4float %c
+               OpLine %6 19 7
+         %77 = OpFAdd %v4float %76 %75
+;CHECK-NOT: %77 = OpFAdd %v4float %76 %75
+;CHECK:     %77 = OpFAdd %v4float %73 %75
+               OpLine %6 19 5
+               OpStore %c %77
+;CHECK:        OpStore %c %77
+               OpLine %6 20 5
+         %78 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 20 5
+;CHECK-NOT: %78 = OpLoad %v4float %c
+               OpLine %6 20 7
+         %79 = OpFDiv %v4float %78 %31
+;CHECK-NOT %79 = OpFDiv %v4float %78 %31
+;CHECK:    %79 = OpFDiv %v4float %77 %31
+               OpLine %6 20 5
+               OpStore %c %79
+;CHECK:        OpStore %c %79
+               OpLine %6 22 26
+         %80 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 22 26
+;CHECK-NOT: %80 = OpLoad %v4float %c
+               OpLine %6 22 5
+         %81 = OpAccessChain %_ptr_Function_v4float %ps_output %int_0
+               OpStore %81 %80
+;CHECK-NOT:    OpStore %81 %80
+;CHECK:        OpStore %81 %79
+               OpLine %6 23 12
+         %82 = OpLoad %PS_OUTPUT %ps_output
+               OpLine %6 23 5
+               OpReturnValue %82
+         %86 = OpExtInst %void %1 DebugNoScope
+               OpFunctionEnd
+  )";
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndMatch<LocalSingleBlockLoadStoreElimPass>(text, false);
+}
+TEST_F(LocalSingleBlockLoadStoreElimTest, DebugValueTest) {
+  // If OpenCL.DebugInfo.100 enabled, check that store/load is still
+  // optimized, but stores are not deleted for store/store.
+  // Same source as DebugDeclareTest; DebugDeclare replaced with
+  // equivalent DebugValue
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %MainPs "MainPs" %in_var_COLOR0 %in_var_COLOR1 %out_var_SV_Target0
+               OpExecutionMode %MainPs OriginUpperLeft
+          %6 = OpString "foo3.frag"
+          %7 = OpString "PS_OUTPUT"
+          %8 = OpString "float"
+          %9 = OpString "vColor"
+         %10 = OpString "PS_INPUT"
+         %11 = OpString "c1"
+         %12 = OpString "c0"
+         %13 = OpString "src.MainPs"
+         %14 = OpString "c"
+         %15 = OpString "ps_output"
+         %16 = OpString "i"
+               OpName %in_var_COLOR0 "in.var.COLOR0"
+               OpName %in_var_COLOR1 "in.var.COLOR1"
+               OpName %out_var_SV_Target0 "out.var.SV_Target0"
+               OpName %MainPs "MainPs"
+               OpName %PS_INPUT "PS_INPUT"
+               OpMemberName %PS_INPUT 0 "c0"
+               OpMemberName %PS_INPUT 1 "c1"
+               OpName %param_var_i "param.var.i"
+               OpName %PS_OUTPUT "PS_OUTPUT"
+               OpMemberName %PS_OUTPUT 0 "vColor"
+               OpName %src_MainPs "src.MainPs"
+               OpName %i "i"
+               OpName %bb_entry "bb.entry"
+               OpName %ps_output "ps_output"
+               OpName %c "c"
+               OpDecorate %in_var_COLOR0 Location 0
+               OpDecorate %in_var_COLOR1 Location 1
+               OpDecorate %out_var_SV_Target0 Location 0
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+      %float = OpTypeFloat 32
+    %float_2 = OpConstant %float 2
+    %v4float = OpTypeVector %float 4
+         %31 = OpConstantComposite %v4float %float_2 %float_2 %float_2 %float_2
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+       %void = OpTypeVoid
+   %uint_128 = OpConstant %uint 128
+     %uint_0 = OpConstant %uint 0
+   %uint_256 = OpConstant %uint 256
+         %40 = OpTypeFunction %void
+   %PS_INPUT = OpTypeStruct %v4float %v4float
+%_ptr_Function_PS_INPUT = OpTypePointer Function %PS_INPUT
+  %PS_OUTPUT = OpTypeStruct %v4float
+         %42 = OpTypeFunction %PS_OUTPUT %_ptr_Function_PS_INPUT
+%_ptr_Function_PS_OUTPUT = OpTypePointer Function %PS_OUTPUT
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%in_var_COLOR0 = OpVariable %_ptr_Input_v4float Input
+%in_var_COLOR1 = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target0 = OpVariable %_ptr_Output_v4float Output
+         %45 = OpExtInst %void %1 DebugSource %6
+         %46 = OpExtInst %void %1 DebugCompilationUnit 1 4 %45 HLSL
+         %47 = OpExtInst %void %1 DebugTypeComposite %7 Structure %45 8 1 %46 %7 %uint_128 FlagIsProtected|FlagIsPrivate %48
+         %49 = OpExtInst %void %1 DebugTypeBasic %8 %uint_32 Float
+         %50 = OpExtInst %void %1 DebugTypeVector %49 4
+         %48 = OpExtInst %void %1 DebugTypeMember %9 %50 %45 10 5 %47 %uint_0 %uint_128 FlagIsProtected|FlagIsPrivate
+         %51 = OpExtInst %void %1 DebugTypeComposite %10 Structure %45 2 1 %46 %10 %uint_256 FlagIsProtected|FlagIsPrivate %52 %53
+         %53 = OpExtInst %void %1 DebugTypeMember %11 %50 %45 5 5 %51 %uint_128 %uint_128 FlagIsProtected|FlagIsPrivate
+         %52 = OpExtInst %void %1 DebugTypeMember %12 %50 %45 4 5 %51 %uint_0 %uint_128 FlagIsProtected|FlagIsPrivate
+         %54 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %47 %51
+         %55 = OpExtInst %void %1 DebugFunction %13 %54 %45 13 1 %46 %13 FlagIsProtected|FlagIsPrivate 14 %src_MainPs
+         %56 = OpExtInst %void %1 DebugLexicalBlock %45 14 1 %55
+         %57 = OpExtInst %void %1 DebugLocalVariable %14 %50 %45 16 12 %56 FlagIsLocal
+         %58 = OpExtInst %void %1 DebugLocalVariable %15 %47 %45 15 15 %56 FlagIsLocal
+         %59 = OpExtInst %void %1 DebugExpression %60 = OpExtInst %void %1 DebugOperation Deref %61 = OpExtInst
+%void %1 DebugExpression %60 %62 = OpExtInst %void %1 DebugLocalVariable %16 %51
+%45 13 29 %55 FlagIsLocal 1 %63 = OpExtInst %void %1 DebugLocalVariable %14 %50
+%45 16 12 %55 FlagIsLocal 1 %MainPs = OpFunction %void None %40 %64 = OpLabel
+%param_var_i = OpVariable %_ptr_Function_PS_INPUT Function
+         %65 = OpLoad %v4float %in_var_COLOR0
+         %66 = OpLoad %v4float %in_var_COLOR1
+         %67 = OpCompositeConstruct %PS_INPUT %65 %66
+               OpStore %param_var_i %67
+         %68 = OpFunctionCall %PS_OUTPUT %src_MainPs %param_var_i
+         %69 = OpCompositeExtract %v4float %68 0
+               OpStore %out_var_SV_Target0 %69
+               OpReturn
+               OpFunctionEnd
+               OpLine %6 13 1
+ %src_MainPs = OpFunction %PS_OUTPUT None %42
+         %70 = OpExtInst %void %1 DebugScope %55
+               OpLine %6 13 29
+          %i = OpFunctionParameter %_ptr_Function_PS_INPUT
+         %71 = OpExtInst %void %1 DebugDeclare %62 %i %59
+         %72 = OpExtInst %void %1 DebugNoScope
+   %bb_entry = OpLabel
+         %73 = OpExtInst %void %1 DebugScope %56
+  %ps_output = OpVariable %_ptr_Function_PS_OUTPUT Function
+          %c = OpVariable %_ptr_Function_v4float Function
+         %74 = OpExtInst %void %1 DebugValue %63 %c %61
+               OpLine %6 18 9
+         %75 = OpAccessChain %_ptr_Function_v4float %i %int_0
+               OpLine %6 18 13
+         %76 = OpLoad %v4float %75
+               OpLine %6 18 5
+               OpStore %c %76
+;CHECK:        OpStore %c %76
+               OpLine %6 19 10
+         %77 = OpAccessChain %_ptr_Function_v4float %i %int_1
+               OpLine %6 19 14
+         %78 = OpLoad %v4float %77
+               OpLine %6 19 5
+         %79 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 19 5
+;CHECK-NOT: %79 = OpLoad %v4float %c
+               OpLine %6 19 7
+         %80 = OpFAdd %v4float %79 %78
+;CHECK-NOT: %80 = OpFAdd %v4float %79 %78
+;CHECK:     %80 = OpFAdd %v4float %76 %78
+               OpLine %6 19 5
+               OpStore %c %80
+;CHECK:        OpStore %c %80
+               OpLine %6 20 5
+         %81 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 20 5
+;CHECK-NOT: %81 = OpLoad %v4float %c
+               OpLine %6 20 7
+         %82 = OpFDiv %v4float %81 %31
+;CHECK-NOT: %82 = OpFDiv %v4float %81 %31
+;CHECK:     %82 = OpFDiv %v4float %80 %31
+               OpLine %6 20 5
+               OpStore %c %82
+;CHECK:        OpStore %c %82
+               OpLine %6 22 26
+         %83 = OpLoad %v4float %c
+;CHECK-NOT:       OpLine %6 22 26
+;CHECK-NOT: %83 = OpLoad %v4float %c
+               OpLine %6 22 5
+         %84 = OpAccessChain %_ptr_Function_v4float %ps_output %int_0
+               OpStore %84 %83
+;CHECK-NOT:    OpStore %84 %83
+;CHECK:        OpStore %84 %82
+               OpLine %6 23 12
+         %85 = OpLoad %PS_OUTPUT %ps_output
+               OpLine %6 23 5
+               OpReturnValue %85
+         %86 = OpExtInst %void %1 DebugNoScope
+               OpFunctionEnd
+  )";
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndMatch<LocalSingleBlockLoadStoreElimPass>(text, false);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 //    Other target variable types

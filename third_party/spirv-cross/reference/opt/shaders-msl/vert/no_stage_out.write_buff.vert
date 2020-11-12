@@ -3,14 +3,14 @@
 
 using namespace metal;
 
-struct _35
+struct _RESERVED_IDENTIFIER_FIXUP_33_35
 {
-    uint4 _m0[1024];
+    uint4 _RESERVED_IDENTIFIER_FIXUP_m0[1024];
 };
 
-struct _40
+struct _RESERVED_IDENTIFIER_FIXUP_38_40
 {
-    uint4 _m0[1024];
+    uint4 _RESERVED_IDENTIFIER_FIXUP_m0[1024];
 };
 
 struct main0_out
@@ -20,16 +20,16 @@ struct main0_out
 
 struct main0_in
 {
-    float4 m_17 [[attribute(0)]];
+    float4 _RESERVED_IDENTIFIER_FIXUP_14 [[attribute(0)]];
 };
 
-vertex void main0(main0_in in [[stage_in]], device _35& _37 [[buffer(0)]], constant _40& _42 [[buffer(1)]])
+vertex void main0(main0_in in [[stage_in]], device _RESERVED_IDENTIFIER_FIXUP_33_35& _RESERVED_IDENTIFIER_FIXUP_35 [[buffer(0)]], constant _RESERVED_IDENTIFIER_FIXUP_38_40& _RESERVED_IDENTIFIER_FIXUP_40 [[buffer(1)]])
 {
     main0_out out = {};
-    out.gl_Position = in.m_17;
+    out.gl_Position = in._RESERVED_IDENTIFIER_FIXUP_14;
     for (int _52 = 0; _52 < 1024; )
     {
-        _37._m0[_52] = _42._m0[_52];
+        _RESERVED_IDENTIFIER_FIXUP_35._RESERVED_IDENTIFIER_FIXUP_m0[_52] = _RESERVED_IDENTIFIER_FIXUP_40._RESERVED_IDENTIFIER_FIXUP_m0[_52];
         _52++;
         continue;
     }

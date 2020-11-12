@@ -29,6 +29,10 @@ protobufs::Instruction MakeInstructionMessage(
     SpvOp opcode, uint32_t result_type_id, uint32_t result_id,
     const opt::Instruction::OperandList& input_operands);
 
+// Creates an Instruction protobuf message from a parsed instruction.
+protobufs::Instruction MakeInstructionMessage(
+    const opt::Instruction* instruction);
+
 // Creates and returns an opt::Instruction from protobuf message
 // |instruction_message|, relative to |ir_context|.  In the process, the module
 // id bound associated with |ir_context| is updated to be at least as large as

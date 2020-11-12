@@ -1953,6 +1953,10 @@ void HlslParseContext::transferTypeAttributes(const TSourceLoc& loc, const TAttr
             break;
         case EatConstantId:
             // specialization constant
+            if (type.getQualifier().storage != EvqConst) {
+                error(loc, "needs a const type", "constant_id", "");
+                break;
+            }
             if (it->getInt(value)) {
                 TSourceLoc loc;
                 loc.init();
@@ -7624,7 +7628,17 @@ const TFunction* HlslParseContext::findFunction(const TSourceLoc& loc, TFunction
     bool tie = false;
 
     // send to the generic selector
-    const TFunction* bestMatch = selectFunction(candidateList, call, convertible, better, tie);
+    const TFunction* bestMatch = nullptr;
+
+    // printf has var args and is in the symbol table as "printf()",
+    // mangled to "printf("
+    if (call.getName() == "printf") {
+        TSymbol* symbol = symbolTable.find("printf(", &builtIn);
+        if (symbol)
+            return symbol->getAsFunction();
+    }
+
+    bestMatch = selectFunction(candidateList, call, convertible, better, tie);
 
     if (bestMatch == nullptr) {
         // If there is nothing selected by allowing only up-conversions (to a larger linearize() value),

@@ -61,6 +61,7 @@ namespace opt {
 // its output buffers.
 static const uint32_t kInstValidationIdBindless = 0;
 static const uint32_t kInstValidationIdBuffAddr = 1;
+static const uint32_t kInstValidationIdDebugPrintf = 2;
 
 class InstrumentPass : public Pass {
   using cbb_ptr = const BasicBlock*;
@@ -81,23 +82,15 @@ class InstrumentPass : public Pass {
  protected:
   // Create instrumentation pass for |validation_id| which utilizes descriptor
   // set |desc_set| for debug input and output buffers and writes |shader_id|
-  // into debug output records.
-  InstrumentPass(uint32_t desc_set, uint32_t shader_id, uint32_t validation_id)
-      : Pass(),
-        desc_set_(desc_set),
-        shader_id_(shader_id),
-        validation_id_(validation_id),
-        version_(2u) {}
-  // Create instrumentation pass for |validation_id| which utilizes descriptor
-  // set |desc_set| for debug input and output buffers and writes |shader_id|
-  // into debug output records with format |version|. Deprecated.
+  // into debug output records. |opt_direct_reads| indicates that the pass
+  // will see direct input buffer reads and should prepare to optimize them.
   InstrumentPass(uint32_t desc_set, uint32_t shader_id, uint32_t validation_id,
-                 uint32_t version)
+                 bool opt_direct_reads = false)
       : Pass(),
         desc_set_(desc_set),
         shader_id_(shader_id),
         validation_id_(validation_id),
-        version_(version) {}
+        opt_direct_reads_(opt_direct_reads) {}
 
   // Initialize state for instrumentation of module.
   void InitializeInstrument();
@@ -206,6 +199,9 @@ class InstrumentPass : public Pass {
                            const std::vector<uint32_t>& validation_ids,
                            InstructionBuilder* builder);
 
+  // Return true if all instructions in |ids| are constants or spec constants.
+  bool AllConstant(const std::vector<uint32_t>& ids);
+
   // Generate in |builder| instructions to read the unsigned integer from the
   // input buffer specified by the offsets in |offset_ids|. Given offsets
   // o0, o1, ... oN, and input buffer ibuf, return the id for the value:
@@ -217,8 +213,12 @@ class InstrumentPass : public Pass {
   uint32_t GenDebugDirectRead(const std::vector<uint32_t>& offset_ids,
                               InstructionBuilder* builder);
 
-  // Generate code to cast |value_id| to unsigned, if needed. Return
-  // an id to the unsigned equivalent.
+  // Generate code to convert integer |value_id| to 32bit, if needed. Return
+  // an id to the 32bit equivalent.
+  uint32_t Gen32BitCvtCode(uint32_t value_id, InstructionBuilder* builder);
+
+  // Generate code to cast integer |value_id| to 32bit unsigned, if needed.
+  // Return an id to the Uint equivalent.
   uint32_t GenUintCastCode(uint32_t value_id, InstructionBuilder* builder);
 
   // Return new label.
@@ -227,8 +227,11 @@ class InstrumentPass : public Pass {
   // Return id for 32-bit unsigned type
   uint32_t GetUintId();
 
-  // Return id for 32-bit unsigned type
+  // Return id for 64-bit unsigned type
   uint32_t GetUint64Id();
+
+  // Return id for 8-bit unsigned type
+  uint32_t GetUint8Id();
 
   // Return id for 32-bit unsigned type
   uint32_t GetBoolId();
@@ -267,6 +270,9 @@ class InstrumentPass : public Pass {
   // Return id for debug input buffer
   uint32_t GetInputBufferId();
 
+  // Return id for 32-bit float type
+  uint32_t GetFloatId();
+
   // Return id for v4float type
   uint32_t GetVec4FloatId();
 
@@ -287,6 +293,12 @@ class InstrumentPass : public Pass {
   // Return id for input function taking |param_cnt| uint32 parameters. Define
   // if it doesn't exist.
   uint32_t GetDirectReadFunctionId(uint32_t param_cnt);
+
+  // Split block |block_itr| into two new blocks where the second block
+  // contains |inst_itr| and place in |new_blocks|.
+  void SplitBlock(BasicBlock::iterator inst_itr,
+                  UptrVectorIterator<BasicBlock> block_itr,
+                  std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
   // Apply instrumentation function |pfn| to every instruction in |func|.
   // If code is generated for an instruction, replace the instruction's
@@ -383,16 +395,16 @@ class InstrumentPass : public Pass {
   uint32_t input_buffer_ptr_id_;
 
   // id for debug output function
-  uint32_t output_func_id_;
+  std::unordered_map<uint32_t, uint32_t> param2output_func_id_;
 
   // ids for debug input functions
   std::unordered_map<uint32_t, uint32_t> param2input_func_id_;
 
-  // param count for output function
-  uint32_t output_func_param_cnt_;
-
   // id for input buffer variable
   uint32_t input_buffer_id_;
+
+  // id for 32-bit float type
+  uint32_t float_id_;
 
   // id for v4float type
   uint32_t v4float_id_;
@@ -406,17 +418,17 @@ class InstrumentPass : public Pass {
   // id for 32-bit unsigned type
   uint32_t uint_id_;
 
-  // id for 32-bit unsigned type
+  // id for 64-bit unsigned type
   uint32_t uint64_id_;
+
+  // id for 8-bit unsigned type
+  uint32_t uint8_id_;
 
   // id for bool type
   uint32_t bool_id_;
 
   // id for void type
   uint32_t void_id_;
-
-  // Record format version
-  uint32_t version_;
 
   // boolean to remember storage buffer extension
   bool storage_buffer_ext_defined_;
@@ -432,6 +444,29 @@ class InstrumentPass : public Pass {
 
   // Post-instrumentation same-block op ids
   std::unordered_map<uint32_t, uint32_t> same_block_post_;
+
+  // Map function calls to result id. Clear for every function.
+  // This is for debug input reads with constant arguments that
+  // have been generated into the first block of the function.
+  // This mechanism is used to avoid multiple identical debug
+  // input buffer reads.
+  struct vector_hash_ {
+    std::size_t operator()(const std::vector<uint32_t>& v) const {
+      std::size_t hash = v.size();
+      for (auto& u : v) {
+        hash ^= u + 0x9e3779b9 + (hash << 11) + (hash >> 21);
+      }
+      return hash;
+    }
+  };
+  std::unordered_map<std::vector<uint32_t>, uint32_t, vector_hash_> call2id_;
+
+  // Function currently being instrumented
+  Function* curr_func_;
+
+  // Optimize direct debug input buffer reads. Specifically, move all such
+  // reads with constant args to first block and reuse them.
+  bool opt_direct_reads_;
 };
 
 }  // namespace opt

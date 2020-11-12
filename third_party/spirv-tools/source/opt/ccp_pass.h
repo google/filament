@@ -105,6 +105,10 @@ class CCPPass : public MemPass {
 
   // Propagator engine used.
   std::unique_ptr<SSAPropagator> propagator_;
+
+  // Value for the module's ID bound before running CCP. Used to detect whether
+  // propagation created new instructions.
+  uint32_t original_id_bound_;
 };
 
 }  // namespace opt

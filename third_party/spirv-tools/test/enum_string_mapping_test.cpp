@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Google Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,7 +179,10 @@ INSTANTIATE_TEST_SUITE_P(
          {SpvCapabilityStoragePushConstant16, "StoragePushConstant16"},
          {SpvCapabilityStorageInputOutput16, "StorageInputOutput16"},
          {SpvCapabilityDeviceGroup, "DeviceGroup"},
+         {SpvCapabilityAtomicFloat32AddEXT, "AtomicFloat32AddEXT"},
+         {SpvCapabilityAtomicFloat64AddEXT, "AtomicFloat64AddEXT"},
          {SpvCapabilityMultiView, "MultiView"},
+         {SpvCapabilityInt64ImageEXT, "Int64ImageEXT"},
          {SpvCapabilitySampleMaskOverrideCoverageNV,
           "SampleMaskOverrideCoverageNV"},
          {SpvCapabilityGeometryShaderPassthroughNV,

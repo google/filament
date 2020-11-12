@@ -19,11 +19,11 @@ struct main0_in
     float4 Position [[attribute(0)]];
 };
 
-vertex main0_out main0(main0_in in [[stage_in]], constant uint* spvViewMask [[buffer(24)]], constant MVPs& _19 [[buffer(0)]], uint gl_InstanceIndex [[instance_id]])
+vertex main0_out main0(main0_in in [[stage_in]], constant uint* spvViewMask [[buffer(24)]], constant MVPs& _19 [[buffer(0)]], uint gl_InstanceIndex [[instance_id]], uint gl_BaseInstance [[base_instance]])
 {
     main0_out out = {};
-    uint gl_ViewIndex = spvViewMask[0] + gl_InstanceIndex % spvViewMask[1];
-    gl_InstanceIndex /= spvViewMask[1];
+    uint gl_ViewIndex = spvViewMask[0] + (gl_InstanceIndex - gl_BaseInstance) % spvViewMask[1];
+    gl_InstanceIndex = (gl_InstanceIndex - gl_BaseInstance) / spvViewMask[1] + gl_BaseInstance;
     out.gl_Position = _19.MVP[int(gl_ViewIndex)] * in.Position;
     out.gl_Layer = gl_ViewIndex - spvViewMask[0];
     return out;

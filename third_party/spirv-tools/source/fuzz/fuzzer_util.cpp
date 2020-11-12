@@ -14,12 +14,38 @@
 
 #include "source/fuzz/fuzzer_util.h"
 
+#include <algorithm>
+#include <unordered_set>
+
 #include "source/opt/build_module.h"
 
 namespace spvtools {
 namespace fuzz {
 
 namespace fuzzerutil {
+namespace {
+
+uint32_t MaybeGetOpConstant(opt::IRContext* ir_context,
+                            const TransformationContext& transformation_context,
+                            const std::vector<uint32_t>& words,
+                            uint32_t type_id, bool is_irrelevant) {
+  for (const auto& inst : ir_context->types_values()) {
+    if (inst.opcode() == SpvOpConstant && inst.type_id() == type_id &&
+        inst.GetInOperand(0).words == words &&
+        transformation_context.GetFactManager()->IdIsIrrelevant(
+            inst.result_id()) == is_irrelevant) {
+      return inst.result_id();
+    }
+  }
+
+  return 0;
+}
+
+}  // namespace
+
+const spvtools::MessageConsumer kSilentMessageConsumer =
+    [](spv_message_level_t, const char*, const spv_position_t&,
+       const char*) -> void {};
 
 bool IsFreshId(opt::IRContext* context, uint32_t id) {
   return !context->get_def_use_mgr()->GetDef(id);
@@ -109,22 +135,9 @@ bool PhiIdsOkForNewEdge(
   return true;
 }
 
-uint32_t MaybeGetBoolConstantId(opt::IRContext* context, bool value) {
-  opt::analysis::Bool bool_type;
-  auto registered_bool_type =
-      context->get_type_mgr()->GetRegisteredType(&bool_type);
-  if (!registered_bool_type) {
-    return 0;
-  }
-  opt::analysis::BoolConstant bool_constant(registered_bool_type->AsBool(),
-                                            value);
-  return context->get_constant_mgr()->FindDeclaredConstant(
-      &bool_constant, context->get_type_mgr()->GetId(&bool_type));
-}
-
 void AddUnreachableEdgeAndUpdateOpPhis(
     opt::IRContext* context, opt::BasicBlock* bb_from, opt::BasicBlock* bb_to,
-    bool condition_value,
+    uint32_t bool_id,
     const google::protobuf::RepeatedField<google::protobuf::uint32>& phi_ids) {
   assert(PhiIdsOkForNewEdge(context, bb_from, bb_to, phi_ids) &&
          "Precondition on phi_ids is not satisfied");
@@ -132,10 +145,13 @@ void AddUnreachableEdgeAndUpdateOpPhis(
          "Precondition on terminator of bb_from is not satisfied");
 
   // Get the id of the boolean constant to be used as the condition.
-  uint32_t bool_id = MaybeGetBoolConstantId(context, condition_value);
-  assert(
-      bool_id &&
-      "Precondition that condition value must be available is not satisfied");
+  auto condition_inst = context->get_def_use_mgr()->GetDef(bool_id);
+  assert(condition_inst &&
+         (condition_inst->opcode() == SpvOpConstantTrue ||
+          condition_inst->opcode() == SpvOpConstantFalse) &&
+         "|bool_id| is invalid");
+
+  auto condition_value = condition_inst->opcode() == SpvOpConstantTrue;
 
   const bool from_to_edge_already_exists = bb_from->IsSuccessor(bb_to);
   auto successor = bb_from->terminator()->GetSingleWordInOperand(0);
@@ -164,6 +180,25 @@ void AddUnreachableEdgeAndUpdateOpPhis(
       phi_index++;
     }
   }
+}
+
+bool BlockIsBackEdge(opt::IRContext* context, uint32_t block_id,
+                     uint32_t loop_header_id) {
+  auto block = context->cfg()->block(block_id);
+  auto loop_header = context->cfg()->block(loop_header_id);
+
+  // |block| and |loop_header| must be defined, |loop_header| must be in fact
+  // loop header and |block| must branch to it.
+  if (!(block && loop_header && loop_header->IsLoopHeader() &&
+        block->IsSuccessor(loop_header))) {
+    return false;
+  }
+
+  // |block_id| must be reachable and be dominated by |loop_header|.
+  opt::DominatorAnalysis* dominator_analysis =
+      context->GetDominatorAnalysis(loop_header->GetParent());
+  return dominator_analysis->IsReachable(block_id) &&
+         dominator_analysis->Dominates(loop_header_id, block_id);
 }
 
 bool BlockIsInLoopContinueConstruct(opt::IRContext* context, uint32_t block_id,
@@ -217,9 +252,22 @@ bool CanInsertOpcodeBeforeInstruction(
   return opcode == SpvOpPhi || instruction_in_block->opcode() != SpvOpPhi;
 }
 
-bool CanMakeSynonymOf(opt::IRContext* ir_context, opt::Instruction* inst) {
+bool CanMakeSynonymOf(opt::IRContext* ir_context,
+                      const TransformationContext& transformation_context,
+                      opt::Instruction* inst) {
+  if (inst->opcode() == SpvOpSampledImage) {
+    // The SPIR-V data rules say that only very specific instructions may
+    // may consume the result id of an OpSampledImage, and this excludes the
+    // instructions that are used for making synonyms.
+    return false;
+  }
   if (!inst->HasResultId()) {
     // We can only make a synonym of an instruction that generates an id.
+    return false;
+  }
+  if (transformation_context.GetFactManager()->IdIsIrrelevant(
+          inst->result_id())) {
+    // An irrelevant id can't be a synonym of anything.
     return false;
   }
   if (!inst->type_id()) {
@@ -227,6 +275,11 @@ bool CanMakeSynonymOf(opt::IRContext* ir_context, opt::Instruction* inst) {
     return false;
   }
   auto type_inst = ir_context->get_def_use_mgr()->GetDef(inst->type_id());
+  if (type_inst->opcode() == SpvOpTypeVoid) {
+    // We only make synonyms of instructions that define objects, and an object
+    // cannot have void type.
+    return false;
+  }
   if (type_inst->opcode() == SpvOpTypePointer) {
     switch (inst->opcode()) {
       case SpvOpConstantNull:
@@ -262,44 +315,48 @@ std::vector<uint32_t> RepeatedFieldToVector(
   return result;
 }
 
+uint32_t WalkOneCompositeTypeIndex(opt::IRContext* context,
+                                   uint32_t base_object_type_id,
+                                   uint32_t index) {
+  auto should_be_composite_type =
+      context->get_def_use_mgr()->GetDef(base_object_type_id);
+  assert(should_be_composite_type && "The type should exist.");
+  switch (should_be_composite_type->opcode()) {
+    case SpvOpTypeArray: {
+      auto array_length = GetArraySize(*should_be_composite_type, context);
+      if (array_length == 0 || index >= array_length) {
+        return 0;
+      }
+      return should_be_composite_type->GetSingleWordInOperand(0);
+    }
+    case SpvOpTypeMatrix:
+    case SpvOpTypeVector: {
+      auto count = should_be_composite_type->GetSingleWordInOperand(1);
+      if (index >= count) {
+        return 0;
+      }
+      return should_be_composite_type->GetSingleWordInOperand(0);
+    }
+    case SpvOpTypeStruct: {
+      if (index >= GetNumberOfStructMembers(*should_be_composite_type)) {
+        return 0;
+      }
+      return should_be_composite_type->GetSingleWordInOperand(index);
+    }
+    default:
+      return 0;
+  }
+}
+
 uint32_t WalkCompositeTypeIndices(
     opt::IRContext* context, uint32_t base_object_type_id,
     const google::protobuf::RepeatedField<google::protobuf::uint32>& indices) {
   uint32_t sub_object_type_id = base_object_type_id;
   for (auto index : indices) {
-    auto should_be_composite_type =
-        context->get_def_use_mgr()->GetDef(sub_object_type_id);
-    assert(should_be_composite_type && "The type should exist.");
-    switch (should_be_composite_type->opcode()) {
-      case SpvOpTypeArray: {
-        auto array_length = GetArraySize(*should_be_composite_type, context);
-        if (array_length == 0 || index >= array_length) {
-          return 0;
-        }
-        sub_object_type_id =
-            should_be_composite_type->GetSingleWordInOperand(0);
-        break;
-      }
-      case SpvOpTypeMatrix:
-      case SpvOpTypeVector: {
-        auto count = should_be_composite_type->GetSingleWordInOperand(1);
-        if (index >= count) {
-          return 0;
-        }
-        sub_object_type_id =
-            should_be_composite_type->GetSingleWordInOperand(0);
-        break;
-      }
-      case SpvOpTypeStruct: {
-        if (index >= GetNumberOfStructMembers(*should_be_composite_type)) {
-          return 0;
-        }
-        sub_object_type_id =
-            should_be_composite_type->GetSingleWordInOperand(index);
-        break;
-      }
-      default:
-        return 0;
+    sub_object_type_id =
+        WalkOneCompositeTypeIndex(context, sub_object_type_id, index);
+    if (!sub_object_type_id) {
+      return 0;
     }
   }
   return sub_object_type_id;
@@ -325,11 +382,86 @@ uint32_t GetArraySize(const opt::Instruction& array_type_instruction,
   return array_length_constant->GetU32();
 }
 
-bool IsValid(opt::IRContext* context) {
+uint32_t GetBoundForCompositeIndex(const opt::Instruction& composite_type_inst,
+                                   opt::IRContext* ir_context) {
+  switch (composite_type_inst.opcode()) {
+    case SpvOpTypeArray:
+      return fuzzerutil::GetArraySize(composite_type_inst, ir_context);
+    case SpvOpTypeMatrix:
+    case SpvOpTypeVector:
+      return composite_type_inst.GetSingleWordInOperand(1);
+    case SpvOpTypeStruct: {
+      return fuzzerutil::GetNumberOfStructMembers(composite_type_inst);
+    }
+    case SpvOpTypeRuntimeArray:
+      assert(false &&
+             "GetBoundForCompositeIndex should not be invoked with an "
+             "OpTypeRuntimeArray, which does not have a static bound.");
+      return 0;
+    default:
+      assert(false && "Unknown composite type.");
+      return 0;
+  }
+}
+
+bool IsValid(const opt::IRContext* context,
+             spv_validator_options validator_options,
+             MessageConsumer consumer) {
   std::vector<uint32_t> binary;
   context->module()->ToBinary(&binary, false);
   SpirvTools tools(context->grammar().target_env());
-  return tools.Validate(binary);
+  tools.SetMessageConsumer(consumer);
+  return tools.Validate(binary.data(), binary.size(), validator_options);
+}
+
+bool IsValidAndWellFormed(const opt::IRContext* ir_context,
+                          spv_validator_options validator_options,
+                          MessageConsumer consumer) {
+  if (!IsValid(ir_context, validator_options, consumer)) {
+    // Expression to dump |ir_context| to /data/temp/shader.spv:
+    //    DumpShader(ir_context, "/data/temp/shader.spv")
+    consumer(SPV_MSG_INFO, nullptr, {},
+             "Module is invalid (set a breakpoint to inspect).");
+    return false;
+  }
+  // Check that all blocks in the module have appropriate parent functions.
+  for (auto& function : *ir_context->module()) {
+    for (auto& block : function) {
+      if (block.GetParent() == nullptr) {
+        std::stringstream ss;
+        ss << "Block " << block.id() << " has no parent; its parent should be "
+           << function.result_id() << " (set a breakpoint to inspect).";
+        consumer(SPV_MSG_INFO, nullptr, {}, ss.str().c_str());
+        return false;
+      }
+      if (block.GetParent() != &function) {
+        std::stringstream ss;
+        ss << "Block " << block.id() << " should have parent "
+           << function.result_id() << " but instead has parent "
+           << block.GetParent() << " (set a breakpoint to inspect).";
+        consumer(SPV_MSG_INFO, nullptr, {}, ss.str().c_str());
+        return false;
+      }
+    }
+  }
+
+  // Check that all instructions have distinct unique ids.  We map each unique
+  // id to the first instruction it is observed to be associated with so that
+  // if we encounter a duplicate we have access to the previous instruction -
+  // this is a useful aid to debugging.
+  std::unordered_map<uint32_t, opt::Instruction*> unique_ids;
+  bool found_duplicate = false;
+  ir_context->module()->ForEachInst([&consumer, &found_duplicate,
+                                     &unique_ids](opt::Instruction* inst) {
+    if (unique_ids.count(inst->unique_id()) != 0) {
+      consumer(SPV_MSG_INFO, nullptr, {},
+               "Two instructions have the same unique id (set a breakpoint to "
+               "inspect).");
+      found_duplicate = true;
+    }
+    unique_ids.insert({inst->unique_id(), inst});
+  });
+  return !found_duplicate;
 }
 
 std::unique_ptr<opt::IRContext> CloneIRContext(opt::IRContext* context) {
@@ -355,6 +487,28 @@ bool IsMergeOrContinue(opt::IRContext* ir_context, uint32_t block_id) {
           case SpvOpSelectionMerge:
             result = true;
             return false;
+          default:
+            return true;
+        }
+      });
+  return result;
+}
+
+uint32_t GetLoopFromMergeBlock(opt::IRContext* ir_context,
+                               uint32_t merge_block_id) {
+  uint32_t result = 0;
+  ir_context->get_def_use_mgr()->WhileEachUse(
+      merge_block_id,
+      [ir_context, &result](opt::Instruction* use_instruction,
+                            uint32_t use_index) -> bool {
+        switch (use_instruction->opcode()) {
+          case SpvOpLoopMerge:
+            // The merge block operand is the first operand in OpLoopMerge.
+            if (use_index == 0) {
+              result = ir_context->get_instr_block(use_instruction)->id();
+              return false;
+            }
+            return true;
           default:
             return true;
         }
@@ -391,7 +545,1288 @@ uint32_t FindFunctionType(opt::IRContext* ir_context,
   return 0;
 }
 
-}  // namespace fuzzerutil
+opt::Instruction* GetFunctionType(opt::IRContext* context,
+                                  const opt::Function* function) {
+  uint32_t type_id = function->DefInst().GetSingleWordInOperand(1);
+  return context->get_def_use_mgr()->GetDef(type_id);
+}
 
+opt::Function* FindFunction(opt::IRContext* ir_context, uint32_t function_id) {
+  for (auto& function : *ir_context->module()) {
+    if (function.result_id() == function_id) {
+      return &function;
+    }
+  }
+  return nullptr;
+}
+
+bool FunctionContainsOpKillOrUnreachable(const opt::Function& function) {
+  for (auto& block : function) {
+    if (block.terminator()->opcode() == SpvOpKill ||
+        block.terminator()->opcode() == SpvOpUnreachable) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool FunctionIsEntryPoint(opt::IRContext* context, uint32_t function_id) {
+  for (auto& entry_point : context->module()->entry_points()) {
+    if (entry_point.GetSingleWordInOperand(1) == function_id) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IdIsAvailableAtUse(opt::IRContext* context,
+                        opt::Instruction* use_instruction,
+                        uint32_t use_input_operand_index, uint32_t id) {
+  assert(context->get_instr_block(use_instruction) &&
+         "|use_instruction| must be in a basic block");
+
+  auto defining_instruction = context->get_def_use_mgr()->GetDef(id);
+  auto enclosing_function =
+      context->get_instr_block(use_instruction)->GetParent();
+  // If the id a function parameter, it needs to be associated with the
+  // function containing the use.
+  if (defining_instruction->opcode() == SpvOpFunctionParameter) {
+    return InstructionIsFunctionParameter(defining_instruction,
+                                          enclosing_function);
+  }
+  if (!context->get_instr_block(id)) {
+    // The id must be at global scope.
+    return true;
+  }
+  if (defining_instruction == use_instruction) {
+    // It is not OK for a definition to use itself.
+    return false;
+  }
+  auto dominator_analysis = context->GetDominatorAnalysis(enclosing_function);
+  if (!dominator_analysis->IsReachable(
+          context->get_instr_block(use_instruction)) ||
+      !dominator_analysis->IsReachable(context->get_instr_block(id))) {
+    // Skip unreachable blocks.
+    return false;
+  }
+  if (use_instruction->opcode() == SpvOpPhi) {
+    // In the case where the use is an operand to OpPhi, it is actually the
+    // *parent* block associated with the operand that must be dominated by
+    // the synonym.
+    auto parent_block =
+        use_instruction->GetSingleWordInOperand(use_input_operand_index + 1);
+    return dominator_analysis->Dominates(
+        context->get_instr_block(defining_instruction)->id(), parent_block);
+  }
+  return dominator_analysis->Dominates(defining_instruction, use_instruction);
+}
+
+bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
+                                    opt::Instruction* instruction,
+                                    uint32_t id) {
+  assert(context->get_instr_block(instruction) &&
+         "|instruction| must be in a basic block");
+
+  auto id_definition = context->get_def_use_mgr()->GetDef(id);
+  auto function_enclosing_instruction =
+      context->get_instr_block(instruction)->GetParent();
+  // If the id a function parameter, it needs to be associated with the
+  // function containing the instruction.
+  if (id_definition->opcode() == SpvOpFunctionParameter) {
+    return InstructionIsFunctionParameter(id_definition,
+                                          function_enclosing_instruction);
+  }
+  if (!context->get_instr_block(id)) {
+    // The id is at global scope.
+    return true;
+  }
+  if (id_definition == instruction) {
+    // The instruction is not available right before its own definition.
+    return false;
+  }
+  const auto* dominator_analysis =
+      context->GetDominatorAnalysis(function_enclosing_instruction);
+  if (dominator_analysis->IsReachable(context->get_instr_block(instruction)) &&
+      dominator_analysis->IsReachable(context->get_instr_block(id)) &&
+      dominator_analysis->Dominates(id_definition, instruction)) {
+    // The id's definition dominates the instruction, and both the definition
+    // and the instruction are in reachable blocks, thus the id is available at
+    // the instruction.
+    return true;
+  }
+  if (id_definition->opcode() == SpvOpVariable &&
+      function_enclosing_instruction ==
+          context->get_instr_block(id)->GetParent()) {
+    assert(!dominator_analysis->IsReachable(
+               context->get_instr_block(instruction)) &&
+           "If the instruction were in a reachable block we should already "
+           "have returned true.");
+    // The id is a variable and it is in the same function as |instruction|.
+    // This is OK despite |instruction| being unreachable.
+    return true;
+  }
+  return false;
+}
+
+bool InstructionIsFunctionParameter(opt::Instruction* instruction,
+                                    opt::Function* function) {
+  if (instruction->opcode() != SpvOpFunctionParameter) {
+    return false;
+  }
+  bool found_parameter = false;
+  function->ForEachParam(
+      [instruction, &found_parameter](opt::Instruction* param) {
+        if (param == instruction) {
+          found_parameter = true;
+        }
+      });
+  return found_parameter;
+}
+
+uint32_t GetTypeId(opt::IRContext* context, uint32_t result_id) {
+  const auto* inst = context->get_def_use_mgr()->GetDef(result_id);
+  assert(inst && "|result_id| is invalid");
+  return inst->type_id();
+}
+
+uint32_t GetPointeeTypeIdFromPointerType(opt::Instruction* pointer_type_inst) {
+  assert(pointer_type_inst && pointer_type_inst->opcode() == SpvOpTypePointer &&
+         "Precondition: |pointer_type_inst| must be OpTypePointer.");
+  return pointer_type_inst->GetSingleWordInOperand(1);
+}
+
+uint32_t GetPointeeTypeIdFromPointerType(opt::IRContext* context,
+                                         uint32_t pointer_type_id) {
+  return GetPointeeTypeIdFromPointerType(
+      context->get_def_use_mgr()->GetDef(pointer_type_id));
+}
+
+SpvStorageClass GetStorageClassFromPointerType(
+    opt::Instruction* pointer_type_inst) {
+  assert(pointer_type_inst && pointer_type_inst->opcode() == SpvOpTypePointer &&
+         "Precondition: |pointer_type_inst| must be OpTypePointer.");
+  return static_cast<SpvStorageClass>(
+      pointer_type_inst->GetSingleWordInOperand(0));
+}
+
+SpvStorageClass GetStorageClassFromPointerType(opt::IRContext* context,
+                                               uint32_t pointer_type_id) {
+  return GetStorageClassFromPointerType(
+      context->get_def_use_mgr()->GetDef(pointer_type_id));
+}
+
+uint32_t MaybeGetPointerType(opt::IRContext* context, uint32_t pointee_type_id,
+                             SpvStorageClass storage_class) {
+  for (auto& inst : context->types_values()) {
+    switch (inst.opcode()) {
+      case SpvOpTypePointer:
+        if (inst.GetSingleWordInOperand(0) == storage_class &&
+            inst.GetSingleWordInOperand(1) == pointee_type_id) {
+          return inst.result_id();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return 0;
+}
+
+uint32_t InOperandIndexFromOperandIndex(const opt::Instruction& inst,
+                                        uint32_t absolute_index) {
+  // Subtract the number of non-input operands from the index
+  return absolute_index - inst.NumOperands() + inst.NumInOperands();
+}
+
+bool IsNullConstantSupported(const opt::analysis::Type& type) {
+  return type.AsBool() || type.AsInteger() || type.AsFloat() ||
+         type.AsMatrix() || type.AsVector() || type.AsArray() ||
+         type.AsStruct() || type.AsPointer() || type.AsEvent() ||
+         type.AsDeviceEvent() || type.AsReserveId() || type.AsQueue();
+}
+
+bool GlobalVariablesMustBeDeclaredInEntryPointInterfaces(
+    const opt::IRContext* ir_context) {
+  // TODO(afd): We capture the universal environments for which this requirement
+  //  holds.  The check should be refined on demand for other target
+  //  environments.
+  switch (ir_context->grammar().target_env()) {
+    case SPV_ENV_UNIVERSAL_1_0:
+    case SPV_ENV_UNIVERSAL_1_1:
+    case SPV_ENV_UNIVERSAL_1_2:
+    case SPV_ENV_UNIVERSAL_1_3:
+      return false;
+    default:
+      return true;
+  }
+}
+
+void AddVariableIdToEntryPointInterfaces(opt::IRContext* context, uint32_t id) {
+  if (GlobalVariablesMustBeDeclaredInEntryPointInterfaces(context)) {
+    // Conservatively add this global to the interface of every entry point in
+    // the module.  This means that the global is available for other
+    // transformations to use.
+    //
+    // A downside of this is that the global will be in the interface even if it
+    // ends up never being used.
+    //
+    // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3111) revisit
+    //  this if a more thorough approach to entry point interfaces is taken.
+    for (auto& entry_point : context->module()->entry_points()) {
+      entry_point.AddOperand({SPV_OPERAND_TYPE_ID, {id}});
+    }
+  }
+}
+
+void AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
+                       uint32_t type_id, SpvStorageClass storage_class,
+                       uint32_t initializer_id) {
+  // Check various preconditions.
+  assert(result_id != 0 && "Result id can't be 0");
+
+  assert((storage_class == SpvStorageClassPrivate ||
+          storage_class == SpvStorageClassWorkgroup) &&
+         "Variable's storage class must be either Private or Workgroup");
+
+  auto* type_inst = context->get_def_use_mgr()->GetDef(type_id);
+  (void)type_inst;  // Variable becomes unused in release mode.
+  assert(type_inst && type_inst->opcode() == SpvOpTypePointer &&
+         GetStorageClassFromPointerType(type_inst) == storage_class &&
+         "Variable's type is invalid");
+
+  if (storage_class == SpvStorageClassWorkgroup) {
+    assert(initializer_id == 0);
+  }
+
+  if (initializer_id != 0) {
+    const auto* constant_inst =
+        context->get_def_use_mgr()->GetDef(initializer_id);
+    (void)constant_inst;  // Variable becomes unused in release mode.
+    assert(constant_inst && spvOpcodeIsConstant(constant_inst->opcode()) &&
+           GetPointeeTypeIdFromPointerType(type_inst) ==
+               constant_inst->type_id() &&
+           "Initializer is invalid");
+  }
+
+  opt::Instruction::OperandList operands = {
+      {SPV_OPERAND_TYPE_STORAGE_CLASS, {static_cast<uint32_t>(storage_class)}}};
+
+  if (initializer_id) {
+    operands.push_back({SPV_OPERAND_TYPE_ID, {initializer_id}});
+  }
+
+  context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
+      context, SpvOpVariable, type_id, result_id, std::move(operands)));
+
+  AddVariableIdToEntryPointInterfaces(context, result_id);
+  UpdateModuleIdBound(context, result_id);
+}
+
+void AddLocalVariable(opt::IRContext* context, uint32_t result_id,
+                      uint32_t type_id, uint32_t function_id,
+                      uint32_t initializer_id) {
+  // Check various preconditions.
+  assert(result_id != 0 && "Result id can't be 0");
+
+  auto* type_inst = context->get_def_use_mgr()->GetDef(type_id);
+  (void)type_inst;  // Variable becomes unused in release mode.
+  assert(type_inst && type_inst->opcode() == SpvOpTypePointer &&
+         GetStorageClassFromPointerType(type_inst) == SpvStorageClassFunction &&
+         "Variable's type is invalid");
+
+  const auto* constant_inst =
+      context->get_def_use_mgr()->GetDef(initializer_id);
+  (void)constant_inst;  // Variable becomes unused in release mode.
+  assert(constant_inst && spvOpcodeIsConstant(constant_inst->opcode()) &&
+         GetPointeeTypeIdFromPointerType(type_inst) ==
+             constant_inst->type_id() &&
+         "Initializer is invalid");
+
+  auto* function = FindFunction(context, function_id);
+  assert(function && "Function id is invalid");
+
+  function->begin()->begin()->InsertBefore(MakeUnique<opt::Instruction>(
+      context, SpvOpVariable, type_id, result_id,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_STORAGE_CLASS, {SpvStorageClassFunction}},
+          {SPV_OPERAND_TYPE_ID, {initializer_id}}}));
+
+  UpdateModuleIdBound(context, result_id);
+}
+
+bool HasDuplicates(const std::vector<uint32_t>& arr) {
+  return std::unordered_set<uint32_t>(arr.begin(), arr.end()).size() !=
+         arr.size();
+}
+
+bool IsPermutationOfRange(const std::vector<uint32_t>& arr, uint32_t lo,
+                          uint32_t hi) {
+  if (arr.empty()) {
+    return lo > hi;
+  }
+
+  if (HasDuplicates(arr)) {
+    return false;
+  }
+
+  auto min_max = std::minmax_element(arr.begin(), arr.end());
+  return arr.size() == hi - lo + 1 && *min_max.first == lo &&
+         *min_max.second == hi;
+}
+
+std::vector<opt::Instruction*> GetParameters(opt::IRContext* ir_context,
+                                             uint32_t function_id) {
+  auto* function = FindFunction(ir_context, function_id);
+  assert(function && "|function_id| is invalid");
+
+  std::vector<opt::Instruction*> result;
+  function->ForEachParam(
+      [&result](opt::Instruction* inst) { result.push_back(inst); });
+
+  return result;
+}
+
+void RemoveParameter(opt::IRContext* ir_context, uint32_t parameter_id) {
+  auto* function = GetFunctionFromParameterId(ir_context, parameter_id);
+  assert(function && "|parameter_id| is invalid");
+  assert(!FunctionIsEntryPoint(ir_context, function->result_id()) &&
+         "Can't remove parameter from an entry point function");
+
+  function->RemoveParameter(parameter_id);
+
+  // We've just removed parameters from the function and cleared their memory.
+  // Make sure analyses have no dangling pointers.
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
+}
+
+std::vector<opt::Instruction*> GetCallers(opt::IRContext* ir_context,
+                                          uint32_t function_id) {
+  assert(FindFunction(ir_context, function_id) &&
+         "|function_id| is not a result id of a function");
+
+  std::vector<opt::Instruction*> result;
+  ir_context->get_def_use_mgr()->ForEachUser(
+      function_id, [&result, function_id](opt::Instruction* inst) {
+        if (inst->opcode() == SpvOpFunctionCall &&
+            inst->GetSingleWordInOperand(0) == function_id) {
+          result.push_back(inst);
+        }
+      });
+
+  return result;
+}
+
+opt::Function* GetFunctionFromParameterId(opt::IRContext* ir_context,
+                                          uint32_t param_id) {
+  auto* param_inst = ir_context->get_def_use_mgr()->GetDef(param_id);
+  assert(param_inst && "Parameter id is invalid");
+
+  for (auto& function : *ir_context->module()) {
+    if (InstructionIsFunctionParameter(param_inst, &function)) {
+      return &function;
+    }
+  }
+
+  return nullptr;
+}
+
+uint32_t UpdateFunctionType(opt::IRContext* ir_context, uint32_t function_id,
+                            uint32_t new_function_type_result_id,
+                            uint32_t return_type_id,
+                            const std::vector<uint32_t>& parameter_type_ids) {
+  // Check some initial constraints.
+  assert(ir_context->get_type_mgr()->GetType(return_type_id) &&
+         "Return type is invalid");
+  for (auto id : parameter_type_ids) {
+    const auto* type = ir_context->get_type_mgr()->GetType(id);
+    (void)type;  // Make compilers happy in release mode.
+    // Parameters can't be OpTypeVoid.
+    assert(type && !type->AsVoid() && "Parameter has invalid type");
+  }
+
+  auto* function = FindFunction(ir_context, function_id);
+  assert(function && "|function_id| is invalid");
+
+  auto* old_function_type = GetFunctionType(ir_context, function);
+  assert(old_function_type && "Function has invalid type");
+
+  std::vector<uint32_t> operand_ids = {return_type_id};
+  operand_ids.insert(operand_ids.end(), parameter_type_ids.begin(),
+                     parameter_type_ids.end());
+
+  // A trivial case - we change nothing.
+  if (FindFunctionType(ir_context, operand_ids) ==
+      old_function_type->result_id()) {
+    return old_function_type->result_id();
+  }
+
+  if (ir_context->get_def_use_mgr()->NumUsers(old_function_type) == 1 &&
+      FindFunctionType(ir_context, operand_ids) == 0) {
+    // We can change |old_function_type| only if it's used once in the module
+    // and we are certain we won't create a duplicate as a result of the change.
+
+    // Update |old_function_type| in-place.
+    opt::Instruction::OperandList operands;
+    for (auto id : operand_ids) {
+      operands.push_back({SPV_OPERAND_TYPE_ID, {id}});
+    }
+
+    old_function_type->SetInOperands(std::move(operands));
+
+    // |operands| may depend on result ids defined below the |old_function_type|
+    // in the module.
+    old_function_type->RemoveFromList();
+    ir_context->AddType(std::unique_ptr<opt::Instruction>(old_function_type));
+    return old_function_type->result_id();
+  } else {
+    // We can't modify the |old_function_type| so we have to either use an
+    // existing one or create a new one.
+    auto type_id = FindOrCreateFunctionType(
+        ir_context, new_function_type_result_id, operand_ids);
+    assert(type_id != old_function_type->result_id() &&
+           "We should've handled this case above");
+
+    function->DefInst().SetInOperand(1, {type_id});
+
+    // DefUseManager hasn't been updated yet, so if the following condition is
+    // true, then |old_function_type| will have no users when this function
+    // returns. We might as well remove it.
+    if (ir_context->get_def_use_mgr()->NumUsers(old_function_type) == 1) {
+      ir_context->KillInst(old_function_type);
+    }
+
+    return type_id;
+  }
+}
+
+void AddFunctionType(opt::IRContext* ir_context, uint32_t result_id,
+                     const std::vector<uint32_t>& type_ids) {
+  assert(result_id != 0 && "Result id can't be 0");
+  assert(!type_ids.empty() &&
+         "OpTypeFunction always has at least one operand - function's return "
+         "type");
+  assert(IsNonFunctionTypeId(ir_context, type_ids[0]) &&
+         "Return type must not be a function");
+
+  for (size_t i = 1; i < type_ids.size(); ++i) {
+    const auto* param_type = ir_context->get_type_mgr()->GetType(type_ids[i]);
+    (void)param_type;  // Make compiler happy in release mode.
+    assert(param_type && !param_type->AsVoid() && !param_type->AsFunction() &&
+           "Function parameter can't have a function or void type");
+  }
+
+  opt::Instruction::OperandList operands;
+  operands.reserve(type_ids.size());
+  for (auto id : type_ids) {
+    operands.push_back({SPV_OPERAND_TYPE_ID, {id}});
+  }
+
+  ir_context->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeFunction, 0, result_id, std::move(operands)));
+
+  UpdateModuleIdBound(ir_context, result_id);
+}
+
+uint32_t FindOrCreateFunctionType(opt::IRContext* ir_context,
+                                  uint32_t result_id,
+                                  const std::vector<uint32_t>& type_ids) {
+  if (auto existing_id = FindFunctionType(ir_context, type_ids)) {
+    return existing_id;
+  }
+  AddFunctionType(ir_context, result_id, type_ids);
+  return result_id;
+}
+
+uint32_t MaybeGetIntegerType(opt::IRContext* ir_context, uint32_t width,
+                             bool is_signed) {
+  opt::analysis::Integer type(width, is_signed);
+  return ir_context->get_type_mgr()->GetId(&type);
+}
+
+uint32_t MaybeGetFloatType(opt::IRContext* ir_context, uint32_t width) {
+  opt::analysis::Float type(width);
+  return ir_context->get_type_mgr()->GetId(&type);
+}
+
+uint32_t MaybeGetBoolType(opt::IRContext* ir_context) {
+  opt::analysis::Bool type;
+  return ir_context->get_type_mgr()->GetId(&type);
+}
+
+uint32_t MaybeGetVectorType(opt::IRContext* ir_context,
+                            uint32_t component_type_id,
+                            uint32_t element_count) {
+  const auto* component_type =
+      ir_context->get_type_mgr()->GetType(component_type_id);
+  assert(component_type &&
+         (component_type->AsInteger() || component_type->AsFloat() ||
+          component_type->AsBool()) &&
+         "|component_type_id| is invalid");
+  assert(element_count >= 2 && element_count <= 4 &&
+         "Precondition: component count must be in range [2, 4].");
+  opt::analysis::Vector type(component_type, element_count);
+  return ir_context->get_type_mgr()->GetId(&type);
+}
+
+uint32_t MaybeGetStructType(opt::IRContext* ir_context,
+                            const std::vector<uint32_t>& component_type_ids) {
+  for (auto& type_or_value : ir_context->types_values()) {
+    if (type_or_value.opcode() != SpvOpTypeStruct ||
+        type_or_value.NumInOperands() !=
+            static_cast<uint32_t>(component_type_ids.size())) {
+      continue;
+    }
+    bool all_components_match = true;
+    for (uint32_t i = 0; i < component_type_ids.size(); i++) {
+      if (type_or_value.GetSingleWordInOperand(i) != component_type_ids[i]) {
+        all_components_match = false;
+        break;
+      }
+    }
+    if (all_components_match) {
+      return type_or_value.result_id();
+    }
+  }
+  return 0;
+}
+
+uint32_t MaybeGetVoidType(opt::IRContext* ir_context) {
+  opt::analysis::Void type;
+  return ir_context->get_type_mgr()->GetId(&type);
+}
+
+uint32_t MaybeGetZeroConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context,
+    uint32_t scalar_or_composite_type_id, bool is_irrelevant) {
+  const auto* type_inst =
+      ir_context->get_def_use_mgr()->GetDef(scalar_or_composite_type_id);
+  assert(type_inst && "|scalar_or_composite_type_id| is invalid");
+
+  switch (type_inst->opcode()) {
+    case SpvOpTypeBool:
+      return MaybeGetBoolConstant(ir_context, transformation_context, false,
+                                  is_irrelevant);
+    case SpvOpTypeFloat:
+    case SpvOpTypeInt: {
+      const auto width = type_inst->GetSingleWordInOperand(0);
+      std::vector<uint32_t> words = {0};
+      if (width > 32) {
+        words.push_back(0);
+      }
+
+      return MaybeGetScalarConstant(ir_context, transformation_context, words,
+                                    scalar_or_composite_type_id, is_irrelevant);
+    }
+    case SpvOpTypeStruct: {
+      std::vector<uint32_t> component_ids;
+      for (uint32_t i = 0; i < type_inst->NumInOperands(); ++i) {
+        const auto component_type_id = type_inst->GetSingleWordInOperand(i);
+
+        auto component_id =
+            MaybeGetZeroConstant(ir_context, transformation_context,
+                                 component_type_id, is_irrelevant);
+
+        if (component_id == 0 && is_irrelevant) {
+          // Irrelevant constants can use either relevant or irrelevant
+          // constituents.
+          component_id = MaybeGetZeroConstant(
+              ir_context, transformation_context, component_type_id, false);
+        }
+
+        if (component_id == 0) {
+          return 0;
+        }
+
+        component_ids.push_back(component_id);
+      }
+
+      return MaybeGetCompositeConstant(
+          ir_context, transformation_context, component_ids,
+          scalar_or_composite_type_id, is_irrelevant);
+    }
+    case SpvOpTypeMatrix:
+    case SpvOpTypeVector: {
+      const auto component_type_id = type_inst->GetSingleWordInOperand(0);
+
+      auto component_id = MaybeGetZeroConstant(
+          ir_context, transformation_context, component_type_id, is_irrelevant);
+
+      if (component_id == 0 && is_irrelevant) {
+        // Irrelevant constants can use either relevant or irrelevant
+        // constituents.
+        component_id = MaybeGetZeroConstant(ir_context, transformation_context,
+                                            component_type_id, false);
+      }
+
+      if (component_id == 0) {
+        return 0;
+      }
+
+      const auto component_count = type_inst->GetSingleWordInOperand(1);
+      return MaybeGetCompositeConstant(
+          ir_context, transformation_context,
+          std::vector<uint32_t>(component_count, component_id),
+          scalar_or_composite_type_id, is_irrelevant);
+    }
+    case SpvOpTypeArray: {
+      const auto component_type_id = type_inst->GetSingleWordInOperand(0);
+
+      auto component_id = MaybeGetZeroConstant(
+          ir_context, transformation_context, component_type_id, is_irrelevant);
+
+      if (component_id == 0 && is_irrelevant) {
+        // Irrelevant constants can use either relevant or irrelevant
+        // constituents.
+        component_id = MaybeGetZeroConstant(ir_context, transformation_context,
+                                            component_type_id, false);
+      }
+
+      if (component_id == 0) {
+        return 0;
+      }
+
+      return MaybeGetCompositeConstant(
+          ir_context, transformation_context,
+          std::vector<uint32_t>(GetArraySize(*type_inst, ir_context),
+                                component_id),
+          scalar_or_composite_type_id, is_irrelevant);
+    }
+    default:
+      assert(false && "Type is not supported");
+      return 0;
+  }
+}
+
+bool CanCreateConstant(opt::IRContext* ir_context, uint32_t type_id) {
+  opt::Instruction* type_instr = ir_context->get_def_use_mgr()->GetDef(type_id);
+  assert(type_instr != nullptr && "The type must exist.");
+  assert(spvOpcodeGeneratesType(type_instr->opcode()) &&
+         "A type-generating opcode was expected.");
+  switch (type_instr->opcode()) {
+    case SpvOpTypeBool:
+    case SpvOpTypeInt:
+    case SpvOpTypeFloat:
+    case SpvOpTypeMatrix:
+    case SpvOpTypeVector:
+      return true;
+    case SpvOpTypeArray:
+      return CanCreateConstant(ir_context,
+                               type_instr->GetSingleWordInOperand(0));
+    case SpvOpTypeStruct:
+      if (HasBlockOrBufferBlockDecoration(ir_context, type_id)) {
+        return false;
+      }
+      for (uint32_t index = 0; index < type_instr->NumInOperands(); index++) {
+        if (!CanCreateConstant(ir_context,
+                               type_instr->GetSingleWordInOperand(index))) {
+          return false;
+        }
+      }
+      return true;
+    default:
+      return false;
+  }
+}
+
+uint32_t MaybeGetScalarConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context,
+    const std::vector<uint32_t>& words, uint32_t scalar_type_id,
+    bool is_irrelevant) {
+  const auto* type = ir_context->get_type_mgr()->GetType(scalar_type_id);
+  assert(type && "|scalar_type_id| is invalid");
+
+  if (const auto* int_type = type->AsInteger()) {
+    return MaybeGetIntegerConstant(ir_context, transformation_context, words,
+                                   int_type->width(), int_type->IsSigned(),
+                                   is_irrelevant);
+  } else if (const auto* float_type = type->AsFloat()) {
+    return MaybeGetFloatConstant(ir_context, transformation_context, words,
+                                 float_type->width(), is_irrelevant);
+  } else {
+    assert(type->AsBool() && words.size() == 1 &&
+           "|scalar_type_id| doesn't represent a scalar type");
+    return MaybeGetBoolConstant(ir_context, transformation_context, words[0],
+                                is_irrelevant);
+  }
+}
+
+uint32_t MaybeGetCompositeConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context,
+    const std::vector<uint32_t>& component_ids, uint32_t composite_type_id,
+    bool is_irrelevant) {
+  const auto* type = ir_context->get_type_mgr()->GetType(composite_type_id);
+  (void)type;  // Make compilers happy in release mode.
+  assert(IsCompositeType(type) && "|composite_type_id| is invalid");
+
+  for (const auto& inst : ir_context->types_values()) {
+    if (inst.opcode() == SpvOpConstantComposite &&
+        inst.type_id() == composite_type_id &&
+        transformation_context.GetFactManager()->IdIsIrrelevant(
+            inst.result_id()) == is_irrelevant &&
+        inst.NumInOperands() == component_ids.size()) {
+      bool is_match = true;
+
+      for (uint32_t i = 0; i < inst.NumInOperands(); ++i) {
+        if (inst.GetSingleWordInOperand(i) != component_ids[i]) {
+          is_match = false;
+          break;
+        }
+      }
+
+      if (is_match) {
+        return inst.result_id();
+      }
+    }
+  }
+
+  return 0;
+}
+
+uint32_t MaybeGetIntegerConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context,
+    const std::vector<uint32_t>& words, uint32_t width, bool is_signed,
+    bool is_irrelevant) {
+  if (auto type_id = MaybeGetIntegerType(ir_context, width, is_signed)) {
+    return MaybeGetOpConstant(ir_context, transformation_context, words,
+                              type_id, is_irrelevant);
+  }
+
+  return 0;
+}
+
+uint32_t MaybeGetIntegerConstantFromValueAndType(opt::IRContext* ir_context,
+                                                 uint32_t value,
+                                                 uint32_t int_type_id) {
+  auto int_type_inst = ir_context->get_def_use_mgr()->GetDef(int_type_id);
+
+  assert(int_type_inst && "The given type id must exist.");
+
+  auto int_type = ir_context->get_type_mgr()
+                      ->GetType(int_type_inst->result_id())
+                      ->AsInteger();
+
+  assert(int_type && int_type->width() == 32 &&
+         "The given type id must correspond to an 32-bit integer type.");
+
+  opt::analysis::IntConstant constant(int_type, {value});
+
+  // Check that the constant exists in the module.
+  if (!ir_context->get_constant_mgr()->FindConstant(&constant)) {
+    return 0;
+  }
+
+  return ir_context->get_constant_mgr()
+      ->GetDefiningInstruction(&constant)
+      ->result_id();
+}
+
+uint32_t MaybeGetFloatConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context,
+    const std::vector<uint32_t>& words, uint32_t width, bool is_irrelevant) {
+  if (auto type_id = MaybeGetFloatType(ir_context, width)) {
+    return MaybeGetOpConstant(ir_context, transformation_context, words,
+                              type_id, is_irrelevant);
+  }
+
+  return 0;
+}
+
+uint32_t MaybeGetBoolConstant(
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context, bool value,
+    bool is_irrelevant) {
+  if (auto type_id = MaybeGetBoolType(ir_context)) {
+    for (const auto& inst : ir_context->types_values()) {
+      if (inst.opcode() == (value ? SpvOpConstantTrue : SpvOpConstantFalse) &&
+          inst.type_id() == type_id &&
+          transformation_context.GetFactManager()->IdIsIrrelevant(
+              inst.result_id()) == is_irrelevant) {
+        return inst.result_id();
+      }
+    }
+  }
+
+  return 0;
+}
+
+void AddIntegerType(opt::IRContext* ir_context, uint32_t result_id,
+                    uint32_t width, bool is_signed) {
+  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeInt, 0, result_id,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {width}},
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {is_signed ? 1u : 0u}}}));
+
+  UpdateModuleIdBound(ir_context, result_id);
+}
+
+void AddFloatType(opt::IRContext* ir_context, uint32_t result_id,
+                  uint32_t width) {
+  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeFloat, 0, result_id,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {width}}}));
+
+  UpdateModuleIdBound(ir_context, result_id);
+}
+
+void AddVectorType(opt::IRContext* ir_context, uint32_t result_id,
+                   uint32_t component_type_id, uint32_t element_count) {
+  const auto* component_type =
+      ir_context->get_type_mgr()->GetType(component_type_id);
+  (void)component_type;  // Make compiler happy in release mode.
+  assert(component_type &&
+         (component_type->AsInteger() || component_type->AsFloat() ||
+          component_type->AsBool()) &&
+         "|component_type_id| is invalid");
+  assert(element_count >= 2 && element_count <= 4 &&
+         "Precondition: component count must be in range [2, 4].");
+  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeVector, 0, result_id,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_ID, {component_type_id}},
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {element_count}}}));
+
+  UpdateModuleIdBound(ir_context, result_id);
+}
+
+void AddStructType(opt::IRContext* ir_context, uint32_t result_id,
+                   const std::vector<uint32_t>& component_type_ids) {
+  opt::Instruction::OperandList operands;
+  operands.reserve(component_type_ids.size());
+
+  for (auto type_id : component_type_ids) {
+    const auto* type = ir_context->get_type_mgr()->GetType(type_id);
+    (void)type;  // Make compiler happy in release mode.
+    assert(type && !type->AsFunction() && "Component's type id is invalid");
+
+    if (type->AsStruct()) {
+      // From the spec for the BuiltIn decoration:
+      // - When applied to a structure-type member, that structure type cannot
+      //   be contained as a member of another structure type.
+      assert(!MembersHaveBuiltInDecoration(ir_context, type_id) &&
+             "A member struct has BuiltIn members");
+    }
+
+    operands.push_back({SPV_OPERAND_TYPE_ID, {type_id}});
+  }
+
+  ir_context->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeStruct, 0, result_id, std::move(operands)));
+
+  UpdateModuleIdBound(ir_context, result_id);
+}
+
+std::vector<uint32_t> IntToWords(uint64_t value, uint32_t width,
+                                 bool is_signed) {
+  assert(width <= 64 && "The bit width should not be more than 64 bits");
+
+  // Sign-extend or zero-extend the last |width| bits of |value|, depending on
+  // |is_signed|.
+  if (is_signed) {
+    // Sign-extend by shifting left and then shifting right, interpreting the
+    // integer as signed.
+    value = static_cast<int64_t>(value << (64 - width)) >> (64 - width);
+  } else {
+    // Zero-extend by shifting left and then shifting right, interpreting the
+    // integer as unsigned.
+    value = (value << (64 - width)) >> (64 - width);
+  }
+
+  std::vector<uint32_t> result;
+  result.push_back(static_cast<uint32_t>(value));
+  if (width > 32) {
+    result.push_back(static_cast<uint32_t>(value >> 32));
+  }
+  return result;
+}
+
+bool TypesAreEqualUpToSign(opt::IRContext* ir_context, uint32_t type1_id,
+                           uint32_t type2_id) {
+  if (type1_id == type2_id) {
+    return true;
+  }
+
+  auto type1 = ir_context->get_type_mgr()->GetType(type1_id);
+  auto type2 = ir_context->get_type_mgr()->GetType(type2_id);
+
+  // Integer scalar types must have the same width
+  if (type1->AsInteger() && type2->AsInteger()) {
+    return type1->AsInteger()->width() == type2->AsInteger()->width();
+  }
+
+  // Integer vector types must have the same number of components and their
+  // component types must be integers with the same width.
+  if (type1->AsVector() && type2->AsVector()) {
+    auto component_type1 = type1->AsVector()->element_type()->AsInteger();
+    auto component_type2 = type2->AsVector()->element_type()->AsInteger();
+
+    // Only check the component count and width if they are integer.
+    if (component_type1 && component_type2) {
+      return type1->AsVector()->element_count() ==
+                 type2->AsVector()->element_count() &&
+             component_type1->width() == component_type2->width();
+    }
+  }
+
+  // In all other cases, the types cannot be considered equal.
+  return false;
+}
+
+std::map<uint32_t, uint32_t> RepeatedUInt32PairToMap(
+    const google::protobuf::RepeatedPtrField<protobufs::UInt32Pair>& data) {
+  std::map<uint32_t, uint32_t> result;
+
+  for (const auto& entry : data) {
+    result[entry.first()] = entry.second();
+  }
+
+  return result;
+}
+
+google::protobuf::RepeatedPtrField<protobufs::UInt32Pair>
+MapToRepeatedUInt32Pair(const std::map<uint32_t, uint32_t>& data) {
+  google::protobuf::RepeatedPtrField<protobufs::UInt32Pair> result;
+
+  for (const auto& entry : data) {
+    protobufs::UInt32Pair pair;
+    pair.set_first(entry.first);
+    pair.set_second(entry.second);
+    *result.Add() = std::move(pair);
+  }
+
+  return result;
+}
+
+opt::Instruction* GetLastInsertBeforeInstruction(opt::IRContext* ir_context,
+                                                 uint32_t block_id,
+                                                 SpvOp opcode) {
+  // CFG::block uses std::map::at which throws an exception when |block_id| is
+  // invalid. The error message is unhelpful, though. Thus, we test that
+  // |block_id| is valid here.
+  const auto* label_inst = ir_context->get_def_use_mgr()->GetDef(block_id);
+  (void)label_inst;  // Make compilers happy in release mode.
+  assert(label_inst && label_inst->opcode() == SpvOpLabel &&
+         "|block_id| is invalid");
+
+  auto* block = ir_context->cfg()->block(block_id);
+  auto it = block->rbegin();
+  assert(it != block->rend() && "Basic block can't be empty");
+
+  if (block->GetMergeInst()) {
+    ++it;
+    assert(it != block->rend() &&
+           "|block| must have at least two instructions:"
+           "terminator and a merge instruction");
+  }
+
+  return CanInsertOpcodeBeforeInstruction(opcode, &*it) ? &*it : nullptr;
+}
+
+bool IdUseCanBeReplaced(opt::IRContext* ir_context,
+                        const TransformationContext& transformation_context,
+                        opt::Instruction* use_instruction,
+                        uint32_t use_in_operand_index) {
+  if (spvOpcodeIsAccessChain(use_instruction->opcode()) &&
+      use_in_operand_index > 0) {
+    // A replacement for an irrelevant index in OpAccessChain must be clamped
+    // first.
+    if (transformation_context.GetFactManager()->IdIsIrrelevant(
+            use_instruction->GetSingleWordInOperand(use_in_operand_index))) {
+      return false;
+    }
+
+    // This is an access chain index.  If the (sub-)object being accessed by the
+    // given index has struct type then we cannot replace the use, as it needs
+    // to be an OpConstant.
+
+    // Get the top-level composite type that is being accessed.
+    auto object_being_accessed = ir_context->get_def_use_mgr()->GetDef(
+        use_instruction->GetSingleWordInOperand(0));
+    auto pointer_type =
+        ir_context->get_type_mgr()->GetType(object_being_accessed->type_id());
+    assert(pointer_type->AsPointer());
+    auto composite_type_being_accessed =
+        pointer_type->AsPointer()->pointee_type();
+
+    // Now walk the access chain, tracking the type of each sub-object of the
+    // composite that is traversed, until the index of interest is reached.
+    for (uint32_t index_in_operand = 1; index_in_operand < use_in_operand_index;
+         index_in_operand++) {
+      // For vectors, matrices and arrays, getting the type of the sub-object is
+      // trivial. For the struct case, the sub-object type is field-sensitive,
+      // and depends on the constant index that is used.
+      if (composite_type_being_accessed->AsVector()) {
+        composite_type_being_accessed =
+            composite_type_being_accessed->AsVector()->element_type();
+      } else if (composite_type_being_accessed->AsMatrix()) {
+        composite_type_being_accessed =
+            composite_type_being_accessed->AsMatrix()->element_type();
+      } else if (composite_type_being_accessed->AsArray()) {
+        composite_type_being_accessed =
+            composite_type_being_accessed->AsArray()->element_type();
+      } else if (composite_type_being_accessed->AsRuntimeArray()) {
+        composite_type_being_accessed =
+            composite_type_being_accessed->AsRuntimeArray()->element_type();
+      } else {
+        assert(composite_type_being_accessed->AsStruct());
+        auto constant_index_instruction = ir_context->get_def_use_mgr()->GetDef(
+            use_instruction->GetSingleWordInOperand(index_in_operand));
+        assert(constant_index_instruction->opcode() == SpvOpConstant);
+        uint32_t member_index =
+            constant_index_instruction->GetSingleWordInOperand(0);
+        composite_type_being_accessed =
+            composite_type_being_accessed->AsStruct()
+                ->element_types()[member_index];
+      }
+    }
+
+    // We have found the composite type being accessed by the index we are
+    // considering replacing. If it is a struct, then we cannot do the
+    // replacement as struct indices must be constants.
+    if (composite_type_being_accessed->AsStruct()) {
+      return false;
+    }
+  }
+
+  if (use_instruction->opcode() == SpvOpFunctionCall &&
+      use_in_operand_index > 0) {
+    // This is a function call argument.  It is not allowed to have pointer
+    // type.
+
+    // Get the definition of the function being called.
+    auto function = ir_context->get_def_use_mgr()->GetDef(
+        use_instruction->GetSingleWordInOperand(0));
+    // From the function definition, get the function type.
+    auto function_type = ir_context->get_def_use_mgr()->GetDef(
+        function->GetSingleWordInOperand(1));
+    // OpTypeFunction's 0-th input operand is the function return type, and the
+    // function argument types follow. Because the arguments to OpFunctionCall
+    // start from input operand 1, we can use |use_in_operand_index| to get the
+    // type associated with this function argument.
+    auto parameter_type = ir_context->get_type_mgr()->GetType(
+        function_type->GetSingleWordInOperand(use_in_operand_index));
+    if (parameter_type->AsPointer()) {
+      return false;
+    }
+  }
+
+  if (use_instruction->opcode() == SpvOpImageTexelPointer &&
+      use_in_operand_index == 2) {
+    // The OpImageTexelPointer instruction has a Sample parameter that in some
+    // situations must be an id for the value 0.  To guard against disrupting
+    // that requirement, we do not replace this argument to that instruction.
+    return false;
+  }
+
+  return true;
+}
+
+bool MembersHaveBuiltInDecoration(opt::IRContext* ir_context,
+                                  uint32_t struct_type_id) {
+  const auto* type_inst = ir_context->get_def_use_mgr()->GetDef(struct_type_id);
+  assert(type_inst && type_inst->opcode() == SpvOpTypeStruct &&
+         "|struct_type_id| is not a result id of an OpTypeStruct");
+
+  uint32_t builtin_count = 0;
+  ir_context->get_def_use_mgr()->ForEachUser(
+      type_inst,
+      [struct_type_id, &builtin_count](const opt::Instruction* user) {
+        if (user->opcode() == SpvOpMemberDecorate &&
+            user->GetSingleWordInOperand(0) == struct_type_id &&
+            static_cast<SpvDecoration>(user->GetSingleWordInOperand(2)) ==
+                SpvDecorationBuiltIn) {
+          ++builtin_count;
+        }
+      });
+
+  assert((builtin_count == 0 || builtin_count == type_inst->NumInOperands()) &&
+         "The module is invalid: either none or all of the members of "
+         "|struct_type_id| may be builtin");
+
+  return builtin_count != 0;
+}
+
+bool HasBlockOrBufferBlockDecoration(opt::IRContext* ir_context, uint32_t id) {
+  for (auto decoration : {SpvDecorationBlock, SpvDecorationBufferBlock}) {
+    if (!ir_context->get_decoration_mgr()->WhileEachDecoration(
+            id, decoration, [](const opt::Instruction & /*unused*/) -> bool {
+              return false;
+            })) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SplittingBeforeInstructionSeparatesOpSampledImageDefinitionFromUse(
+    opt::BasicBlock* block_to_split, opt::Instruction* split_before) {
+  std::set<uint32_t> sampled_image_result_ids;
+  bool before_split = true;
+
+  // Check all the instructions in the block to split.
+  for (auto& instruction : *block_to_split) {
+    if (&instruction == &*split_before) {
+      before_split = false;
+    }
+    if (before_split) {
+      // If the instruction comes before the split and its opcode is
+      // OpSampledImage, record its result id.
+      if (instruction.opcode() == SpvOpSampledImage) {
+        sampled_image_result_ids.insert(instruction.result_id());
+      }
+    } else {
+      // If the instruction comes after the split, check if ids
+      // corresponding to OpSampledImage instructions defined before the split
+      // are used, and return true if they are.
+      if (!instruction.WhileEachInId(
+              [&sampled_image_result_ids](uint32_t* id) -> bool {
+                return !sampled_image_result_ids.count(*id);
+              })) {
+        return true;
+      }
+    }
+  }
+
+  // No usage that would be separated from the definition has been found.
+  return false;
+}
+
+bool InstructionHasNoSideEffects(const opt::Instruction& instruction) {
+  switch (instruction.opcode()) {
+    case SpvOpUndef:
+    case SpvOpAccessChain:
+    case SpvOpInBoundsAccessChain:
+    case SpvOpArrayLength:
+    case SpvOpVectorExtractDynamic:
+    case SpvOpVectorInsertDynamic:
+    case SpvOpVectorShuffle:
+    case SpvOpCompositeConstruct:
+    case SpvOpCompositeExtract:
+    case SpvOpCompositeInsert:
+    case SpvOpCopyObject:
+    case SpvOpTranspose:
+    case SpvOpConvertFToU:
+    case SpvOpConvertFToS:
+    case SpvOpConvertSToF:
+    case SpvOpConvertUToF:
+    case SpvOpUConvert:
+    case SpvOpSConvert:
+    case SpvOpFConvert:
+    case SpvOpQuantizeToF16:
+    case SpvOpSatConvertSToU:
+    case SpvOpSatConvertUToS:
+    case SpvOpBitcast:
+    case SpvOpSNegate:
+    case SpvOpFNegate:
+    case SpvOpIAdd:
+    case SpvOpFAdd:
+    case SpvOpISub:
+    case SpvOpFSub:
+    case SpvOpIMul:
+    case SpvOpFMul:
+    case SpvOpUDiv:
+    case SpvOpSDiv:
+    case SpvOpFDiv:
+    case SpvOpUMod:
+    case SpvOpSRem:
+    case SpvOpSMod:
+    case SpvOpFRem:
+    case SpvOpFMod:
+    case SpvOpVectorTimesScalar:
+    case SpvOpMatrixTimesScalar:
+    case SpvOpVectorTimesMatrix:
+    case SpvOpMatrixTimesVector:
+    case SpvOpMatrixTimesMatrix:
+    case SpvOpOuterProduct:
+    case SpvOpDot:
+    case SpvOpIAddCarry:
+    case SpvOpISubBorrow:
+    case SpvOpUMulExtended:
+    case SpvOpSMulExtended:
+    case SpvOpAny:
+    case SpvOpAll:
+    case SpvOpIsNan:
+    case SpvOpIsInf:
+    case SpvOpIsFinite:
+    case SpvOpIsNormal:
+    case SpvOpSignBitSet:
+    case SpvOpLessOrGreater:
+    case SpvOpOrdered:
+    case SpvOpUnordered:
+    case SpvOpLogicalEqual:
+    case SpvOpLogicalNotEqual:
+    case SpvOpLogicalOr:
+    case SpvOpLogicalAnd:
+    case SpvOpLogicalNot:
+    case SpvOpSelect:
+    case SpvOpIEqual:
+    case SpvOpINotEqual:
+    case SpvOpUGreaterThan:
+    case SpvOpSGreaterThan:
+    case SpvOpUGreaterThanEqual:
+    case SpvOpSGreaterThanEqual:
+    case SpvOpULessThan:
+    case SpvOpSLessThan:
+    case SpvOpULessThanEqual:
+    case SpvOpSLessThanEqual:
+    case SpvOpFOrdEqual:
+    case SpvOpFUnordEqual:
+    case SpvOpFOrdNotEqual:
+    case SpvOpFUnordNotEqual:
+    case SpvOpFOrdLessThan:
+    case SpvOpFUnordLessThan:
+    case SpvOpFOrdGreaterThan:
+    case SpvOpFUnordGreaterThan:
+    case SpvOpFOrdLessThanEqual:
+    case SpvOpFUnordLessThanEqual:
+    case SpvOpFOrdGreaterThanEqual:
+    case SpvOpFUnordGreaterThanEqual:
+    case SpvOpShiftRightLogical:
+    case SpvOpShiftRightArithmetic:
+    case SpvOpShiftLeftLogical:
+    case SpvOpBitwiseOr:
+    case SpvOpBitwiseXor:
+    case SpvOpBitwiseAnd:
+    case SpvOpNot:
+    case SpvOpBitFieldInsert:
+    case SpvOpBitFieldSExtract:
+    case SpvOpBitFieldUExtract:
+    case SpvOpBitReverse:
+    case SpvOpBitCount:
+    case SpvOpCopyLogical:
+    case SpvOpPhi:
+    case SpvOpPtrEqual:
+    case SpvOpPtrNotEqual:
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::set<uint32_t> GetReachableReturnBlocks(opt::IRContext* ir_context,
+                                            uint32_t function_id) {
+  auto function = ir_context->GetFunction(function_id);
+  assert(function && "The function |function_id| must exist.");
+
+  std::set<uint32_t> result;
+
+  ir_context->cfg()->ForEachBlockInPostOrder(function->entry().get(),
+                                             [&result](opt::BasicBlock* block) {
+                                               if (block->IsReturn()) {
+                                                 result.emplace(block->id());
+                                               }
+                                             });
+
+  return result;
+}
+
+}  // namespace fuzzerutil
 }  // namespace fuzz
 }  // namespace spvtools

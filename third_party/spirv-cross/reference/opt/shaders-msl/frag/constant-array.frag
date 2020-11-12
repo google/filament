@@ -50,10 +50,10 @@ struct Foobar
     float b;
 };
 
-constant spvUnsafeArray<float4, 3> _40 = spvUnsafeArray<float4, 3>({ float4(1.0), float4(2.0), float4(3.0) });
-constant spvUnsafeArray<float4, 2> _51 = spvUnsafeArray<float4, 2>({ float4(1.0), float4(2.0) });
-constant spvUnsafeArray<float4, 2> _56 = spvUnsafeArray<float4, 2>({ float4(8.0), float4(10.0) });
-constant spvUnsafeArray<spvUnsafeArray<float4, 2>, 2> _57 = spvUnsafeArray<spvUnsafeArray<float4, 2>, 2>({ spvUnsafeArray<float4, 2>({ float4(1.0), float4(2.0) }), spvUnsafeArray<float4, 2>({ float4(8.0), float4(10.0) }) });
+constant spvUnsafeArray<float4, 3> _37 = spvUnsafeArray<float4, 3>({ float4(1.0), float4(2.0), float4(3.0) });
+constant spvUnsafeArray<float4, 2> _49 = spvUnsafeArray<float4, 2>({ float4(1.0), float4(2.0) });
+constant spvUnsafeArray<float4, 2> _54 = spvUnsafeArray<float4, 2>({ float4(8.0), float4(10.0) });
+constant spvUnsafeArray<spvUnsafeArray<float4, 2>, 2> _55 = spvUnsafeArray<spvUnsafeArray<float4, 2>, 2>({ spvUnsafeArray<float4, 2>({ float4(1.0), float4(2.0) }), spvUnsafeArray<float4, 2>({ float4(8.0), float4(10.0) }) });
 
 struct main0_out
 {
@@ -67,10 +67,10 @@ struct main0_in
 
 fragment main0_out main0(main0_in in [[stage_in]])
 {
-    spvUnsafeArray<Foobar, 2> _77 = spvUnsafeArray<Foobar, 2>({ Foobar{ 10.0, 40.0 }, Foobar{ 90.0, 70.0 } });
+    spvUnsafeArray<Foobar, 2> _75 = spvUnsafeArray<Foobar, 2>({ Foobar{ 10.0, 40.0 }, Foobar{ 90.0, 70.0 } });
     
     main0_out out = {};
-    out.FragColor = ((_40[in.index] + _57[in.index][in.index + 1]) + float4(30.0)) + float4(_77[in.index].a + _77[in.index].b);
+    out.FragColor = ((_37[in.index] + _55[in.index][in.index + 1]) + float4(30.0)) + float4(_75[in.index].a + _75[in.index].b);
     return out;
 }
 

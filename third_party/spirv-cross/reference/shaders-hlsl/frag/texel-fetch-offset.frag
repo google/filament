@@ -23,6 +23,7 @@ void frag_main()
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
 {
     gl_FragCoord = stage_input.gl_FragCoord;
+    gl_FragCoord.w = 1.0 / gl_FragCoord.w;
     frag_main();
     SPIRV_Cross_Output stage_output;
     stage_output.FragColor = FragColor;
