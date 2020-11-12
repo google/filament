@@ -1602,8 +1602,14 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             // not allow sampling from a non-bound texture.
             const VulkanTexture* texture;
             if (UTILS_UNLIKELY(!boundSampler->t)) {
-                utils::slog.w << "Warning: no texture bound at binding point "
-                        << (size_t) bindingPoint << "." << utils::io::endl;
+                if (!sampler.strict) {
+                    continue;
+                }
+                utils::slog.w << "No texture bound to '" << sampler.name.c_str() << "'";
+#ifndef NDEBUG
+                utils::slog.w << " in material '" << program->name.c_str() << "'";
+#endif
+                utils::slog.w << " at binding point " << +bindingPoint << utils::io::endl;
                 texture = mContext.emptyTexture;
             } else {
                 texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
