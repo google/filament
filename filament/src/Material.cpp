@@ -151,7 +151,8 @@ static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceB
             uint8_t binding = 0;
             UTILS_UNUSED bool ok = map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
             assert(ok);
-            samplers[i] = { std::move(uniformName), binding };
+            const bool strict = (bindingPoint == filament::BindingPoints::PER_MATERIAL_INSTANCE);
+            samplers[i] = { std::move(uniformName), binding, strict };
         }
         pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
     }
