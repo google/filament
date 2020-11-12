@@ -957,5 +957,14 @@ void blitColor(VulkanContext* context, const VulkanRenderTarget* dstTarget,
     }
 }
 
+void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool) {
+    context.emptyTexture = new VulkanTexture(context, SamplerType::SAMPLER_2D, 1,
+            TextureFormat::RGBA8, 1, 1, 1, 1,
+            TextureUsage::DEFAULT | TextureUsage::COLOR_ATTACHMENT, stagePool);
+    uint32_t black = 0;
+    PixelBufferDescriptor pbd(&black, 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    context.emptyTexture->update2DImage(pbd, 1, 1, 0);
+}
+
 } // namespace filament
 } // namespace backend

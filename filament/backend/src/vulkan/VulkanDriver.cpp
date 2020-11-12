@@ -195,6 +195,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Initialize device and graphicsQueue.
     createLogicalDevice(mContext);
     mBinder.setDevice(mContext.device);
+    createEmptyTexture(mContext, mStagePool);
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
@@ -247,6 +248,9 @@ void VulkanDriver::terminate() {
 
     // Flush the work command buffer.
     acquireWorkCommandBuffer(mContext);
+
+    delete mContext.emptyTexture;
+
     mDisposer.release(mContext.work.resources);
 
     // Allow the stage pool and disposer to clean up.
@@ -1592,14 +1596,22 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
             samplerIdx++;
 
-            if (!boundSampler->t) {
-                continue;
+            // Note that we always use a 2D texture for the fallback texture, which might not be
+            // appropriate. The fallback improves robustness but does not guarantee 100% success.
+            // It can be argued that clients are being malfeasant here anyway, since Vulkan does
+            // not allow sampling from a non-bound texture.
+            const VulkanTexture* texture;
+            if (UTILS_UNLIKELY(!boundSampler->t)) {
+                utils::slog.w << "Warning: no texture bound at binding point "
+                        << (size_t) bindingPoint << "." << utils::io::endl;
+                texture = mContext.emptyTexture;
+            } else {
+                texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
+                mDisposer.acquire(texture, commands->resources);
             }
 
             const SamplerParams& samplerParams = boundSampler->s;
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
-            const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
-            mDisposer.acquire(texture, commands->resources);
 
             mBinder.bindSampler(bindingPoint, {
                 .sampler = vksampler,
