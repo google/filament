@@ -60,6 +60,18 @@ static void errorHandler(const std::string& str) {
     utils::slog.e << str << utils::io::endl;
 }
 
+static bool filterSpvOptimizerMessage(spv_message_level_t level) {
+#ifdef NDEBUG
+    // In release builds, only log errors.
+    if (level == SPV_MSG_WARNING ||
+        level == SPV_MSG_INFO ||
+        level == SPV_MSG_DEBUG) {
+        return false;
+    }
+#endif
+    return true;
+}
+
 static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const char* source,
         const spv_position_t& position, const char* message) {
     const char* levelString = nullptr;
@@ -360,6 +372,9 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
 
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
+        if (!filterSpvOptimizerMessage(level)) {
+            return;
+        }
         utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
                 << utils::io::endl;
     });
