@@ -215,6 +215,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
             Handle<HwTexture> th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {
 #ifndef NDEBUG
+                slog.w << "In material " << name.c_str() << ": ";
                 slog.w << "no texture bound to unit " << +index << io::endl;
 #endif
                 continue;

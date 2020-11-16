@@ -18,6 +18,8 @@
 
 #include <utils/Panic.h>
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 

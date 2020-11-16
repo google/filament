@@ -91,9 +91,12 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
     ASSERT_POSTCONDITION(planeCount == 0 || planeCount == 2,
             "The Metal backend does not support images with plane counts of %d.", planeCount);
 
+
     if (planeCount == 0) {
         mImage = image;
         mTexture = createTextureFromImage(image, MTLPixelFormatBGRA8Unorm, 0);
+        mWidth = CVPixelBufferGetWidth(image);
+        mHeight = CVPixelBufferGetHeight(image);
     }
 
     if (planeCount == 2) {
@@ -102,10 +105,10 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
                 CBCR_PLANE);
 
         // Get the size of luminance plane.
-        size_t width = CVPixelBufferGetWidthOfPlane(image, Y_PLANE);
-        size_t height = CVPixelBufferGetHeightOfPlane(image, Y_PLANE);
+        mWidth = CVPixelBufferGetWidthOfPlane(image, Y_PLANE);
+        mHeight = CVPixelBufferGetHeightOfPlane(image, Y_PLANE);
 
-        mRgbTexture = createRgbTexture(width, height);
+        mRgbTexture = createRgbTexture(mWidth, mHeight);
 
         id <MTLCommandBuffer> commandBuffer = encodeColorConversionPass(
                 CVMetalTextureGetTexture(yPlane),
@@ -191,6 +194,12 @@ void MetalExternalImage::shutdown(MetalContext& context) noexcept {
     context.externalImageComputePipelineState = nil;
 }
 
+void MetalExternalImage::assertWritableImage(CVPixelBufferRef image) {
+    OSType formatType = CVPixelBufferGetPixelFormatType(image);
+    ASSERT_PRECONDITION(formatType == kCVPixelFormatType_32BGRA,
+            "Metal SwapChain images must be in the 32BGRA format.");
+}
+
 void MetalExternalImage::unset() {
     CVPixelBufferRelease(mImage);
     CVBufferRelease(mTexture);
@@ -198,6 +207,8 @@ void MetalExternalImage::unset() {
     mImage = nullptr;
     mTexture = nullptr;
     mRgbTexture = nil;
+    mWidth = 0;
+    mHeight = 0;
 }
 
 id<MTLTexture> MetalExternalImage::createRgbTexture(size_t width, size_t height) {

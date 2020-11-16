@@ -44,33 +44,67 @@ namespace metal {
 class MetalSwapChain : public HwSwapChain {
 public:
 
-    MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags);
+    // Instantiate a SwapChain from a CAMetalLayer
+    MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags);
+
+    // Instantiate a SwapChain from a CVPixelBuffer
+    MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags);
 
     // Instantiate a headless SwapChain.
-    MetalSwapChain(int32_t width, int32_t height, uint64_t flags);
+    MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags);
 
-    bool isHeadless() const { return layer == nullptr; }
-    CAMetalLayer* getLayer() const { return layer; }
+    ~MetalSwapChain();
 
-    NSUInteger getSurfaceWidth() const {
-        if (isHeadless()) {
-            return headlessWidth;
-        }
-        return (NSUInteger) layer.drawableSize.width;
-    }
+    // Acquires a texture that can be used to render into this SwapChain.
+    // The texture source depends on the type of SwapChain:
+    //   - CAMetalLayer-backed: acquires the CAMetalDrawable and returns its texture.
+    //   - Headless: lazily creates and returns a headless texture.
+    id<MTLTexture> acquireDrawable();
 
-    NSUInteger getSurfaceHeight() const {
-        if (isHeadless()) {
-            return headlessHeight;
-        }
-        return (NSUInteger) layer.drawableSize.height;
-    }
+    id<MTLTexture> acquireDepthTexture();
+
+    void releaseDrawable();
+
+    void setFrameFinishedCallback(FrameFinishedCallback callback, void* user);
+
+    // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
+    // FrameFinishedCallback.
+    void present();
+
+    NSUInteger getSurfaceWidth() const;
+    NSUInteger getSurfaceHeight() const;
 
 private:
 
+    enum class SwapChainType {
+        CAMETALLAYER,
+        CVPIXELBUFFERREF,
+        HEADLESS
+    };
+    bool isCaMetalLayer() const { return type == SwapChainType::CAMETALLAYER; }
+    bool isHeadless() const { return type == SwapChainType::HEADLESS; }
+    bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
+
+    void scheduleFrameFinishedCallback();
+
+    MetalContext& context;
+    id<CAMetalDrawable> drawable = nil;
+    id<MTLTexture> depthTexture = nil;
+    id<MTLTexture> headlessDrawable = nil;
     NSUInteger headlessWidth;
     NSUInteger headlessHeight;
     CAMetalLayer* layer = nullptr;
+    MetalExternalImage externalImage;
+    SwapChainType type;
+
+    // These two fields store a callback and user data to notify the client that a frame is ready
+    // for presentation.
+    // If frameFinishedCallback is nullptr, then the Metal backend automatically calls
+    // presentDrawable when the frame is commited.
+    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
+    // the responsibility of presenting the frame by calling the PresentCallable object.
+    FrameFinishedCallback frameFinishedCallback = nullptr;
+    void* frameFinishedUserData = nullptr;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
@@ -180,7 +214,8 @@ public:
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
 
-    Attachment getColorAttachment(size_t index);
+    Attachment getDrawColorAttachment(size_t index);
+    Attachment getReadColorAttachment(size_t index);
     Attachment getDepthAttachment();
 
 private:

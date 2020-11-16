@@ -49,8 +49,9 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow, uint64_t flags)
-        : layer(nativeWindow) {
+MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
+        : context(context), layer(nativeWindow), externalImage(context),
+        type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
@@ -68,11 +69,165 @@ MetalSwapChain::MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow,
         nativeWindow.framebufferOnly = NO;
     }
 
-    layer.device = device;
+    layer.device = context.device;
 }
 
-MetalSwapChain::MetalSwapChain(int32_t width, int32_t height, uint64_t flags) : headlessWidth(width),
-        headlessHeight(height) { }
+MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
+        : context(context), headlessWidth(width), headlessHeight(height), externalImage(context),
+        type(SwapChainType::HEADLESS) { }
+
+MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
+        : context(context), externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
+    assert(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
+    MetalExternalImage::assertWritableImage(pixelBuffer);
+    externalImage.set(pixelBuffer);
+    assert(externalImage.isValid());
+}
+
+MetalSwapChain::~MetalSwapChain() {
+    externalImage.set(nullptr);
+}
+
+NSUInteger MetalSwapChain::getSurfaceWidth() const {
+    if (isHeadless()) {
+        return headlessWidth;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getWidth();
+    }
+    return (NSUInteger) layer.drawableSize.width;
+}
+
+NSUInteger MetalSwapChain::getSurfaceHeight() const {
+    if (isHeadless()) {
+        return headlessHeight;
+    }
+    if (isPixelBuffer()) {
+        return externalImage.getHeight();
+    }
+    return (NSUInteger) layer.drawableSize.height;
+}
+
+id<MTLTexture> MetalSwapChain::acquireDrawable() {
+    if (drawable) {
+        return drawable.texture;
+    }
+
+    if (isHeadless()) {
+        if (headlessDrawable) {
+            return headlessDrawable;
+        }
+        // For headless surfaces we construct a "fake" drawable, which is simply a renderable
+        // texture.
+        MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor new];
+        textureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        textureDescriptor.width = headlessWidth;
+        textureDescriptor.height = headlessHeight;
+        // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
+        textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+#if defined(IOS)
+        textureDescriptor.storageMode = MTLStorageModeShared;
+#else
+        textureDescriptor.storageMode = MTLStorageModeManaged;
+#endif
+        headlessDrawable = [context.device newTextureWithDescriptor:textureDescriptor];
+        return headlessDrawable;
+    }
+
+    if (isPixelBuffer()) {
+        return externalImage.getMetalTextureForDraw();
+    }
+
+    assert(isCaMetalLayer());
+    drawable = [layer nextDrawable];
+
+    ASSERT_POSTCONDITION(drawable != nil, "Could not obtain drawable.");
+    return drawable.texture;
+}
+
+void MetalSwapChain::releaseDrawable() {
+    drawable = nil;
+}
+
+id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
+    if (depthTexture) {
+        // If the surface size has changed, we'll need to allocate a new depth texture.
+        if (depthTexture.width != getSurfaceWidth() ||
+            depthTexture.height != getSurfaceHeight()) {
+            depthTexture = nil;
+        } else {
+            return depthTexture;
+        }
+    }
+
+    const MTLPixelFormat depthFormat =
+#if defined(IOS)
+            MTLPixelFormatDepth32Float;
+#else
+    context.device.depth24Stencil8PixelFormatSupported ?
+            MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float;
+#endif
+
+    const NSUInteger width = getSurfaceWidth();
+    const NSUInteger height = getSurfaceHeight();
+    MTLTextureDescriptor* descriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthFormat
+                                                               width:width
+                                                              height:height
+                                                           mipmapped:NO];
+    descriptor.usage = MTLTextureUsageRenderTarget;
+    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+
+    depthTexture = [context.device newTextureWithDescriptor:descriptor];
+
+    return depthTexture;
+}
+
+void MetalSwapChain::setFrameFinishedCallback(FrameFinishedCallback callback, void* user) {
+    frameFinishedCallback = callback;
+    frameFinishedUserData = user;
+}
+
+void MetalSwapChain::present() {
+    if (drawable) {
+        if (frameFinishedCallback) {
+            scheduleFrameFinishedCallback();
+        } else  {
+            [getPendingCommandBuffer(&context) presentDrawable:drawable];
+        }
+    }
+}
+
+void presentDrawable(bool presentFrame, void* user) {
+    // CFBridgingRelease here is used to balance the CFBridgingRetain inside of acquireDrawable.
+    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) CFBridgingRelease(user);
+    if (presentFrame) {
+        [drawable present];
+    }
+    // The drawable will be released here when the "drawable" variable goes out of scope.
+}
+
+void MetalSwapChain::scheduleFrameFinishedCallback() {
+    if (!frameFinishedCallback) {
+        return;
+    }
+
+    assert(drawable);
+    backend::FrameFinishedCallback callback = frameFinishedCallback;
+    // This block strongly captures drawable to keep it alive until the handler executes.
+    // We cannot simply reference this->drawable inside the block because the block would then only
+    // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
+    id<CAMetalDrawable> d = drawable;
+    void* userData = frameFinishedUserData;
+    [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
+        // CFBridgingRetain is used here to give the drawable a +1 retain count before
+        // casting it to a void*.
+        PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(d));
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            callback(callable, userData);
+        });
+    }];
+}
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
@@ -543,7 +698,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     const auto discardFlags = params.flags.discardEnd;
 
     for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
-        Attachment attachment = getColorAttachment(i);
+        Attachment attachment = getDrawColorAttachment(i);
         if (!attachment) {
             continue;
         }
@@ -600,11 +755,22 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 }
 
-MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index) {
+MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
     assert(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
-        result.texture = acquireDrawable(context);
+        assert(context->currentDrawSwapChain);
+        result.texture = context->currentDrawSwapChain->acquireDrawable();
+    }
+    return result;
+}
+
+MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t index) {
+    assert(index < MRT::TARGET_COUNT);
+    Attachment result = color[index];
+    if (index == 0 && defaultRenderTarget) {
+        assert(context->currentReadSwapChain);
+        result.texture = context->currentReadSwapChain->acquireDrawable();
     }
     return result;
 }
@@ -612,7 +778,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getColorAttachment(size_t index
 MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
     Attachment result = depth;
     if (defaultRenderTarget) {
-        result.texture = acquireDepthTexture(context);
+        result.texture = context->currentDrawSwapChain->acquireDepthTexture();
     }
     return result;
 }
@@ -683,12 +849,13 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(macOS 10.14, iOS 12, *)) {
+        using ns = std::chrono::nanoseconds;
         std::unique_lock<std::mutex> guard(state->mutex);
-        timeoutNs = std::min(timeoutNs, (uint64_t) std::chrono::nanoseconds::max().count());
         while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
-            if (timeoutNs == 0 ||
-                state->cv.wait_for(guard, std::chrono::nanoseconds(timeoutNs)) ==
-                        std::cv_status::timeout) {
+            if (timeoutNs == FENCE_WAIT_FOR_EVER) {
+                state->cv.wait(guard);
+            } else if (timeoutNs == 0 ||
+                    state->cv.wait_for(guard, ns(timeoutNs)) == std::cv_status::timeout) {
                 return FenceStatus::TIMEOUT_EXPIRED;
             }
         }

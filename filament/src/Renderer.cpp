@@ -228,6 +228,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
+    FRenderTarget* currentRenderTarget = upcast(view.getRenderTarget());
+    if (mPreviousRenderTarget != currentRenderTarget) {
+        initializeClearFlags();
+        mPreviousRenderTarget = currentRenderTarget;
+    }
+
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
     // start froxelization immediately, it has no dependencies
@@ -899,14 +905,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
-    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
-    // across views (clear implies discard)
-    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
-
-    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    initializeClearFlags();
+    mPreviousRenderTarget = nullptr;
 
     mBeginFrameInternal = {};
 
@@ -1097,6 +1097,17 @@ void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
 Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
     Handle<HwRenderTarget> viewRenderTarget = view.getRenderTargetHandle();
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
+}
+
+void FRenderer::initializeClearFlags() {
+    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
+    // across views (clear implies discard)
+    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
+
+    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
 
 // ------------------------------------------------------------------------------------------------

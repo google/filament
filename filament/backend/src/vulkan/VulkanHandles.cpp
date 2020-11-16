@@ -23,6 +23,8 @@
 
 #define FILAMENT_VULKAN_VERBOSE 0
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 
@@ -515,6 +517,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     }
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
+    // TODO: investigate performance implications of setting these flags.
     const VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
@@ -545,6 +548,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.usage |= blittable;
     }
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        imageInfo.usage |= blittable;
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 

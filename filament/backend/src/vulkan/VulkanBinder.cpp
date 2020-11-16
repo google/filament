@@ -27,6 +27,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 

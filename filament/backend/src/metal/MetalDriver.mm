@@ -103,9 +103,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
         backend::FrameFinishedCallback callback, void* user) {
-    // If a callback was specified, then the client is responsible for presenting the frame.
-    mContext->frameFinishedCallback = callback;
-    mContext->frameFinishedUserData = user;
+    mContext->currentDrawSwapChain->setFrameFinishedCallback(callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> fn) noexcept {
@@ -125,8 +123,7 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentDrawable = nil;
-    mContext->headlessDrawable = nil;
+    mContext->currentDrawSwapChain->releaseDrawable();
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
@@ -280,13 +277,18 @@ void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
-    auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-    construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer, flags);
+    if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
+        CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
+        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, pixelBuffer, flags);
+    } else {
+        auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
+        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, metalLayer, flags);
+    }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(mHandleMap, sch, width, height, flags);
+    construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, width, height, flags);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
@@ -652,8 +654,10 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
 }
 
 void MetalDriver::setupExternalImage(void* image) {
-    // Take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, or when the texture is destroyed.
+    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
+    // Here we take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
+    // destroyed.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }
@@ -743,7 +747,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
             mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->getSurfaceHeight() : mContext->currentRenderTarget->height;
+            mContext->currentReadSwapChain->getSurfaceHeight() : mContext->currentRenderTarget->height;
     MTLViewport metalViewport {
             .originX = static_cast<double>(params.viewport.left),
             .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -
@@ -793,19 +797,21 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
-    ASSERT_PRECONDITION_NON_FATAL(schDraw == schRead,
-                                  "Metal driver does not support distinct draw/read swap chains.");
-    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
-    mContext->currentSurface = swapChain;
+    ASSERT_PRECONDITION_NON_FATAL(schDraw, "A draw SwapChain must be set.");
+    auto* drawSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
+    mContext->currentDrawSwapChain = drawSwapChain;
+
+    if (schRead) {
+        auto* readSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schRead);
+        mContext->currentReadSwapChain = readSwapChain;
+    }
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    if (mContext->currentDrawable != nil && !mContext->frameFinishedCallback) {
-        [getPendingCommandBuffer(mContext) presentDrawable:mContext->currentDrawable];
-    }
+    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    swapChain->present();
     submitPendingCommands(mContext);
-    mContext->currentDrawable = nil;
-    mContext->headlessDrawable = nil;
+    swapChain->releaseDrawable();
 }
 
 void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
@@ -871,7 +877,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     // We always readPixels from the COLOR0 attachment.
-    MetalRenderTarget::Attachment color = srcTarget->getColorAttachment(0);
+    MetalRenderTarget::Attachment color = srcTarget->getDrawColorAttachment(0);
     id<MTLTexture> srcTexture = color.texture;
     size_t miplevel = color.level;
 
@@ -950,8 +956,13 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, backend::Viewport dstRect,
         Handle<HwRenderTarget> src, backend::Viewport srcRect,
         SamplerMagFilter filter) {
-    ASSERT_PRECONDITION(!isInRenderPass(mContext),
-                        "Blitting must be done outside of a render pass.");
+    // If we're the in middle of a render pass, finish it.
+    // This condition should only occur during copyFrame. It's okay to end the render pass because
+    // we don't issue any other rendering commands.
+    if (mContext->currentRenderPassEncoder) {
+        [mContext->currentRenderPassEncoder endEncoding];
+        mContext->currentRenderPassEncoder = nil;
+    }
 
     auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
     auto dstTarget = handle_cast<MetalRenderTarget>(mHandleMap, dst);
@@ -962,14 +973,17 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 
     // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
     // coordinates have (0, 0) at bottom-left.
+    const NSInteger srcHeight =
+            srcTarget->isDefaultRenderTarget() ?
+            mContext->currentReadSwapChain->getSurfaceHeight() : srcTarget->height;
     MTLRegion srcRegion = MTLRegionMake2D(
             (NSUInteger) srcRect.left,
-            srcTarget->height - (NSUInteger) srcRect.bottom - srcRect.height,
+            srcHeight - (NSUInteger) srcRect.bottom - srcRect.height,
             srcRect.width, srcRect.height);
 
     const NSInteger dstHeight =
             dstTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->getSurfaceHeight() : dstTarget->height;
+            mContext->currentDrawSwapChain->getSurfaceHeight() : dstTarget->height;
     MTLRegion dstRegion = MTLRegionMake2D(
             (NSUInteger) dstRect.left,
             dstHeight - (NSUInteger) dstRect.bottom - dstRect.height,
@@ -999,10 +1013,10 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             srcAttachIndex = 3;
         }
 
-        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getColorAttachment(srcAttachIndex);
+        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getReadColorAttachment(srcAttachIndex);
 
         // We always blit to the COLOR0 attachment.
-        MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getColorAttachment(0);
+        MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getDrawColorAttachment(0);
 
         if (srcColorAttachment && dstColorAttachment) {
             ASSERT_PRECONDITION(isBlitableTextureType(srcColorAttachment.texture.textureType) &&
@@ -1066,7 +1080,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Pipeline state
     MTLPixelFormat colorPixelFormat[4] = { MTLPixelFormatInvalid };
     for (size_t i = 0; i < 4; i++) {
-        const auto& attachment = mContext->currentRenderTarget->getColorAttachment(i);
+        const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
         if (!attachment) {
             continue;
         }

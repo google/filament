@@ -5,6 +5,15 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.9
+
+- Vulkan: internal robustness improvements
+- Metal: Support CVPixelBuffer SwapChains
+- Metal: Support copyFrame
+- Fix clear behavior with RenderTarget API.
+- Fix GetRefractionMode JNI binding
+- Additional fixes for Fence bug
+
 ## v1.9.8
 
 - Fix a few Fence-related bugs

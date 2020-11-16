@@ -22,6 +22,8 @@
 
 #include <bluevk/BlueVK.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
