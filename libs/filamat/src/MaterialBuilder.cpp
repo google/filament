@@ -640,6 +640,7 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
         const bool targetApiNeedsSpirv =
                 (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL);
         const bool targetApiNeedsMsl = targetApi == TargetApi::METAL;
+        const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
         std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
         std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
@@ -678,6 +679,11 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
 #endif
             }
 
+            std::string* pGlsl = nullptr;
+            if (targetApiNeedsGlsl) {
+                pGlsl = &shader;
+            }
+
 #ifndef FILAMAT_LITE
 
             GLSLPostProcessor::Config config{
@@ -690,7 +696,7 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
                 config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
             }
 
-            bool ok = postProcessor.process(shader, config, &shader, pSpirv, pMsl);
+            bool ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
 #else
             bool ok = true;
 #endif
