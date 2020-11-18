@@ -188,7 +188,20 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
         const Sampler* samplers = dst.samplers.data();
         for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
             const cgltf_animation_channel& srcChannel = srcChannels[j];
-            utils::Entity targetEntity = nodeMap.at(srcChannel.target_node);
+            auto iter = nodeMap.find(srcChannel.target_node);
+            if (iter == nodeMap.end()) {
+                slog.w << "No scene root contains node ";
+                if (srcChannel.target_node->name) {
+                    slog.w << "'" << srcChannel.target_node->name << "' ";
+                }
+                slog.w << "for animation ";
+                if (srcAnim.name) {
+                    slog.w << "'" << srcAnim.name << "' ";
+                }
+                slog.w << "in channel " << j << io::endl;
+                continue;
+            }
+            utils::Entity targetEntity = iter.value();
             Channel dstChannel;
             dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
             dstChannel.targetEntity = targetEntity;
