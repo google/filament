@@ -7,16 +7,16 @@ layout(location = 0) out vec4 fragColor;
 //------------------------------------------------------------------------------
 
 #if defined(HAS_TRANSPARENT_SHADOW)
-float bayer2x2(highp vec2 p) {
-    return mod(2.0 * p.y + p.x + 1.0, 4.0);
-}
-
-float bayer8x8(highp vec2 p) {
-    vec2 p1 = mod(p, 2.0);
-    vec2 p2 = floor(0.5  * mod(p, 4.0));
-    vec2 p4 = floor(0.25 * mod(p, 8.0));
-    return 4.0 * (4.0 * bayer2x2(p1) + bayer2x2(p2)) + bayer2x2(p4);
-}
+const float bayer8x8[64] = float[64](
+    0.0000, 0.5000, 0.1250, 0.6250, 0.03125, 0.53125, 0.15625, 0.65625,
+    0.7500, 0.2500, 0.8750, 0.3750, 0.78125, 0.28125, 0.90625, 0.40625,
+    0.1875, 0.6875, 0.0625, 0.5625, 0.21875, 0.71875, 0.09375, 0.59375,
+    0.9375, 0.4375, 0.8125, 0.3125, 0.96875, 0.46875, 0.84375, 0.34375,
+    0.0469, 0.5469, 0.1719, 0.6719, 0.01563, 0.51563, 0.14063, 0.64063,
+    0.7969, 0.2969, 0.9219, 0.4219, 0.76563, 0.26563, 0.89063, 0.39063,
+    0.2344, 0.7344, 0.1094, 0.6094, 0.20313, 0.70313, 0.07813, 0.57813,
+    0.9844, 0.4844, 0.8594, 0.3594, 0.95313, 0.45313, 0.82813, 0.32813
+);
 #endif
 
 void main() {
@@ -33,7 +33,8 @@ void main() {
 #endif
 
 #if defined(HAS_TRANSPARENT_SHADOW)
-    if ((bayer8x8(floor(mod(gl_FragCoord.xy, 8.0)))) / 64.0 >= alpha) {
+    vec2 coords = mod(gl_FragCoord.xy, 8.0);
+    if (bayer8x8[int(coords.y * 8.0 + coords.x)] >= alpha) {
         discard;
     }
 #endif

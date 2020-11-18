@@ -639,7 +639,10 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
     bool emptyVertexCode = mMaterialVertexCode.getResolved().empty();
     bool customDepth = sg.hasCustomDepthShader() ||
-            mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
+            mBlendingMode == BlendingMode::MASKED ||
+            ((mBlendingMode == BlendingMode::TRANSPARENT ||mBlendingMode == BlendingMode::FADE) &&
+                    mTransparentShadow) ||
+            !emptyVertexCode;
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
 
     std::atomic_bool cancelJobs(false);
