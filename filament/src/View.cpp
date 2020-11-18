@@ -301,13 +301,16 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     u.setUniform(offsetof(PerViewUib, iblRoughnessOneLevel), iblRoughnessOneLevel);
     u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
-    if (ibl->getReflectionHwHandle()) {
-        mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, {
-                ibl->getReflectionHwHandle(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-                }});
+
+    // We always sample from the reflection texture, so provide a dummy texture if necessary.
+    backend::Handle<backend::HwTexture> reflection = ibl->getReflectionHwHandle();
+    if (!reflection) {
+        reflection = engine.getDummyCubemap()->getHwHandle();
     }
+    mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, { reflection, {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+    }});
 
     // Directional light (always at index 0)
     auto& lcm = engine.getLightManager();
