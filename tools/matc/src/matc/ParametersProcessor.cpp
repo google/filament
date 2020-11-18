@@ -543,6 +543,11 @@ static bool processShadowMultiplier(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processTransparentShadow(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.transparentShadow(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processSpecularAntiAliasing(MaterialBuilder& builder, const JsonishValue& value) {
     builder.specularAntiAliasing(value.toJsonBool()->getBool());
     return true;
@@ -720,6 +725,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };
     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
+    mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
     mParameters["shadingModel"]                  = { &processShading, Type::STRING };
     mParameters["variantFilter"]                 = { &processVariantFilter, Type::ARRAY };
     mParameters["specularAntiAliasing"]          = { &processSpecularAntiAliasing, Type::BOOL };

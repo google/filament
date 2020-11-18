@@ -37,6 +37,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool hasDoubleSidedCapability;
     bool hasExternalSamplers;
     bool hasShadowMultiplier;
+    bool hasTransparentShadow;
     bool specularAntiAliasing;
     bool clearCoatIorChange;
     bool flipUV;

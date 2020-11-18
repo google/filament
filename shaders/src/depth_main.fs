@@ -6,16 +6,37 @@ layout(location = 0) out vec4 fragColor;
 // Depth
 //------------------------------------------------------------------------------
 
+#if defined(HAS_TRANSPARENT_SHADOW)
+float bayer2x2(highp vec2 p) {
+    return mod(2.0 * p.y + p.x + 1.0, 4.0);
+}
+
+float bayer8x8(highp vec2 p) {
+    vec2 p1 = mod(p, 2.0);
+    vec2 p2 = floor(0.5  * mod(p, 4.0));
+    vec2 p4 = floor(0.25 * mod(p, 8.0));
+    return 4.0 * (4.0 * bayer2x2(p1) + bayer2x2(p2)) + bayer2x2(p4);
+}
+#endif
+
 void main() {
-#if defined(BLEND_MODE_MASKED)
+#if defined(BLEND_MODE_MASKED) || (defined(BLEND_MODE_TRANSPARENT) && defined(HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);
 
     float alpha = inputs.baseColor.a;
+#if defined(BLEND_MODE_MASKED)
     if (alpha < getMaskThreshold()) {
         discard;
     }
+#endif
+
+#if defined(HAS_TRANSPARENT_SHADOW)
+    if ((bayer8x8(floor(mod(gl_FragCoord.xy, 8.0)))) / 64.0 >= alpha) {
+        discard;
+    }
+#endif
 #endif
 
 #if defined(HAS_VSM)

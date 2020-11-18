@@ -9,6 +9,7 @@ material {
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
     clearCoatIorChange : false,
+    transparentShadow : true,
     parameters : [
 
         { type : float3, name : specularFactor },
