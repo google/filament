@@ -77,6 +77,10 @@ struct WGLSwapChain {
 };
 
 Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
+    int result = 0;
+    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
+    int pixelFormat = 0;
+
     mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
@@ -112,7 +116,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
         goto error;
     }
 
-    int pixelFormat = ChoosePixelFormat(whdc, &mPfd);
+    pixelFormat = ChoosePixelFormat(whdc, &mPfd);
     SetPixelFormat(whdc, pixelFormat, &mPfd);
 
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
@@ -123,7 +127,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
         goto error;
     }
 
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
+    wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
     mContext = wglCreateContextAttribs(whdc, (HGLRC) sharedGLContext, attribs);
     if (!mContext) {
@@ -141,7 +145,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
         goto error;
     }
 
-    int result = bluegl::bind();
+    result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
     return OpenGLDriverFactory::create(this, sharedGLContext);
 
