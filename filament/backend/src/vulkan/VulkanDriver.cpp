@@ -757,7 +757,7 @@ FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     if (cmdfence->swapChainDestroyed) {
         return FenceStatus::ERROR;
     }
-    VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_FALSE, timeout);
+    VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_TRUE, timeout);
     return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
 
