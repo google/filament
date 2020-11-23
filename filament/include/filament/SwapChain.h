@@ -39,15 +39,15 @@ namespace filament {
  * When Engine::create() is used without specifying a Platform, the `nativeWindow`
  * parameter above must be of type:
  *
- * Platform      | nativeWindow type
- * :-------------|:----------------------------:
- * Android       | ANativeWindow*
- * OSX - OpenGL  | NSView*
- * OSX - Metal   | CAMetalLayer*
- * iOS - OpenGL  | CAEAGLLayer*
- * iOS - Metal   | CAMetalLayer*
- * X11           | Window
- * Windows       | HWND
+ * Platform        | nativeWindow type
+ * :---------------|:----------------------------:
+ * Android         | ANativeWindow*
+ * macOS - OpenGL  | NSView*
+ * macOS - Metal   | CAMetalLayer*
+ * iOS - OpenGL    | CAEAGLLayer*
+ * iOS - Metal     | CAMetalLayer*
+ * X11             | Window
+ * Windows         | HWND
  *
  * Otherwise, the `nativeWindow` is defined by the concrete implementation of Platform.
  *
