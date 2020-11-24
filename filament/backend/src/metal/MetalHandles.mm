@@ -556,8 +556,15 @@ void MetalTexture::load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
 
-    loadSlice(level, xoffset, yoffset, zoffset, width, height, depth, 0, 0, p,
-            blitCommandEncoder, blitCommandBuffer);
+    if (target == SamplerType::SAMPLER_2D_ARRAY) {
+        // Metal uses 'slice' (not z offset) to index into individual layers of the texture array.
+        loadSlice(level, xoffset, yoffset, 0, width, height, depth, 0, zoffset, p,
+                blitCommandEncoder, blitCommandBuffer);
+    } else {
+        assert(target == SamplerType::SAMPLER_3D);
+        loadSlice(level, xoffset, yoffset, zoffset, width, height, depth, 0, 0, p,
+                blitCommandEncoder, blitCommandBuffer);
+    }
 
     updateLodRange(level);
 
