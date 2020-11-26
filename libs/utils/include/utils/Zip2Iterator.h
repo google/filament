@@ -60,8 +60,11 @@ public:
     Zip2Iterator(Zip2Iterator const& rhs) noexcept = default;
     Zip2Iterator& operator=(Zip2Iterator const& rhs) = default;
 
-    const value_type operator*() const { return { *mIt.first, *mIt.second }; }
-          reference  operator*()       { return { *mIt.first, *mIt.second }; }
+    // MSVC's implementation of std::sort performs
+    //   *iterator = ...
+    // so the return value for operator* overloads must be non-const and assignable.
+    value_type operator*() const { return { *mIt.first, *mIt.second }; }
+    reference  operator*()       { return { *mIt.first, *mIt.second }; }
 
     const value_type operator[](size_t n) const { return *(*this + n); }
           reference  operator[](size_t n)       { return *(*this + n); }
