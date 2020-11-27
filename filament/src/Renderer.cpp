@@ -229,9 +229,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     FRenderTarget* currentRenderTarget = upcast(view.getRenderTarget());
-    if (mPreviousRenderTarget != currentRenderTarget) {
+    if (mPreviousRenderTargets.find(currentRenderTarget) == mPreviousRenderTargets.end()) {
+        mPreviousRenderTargets.insert(currentRenderTarget);
         initializeClearFlags();
-        mPreviousRenderTarget = currentRenderTarget;
     }
 
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
@@ -906,7 +906,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     mShaderUserTime = { h, l, 0, 0 };
 
     initializeClearFlags();
-    mPreviousRenderTarget = nullptr;
+    mPreviousRenderTargets.clear();
 
     mBeginFrameInternal = {};
 

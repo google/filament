@@ -40,6 +40,8 @@
 #include <utils/JobSystem.h>
 #include <utils/Slice.h>
 
+#include <tsl/robin_set.h>
+
 namespace filament {
 
 namespace backend {
@@ -192,7 +194,7 @@ private:
     ClearOptions mClearOptions;
     backend::TargetBufferFlags mDiscardedFlags{};
     backend::TargetBufferFlags mClearFlags{};
-    FRenderTarget* mPreviousRenderTarget = nullptr;
+    tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
 
     // per-frame arena for this Renderer
