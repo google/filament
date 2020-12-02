@@ -1,4 +1,20 @@
 LIBFILAMENT {
-  global: *filament*; JNI*;
+  global:
+    Java_com_google_android_filament_*;
+    JNI*;
+    *filament*Camera*;
+    *filament*Skybox*;
+    *filament*Engine*;
+    *filament*RenderableManager*;
+    *filament*Aabb*;
+    *filament*IndirectLight*;
+    *filament*LightManager*;
+    *filament*Transform*;
+    *filament*Material*;
+    *filament*IndexBuffer*;
+    *filament*VertexBuffer*;
+    *filament*Texture*;
+    *filament*geometry*;
+
   local: *;
 };
