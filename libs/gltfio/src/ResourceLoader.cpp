@@ -480,7 +480,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         } else {
             const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
             for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-                const cgltf_attribute& attr = prim.attributes[aindex];
+                const cgltf_attribute& attr = morphTarget.attributes[aindex];
                 if (attr.index == 0) {
                     accessors[attr.type] = attr.data;
                     vertexCount = attr.data->count;
