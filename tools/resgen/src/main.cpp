@@ -29,12 +29,14 @@
 using namespace std;
 using namespace utils;
 
+static const char* g_jsonMagicString = "__RESGEN__";
 static const char* g_packageName = "resources";
 static const char* g_deployDir = ".";
 static bool g_keepExtension = false;
 static bool g_appendNull = false;
 static bool g_generateC = false;
 static bool g_quietMode = false;
+static bool g_embedJson = false;
 
 static const char* USAGE = R"TXT(
 RESGEN aggregates a sequence of binary blobs, each of which becomes a "resource" whose id
@@ -64,6 +66,9 @@ Options:
        Append a null terminator to each data blob
    --cfile, -c
        Generate xxd-style C file (useful for WebAssembly)
+   --json, -j
+       Embed a JSON string in the output that provides a summary
+       of all resource sizes and names. Useful for size analysis.
     --quiet, -q
         Suppress console output
 
@@ -110,7 +115,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:ktcq";
+    static constexpr const char* OPTSTR = "hLp:x:ktcqj";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
@@ -120,6 +125,7 @@ static int handleArguments(int argc, char* argv[]) {
             { "text",                 no_argument, 0, 't' },
             { "cfile",                no_argument, 0, 'c' },
             { "quiet",                no_argument, 0, 'q' },
+            { "json",                 no_argument, 0, 'j' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -154,6 +160,9 @@ static int handleArguments(int argc, char* argv[]) {
             case 'q':
                 g_quietMode = true;
                 break;
+            case 'j':
+                g_embedJson = true;
+                break;
         }
     }
 
@@ -171,6 +180,9 @@ int main(int argc, char* argv[]) {
     vector<Path> inputPaths;
     for (int argIndex = optionIndex; argIndex < argc; ++argIndex) {
         inputPaths.emplace_back(argv[argIndex]);
+    }
+    if (g_embedJson) {
+        inputPaths.push_back(g_jsonMagicString);
     }
 
     std::string packageFile = g_packageName;
@@ -205,14 +217,14 @@ int main(int argc, char* argv[]) {
     for (size_t pos = asmstr.find(k2); pos != std::string::npos; pos = asmstr.find(k2, pos))
         asmstr.replace(pos, k2.length(), packageFile);
 
-    // Generate the Apple-friendly assembly language file.
+    // Open the Apple-friendly assembly language file.
     ofstream appleAsmStream(appleAsmPath.getPath());
     if (!appleAsmStream) {
         cerr << "Unable to open " << appleAsmPath << endl;
         exit(1);
     }
 
-    // Generate the non-Apple assembly language file.
+    // Open the non-Apple assembly language file.
     ofstream asmStream(asmPath.getPath());
     if (!asmStream) {
         cerr << "Unable to open " << asmPath << endl;
@@ -238,6 +250,7 @@ int main(int argc, char* argv[]) {
     ostringstream xxdDefinitions;
     ostringstream appleDataAsmStream;
     ostringstream dataAsmStream;
+    ostringstream jsonStream;
 
     // Open the generated C file for writing.
     ofstream xxdStream;
@@ -250,15 +263,31 @@ int main(int argc, char* argv[]) {
         xxdStream << "#include <stdint.h>\n\nconst uint8_t " << package << "[] = {\n";
     }
 
-    // Iterate through each input file and consume its contents.
+    // Consume each input file and write it back out into the various output streams.
+    jsonStream << "{";
     size_t offset = 0;
     for (const auto& inPath : inputPaths) {
-        ifstream inStream(inPath.getPath(), ios::binary);
-        if (!inStream) {
-            cerr << "Unable to open " << inPath << endl;
-            exit(1);
+        vector<uint8_t> content;
+        if (inPath != g_jsonMagicString) {
+            ifstream inStream(inPath.getPath(), ios::binary);
+            if (!inStream) {
+                cerr << "Unable to open " << inPath << endl;
+                exit(1);
+            }
+            content = vector<uint8_t>((istreambuf_iterator<char>(inStream)), {});
+        } else {
+            // To finalize the JSON string, we replace the trailing comma with an end bracket and
+            // prefix it with the magic identifier and string size.
+            std::string jsonString = jsonStream.str();
+            jsonString[jsonString.size()-1] = '}';
+            ostringstream jsonBlob;
+            jsonBlob << g_jsonMagicString << "\0";
+            jsonBlob << jsonString.size() << "\0";
+            jsonBlob << jsonString;
+            jsonString = jsonBlob.str();
+            uint8_t const* jsonPtr = (uint8_t const*) jsonString.c_str();
+            content = vector<uint8_t>(jsonPtr, jsonPtr + jsonBlob.str().size());
         }
-        vector<uint8_t> content((istreambuf_iterator<char>(inStream)), {});
         if (g_appendNull) {
             content.push_back(0);
         }
@@ -319,6 +348,7 @@ int main(int argc, char* argv[]) {
             xxdStream << "\n";
         }
 
+        jsonStream << "\"" << rname << "\":" << content.size() << ",";
         offset += content.size();
     }
 
