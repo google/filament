@@ -568,7 +568,7 @@ public class Engine {
      * Destroys a {@link ColorGrading} and frees all its associated resources.
      * @param colorGrading the {@link ColorGrading} to destroy
      */
-    public void destroySkybox(@NonNull ColorGrading colorGrading) {
+    public void destroyColorGrading(@NonNull ColorGrading colorGrading) {
         assertDestroy(nDestroyColorGrading(getNativeObject(), colorGrading.getNativeObject()));
         colorGrading.clearNativeObject();
     }
