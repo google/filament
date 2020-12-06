@@ -33,6 +33,17 @@ def format_bytes(bytes):
     return str(bytes)
 
 
+def format_bytes_precise(bytes):
+    """Pretty-print a number of bytes."""
+    if bytes > 1e6:
+        bytes = bytes / 1.0e6
+        return '%.3fm' % bytes
+    if bytes > 1e3:
+        bytes = bytes / 1.0e3
+        return '%.3fk' % bytes
+    return str(bytes)
+
+
 def symbol_type_to_human(type):
     """Convert a symbol type as printed by nm into a human-readable name."""
     return {
@@ -282,6 +293,7 @@ def jsonify_tree(tree, name):
             symbol = symbol_type_to_human(symbols.keys()[0])
             children.append({
                     'name': key + ' ' + format_bytes(size),
+                    'detail': key + ' ' + format_bytes_precise(size),
                     'data': {
                         '$area': size,
                         '$symbol': symbol,
@@ -296,6 +308,7 @@ def jsonify_tree(tree, name):
                 key=operator.itemgetter(1))[0])
     return {
         'name': name + ' ' + format_bytes(total),
+        'detail': name + ' ' + format_bytes_precise(total),
         'data': {
             '$area': total,
             '$dominant_symbol': dominant_symbol,
@@ -337,6 +350,7 @@ def jsonify_sections(name, sections):
     for section, size in sections:
         children.append({
                 'name': section + ' ' + format_bytes(size),
+                'detail': section + ' ' + format_bytes_precise(size),
                 'data': { '$area': size }
                 })
         total += size
@@ -345,6 +359,7 @@ def jsonify_sections(name, sections):
 
     return {
         'name': name + ' ' + format_bytes(total),
+        'detail': name + ' ' + format_bytes_precise(total),
         'data': { '$area': total },
         'children': children
         }
@@ -357,6 +372,7 @@ def dump_sections(objdump):
     size = sections['data']['$area'] + debug_sections['data']['$area']
     print(json.dumps({
             'name': 'top ' + format_bytes(size),
+            'detail': 'top ' + format_bytes_precise(size),
             'data': { '$area': size },
             'children': [ debug_sections, sections ]}))
 

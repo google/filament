@@ -31,14 +31,14 @@ SCRIPTDIR = Path(os.path.realpath(__file__)).parent
 DEBUG = False
 RESGEN_MAGIC = b'__RESGEN__'
 
-def format_bytes(bytes):
+def format_bytes(bytes, prec=1):
     """Pretty-print a number of bytes."""
     if bytes > 1e6:
         bytes = bytes / 1.0e6
-        return '%.1fm' % bytes
+        return f'%.{prec}fm' % bytes
     if bytes > 1e3:
         bytes = bytes / 1.0e3
-        return '%.1fk' % bytes
+        return f'%.{prec}fk' % bytes
     return str(bytes)
 
 
@@ -89,7 +89,8 @@ def extract_resgen(path: Path):
         content = file.read()
     offset = content.find(RESGEN_MAGIC)
     if offset < 0:
-        return "{}", b''
+        print("Unable to find resgen blob.")
+        return {}, b''
     idx = offset + len(RESGEN_MAGIC)
     size_string = ""
     while chr(content[idx]) != '{':
@@ -102,7 +103,7 @@ def extract_resgen(path: Path):
     total_size = 0
     for mat in resgen_json:
         total_size += resgen_json[mat]
-    return json.loads(json_string), content[offset - total_size:offset]
+    return resgen_json, content[offset - total_size:offset]
 
 
 def get_compressed_size(blob):
@@ -139,8 +140,9 @@ def main(args):
         path = choose_from_zip(path)
 
     dsopath = Path(path)
-    size = format_bytes(dsopath.stat().st_size)
-    info = f'Uncompressed size is {size}'
+    size = format_bytes(dsopath.stat().st_size, 2)
+    csize = format_bytes(get_compressed_size(open(dsopath, 'rb').read()), 2)
+    info = f'{size} ({csize})'
 
     print('Scanning for resgen resources...')
     resgen_json, resgen_blob = extract_resgen(dsopath)
@@ -159,12 +161,14 @@ def main(args):
 
     # Splice the materials JSON into the sections JSON.
     sections_json = json.loads(open(f'{TEMPDIR}/sections.json').read())
+    trimmed_json = sections_json
     for child in sections_json['children']:
         if child["name"].startswith('sections '):
-            for section in child['children']:
+            trimmed_json = child
+            for section in trimmed_json['children']:
                 if section["name"].startswith('rodata'):
                     section["children"] = [ treeify_resgen(resgen_json, resgen_blob) ]
-    sections_json = "const kSections = " + json.dumps(sections_json) + ";\n"
+    sections_json = "const kSections = " + json.dumps(trimmed_json) + ";\n"
 
     symbols_json = open(f'{TEMPDIR}/syms.json').read()
     symbols_json = "const kSymbols = " + symbols_json + ";\n"
