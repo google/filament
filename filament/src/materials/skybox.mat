@@ -24,7 +24,7 @@ material {
     vertexDomain : device,
     depthWrite : false,
     shadingModel : unlit,
-    variantFilter : [ skinning, shadowReceiver ],
+    variantFilter : [ skinning, shadowReceiver, vsm ],
     culling: none
 }
 
