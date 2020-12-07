@@ -106,42 +106,8 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
     return oss.str();
 }
 
-/**
- * Shrinks the specified string and returns a new string as the result.
- * To shrink the string, this method performs the following transforms:
- * - Remove leading white spaces at the beginning of each line
- * - Remove empty lines
- */
-static std::string shrinkString(const std::string& s) {
-    size_t cur = 0;
-
-    std::string r;
-    r.reserve(s.length());
-
-    while (cur < s.length()) {
-        size_t pos = cur;
-        size_t len = 0;
-
-        while (s[cur] != '\n') {
-            cur++;
-            len++;
-        }
-
-        size_t newPos = s.find_first_not_of(" \t", pos);
-        if (newPos == std::string::npos) newPos = pos;
-
-        r.append(s, newPos, len - (newPos - pos));
-        r += '\n';
-
-        while (s[cur] == '\n') {
-            cur++;
-        }
-    }
-
-    return r;
-}
-
-void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl, const GLSLPostProcessor::Config& config) {
+void GLSLPostProcessor::spirvToToMsl(const SpirvBlob* spirv, std::string* outMsl,
+        const GLSLPostProcessor::Config& config) const {
     CompilerMSL mslCompiler(*spirv);
     CompilerGLSL::Options options;
     mslCompiler.set_common_options(options);
@@ -184,7 +150,7 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl, const GLSLPostProcess
     }
 
     *outMsl = mslCompiler.compile();
-    *outMsl = shrinkString(*outMsl);
+    *outMsl = mShaderMinifier.removeWhitespace(*outMsl);
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
@@ -245,7 +211,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 options.generateDebugInfo = mGenerateDebugInfo;
                 GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput, &options);
                 if (mMslOutput) {
-                    SpvToMsl(mSpirvOutput, mMslOutput, config);
+                    spirvToToMsl(mSpirvOutput, mMslOutput, config);
                 }
             } else {
                 utils::slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -262,7 +228,13 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     if (mGlslOutput) {
-        *mGlslOutput = shrinkString(*mGlslOutput);
+        *mGlslOutput = mShaderMinifier.removeWhitespace(*mGlslOutput);
+
+        // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
+        if (mOptimization != MaterialBuilder::Optimization::NONE) {
+           *mGlslOutput = mShaderMinifier.renameStructFields(*mGlslOutput);
+        }
+
         if (mPrintShaders) {
             utils::slog.i << *mGlslOutput << utils::io::endl;
         }
@@ -313,7 +285,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (mMslOutput) {
-        SpvToMsl(mSpirvOutput, mMslOutput, config);
+        spirvToToMsl(mSpirvOutput, mMslOutput, config);
     }
 
     if (mGlslOutput) {
@@ -339,7 +311,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 
     if (mMslOutput) {
-        SpvToMsl(&spirv, mMslOutput, config);
+        spirvToToMsl(&spirv, mMslOutput, config);
     }
 
     // Transpile back to GLSL
