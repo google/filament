@@ -20,6 +20,7 @@ For usage help, see README.md
 
 import argparse
 import os
+import struct
 import tempfile
 import zipfile
 import json
@@ -103,7 +104,8 @@ def extract_resgen(path: Path):
     total_size = 0
     for mat in resgen_json:
         total_size += resgen_json[mat]
-    return resgen_json, content[offset - total_size:offset]
+    resgen_blob = content[offset - total_size:offset]
+    return resgen_json, resgen_blob
 
 
 def get_compressed_size(blob):
@@ -118,13 +120,32 @@ def treeify_resgen(resgen_json, resgen_blob):
     result = {}
     total_size = 0
     materials = []
+    offset = 0
     for mat in resgen_json:
         material_size = resgen_json[mat]
         total_size += material_size
+
+        material_blob = resgen_blob[offset:offset + material_size]
+        offset += material_size
+
+        chunk_offset = 0
+        chunks = []
+        while chunk_offset < len(material_blob):
+            chunk_name = material_blob[chunk_offset:chunk_offset + 8][::-1].decode("utf-8")
+            chunk_size = struct.unpack_from('i', material_blob[chunk_offset + 8:chunk_offset + 12])[0]
+            chunks.append({
+                "data": {"$area": chunk_size},
+                "name": chunk_name + " " + format_bytes(chunk_size),
+                "detail": chunk_name + " " + format_bytes(chunk_size, 3),
+            })
+            chunk_offset += 12 + chunk_size
+
         materials.append({
             "data": {"$area": material_size, "$symbol": "read-only data"},
             "name": mat + " " + format_bytes(material_size),
+            "children": chunks,
         })
+
     result["data"] = {"$area": total_size}
     result["name"] = f"materials {format_bytes(total_size)} ({csize})"
     result["children"] = materials
