@@ -118,7 +118,7 @@ inline filament::math::mat3f matrixFromUvTransform(const float offset[2], float 
     float sy = scale[1];
     float c = cos(rotation);
     float s = sin(rotation);
-    return filament::math::mat3f(sx * c, sx * s, tx, -sy * s, sy * c, ty, 0, 0, 1);
+    return filament::math::mat3f(sx * c, sx * s, tx, -sy * s, sy * c, ty, 0.0f, 0.0f, 1.0f);
 };
 
 } // namespace gltfio
