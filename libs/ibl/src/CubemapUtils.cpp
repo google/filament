@@ -70,6 +70,114 @@ void CubemapUtils::highlight(Image& src) {
     }
 }
 
+void CubemapUtils::downsampleCubemapLevelBoxFilter(JobSystem& js, Cubemap& dst, const Cubemap& src) {
+    size_t scale = src.getDimensions() / dst.getDimensions();
+    processSingleThreaded<EmptyState>(dst, js,
+            [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
+                const Image& image(src.getImageForFace(f));
+                for (size_t x = 0; x < dim; ++x, ++data) {
+                    Cubemap::writeAt(data, Cubemap::filterAtCenter(image, x * scale, y * scale));
+                }
+            });
+}
+
+
+/*
+ * Area of a cube face's quadrant projected onto a sphere
+ *
+ *  1 +---+----------+
+ *    |   |          |
+ *    |---+----------|
+ *    |   |(x,y)     |
+ *    |   |          |
+ *    |   |          |
+ * -1 +---+----------+
+ *   -1              1
+ *
+ *
+ * The quadrant (-1,1)-(x,y) is projected onto the unit sphere
+ *
+ */
+static inline float sphereQuadrantArea(float x, float y) {
+    return std::atan2(x*y, std::sqrt(x*x + y*y + 1));
+}
+
+float CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
+    const float iDim = 1.0f / dim;
+    float s = ((u + 0.5f) * 2 * iDim) - 1;
+    float t = ((v + 0.5f) * 2 * iDim) - 1;
+    const float x0 = s - iDim;
+    const float y0 = t - iDim;
+    const float x1 = s + iDim;
+    const float y1 = t + iDim;
+    float solidAngle = sphereQuadrantArea(x0, y0) -
+                        sphereQuadrantArea(x0, y1) -
+                        sphereQuadrantArea(x1, y0) +
+                        sphereQuadrantArea(x1, y1);
+    return solidAngle;
+}
+
+Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
+    Cubemap cm(dim);
+    Image temp(CubemapUtils::createCubemapImage(dim, horizontal));
+    CubemapUtils::setAllFacesFromCross(cm, temp);
+    std::swap(image, temp);
+    return cm;
+}
+
+void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image) {
+    size_t dim = cm.getDimensions() + 2; // 2 extra per image, for seamlessness
+    size_t x = 0;
+    size_t y = 0;
+    switch (face) {
+        case Cubemap::Face::NX:
+            x = 0, y = dim;
+            break;
+        case Cubemap::Face::PX:
+            x = 2 * dim, y = dim;
+            break;
+        case Cubemap::Face::NY:
+            x = dim, y = 2 * dim;
+            break;
+        case Cubemap::Face::PY:
+            x = dim, y = 0;
+            break;
+        case Cubemap::Face::NZ:
+            x = 3 * dim, y = dim;
+            break;
+        case Cubemap::Face::PZ:
+            x = dim, y = dim;
+            break;
+    }
+    Image subImage;
+    subImage.subset(image, x + 1, y + 1, dim - 2, dim - 2);
+    cm.setImageForFace(face, subImage);
+}
+
+void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NX, image);
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PX, image);
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NY, image);
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PY, image);
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NZ, image);
+    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PZ, image);
+}
+
+Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
+    // always allocate 2 extra column and row / face, to allow the cubemap to be "seamless"
+    size_t width = 4 * (dim + 2);
+    size_t height = 3 * (dim + 2);
+    if (!horizontal) {
+        std::swap(width, height);
+    }
+
+    Image image(width, height);
+    memset(image.getData(), 0, image.getBytesPerRow() * height);
+    return image;
+}
+
+#ifndef FILAMENT_IBL_LITE
+
 void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
@@ -242,71 +350,6 @@ void CubemapUtils::crossToCubemap(JobSystem& js, Cubemap& dst, const Image& src)
             });
 }
 
-
-void CubemapUtils::downsampleCubemapLevelBoxFilter(JobSystem& js, Cubemap& dst, const Cubemap& src) {
-    size_t scale = src.getDimensions() / dst.getDimensions();
-    processSingleThreaded<EmptyState>(dst, js,
-            [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-                const Image& image(src.getImageForFace(f));
-                for (size_t x = 0; x < dim; ++x, ++data) {
-                    Cubemap::writeAt(data, Cubemap::filterAtCenter(image, x * scale, y * scale));
-                }
-            });
-}
-
-// ------------------------------------------------------------------------------------------------
-
-void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image) {
-    size_t dim = cm.getDimensions() + 2; // 2 extra per image, for seamlessness
-    size_t x = 0;
-    size_t y = 0;
-    switch (face) {
-        case Cubemap::Face::NX:
-            x = 0, y = dim;
-            break;
-        case Cubemap::Face::PX:
-            x = 2 * dim, y = dim;
-            break;
-        case Cubemap::Face::NY:
-            x = dim, y = 2 * dim;
-            break;
-        case Cubemap::Face::PY:
-            x = dim, y = 0;
-            break;
-        case Cubemap::Face::NZ:
-            x = 3 * dim, y = dim;
-            break;
-        case Cubemap::Face::PZ:
-            x = dim, y = dim;
-            break;
-    }
-    Image subImage;
-    subImage.subset(image, x + 1, y + 1, dim - 2, dim - 2);
-    cm.setImageForFace(face, subImage);
-}
-
-void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NX, image);
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PX, image);
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NY, image);
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PY, image);
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NZ, image);
-    CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PZ, image);
-}
-
-Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
-    // always allocate 2 extra column and row / face, to allow the cubemap to be "seamless"
-    size_t width = 4 * (dim + 2);
-    size_t height = 3 * (dim + 2);
-    if (!horizontal) {
-        std::swap(width, height);
-    }
-
-    Image image(width, height);
-    memset(image.getData(), 0, image.getBytesPerRow() * height);
-    return image;
-}
-
 const char* CubemapUtils::getFaceName(Cubemap::Face face) {
     switch (face) {
         case Cubemap::Face::NX: return "nx";
@@ -316,14 +359,6 @@ const char* CubemapUtils::getFaceName(Cubemap::Face face) {
         case Cubemap::Face::NZ: return "nz";
         case Cubemap::Face::PZ: return "pz";
     }
-}
-
-Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
-    Cubemap cm(dim);
-    Image temp(CubemapUtils::createCubemapImage(dim, horizontal));
-    CubemapUtils::setAllFacesFromCross(cm, temp);
-    std::swap(image, temp);
-    return cm;
 }
 
 void CubemapUtils::mirrorCubemap(JobSystem& js, Cubemap& dst, const Cubemap& src) {
@@ -358,42 +393,7 @@ void CubemapUtils::generateUVGrid(JobSystem& js, Cubemap& cml, size_t gridFreque
                 }
             });
 }
-
-
-/*
- * Area of a cube face's quadrant projected onto a sphere
- *
- *  1 +---+----------+
- *    |   |          |
- *    |---+----------|
- *    |   |(x,y)     |
- *    |   |          |
- *    |   |          |
- * -1 +---+----------+
- *   -1              1
- *
- *
- * The quadrant (-1,1)-(x,y) is projected onto the unit sphere
- *
- */
-static inline float sphereQuadrantArea(float x, float y) {
-    return std::atan2(x*y, std::sqrt(x*x + y*y + 1));
-}
-
-float CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
-    const float iDim = 1.0f / dim;
-    float s = ((u + 0.5f) * 2 * iDim) - 1;
-    float t = ((v + 0.5f) * 2 * iDim) - 1;
-    const float x0 = s - iDim;
-    const float y0 = t - iDim;
-    const float x1 = s + iDim;
-    const float y1 = t + iDim;
-    float solidAngle = sphereQuadrantArea(x0, y0) -
-                        sphereQuadrantArea(x0, y1) -
-                        sphereQuadrantArea(x1, y0) +
-                        sphereQuadrantArea(x1, y1);
-    return solidAngle;
-}
+#endif
 
 } // namespace ibl
 } // namespace filament
