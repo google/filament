@@ -683,11 +683,11 @@ int main(int argc, char* argv[]) {
             Cubemap blurred = CubemapUtils::create(image, dim);
             CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples,
                     float3{ 1, 1, 1 }, !g_ibl_no_prefilter,
-                    [&updater, quiet = g_quiet](size_t index, float v) {
-                        if (!quiet) {
-                            updater.update(index, v);
+                    [](size_t index, float v, void* userdata) {
+                        if (!g_quiet) {
+                            ((ProgressUpdater*) userdata)->update(index, v);
                         }
-                    });
+                    }, &updater);
             if (!g_quiet) {
                 updater.stop();
                 std::cout << "Extract faces..." << std::endl;
@@ -978,11 +978,11 @@ void iblRoughnessPrefilter(
         }
         CubemapIBL::roughnessFilter(js, dst, levels, roughness, numSamples,
                 float3{ 1, 1, 1 }, prefilter,
-                [&updater, quiet = g_quiet](size_t index, float v) {
-                    if (!quiet) {
-                        updater.update(index, v);
+                [](size_t index, float v, void* userdata) {
+                    if (!g_quiet) {
+                        ((ProgressUpdater*) userdata)->update(index, v);
                     }
-                });
+                }, &updater);
         if (!g_quiet) {
             updater.stop();
         }
@@ -1067,11 +1067,11 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         updater.start();
     }
     CubemapIBL::diffuseIrradiance(js, dst, levels, numSamples,
-            [&updater, quiet = g_quiet](size_t index, float v) {
-                if (!quiet) {
-                    updater.update(index, v);
+            [](size_t index, float v, void* userdata) {
+                if (!g_quiet) {
+                    ((ProgressUpdater*) userdata)->update(index, v);
                 }
-            });
+            }, &updater);
     if (!g_quiet) {
         updater.stop();
     }
