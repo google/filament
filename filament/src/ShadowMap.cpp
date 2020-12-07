@@ -398,10 +398,10 @@ void ShadowMap::computeShadowCameraDirectional(
         }
 
         const mat4f F(mat4f::row_major_init {
-                 s.x,   0,  0, o.x,
-                   0, s.y,  0, o.y,
-                   0,   0,  1,   0,
-                   0,   0,  0,   1,
+                 s.x,  0.0f, 0.0f, o.x,
+                 0.0f, s.y,  0.0f, o.y,
+                 0.0f, 0.0f, 1.0f, 0.0f,
+                 0.0f, 0.0f, 0.0f, 1.0f,
         });
 
 
@@ -579,42 +579,42 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
     const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
-            0.5f,   0,    0,  0.5f,
-              0, -0.5f,   0,  0.5f,
-              0,    0,  -0.5f, 0.5f,
-              0,    0,    0,    1
+            0.5f,  0.0f,   0.0f, 0.5f,
+            0.0f, -0.5f,   0.0f, 0.5f,
+            0.0f,  0.0f,  -0.5f, 0.5f,
+            0.0f,  0.0f,   0.0f, 1.0f
     } : mat4f::row_major_init{
-            0.5f,   0,    0,  0.5f,
-              0,  0.5f,   0,  0.5f,
-              0,    0,  -0.5f, 0.5f,
-              0,    0,    0,    1
+            0.5f,  0.0f,  0.0f, 0.5f,
+            0.0f,  0.5f,  0.0f, 0.5f,
+            0.0f,  0.0f, -0.5f, 0.5f,
+            0.0f,  0.0f,  0.0f, 1.0f
     });
 
     // the shadow map texture might be larger than the shadow map dimension, so we add a scaling
     // factor
     const float v = (float) mShadowMapLayout.textureDimension / mShadowMapLayout.atlasDimension;
     const mat4f Mv(mat4f::row_major_init{
-            v, 0, 0, 0,
-            0, v, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
+            v,    0.0f, 0.0f, 0.0f,
+            0.0f, v,    0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
     });
 
     // apply the 1-texel border viewport transform
     const float o = 1.0f / mShadowMapLayout.atlasDimension;
     const float s = 1.0f - 2.0f * (1.0f / mShadowMapLayout.textureDimension);
     const mat4f Mb(mat4f::row_major_init{
-             s, 0, 0, o,
-             0, s, 0, o,
-             0, 0, 1, 0,
-             0, 0, 0, 1
+             s,    0.0f, 0.0f, o,
+             0.0f, s,    0.0f, o,
+             0.0f, 0.0f, 1.0f, 0.0f,
+             0.0f, 0.0f, 0.0f, 1.0f
     });
 
     const mat4f Mf = mTextureSpaceFlipped ? mat4f(mat4f::row_major_init{
-            1,  0,  0,  0,
-            0, -1,  0,  1,
-            0,  0,  1,  0,
-            0,  0,  0,  1
+            1.0f,  0.0f,  0.0f,  0.0f,
+            0.0f, -1.0f,  0.0f,  1.0f,
+            0.0f,  0.0f,  1.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  1.0f
     }) : mat4f();
 
     // Compute shadow-map texture access transform
@@ -647,10 +647,10 @@ mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
     const float A = (f + n) * d;
     const float B = -2 * n * f * d;
     const mat4f Wp(mat4f::row_major_init{
-            n, 0, 0, 0,
-            0, A, 0, B,
-            0, 0, n, 0,
-            0, 1, 0, 0
+            n,    0.0f, 0.0f, 0.0f,
+            0.0f, A,    0.0f, B,
+            0.0f, 0.0f, n,    0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f
     });
     return Wp;
 }
@@ -735,10 +735,10 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
     const float2 s = 2.0f / float2(lightFrustum.max.xy - lightFrustum.min.xy);
     const float2 o =   -s * float2(lightFrustum.max.xy + lightFrustum.min.xy) * 0.5f;
     const mat4f F(mat4f::row_major_init {
-            s.x,   0,  0, o.x,
-              0, s.y,  0, o.y,
-              0,   0,  1,   0,
-              0,   0,  0,   1,
+            s.x,  0.0f, 0.0f,    o.x,
+            0.0f,  s.y, 0.0f,    o.y,
+            0.0f, 0.0f, 1.0f,   0.0f,
+            0.0f, 0.0f, 0.0f,   1.0f,
     });
     float3 wsLightFrustumCorners[8];
     const mat4f projection = F * lightView;
@@ -1043,9 +1043,9 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     const float nsxsz = n * sx * sz;
     const float j = -(B * sy) / (nsxsz * dz * dz);
     const mat3f J(mat3f::row_major_init{
-            j * dz * sz,    j * X * sz,     0,
-            0,              j * nsxsz,      0,
-            0,              j * Z * sx,     j * dz * sx
+            j * dz * sz,    j * X * sz,     0.0f,
+            0.0f,           j * nsxsz,      0.0f,
+            0.0f,           j * Z * sx,     j * dz * sx
     });
 
     float3 Jx = J[0] * ures;
