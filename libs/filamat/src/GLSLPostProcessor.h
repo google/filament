@@ -24,6 +24,8 @@
 
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 
+#include "ShaderMinifier.h"
+
 #include <ShaderLang.h>
 
 #include <spirv-tools/optimizer.hpp>
@@ -78,6 +80,8 @@ private:
     static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
 
     void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const;
+    void spirvToToMsl(const SpirvBlob* spirv, std::string* outMsl,
+            const GLSLPostProcessor::Config& config) const;
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;
@@ -86,6 +90,7 @@ private:
     SpirvBlob* mSpirvOutput = nullptr;
     std::string* mMslOutput = nullptr;
     EShLanguage mShLang = EShLangFragment;
+    ShaderMinifier mShaderMinifier;
     int mLangVersion = 0;
 };
 

@@ -52,6 +52,7 @@ set(PRIVATE_HDRS
         src/eiff/DictionarySpirvChunk.h
         src/eiff/MaterialSpirvChunk.h
         src/GLSLPostProcessor.h
+        src/ShaderMinifier.h
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
         src/sca/builtinResource.h)
@@ -63,7 +64,8 @@ set(SRCS
         src/eiff/MaterialSpirvChunk.cpp
         src/sca/ASTHelpers.cpp
         src/sca/GLSLTools.cpp
-        src/GLSLPostProcessor.cpp)
+        src/GLSLPostProcessor.cpp
+        src/ShaderMinifier.cpp)
 
 # Sources and headers for filamat lite
 
