@@ -350,7 +350,7 @@ target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC geometry) # TODO: remove this dependency after deprecating VertexBuffer::populateTangentQuaternions
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
-target_link_libraries(${TARGET} PUBLIC ibl_lite)
+target_link_libraries(${TARGET} PUBLIC ibl-lite)
 
 if (FILAMENT_ENABLE_MATDBG)
     target_link_libraries(${TARGET} PUBLIC matdbg)
