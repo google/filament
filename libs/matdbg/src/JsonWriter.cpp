@@ -115,11 +115,12 @@ static bool printParametersInfo(ostream& json, const ChunkContainer& container) 
     return true;
 }
 
-static void printShaderInfo(ostream& json, const std::vector<ShaderInfo>& info) {
+static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const ChunkContainer& container) {
+    MaterialDomain domain = MaterialDomain::SURFACE;
+    read(container, ChunkType::MaterialDomain, reinterpret_cast<uint8_t*>(&domain));
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
-
-        string variantString = formatVariantString(item.variant);
+        string variantString = formatVariantString(item.variant, domain);
         string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
         json
             << "    {"
@@ -139,7 +140,7 @@ static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
         return false;
     }
     json << "\"opengl\": [\n";
-    printShaderInfo(json, info);
+    printShaderInfo(json, info, container);
     json << "],\n";
     return true;
 }
@@ -151,7 +152,7 @@ static bool printVkInfo(ostream& json, const ChunkContainer& container) {
         return false;
     }
     json << "\"vulkan\": [\n";
-    printShaderInfo(json, info);
+    printShaderInfo(json, info, container);
     json << "],\n";
     return true;
 }
@@ -163,7 +164,7 @@ static bool printMetalInfo(ostream& json, const ChunkContainer& container) {
         return false;
     }
     json << "\"metal\": [\n";
-    printShaderInfo(json, info);
+    printShaderInfo(json, info, container);
     json << "],\n";
     return true;
 }

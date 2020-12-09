@@ -333,7 +333,10 @@ static void printChunks(ostream& text, const ChunkContainer& container) {
     }
 }
 
-static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info) {
+static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info,
+        const ChunkContainer& container) {
+    MaterialDomain domain = MaterialDomain::SURFACE;
+    read(container, ChunkType::MaterialDomain, reinterpret_cast<uint8_t*>(&domain));
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
         text << "    #";
@@ -346,7 +349,7 @@ static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info) {
              << right << (int) item.variant;
         text << setfill(' ') << dec;
         text << "   ";
-        text << formatVariantString(item.variant);
+        text << formatVariantString(item.variant, domain);
         text << endl;
     }
     text << endl;
@@ -359,7 +362,7 @@ static bool printGlslInfo(ostream& text, const ChunkContainer& container) {
         return false;
     }
     text << "GLSL shaders:" << endl;
-    printShaderInfo(text, info);
+    printShaderInfo(text, info, container);
     return true;
 }
 
@@ -370,7 +373,7 @@ static bool printVkInfo(ostream& text, const ChunkContainer& container) {
         return false;
     }
     text << "Vulkan shaders:" << endl;
-    printShaderInfo(text, info);
+    printShaderInfo(text, info, container);
     return true;
 }
 
@@ -381,7 +384,7 @@ static bool printMetalInfo(ostream& text, const ChunkContainer& container) {
         return false;
     }
     text << "Metal shaders:" << endl;
-    printShaderInfo(text, info);
+    printShaderInfo(text, info, container);
     return true;
 }
 

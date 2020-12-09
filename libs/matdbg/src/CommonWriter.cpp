@@ -16,11 +16,20 @@
 
 #include "CommonWriter.h"
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 namespace filament::matdbg {
 
-std::string formatVariantString(uint8_t variant) noexcept {
+std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept {
+    if (domain == MaterialDomain::POST_PROCESS) {
+        switch ((PostProcessVariant) variant) {
+            case PostProcessVariant::OPAQUE: return "OPA";
+            case PostProcessVariant::TRANSLUCENT: return "TRN";
+        }
+        return "UNK";
+    }
+
     std::string variantString = "";
 
     // NOTE: The 3-character nomenclature used here is consistent with the ASCII art seen in the
