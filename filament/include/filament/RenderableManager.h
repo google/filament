@@ -145,7 +145,7 @@ public:
          * @param type specifies the topology of the primitive (e.g., \c RenderableManager::PrimitiveType::TRIANGLES)
          * @param vertices specifies the vertex buffer, which in turn specifies a set of attributes
          * @param indices specifies the index buffer (either u16 or u32)
-         * @param offset specifies where in the index buffer to start reading (expressed as a number of bytes)
+         * @param offset specifies where in the index buffer to start reading (expressed as a number of indices)
          * @param minIndex specifies the minimum index contained in the index buffer
          * @param maxIndex specifies the maximum index contained in the index buffer
          * @param count number of indices to read (for triangles, this should be a multiple of 3)
