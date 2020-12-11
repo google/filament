@@ -35,6 +35,7 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "subsurfacePower",     Property::SUBSURFACE_POWER },
         { "subsurfaceColor",     Property::SUBSURFACE_COLOR },
         { "sheenColor",          Property::SHEEN_COLOR },
+        { "sheenRoughness",      Property::SHEEN_ROUGHNESS },
         { "glossiness",          Property::GLOSSINESS },
         { "specularColor",       Property::SPECULAR_COLOR },
         { "emissive",            Property::EMISSIVE },

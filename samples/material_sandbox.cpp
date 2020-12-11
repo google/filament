@@ -374,6 +374,8 @@ static filament::MaterialInstance* updateInstances(
         if (!hasRefraction) {
             materialInstance->setParameter("reflectance", params.reflectance);
         }
+        materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
+        materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -543,6 +545,8 @@ static void gui(filament::Engine* engine, filament::View*) {
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
                         params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::ColorEdit3("Sheen color", &params.sheenColor.r);
+                    ImGui::SliderFloat("Sheen roughness", &params.sheenRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("Clear coat", &params.clearCoat, 0.0f, 1.0f);
                     ImGui::SliderFloat("Clear coat roughness", &params.clearCoatRoughness, 0.0f, 1.0f);
                     ImGui::SliderFloat("Anisotropy", &params.anisotropy, -1.0f, 1.0f);
