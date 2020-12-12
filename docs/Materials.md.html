@@ -81,6 +81,8 @@ in table [standardProperties].
 **metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
 **roughness**           | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
 **reflectance**         | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
+**sheenColor**          | Strength of the sheen layer
+**sheenRoughness**      | Perceived smoothness or roughness of the sheen layer
 **clearCoat**           | Strength of the clear coat layer
 **clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
 **anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
@@ -106,6 +108,8 @@ The type and range of each property is described in table [standardPropertiesTyp
 **metallic**            | float    |  [0..1]                  | Should be 0 or 1
 **roughness**           | float    |  [0..1]                  |
 **reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
+**sheenColor**          | float3   |  [0..1]                  | Linear RGB
+**sheenRoughness**      | float    |  [0..1]                  |
 **clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
 **clearCoatRoughness**  | float    |  [0..1]                  |
 **anisotropy**          | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
@@ -296,6 +300,37 @@ it easy to define from a texture.
 See the Index of refraction section for more information about the `ior` property and refractive
 indices.
 
+### Sheen color
+
+The sheen color controls the color appearance and strength of an optional sheen layer on top of the
+base layer described by the properties above. The sheen layer always sits below the clear coat layer
+if such a layer is present.
+
+The sheen layer can be used to represent cloth and fabric materials. Please refer to the
+[Cloth model] section for more information about cloth and fabric materials.
+
+The effect of `sheenColor` is shown in figure [materialSheenColor]
+(click on the image to see a larger version).
+
+![Figure [materialSheenColor]: Different sheen colors](images/screenshot_sheen_color.png)
+
+!!! Note
+    If you do not need the other properties offered by the standard lit material model but want to
+    create a cloth-like or fabric-like appearance, it is more efficient to use the dedicated cloth
+    model described in the [Cloth model] section.
+
+### Sheen roughness
+
+The `sheenRoughness` property is similar to the `roughness` property but applies only to the
+sheen layer.
+
+The effect of `sheenRoughness` on a rough metal is shown in figure [sheenRoughnessProperty]
+(click on the image to see a larger version). In this picture, the base layer is a dark blue, with
+`metallic` set to `0.0` and `roughness` set to `1.0`.
+
+![Figure [sheenRoughnessProperty]: `sheenRoughness` varying from 0.0
+(left) to 1.0 (right)](images/materials/sheen_roughness.png)
+
 ### Clear coat
 
 Multi-layer materials are fairly common, particularly materials with a thin translucent
@@ -321,6 +356,9 @@ The effect of `clearCoat` on a rough metal is shown in figure [clearCoatProperty
 !!! Warning
     The clear coat layer effectively doubles the cost of specular computations. Do not assign a
     value, even 0.0, to the clear coat property if you don't need this second layer.
+
+!!! Note
+    The clear coat layer is added on top of the sheen layer if present.
 
 ### Clear coat roughness
 
@@ -1771,6 +1809,8 @@ struct MaterialInputs {
     float  ambientOcclusion;    // default: 0.0
 
     // not available when the shading model is subsurface or cloth
+    float3 sheenColor;          // default: float3(0.0)
+    float  sheenRoughness;      // default: 0.0
     float  clearCoat;           // default: 1.0
     float  clearCoatRoughness;  // default: 0.0
     float3 clearCoatNormal;     // default: float3(0.0, 0.0, 1.0)

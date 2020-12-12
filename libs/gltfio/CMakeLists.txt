@@ -66,6 +66,7 @@ generate_mat(ubershader unlit fade)
 generate_mat(ubershader unlit opaque)
 generate_mat(ubershader unlit masked)
 generate_mat(transmission lit transmission)
+generate_mat(sheen lit sheen)
 
 set(RESOURCE_BINS)
 foreach (input_path ${MATERIAL_SRCS})

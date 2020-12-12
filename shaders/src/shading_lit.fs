@@ -128,6 +128,23 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 }
 
+void getSheenPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
+    pixel.sheenColor = material.sheenColor;
+
+    float sheenPerceptualRoughness = material.sheenRoughness;
+    sheenPerceptualRoughness = clamp(sheenPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
+
+#if defined(GEOMETRIC_SPECULAR_AA)
+    sheenPerceptualRoughness =
+            normalFiltering(sheenPerceptualRoughness, getWorldGeometricNormalVector());
+#endif
+
+    pixel.sheenPerceptualRoughness = sheenPerceptualRoughness;
+    pixel.sheenRoughness = perceptualRoughnessToRoughness(sheenPerceptualRoughness);
+#endif
+}
+
 void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     pixel.clearCoat = material.clearCoat;
@@ -211,6 +228,13 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
 #else
     pixel.energyCompensation = vec3(1.0);
 #endif
+
+#if !defined(SHADING_MODEL_CLOTH)
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+    pixel.sheenDFG = prefilteredDFG(pixel.sheenPerceptualRoughness, shading_NoV).z;
+    pixel.sheenScaling = 1.0 - max3(pixel.sheenColor) * pixel.sheenDFG;
+#endif
+#endif
 }
 
 /**
@@ -223,6 +247,7 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
  */
 void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getCommonPixelParams(material, pixel);
+    getSheenPixelParams(material, pixel);
     getClearCoatPixelParams(material, pixel);
     getRoughnessPixelParams(material, pixel);
     getSubsurfacePixelParams(material, pixel);

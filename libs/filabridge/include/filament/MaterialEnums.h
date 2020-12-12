@@ -179,7 +179,7 @@ enum class RefractionType : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 25;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 27;
 enum class Property : uint8_t {
     BASE_COLOR,              //!< float4, all shading models
     ROUGHNESS,               //!< float,  lit shading models only
@@ -194,7 +194,8 @@ enum class Property : uint8_t {
     THICKNESS,               //!< float,  subsurface shading model only
     SUBSURFACE_POWER,        //!< float,  subsurface shading model only
     SUBSURFACE_COLOR,        //!< float3, subsurface and cloth shading models only
-    SHEEN_COLOR,             //!< float3, cloth shading model only
+    SHEEN_COLOR,             //!< float3, lit shading models only, except subsurface
+    SHEEN_ROUGHNESS,         //!< float3, lit shading models only, except subsurface and cloth
     SPECULAR_COLOR,          //!< float3, specular-glossiness shading model only
     GLOSSINESS,              //!< float,  specular-glossiness shading model only
     EMISSIVE,                //!< float4, all shading models

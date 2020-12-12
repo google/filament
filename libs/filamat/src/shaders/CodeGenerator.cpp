@@ -578,6 +578,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::SUBSURFACE_POWER:     return "SUBSURFACE_POWER";
         case Property::SUBSURFACE_COLOR:     return "SUBSURFACE_COLOR";
         case Property::SHEEN_COLOR:          return "SHEEN_COLOR";
+        case Property::SHEEN_ROUGHNESS:      return "SHEEN_ROUGHNESS";
         case Property::GLOSSINESS:           return "GLOSSINESS";
         case Property::SPECULAR_COLOR:       return "SPECULAR_COLOR";
         case Property::EMISSIVE:             return "EMISSIVE";

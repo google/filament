@@ -874,6 +874,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto sgConfig = inputMat->pbr_specular_glossiness;
     auto ccConfig = inputMat->clearcoat;
     auto trConfig = inputMat->transmission;
+    auto shConfig = inputMat->sheen;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -886,6 +887,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         ccConfig.clearcoat_texture.has_transform ||
         ccConfig.clearcoat_roughness_texture.has_transform ||
         ccConfig.clearcoat_normal_texture.has_transform ||
+        shConfig.sheen_color_texture.has_transform ||
+        shConfig.sheen_roughness_texture.has_transform ||
         trConfig.transmission_texture.has_transform;
 
     cgltf_texture_view baseColorTexture = mrConfig.base_color_texture;
@@ -914,7 +917,12 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
         .hasTransmissionTexture = !!trConfig.transmission_texture.texture,
-        .transmissionUV = (uint8_t) trConfig.transmission_texture.texcoord
+        .transmissionUV = (uint8_t) trConfig.transmission_texture.texcoord,
+        .hasSheenColorTexture = !!shConfig.sheen_color_texture.texture,
+        .sheenColorUV = (uint8_t) shConfig.sheen_color_texture.texcoord,
+        .hasSheenRoughnessTexture = !!shConfig.sheen_roughness_texture.texture,
+        .sheenRoughnessUV = (uint8_t) shConfig.sheen_roughness_texture.texcoord,
+        .hasSheen = !!inputMat->has_sheen,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1060,6 +1068,29 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
                 mi->setParameter("clearCoatNormalUvMatrix", uvmat);
             }
             mi->setParameter("clearCoatNormalScale", ccConfig.clearcoat_normal_texture.scale);
+        }
+    }
+
+    if (matkey.hasSheen) {
+        const float* s = shConfig.sheen_color_factor;
+        mi->setParameter("sheenColorFactor", float3{s[0], s[1], s[2]});
+        mi->setParameter("sheenRoughnessFactor", shConfig.sheen_roughness_factor);
+
+        if (matkey.hasSheenColorTexture) {
+            addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture, true);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("sheenColorUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasSheenRoughnessTexture) {
+            addTextureBinding(mi, "sheenRoughnessMap", shConfig.sheen_roughness_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("sheenRoughnessUvMatrix", uvmat);
+            }
         }
     }
 

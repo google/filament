@@ -325,6 +325,19 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 #endif
 }
 
+void evaluateSheenIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+    // Albedo scaling of the base layer before we layer sheen on top
+    Fd *= pixel.sheenScaling;
+    Fr *= pixel.sheenScaling;
+
+    vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
+    Fr += reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
+#endif
+#endif
+}
+
 void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
@@ -522,6 +535,9 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     vec3 diffuseIrradiance = diffuseIrradiance(diffuseNormal);
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
+
+    // sheen layer
+    evaluateSheenIBL(pixel, specularAO, Fd, Fr);
 
     // clear coat layer
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
