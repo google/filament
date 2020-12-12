@@ -1809,6 +1809,8 @@ struct MaterialInputs {
     float  ambientOcclusion;    // default: 0.0
 
     // not available when the shading model is subsurface or cloth
+    float3 sheenColor;          // default: float3(0.0)
+    float  sheenRoughness;      // default: 0.0
     float  clearCoat;           // default: 1.0
     float  clearCoatRoughness;  // default: 0.0
     float3 clearCoatNormal;     // default: float3(0.0, 0.0, 1.0)
