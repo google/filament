@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
+- gltfio: added support for `KHR_materials_sheen`
+
 ## v1.9.10
 
 - Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
