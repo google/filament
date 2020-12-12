@@ -61,7 +61,7 @@ public:
         SPECULAR_GLOSSINESS = 2,
     };
 
-    mutable Material* mMaterials[10] = {};
+    mutable Material* mMaterials[11] = {};
     Texture* mDummyTexture = nullptr;
 
     filament::Engine* mEngine;
@@ -81,7 +81,7 @@ public:
 
 #endif
 
-#define MATINDEX(shading, alpha, transmit) (transmit ? 9 : (int(shading) + 3 * int(alpha)))
+#define MATINDEX(shading, alpha, sheen, transmit) (transmit ? 10 : (sheen ? 9 : (int(shading) + 3 * int(alpha))))
 
 UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     unsigned char texels[4] = {};
@@ -113,29 +113,30 @@ void UbershaderLoader::destroyMaterials() {
 Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
     const ShadingMode shading = config.unlit ? UNLIT :
             (config.useSpecularGlossiness ? SPECULAR_GLOSSINESS : LIT);
-    const int matindex = MATINDEX(shading, config.alphaMode, config.hasTransmission);
+    const int matindex = MATINDEX(shading, config.alphaMode, config.hasSheen, config.hasTransmission);
     if (mMaterials[matindex] != nullptr) {
         return mMaterials[matindex];
     }
     switch (matindex) {
 
         #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_OPAQUE_DATA)
-        case MATINDEX(LIT, AlphaMode::OPAQUE, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
+        case MATINDEX(LIT, AlphaMode::OPAQUE, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
         #endif
 
         #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_BLEND_DATA)
-        case MATINDEX(LIT, AlphaMode::BLEND, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
+        case MATINDEX(LIT, AlphaMode::BLEND, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
         #endif
 
         #if !GLTFIO_LITE
-        case MATINDEX(LIT, AlphaMode::MASK, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
-        case MATINDEX(UNLIT, AlphaMode::OPAQUE, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
-        case MATINDEX(UNLIT, AlphaMode::MASK, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
-        case MATINDEX(UNLIT, AlphaMode::BLEND, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
-        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
-        case MATINDEX(0, 0, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSMISSION); break;
+        case MATINDEX(LIT, AlphaMode::MASK, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_MASKED); break;
+        case MATINDEX(UNLIT, AlphaMode::OPAQUE, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_OPAQUE); break;
+        case MATINDEX(UNLIT, AlphaMode::MASK, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_MASKED); break;
+        case MATINDEX(UNLIT, AlphaMode::BLEND, false, false): mMaterials[matindex] = CREATE_MATERIAL(UNLIT_FADE); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::OPAQUE, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_OPAQUE); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::MASK, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_MASKED); break;
+        case MATINDEX(SPECULAR_GLOSSINESS, AlphaMode::BLEND, false, false): mMaterials[matindex] = CREATE_MATERIAL(SPECULARGLOSSINESS_FADE); break;
+        case MATINDEX(0, 0, false, true): mMaterials[matindex] = CREATE_MATERIAL(LIT_TRANSMISSION); break;
+        case MATINDEX(0, 0, true, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_SHEEN); break;
         #endif
     }
     if (mMaterials[matindex] == nullptr) {
@@ -157,11 +158,20 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         return nullptr;
     }
 
+    if (config->hasTransmission && config->hasSheen) {
+        slog.w << "Transmission and sheen are not supported together in ubershader mode,"
+                  " removing sheen (" << label << ")." << io::endl;
+        config->hasSheen = false;
+    }
+
+    bool clearCoatConflict = config->hasTransmission || config->hasSheen;
+
     // Due to sampler overload, disable transmission if necessary and print a friendly warning.
-    if (config->hasClearCoat && config->hasTransmission) {
-        slog.w << "Transmission is not supported in ubershader mode for clearcoat materials "
-                    "(" << label << ")." << io::endl;
+    if (config->hasClearCoat && clearCoatConflict) {
+        slog.w << "Transmission and sheen are not supported in ubershader mode for clearcoat"
+                  " materials (" << label << ")." << io::endl;
         config->hasTransmission = false;
+        config->hasSheen = false;
     }
 
     constrainMaterial(config, uvmap);
@@ -188,11 +198,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("normalUvMatrix", identity);
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
-    if (config->hasTransmission) {
-        mi->setParameter("transmissionUvMatrix", identity);
-        mi->setParameter("transmissionIndex",
-                getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
-    } else {
+
+    if (config->hasClearCoat) {
         mi->setParameter("clearCoatIndex",
                 getUvIndex(config->clearCoatUV, config->hasClearCoatTexture));
         mi->setParameter("clearCoatRoughnessIndex",
@@ -202,6 +209,21 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         mi->setParameter("clearCoatUvMatrix", identity);
         mi->setParameter("clearCoatRoughnessUvMatrix", identity);
         mi->setParameter("clearCoatNormalUvMatrix", identity);
+    } else {
+        if (config->hasSheen) {
+            mi->setParameter("sheenColorIndex",
+                    getUvIndex(config->sheenColorUV, config->hasSheenColorTexture));
+            mi->setParameter("sheenRoughnessIndex",
+                    getUvIndex(config->sheenRoughnessUV, config->hasSheenRoughnessTexture));
+            mi->setParameter("sheenColorUvMatrix", identity);
+            mi->setParameter("sheenRoughnessUvMatrix", identity);
+
+        }
+        if (config->hasTransmission) {
+            mi->setParameter("transmissionUvMatrix", identity);
+            mi->setParameter("transmissionIndex",
+                    getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
+        }
     }
     #endif
 
@@ -211,12 +233,18 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("metallicRoughnessMap", mDummyTexture, sampler);
     mi->setParameter("occlusionMap", mDummyTexture, sampler);
     mi->setParameter("emissiveMap", mDummyTexture, sampler);
-    if (config->hasTransmission) {
-        mi->setParameter("transmissionMap", mDummyTexture, sampler);
-    } else {
+    if (config->hasClearCoat) {
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    } else {
+        if (config->hasTransmission) {
+            mi->setParameter("transmissionMap", mDummyTexture, sampler);
+        }
+        if (config->hasSheen) {
+            mi->setParameter("sheenColorMap", mDummyTexture, sampler);
+            mi->setParameter("sheenRoughnessMap", mDummyTexture, sampler);
+        }
     }
 
     return mi;

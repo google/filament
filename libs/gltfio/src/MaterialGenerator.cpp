@@ -250,6 +250,35 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasSheen) {
+            shader += R"SHADER(
+                material.sheenColor = materialParams.sheenColorFactor;
+                material.sheenRoughness = materialParams.sheenRoughnessFactor;
+            )SHADER";
+
+            if (config.hasSheenColorTexture) {
+                shader += "highp float2 sheenColorUV = ${sheenColor};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "sheenColorUV = (vec3(sheenColorUV, 1.0) * "
+                              "materialParams.sheenColorUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.sheenColor *= texture(materialParams_sheenColorMap, sheenColorUV).rgb;
+                )SHADER";
+            }
+
+            if (config.hasSheenRoughnessTexture) {
+                shader += "highp float2 sheenRoughnessUV = ${sheenRoughness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "sheenRoughnessUV = (vec3(sheenRoughnessUV, 1.0) * "
+                              "materialParams.sheenRoughnessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, sheenRoughnessUV).g;
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -365,6 +394,24 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
             if (config.hasTextureTransforms) {
                 builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatNormalUvMatrix");
+            }
+        }
+    }
+
+    // SHEEN
+    if (config.hasSheen) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "sheenColorFactor");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "sheenRoughnessFactor");
+        if (config.hasSheenColorTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenColorMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenColorUvMatrix");
+            }
+        }
+        if (config.hasSheenRoughnessTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenRoughnessMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenRoughnessUvMatrix");
             }
         }
     }

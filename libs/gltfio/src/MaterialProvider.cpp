@@ -47,7 +47,12 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.aoUV == k2.aoUV) &&
         (k1.normalUV == k2.normalUV) &&
         (k1.hasTransmissionTexture == k2.hasTransmissionTexture) &&
-        (k1.transmissionUV == k2.transmissionUV);
+        (k1.transmissionUV == k2.transmissionUV) &&
+        (k1.hasSheenColorTexture == k2.hasSheenColorTexture) &&
+        (k1.sheenColorUV == k2.sheenColorUV) &&
+        (k1.hasSheenRoughnessTexture == k2.hasSheenRoughnessTexture) &&
+        (k1.sheenRoughnessUV == k2.sheenRoughnessUV) &&
+        (k1.hasSheen == k2.hasSheen);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
@@ -113,6 +118,20 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->clearCoatNormalUV] = (UvSet) index++;
         }
     }
+    if (key->hasSheenColorTexture && retval[key->sheenColorUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasSheenColorTexture = false;
+        } else {
+            retval[key->sheenColorUV] = (UvSet) index++;
+        }
+    }
+    if (key->hasSheenRoughnessTexture && retval[key->sheenRoughnessUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasSheenRoughnessTexture = false;
+        } else {
+            retval[key->sheenRoughnessUV] = (UvSet) index++;
+        }
+    }
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -134,6 +153,9 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& clearCoatUV = uvstrings[uvmap[config.clearCoatUV]];
     const auto& clearCoatRoughnessUV = uvstrings[uvmap[config.clearCoatRoughnessUV]];
     const auto& clearCoatNormalUV = uvstrings[uvmap[config.clearCoatNormalUV]];
+    const auto& sheenColorUV = uvstrings[uvmap[config.sheenColorUV]];
+    const auto& sheenRoughnessUV = uvstrings[uvmap[config.sheenRoughnessUV]];
+
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
     replaceAll("${metallic}", metallicRoughnessUV);
@@ -143,6 +165,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${clearCoat}", clearCoatUV);
     replaceAll("${clearCoatRoughness}", clearCoatRoughnessUV);
     replaceAll("${clearCoatNormal}", clearCoatNormalUV);
+    replaceAll("${sheenColor}", sheenColorUV);
+    replaceAll("${sheenRoughness}", sheenRoughnessUV);
 }
 
 } // namespace gltfio
