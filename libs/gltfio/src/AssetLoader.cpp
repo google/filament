@@ -862,6 +862,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .has_pbr_metallic_roughness = true,
         .has_pbr_specular_glossiness = false,
         .has_clearcoat = false,
+        .has_transmission = false,
+        .has_ior = false,
+        .has_specular = false,
+        .has_sheen = false,
         .pbr_metallic_roughness = {
 	        .base_color_factor = {1.0, 1.0, 1.0, 1.0},
 	        .metallic_factor = 1.0,
