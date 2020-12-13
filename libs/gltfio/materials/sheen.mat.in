@@ -96,7 +96,7 @@ fragment {
         if (materialParams.sheenRoughnessIndex > -1) {
             highp float2 uv = uvs[materialParams.sheenRoughnessIndex];
             uv = (vec3(uv, 1.0) * materialParams.sheenRoughnessUvMatrix).xy;
-            material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, uv).r;
+            material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, uv).a;
         }
 
         if (materialParams.metallicRoughnessIndex > -1) {

@@ -275,7 +275,7 @@ std::string shaderFromKey(const MaterialKey& config) {
                               "materialParams.sheenRoughnessUvMatrix).xy;\n";
                 }
                 shader += R"SHADER(
-                    material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, sheenRoughnessUV).g;
+                    material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, sheenRoughnessUV).a;
                 )SHADER";
             }
         }
