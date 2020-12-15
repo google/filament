@@ -136,7 +136,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Clear coat
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
-- Cloth shading
+- Cloth/fabric/sheen shading
 - Normal mapping & ambient occlusion mapping
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
