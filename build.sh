@@ -241,14 +241,10 @@ function build_webgl_with_target {
 
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-web.tgz..."
-            # The web archive has the following subfolders:
-            # dist...core WASM module and accompanying JS file.
-            # docs...HTML tutorials for the JS API, accompanying demos, and a reference page.
-            cd web
-            tar -cvf "../../filament-${lc_target}-web.tar" -s /^filament-js/dist/ \
-                    filament-js/filament.js
-            tar -rvf "../../filament-${lc_target}-web.tar" -s /^filament-js/dist/ \
-                    filament-js/filament.wasm
+            cd web/filament-js
+            tar -cvf "../../../filament-${lc_target}-web.tar" filament.js
+            tar -rvf "../../../filament-${lc_target}-web.tar" filament.wasm
+            tar -rvf "../../../filament-${lc_target}-web.tar" filament.d.ts
             cd -
             gzip -c "../filament-${lc_target}-web.tar" > "../filament-${lc_target}-web.tgz"
             rm "../filament-${lc_target}-web.tar"
