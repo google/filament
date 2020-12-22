@@ -24,6 +24,8 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <tsl/robin_set.h>
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -65,6 +67,9 @@ struct MetalContext {
     SamplerStateCache samplerStateCache;
 
     MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
+
+    // Keeps track of all alive sampler groups.
+    tsl::robin_set<MetalSamplerGroup*> samplerGroups;
 
     MetalBufferPool* bufferPool;
 
