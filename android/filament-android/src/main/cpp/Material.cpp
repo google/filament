@@ -204,9 +204,20 @@ Java_com_google_android_filament_Material_nGetParameters(JNIEnv* env, jclass,
     jfieldID parameterSamplerOffset = env->GetStaticFieldID(parameterClass,
             "SAMPLER_OFFSET", "I");
 
+    jfieldID parameterSubpassOffset = env->GetStaticFieldID(parameterClass,
+            "SUBPASS_OFFSET", "I");
+
     jint offset = env->GetStaticIntField(parameterClass, parameterSamplerOffset);
+    jint subpassOffset = env->GetStaticIntField(parameterClass, parameterSubpassOffset);
     for (size_t i = 0; i < received; i++) {
-        jint type = info[i].isSampler ? (jint) info[i].samplerType + offset : (jint) info[i].type;
+        jint type;
+        if (info[i].isSampler) {
+            type = (jint) info[i].samplerType + offset;
+        } else if (info[i].isSubpass) {
+            type = subpassOffset;
+        } else {
+            type = (jint) info[i].type;
+        }
 
         env->CallStaticVoidMethod(
                 parameterClass, parameterAdd,

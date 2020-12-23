@@ -25,6 +25,7 @@
 
 #include <private/filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
 #include <filaflat/ShaderBuilder.h>
@@ -127,7 +128,8 @@ public:
 
     size_t getParameterCount() const noexcept {
         return mUniformInterfaceBlock.getUniformInfoList().size() +
-                mSamplerInterfaceBlock.getSamplerInfoList().size();
+                mSamplerInterfaceBlock.getSamplerInfoList().size() +
+                (mSubpassInfo.isValid ? 1 : 0);
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
@@ -191,6 +193,7 @@ private:
     FMaterialInstance mDefaultInstance;
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     UniformInterfaceBlock mUniformInterfaceBlock;
+    SubpassInfo mSubpassInfo;
     SamplerBindingMap mSamplerBindings;
 
     utils::CString mName;

@@ -40,6 +40,7 @@ namespace filament {
 
 class UniformInterfaceBlock;
 class SamplerInterfaceBlock;
+struct SubpassInfo;
 
 class MaterialParser {
 public:
@@ -61,6 +62,7 @@ public:
     bool getName(utils::CString*) const noexcept;
     bool getUIB(UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
+    bool getSubpasses(SubpassInfo* subpass) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
     bool getMaterialProperties(uint64_t* value) const noexcept;
 
@@ -139,6 +141,10 @@ struct ChunkUniformInterfaceBlock {
 
 struct ChunkSamplerInterfaceBlock {
     static bool unflatten(filaflat::Unflattener& unflattener, SamplerInterfaceBlock* sib);
+};
+
+struct ChunkSubpassInterfaceBlock {
+    static bool unflatten(filaflat::Unflattener& unflattener, SubpassInfo* sib);
 };
 
 } // namespace filament
