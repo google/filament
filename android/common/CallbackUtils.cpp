@@ -95,3 +95,25 @@ void JniImageCallback::invoke(void*, void* user) {
     JniImageCallback* data = reinterpret_cast<JniImageCallback*>(user);
     delete data;
 }
+
+// -----------------------------------------------------------------------------------------------
+
+JniCallback* JniCallback::make(JNIEnv* env, jobject handler, jobject callback) {
+    return new JniCallback(env, handler, callback);
+}
+
+JniCallback::JniCallback(JNIEnv* env, jobject handler, jobject callback)
+        : mEnv(env)
+        , mHandler(env->NewGlobalRef(handler))
+        , mCallback(env->NewGlobalRef(callback)) {
+    acquireCallbackJni(env, mCallbackUtils);
+}
+
+JniCallback::~JniCallback() {
+    releaseCallbackJni(mEnv, mCallbackUtils, mHandler, mCallback);
+}
+
+void JniCallback::invoke(void* user) {
+    JniCallback* data = reinterpret_cast<JniCallback*>(user);
+    delete data;
+}

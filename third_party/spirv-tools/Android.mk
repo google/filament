@@ -95,6 +95,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/dead_variable_elimination.cpp \
 		source/opt/decompose_initialized_variables_pass.cpp \
 		source/opt/decoration_manager.cpp \
+		source/opt/debug_info_manager.cpp \
 		source/opt/def_use_manager.cpp \
 		source/opt/desc_sroa.cpp \
 		source/opt/dominator_analysis.cpp \
@@ -119,6 +120,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/inline_opaque_pass.cpp \
 		source/opt/inst_bindless_check_pass.cpp \
 		source/opt/inst_buff_addr_check_pass.cpp \
+		source/opt/inst_debug_printf_pass.cpp \
 		source/opt/instruction.cpp \
 		source/opt/instruction_list.cpp \
 		source/opt/instrument_pass.cpp \
@@ -147,7 +149,6 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/pass.cpp \
 		source/opt/pass_manager.cpp \
 		source/opt/private_to_local_pass.cpp \
-		source/opt/process_lines_pass.cpp \
 		source/opt/propagator.cpp \
 		source/opt/reduce_load_size.cpp \
 		source/opt/redundancy_elimination.cpp \
@@ -179,11 +180,10 @@ SPVTOOLS_OPT_SRC_FILES := \
 # Locations of grammar files.
 #
 SPV_COREUNIFIED1_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/spirv.core.grammar.json
-SPV_GLSL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.2/extinst.glsl.std.450.grammar.json
-SPV_OPENCL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/1.2/extinst.opencl.std.100.grammar.json
-# TODO(dneto): I expect the DebugInfo grammar file to eventually migrate to SPIRV-Headers
-SPV_DEBUGINFO_GRAMMAR=$(LOCAL_PATH)/source/extinst.debuginfo.grammar.json
-SPV_CLDEBUGINFO100_GRAMMAR=$(LOCAL_PATH)/source/extinst.opencl.debuginfo.100.grammar.json
+SPV_GLSL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.glsl.std.450.grammar.json
+SPV_OPENCL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.opencl.std.100.grammar.json
+SPV_DEBUGINFO_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.debuginfo.grammar.json
+SPV_CLDEBUGINFO100_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json
 
 define gen_spvtools_grammar_tables
 $(call generate-file-dir,$(1)/core.insts-unified1.inc)
@@ -235,9 +235,8 @@ $(1)/$(2).h : \
         $(LOCAL_PATH)/utils/generate_language_headers.py \
         $(3)
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_language_headers.py \
-		    --extinst-name=$(2) \
 		    --extinst-grammar=$(3) \
-		    --extinst-output-base=$(1)/$(2)
+		    --extinst-output-path=$(1)/$(2).h
 		@echo "[$(TARGET_ARCH_ABI)] Generate language specific header for $(2): headers <= grammar"
 $(foreach F,$(SPVTOOLS_SRC_FILES) $(SPVTOOLS_OPT_SRC_FILES),$(LOCAL_PATH)/$F ) \
 	: $(1)/$(2).h
@@ -251,9 +250,9 @@ define gen_spvtools_vendor_tables
 $(call generate-file-dir,$(1)/$(2).insts.inc)
 $(1)/$(2).insts.inc : \
         $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-        $(LOCAL_PATH)/source/extinst.$(2).grammar.json
+        $(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.$(2).grammar.json
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/generate_grammar_tables.py \
-		    --extinst-vendor-grammar=$(LOCAL_PATH)/source/extinst.$(2).grammar.json \
+		    --extinst-vendor-grammar=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.$(2).grammar.json \
 		    --vendor-insts-output=$(1)/$(2).insts.inc \
 		    --vendor-operand-kind-prefix=$(3)
 		@echo "[$(TARGET_ARCH_ABI)] Vendor extended instruction set: $(2) tables <= grammar"
@@ -266,6 +265,7 @@ $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-gcn-shader
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-ballot,""))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-explicit-vertex-parameter,""))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-trinary-minmax,""))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),nonsemantic.clspvreflection,""))
 
 define gen_spvtools_enum_string_mapping
 $(call generate-file-dir,$(1)/extension_enum.inc.inc)

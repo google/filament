@@ -35,6 +35,8 @@
 
 #define METALVIEW_TAG 255
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
@@ -46,7 +48,7 @@ Driver* PlatformVkCocoaTouch::createDriver(void* const sharedContext) noexcept {
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
+void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
 #if METAL_AVAILABLE
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
 

@@ -1622,6 +1622,198 @@ TEST_F(CopyPropArrayPassTest, IndexIsNullConstnat) {
   SinglePassRunAndMatch<CopyPropagateArrays>(text, true);
 }
 
+TEST_F(CopyPropArrayPassTest, DebugDeclare) {
+  const std::string before =
+      R"(OpCapability Shader
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_INDEX %out_var_SV_Target
+OpExecutionMode %main OriginUpperLeft
+OpSource HLSL 600
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+OpName %type_MyCBuffer "type.MyCBuffer"
+OpMemberName %type_MyCBuffer 0 "Data"
+OpName %MyCBuffer "MyCBuffer"
+OpName %main "main"
+OpName %in_var_INDEX "in.var.INDEX"
+OpName %out_var_SV_Target "out.var.SV_Target"
+OpDecorate %_arr_v4float_uint_8 ArrayStride 16
+OpMemberDecorate %type_MyCBuffer 0 Offset 0
+OpDecorate %type_MyCBuffer Block
+OpDecorate %in_var_INDEX Flat
+OpDecorate %in_var_INDEX Location 0
+OpDecorate %out_var_SV_Target Location 0
+OpDecorate %MyCBuffer DescriptorSet 0
+OpDecorate %MyCBuffer Binding 0
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%uint = OpTypeInt 32 0
+%uint_8 = OpConstant %uint 8
+%uint_32 = OpConstant %uint 32
+%_arr_v4float_uint_8 = OpTypeArray %v4float %uint_8
+%type_MyCBuffer = OpTypeStruct %_arr_v4float_uint_8
+%_ptr_Uniform_type_MyCBuffer = OpTypePointer Uniform %type_MyCBuffer
+%void = OpTypeVoid
+%13 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%_arr_v4float_uint_8_0 = OpTypeArray %v4float %uint_8
+%_ptr_Function__arr_v4float_uint_8_0 = OpTypePointer Function %_arr_v4float_uint_8_0
+%int_0 = OpConstant %int 0
+%_ptr_Uniform__arr_v4float_uint_8 = OpTypePointer Uniform %_arr_v4float_uint_8
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%MyCBuffer = OpVariable %_ptr_Uniform_type_MyCBuffer Uniform
+%in_var_INDEX = OpVariable %_ptr_Input_int Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+%null_expr = OpExtInst %void %ext DebugExpression
+%src = OpExtInst %void %ext DebugSource %file_name
+%cu = OpExtInst %void %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %void %ext DebugTypeBasic %float_name %uint_32 Float
+%main_ty = OpExtInst %void %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_tf
+%dbg_main = OpExtInst %void %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %main
+
+; CHECK: [[deref:%\w+]] = OpExtInst %void [[ext:%\w+]] DebugOperation Deref
+; CHECK: [[dbg_f:%\w+]] = OpExtInst %void [[ext]] DebugLocalVariable
+%dbg_f = OpExtInst %void %ext DebugLocalVariable %f_name %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+
+; CHECK: [[deref_expr:%\w+]] = OpExtInst %void [[ext]] DebugExpression [[deref]]
+; CHECK: OpAccessChain
+; CHECK: [[newptr:%\w+]] = OpAccessChain %_ptr_Uniform__arr_v4float_uint_8 %MyCBuffer %int_0
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_f]] [[newptr]] [[deref_expr]]
+; CHECK: [[element_ptr:%\w+]] = OpAccessChain %_ptr_Uniform_v4float [[newptr]] %24
+; CHECK: [[load:%\w+]] = OpLoad %v4float [[element_ptr]]
+; CHECK: OpStore %out_var_SV_Target [[load]]
+%main = OpFunction %void None %13
+%22 = OpLabel
+%23 = OpVariable %_ptr_Function__arr_v4float_uint_8_0 Function
+%24 = OpLoad %int %in_var_INDEX
+%25 = OpAccessChain %_ptr_Uniform__arr_v4float_uint_8 %MyCBuffer %int_0
+%26 = OpLoad %_arr_v4float_uint_8 %25
+%27 = OpCompositeExtract %v4float %26 0
+%28 = OpCompositeExtract %v4float %26 1
+%29 = OpCompositeExtract %v4float %26 2
+%30 = OpCompositeExtract %v4float %26 3
+%31 = OpCompositeExtract %v4float %26 4
+%32 = OpCompositeExtract %v4float %26 5
+%33 = OpCompositeExtract %v4float %26 6
+%34 = OpCompositeExtract %v4float %26 7
+%35 = OpCompositeConstruct %_arr_v4float_uint_8_0 %27 %28 %29 %30 %31 %32 %33 %34
+OpStore %23 %35
+%decl = OpExtInst %void %ext DebugDeclare %dbg_f %23 %null_expr
+%36 = OpAccessChain %_ptr_Function_v4float %23 %24
+%37 = OpLoad %v4float %36
+OpStore %out_var_SV_Target %37
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<CopyPropagateArrays>(before, false);
+}
+
+TEST_F(CopyPropArrayPassTest, DebugValue) {
+  const std::string before =
+      R"(OpCapability Shader
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_INDEX %out_var_SV_Target
+OpExecutionMode %main OriginUpperLeft
+OpSource HLSL 600
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+OpName %type_MyCBuffer "type.MyCBuffer"
+OpMemberName %type_MyCBuffer 0 "Data"
+OpName %MyCBuffer "MyCBuffer"
+OpName %main "main"
+OpName %in_var_INDEX "in.var.INDEX"
+OpName %out_var_SV_Target "out.var.SV_Target"
+OpDecorate %_arr_v4float_uint_8 ArrayStride 16
+OpMemberDecorate %type_MyCBuffer 0 Offset 0
+OpDecorate %type_MyCBuffer Block
+OpDecorate %in_var_INDEX Flat
+OpDecorate %in_var_INDEX Location 0
+OpDecorate %out_var_SV_Target Location 0
+OpDecorate %MyCBuffer DescriptorSet 0
+OpDecorate %MyCBuffer Binding 0
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%uint = OpTypeInt 32 0
+%uint_8 = OpConstant %uint 8
+%uint_32 = OpConstant %uint 32
+%_arr_v4float_uint_8 = OpTypeArray %v4float %uint_8
+%type_MyCBuffer = OpTypeStruct %_arr_v4float_uint_8
+%_ptr_Uniform_type_MyCBuffer = OpTypePointer Uniform %type_MyCBuffer
+%void = OpTypeVoid
+%13 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%_arr_v4float_uint_8_0 = OpTypeArray %v4float %uint_8
+%_ptr_Function__arr_v4float_uint_8_0 = OpTypePointer Function %_arr_v4float_uint_8_0
+%int_0 = OpConstant %int 0
+%_ptr_Uniform__arr_v4float_uint_8 = OpTypePointer Uniform %_arr_v4float_uint_8
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%MyCBuffer = OpVariable %_ptr_Uniform_type_MyCBuffer Uniform
+%in_var_INDEX = OpVariable %_ptr_Input_int Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+
+; CHECK: [[deref:%\w+]] = OpExtInst %void [[ext:%\w+]] DebugOperation Deref
+; CHECK: [[deref_expr:%\w+]] = OpExtInst %void [[ext]] DebugExpression [[deref]]
+%deref = OpExtInst %void %ext DebugOperation Deref
+%expr = OpExtInst %void %ext DebugExpression %deref
+%src = OpExtInst %void %ext DebugSource %file_name
+%cu = OpExtInst %void %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %void %ext DebugTypeBasic %float_name %uint_32 Float
+%main_ty = OpExtInst %void %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_tf
+%dbg_main = OpExtInst %void %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %main
+
+; CHECK: [[dbg_f:%\w+]] = OpExtInst %void [[ext]] DebugLocalVariable
+%dbg_f = OpExtInst %void %ext DebugLocalVariable %f_name %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%main = OpFunction %void None %13
+%22 = OpLabel
+%23 = OpVariable %_ptr_Function__arr_v4float_uint_8_0 Function
+%24 = OpLoad %int %in_var_INDEX
+%25 = OpAccessChain %_ptr_Uniform__arr_v4float_uint_8 %MyCBuffer %int_0
+%26 = OpLoad %_arr_v4float_uint_8 %25
+%27 = OpCompositeExtract %v4float %26 0
+%28 = OpCompositeExtract %v4float %26 1
+%29 = OpCompositeExtract %v4float %26 2
+%30 = OpCompositeExtract %v4float %26 3
+%31 = OpCompositeExtract %v4float %26 4
+%32 = OpCompositeExtract %v4float %26 5
+%33 = OpCompositeExtract %v4float %26 6
+%34 = OpCompositeExtract %v4float %26 7
+%35 = OpCompositeConstruct %_arr_v4float_uint_8_0 %27 %28 %29 %30 %31 %32 %33 %34
+OpStore %23 %35
+
+; CHECK: OpAccessChain
+; CHECK: [[newptr:%\w+]] = OpAccessChain %_ptr_Uniform__arr_v4float_uint_8 %MyCBuffer %int_0
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_f]] [[newptr]] [[deref_expr]]
+; CHECK: [[element_ptr:%\w+]] = OpAccessChain %_ptr_Uniform_v4float [[newptr]] %24
+; CHECK: [[load:%\w+]] = OpLoad %v4float [[element_ptr]]
+; CHECK: OpStore %out_var_SV_Target [[load]]
+%decl = OpExtInst %void %ext DebugValue %dbg_f %23 %expr
+%36 = OpAccessChain %_ptr_Function_v4float %23 %24
+%37 = OpLoad %v4float %36
+OpStore %out_var_SV_Target %37
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<CopyPropagateArrays>(before, false);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

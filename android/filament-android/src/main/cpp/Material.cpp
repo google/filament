@@ -91,7 +91,7 @@ Java_com_google_android_filament_Material_nGetBlendingMode(JNIEnv*, jclass,
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Material_nGetRefraction(JNIEnv*, jclass,
+Java_com_google_android_filament_Material_nGetRefractionMode(JNIEnv*, jclass,
         jlong nativeMaterial) {
     Material* material = (Material*) nativeMaterial;
     return (jint)material->getRefractionMode();

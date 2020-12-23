@@ -17,9 +17,9 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
-add_library(ibl STATIC IMPORTED)
-set_target_properties(ibl PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl.a)
+add_library(ibl-lite STATIC IMPORTED)
+set_target_properties(ibl-lite PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl-lite.a)
 
 add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
@@ -70,6 +70,7 @@ add_library(filament-jni SHARED
     src/main/cpp/SkyBox.cpp
     src/main/cpp/Stream.cpp
     src/main/cpp/SurfaceOrientation.cpp
+    src/main/cpp/SwapChain.cpp
     src/main/cpp/Texture.cpp
     src/main/cpp/TextureSampler.cpp
     src/main/cpp/TransformManager.cpp
@@ -91,7 +92,7 @@ target_link_libraries(filament-jni
     PRIVATE filaflat
     PRIVATE filabridge
     PRIVATE geometry
-    PRIVATE ibl
+    PRIVATE ibl-lite
     PRIVATE log
     PRIVATE GLESv3
     PRIVATE EGL

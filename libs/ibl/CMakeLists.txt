@@ -35,16 +35,22 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-
 target_link_libraries(${TARGET} math utils)
+
+add_library(${TARGET}-lite ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
+target_compile_definitions(${TARGET}-lite PUBLIC -DFILAMENT_IBL_LITE=1)
+target_include_directories(${TARGET}-lite PUBLIC ${PUBLIC_HDR_DIR})
+target_link_libraries(${TARGET}-lite math utils)
 
 # ==================================================================================================
 # Compile options and optimizations
 # ==================================================================================================
 if (MSVC)
     target_compile_options(${TARGET} PRIVATE /fp:fast)
+    target_compile_options(${TARGET}-lite PRIVATE /fp:fast)
 else()
     target_compile_options(${TARGET} PRIVATE -ffast-math)
+    target_compile_options(${TARGET}-lite PRIVATE -ffast-math)
 endif()
 
 
@@ -52,4 +58,5 @@ endif()
 # Installation
 # ==================================================================================================
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(TARGETS ${TARGET}-lite ARCHIVE DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/ibl DESTINATION include)

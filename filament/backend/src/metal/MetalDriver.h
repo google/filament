@@ -48,6 +48,8 @@ public:
 
 private:
 
+    friend class MetalSwapChain;
+
     backend::MetalPlatform& mPlatform;
 
     MetalContext* mContext;

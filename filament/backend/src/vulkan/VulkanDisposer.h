@@ -61,7 +61,7 @@ public:
 
 private:
     struct Disposable {
-        size_t refcount = 1;
+        int refcount = 1;
         std::function<void()> destructor;
     };
     tsl::robin_map<Key, Disposable> mDisposables;

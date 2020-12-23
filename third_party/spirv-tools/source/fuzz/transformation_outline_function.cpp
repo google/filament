@@ -21,20 +21,6 @@
 namespace spvtools {
 namespace fuzz {
 
-namespace {
-
-std::map<uint32_t, uint32_t> PairSequenceToMap(
-    const google::protobuf::RepeatedPtrField<protobufs::UInt32Pair>&
-        pair_sequence) {
-  std::map<uint32_t, uint32_t> result;
-  for (auto& pair : pair_sequence) {
-    result[pair.first()] = pair.second();
-  }
-  return result;
-}
-
-}  // namespace
-
 TransformationOutlineFunction::TransformationOutlineFunction(
     const spvtools::fuzz::protobufs::TransformationOutlineFunction& message)
     : message_(message) {}
@@ -44,8 +30,8 @@ TransformationOutlineFunction::TransformationOutlineFunction(
     uint32_t new_function_struct_return_type_id, uint32_t new_function_type_id,
     uint32_t new_function_id, uint32_t new_function_region_entry_block,
     uint32_t new_caller_result_id, uint32_t new_callee_result_id,
-    std::map<uint32_t, uint32_t>&& input_id_to_fresh_id,
-    std::map<uint32_t, uint32_t>&& output_id_to_fresh_id) {
+    const std::map<uint32_t, uint32_t>& input_id_to_fresh_id,
+    const std::map<uint32_t, uint32_t>& output_id_to_fresh_id) {
   message_.set_entry_block(entry_block);
   message_.set_exit_block(exit_block);
   message_.set_new_function_struct_return_type_id(
@@ -55,87 +41,79 @@ TransformationOutlineFunction::TransformationOutlineFunction(
   message_.set_new_function_region_entry_block(new_function_region_entry_block);
   message_.set_new_caller_result_id(new_caller_result_id);
   message_.set_new_callee_result_id(new_callee_result_id);
-  for (auto& entry : input_id_to_fresh_id) {
-    protobufs::UInt32Pair pair;
-    pair.set_first(entry.first);
-    pair.set_second(entry.second);
-    *message_.add_input_id_to_fresh_id() = pair;
-  }
-  for (auto& entry : output_id_to_fresh_id) {
-    protobufs::UInt32Pair pair;
-    pair.set_first(entry.first);
-    pair.set_second(entry.second);
-    *message_.add_output_id_to_fresh_id() = pair;
-  }
+  *message_.mutable_input_id_to_fresh_id() =
+      fuzzerutil::MapToRepeatedUInt32Pair(input_id_to_fresh_id);
+  *message_.mutable_output_id_to_fresh_id() =
+      fuzzerutil::MapToRepeatedUInt32Pair(output_id_to_fresh_id);
 }
 
 bool TransformationOutlineFunction::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context,
+    const TransformationContext& transformation_context) const {
   std::set<uint32_t> ids_used_by_this_transformation;
 
   // The various new ids used by the transformation must be fresh and distinct.
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_function_struct_return_type_id(), context,
+          message_.new_function_struct_return_type_id(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_function_type_id(), context,
+          message_.new_function_type_id(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_function_id(), context,
+          message_.new_function_id(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_function_region_entry_block(), context,
+          message_.new_function_region_entry_block(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_caller_result_id(), context,
+          message_.new_caller_result_id(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-          message_.new_callee_result_id(), context,
+          message_.new_callee_result_id(), ir_context,
           &ids_used_by_this_transformation)) {
     return false;
   }
 
   for (auto& pair : message_.input_id_to_fresh_id()) {
     if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-            pair.second(), context, &ids_used_by_this_transformation)) {
+            pair.second(), ir_context, &ids_used_by_this_transformation)) {
       return false;
     }
   }
 
   for (auto& pair : message_.output_id_to_fresh_id()) {
     if (!CheckIdIsFreshAndNotUsedByThisTransformation(
-            pair.second(), context, &ids_used_by_this_transformation)) {
+            pair.second(), ir_context, &ids_used_by_this_transformation)) {
       return false;
     }
   }
 
   // The entry and exit block ids must indeed refer to blocks.
   for (auto block_id : {message_.entry_block(), message_.exit_block()}) {
-    auto block_label = context->get_def_use_mgr()->GetDef(block_id);
+    auto block_label = ir_context->get_def_use_mgr()->GetDef(block_id);
     if (!block_label || block_label->opcode() != SpvOpLabel) {
       return false;
     }
   }
 
-  auto entry_block = context->cfg()->block(message_.entry_block());
-  auto exit_block = context->cfg()->block(message_.exit_block());
+  auto entry_block = ir_context->cfg()->block(message_.entry_block());
+  auto exit_block = ir_context->cfg()->block(message_.exit_block());
 
   // The entry block cannot start with OpVariable - this would mean that
   // outlining would remove a variable from the function containing the region
@@ -151,7 +129,7 @@ bool TransformationOutlineFunction::IsApplicable(
 
   // For simplicity, we do not allow the exit block to be a merge block or
   // continue target.
-  if (fuzzerutil::IsMergeOrContinue(context, exit_block->id())) {
+  if (fuzzerutil::IsMergeOrContinue(ir_context, exit_block->id())) {
     return false;
   }
 
@@ -169,14 +147,14 @@ bool TransformationOutlineFunction::IsApplicable(
 
   // The entry block must dominate the exit block.
   auto dominator_analysis =
-      context->GetDominatorAnalysis(entry_block->GetParent());
+      ir_context->GetDominatorAnalysis(entry_block->GetParent());
   if (!dominator_analysis->Dominates(entry_block, exit_block)) {
     return false;
   }
 
   // The exit block must post-dominate the entry block.
   auto postdominator_analysis =
-      context->GetPostDominatorAnalysis(entry_block->GetParent());
+      ir_context->GetPostDominatorAnalysis(entry_block->GetParent());
   if (!postdominator_analysis->Dominates(exit_block, entry_block)) {
     return false;
   }
@@ -184,8 +162,9 @@ bool TransformationOutlineFunction::IsApplicable(
   // Find all the blocks dominated by |message_.entry_block| and post-dominated
   // by |message_.exit_block|.
   auto region_set = GetRegionBlocks(
-      context, entry_block = context->cfg()->block(message_.entry_block()),
-      exit_block = context->cfg()->block(message_.exit_block()));
+      ir_context,
+      entry_block = ir_context->cfg()->block(message_.entry_block()),
+      exit_block = ir_context->cfg()->block(message_.exit_block()));
 
   // Check whether |region_set| really is a single-entry single-exit region, and
   // also check whether structured control flow constructs and their merge
@@ -198,10 +177,15 @@ bool TransformationOutlineFunction::IsApplicable(
   for (auto& block : *entry_block->GetParent()) {
     if (&block == exit_block) {
       // It is OK (and typically expected) for the exit block of the region to
-      // have successors outside the region.  It is also OK for the exit block
-      // to head a structured control flow construct - the block containing the
-      // call to the outlined function will end up heading this construct if
-      // outlining takes place.
+      // have successors outside the region.
+      //
+      // It is also OK for the exit block to head a selection construct: the
+      // block containing the call to the outlined function will end up heading
+      // this construct if outlining takes place.  However, it is not OK for
+      // the exit block to head a loop construct.
+      if (block.GetLoopMergeInst()) {
+        return false;
+      }
       continue;
     }
 
@@ -210,9 +194,9 @@ bool TransformationOutlineFunction::IsApplicable(
       // see whether all of the block's successors are in the region.  If they
       // are not, the region is not single-entry single-exit.
       bool all_successors_in_region = true;
-      block.WhileEachSuccessorLabel([&all_successors_in_region, context,
+      block.WhileEachSuccessorLabel([&all_successors_in_region, ir_context,
                                      &region_set](uint32_t successor) -> bool {
-        if (region_set.count(context->cfg()->block(successor)) == 0) {
+        if (region_set.count(ir_context->cfg()->block(successor)) == 0) {
           all_successors_in_region = false;
           return false;
         }
@@ -227,7 +211,8 @@ bool TransformationOutlineFunction::IsApplicable(
       // The block is a loop or selection header -- the header and its
       // associated merge block had better both be in the region or both be
       // outside the region.
-      auto merge_block = context->cfg()->block(merge->GetSingleWordOperand(0));
+      auto merge_block =
+          ir_context->cfg()->block(merge->GetSingleWordOperand(0));
       if (region_set.count(&block) != region_set.count(merge_block)) {
         return false;
       }
@@ -236,7 +221,7 @@ bool TransformationOutlineFunction::IsApplicable(
     if (auto loop_merge = block.GetLoopMergeInst()) {
       // Similar to the above, but for the continue target of a loop.
       auto continue_target =
-          context->cfg()->block(loop_merge->GetSingleWordOperand(1));
+          ir_context->cfg()->block(loop_merge->GetSingleWordOperand(1));
       if (continue_target != exit_block &&
           region_set.count(&block) != region_set.count(continue_target)) {
         return false;
@@ -246,18 +231,19 @@ bool TransformationOutlineFunction::IsApplicable(
 
   // For each region input id, i.e. every id defined outside the region but
   // used inside the region, ...
-  std::map<uint32_t, uint32_t> input_id_to_fresh_id_map =
-      PairSequenceToMap(message_.input_id_to_fresh_id());
-  for (auto id : GetRegionInputIds(context, region_set, exit_block)) {
+  auto input_id_to_fresh_id_map =
+      fuzzerutil::RepeatedUInt32PairToMap(message_.input_id_to_fresh_id());
+  for (auto id : GetRegionInputIds(ir_context, region_set, exit_block)) {
     // There needs to be a corresponding fresh id to be used as a function
-    // parameter.
-    if (input_id_to_fresh_id_map.count(id) == 0) {
+    // parameter, or overflow ids need to be available.
+    if (input_id_to_fresh_id_map.count(id) == 0 &&
+        !transformation_context.GetOverflowIdSource()->HasOverflowIds()) {
       return false;
     }
     // Furthermore, if the input id has pointer type it must be an OpVariable
     // or OpFunctionParameter.
-    auto input_id_inst = context->get_def_use_mgr()->GetDef(id);
-    if (context->get_def_use_mgr()
+    auto input_id_inst = ir_context->get_def_use_mgr()->GetDef(id);
+    if (ir_context->get_def_use_mgr()
             ->GetDef(input_id_inst->type_id())
             ->opcode() == SpvOpTypePointer) {
       switch (input_id_inst->opcode()) {
@@ -273,12 +259,22 @@ bool TransformationOutlineFunction::IsApplicable(
   }
 
   // For each region output id -- i.e. every id defined inside the region but
-  // used outside the region -- there needs to be a corresponding fresh id that
-  // can hold the value for this id computed in the outlined function.
-  std::map<uint32_t, uint32_t> output_id_to_fresh_id_map =
-      PairSequenceToMap(message_.output_id_to_fresh_id());
-  for (auto id : GetRegionOutputIds(context, region_set, exit_block)) {
-    if (output_id_to_fresh_id_map.count(id) == 0) {
+  // used outside the region, ...
+  auto output_id_to_fresh_id_map =
+      fuzzerutil::RepeatedUInt32PairToMap(message_.output_id_to_fresh_id());
+  for (auto id : GetRegionOutputIds(ir_context, region_set, exit_block)) {
+    if (
+        // ... there needs to be a corresponding fresh id that can hold the
+        // value for this id computed in the outlined function (or overflow ids
+        // must be available), and ...
+        (output_id_to_fresh_id_map.count(id) == 0 &&
+         !transformation_context.GetOverflowIdSource()->HasOverflowIds())
+        // ... the output id must not have pointer type (to avoid creating a
+        // struct with pointer members to pass data out of the outlined
+        // function)
+        || ir_context->get_def_use_mgr()
+                   ->GetDef(fuzzerutil::GetTypeId(ir_context, id))
+                   ->opcode() == SpvOpTypePointer) {
       return false;
     }
   }
@@ -287,40 +283,58 @@ bool TransformationOutlineFunction::IsApplicable(
 }
 
 void TransformationOutlineFunction::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* fact_manager) const {
+    opt::IRContext* ir_context,
+    TransformationContext* transformation_context) const {
   // The entry block for the region before outlining.
   auto original_region_entry_block =
-      context->cfg()->block(message_.entry_block());
+      ir_context->cfg()->block(message_.entry_block());
 
   // The exit block for the region before outlining.
   auto original_region_exit_block =
-      context->cfg()->block(message_.exit_block());
+      ir_context->cfg()->block(message_.exit_block());
 
   // The single-entry single-exit region defined by |message_.entry_block| and
   // |message_.exit_block|.
   std::set<opt::BasicBlock*> region_blocks = GetRegionBlocks(
-      context, original_region_entry_block, original_region_exit_block);
+      ir_context, original_region_entry_block, original_region_exit_block);
 
   // Input and output ids for the region being outlined.
   std::vector<uint32_t> region_input_ids =
-      GetRegionInputIds(context, region_blocks, original_region_exit_block);
+      GetRegionInputIds(ir_context, region_blocks, original_region_exit_block);
   std::vector<uint32_t> region_output_ids =
-      GetRegionOutputIds(context, region_blocks, original_region_exit_block);
+      GetRegionOutputIds(ir_context, region_blocks, original_region_exit_block);
 
   // Maps from input and output ids to fresh ids.
-  std::map<uint32_t, uint32_t> input_id_to_fresh_id_map =
-      PairSequenceToMap(message_.input_id_to_fresh_id());
-  std::map<uint32_t, uint32_t> output_id_to_fresh_id_map =
-      PairSequenceToMap(message_.output_id_to_fresh_id());
+  auto input_id_to_fresh_id_map =
+      fuzzerutil::RepeatedUInt32PairToMap(message_.input_id_to_fresh_id());
+  auto output_id_to_fresh_id_map =
+      fuzzerutil::RepeatedUInt32PairToMap(message_.output_id_to_fresh_id());
 
-  UpdateModuleIdBoundForFreshIds(context, input_id_to_fresh_id_map,
+  // Use overflow ids to augment these maps at any locations where fresh ids are
+  // required but not provided.
+  for (uint32_t id : region_input_ids) {
+    if (input_id_to_fresh_id_map.count(id) == 0) {
+      input_id_to_fresh_id_map.insert(
+          {id,
+           transformation_context->GetOverflowIdSource()->GetNextOverflowId()});
+    }
+  }
+  for (uint32_t id : region_output_ids) {
+    if (output_id_to_fresh_id_map.count(id) == 0) {
+      output_id_to_fresh_id_map.insert(
+          {id,
+           transformation_context->GetOverflowIdSource()->GetNextOverflowId()});
+    }
+  }
+
+  UpdateModuleIdBoundForFreshIds(ir_context, input_id_to_fresh_id_map,
                                  output_id_to_fresh_id_map);
 
   // Construct a map that associates each output id with its type id.
   std::map<uint32_t, uint32_t> output_id_to_type_id;
   for (uint32_t output_id : region_output_ids) {
     output_id_to_type_id[output_id] =
-        context->get_def_use_mgr()->GetDef(output_id)->type_id();
+        ir_context->get_def_use_mgr()->GetDef(output_id)->type_id();
   }
 
   // The region will be collapsed to a single block that calls a function
@@ -331,53 +345,64 @@ void TransformationOutlineFunction::Apply(
   // collapsed block later.
   std::unique_ptr<opt::Instruction> cloned_exit_block_terminator =
       std::unique_ptr<opt::Instruction>(
-          original_region_exit_block->terminator()->Clone(context));
+          original_region_exit_block->terminator()->Clone(ir_context));
   std::unique_ptr<opt::Instruction> cloned_exit_block_merge =
       original_region_exit_block->GetMergeInst()
           ? std::unique_ptr<opt::Instruction>(
-                original_region_exit_block->GetMergeInst()->Clone(context))
+                original_region_exit_block->GetMergeInst()->Clone(ir_context))
           : nullptr;
 
   // Make a function prototype for the outlined function, which involves
   // figuring out its required type.
-  std::unique_ptr<opt::Function> outlined_function =
-      PrepareFunctionPrototype(region_input_ids, region_output_ids,
-                               input_id_to_fresh_id_map, context, fact_manager);
-
-  // If the original function was livesafe, the new function should also be
-  // livesafe.
-  if (fact_manager->FunctionIsLivesafe(
-          original_region_entry_block->GetParent()->result_id())) {
-    fact_manager->AddFactFunctionIsLivesafe(message_.new_function_id());
-  }
+  std::unique_ptr<opt::Function> outlined_function = PrepareFunctionPrototype(
+      region_input_ids, region_output_ids, input_id_to_fresh_id_map, ir_context,
+      transformation_context);
 
   // Adapt the region to be outlined so that its input ids are replaced with the
   // ids of the outlined function's input parameters, and so that output ids
   // are similarly remapped.
   RemapInputAndOutputIdsInRegion(
-      context, *original_region_exit_block, region_blocks, region_input_ids,
+      ir_context, *original_region_exit_block, region_blocks, region_input_ids,
       region_output_ids, input_id_to_fresh_id_map, output_id_to_fresh_id_map);
 
   // Fill out the body of the outlined function according to the region that is
   // being outlined.
-  PopulateOutlinedFunction(*original_region_entry_block,
-                           *original_region_exit_block, region_blocks,
-                           region_output_ids, output_id_to_fresh_id_map,
-                           context, outlined_function.get(), fact_manager);
+  PopulateOutlinedFunction(
+      *original_region_entry_block, *original_region_exit_block, region_blocks,
+      region_output_ids, output_id_to_type_id, output_id_to_fresh_id_map,
+      ir_context, outlined_function.get());
 
   // Collapse the region that has been outlined into a function down to a single
   // block that calls said function.
   ShrinkOriginalRegion(
-      context, region_blocks, region_input_ids, region_output_ids,
+      ir_context, region_blocks, region_input_ids, region_output_ids,
       output_id_to_type_id, outlined_function->type_id(),
       std::move(cloned_exit_block_merge),
       std::move(cloned_exit_block_terminator), original_region_entry_block);
 
   // Add the outlined function to the module.
-  context->module()->AddFunction(std::move(outlined_function));
+  const auto* outlined_function_ptr = outlined_function.get();
+  ir_context->module()->AddFunction(std::move(outlined_function));
 
   // Major surgery has been conducted on the module, so invalidate all analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
+
+  // If the original function was livesafe, the new function should also be
+  // livesafe.
+  if (transformation_context->GetFactManager()->FunctionIsLivesafe(
+          original_region_entry_block->GetParent()->result_id())) {
+    transformation_context->GetFactManager()->AddFactFunctionIsLivesafe(
+        message_.new_function_id());
+  }
+
+  // Record the fact that all blocks in the outlined region are dead if the
+  // first block is dead.
+  if (transformation_context->GetFactManager()->BlockIsDead(
+          original_region_entry_block->id())) {
+    transformation_context->GetFactManager()->AddFactBlockIsDead(
+        outlined_function_ptr->entry()->id());
+  }
 }
 
 protobufs::Transformation TransformationOutlineFunction::ToMessage() const {
@@ -387,30 +412,31 @@ protobufs::Transformation TransformationOutlineFunction::ToMessage() const {
 }
 
 std::vector<uint32_t> TransformationOutlineFunction::GetRegionInputIds(
-    opt::IRContext* context, const std::set<opt::BasicBlock*>& region_set,
+    opt::IRContext* ir_context, const std::set<opt::BasicBlock*>& region_set,
     opt::BasicBlock* region_exit_block) {
   std::vector<uint32_t> result;
 
   auto enclosing_function = region_exit_block->GetParent();
 
   // Consider each parameter of the function containing the region.
-  enclosing_function->ForEachParam([context, &region_set, &result](
-                                       opt::Instruction* function_parameter) {
-    // Consider every use of the parameter.
-    context->get_def_use_mgr()->WhileEachUse(
-        function_parameter, [context, function_parameter, &region_set, &result](
-                                opt::Instruction* use, uint32_t /*unused*/) {
-          // Get the block, if any, in which the parameter is used.
-          auto use_block = context->get_instr_block(use);
-          // If the use is in a block that lies within the region, the
-          // parameter is an input id for the region.
-          if (use_block && region_set.count(use_block) != 0) {
-            result.push_back(function_parameter->result_id());
-            return false;
-          }
-          return true;
-        });
-  });
+  enclosing_function->ForEachParam(
+      [ir_context, &region_set, &result](opt::Instruction* function_parameter) {
+        // Consider every use of the parameter.
+        ir_context->get_def_use_mgr()->WhileEachUse(
+            function_parameter,
+            [ir_context, function_parameter, &region_set, &result](
+                opt::Instruction* use, uint32_t /*unused*/) {
+              // Get the block, if any, in which the parameter is used.
+              auto use_block = ir_context->get_instr_block(use);
+              // If the use is in a block that lies within the region, the
+              // parameter is an input id for the region.
+              if (use_block && region_set.count(use_block) != 0) {
+                result.push_back(function_parameter->result_id());
+                return false;
+              }
+              return true;
+            });
+      });
 
   // Consider all definitions in the function that might turn out to be input
   // ids.
@@ -430,15 +456,14 @@ std::vector<uint32_t> TransformationOutlineFunction::GetRegionInputIds(
     // Consider each candidate input id to check whether it is used in the
     // region.
     for (auto& inst : candidate_input_ids_for_block) {
-      context->get_def_use_mgr()->WhileEachUse(
+      ir_context->get_def_use_mgr()->WhileEachUse(
           inst,
-          [context, &inst, region_exit_block, &region_set, &result](
+          [ir_context, &inst, region_exit_block, &region_set, &result](
               opt::Instruction* use, uint32_t /*unused*/) -> bool {
-
             // Find the block in which this id use occurs, recording the id as
             // an input id if the block is outside the region, with some
             // exceptions detailed below.
-            auto use_block = context->get_instr_block(use);
+            auto use_block = ir_context->get_instr_block(use);
 
             if (!use_block) {
               // There might be no containing block, e.g. if the use is in a
@@ -467,7 +492,7 @@ std::vector<uint32_t> TransformationOutlineFunction::GetRegionInputIds(
 }
 
 std::vector<uint32_t> TransformationOutlineFunction::GetRegionOutputIds(
-    opt::IRContext* context, const std::set<opt::BasicBlock*>& region_set,
+    opt::IRContext* ir_context, const std::set<opt::BasicBlock*>& region_set,
     opt::BasicBlock* region_exit_block) {
   std::vector<uint32_t> result;
 
@@ -479,15 +504,14 @@ std::vector<uint32_t> TransformationOutlineFunction::GetRegionOutputIds(
     }
     // Consider each use of each instruction defined in the block.
     for (auto& inst : block) {
-      context->get_def_use_mgr()->WhileEachUse(
+      ir_context->get_def_use_mgr()->WhileEachUse(
           &inst,
-          [&region_set, context, &inst, region_exit_block, &result](
+          [&region_set, ir_context, &inst, region_exit_block, &result](
               opt::Instruction* use, uint32_t /*unused*/) -> bool {
-
             // Find the block in which this id use occurs, recording the id as
             // an output id if the block is outside the region, with some
             // exceptions detailed below.
-            auto use_block = context->get_instr_block(use);
+            auto use_block = ir_context->get_instr_block(use);
 
             if (!use_block) {
               // There might be no containing block, e.g. if the use is in a
@@ -513,12 +537,13 @@ std::vector<uint32_t> TransformationOutlineFunction::GetRegionOutputIds(
 }
 
 std::set<opt::BasicBlock*> TransformationOutlineFunction::GetRegionBlocks(
-    opt::IRContext* context, opt::BasicBlock* entry_block,
+    opt::IRContext* ir_context, opt::BasicBlock* entry_block,
     opt::BasicBlock* exit_block) {
   auto enclosing_function = entry_block->GetParent();
-  auto dominator_analysis = context->GetDominatorAnalysis(enclosing_function);
+  auto dominator_analysis =
+      ir_context->GetDominatorAnalysis(enclosing_function);
   auto postdominator_analysis =
-      context->GetPostDominatorAnalysis(enclosing_function);
+      ir_context->GetPostDominatorAnalysis(enclosing_function);
 
   std::set<opt::BasicBlock*> result;
   for (auto& block : *enclosing_function) {
@@ -535,7 +560,8 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
     const std::vector<uint32_t>& region_input_ids,
     const std::vector<uint32_t>& region_output_ids,
     const std::map<uint32_t, uint32_t>& input_id_to_fresh_id_map,
-    opt::IRContext* context, FactManager* fact_manager) const {
+    opt::IRContext* ir_context,
+    TransformationContext* transformation_context) const {
   uint32_t return_type_id = 0;
   uint32_t function_type_id = 0;
 
@@ -547,14 +573,14 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
   if (region_output_ids.empty()) {
     std::vector<uint32_t> return_and_parameter_types;
     opt::analysis::Void void_type;
-    return_type_id = context->get_type_mgr()->GetId(&void_type);
+    return_type_id = ir_context->get_type_mgr()->GetId(&void_type);
     return_and_parameter_types.push_back(return_type_id);
     for (auto id : region_input_ids) {
       return_and_parameter_types.push_back(
-          context->get_def_use_mgr()->GetDef(id)->type_id());
+          ir_context->get_def_use_mgr()->GetDef(id)->type_id());
     }
     function_type_id =
-        fuzzerutil::FindFunctionType(context, return_and_parameter_types);
+        fuzzerutil::FindFunctionType(ir_context, return_and_parameter_types);
   }
 
   // If no existing function type was found, we need to create one.
@@ -568,12 +594,18 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
       opt::Instruction::OperandList struct_member_types;
       for (uint32_t output_id : region_output_ids) {
         auto output_id_type =
-            context->get_def_use_mgr()->GetDef(output_id)->type_id();
+            ir_context->get_def_use_mgr()->GetDef(output_id)->type_id();
+        if (ir_context->get_def_use_mgr()->GetDef(output_id_type)->opcode() ==
+            SpvOpTypeVoid) {
+          // We cannot add a void field to a struct.  We instead use OpUndef to
+          // handle void output ids.
+          continue;
+        }
         struct_member_types.push_back({SPV_OPERAND_TYPE_ID, {output_id_type}});
       }
       // Add a new struct type to the module.
-      context->module()->AddType(MakeUnique<opt::Instruction>(
-          context, SpvOpTypeStruct, 0,
+      ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+          ir_context, SpvOpTypeStruct, 0,
           message_.new_function_struct_return_type_id(),
           std::move(struct_member_types)));
       // The return type for the function is the newly-created struct.
@@ -589,12 +621,12 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
     for (auto id : region_input_ids) {
       function_type_operands.push_back(
           {SPV_OPERAND_TYPE_ID,
-           {context->get_def_use_mgr()->GetDef(id)->type_id()}});
+           {ir_context->get_def_use_mgr()->GetDef(id)->type_id()}});
     }
     // Add a new function type to the module, and record that this is the type
     // id for the new function.
-    context->module()->AddType(MakeUnique<opt::Instruction>(
-        context, SpvOpTypeFunction, 0, message_.new_function_type_id(),
+    ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+        ir_context, SpvOpTypeFunction, 0, message_.new_function_type_id(),
         function_type_operands));
     function_type_id = message_.new_function_type_id();
   }
@@ -603,7 +635,7 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
   // and the return type and function type prepared above.
   std::unique_ptr<opt::Function> outlined_function =
       MakeUnique<opt::Function>(MakeUnique<opt::Instruction>(
-          context, SpvOpFunction, return_type_id, message_.new_function_id(),
+          ir_context, SpvOpFunction, return_type_id, message_.new_function_id(),
           opt::Instruction::OperandList(
               {{spv_operand_type_t ::SPV_OPERAND_TYPE_LITERAL_INTEGER,
                 {SpvFunctionControlMaskNone}},
@@ -611,17 +643,28 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
                 {function_type_id}}})));
 
   // Add one parameter to the function for each input id, using the fresh ids
-  // provided in |input_id_to_fresh_id_map|.
+  // provided in |input_id_to_fresh_id_map|, or overflow ids if needed.
   for (auto id : region_input_ids) {
+    uint32_t fresh_id = input_id_to_fresh_id_map.at(id);
     outlined_function->AddParameter(MakeUnique<opt::Instruction>(
-        context, SpvOpFunctionParameter,
-        context->get_def_use_mgr()->GetDef(id)->type_id(),
-        input_id_to_fresh_id_map.at(id), opt::Instruction::OperandList()));
-    // If the input id is an arbitrary-valued variable, the same should be true
+        ir_context, SpvOpFunctionParameter,
+        ir_context->get_def_use_mgr()->GetDef(id)->type_id(), fresh_id,
+        opt::Instruction::OperandList()));
+
+    // Analyse the use of the new parameter instruction.
+    outlined_function->ForEachParam(
+        [fresh_id, ir_context](opt::Instruction* inst) {
+          if (inst->result_id() == fresh_id) {
+            ir_context->AnalyzeDefUse(inst);
+          }
+        });
+
+    // If the input id is an irrelevant-valued variable, the same should be true
     // of the corresponding parameter.
-    if (fact_manager->VariableValueIsArbitrary(id)) {
-      fact_manager->AddFactValueOfVariableIsArbitrary(
-          input_id_to_fresh_id_map.at(id));
+    if (transformation_context->GetFactManager()->PointeeValueIsIrrelevant(
+            id)) {
+      transformation_context->GetFactManager()
+          ->AddFactValueOfPointeeIsIrrelevant(input_id_to_fresh_id_map.at(id));
     }
   }
 
@@ -629,31 +672,32 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
 }
 
 void TransformationOutlineFunction::UpdateModuleIdBoundForFreshIds(
-    opt::IRContext* context,
+    opt::IRContext* ir_context,
     const std::map<uint32_t, uint32_t>& input_id_to_fresh_id_map,
     const std::map<uint32_t, uint32_t>& output_id_to_fresh_id_map) const {
   // Enlarge the module's id bound as needed to accommodate the various fresh
   // ids associated with the transformation.
   fuzzerutil::UpdateModuleIdBound(
-      context, message_.new_function_struct_return_type_id());
-  fuzzerutil::UpdateModuleIdBound(context, message_.new_function_type_id());
-  fuzzerutil::UpdateModuleIdBound(context, message_.new_function_id());
-  fuzzerutil::UpdateModuleIdBound(context,
+      ir_context, message_.new_function_struct_return_type_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.new_function_type_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.new_function_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context,
                                   message_.new_function_region_entry_block());
-  fuzzerutil::UpdateModuleIdBound(context, message_.new_caller_result_id());
-  fuzzerutil::UpdateModuleIdBound(context, message_.new_callee_result_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.new_caller_result_id());
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.new_callee_result_id());
 
   for (auto& entry : input_id_to_fresh_id_map) {
-    fuzzerutil::UpdateModuleIdBound(context, entry.second);
+    fuzzerutil::UpdateModuleIdBound(ir_context, entry.second);
   }
 
   for (auto& entry : output_id_to_fresh_id_map) {
-    fuzzerutil::UpdateModuleIdBound(context, entry.second);
+    fuzzerutil::UpdateModuleIdBound(ir_context, entry.second);
   }
 }
 
 void TransformationOutlineFunction::RemapInputAndOutputIdsInRegion(
-    opt::IRContext* context, const opt::BasicBlock& original_region_exit_block,
+    opt::IRContext* ir_context,
+    const opt::BasicBlock& original_region_exit_block,
     const std::set<opt::BasicBlock*>& region_blocks,
     const std::vector<uint32_t>& region_input_ids,
     const std::vector<uint32_t>& region_output_ids,
@@ -664,11 +708,11 @@ void TransformationOutlineFunction::RemapInputAndOutputIdsInRegion(
   // This is done by considering each region input id in turn.
   for (uint32_t id : region_input_ids) {
     // We then consider each use of the input id.
-    context->get_def_use_mgr()->ForEachUse(
-        id, [context, id, &input_id_to_fresh_id_map, region_blocks](
+    ir_context->get_def_use_mgr()->ForEachUse(
+        id, [ir_context, id, &input_id_to_fresh_id_map, region_blocks](
                 opt::Instruction* use, uint32_t operand_index) {
           // Find the block in which this use of the input id occurs.
-          opt::BasicBlock* use_block = context->get_instr_block(use);
+          opt::BasicBlock* use_block = ir_context->get_instr_block(use);
           // We want to rewrite the use id if its block occurs in the outlined
           // region.
           if (region_blocks.count(use_block) != 0) {
@@ -684,12 +728,12 @@ void TransformationOutlineFunction::RemapInputAndOutputIdsInRegion(
   // This is done by considering each region output id in turn.
   for (uint32_t id : region_output_ids) {
     // First consider each use of the output id and update the relevant uses.
-    context->get_def_use_mgr()->ForEachUse(
-        id,
-        [context, &original_region_exit_block, id, &output_id_to_fresh_id_map,
-         region_blocks](opt::Instruction* use, uint32_t operand_index) {
+    ir_context->get_def_use_mgr()->ForEachUse(
+        id, [ir_context, &original_region_exit_block, id,
+             &output_id_to_fresh_id_map,
+             region_blocks](opt::Instruction* use, uint32_t operand_index) {
           // Find the block in which this use of the output id occurs.
-          auto use_block = context->get_instr_block(use);
+          auto use_block = ir_context->get_instr_block(use);
           // We want to rewrite the use id if its block occurs in the outlined
           // region, with one exception: the terminator of the exit block of
           // the region is going to remain in the original function, so if the
@@ -710,7 +754,7 @@ void TransformationOutlineFunction::RemapInputAndOutputIdsInRegion(
     // defines the corresponding fresh id.  We do this after changing all the
     // uses so that the definition of the original id is still registered when
     // we analyse its uses.
-    context->get_def_use_mgr()->GetDef(id)->SetResultId(
+    ir_context->get_def_use_mgr()->GetDef(id)->SetResultId(
         output_id_to_fresh_id_map.at(id));
   }
 }
@@ -720,9 +764,9 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     const opt::BasicBlock& original_region_exit_block,
     const std::set<opt::BasicBlock*>& region_blocks,
     const std::vector<uint32_t>& region_output_ids,
+    const std::map<uint32_t, uint32_t>& output_id_to_type_id,
     const std::map<uint32_t, uint32_t>& output_id_to_fresh_id_map,
-    opt::IRContext* context, opt::Function* outlined_function,
-    FactManager* fact_manager) const {
+    opt::IRContext* ir_context, opt::Function* outlined_function) const {
   // When we create the exit block for the outlined region, we use this pointer
   // to track of it so that we can manipulate it later.
   opt::BasicBlock* outlined_region_exit_block = nullptr;
@@ -732,15 +776,9 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
   // |message_.new_function_region_entry_block| as its id.
   std::unique_ptr<opt::BasicBlock> outlined_region_entry_block =
       MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-          context, SpvOpLabel, 0, message_.new_function_region_entry_block(),
+          ir_context, SpvOpLabel, 0, message_.new_function_region_entry_block(),
           opt::Instruction::OperandList()));
   outlined_region_entry_block->SetParent(outlined_function);
-
-  // If the original region's entry block was dead, the outlined region's entry
-  // block is also dead.
-  if (fact_manager->BlockIsDead(original_region_entry_block.id())) {
-    fact_manager->AddFactBlockIsDead(outlined_region_entry_block->id());
-  }
 
   if (&original_region_entry_block == &original_region_exit_block) {
     outlined_region_exit_block = outlined_region_entry_block.get();
@@ -748,7 +786,7 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
 
   for (auto& inst : original_region_entry_block) {
     outlined_region_entry_block->AddInstruction(
-        std::unique_ptr<opt::Instruction>(inst.Clone(context)));
+        std::unique_ptr<opt::Instruction>(inst.Clone(ir_context)));
   }
   outlined_function->AddBasicBlock(std::move(outlined_region_entry_block));
 
@@ -767,7 +805,7 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     }
     // Clone the block so that it can be added to the new function.
     auto cloned_block =
-        std::unique_ptr<opt::BasicBlock>(block_it->Clone(context));
+        std::unique_ptr<opt::BasicBlock>(block_it->Clone(ir_context));
 
     // If this is the region's exit block, then the cloned block is the outlined
     // region's exit block.
@@ -823,32 +861,36 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     // The case where there are no region output ids is simple: we just add
     // OpReturn.
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        context, SpvOpReturn, 0, 0, opt::Instruction::OperandList()));
+        ir_context, SpvOpReturn, 0, 0, opt::Instruction::OperandList()));
   } else {
     // In the case where there are output ids, we add an OpCompositeConstruct
-    // instruction to pack all the output values into a struct, and then an
-    // OpReturnValue instruction to return this struct.
+    // instruction to pack all the non-void output values into a struct, and
+    // then an OpReturnValue instruction to return this struct.
     opt::Instruction::OperandList struct_member_operands;
     for (uint32_t id : region_output_ids) {
-      struct_member_operands.push_back(
-          {SPV_OPERAND_TYPE_ID, {output_id_to_fresh_id_map.at(id)}});
+      if (ir_context->get_def_use_mgr()
+              ->GetDef(output_id_to_type_id.at(id))
+              ->opcode() != SpvOpTypeVoid) {
+        struct_member_operands.push_back(
+            {SPV_OPERAND_TYPE_ID, {output_id_to_fresh_id_map.at(id)}});
+      }
     }
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        context, SpvOpCompositeConstruct,
+        ir_context, SpvOpCompositeConstruct,
         message_.new_function_struct_return_type_id(),
         message_.new_callee_result_id(), struct_member_operands));
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        context, SpvOpReturnValue, 0, 0,
+        ir_context, SpvOpReturnValue, 0, 0,
         opt::Instruction::OperandList(
             {{SPV_OPERAND_TYPE_ID, {message_.new_callee_result_id()}}})));
   }
 
   outlined_function->SetFunctionEnd(MakeUnique<opt::Instruction>(
-      context, SpvOpFunctionEnd, 0, 0, opt::Instruction::OperandList()));
+      ir_context, SpvOpFunctionEnd, 0, 0, opt::Instruction::OperandList()));
 }
 
 void TransformationOutlineFunction::ShrinkOriginalRegion(
-    opt::IRContext* context, std::set<opt::BasicBlock*>& region_blocks,
+    opt::IRContext* ir_context, const std::set<opt::BasicBlock*>& region_blocks,
     const std::vector<uint32_t>& region_input_ids,
     const std::vector<uint32_t>& region_output_ids,
     const std::map<uint32_t, uint32_t>& output_id_to_type_id,
@@ -912,20 +954,32 @@ void TransformationOutlineFunction::ShrinkOriginalRegion(
   }
 
   original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-      context, SpvOpFunctionCall, return_type_id,
+      ir_context, SpvOpFunctionCall, return_type_id,
       message_.new_caller_result_id(), function_call_operands));
 
   // If there are output ids, the function call will return a struct.  For each
   // output id, we add an extract operation to pull the appropriate struct
-  // member out into an output id.
-  for (uint32_t index = 0; index < region_output_ids.size(); ++index) {
-    uint32_t output_id = region_output_ids[index];
-    original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-        context, SpvOpCompositeExtract, output_id_to_type_id.at(output_id),
-        output_id,
-        opt::Instruction::OperandList(
-            {{SPV_OPERAND_TYPE_ID, {message_.new_caller_result_id()}},
-             {SPV_OPERAND_TYPE_LITERAL_INTEGER, {index}}})));
+  // member out into an output id.  The exception is for output ids with void
+  // type.  There are no struct entries for these, so we use an OpUndef of void
+  // type instead.
+  uint32_t struct_member_index = 0;
+  for (uint32_t output_id : region_output_ids) {
+    uint32_t output_type_id = output_id_to_type_id.at(output_id);
+    if (ir_context->get_def_use_mgr()->GetDef(output_type_id)->opcode() ==
+        SpvOpTypeVoid) {
+      original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
+          ir_context, SpvOpUndef, output_type_id, output_id,
+          opt::Instruction::OperandList()));
+      // struct_member_index is not incremented since there was no struct member
+      // associated with this void-typed output id.
+    } else {
+      original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
+          ir_context, SpvOpCompositeExtract, output_type_id, output_id,
+          opt::Instruction::OperandList(
+              {{SPV_OPERAND_TYPE_ID, {message_.new_caller_result_id()}},
+               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {struct_member_index}}})));
+      struct_member_index++;
+    }
   }
 
   // Finally, we terminate the block with the merge instruction (if any) that
@@ -937,6 +991,24 @@ void TransformationOutlineFunction::ShrinkOriginalRegion(
   }
   original_region_entry_block->AddInstruction(
       std::move(cloned_exit_block_terminator));
+}
+
+std::unordered_set<uint32_t> TransformationOutlineFunction::GetFreshIds()
+    const {
+  std::unordered_set<uint32_t> result = {
+      message_.new_function_struct_return_type_id(),
+      message_.new_function_type_id(),
+      message_.new_function_id(),
+      message_.new_function_region_entry_block(),
+      message_.new_caller_result_id(),
+      message_.new_callee_result_id()};
+  for (auto& pair : message_.input_id_to_fresh_id()) {
+    result.insert(pair.second());
+  }
+  for (auto& pair : message_.output_id_to_fresh_id()) {
+    result.insert(pair.second());
+  }
+  return result;
 }
 
 }  // namespace fuzz

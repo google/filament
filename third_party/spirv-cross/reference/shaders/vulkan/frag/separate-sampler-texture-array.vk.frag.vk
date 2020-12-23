@@ -14,20 +14,17 @@ layout(location = 0) out vec4 FragColor;
 
 vec4 sample_func(mediump sampler samp, vec2 uv)
 {
-    vec4 _46 = texture(sampler2D(uTexture[2], samp), uv);
-    return _46;
+    return texture(sampler2D(uTexture[2], samp), uv);
 }
 
 vec4 sample_func_dual(mediump sampler samp, mediump texture2D tex, vec2 uv)
 {
-    vec4 _55 = texture(sampler2D(tex, samp), uv);
-    return _55;
+    return texture(sampler2D(tex, samp), uv);
 }
 
 vec4 sample_func_dual_array(mediump sampler samp, mediump texture2D tex[4], vec2 uv)
 {
-    vec4 _66 = texture(sampler2D(tex[1], samp), uv);
-    return _66;
+    return texture(sampler2D(tex[1], samp), uv);
 }
 
 void main()

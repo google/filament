@@ -32,6 +32,7 @@ VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
+PixelDataType getComponentType(VkFormat format);
 
 } // namespace filament
 } // namespace backend

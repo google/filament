@@ -699,8 +699,31 @@ bool Compiler::InterfaceVariableAccessHandler::handle(Op opcode, const uint32_t 
 	{
 		if (length < 5)
 			return false;
-		uint32_t extension_set = args[2];
-		if (compiler.get<SPIRExtension>(extension_set).ext == SPIRExtension::SPV_AMD_shader_explicit_vertex_parameter)
+		auto &extension_set = compiler.get<SPIRExtension>(args[2]);
+		switch (extension_set.ext)
+		{
+		case SPIRExtension::GLSL:
+		{
+			auto op = static_cast<GLSLstd450>(args[3]);
+
+			switch (op)
+			{
+			case GLSLstd450InterpolateAtCentroid:
+			case GLSLstd450InterpolateAtSample:
+			case GLSLstd450InterpolateAtOffset:
+			{
+				auto *var = compiler.maybe_get<SPIRVariable>(args[4]);
+				if (var && storage_class_is_interface(var->storage))
+					variables.insert(args[4]);
+				break;
+			}
+
+			default:
+				break;
+			}
+			break;
+		}
+		case SPIRExtension::SPV_AMD_shader_explicit_vertex_parameter:
 		{
 			enum AMDShaderExplicitVertexParameter
 			{
@@ -722,6 +745,10 @@ bool Compiler::InterfaceVariableAccessHandler::handle(Op opcode, const uint32_t 
 			default:
 				break;
 			}
+			break;
+		}
+		default:
+			break;
 		}
 		break;
 	}
@@ -1652,6 +1679,161 @@ size_t Compiler::get_declared_struct_size_runtime_array(const SPIRType &type, si
 	return size;
 }
 
+uint32_t Compiler::evaluate_spec_constant_u32(const SPIRConstantOp &spec) const
+{
+	auto &result_type = get<SPIRType>(spec.basetype);
+	if (result_type.basetype != SPIRType::UInt && result_type.basetype != SPIRType::Int &&
+	    result_type.basetype != SPIRType::Boolean)
+	{
+		SPIRV_CROSS_THROW(
+		    "Only 32-bit integers and booleans are currently supported when evaluating specialization constants.\n");
+	}
+
+	if (!is_scalar(result_type))
+		SPIRV_CROSS_THROW("Spec constant evaluation must be a scalar.\n");
+
+	uint32_t value = 0;
+
+	const auto eval_u32 = [&](uint32_t id) -> uint32_t {
+		auto &type = expression_type(id);
+		if (type.basetype != SPIRType::UInt && type.basetype != SPIRType::Int && type.basetype != SPIRType::Boolean)
+		{
+			SPIRV_CROSS_THROW("Only 32-bit integers and booleans are currently supported when evaluating "
+			                  "specialization constants.\n");
+		}
+
+		if (!is_scalar(type))
+			SPIRV_CROSS_THROW("Spec constant evaluation must be a scalar.\n");
+		if (const auto *c = this->maybe_get<SPIRConstant>(id))
+			return c->scalar();
+		else
+			return evaluate_spec_constant_u32(this->get<SPIRConstantOp>(id));
+	};
+
+#define binary_spec_op(op, binary_op)                                              \
+	case Op##op:                                                                   \
+		value = eval_u32(spec.arguments[0]) binary_op eval_u32(spec.arguments[1]); \
+		break
+#define binary_spec_op_cast(op, binary_op, type)                                                         \
+	case Op##op:                                                                                         \
+		value = uint32_t(type(eval_u32(spec.arguments[0])) binary_op type(eval_u32(spec.arguments[1]))); \
+		break
+
+	// Support the basic opcodes which are typically used when computing array sizes.
+	switch (spec.opcode)
+	{
+		binary_spec_op(IAdd, +);
+		binary_spec_op(ISub, -);
+		binary_spec_op(IMul, *);
+		binary_spec_op(BitwiseAnd, &);
+		binary_spec_op(BitwiseOr, |);
+		binary_spec_op(BitwiseXor, ^);
+		binary_spec_op(LogicalAnd, &);
+		binary_spec_op(LogicalOr, |);
+		binary_spec_op(ShiftLeftLogical, <<);
+		binary_spec_op(ShiftRightLogical, >>);
+		binary_spec_op_cast(ShiftRightArithmetic, >>, int32_t);
+		binary_spec_op(LogicalEqual, ==);
+		binary_spec_op(LogicalNotEqual, !=);
+		binary_spec_op(IEqual, ==);
+		binary_spec_op(INotEqual, !=);
+		binary_spec_op(ULessThan, <);
+		binary_spec_op(ULessThanEqual, <=);
+		binary_spec_op(UGreaterThan, >);
+		binary_spec_op(UGreaterThanEqual, >=);
+		binary_spec_op_cast(SLessThan, <, int32_t);
+		binary_spec_op_cast(SLessThanEqual, <=, int32_t);
+		binary_spec_op_cast(SGreaterThan, >, int32_t);
+		binary_spec_op_cast(SGreaterThanEqual, >=, int32_t);
+#undef binary_spec_op
+#undef binary_spec_op_cast
+
+	case OpLogicalNot:
+		value = uint32_t(!eval_u32(spec.arguments[0]));
+		break;
+
+	case OpNot:
+		value = ~eval_u32(spec.arguments[0]);
+		break;
+
+	case OpSNegate:
+		value = uint32_t(-int32_t(eval_u32(spec.arguments[0])));
+		break;
+
+	case OpSelect:
+		value = eval_u32(spec.arguments[0]) ? eval_u32(spec.arguments[1]) : eval_u32(spec.arguments[2]);
+		break;
+
+	case OpUMod:
+	{
+		uint32_t a = eval_u32(spec.arguments[0]);
+		uint32_t b = eval_u32(spec.arguments[1]);
+		if (b == 0)
+			SPIRV_CROSS_THROW("Undefined behavior in UMod, b == 0.\n");
+		value = a % b;
+		break;
+	}
+
+	case OpSRem:
+	{
+		auto a = int32_t(eval_u32(spec.arguments[0]));
+		auto b = int32_t(eval_u32(spec.arguments[1]));
+		if (b == 0)
+			SPIRV_CROSS_THROW("Undefined behavior in SRem, b == 0.\n");
+		value = a % b;
+		break;
+	}
+
+	case OpSMod:
+	{
+		auto a = int32_t(eval_u32(spec.arguments[0]));
+		auto b = int32_t(eval_u32(spec.arguments[1]));
+		if (b == 0)
+			SPIRV_CROSS_THROW("Undefined behavior in SMod, b == 0.\n");
+		auto v = a % b;
+
+		// Makes sure we match the sign of b, not a.
+		if ((b < 0 && v > 0) || (b > 0 && v < 0))
+			v += b;
+		value = v;
+		break;
+	}
+
+	case OpUDiv:
+	{
+		uint32_t a = eval_u32(spec.arguments[0]);
+		uint32_t b = eval_u32(spec.arguments[1]);
+		if (b == 0)
+			SPIRV_CROSS_THROW("Undefined behavior in UDiv, b == 0.\n");
+		value = a / b;
+		break;
+	}
+
+	case OpSDiv:
+	{
+		auto a = int32_t(eval_u32(spec.arguments[0]));
+		auto b = int32_t(eval_u32(spec.arguments[1]));
+		if (b == 0)
+			SPIRV_CROSS_THROW("Undefined behavior in SDiv, b == 0.\n");
+		value = a / b;
+		break;
+	}
+
+	default:
+		SPIRV_CROSS_THROW("Unsupported spec constant opcode for evaluation.\n");
+	}
+
+	return value;
+}
+
+uint32_t Compiler::evaluate_constant_u32(uint32_t id) const
+{
+	if (const auto *c = maybe_get<SPIRConstant>(id))
+		return c->scalar();
+	else
+		return evaluate_spec_constant_u32(get<SPIRConstantOp>(id));
+}
+
 size_t Compiler::get_declared_struct_member_size(const SPIRType &struct_type, uint32_t index) const
 {
 	if (struct_type.member_types.empty())
@@ -1686,7 +1868,7 @@ size_t Compiler::get_declared_struct_member_size(const SPIRType &struct_type, ui
 	{
 		// For arrays, we can use ArrayStride to get an easy check.
 		bool array_size_literal = type.array_size_literal.back();
-		uint32_t array_size = array_size_literal ? type.array.back() : get<SPIRConstant>(type.array.back()).scalar();
+		uint32_t array_size = array_size_literal ? type.array.back() : evaluate_constant_u32(type.array.back());
 		return type_struct_member_array_stride(struct_type, index) * array_size;
 	}
 	else if (type.basetype == SPIRType::Struct)
@@ -1918,6 +2100,13 @@ ExecutionModel Compiler::get_execution_model() const
 bool Compiler::is_tessellation_shader(ExecutionModel model)
 {
 	return model == ExecutionModelTessellationControl || model == ExecutionModelTessellationEvaluation;
+}
+
+bool Compiler::is_vertex_like_shader() const
+{
+	auto model = get_execution_model();
+	return model == ExecutionModelVertex || model == ExecutionModelGeometry ||
+	       model == ExecutionModelTessellationControl || model == ExecutionModelTessellationEvaluation;
 }
 
 bool Compiler::is_tessellation_shader() const

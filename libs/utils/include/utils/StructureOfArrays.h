@@ -181,7 +181,7 @@ public:
         Iterator(Iterator const& rhs) noexcept = default;
         Iterator& operator=(Iterator const& rhs) = default;
 
-        const reference operator*() const { return { soa, index }; }
+        reference operator*() const { return { soa, index }; }
         reference operator*() { return { soa, index }; }
         reference operator[](size_t n) { return *(*this + n); }
 

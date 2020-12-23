@@ -228,6 +228,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
+    FRenderTarget* currentRenderTarget = upcast(view.getRenderTarget());
+    if (mPreviousRenderTargets.find(currentRenderTarget) == mPreviousRenderTargets.end()) {
+        mPreviousRenderTargets.insert(currentRenderTarget);
+        initializeClearFlags();
+    }
+
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
     // start froxelization immediately, it has no dependencies
@@ -866,7 +872,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     assert(swapChain);
 
     SYSTRACE_CALL();
@@ -899,14 +905,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
-    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
-    // across views (clear implies discard)
-    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
-
-    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    initializeClearFlags();
+    mPreviousRenderTargets.clear();
 
     mBeginFrameInternal = {};
 
@@ -928,7 +928,10 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = getEngine();
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId, callback, user);
+        if (callback) {
+            driver.setFrameScheduledCallback(swapChain->getHwHandle(), callback, user);
+        }
+        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
@@ -1099,6 +1102,17 @@ Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
     return viewRenderTarget ? viewRenderTarget : mRenderTarget;
 }
 
+void FRenderer::initializeClearFlags() {
+    // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
+    // across views (clear implies discard)
+    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
+
+    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+            | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -1111,8 +1125,12 @@ void Renderer::render(View const* view) {
     upcast(this)->render(upcast(view));
 }
 
+bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, nullptr, nullptr);
+}
+
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameFinishedCallback callback, void* user) {
+        backend::FrameScheduledCallback callback, void* user) {
     return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
 }
 

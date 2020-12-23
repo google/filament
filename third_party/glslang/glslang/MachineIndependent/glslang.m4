@@ -242,6 +242,18 @@ GLSLANG_WEB_EXCLUDE_ON
 %token <lex> F16IMAGECUBE F16IMAGE1DARRAY F16IMAGE2DARRAY F16IMAGECUBEARRAY
 %token <lex> F16IMAGEBUFFER F16IMAGE2DMS F16IMAGE2DMSARRAY
 
+%token <lex> I64IMAGE1D U64IMAGE1D
+%token <lex> I64IMAGE2D U64IMAGE2D
+%token <lex> I64IMAGE3D U64IMAGE3D
+%token <lex> I64IMAGE2DRECT U64IMAGE2DRECT
+%token <lex> I64IMAGECUBE U64IMAGECUBE
+%token <lex> I64IMAGEBUFFER U64IMAGEBUFFER
+%token <lex> I64IMAGE1DARRAY U64IMAGE1DARRAY
+%token <lex> I64IMAGE2DARRAY U64IMAGE2DARRAY
+%token <lex> I64IMAGECUBEARRAY U64IMAGECUBEARRAY
+%token <lex> I64IMAGE2DMS U64IMAGE2DMS
+%token <lex> I64IMAGE2DMSARRAY U64IMAGE2DMSARRAY
+
 // texture without sampler
 %token <lex> TEXTURECUBEARRAY ITEXTURECUBEARRAY UTEXTURECUBEARRAY
 %token <lex> TEXTURE1D ITEXTURE1D UTEXTURE1D
@@ -281,6 +293,7 @@ GLSLANG_WEB_EXCLUDE_OFF
 %token <lex> CENTROID IN OUT INOUT
 %token <lex> STRUCT VOID WHILE
 %token <lex> BREAK CONTINUE DO ELSE FOR IF DISCARD RETURN SWITCH CASE DEFAULT
+%token <lex> TERMINATE_INVOCATION
 %token <lex> UNIFORM SHARED BUFFER
 %token <lex> FLAT SMOOTH LAYOUT
 
@@ -778,7 +791,7 @@ assignment_expression
         parseContext.specializationCheck($2.loc, $1->getType(), "=");
         parseContext.lValueErrorCheck($2.loc, "assign", $1);
         parseContext.rValueErrorCheck($2.loc, "assign", $3);
-        $$ = parseContext.intermediate.addAssign($2.op, $1, $3, $2.loc);
+        $$ = parseContext.addAssign($2.loc, $2.op, $1, $3);
         if ($$ == 0) {
             parseContext.assignError($2.loc, "assign", $1->getCompleteString(), $3->getCompleteString());
             $$ = $1;
@@ -905,7 +918,7 @@ declaration
 
 block_structure
     : type_qualifier IDENTIFIER LEFT_BRACE { parseContext.nestedBlockCheck($1.loc); } struct_declaration_list RIGHT_BRACE {
-        --parseContext.structNestingLevel;
+        --parseContext.blockNestingLevel;
         parseContext.blockName = $2.string;
         parseContext.globalQualifierFixCheck($1.loc, $1.qualifier);
         parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
@@ -3203,6 +3216,116 @@ GLSLANG_WEB_EXCLUDE_ON
         $$.basicType = EbtSampler;
         $$.sampler.setImage(EbtUint, Esd2D, true, false, true);
     }
+    | I64IMAGE1D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd1D);
+    }
+    | U64IMAGE1D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd1D);
+    }
+    | I64IMAGE2D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd2D);
+    }
+    | U64IMAGE2D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd2D);
+    }
+    | I64IMAGE3D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd3D);
+    }
+    | U64IMAGE3D {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd3D);
+    }
+    | I64IMAGE2DRECT {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, EsdRect);
+    }
+    | U64IMAGE2DRECT {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, EsdRect);
+    }
+    | I64IMAGECUBE {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, EsdCube);
+    }
+    | U64IMAGECUBE {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, EsdCube);
+    }
+    | I64IMAGEBUFFER {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, EsdBuffer);
+    }
+    | U64IMAGEBUFFER {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, EsdBuffer);
+    }
+    | I64IMAGE1DARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd1D, true);
+    }
+    | U64IMAGE1DARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd1D, true);
+    }
+    | I64IMAGE2DARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd2D, true);
+    }
+    | U64IMAGE2DARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd2D, true);
+    }
+    | I64IMAGECUBEARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, EsdCube, true);
+    }
+    | U64IMAGECUBEARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, EsdCube, true);
+    }
+    | I64IMAGE2DMS {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd2D, false, false, true);
+    }
+    | U64IMAGE2DMS {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd2D, false, false, true);
+    }
+    | I64IMAGE2DMSARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtInt64, Esd2D, true, false, true);
+    }
+    | U64IMAGE2DMSARRAY {
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtSampler;
+        $$.sampler.setImage(EbtUint64, Esd2D, true, false, true);
+    }
     | SAMPLEREXTERNALOES {  // GL_OES_EGL_image_external
         $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         $$.basicType = EbtSampler;
@@ -3805,6 +3928,10 @@ jump_statement
         parseContext.requireStage($1.loc, EShLangFragment, "discard");
         $$ = parseContext.intermediate.addBranch(EOpKill, $1.loc);
     }
+    | TERMINATE_INVOCATION SEMICOLON {
+        parseContext.requireStage($1.loc, EShLangFragment, "terminateInvocation");
+        $$ = parseContext.intermediate.addBranch(EOpTerminateInvocation, $1.loc);
+    }
     ;
 
 // Grammar Note:  No 'goto'.  Gotos are not supported.
@@ -3842,6 +3969,14 @@ function_definition
     : function_prototype {
         $1.function = parseContext.handleFunctionDeclarator($1.loc, *$1.function, false /* not prototype */);
         $1.intermNode = parseContext.handleFunctionDefinition($1.loc, *$1.function);
+
+        // For ES 100 only, according to ES shading language 100 spec: A function
+        // body has a scope nested inside the function's definition.
+        if (parseContext.profile == EEsProfile && parseContext.version == 100)
+        {
+            parseContext.symbolTable.push();
+            ++parseContext.statementNestingLevel;
+        }
     }
     compound_statement_no_new_scope {
         //   May be best done as post process phase on intermediate code
@@ -3857,6 +3992,17 @@ function_definition
         $$->getAsAggregate()->setOptimize(parseContext.contextPragma.optimize);
         $$->getAsAggregate()->setDebug(parseContext.contextPragma.debug);
         $$->getAsAggregate()->setPragmaTable(parseContext.contextPragma.pragmaTable);
+
+        // Set currentFunctionType to empty pointer when goes outside of the function
+        parseContext.currentFunctionType = nullptr;
+
+        // For ES 100 only, according to ES shading language 100 spec: A function
+        // body has a scope nested inside the function's definition.
+        if (parseContext.profile == EEsProfile && parseContext.version == 100)
+        {
+            parseContext.symbolTable.pop(&parseContext.defaultPrecision[0]);
+            --parseContext.statementNestingLevel;
+        }
     }
     ;
 

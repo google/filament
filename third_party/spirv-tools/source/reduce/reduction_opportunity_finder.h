@@ -15,6 +15,8 @@
 #ifndef SOURCE_REDUCE_REDUCTION_OPPORTUNITY_FINDER_H_
 #define SOURCE_REDUCE_REDUCTION_OPPORTUNITY_FINDER_H_
 
+#include <vector>
+
 #include "source/opt/ir_context.h"
 #include "source/reduce/reduction_opportunity.h"
 
@@ -29,12 +31,25 @@ class ReductionOpportunityFinder {
   virtual ~ReductionOpportunityFinder() = default;
 
   // Finds and returns the reduction opportunities relevant to this pass that
-  // could be applied to the given SPIR-V module.
+  // could be applied to SPIR-V module |context|.
+  //
+  // If |target_function| is non-zero then the available opportunities will be
+  // restricted to only those opportunities that modify the function with result
+  // id |target_function|.
   virtual std::vector<std::unique_ptr<ReductionOpportunity>>
-  GetAvailableOpportunities(opt::IRContext* context) const = 0;
+  GetAvailableOpportunities(opt::IRContext* context,
+                            uint32_t target_function) const = 0;
 
   // Provides a name for the finder.
   virtual std::string GetName() const = 0;
+
+ protected:
+  // Requires that |target_function| is zero or the id of a function in
+  // |ir_context|.  If |target_function| is zero, returns all the functions in
+  // |ir_context|.  Otherwise, returns the function with id |target_function|.
+  // This allows fuzzer passes to restrict attention to a single function.
+  static std::vector<opt::Function*> GetTargetFunctions(
+      opt::IRContext* ir_context, uint32_t target_function);
 };
 
 }  // namespace reduce

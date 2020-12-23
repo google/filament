@@ -23,6 +23,11 @@ struct MaterialInputs {
 #endif
     vec4  emissive;
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+    vec3 sheenColor;
+    float sheenRoughness;
+#endif
+
     float clearCoat;
     float clearCoatRoughness;
 
@@ -92,6 +97,13 @@ void initMaterial(out MaterialInputs material) {
     material.ambientOcclusion = 1.0;
 #endif
     material.emissive = vec4(vec3(0.0), 1.0);
+
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+    material.sheenColor = vec3(0.0);
+    material.sheenRoughness = 0.0;
+#endif
+#endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     material.clearCoat = 1.0;

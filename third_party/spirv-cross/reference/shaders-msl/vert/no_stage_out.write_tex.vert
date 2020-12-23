@@ -10,16 +10,16 @@ struct main0_out
 
 struct main0_in
 {
-    float4 m_17 [[attribute(0)]];
+    float4 _RESERVED_IDENTIFIER_FIXUP_14 [[attribute(0)]];
 };
 
-vertex void main0(main0_in in [[stage_in]], texture1d<uint, access::write> _34 [[texture(0)]], texture1d<uint> _37 [[texture(1)]])
+vertex void main0(main0_in in [[stage_in]], texture1d<uint, access::write> _RESERVED_IDENTIFIER_FIXUP_32 [[texture(0)]], texture1d<uint> _RESERVED_IDENTIFIER_FIXUP_35 [[texture(1)]])
 {
     main0_out out = {};
-    out.gl_Position = in.m_17;
-    for (int _22 = 0; _22 < 128; _22++)
+    out.gl_Position = in._RESERVED_IDENTIFIER_FIXUP_14;
+    for (int _RESERVED_IDENTIFIER_FIXUP_19 = 0; _RESERVED_IDENTIFIER_FIXUP_19 < 128; _RESERVED_IDENTIFIER_FIXUP_19++)
     {
-        _34.write(_37.read(uint(_22)), uint(_22));
+        _RESERVED_IDENTIFIER_FIXUP_32.write(_RESERVED_IDENTIFIER_FIXUP_35.read(uint(_RESERVED_IDENTIFIER_FIXUP_19)), uint(_RESERVED_IDENTIFIER_FIXUP_19));
     }
 }
 

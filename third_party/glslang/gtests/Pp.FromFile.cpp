@@ -47,7 +47,7 @@ TEST_P(PreprocessingTest, FromFile)
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Glsl, PreprocessingTest,
     ::testing::ValuesIn(std::vector<std::string>({
         "preprocessor.bad_arg.vert",

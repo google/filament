@@ -27,15 +27,23 @@ void main()
 
 	// shuffle
 	uint shuffled = subgroupShuffle(10u, 8u);
+	bool shuffled_bool = subgroupShuffle(true, 9u);
 	uint shuffled_xor = subgroupShuffleXor(30u, 8u);
+	bool shuffled_xor_bool = subgroupShuffleXor(false, 9u);
 
 	// shuffle relative 
 	uint shuffled_up = subgroupShuffleUp(20u, 4u);
+	bool shuffled_up_bool = subgroupShuffleUp(true, 4u);
 	uint shuffled_down = subgroupShuffleDown(20u, 4u);
+	bool shuffled_down_bool = subgroupShuffleDown(false, 4u);
 
 	// quad
 	vec4 swap_horiz = subgroupQuadSwapHorizontal(vec4(20.0));
+	bvec4 swap_horiz_bool = subgroupQuadSwapHorizontal(bvec4(true));
 	vec4 swap_vertical = subgroupQuadSwapVertical(vec4(20.0));
+	bvec4 swap_vertical_bool = subgroupQuadSwapVertical(bvec4(true));
 	vec4 swap_diagonal = subgroupQuadSwapDiagonal(vec4(20.0));
+	bvec4 swap_diagonal_bool = subgroupQuadSwapDiagonal(bvec4(true));
 	vec4 quad_broadcast = subgroupQuadBroadcast(vec4(20.0), 3u);
+	bvec4 quad_broadcast_bool = subgroupQuadBroadcast(bvec4(true), 3u);
 }

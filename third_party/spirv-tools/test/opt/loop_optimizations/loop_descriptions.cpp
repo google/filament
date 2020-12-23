@@ -379,6 +379,43 @@ TEST_F(PassClassTest, LoopLatchNotContinue) {
   EXPECT_EQ(loop.GetLatchBlock()->id(), 30u);
 }
 
+TEST_F(PassClassTest, UnreachableMerge) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "main"
+               OpExecutionMode %1 OriginUpperLeft
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+          %1 = OpFunction %void None %3
+          %4 = OpLabel
+               OpBranch %5
+          %5 = OpLabel
+               OpLoopMerge %6 %7 None
+               OpBranch %8
+          %8 = OpLabel
+               OpBranch %9
+          %9 = OpLabel
+               OpBranch %7
+          %7 = OpLabel
+               OpBranch %5
+          %6 = OpLabel
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_3, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
+                             << text << std::endl;
+  const Function* f = spvtest::GetFunction(module, 1);
+  LoopDescriptor ld{context.get(), f};
+
+  EXPECT_EQ(ld.NumLoops(), 1u);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

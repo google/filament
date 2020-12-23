@@ -29,10 +29,11 @@
 #error VK_MVK_macos_surface is not defined
 #endif
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
-
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr VkAllocationCallbacks* VKALLOC = nullptr;
@@ -51,7 +52,7 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
+void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (__bridge NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");

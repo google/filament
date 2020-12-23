@@ -130,7 +130,6 @@ spv_result_t Function::RegisterBlock(uint32_t block_id, bool is_definition) {
     undefined_blocks_.erase(block_id);
     current_block_ = &inserted_block->second;
     ordered_blocks_.push_back(current_block_);
-    if (IsFirstBlock(block_id)) current_block_->set_reachable(true);
   } else if (success) {  // Block doesn't exsist but this is not a definition
     undefined_blocks_.insert(block_id);
   }
@@ -138,8 +137,7 @@ spv_result_t Function::RegisterBlock(uint32_t block_id, bool is_definition) {
   return SPV_SUCCESS;
 }
 
-void Function::RegisterBlockEnd(std::vector<uint32_t> next_list,
-                                SpvOp branch_instruction) {
+void Function::RegisterBlockEnd(std::vector<uint32_t> next_list) {
   assert(
       current_block_ &&
       "RegisterBlockEnd can only be called when parsing a binary in a block");
@@ -174,7 +172,6 @@ void Function::RegisterBlockEnd(std::vector<uint32_t> next_list,
     }
   }
 
-  current_block_->RegisterBranchInstruction(branch_instruction);
   current_block_->RegisterSuccessors(next_blocks);
   current_block_ = nullptr;
   return;

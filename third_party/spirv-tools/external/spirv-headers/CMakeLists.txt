@@ -29,7 +29,7 @@
 # https://www.khronos.org/registry/spir-v/
 #
 cmake_minimum_required(VERSION 3.0)
-project(SPIRV-Headers VERSION 1.4.1)
+project(SPIRV-Headers VERSION 1.5.1)
 
 # There are two ways to use this project.
 #
@@ -49,11 +49,11 @@ add_custom_target(install-headers
     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
         $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
 
-option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
-      ${SPIRV_HEADERS_SKIP_EXAMPLES})
+# Filament specific changes
+option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
 
-option(SPIRV_HEADERS_SKIP_INSTALL "Skip install"
-      ${SPIRV_HEADERS_SKIP_INSTALL})
+option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
+# End Filament specific changes
 
 if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)

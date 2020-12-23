@@ -1063,7 +1063,7 @@ LoopPeelingPass::LoopPeelingInfo::HandleInequality(CmpOperator cmp_op,
   }
 
   uint32_t cast_iteration = 0;
-  // sanity check: can we fit |iteration| in a uint32_t ?
+  // Integrity check: can we fit |iteration| in a uint32_t ?
   if (static_cast<uint64_t>(iteration) < std::numeric_limits<uint32_t>::max()) {
     cast_iteration = static_cast<uint32_t>(iteration);
   }

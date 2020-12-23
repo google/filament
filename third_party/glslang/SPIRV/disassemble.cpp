@@ -46,7 +46,6 @@
 
 #include "disassemble.h"
 #include "doc.h"
-#include "SpvTools.h"
 
 namespace spv {
     extern "C" {
@@ -519,6 +518,10 @@ void SpirvStream::disassembleInstruction(Id resultId, Id /*typeId*/, Op opCode, 
         case OperandLiteralString:
             numOperands -= disassembleString();
             break;
+        case OperandVariableLiteralStrings:
+            while (numOperands > 0)
+                numOperands -= disassembleString();
+            return;
         case OperandMemoryAccess:
             outputMask(OperandMemoryAccess, stream[word++]);
             --numOperands;

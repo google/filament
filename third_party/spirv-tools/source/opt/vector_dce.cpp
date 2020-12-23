@@ -52,6 +52,9 @@ void VectorDCE::FindLiveComponents(Function* function,
   // components are live because of arbitrary nesting of structs.
   function->ForEachInst(
       [&work_list, this, live_components](Instruction* current_inst) {
+        if (current_inst->IsOpenCL100DebugInstr()) {
+          return;
+        }
         if (!HasVectorOrScalarResult(current_inst) ||
             !context()->IsCombinatorInstruction(current_inst)) {
           MarkUsesAsLive(current_inst, all_components_live_, live_components,
@@ -297,51 +300,60 @@ bool VectorDCE::HasScalarResult(const Instruction* inst) const {
 bool VectorDCE::RewriteInstructions(
     Function* function, const VectorDCE::LiveComponentMap& live_components) {
   bool modified = false;
-  function->ForEachInst(
-      [&modified, this, live_components](Instruction* current_inst) {
-        if (!context()->IsCombinatorInstruction(current_inst)) {
-          return;
-        }
 
-        auto live_component = live_components.find(current_inst->result_id());
-        if (live_component == live_components.end()) {
-          // If this instruction is not in live_components then it does not
-          // produce a vector, or it is never referenced and ADCE will remove
-          // it.  No point in trying to differentiate.
-          return;
-        }
+  // Kill DebugValue in the middle of the instruction iteration will result
+  // in accessing a dangling pointer. We keep dead DebugValue instructions
+  // in |dead_dbg_value| to kill them once after the iteration.
+  std::vector<Instruction*> dead_dbg_value;
 
-        // If no element in the current instruction is used replace it with an
-        // OpUndef.
-        if (live_component->second.Empty()) {
-          modified = true;
-          uint32_t undef_id = this->Type2Undef(current_inst->type_id());
-          context()->KillNamesAndDecorates(current_inst);
-          context()->ReplaceAllUsesWith(current_inst->result_id(), undef_id);
-          context()->KillInst(current_inst);
-          return;
-        }
+  function->ForEachInst([&modified, this, live_components,
+                         &dead_dbg_value](Instruction* current_inst) {
+    if (!context()->IsCombinatorInstruction(current_inst)) {
+      return;
+    }
 
-        switch (current_inst->opcode()) {
-          case SpvOpCompositeInsert:
-            modified |=
-                RewriteInsertInstruction(current_inst, live_component->second);
-            break;
-          case SpvOpCompositeConstruct:
-            // TODO: The members that are not live can be replaced by an undef
-            // or constant. This will remove uses of those values, and possibly
-            // create opportunities for ADCE.
-            break;
-          default:
-            // Do nothing.
-            break;
-        }
-      });
+    auto live_component = live_components.find(current_inst->result_id());
+    if (live_component == live_components.end()) {
+      // If this instruction is not in live_components then it does not
+      // produce a vector, or it is never referenced and ADCE will remove
+      // it.  No point in trying to differentiate.
+      return;
+    }
+
+    // If no element in the current instruction is used replace it with an
+    // OpUndef.
+    if (live_component->second.Empty()) {
+      modified = true;
+      MarkDebugValueUsesAsDead(current_inst, &dead_dbg_value);
+      uint32_t undef_id = this->Type2Undef(current_inst->type_id());
+      context()->KillNamesAndDecorates(current_inst);
+      context()->ReplaceAllUsesWith(current_inst->result_id(), undef_id);
+      context()->KillInst(current_inst);
+      return;
+    }
+
+    switch (current_inst->opcode()) {
+      case SpvOpCompositeInsert:
+        modified |= RewriteInsertInstruction(
+            current_inst, live_component->second, &dead_dbg_value);
+        break;
+      case SpvOpCompositeConstruct:
+        // TODO: The members that are not live can be replaced by an undef
+        // or constant. This will remove uses of those values, and possibly
+        // create opportunities for ADCE.
+        break;
+      default:
+        // Do nothing.
+        break;
+    }
+  });
+  for (auto* i : dead_dbg_value) context()->KillInst(i);
   return modified;
 }
 
 bool VectorDCE::RewriteInsertInstruction(
-    Instruction* current_inst, const utils::BitVector& live_components) {
+    Instruction* current_inst, const utils::BitVector& live_components,
+    std::vector<Instruction*>* dead_dbg_value) {
   // If the value being inserted is not live, then we can skip the insert.
 
   if (current_inst->NumInOperands() == 2) {
@@ -355,6 +367,7 @@ bool VectorDCE::RewriteInsertInstruction(
 
   uint32_t insert_index = current_inst->GetSingleWordInOperand(2);
   if (!live_components.Get(insert_index)) {
+    MarkDebugValueUsesAsDead(current_inst, dead_dbg_value);
     context()->KillNamesAndDecorates(current_inst->result_id());
     uint32_t composite_id =
         current_inst->GetSingleWordInOperand(kInsertCompositeIdInIdx);
@@ -375,6 +388,15 @@ bool VectorDCE::RewriteInsertInstruction(
   }
 
   return false;
+}
+
+void VectorDCE::MarkDebugValueUsesAsDead(
+    Instruction* composite, std::vector<Instruction*>* dead_dbg_value) {
+  context()->get_def_use_mgr()->ForEachUser(
+      composite, [&dead_dbg_value](Instruction* use) {
+        if (use->GetOpenCL100DebugOpcode() == OpenCLDebugInfo100DebugValue)
+          dead_dbg_value->push_back(use);
+      });
 }
 
 void VectorDCE::AddItemToWorkListIfNeeded(

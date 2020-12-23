@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_SET_MEMORY_OPERANDS_MASK_H_
 #define SOURCE_FUZZ_TRANSFORMATION_SET_MEMORY_OPERANDS_MASK_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -40,14 +40,18 @@ class TransformationSetMemoryOperandsMask : public Transformation {
   // - |message_.memory_operands_mask| must be identical to the original memory
   //   operands mask, except that Volatile may be added, and Nontemporal may be
   //   toggled.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Replaces the operands mask identified by
   // |message_.memory_operands_mask_index| in the instruction described by
   // |message_.memory_access_instruction| with |message_.memory_operands_mask|,
   // creating an input operand for the mask if no such operand was present.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
@@ -57,7 +61,8 @@ class TransformationSetMemoryOperandsMask : public Transformation {
 
   // Does the version of SPIR-V being used support multiple memory operand
   // masks on relevant memory access instructions?
-  static bool MultipleMemoryOperandMasksAreSupported(opt::IRContext* context);
+  static bool MultipleMemoryOperandMasksAreSupported(
+      opt::IRContext* ir_context);
 
   // Helper function to get the input operand index associated with mask number
   // |mask_index|. This is a bit tricky if there are multiple masks, because the

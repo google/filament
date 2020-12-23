@@ -208,6 +208,12 @@ public:
 
 	void make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set);
 
+	void fixup_reserved_names();
+
+	static void sanitize_underscores(std::string &str);
+	static void sanitize_identifier(std::string &str, bool member, bool allow_reserved_prefixes);
+	static bool is_globally_reserved_identifier(std::string &str, bool allow_reserved_prefixes);
+
 private:
 	template <typename T>
 	T &get(uint32_t id)
@@ -225,6 +231,8 @@ private:
 	mutable uint32_t loop_iteration_depth_soft = 0;
 	std::string empty_string;
 	Bitset cleared_bitset;
+
+	std::unordered_set<uint32_t> meta_needing_name_fixup;
 };
 } // namespace SPIRV_CROSS_NAMESPACE
 

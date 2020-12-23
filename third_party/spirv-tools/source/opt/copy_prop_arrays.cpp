@@ -29,6 +29,12 @@ const uint32_t kCompositeExtractObjectInOperand = 0;
 const uint32_t kTypePointerStorageClassInIdx = 0;
 const uint32_t kTypePointerPointeeInIdx = 1;
 
+bool IsOpenCL100DebugDeclareOrValue(Instruction* di) {
+  auto dbg_opcode = di->GetOpenCL100DebugOpcode();
+  return dbg_opcode == OpenCLDebugInfo100DebugDeclare ||
+         dbg_opcode == OpenCLDebugInfo100DebugValue;
+}
+
 }  // namespace
 
 Pass::Status CopyPropagateArrays::Process() {
@@ -188,6 +194,8 @@ bool CopyPropagateArrays::HasValidReferencesOnly(Instruction* ptr_inst,
           return ptr_inst->opcode() == SpvOpVariable &&
                  store_inst->GetSingleWordInOperand(kStorePointerInOperand) ==
                      ptr_inst->result_id();
+        } else if (IsOpenCL100DebugDeclareOrValue(use)) {
+          return true;
         }
         // Some other instruction.  Be conservative.
         return false;
@@ -492,6 +500,8 @@ bool CopyPropagateArrays::CanUpdateUses(Instruction* original_ptr_inst,
                                                        const_mgr,
                                                        type](Instruction* use,
                                                              uint32_t) {
+    if (IsOpenCL100DebugDeclareOrValue(use)) return true;
+
     switch (use->opcode()) {
       case SpvOpLoad: {
         analysis::Pointer* pointer_type = type->AsPointer();
@@ -565,6 +575,7 @@ bool CopyPropagateArrays::CanUpdateUses(Instruction* original_ptr_inst,
     }
   });
 }
+
 void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
                                      Instruction* new_ptr_inst) {
   analysis::TypeManager* type_mgr = context()->get_type_mgr();
@@ -580,6 +591,52 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
   for (auto pair : uses) {
     Instruction* use = pair.first;
     uint32_t index = pair.second;
+
+    if (use->IsOpenCL100DebugInstr()) {
+      switch (use->GetOpenCL100DebugOpcode()) {
+        case OpenCLDebugInfo100DebugDeclare: {
+          if (new_ptr_inst->opcode() == SpvOpVariable ||
+              new_ptr_inst->opcode() == SpvOpFunctionParameter) {
+            context()->ForgetUses(use);
+            use->SetOperand(index, {new_ptr_inst->result_id()});
+            context()->AnalyzeUses(use);
+          } else {
+            // Based on the spec, we cannot use a pointer other than OpVariable
+            // or OpFunctionParameter for DebugDeclare. We have to use
+            // DebugValue with Deref.
+
+            context()->ForgetUses(use);
+
+            // Change DebugDeclare to DebugValue.
+            use->SetOperand(
+                index - 2,
+                {static_cast<uint32_t>(OpenCLDebugInfo100DebugValue)});
+            use->SetOperand(index, {new_ptr_inst->result_id()});
+
+            // Add Deref operation.
+            Instruction* dbg_expr =
+                def_use_mgr->GetDef(use->GetSingleWordOperand(index + 1));
+            auto* deref_expr_instr =
+                context()->get_debug_info_mgr()->DerefDebugExpression(dbg_expr);
+            use->SetOperand(index + 1, {deref_expr_instr->result_id()});
+
+            context()->AnalyzeUses(deref_expr_instr);
+            context()->AnalyzeUses(use);
+          }
+          break;
+        }
+        case OpenCLDebugInfo100DebugValue:
+          context()->ForgetUses(use);
+          use->SetOperand(index, {new_ptr_inst->result_id()});
+          context()->AnalyzeUses(use);
+          break;
+        default:
+          assert(false && "Don't know how to rewrite instruction");
+          break;
+      }
+      continue;
+    }
+
     switch (use->opcode()) {
       case SpvOpLoad: {
         // Replace the actual use.

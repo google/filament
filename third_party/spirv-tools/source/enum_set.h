@@ -93,6 +93,10 @@ class EnumSet {
   // enum value is already in the set.
   void Add(EnumType c) { AddWord(ToWord(c)); }
 
+  // Removes the given enum value from the set.  This has no effect if the
+  // enum value is not in the set.
+  void Remove(EnumType c) { RemoveWord(ToWord(c)); }
+
   // Returns true if this enum value is in the set.
   bool Contains(EnumType c) const { return ContainsWord(ToWord(c)); }
 
@@ -138,6 +142,17 @@ class EnumSet {
       mask_ |= new_bits;
     } else {
       Overflow().insert(word);
+    }
+  }
+
+  // Removes the given enum value (as a 32-bit word) from the set.  This has no
+  // effect if the enum value is not in the set.
+  void RemoveWord(uint32_t word) {
+    if (auto new_bits = AsMask(word)) {
+      mask_ &= ~new_bits;
+    } else {
+      auto itr = Overflow().find(word);
+      if (itr != Overflow().end()) Overflow().erase(itr);
     }
   }
 

@@ -24,6 +24,8 @@
 
 #include <dlfcn.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
@@ -36,14 +38,18 @@ static constexpr const char* LIBRARY_X11 = "libX11.so.6";
 
 #ifdef FILAMENT_SUPPORTS_XCB
 typedef xcb_connection_t* (*XCB_CONNECT)(const char *displayname, int *screenp);
-#else
+#endif
+
+#ifdef FILAMENT_SUPPORTS_XLIB
 typedef Display* (*X11_OPEN_DISPLAY)(const char*);
 #endif
 
 struct X11Functions {
 #ifdef FILAMENT_SUPPORTS_XCB
     XCB_CONNECT xcbConnect;
-#else
+#endif
+
+#ifdef FILAMENT_SUPPORTS_XLIB
     X11_OPEN_DISPLAY openDisplay;
 #endif
     void* library = nullptr;
@@ -55,7 +61,8 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
         "VK_KHR_surface",
 #ifdef FILAMENT_SUPPORTS_XCB
         "VK_KHR_xcb_surface",
-#else
+#endif
+#ifdef FILAMENT_SUPPORTS_XLIB
         "VK_KHR_xlib_surface",
 #endif
         "VK_KHR_get_physical_device_properties2",
@@ -67,42 +74,57 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
-#ifdef FILAMENT_SUPPORTS_XCB
+void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
     if (g_x11.library == nullptr) {
         g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
         ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");
+
+#ifdef FILAMENT_SUPPORTS_XCB
         g_x11.xcbConnect = (XCB_CONNECT) dlsym(g_x11.library, "xcb_connect");
         int screen;
         mConnection = g_x11.xcbConnect(nullptr, &screen);
-    }
-    ASSERT_POSTCONDITION(vkCreateXcbSurfaceKHR, "Unable to load vkCreateXcbSurfaceKHR function.");
-    VkSurfaceKHR surface = nullptr;
-    const uint64_t ptrval = reinterpret_cast<uint64_t>(nativeWindow);
-    VkXcbSurfaceCreateInfoKHR createInfo = {
-        .sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
-        .connection = mConnection,
-        .window = (xcb_window_t) ptrval,
-    };
-    VkResult result = vkCreateXcbSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
-#else
-    if (g_x11.library == nullptr) {
-        g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
-        ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");
+        ASSERT_POSTCONDITION(vkCreateXcbSurfaceKHR, "Unable to load vkCreateXcbSurfaceKHR function.");
+#endif
+
+#ifdef FILAMENT_SUPPORTS_XLIB
         g_x11.openDisplay  = (X11_OPEN_DISPLAY)  dlsym(g_x11.library, "XOpenDisplay");
         mDisplay = g_x11.openDisplay(NULL);
         ASSERT_PRECONDITION(mDisplay, "Unable to open X11 display.");
+        ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR, "Unable to load vkCreateXlibSurfaceKHR function.");
+#endif
+
     }
-    ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR, "Unable to load vkCreateXlibSurfaceKHR function.");
+
     VkSurfaceKHR surface = nullptr;
+
+#ifdef FILAMENT_SUPPORTS_XCB
+#ifdef FILAMENT_SUPPORTS_XLIB
+const bool windowIsXCB = flags & SWAP_CHAIN_CONFIG_ENABLE_XCB;
+#else
+const bool windowIsXCB = true;
+#endif
+
+    if (windowIsXCB) {
+        const uint64_t ptrval = reinterpret_cast<uint64_t>(nativeWindow);
+        VkXcbSurfaceCreateInfoKHR createInfo = {
+            .sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
+            .connection = mConnection,
+            .window = (xcb_window_t) ptrval,
+        };
+        vkCreateXcbSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+        return surface;
+    }
+#endif
+
+#ifdef FILAMENT_SUPPORTS_XLIB
     VkXlibSurfaceCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
         .dpy = mDisplay,
         .window = (Window) nativeWindow,
     };
-    VkResult result = vkCreateXlibSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+    vkCreateXlibSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
 #endif
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXlibSurfaceKHR error.");
+
     return surface;
 }
 

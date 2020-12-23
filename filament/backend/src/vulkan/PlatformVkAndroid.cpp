@@ -24,6 +24,8 @@
 
 #include <android/native_window.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
@@ -47,7 +49,7 @@ Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance) noexcept {
+void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance, uint64_t flags) noexcept {
     const VkInstance instance = (VkInstance) vkinstance;
     ANativeWindow* aNativeWindow = (ANativeWindow*) nativeWindow;
     VkAndroidSurfaceCreateInfoKHR createInfo {

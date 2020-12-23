@@ -1229,14 +1229,18 @@ std::make_pair(std::string(kOpenCLMemoryModel) +
           "%intt = OpTypeInt 32 0\n" + std::string(kVoidFVoid),
           ShaderDependencies()),
 std::make_pair(std::string(kOpenCLMemoryModel) +
+          // Block applies to struct type.
           "OpEntryPoint Kernel %func \"compute\" \n"
-          "OpDecorate %intt Block\n"
-          "%intt = OpTypeInt 32 0\n" + std::string(kVoidFVoid),
+          "OpDecorate %block Block\n"
+          "%intt = OpTypeInt 32 0\n"
+          "%block = OpTypeStruct %intt\n" + std::string(kVoidFVoid),
           ShaderDependencies()),
 std::make_pair(std::string(kOpenCLMemoryModel) +
+          // BufferBlock applies to struct type.
           "OpEntryPoint Kernel %func \"compute\" \n"
-          "OpDecorate %intt BufferBlock\n"
-          "%intt = OpTypeInt 32 0\n" + std::string(kVoidFVoid),
+          "OpDecorate %block BufferBlock\n"
+          "%intt = OpTypeInt 32 0\n"
+          "%block = OpTypeStruct %intt\n" + std::string(kVoidFVoid),
           ShaderDependencies()),
 std::make_pair(std::string(kOpenCLMemoryModel) +
           "OpEntryPoint Kernel %func \"compute\" \n"
@@ -1363,8 +1367,9 @@ std::make_pair(std::string(kOpenCLMemoryModel) +
           std::vector<std::string>{"GeometryStreams"}),
 std::make_pair(std::string(kOpenCLMemoryModel) +
           "OpEntryPoint Kernel %func \"compute\" \n"
-          "OpDecorate %intt Location 0\n"
-          "%intt = OpTypeInt 32 0\n" + std::string(kVoidFVoid),
+          "OpMemberDecorate %struct 0 Location 0\n"
+          "%intt = OpTypeInt 32 0\n"
+          "%struct = OpTypeStruct %intt\n" + std::string(kVoidFVoid),
           ShaderDependencies()),
 std::make_pair(std::string(kOpenCLMemoryModel) +
           "OpEntryPoint Kernel %func \"compute\" \n"
@@ -2283,11 +2288,30 @@ OpMemoryModel Physical64 OpenCL
                         "Embedded Profile"));
 }
 
+TEST_F(ValidateCapability, OpenCL12EmbeddedNoLongerEnabledByCapability) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Linkage
+OpCapability Pipes
+OpMemoryModel Physical64 OpenCL
+%u32    = OpTypeInt 32 0
+)" + std::string(kVoidFVoid);
+
+  CompileSuccessfully(spirv, SPV_ENV_OPENCL_EMBEDDED_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_OPENCL_EMBEDDED_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Capability Pipes is not allowed by OpenCL 1.2 "
+                        "Embedded Profile"));
+}
+
 TEST_F(ValidateCapability, OpenCL20FullCapability) {
   const std::string spirv = R"(
 OpCapability Kernel
 OpCapability Addresses
 OpCapability Linkage
+OpCapability Groups
 OpCapability Pipes
 OpMemoryModel Physical64 OpenCL
 %u32    = OpTypeInt 32 0

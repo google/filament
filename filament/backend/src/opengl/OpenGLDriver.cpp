@@ -31,7 +31,7 @@
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #endif
 
@@ -1518,9 +1518,15 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
         case TextureFormat::RGBA16F:
             return gl.ext.EXT_color_buffer_float || gl.ext.EXT_color_buffer_half_float;
 
-        // RGB16F is only supported with EXT_color_buffer_half_float
+        // RGB16F is only supported with EXT_color_buffer_half_float, however
+        // some WebGL implementations do not consider this extension to be sufficient:
+        // https://bugs.chromium.org/p/chromium/issues/detail?id=941671#c10
         case TextureFormat::RGB16F:
+        #if defined(__EMSCRIPTEN__)
+            return false;
+        #else
             return gl.ext.EXT_color_buffer_half_float;
+        #endif
 
         // Float formats from GL_EXT_color_buffer_float
         case TextureFormat::R32F:
@@ -2857,8 +2863,7 @@ void OpenGLDriver::tick(int) {
     executeEveryNowAndThenOps();
 }
 
-void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback, void*) {
+void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
@@ -2874,6 +2879,16 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
             }
         }
     }
+}
+
+void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        backend::FrameScheduledCallback callback, void* user) {
+
+}
+
+void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
+        backend::FrameCompletedCallback callback, void* user) {
+
 }
 
 void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {

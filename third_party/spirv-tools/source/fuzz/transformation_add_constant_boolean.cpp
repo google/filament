@@ -25,39 +25,47 @@ TransformationAddConstantBoolean::TransformationAddConstantBoolean(
     : message_(message) {}
 
 TransformationAddConstantBoolean::TransformationAddConstantBoolean(
-    uint32_t fresh_id, bool is_true) {
+    uint32_t fresh_id, bool is_true, bool is_irrelevant) {
   message_.set_fresh_id(fresh_id);
   message_.set_is_true(is_true);
+  message_.set_is_irrelevant(is_irrelevant);
 }
 
 bool TransformationAddConstantBoolean::IsApplicable(
-    opt::IRContext* context, const FactManager& /*unused*/) const {
-  opt::analysis::Bool bool_type;
-  if (!context->get_type_mgr()->GetId(&bool_type)) {
-    // No OpTypeBool is present.
-    return false;
-  }
-  return fuzzerutil::IsFreshId(context, message_.fresh_id());
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
+  return fuzzerutil::MaybeGetBoolType(ir_context) != 0 &&
+         fuzzerutil::IsFreshId(ir_context, message_.fresh_id());
 }
 
-void TransformationAddConstantBoolean::Apply(opt::IRContext* context,
-                                             FactManager* /*unused*/) const {
-  opt::analysis::Bool bool_type;
+void TransformationAddConstantBoolean::Apply(
+    opt::IRContext* ir_context,
+    TransformationContext* transformation_context) const {
   // Add the boolean constant to the module, ensuring the module's id bound is
   // high enough.
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
-  context->module()->AddGlobalValue(
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+  ir_context->module()->AddGlobalValue(
       message_.is_true() ? SpvOpConstantTrue : SpvOpConstantFalse,
-      message_.fresh_id(), context->get_type_mgr()->GetId(&bool_type));
+      message_.fresh_id(), fuzzerutil::MaybeGetBoolType(ir_context));
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
+
+  if (message_.is_irrelevant()) {
+    transformation_context->GetFactManager()->AddFactIdIsIrrelevant(
+        message_.fresh_id());
+  }
 }
 
 protobufs::Transformation TransformationAddConstantBoolean::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_constant_boolean() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddConstantBoolean::GetFreshIds()
+    const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

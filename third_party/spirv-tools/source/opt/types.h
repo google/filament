@@ -59,6 +59,7 @@ class PipeStorage;
 class NamedBarrier;
 class AccelerationStructureNV;
 class CooperativeMatrixNV;
+class RayQueryProvisionalKHR;
 
 // Abstract class for a SPIR-V type. It has a bunch of As<sublcass>() methods,
 // which is used as a way to probe the actual <subclass>.
@@ -94,7 +95,8 @@ class Type {
     kPipeStorage,
     kNamedBarrier,
     kAccelerationStructureNV,
-    kCooperativeMatrixNV
+    kCooperativeMatrixNV,
+    kRayQueryProvisionalKHR
   };
 
   Type(Kind k) : kind_(k) {}
@@ -199,6 +201,7 @@ class Type {
   DeclareCastMethod(NamedBarrier)
   DeclareCastMethod(AccelerationStructureNV)
   DeclareCastMethod(CooperativeMatrixNV)
+  DeclareCastMethod(RayQueryProvisionalKHR)
 #undef DeclareCastMethod
 
  protected:
@@ -659,6 +662,7 @@ DefineParameterlessType(Queue, queue);
 DefineParameterlessType(PipeStorage, pipe_storage);
 DefineParameterlessType(NamedBarrier, named_barrier);
 DefineParameterlessType(AccelerationStructureNV, accelerationStructureNV);
+DefineParameterlessType(RayQueryProvisionalKHR, rayQueryProvisionalKHR);
 #undef DefineParameterlessType
 
 }  // namespace analysis

@@ -296,7 +296,6 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     if (asset->mResourcesLoaded) {
         return false;
     }
-    asset->mResourcesLoaded = true;
     mPool->addAsset(asset);
     const cgltf_data* gltf = asset->mSourceAsset;
     cgltf_options options {};
@@ -389,7 +388,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (pImpl->mNormalizeSkinningWeights) {
             normalizeSkinningWeights(asset);
         }
-        if (asset->mInstances.empty()) {
+        if (!asset->isInstanced()) {
             importSkins(gltf, asset->mNodeMap, asset->mSkins);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
@@ -444,8 +443,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     asset->mDependencyGraph.finalize();
     pImpl->mCurrentAsset = asset;
 
-    // Finally, load image files and create Filament Textures.
-    return pImpl->createTextures(async);
+    // Finally, create Filament Textures and begin loading image files.
+    asset->mResourcesLoaded = pImpl->createTextures(async);
+    return asset->mResourcesLoaded;
 }
 
 bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {
@@ -800,7 +800,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         } else {
             const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
             for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-                const cgltf_attribute& attr = prim.attributes[aindex];
+                const cgltf_attribute& attr = morphTarget.attributes[aindex];
                 if (attr.index == 0) {
                     accessors[attr.type] = attr.data;
                     vertexCount = attr.data->count;
@@ -996,7 +996,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
-    NodeMap& nodeMap = asset->mInstances.empty() ? asset->mNodeMap : asset->mInstances[0]->nodeMap;
+    NodeMap& nodeMap = asset->isInstanced() ? asset->mInstances[0]->nodeMap : asset->mNodeMap;
 
     // The purpose of the root node is to give the client a place for custom transforms.
     // Since it is not part of the source model, it should be ignored when computing the

@@ -59,7 +59,12 @@ public:
       return mSwapChain;
     }
 
+    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
+
+    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);
+
 private:
+    FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mSwapChain;
     void* mNativeWindow = nullptr;
     uint64_t mConfigFlags = 0;

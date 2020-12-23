@@ -194,6 +194,13 @@ class TypeManager {
 
   uint32_t GetBoolTypeId() { return GetTypeInstruction(GetBoolType()); }
 
+  Type* GetVoidType() {
+    Void void_type;
+    return GetRegisteredType(&void_type);
+  }
+
+  uint32_t GetVoidTypeId() { return GetTypeInstruction(GetVoidType()); }
+
  private:
   using TypeToIdMap = std::unordered_map<const Type*, uint32_t, HashTypePointer,
                                          CompareTypePointers>;

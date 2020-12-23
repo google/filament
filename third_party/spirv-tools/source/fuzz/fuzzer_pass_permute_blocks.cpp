@@ -20,10 +20,11 @@ namespace spvtools {
 namespace fuzz {
 
 FuzzerPassPermuteBlocks::FuzzerPassPermuteBlocks(
-    opt::IRContext* ir_context, FactManager* fact_manager,
+    opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
     protobufs::TransformationSequence* transformations)
-    : FuzzerPass(ir_context, fact_manager, fuzzer_context, transformations) {}
+    : FuzzerPass(ir_context, transformation_context, fuzzer_context,
+                 transformations) {}
 
 FuzzerPassPermuteBlocks::~FuzzerPassPermuteBlocks() = default;
 
@@ -66,11 +67,7 @@ void FuzzerPassPermuteBlocks::Apply() {
       // down indefinitely.
       while (true) {
         TransformationMoveBlockDown transformation(*id);
-        if (transformation.IsApplicable(GetIRContext(), *GetFactManager())) {
-          transformation.Apply(GetIRContext(), GetFactManager());
-          *GetTransformations()->add_transformation() =
-              transformation.ToMessage();
-        } else {
+        if (!MaybeApplyTransformation(transformation)) {
           break;
         }
       }

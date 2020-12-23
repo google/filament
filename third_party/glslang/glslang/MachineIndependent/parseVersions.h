@@ -58,7 +58,7 @@ public:
                    const SpvVersion& spvVersion, EShLanguage language, TInfoSink& infoSink,
                    bool forwardCompatible, EShMessages messages)
         :
-#ifndef GLSLANG_WEB
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         forwardCompatible(forwardCompatible),
         profile(profile),
 #endif
@@ -117,8 +117,13 @@ public:
     bool suppressWarnings() const { return true; }
     bool isForwardCompatible() const { return false; }
 #else
+#ifdef GLSLANG_ANGLE
+    const bool forwardCompatible = true;
+    const EProfile profile = ECoreProfile;
+#else
     bool forwardCompatible;      // true if errors are to be given for use of deprecated features
     EProfile profile;            // the declared profile in the shader (core by default)
+#endif
     bool isEsProfile() const { return profile == EEsProfile; }
     void requireProfile(const TSourceLoc& loc, int profileMask, const char* featureDesc);
     void profileRequires(const TSourceLoc& loc, int profileMask, int minVersion, int numExtensions,
@@ -224,7 +229,7 @@ public:
     TIntermediate& intermediate; // helper for making and hooking up pieces of the parse tree
 
 protected:
-    TMap<TString, TExtensionBehavior> extensionBehavior;    // for each extension string, what its current behavior is set to
+    TMap<TString, TExtensionBehavior> extensionBehavior;    // for each extension string, what its current behavior is
     TMap<TString, unsigned int> extensionMinSpv;            // for each extension string, store minimum spirv required
     EShMessages messages;        // errors/warnings/rule-sets
     int numErrors;               // number of compile-time errors encountered

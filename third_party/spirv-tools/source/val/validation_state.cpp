@@ -30,114 +30,74 @@ namespace spvtools {
 namespace val {
 namespace {
 
-bool IsInstructionInLayoutSection(ModuleLayoutSection layout, SpvOp op) {
+ModuleLayoutSection InstructionLayoutSection(
+    ModuleLayoutSection current_section, SpvOp op) {
   // See Section 2.4
-  bool out = false;
-  // clang-format off
-  switch (layout) {
-    case kLayoutCapabilities:  out = op == SpvOpCapability;    break;
-    case kLayoutExtensions:    out = op == SpvOpExtension;     break;
-    case kLayoutExtInstImport: out = op == SpvOpExtInstImport; break;
-    case kLayoutMemoryModel:   out = op == SpvOpMemoryModel;   break;
-    case kLayoutEntryPoint:    out = op == SpvOpEntryPoint;    break;
-    case kLayoutExecutionMode:
-      out = op == SpvOpExecutionMode || op == SpvOpExecutionModeId;
+  if (spvOpcodeGeneratesType(op) || spvOpcodeIsConstant(op))
+    return kLayoutTypes;
+
+  switch (op) {
+    case SpvOpCapability:
+      return kLayoutCapabilities;
+    case SpvOpExtension:
+      return kLayoutExtensions;
+    case SpvOpExtInstImport:
+      return kLayoutExtInstImport;
+    case SpvOpMemoryModel:
+      return kLayoutMemoryModel;
+    case SpvOpEntryPoint:
+      return kLayoutEntryPoint;
+    case SpvOpExecutionMode:
+    case SpvOpExecutionModeId:
+      return kLayoutExecutionMode;
+    case SpvOpSourceContinued:
+    case SpvOpSource:
+    case SpvOpSourceExtension:
+    case SpvOpString:
+      return kLayoutDebug1;
+    case SpvOpName:
+    case SpvOpMemberName:
+      return kLayoutDebug2;
+    case SpvOpModuleProcessed:
+      return kLayoutDebug3;
+    case SpvOpDecorate:
+    case SpvOpMemberDecorate:
+    case SpvOpGroupDecorate:
+    case SpvOpGroupMemberDecorate:
+    case SpvOpDecorationGroup:
+    case SpvOpDecorateId:
+    case SpvOpDecorateStringGOOGLE:
+    case SpvOpMemberDecorateStringGOOGLE:
+      return kLayoutAnnotations;
+    case SpvOpTypeForwardPointer:
+      return kLayoutTypes;
+    case SpvOpVariable:
+      if (current_section == kLayoutTypes) return kLayoutTypes;
+      return kLayoutFunctionDefinitions;
+    case SpvOpExtInst:
+      // SpvOpExtInst is only allowed in types section for certain extended
+      // instruction sets. This will be checked separately.
+      if (current_section == kLayoutTypes) return kLayoutTypes;
+      return kLayoutFunctionDefinitions;
+    case SpvOpLine:
+    case SpvOpNoLine:
+    case SpvOpUndef:
+      if (current_section == kLayoutTypes) return kLayoutTypes;
+      return kLayoutFunctionDefinitions;
+    case SpvOpFunction:
+    case SpvOpFunctionParameter:
+    case SpvOpFunctionEnd:
+      if (current_section == kLayoutFunctionDeclarations)
+        return kLayoutFunctionDeclarations;
+      return kLayoutFunctionDefinitions;
+    default:
       break;
-    case kLayoutDebug1:
-      switch (op) {
-        case SpvOpSourceContinued:
-        case SpvOpSource:
-        case SpvOpSourceExtension:
-        case SpvOpString:
-          out = true;
-          break;
-        default: break;
-      }
-      break;
-    case kLayoutDebug2:
-      switch (op) {
-        case SpvOpName:
-        case SpvOpMemberName:
-          out = true;
-          break;
-        default: break;
-      }
-      break;
-    case kLayoutDebug3:
-      // Only OpModuleProcessed is allowed here.
-      out = (op == SpvOpModuleProcessed);
-      break;
-    case kLayoutAnnotations:
-      switch (op) {
-        case SpvOpDecorate:
-        case SpvOpMemberDecorate:
-        case SpvOpGroupDecorate:
-        case SpvOpGroupMemberDecorate:
-        case SpvOpDecorationGroup:
-        case SpvOpDecorateId:
-        case SpvOpDecorateStringGOOGLE:
-        case SpvOpMemberDecorateStringGOOGLE:
-          out = true;
-          break;
-        default: break;
-      }
-      break;
-    case kLayoutTypes:
-      if (spvOpcodeGeneratesType(op) || spvOpcodeIsConstant(op)) {
-        out = true;
-        break;
-      }
-      switch (op) {
-        case SpvOpTypeForwardPointer:
-        case SpvOpVariable:
-        case SpvOpLine:
-        case SpvOpNoLine:
-        case SpvOpUndef:
-        // SpvOpExtInst is only allowed here for certain extended instruction
-        // sets. This will be checked separately
-        case SpvOpExtInst:
-          out = true;
-          break;
-        default: break;
-      }
-      break;
-    case kLayoutFunctionDeclarations:
-    case kLayoutFunctionDefinitions:
-      // NOTE: These instructions should NOT be in these layout sections
-      if (spvOpcodeGeneratesType(op) || spvOpcodeIsConstant(op)) {
-        out = false;
-        break;
-      }
-      switch (op) {
-        case SpvOpCapability:
-        case SpvOpExtension:
-        case SpvOpExtInstImport:
-        case SpvOpMemoryModel:
-        case SpvOpEntryPoint:
-        case SpvOpExecutionMode:
-        case SpvOpExecutionModeId:
-        case SpvOpSourceContinued:
-        case SpvOpSource:
-        case SpvOpSourceExtension:
-        case SpvOpString:
-        case SpvOpName:
-        case SpvOpMemberName:
-        case SpvOpModuleProcessed:
-        case SpvOpDecorate:
-        case SpvOpMemberDecorate:
-        case SpvOpGroupDecorate:
-        case SpvOpGroupMemberDecorate:
-        case SpvOpDecorationGroup:
-        case SpvOpTypeForwardPointer:
-          out = false;
-          break;
-      default:
-        out = true;
-        break;
-      }
   }
-  // clang-format on
-  return out;
+  return kLayoutFunctionDefinitions;
+}
+
+bool IsInstructionInLayoutSection(ModuleLayoutSection layout, SpvOp op) {
+  return layout == InstructionLayoutSection(layout, op);
 }
 
 // Counts the number of instructions and functions in the file.
@@ -309,6 +269,12 @@ void ValidationState_t::ProgressToNextLayoutSectionOrder() {
     current_layout_section_ =
         static_cast<ModuleLayoutSection>(current_layout_section_ + 1);
   }
+}
+
+bool ValidationState_t::IsOpcodeInPreviousLayoutSection(SpvOp op) {
+  ModuleLayoutSection section =
+      InstructionLayoutSection(current_layout_section_, op);
+  return section < current_layout_section_;
 }
 
 bool ValidationState_t::IsOpcodeInCurrentLayoutSection(SpvOp op) {
@@ -1052,7 +1018,7 @@ void ValidationState_t::ComputeFunctionToEntryPointMapping() {
 }
 
 void ValidationState_t::ComputeRecursiveEntryPoints() {
-  for (const Function &func : functions()) {
+  for (const Function& func : functions()) {
     std::stack<uint32_t> call_stack;
     std::set<uint32_t> visited;
 
@@ -1317,6 +1283,230 @@ bool ValidationState_t::IsValidStorageClass(
   }
 
   return true;
+}
+
+#define VUID_WRAP(vuid) "[" #vuid "] "
+
+// Currently no 2 VUID share the same id, so no need for |reference|
+std::string ValidationState_t::VkErrorID(uint32_t id,
+                                         const char* /*reference*/) const {
+  if (!spvIsVulkanEnv(context_->target_env)) {
+    return "";
+  }
+
+  // This large switch case is only searched when an error has occured.
+  // If an id is changed, the old case must be modified or removed. Each string
+  // here is interpreted as being "implemented"
+
+  // Clang format adds spaces between hyphens
+  // clang-format off
+  switch (id) {
+    case 4181:
+      return VUID_WRAP(VUID-BaseInstance-BaseInstance-04181);
+    case 4182:
+      return VUID_WRAP(VUID-BaseInstance-BaseInstance-04182);
+    case 4183:
+      return VUID_WRAP(VUID-BaseInstance-BaseInstance-04183);
+    case 4184:
+      return VUID_WRAP(VUID-BaseVertex-BaseVertex-04184);
+    case 4185:
+      return VUID_WRAP(VUID-BaseVertex-BaseVertex-04185);
+    case 4186:
+      return VUID_WRAP(VUID-BaseVertex-BaseVertex-04186);
+    case 4187:
+      return VUID_WRAP(VUID-ClipDistance-ClipDistance-04187);
+    case 4191:
+      return VUID_WRAP(VUID-ClipDistance-ClipDistance-04191);
+    case 4196:
+      return VUID_WRAP(VUID-CullDistance-CullDistance-04196);
+    case 4200:
+      return VUID_WRAP(VUID-CullDistance-CullDistance-04200);
+    case 4205:
+      return VUID_WRAP(VUID-DeviceIndex-DeviceIndex-04205);
+    case 4206:
+      return VUID_WRAP(VUID-DeviceIndex-DeviceIndex-04206);
+    case 4207:
+      return VUID_WRAP(VUID-DrawIndex-DrawIndex-04207);
+    case 4208:
+      return VUID_WRAP(VUID-DrawIndex-DrawIndex-04208);
+    case 4209:
+      return VUID_WRAP(VUID-DrawIndex-DrawIndex-04209);
+    case 4210:
+      return VUID_WRAP(VUID-FragCoord-FragCoord-04210);
+    case 4211:
+      return VUID_WRAP(VUID-FragCoord-FragCoord-04211);
+    case 4212:
+      return VUID_WRAP(VUID-FragCoord-FragCoord-04212);
+    case 4213:
+      return VUID_WRAP(VUID-FragDepth-FragDepth-04213);
+    case 4214:
+      return VUID_WRAP(VUID-FragDepth-FragDepth-04214);
+    case 4215:
+      return VUID_WRAP(VUID-FragDepth-FragDepth-04215);
+    case 4216:
+      return VUID_WRAP(VUID-FragDepth-FragDepth-04216);
+    case 4229:
+      return VUID_WRAP(VUID-FrontFacing-FrontFacing-04229);
+    case 4230:
+      return VUID_WRAP(VUID-FrontFacing-FrontFacing-04230);
+    case 4231:
+      return VUID_WRAP(VUID-FrontFacing-FrontFacing-04231);
+    case 4236:
+      return VUID_WRAP(VUID-GlobalInvocationId-GlobalInvocationId-04236);
+    case 4237:
+      return VUID_WRAP(VUID-GlobalInvocationId-GlobalInvocationId-04237);
+    case 4238:
+      return VUID_WRAP(VUID-GlobalInvocationId-GlobalInvocationId-04238);
+    case 4239:
+      return VUID_WRAP(VUID-HelperInvocation-HelperInvocation-04239);
+    case 4240:
+      return VUID_WRAP(VUID-HelperInvocation-HelperInvocation-04240);
+    case 4241:
+      return VUID_WRAP(VUID-HelperInvocation-HelperInvocation-04241);
+    case 4257:
+      return VUID_WRAP(VUID-InvocationId-InvocationId-04257);
+    case 4258:
+      return VUID_WRAP(VUID-InvocationId-InvocationId-04258);
+    case 4259:
+      return VUID_WRAP(VUID-InvocationId-InvocationId-04259);
+    case 4263:
+      return VUID_WRAP(VUID-InstanceIndex-InstanceIndex-04263);
+    case 4264:
+      return VUID_WRAP(VUID-InstanceIndex-InstanceIndex-04264);
+    case 4265:
+      return VUID_WRAP(VUID-InstanceIndex-InstanceIndex-04265);
+    case 4272:
+      return VUID_WRAP(VUID-Layer-Layer-04272);
+    case 4274:
+      return VUID_WRAP(VUID-Layer-Layer-04274);
+    case 4275:
+      return VUID_WRAP(VUID-Layer-Layer-04275);
+    case 4276:
+      return VUID_WRAP(VUID-Layer-Layer-04276);
+    case 4281:
+      return VUID_WRAP(VUID-LocalInvocationId-LocalInvocationId-04281);
+    case 4282:
+      return VUID_WRAP(VUID-LocalInvocationId-LocalInvocationId-04282);
+    case 4283:
+      return VUID_WRAP(VUID-LocalInvocationId-LocalInvocationId-04283);
+    case 4296:
+      return VUID_WRAP(VUID-NumWorkgroups-NumWorkgroups-04296);
+    case 4297:
+      return VUID_WRAP(VUID-NumWorkgroups-NumWorkgroups-04297);
+    case 4298:
+      return VUID_WRAP(VUID-NumWorkgroups-NumWorkgroups-04298);
+    case 4308:
+      return VUID_WRAP(VUID-PatchVertices-PatchVertices-04308);
+    case 4309:
+      return VUID_WRAP(VUID-PatchVertices-PatchVertices-04309);
+    case 4310:
+      return VUID_WRAP(VUID-PatchVertices-PatchVertices-04310);
+    case 4311:
+      return VUID_WRAP(VUID-PointCoord-PointCoord-04311);
+    case 4312:
+      return VUID_WRAP(VUID-PointCoord-PointCoord-04312);
+    case 4313:
+      return VUID_WRAP(VUID-PointCoord-PointCoord-04313);
+    case 4314:
+      return VUID_WRAP(VUID-PointSize-PointSize-04314);
+    case 4315:
+      return VUID_WRAP(VUID-PointSize-PointSize-04315);
+    case 4316:
+      return VUID_WRAP(VUID-PointSize-PointSize-04316);
+    case 4317:
+      return VUID_WRAP(VUID-PointSize-PointSize-04317);
+    case 4318:
+      return VUID_WRAP(VUID-Position-Position-04318);
+    case 4320:
+      return VUID_WRAP(VUID-Position-Position-04320);
+    case 4321:
+      return VUID_WRAP(VUID-Position-Position-04321);
+    case 4330:
+      return VUID_WRAP(VUID-PrimitiveId-PrimitiveId-04330);
+    case 4334:
+      return VUID_WRAP(VUID-PrimitiveId-PrimitiveId-04334);
+    case 4337:
+      return VUID_WRAP(VUID-PrimitiveId-PrimitiveId-04337);
+    case 4354:
+      return VUID_WRAP(VUID-SampleId-SampleId-04354);
+    case 4355:
+      return VUID_WRAP(VUID-SampleId-SampleId-04355);
+    case 4356:
+      return VUID_WRAP(VUID-SampleId-SampleId-04356);
+    case 4357:
+      return VUID_WRAP(VUID-SampleMask-SampleMask-04357);
+    case 4358:
+      return VUID_WRAP(VUID-SampleMask-SampleMask-04358);
+    case 4359:
+      return VUID_WRAP(VUID-SampleMask-SampleMask-04359);
+    case 4360:
+      return VUID_WRAP(VUID-SamplePosition-SamplePosition-04360);
+    case 4361:
+      return VUID_WRAP(VUID-SamplePosition-SamplePosition-04361);
+    case 4362:
+      return VUID_WRAP(VUID-SamplePosition-SamplePosition-04362);
+    case 4387:
+      return VUID_WRAP(VUID-TessCoord-TessCoord-04387);
+    case 4388:
+      return VUID_WRAP(VUID-TessCoord-TessCoord-04388);
+    case 4389:
+      return VUID_WRAP(VUID-TessCoord-TessCoord-04389);
+    case 4390:
+      return VUID_WRAP(VUID-TessLevelOuter-TessLevelOuter-04390);
+    case 4393:
+      return VUID_WRAP(VUID-TessLevelOuter-TessLevelOuter-04393);
+    case 4394:
+      return VUID_WRAP(VUID-TessLevelInner-TessLevelInner-04394);
+    case 4397:
+      return VUID_WRAP(VUID-TessLevelInner-TessLevelInner-04397);
+    case 4398:
+      return VUID_WRAP(VUID-VertexIndex-VertexIndex-04398);
+    case 4399:
+      return VUID_WRAP(VUID-VertexIndex-VertexIndex-04399);
+    case 4400:
+      return VUID_WRAP(VUID-VertexIndex-VertexIndex-04400);
+    case 4401:
+      return VUID_WRAP(VUID-ViewIndex-ViewIndex-04401);
+    case 4402:
+      return VUID_WRAP(VUID-ViewIndex-ViewIndex-04402);
+    case 4403:
+      return VUID_WRAP(VUID-ViewIndex-ViewIndex-04403);
+    case 4404:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-04404);
+    case 4406:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-04406);
+    case 4407:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-04407);
+    case 4408:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-04408);
+    case 4422:
+      return VUID_WRAP(VUID-WorkgroupId-WorkgroupId-04422);
+    case 4423:
+      return VUID_WRAP(VUID-WorkgroupId-WorkgroupId-04423);
+    case 4424:
+      return VUID_WRAP(VUID-WorkgroupId-WorkgroupId-04424);
+    case 4425:
+      return VUID_WRAP(VUID-WorkgroupSize-WorkgroupSize-04425);
+    case 4426:
+      return VUID_WRAP(VUID-WorkgroupSize-WorkgroupSize-04426);
+    case 4427:
+      return VUID_WRAP(VUID-WorkgroupSize-WorkgroupSize-04427);
+    case 4484:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-04484);
+    case 4485:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-04485);
+    case 4486:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-04486);
+    case 4490:
+      return VUID_WRAP(VUID-ShadingRateKHR-ShadingRateKHR-04490);
+    case 4491:
+      return VUID_WRAP(VUID-ShadingRateKHR-ShadingRateKHR-04491);
+    case 4492:
+      return VUID_WRAP(VUID-ShadingRateKHR-ShadingRateKHR-04492);
+    default:
+      return "";  // unknown id
+  };
+  // clang-format on
 }
 
 }  // namespace val

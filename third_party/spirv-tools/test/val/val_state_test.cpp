@@ -134,6 +134,57 @@ TEST_F(ValidationState_HasAnyOfExtensions, MultiCapMask) {
   EXPECT_FALSE(state_.HasAnyOfExtensions(set2));
 }
 
+// A test of ValidationState_t::IsOpcodeInCurrentLayoutSection().
+using ValidationState_InLayoutState = ValidationStateTest;
+
+TEST_F(ValidationState_InLayoutState, Variable) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpVariable));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpVariable));
+}
+
+TEST_F(ValidationState_InLayoutState, ExtInst) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpExtInst));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpExtInst));
+}
+
+TEST_F(ValidationState_InLayoutState, Undef) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpUndef));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpUndef));
+}
+
+TEST_F(ValidationState_InLayoutState, Function) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunction));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunction));
+}
+
+TEST_F(ValidationState_InLayoutState, FunctionParameter) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionParameter));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionParameter));
+}
+
+TEST_F(ValidationState_InLayoutState, FunctionEnd) {
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionEnd));
+
+  state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionEnd));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

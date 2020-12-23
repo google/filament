@@ -590,6 +590,24 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
+    std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.sheenRoughness = 1.0;
+        }
+    )");
+
+    std::string shaderCode = shaderWithAllProperties(ShaderType::FRAGMENT, fragmentCode);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {

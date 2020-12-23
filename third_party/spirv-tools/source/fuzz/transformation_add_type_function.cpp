@@ -36,19 +36,18 @@ TransformationAddTypeFunction::TransformationAddTypeFunction(
 }
 
 bool TransformationAddTypeFunction::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // The result id must be fresh.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
   }
   // The return and argument types must be type ids but not not be function
   // type ids.
-  if (!fuzzerutil::IsNonFunctionTypeId(context, message_.return_type_id())) {
+  if (!fuzzerutil::IsNonFunctionTypeId(ir_context, message_.return_type_id())) {
     return false;
   }
   for (auto argument_type_id : message_.argument_type_id()) {
-    if (!fuzzerutil::IsNonFunctionTypeId(context, argument_type_id)) {
+    if (!fuzzerutil::IsNonFunctionTypeId(ir_context, argument_type_id)) {
       return false;
     }
   }
@@ -56,57 +55,34 @@ bool TransformationAddTypeFunction::IsApplicable(
   // exactly the same return and argument type ids.  (Note that the type manager
   // does not allow us to check this, as it does not distinguish between
   // function types with different but isomorphic pointer argument types.)
-  for (auto& inst : context->module()->types_values()) {
-    if (inst.opcode() != SpvOpTypeFunction) {
-      // Consider only OpTypeFunction instructions.
-      continue;
-    }
-    if (inst.GetSingleWordInOperand(0) != message_.return_type_id()) {
-      // Different return types - cannot be the same.
-      continue;
-    }
-    if (inst.NumInOperands() !=
-        1 + static_cast<uint32_t>(message_.argument_type_id().size())) {
-      // Different numbers of arguments - cannot be the same.
-      continue;
-    }
-    bool found_argument_mismatch = false;
-    for (uint32_t index = 1; index < inst.NumInOperands(); index++) {
-      if (message_.argument_type_id(index - 1) !=
-          inst.GetSingleWordInOperand(index)) {
-        // Argument mismatch - cannot be the same.
-        found_argument_mismatch = true;
-        break;
-      }
-    }
-    if (found_argument_mismatch) {
-      continue;
-    }
-    // Everything matches - the type is already declared.
-    return false;
-  }
-  return true;
+  std::vector<uint32_t> type_ids = {message_.return_type_id()};
+  type_ids.insert(type_ids.end(), message_.argument_type_id().begin(),
+                  message_.argument_type_id().end());
+  return fuzzerutil::FindFunctionType(ir_context, type_ids) == 0;
 }
 
 void TransformationAddTypeFunction::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
-  opt::Instruction::OperandList in_operands;
-  in_operands.push_back({SPV_OPERAND_TYPE_ID, {message_.return_type_id()}});
-  for (auto argument_type_id : message_.argument_type_id()) {
-    in_operands.push_back({SPV_OPERAND_TYPE_ID, {argument_type_id}});
-  }
-  context->module()->AddType(MakeUnique<opt::Instruction>(
-      context, SpvOpTypeFunction, 0, message_.fresh_id(), in_operands));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  std::vector<uint32_t> type_ids = {message_.return_type_id()};
+  type_ids.insert(type_ids.end(), message_.argument_type_id().begin(),
+                  message_.argument_type_id().end());
+
+  fuzzerutil::AddFunctionType(ir_context, message_.fresh_id(), type_ids);
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddTypeFunction::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_type_function() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddTypeFunction::GetFreshIds()
+    const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

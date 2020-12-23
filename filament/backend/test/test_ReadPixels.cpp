@@ -23,6 +23,16 @@
 
 #include <fstream>
 
+using namespace filament;
+using namespace filament::backend;
+
+#ifndef IOS
+#include <imageio/ImageEncoder.h>
+#include <image/ColorTransform.h>
+
+using namespace image;
+#endif
+
 namespace {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,9 +61,6 @@ void main() {
 }
 
 namespace test {
-
-using namespace filament;
-using namespace filament::backend;
 
 TEST_F(BackendTest, ReadPixels) {
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
@@ -115,6 +122,23 @@ TEST_F(BackendTest, ReadPixels) {
 
         size_t getPixelBufferStride() const {
             return bufferDimension;
+        }
+
+        void exportScreenshot(void* pixelData) const {
+            #ifndef IOS
+            const size_t width = readRect.width, height = readRect.height;
+            LinearImage image(width, height, 4);
+            if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
+                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*) pixelData);
+            }
+            if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
+                memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
+            }
+            std::string png = std::string(testName) + ".png";
+            std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
+            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
+                    png.c_str());
+            #endif
         }
 
         PixelDataFormat format = PixelDataFormat::RGBA;
@@ -214,7 +238,7 @@ TEST_F(BackendTest, ReadPixels) {
         params.viewport.width = t.getRenderTargetSize();
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, nullptr, nullptr);
+        getDriverApi().beginFrame(0, 0);
 
         // Render a white triangle over blue.
         getDriverApi().beginRenderPass(renderTarget, params);
@@ -256,6 +280,8 @@ TEST_F(BackendTest, ReadPixels) {
                     const TestCase* test = (const TestCase*) user;
                     assert(test);
 
+                    test->exportScreenshot(buffer);
+
                     // Hash the contents of the buffer and check that they match.
                     uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
 
@@ -264,6 +290,7 @@ TEST_F(BackendTest, ReadPixels) {
 
                     free(buffer);
                 }, (void*) &t);
+
         getDriverApi().readPixels(renderTarget, t.readRect.x, t.readRect.y, t.readRect.width,
                 t.readRect.height, std::move(descriptor));
 

@@ -30,35 +30,56 @@ TransformationAddTypeFloat::TransformationAddTypeFloat(
     : message_(message) {}
 
 bool TransformationAddTypeFloat::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // The id must be fresh.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
+  }
+
+  // Checks float type width capabilities.
+  switch (message_.width()) {
+    case 16:
+      // The Float16 capability must be present.
+      if (!ir_context->get_feature_mgr()->HasCapability(SpvCapabilityFloat16)) {
+        return false;
+      }
+      break;
+    case 32:
+      // No capabilities needed.
+      break;
+    case 64:
+      // The Float64 capability must be present.
+      if (!ir_context->get_feature_mgr()->HasCapability(SpvCapabilityFloat64)) {
+        return false;
+      }
+      break;
+    default:
+      assert(false && "Unexpected float type width");
+      return false;
   }
 
   // Applicable if there is no float type with this width already declared in
   // the module.
-  opt::analysis::Float float_type(message_.width());
-  return context->get_type_mgr()->GetId(&float_type) == 0;
+  return fuzzerutil::MaybeGetFloatType(ir_context, message_.width()) == 0;
 }
 
 void TransformationAddTypeFloat::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
-  opt::Instruction::OperandList width = {
-      {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.width()}}};
-  context->module()->AddType(MakeUnique<opt::Instruction>(
-      context, SpvOpTypeFloat, 0, message_.fresh_id(), width));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  fuzzerutil::AddFloatType(ir_context, message_.fresh_id(), message_.width());
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddTypeFloat::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_type_float() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddTypeFloat::GetFreshIds() const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

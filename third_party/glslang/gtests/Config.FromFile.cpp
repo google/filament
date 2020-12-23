@@ -95,7 +95,7 @@ TEST_P(ConfigTest, FromFile)
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Glsl, ConfigTest,
     ::testing::ValuesIn(std::vector<TestCaseSpec>({
         {"specExamples.vert", "baseResults/test.conf", "specExamplesConf.vert.out", (EShMessages)(EShMsgAST | EShMsgCascadingErrors)},

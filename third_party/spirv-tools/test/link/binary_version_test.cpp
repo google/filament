@@ -27,21 +27,21 @@ TEST_F(BinaryVersion, LinkerChoosesMaxSpirvVersion) {
   spvtest::Binaries binaries = {
       {
           SpvMagicNumber,
-          0x00000300u,
+          0x00010300u,
           SPV_GENERATOR_CODEPLAY,
           1u,  // NOTE: Bound
           0u   // NOTE: Schema; reserved
       },
       {
           SpvMagicNumber,
-          0x00000600u,
+          0x00010500u,
           SPV_GENERATOR_CODEPLAY,
           1u,  // NOTE: Bound
           0u   // NOTE: Schema; reserved
       },
       {
           SpvMagicNumber,
-          0x00000100u,
+          0x00010100u,
           SPV_GENERATOR_CODEPLAY,
           1u,  // NOTE: Bound
           0u   // NOTE: Schema; reserved
@@ -53,7 +53,7 @@ TEST_F(BinaryVersion, LinkerChoosesMaxSpirvVersion) {
   ASSERT_EQ(SPV_SUCCESS, Link(binaries, &linked_binary));
   EXPECT_THAT(GetErrorMessage(), std::string());
 
-  EXPECT_EQ(0x00000600u, linked_binary[1]);
+  EXPECT_EQ(0x00010500u, linked_binary[1]);
 }
 
 }  // namespace

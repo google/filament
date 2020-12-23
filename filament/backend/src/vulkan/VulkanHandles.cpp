@@ -23,6 +23,8 @@
 
 #define FILAMENT_VULKAN_VERBOSE 0
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 
@@ -77,7 +79,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variant = (" << utils::io::hex
-                << builder.getVariant() << utils::io::dec << "), "
+                << (int) builder.getVariant() << utils::io::dec << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
 #endif
@@ -261,7 +263,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
 
         surfaceContext.swapContexts[i].attachment = {
             .format = surfaceContext.surfaceFormat.format, .image = image,
-            .view = {}, .memory = {}, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
+            .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
         };
         VkImageViewCreateInfo ivCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -374,14 +376,18 @@ VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
     return mMsaaDepthAttachment;
 }
 
-int VulkanRenderTarget::getColorTargetCount() const {
+int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
     int count = 0;
     for (int i = 0; i < MRT::TARGET_COUNT; i++) {
-        if (mColor[i].format != VK_FORMAT_UNDEFINED) {
-            ++count;
+        if (mColor[i].format == VK_FORMAT_UNDEFINED) {
+            continue;
+        }
+        // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
+        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+            count++;
         }
     }
     return count;
@@ -396,8 +402,8 @@ bool VulkanRenderTarget::invalidate() {
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-        AttributeArray const& attributes) :
+        VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
+        uint32_t elementCount, AttributeArray const& attributes) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes) {
     buffers.reserve(bufferCount);
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
@@ -408,14 +414,14 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
                 size = std::max(size, end);
             }
         }
-        buffers.emplace_back(new VulkanBuffer(context, stagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                size));
+        buffers.emplace_back(new VulkanBuffer(context, stagePool, disposer, this,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, size));
     }
 }
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool) {
+        VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage)
+        : mContext(context), mStagePool(stagePool), mDisposer(disposer) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -439,6 +445,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
         vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+        mDisposer.acquire(this, commands.resources);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
@@ -510,6 +517,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     }
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
+    // TODO: investigate performance implications of setting these flags.
     const VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
@@ -540,6 +548,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.usage |= blittable;
     }
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        imageInfo.usage |= blittable;
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
@@ -768,6 +777,7 @@ VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags
 }
 
 // TODO: replace the last 4 args with VkImageSubresourceRange
+// TODO: replace this function with a flexible thin wrapper over image barrier creation
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
         VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
         uint32_t layerCount, uint32_t levelCount, VkImageAspectFlags aspect) {
@@ -811,6 +821,7 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
 
         // We support PRESENT as a target layout to allow blitting from the swap chain.
         // See also makeSwapChainPresentable().
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = 0;

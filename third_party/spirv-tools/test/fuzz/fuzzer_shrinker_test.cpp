@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/fuzz/fuzzer.h"
+#include "source/fuzz/shrinker.h"
+
 #include <functional>
 #include <vector>
 
-#include "source/fuzz/fuzzer.h"
+#include "gtest/gtest.h"
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/pseudo_random_generator.h"
-#include "source/fuzz/shrinker.h"
 #include "source/fuzz/uniform_buffer_element_descriptor.h"
 #include "test/fuzz/fuzz_test_util.h"
 
@@ -979,33 +981,37 @@ class InterestingThenRandom : public InterestingnessTest {
 // The |step_limit| parameter restricts the number of steps that the shrinker
 // will try; it can be set to something small for a faster (but less thorough)
 // test.
+//
+// The |validator_options| parameter provides validator options that should be
+// used during shrinking.
 void RunAndCheckShrinker(
     const spv_target_env& target_env, const std::vector<uint32_t>& binary_in,
     const protobufs::FactSequence& initial_facts,
     const protobufs::TransformationSequence& transformation_sequence_in,
     const Shrinker::InterestingnessFunction& interestingness_function,
     const std::vector<uint32_t>& expected_binary_out,
-    uint32_t expected_transformations_out_size, uint32_t step_limit) {
+    uint32_t expected_transformations_out_size, uint32_t step_limit,
+    spv_validator_options validator_options) {
   // Run the shrinker.
-  Shrinker shrinker(target_env, step_limit, false);
-  shrinker.SetMessageConsumer(kSilentConsumer);
+  auto shrinker_result =
+      Shrinker(target_env, kConsoleMessageConsumer, binary_in, initial_facts,
+               transformation_sequence_in, interestingness_function, step_limit,
+               false, validator_options)
+          .Run();
 
-  std::vector<uint32_t> binary_out;
-  protobufs::TransformationSequence transformations_out;
-  Shrinker::ShrinkerResultStatus shrinker_result_status =
-      shrinker.Run(binary_in, initial_facts, transformation_sequence_in,
-                   interestingness_function, &binary_out, &transformations_out);
   ASSERT_TRUE(Shrinker::ShrinkerResultStatus::kComplete ==
-                  shrinker_result_status ||
+                  shrinker_result.status ||
               Shrinker::ShrinkerResultStatus::kStepLimitReached ==
-                  shrinker_result_status);
+                  shrinker_result.status);
 
   // If a non-empty expected binary was provided, check that it matches the
   // result of shrinking and that the expected number of transformations remain.
   if (!expected_binary_out.empty()) {
-    ASSERT_EQ(expected_binary_out, binary_out);
-    ASSERT_EQ(expected_transformations_out_size,
-              static_cast<uint32_t>(transformations_out.transformation_size()));
+    ASSERT_EQ(expected_binary_out, shrinker_result.transformed_binary);
+    ASSERT_EQ(
+        expected_transformations_out_size,
+        static_cast<uint32_t>(
+            shrinker_result.applied_transformations.transformation_size()));
   }
 }
 
@@ -1033,47 +1039,62 @@ void RunFuzzerAndShrinker(const std::string& shader,
   }
 
   // Run the fuzzer and check that it successfully yields a valid binary.
-  std::vector<uint32_t> fuzzer_binary_out;
-  protobufs::TransformationSequence fuzzer_transformation_sequence_out;
-  Fuzzer fuzzer(env, seed, true);
-  fuzzer.SetMessageConsumer(kSilentConsumer);
-  auto fuzzer_result_status =
-      fuzzer.Run(binary_in, initial_facts, donor_suppliers, &fuzzer_binary_out,
-                 &fuzzer_transformation_sequence_out);
-  ASSERT_EQ(Fuzzer::FuzzerResultStatus::kComplete, fuzzer_result_status);
-  ASSERT_TRUE(t.Validate(fuzzer_binary_out));
+  spvtools::ValidatorOptions validator_options;
+
+  // Depending on the seed, decide whether to enable all passes and which
+  // repeated pass manager to use.
+  bool enable_all_passes = (seed % 4) == 0;
+  Fuzzer::RepeatedPassStrategy repeated_pass_strategy;
+  if ((seed % 3) == 0) {
+    repeated_pass_strategy = Fuzzer::RepeatedPassStrategy::kSimple;
+  } else if ((seed % 3) == 1) {
+    repeated_pass_strategy =
+        Fuzzer::RepeatedPassStrategy::kLoopedWithRecommendations;
+  } else {
+    repeated_pass_strategy =
+        Fuzzer::RepeatedPassStrategy::kRandomWithRecommendations;
+  }
+
+  auto fuzzer_result =
+      Fuzzer(env, kConsoleMessageConsumer, binary_in, initial_facts,
+             donor_suppliers, MakeUnique<PseudoRandomGenerator>(seed),
+             enable_all_passes, repeated_pass_strategy, true, validator_options)
+          .Run();
+  ASSERT_EQ(Fuzzer::FuzzerResultStatus::kComplete, fuzzer_result.status);
+  ASSERT_TRUE(t.Validate(fuzzer_result.transformed_binary));
 
   const uint32_t kReasonableStepLimit = 50;
   const uint32_t kSmallStepLimit = 20;
 
   // With the AlwaysInteresting test, we should quickly shrink to the original
   // binary with no transformations remaining.
-  RunAndCheckShrinker(
-      env, binary_in, initial_facts, fuzzer_transformation_sequence_out,
-      AlwaysInteresting().AsFunction(), binary_in, 0, kReasonableStepLimit);
+  RunAndCheckShrinker(env, binary_in, initial_facts,
+                      fuzzer_result.applied_transformations,
+                      AlwaysInteresting().AsFunction(), binary_in, 0,
+                      kReasonableStepLimit, validator_options);
 
   // With the OnlyInterestingFirstTime test, no shrinking should be achieved.
   RunAndCheckShrinker(
-      env, binary_in, initial_facts, fuzzer_transformation_sequence_out,
-      OnlyInterestingFirstTime().AsFunction(), fuzzer_binary_out,
+      env, binary_in, initial_facts, fuzzer_result.applied_transformations,
+      OnlyInterestingFirstTime().AsFunction(), fuzzer_result.transformed_binary,
       static_cast<uint32_t>(
-          fuzzer_transformation_sequence_out.transformation_size()),
-      kReasonableStepLimit);
+          fuzzer_result.applied_transformations.transformation_size()),
+      kReasonableStepLimit, validator_options);
 
   // The PingPong test is unpredictable; passing an empty expected binary
   // means that we don't check anything beyond that shrinking completes
   // successfully.
-  RunAndCheckShrinker(env, binary_in, initial_facts,
-                      fuzzer_transformation_sequence_out,
-                      PingPong().AsFunction(), {}, 0, kSmallStepLimit);
+  RunAndCheckShrinker(
+      env, binary_in, initial_facts, fuzzer_result.applied_transformations,
+      PingPong().AsFunction(), {}, 0, kSmallStepLimit, validator_options);
 
   // The InterestingThenRandom test is unpredictable; passing an empty
   // expected binary means that we do not check anything about shrinking
   // results.
   RunAndCheckShrinker(
-      env, binary_in, initial_facts, fuzzer_transformation_sequence_out,
+      env, binary_in, initial_facts, fuzzer_result.applied_transformations,
       InterestingThenRandom(PseudoRandomGenerator(seed)).AsFunction(), {}, 0,
-      kSmallStepLimit);
+      kSmallStepLimit, validator_options);
 }
 
 TEST(FuzzerShrinkerTest, Miscellaneous1) {
@@ -1103,6 +1124,18 @@ TEST(FuzzerShrinkerTest, Miscellaneous3) {
     *resolution_y_eq_100.mutable_constant_word()->Add() = 100;
     protobufs::Fact temp;
     *temp.mutable_constant_uniform_fact() = resolution_y_eq_100;
+    *facts.mutable_fact()->Add() = temp;
+  }
+  // Also add an invalid fact, which should be ignored.
+  {
+    protobufs::FactConstantUniform bad_fact;
+    // The descriptor set, binding and indices used here deliberately make no
+    // sense.
+    *bad_fact.mutable_uniform_buffer_element_descriptor() =
+        MakeUniformBufferElementDescriptor(22, 33, {44, 55});
+    *bad_fact.mutable_constant_word()->Add() = 100;
+    protobufs::Fact temp;
+    *temp.mutable_constant_uniform_fact() = bad_fact;
     *facts.mutable_fact()->Add() = temp;
   }
 

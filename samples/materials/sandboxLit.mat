@@ -19,6 +19,14 @@ material {
             name : reflectance
         },
         {
+            type : float3,
+            name : sheenColor
+        },
+        {
+            type : float,
+            name : sheenRoughness
+        },
+        {
             type : float,
             name : clearCoat
         },
@@ -45,6 +53,8 @@ fragment {
         material.roughness = materialParams.roughness;
         material.metallic = materialParams.metallic;
         material.reflectance = materialParams.reflectance;
+        material.sheenColor = materialParams.sheenColor;
+        material.sheenRoughness = materialParams.sheenRoughness;
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
         material.anisotropy = materialParams.anisotropy;

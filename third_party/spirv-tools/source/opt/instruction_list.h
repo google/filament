@@ -61,6 +61,16 @@ class InstructionList : public utils::IntrusiveList<Instruction> {
         : utils::IntrusiveList<Instruction>::iterator(i) {}
     iterator(Instruction* i) : utils::IntrusiveList<Instruction>::iterator(i) {}
 
+    iterator& operator++() {
+      utils::IntrusiveList<Instruction>::iterator::operator++();
+      return *this;
+    }
+
+    iterator& operator--() {
+      utils::IntrusiveList<Instruction>::iterator::operator--();
+      return *this;
+    }
+
     // DEPRECATED: Please use MoveBefore with an InstructionList instead.
     //
     // Moves the nodes in |list| to the list that |this| points to.  The

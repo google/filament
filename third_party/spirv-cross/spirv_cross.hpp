@@ -1060,6 +1060,11 @@ protected:
 
 	bool flush_phi_required(BlockID from, BlockID to) const;
 
+	uint32_t evaluate_spec_constant_u32(const SPIRConstantOp &spec) const;
+	uint32_t evaluate_constant_u32(uint32_t id) const;
+
+	bool is_vertex_like_shader() const;
+
 private:
 	// Used only to implement the old deprecated get_entry_point() interface.
 	const SPIREntryPoint &get_first_entry_point(const std::string &name) const;

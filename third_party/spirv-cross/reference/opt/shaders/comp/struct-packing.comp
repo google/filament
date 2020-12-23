@@ -43,48 +43,6 @@ struct Content
     S4 m3s[8];
 };
 
-struct S0_1
-{
-    vec2 a[1];
-    float b;
-};
-
-struct S1_1
-{
-    vec3 a;
-    float b;
-};
-
-struct S2_1
-{
-    vec3 a[1];
-    float b;
-};
-
-struct S3_1
-{
-    vec2 a;
-    float b;
-};
-
-struct S4_1
-{
-    vec2 c;
-};
-
-struct Content_1
-{
-    S0_1 m0s[1];
-    S1_1 m1s[1];
-    S2_1 m2s[1];
-    S0_1 m0;
-    S1_1 m1;
-    S2_1 m2;
-    S3_1 m3;
-    float m4;
-    S4_1 m3s[8];
-};
-
 layout(binding = 1, std430) restrict buffer SSBO1
 {
     Content content;
@@ -103,9 +61,9 @@ layout(binding = 1, std430) restrict buffer SSBO1
 
 layout(binding = 0, std140) restrict buffer SSBO0
 {
-    Content_1 content;
-    Content_1 content1[2];
-    Content_1 content2;
+    Content content;
+    Content content1[2];
+    Content content2;
     mat2 m0;
     mat2 m1;
     mat2x3 m2[4];

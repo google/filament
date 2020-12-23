@@ -33,6 +33,7 @@
 #include <math/scalar.h>
 
 using namespace filament::math;
+using namespace bluevk;
 
 struct VulkanDriver {
     VkInstance instance;

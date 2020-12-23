@@ -28,7 +28,7 @@ namespace fuzz {
 class FuzzerPassDonateModules : public FuzzerPass {
  public:
   FuzzerPassDonateModules(
-      opt::IRContext* ir_context, FactManager* fact_manager,
+      opt::IRContext* ir_context, TransformationContext* transformation_context,
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations,
       const std::vector<fuzzerutil::ModuleSupplier>& donor_suppliers);
@@ -66,6 +66,11 @@ class FuzzerPassDonateModules : public FuzzerPass {
       opt::IRContext* donor_ir_context,
       std::map<uint32_t, uint32_t>* original_id_to_donated_id);
 
+  // Helper method for HandleTypesAndValues, to handle a single type/value.
+  void HandleTypeOrValue(
+      const opt::Instruction& type_or_value,
+      std::map<uint32_t, uint32_t>* original_id_to_donated_id);
+
   // Assumes that |donor_ir_context| does not exhibit recursion.  Considers the
   // functions in |donor_ir_context|'s call graph in a reverse-topologically-
   // sorted order (leaves-to-root), adding each function to the recipient
@@ -77,11 +82,77 @@ class FuzzerPassDonateModules : public FuzzerPass {
                        std::map<uint32_t, uint32_t>* original_id_to_donated_id,
                        bool make_livesafe);
 
-  // Returns the ids of all functions in |context| in a topological order in
-  // relation to the call graph of |context|, which is assumed to be recursion-
-  // free.
-  static std::vector<uint32_t> GetFunctionsInCallGraphTopologicalOrder(
-      opt::IRContext* context);
+  // During donation we will have to ignore some instructions, e.g. because they
+  // use opcodes that we cannot support or because they reference the ids of
+  // instructions that have not been donated.  This function encapsulates the
+  // logic for deciding which whether instruction |instruction| from
+  // |donor_ir_context| can be donated.
+  bool CanDonateInstruction(
+      opt::IRContext* donor_ir_context, const opt::Instruction& instruction,
+      const std::map<uint32_t, uint32_t>& original_id_to_donated_id,
+      const std::set<uint32_t>& skipped_instructions) const;
+
+  // We treat the OpArrayLength instruction specially.  In the donor shader this
+  // instruction yields the length of a runtime array that is the final member
+  // of a struct.  During donation, we will have converted the runtime array
+  // type, and the associated struct field, into a fixed-size array.
+  //
+  // Instead of donating this instruction, we turn it into an OpCopyObject
+  // instruction that copies the size of the fixed-size array.
+  void HandleOpArrayLength(
+      const opt::Instruction& instruction,
+      std::map<uint32_t, uint32_t>* original_id_to_donated_id,
+      std::vector<protobufs::Instruction>* donated_instructions) const;
+
+  // The instruction |instruction| is required to be an instruction that cannot
+  // be easily donated, either because it uses an unsupported opcode, has an
+  // unsupported result type, or uses id operands that could not be donated.
+  //
+  // If |instruction| generates a result id, the function attempts to add a
+  // substitute for |instruction| to |donated_instructions| that has the correct
+  // result type.  If this cannot be done, the instruction's result id is added
+  // to |skipped_instructions|.  The mapping from donor ids to recipient ids is
+  // managed by |original_id_to_donated_id|.
+  void HandleDifficultInstruction(
+      const opt::Instruction& instruction,
+      std::map<uint32_t, uint32_t>* original_id_to_donated_id,
+      std::vector<protobufs::Instruction>* donated_instructions,
+      std::set<uint32_t>* skipped_instructions);
+
+  // Adds an instruction based in |instruction| to |donated_instructions| in a
+  // form ready for donation.  The original instruction comes from
+  // |donor_ir_context|, and |original_id_to_donated_id| maps ids from
+  // |donor_ir_context| to corresponding ids in the recipient module.
+  void PrepareInstructionForDonation(
+      const opt::Instruction& instruction, opt::IRContext* donor_ir_context,
+      std::map<uint32_t, uint32_t>* original_id_to_donated_id,
+      std::vector<protobufs::Instruction>* donated_instructions);
+
+  // Tries to create a protobufs::LoopLimiterInfo given a loop header basic
+  // block. Returns true if successful and outputs loop limiter into the |out|
+  // variable. Otherwise, returns false. |out| contains an undefined value when
+  // this function returns false.
+  bool CreateLoopLimiterInfo(
+      opt::IRContext* donor_ir_context, const opt::BasicBlock& loop_header,
+      const std::map<uint32_t, uint32_t>& original_id_to_donated_id,
+      protobufs::LoopLimiterInfo* out);
+
+  // Requires that |donated_instructions| represents a prepared version of the
+  // instructions of |function_to_donate| (which comes from |donor_ir_context|)
+  // ready for donation, and |original_id_to_donated_id| maps ids from
+  // |donor_ir_context| to their corresponding ids in the recipient module.
+  //
+  // Attempts to add a livesafe version of the function, based on
+  // |donated_instructions|, to the recipient module. Returns true if the
+  // donation was successful, false otherwise.
+  bool MaybeAddLivesafeFunction(
+      const opt::Function& function_to_donate, opt::IRContext* donor_ir_context,
+      const std::map<uint32_t, uint32_t>& original_id_to_donated_id,
+      const std::vector<protobufs::Instruction>& donated_instructions);
+
+  // Returns true if and only if |instruction| is a scalar, vector, matrix,
+  // array or struct; i.e. it is not an opaque type.
+  bool IsBasicType(const opt::Instruction& instruction) const;
 
   // Functions that supply SPIR-V modules
   std::vector<fuzzerutil::ModuleSupplier> donor_suppliers_;

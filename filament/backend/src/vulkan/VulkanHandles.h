@@ -58,9 +58,10 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VulkanAttachment getMsaaColor(int target) const;
     VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
-    int getColorTargetCount() const;
+    int getColorTargetCount(const VulkanRenderPass& pass) const;
     bool invalidate();
     uint8_t getSamples() const { return mSamples; }
+    bool hasDepth() const { return mDepth.format != VK_FORMAT_UNDEFINED; }
 private:
     VulkanAttachment mColor[MRT::TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};
@@ -78,31 +79,32 @@ struct VulkanSwapChain : public HwSwapChain {
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer {
-    VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t elementCount,
+    VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+            uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes);
     std::vector<std::unique_ptr<VulkanBuffer>> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
-    VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint8_t elementSize,
-            uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
+    VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+            uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
             indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-            buffer(new VulkanBuffer(context, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            elementSize * indexCount)) {}
+            buffer(new VulkanBuffer(context, stagePool, disposer, this,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
     const VkIndexType indexType;
     const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
-    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint32_t numBytes,
-            backend::BufferUsage usage);
+    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
+            VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage);
     ~VulkanUniformBuffer();
     void loadFromCpu(const void* cpuData, uint32_t numBytes);
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
 private:
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
+    VulkanDisposer& mDisposer;
     VkBuffer mGpuBuffer;
     VmaAllocation mGpuMemory;
 };

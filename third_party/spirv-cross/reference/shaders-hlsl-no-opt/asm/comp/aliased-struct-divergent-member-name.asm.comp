@@ -3,11 +3,6 @@ struct T
     float c;
 };
 
-struct T_1
-{
-    float b;
-};
-
 static const T _18 = { 40.0f };
 
 RWByteAddressBuffer _7 : register(u0);

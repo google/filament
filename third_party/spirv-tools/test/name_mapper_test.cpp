@@ -270,6 +270,7 @@ INSTANTIATE_TEST_SUITE_P(
         BuiltInCase("SubgroupLocalInvocationId"),
         BuiltInGLCase("VertexIndex"),
         BuiltInGLCase("InstanceIndex"),
+        BuiltInGLCase("BaseInstance"),
         BuiltInCase("SubgroupEqMaskKHR"),
         BuiltInCase("SubgroupGeMaskKHR"),
         BuiltInCase("SubgroupGtMaskKHR"),

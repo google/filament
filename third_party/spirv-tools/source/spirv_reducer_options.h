@@ -30,6 +30,9 @@ struct spv_reducer_options_t {
 
   // See spvReducerOptionsSetFailOnValidationError.
   bool fail_on_validation_error;
+
+  // See spvReducerOptionsSetTargetFunction.
+  uint32_t target_function;
 };
 
 #endif  // SOURCE_SPIRV_REDUCER_OPTIONS_H_

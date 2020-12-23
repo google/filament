@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_SET_FUNCTION_CONTROL_H_
 #define SOURCE_FUZZ_TRANSFORMATION_SET_FUNCTION_CONTROL_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -37,17 +37,22 @@ class TransformationSetFunctionControl : public Transformation {
   //   at most one of 'Inline' or 'DontInline', and that may not contain 'Pure'
   //   (respectively 'Const') unless the existing function control mask contains
   //   'Pure' (respectively 'Const').
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // The function control operand of instruction |message_.function_id| is
   // over-written with |message_.function_control|.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
  private:
-  opt::Instruction* FindFunctionDefInstruction(opt::IRContext* context) const;
+  opt::Instruction* FindFunctionDefInstruction(
+      opt::IRContext* ir_context) const;
 
   protobufs::TransformationSetFunctionControl message_;
 };

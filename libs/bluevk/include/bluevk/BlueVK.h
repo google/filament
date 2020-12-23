@@ -38,14 +38,14 @@
     #include <vulkan/vulkan.h>
 #endif
 
+#include <utils/unwindows.h>
+
 namespace bluevk {
 
     // Returns false if BlueGL could not find the Vulkan shared library.
     bool initialize();
 
     void bindInstance(VkInstance instance);
-
-} // namespace bluevk
 
 #if defined(VK_VERSION_1_0)
 extern PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
@@ -413,6 +413,14 @@ extern PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
 extern PFN_vkGetBufferOpaqueCaptureAddressKHR vkGetBufferOpaqueCaptureAddressKHR;
 extern PFN_vkGetDeviceMemoryOpaqueCaptureAddressKHR vkGetDeviceMemoryOpaqueCaptureAddressKHR;
 #endif // defined(VK_KHR_buffer_device_address)
+#if defined(VK_KHR_copy_commands2)
+extern PFN_vkCmdBlitImage2KHR vkCmdBlitImage2KHR;
+extern PFN_vkCmdCopyBuffer2KHR vkCmdCopyBuffer2KHR;
+extern PFN_vkCmdCopyBufferToImage2KHR vkCmdCopyBufferToImage2KHR;
+extern PFN_vkCmdCopyImage2KHR vkCmdCopyImage2KHR;
+extern PFN_vkCmdCopyImageToBuffer2KHR vkCmdCopyImageToBuffer2KHR;
+extern PFN_vkCmdResolveImage2KHR vkCmdResolveImage2KHR;
+#endif // defined(VK_KHR_copy_commands2)
 #if defined(VK_KHR_create_renderpass2)
 extern PFN_vkCmdBeginRenderPass2KHR vkCmdBeginRenderPass2KHR;
 extern PFN_vkCmdEndRenderPass2KHR vkCmdEndRenderPass2KHR;
@@ -488,6 +496,10 @@ extern PFN_vkImportSemaphoreFdKHR vkImportSemaphoreFdKHR;
 extern PFN_vkGetSemaphoreWin32HandleKHR vkGetSemaphoreWin32HandleKHR;
 extern PFN_vkImportSemaphoreWin32HandleKHR vkImportSemaphoreWin32HandleKHR;
 #endif // defined(VK_KHR_external_semaphore_win32)
+#if defined(VK_KHR_fragment_shading_rate)
+extern PFN_vkCmdSetFragmentShadingRateKHR vkCmdSetFragmentShadingRateKHR;
+extern PFN_vkGetPhysicalDeviceFragmentShadingRatesKHR vkGetPhysicalDeviceFragmentShadingRatesKHR;
+#endif // defined(VK_KHR_fragment_shading_rate)
 #if defined(VK_KHR_get_display_properties2)
 extern PFN_vkGetDisplayModeProperties2KHR vkGetDisplayModeProperties2KHR;
 extern PFN_vkGetDisplayPlaneCapabilities2KHR vkGetDisplayPlaneCapabilities2KHR;
@@ -680,6 +692,8 @@ extern PFN_vkGetPhysicalDevicePresentRectanglesKHR vkGetPhysicalDevicePresentRec
 extern PFN_vkAcquireNextImage2KHR vkAcquireNextImage2KHR;
 #endif // (defined(VK_KHR_device_group) && defined(VK_KHR_swapchain)) || (defined(VK_KHR_swapchain) && defined(VK_VERSION_1_1))
 
+} // namespace bluevk
+
 #if !defined(NDEBUG)
 #include <utils/Log.h>
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkImageLayout& value);
@@ -724,6 +738,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkPresentModeKHR& 
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkColorSpaceKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkTimeDomainEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkDebugReportObjectTypeEXT& value);
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkDeviceMemoryReportEventTypeEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkRasterizationOrderAMD& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkValidationCheckEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkValidationFeatureEnableEXT& value);
@@ -765,9 +780,10 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkPerformanceValue
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderFloatControlsIndependence& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineExecutableStatisticFormatKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkLineRasterizationModeEXT& value);
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkFragmentShadingRateCombinerOpKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineCacheCreateFlagBits& value);
-utils::io::ostream& operator<<(utils::io::ostream& out, const VkCullModeFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkQueueFlagBits& value);
+utils::io::ostream& operator<<(utils::io::ostream& out, const VkCullModeFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkRenderPassCreateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkDeviceQueueCreateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkMemoryPropertyFlagBits& value);
@@ -819,7 +835,6 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkSemaphoreImportF
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkExternalFenceHandleTypeFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkExternalFenceFeatureFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkFenceImportFlagBits& value);
-utils::io::ostream& operator<<(utils::io::ostream& out, const VkSurfaceCounterFlagBitsEXT& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPeerMemoryFeatureFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkMemoryAllocateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkDeviceGroupPresentModeFlagBitsKHR& value);

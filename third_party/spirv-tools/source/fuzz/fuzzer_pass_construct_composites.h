@@ -15,10 +15,10 @@
 #ifndef SOURCE_FUZZ_FUZZER_PASS_CONSTRUCT_COMPOSITES_H_
 #define SOURCE_FUZZ_FUZZER_PASS_CONSTRUCT_COMPOSITES_H_
 
-#include "source/fuzz/fuzzer_pass.h"
-
 #include <map>
 #include <vector>
+
+#include "source/fuzz/fuzzer_pass.h"
 
 namespace spvtools {
 namespace fuzz {
@@ -27,7 +27,7 @@ namespace fuzz {
 class FuzzerPassConstructComposites : public FuzzerPass {
  public:
   FuzzerPassConstructComposites(
-      opt::IRContext* ir_context, FactManager* fact_manager,
+      opt::IRContext* ir_context, TransformationContext* transformation_context,
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
@@ -49,27 +49,28 @@ class FuzzerPassConstructComposites : public FuzzerPass {
       opt::Instruction* inst,
       TypeIdToInstructions* type_id_to_available_instructions);
 
+  // Requires that |array_type_instruction| has opcode OpTypeArray.
   // Attempts to find suitable instruction result ids from the values of
   // |type_id_to_available_instructions| that would allow a composite of type
-  // |array_type| to be constructed.  Returns said ids if they can be found.
-  // Returns |nullptr| otherwise.
-  std::unique_ptr<std::vector<uint32_t>> TryConstructingArrayComposite(
-      const opt::analysis::Array& array_type,
+  // |array_type_instruction| to be constructed.  Returns said ids if they can
+  // be found and an empty vector otherwise.
+  std::vector<uint32_t> FindComponentsToConstructArray(
+      const opt::Instruction& array_type_instruction,
       const TypeIdToInstructions& type_id_to_available_instructions);
 
-  // Similar to TryConstructingArrayComposite, but for matrices.
-  std::unique_ptr<std::vector<uint32_t>> TryConstructingMatrixComposite(
-      const opt::analysis::Matrix& matrix_type,
+  // Similar to FindComponentsToConstructArray, but for matrices.
+  std::vector<uint32_t> FindComponentsToConstructMatrix(
+      const opt::Instruction& matrix_type_instruction,
       const TypeIdToInstructions& type_id_to_available_instructions);
 
-  // Similar to TryConstructingArrayComposite, but for structs.
-  std::unique_ptr<std::vector<uint32_t>> TryConstructingStructComposite(
-      const opt::analysis::Struct& struct_type,
+  // Similar to FindComponentsToConstructArray, but for structs.
+  std::vector<uint32_t> FindComponentsToConstructStruct(
+      const opt::Instruction& struct_type_instruction,
       const TypeIdToInstructions& type_id_to_available_instructions);
 
-  // Similar to TryConstructingArrayComposite, but for vectors.
-  std::unique_ptr<std::vector<uint32_t>> TryConstructingVectorComposite(
-      const opt::analysis::Vector& vector_type,
+  // Similar to FindComponentsToConstructArray, but for vectors.
+  std::vector<uint32_t> FindComponentsToConstructVector(
+      const opt::Instruction& vector_type_instruction,
       const TypeIdToInstructions& type_id_to_available_instructions);
 };
 

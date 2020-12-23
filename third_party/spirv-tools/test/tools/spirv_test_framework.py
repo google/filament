@@ -146,9 +146,9 @@ class TestStatus:
     # Some of our MacOS bots still run Python 2, so need to be backwards
     # compatible here.
     if type(stdout) is not str:     
-      if sys.version_info[0] is 2:
+      if sys.version_info[0] == 2:
        self.stdout = stdout.decode('utf-8')
-      elif sys.version_info[0] is 3:
+      elif sys.version_info[0] == 3:
         self.stdout = str(stdout, encoding='utf-8') if stdout is not None else stdout
       else:
         raise Exception('Unable to determine if running Python 2 or 3 from {}'.format(sys.version_info))
@@ -156,9 +156,9 @@ class TestStatus:
       self.stdout = stdout
     
     if type(stderr) is not str:     
-      if sys.version_info[0] is 2:
+      if sys.version_info[0] == 2:
        self.stderr = stderr.decode('utf-8')
-      elif sys.version_info[0] is 3:
+      elif sys.version_info[0] == 3:
         self.stderr = str(stderr, encoding='utf-8') if stderr is not None else stderr
       else:
         raise Exception('Unable to determine if running Python 2 or 3 from {}'.format(sys.version_info))

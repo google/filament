@@ -1899,6 +1899,186 @@ TEST_F(ScalarReplacementTest, RelaxedPrecisionMemberDecoration) {
   SinglePassRunAndMatch<ScalarReplacementPass>(text, true);
 }
 
+TEST_F(ScalarReplacementTest, DebugDeclare) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+%test = OpString "test"
+OpName %6 "simple_struct"
+%1 = OpTypeVoid
+%2 = OpTypeInt 32 0
+%uint_32 = OpConstant %2 32
+%3 = OpTypeStruct %2 %2 %2 %2
+%4 = OpTypePointer Function %3
+%5 = OpTypePointer Function %2
+%6 = OpTypeFunction %2
+%7 = OpConstantNull %3
+%8 = OpConstant %2 0
+%9 = OpConstant %2 1
+%10 = OpConstant %2 2
+%11 = OpConstant %2 3
+%null_expr = OpExtInst %1 %ext DebugExpression
+%src = OpExtInst %1 %ext DebugSource %test
+%cu = OpExtInst %1 %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %1 %ext DebugTypeBasic %test %uint_32 Float
+%main_ty = OpExtInst %1 %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %1
+%dbg_main = OpExtInst %1 %ext DebugFunction %test %main_ty %src 0 0 %cu %test FlagIsProtected|FlagIsPrivate 0 %12
+%dbg_foo = OpExtInst %1 %ext DebugLocalVariable %test %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%12 = OpFunction %2 None %6
+%13 = OpLabel
+%scope = OpExtInst %1 %ext DebugScope %dbg_main
+%14 = OpVariable %4 Function %7
+
+; CHECK: [[deref:%\w+]] = OpExtInst %void [[ext:%\w+]] DebugOperation Deref
+; CHECK: [[dbg_local_var:%\w+]] = OpExtInst %void [[ext]] DebugLocalVariable
+; CHECK: [[deref_expr:%\w+]] = OpExtInst %void [[ext]] DebugExpression [[deref]]
+; CHECK: [[repl3:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl3]] [[deref_expr]] %int_3
+; CHECK: [[repl2:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl2]] [[deref_expr]] %int_2
+; CHECK: [[repl1:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl1]] [[deref_expr]] %int_1
+; CHECK: [[repl0:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl0]] [[deref_expr]] %int_0
+; CHECK-NOT: DebugDeclare
+%decl = OpExtInst %1 %ext DebugDeclare %dbg_foo %14 %null_expr
+
+%15 = OpInBoundsAccessChain %5 %14 %8
+%16 = OpLoad %2 %15
+%17 = OpAccessChain %5 %14 %10
+%18 = OpLoad %2 %17
+%19 = OpIAdd %2 %16 %18
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<ScalarReplacementPass>(text, true);
+}
+
+TEST_F(ScalarReplacementTest, DebugValue) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+%test = OpString "test"
+OpName %6 "simple_struct"
+%1 = OpTypeVoid
+%2 = OpTypeInt 32 0
+%uint_32 = OpConstant %2 32
+%3 = OpTypeStruct %2 %2 %2 %2
+%4 = OpTypePointer Function %3
+%5 = OpTypePointer Function %2
+%6 = OpTypeFunction %2
+%7 = OpConstantNull %3
+%8 = OpConstant %2 0
+%9 = OpConstant %2 1
+%10 = OpConstant %2 2
+%11 = OpConstant %2 3
+%deref = OpExtInst %1 %ext DebugOperation Deref
+%deref_expr = OpExtInst %1 %ext DebugExpression %deref
+%null_expr = OpExtInst %1 %ext DebugExpression
+%src = OpExtInst %1 %ext DebugSource %test
+%cu = OpExtInst %1 %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %1 %ext DebugTypeBasic %test %uint_32 Float
+%main_ty = OpExtInst %1 %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %1
+%dbg_main = OpExtInst %1 %ext DebugFunction %test %main_ty %src 0 0 %cu %test FlagIsProtected|FlagIsPrivate 0 %12
+%dbg_foo = OpExtInst %1 %ext DebugLocalVariable %test %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%12 = OpFunction %2 None %6
+%13 = OpLabel
+%scope = OpExtInst %1 %ext DebugScope %dbg_main
+%14 = OpVariable %4 Function %7
+
+; CHECK: [[deref:%\w+]] = OpExtInst %void [[ext:%\w+]] DebugOperation Deref
+; CHECK: [[deref_expr:%\w+]] = OpExtInst %void [[ext]] DebugExpression [[deref]]
+; CHECK: [[dbg_local_var:%\w+]] = OpExtInst %void [[ext]] DebugLocalVariable
+; CHECK: [[repl3:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: [[repl2:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: [[repl1:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: [[repl0:%\w+]] = OpVariable %_ptr_Function_uint Function
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl0]] [[deref_expr]] %int_0
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl1]] [[deref_expr]] %int_1
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl2]] [[deref_expr]] %int_2
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl3]] [[deref_expr]] %int_3
+%value = OpExtInst %1 %ext DebugValue %dbg_foo %14 %deref_expr
+
+%15 = OpInBoundsAccessChain %5 %14 %8
+%16 = OpLoad %2 %15
+%17 = OpAccessChain %5 %14 %10
+%18 = OpLoad %2 %17
+%19 = OpIAdd %2 %16 %18
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<ScalarReplacementPass>(text, true);
+}
+
+TEST_F(ScalarReplacementTest, DebugDeclareRecursive) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+%test = OpString "test"
+OpName %6 "simple_struct"
+%1 = OpTypeVoid
+%2 = OpTypeInt 32 0
+%uint_32 = OpConstant %2 32
+%float = OpTypeFloat 32
+%float_1 = OpConstant %float 1
+%member = OpTypeStruct %2 %float
+%3 = OpTypeStruct %2 %member %float
+%4 = OpTypePointer Function %3
+%5 = OpTypePointer Function %2
+%ptr_float_Function = OpTypePointer Function %float
+%6 = OpTypeFunction %2
+%cmember = OpConstantComposite %member %uint_32 %float_1
+%7 = OpConstantComposite %3 %uint_32 %cmember %float_1
+%8 = OpConstant %2 0
+%9 = OpConstant %2 1
+%10 = OpConstant %2 2
+%null_expr = OpExtInst %1 %ext DebugExpression
+%src = OpExtInst %1 %ext DebugSource %test
+%cu = OpExtInst %1 %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %1 %ext DebugTypeBasic %test %uint_32 Float
+%main_ty = OpExtInst %1 %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %1
+%dbg_main = OpExtInst %1 %ext DebugFunction %test %main_ty %src 0 0 %cu %test FlagIsProtected|FlagIsPrivate 0 %12
+%dbg_foo = OpExtInst %1 %ext DebugLocalVariable %test %dbg_tf %src 0 0 %dbg_main FlagIsLocal
+%12 = OpFunction %2 None %6
+%13 = OpLabel
+%scope = OpExtInst %1 %ext DebugScope %dbg_main
+%14 = OpVariable %4 Function %7
+
+; CHECK: [[deref:%\w+]] = OpExtInst %void [[ext:%\w+]] DebugOperation Deref
+; CHECK: [[dbg_local_var:%\w+]] = OpExtInst %void [[ext]] DebugLocalVariable
+; CHECK: [[deref_expr:%\w+]] = OpExtInst %void [[ext]] DebugExpression [[deref]]
+; CHECK: [[repl2:%\w+]] = OpVariable %_ptr_Function_float Function %float_1
+; CHECK: [[repl1:%\w+]] = OpVariable %_ptr_Function_uint Function %uint_32
+; CHECK: [[repl3:%\w+]] = OpVariable %_ptr_Function_float Function %float_1
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl3]] [[deref_expr]] %int_2
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl1]] [[deref_expr]] %int_1 %int_0
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl2]] [[deref_expr]] %int_1 %int_1
+; CHECK: [[repl0:%\w+]] = OpVariable %_ptr_Function_uint Function %uint_32
+; CHECK: OpExtInst %void [[ext]] DebugValue [[dbg_local_var]] [[repl0]] [[deref_expr]] %int_0
+; CHECK-NOT: DebugDeclare
+%decl = OpExtInst %1 %ext DebugDeclare %dbg_foo %14 %null_expr
+
+%15 = OpInBoundsAccessChain %5 %14 %8
+%16 = OpLoad %2 %15
+%17 = OpAccessChain %ptr_float_Function %14 %10
+%18 = OpLoad %float %17
+%value = OpConvertFToU %2 %18
+%19 = OpIAdd %2 %16 %value
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<ScalarReplacementPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

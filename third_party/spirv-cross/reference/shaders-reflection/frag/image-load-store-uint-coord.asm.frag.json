@@ -8,7 +8,7 @@
     "outputs" : [
         {
             "type" : "vec4",
-            "name" : "_entryPointOutput",
+            "name" : "@entryPointOutput",
             "location" : 0
         }
     ],

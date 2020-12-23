@@ -12,8 +12,7 @@ layout(location = 0) out vec4 FragColor;
 
 vec4 sample_dual(mediump sampler samp, mediump texture2D tex)
 {
-    vec4 _38 = texture(sampler2D(tex, samp), vTex);
-    return _38;
+    return texture(sampler2D(tex, samp), vTex);
 }
 
 vec4 sample_duals()

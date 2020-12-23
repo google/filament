@@ -6,7 +6,7 @@
         }
     ],
     "types" : {
-        "_91" : {
+        "_89" : {
             "name" : "gl_PerVertex",
             "members" : [
                 {
@@ -19,7 +19,7 @@
                 }
             ]
         },
-        "_104" : {
+        "_102" : {
             "name" : "Block",
             "members" : [
                 {
@@ -57,7 +57,7 @@
     ],
     "ubos" : [
         {
-            "type" : "_104",
+            "type" : "_102",
             "name" : "Block",
             "block_size" : 576,
             "set" : 0,

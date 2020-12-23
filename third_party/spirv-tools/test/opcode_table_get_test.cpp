@@ -21,7 +21,7 @@ namespace {
 using GetTargetOpcodeTableGetTest = ::testing::TestWithParam<spv_target_env>;
 using ::testing::ValuesIn;
 
-TEST_P(GetTargetOpcodeTableGetTest, SanityCheck) {
+TEST_P(GetTargetOpcodeTableGetTest, IntegrityCheck) {
   spv_opcode_table table;
   ASSERT_EQ(SPV_SUCCESS, spvOpcodeTableGet(&table, GetParam()));
   ASSERT_NE(0u, table->count);

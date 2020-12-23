@@ -40,6 +40,8 @@
 #include <utils/JobSystem.h>
 #include <utils/Slice.h>
 
+#include <tsl/robin_set.h>
+
 namespace filament {
 
 namespace backend {
@@ -49,6 +51,7 @@ class Driver;
 class View;
 
 class FEngine;
+class FRenderTarget;
 class FView;
 class ShadowMap;
 
@@ -76,7 +79,7 @@ public:
             Viewport const& srcViewport, CopyFrameFlag flags);
 
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-            backend::FrameFinishedCallback callback, void* user);
+            backend::FrameScheduledCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();
@@ -161,6 +164,8 @@ private:
     backend::TextureFormat getHdrFormat(const View& view, bool translucent) const noexcept;
     backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
+    void initializeClearFlags();
+
     using clock = std::chrono::steady_clock;
     using Epoch = clock::time_point;
     using duration = clock::duration;
@@ -189,6 +194,7 @@ private:
     ClearOptions mClearOptions;
     backend::TargetBufferFlags mDiscardedFlags{};
     backend::TargetBufferFlags mClearFlags{};
+    tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
 
     // per-frame arena for this Renderer

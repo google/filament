@@ -14,6 +14,8 @@
 
 #include "source/fuzz/transformation_merge_blocks.h"
 
+#include "gtest/gtest.h"
+#include "source/fuzz/fuzzer_util.h"
 #include "test/fuzz/fuzz_test_util.h"
 
 namespace spvtools {
@@ -42,14 +44,15 @@ TEST(TransformationMergeBlocksTest, BlockDoesNotExist) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
-  ASSERT_FALSE(
-      TransformationMergeBlocks(3).IsApplicable(context.get(), fact_manager));
-  ASSERT_FALSE(
-      TransformationMergeBlocks(7).IsApplicable(context.get(), fact_manager));
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  ASSERT_FALSE(TransformationMergeBlocks(3).IsApplicable(
+      context.get(), transformation_context));
+  ASSERT_FALSE(TransformationMergeBlocks(7).IsApplicable(
+      context.get(), transformation_context));
 }
 
 TEST(TransformationMergeBlocksTest, DoNotMergeFirstBlockHasMultipleSuccessors) {
@@ -81,12 +84,13 @@ TEST(TransformationMergeBlocksTest, DoNotMergeFirstBlockHasMultipleSuccessors) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
-  ASSERT_FALSE(
-      TransformationMergeBlocks(6).IsApplicable(context.get(), fact_manager));
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  ASSERT_FALSE(TransformationMergeBlocks(6).IsApplicable(
+      context.get(), transformation_context));
 }
 
 TEST(TransformationMergeBlocksTest,
@@ -119,12 +123,13 @@ TEST(TransformationMergeBlocksTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
-  ASSERT_FALSE(
-      TransformationMergeBlocks(10).IsApplicable(context.get(), fact_manager));
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  ASSERT_FALSE(TransformationMergeBlocks(10).IsApplicable(
+      context.get(), transformation_context));
 }
 
 TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockIsSelectionMerge) {
@@ -158,14 +163,17 @@ TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockIsSelectionMerge) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationMergeBlocks transformation(10);
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -228,14 +236,17 @@ TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockIsLoopMerge) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationMergeBlocks transformation(10);
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -303,14 +314,17 @@ TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockIsLoopContinue) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationMergeBlocks transformation(11);
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -374,14 +388,17 @@ TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockStartsWithOpPhi) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationMergeBlocks transformation(6);
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -451,16 +468,20 @@ TEST(TransformationMergeBlocksTest, BasicMerge) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   for (auto& transformation :
        {TransformationMergeBlocks(100), TransformationMergeBlocks(101),
         TransformationMergeBlocks(102), TransformationMergeBlocks(103)}) {
-    ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-    transformation.Apply(context.get(), &fact_manager);
-    ASSERT_TRUE(IsValid(env, context.get()));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
   }
 
   std::string after_transformation = R"(
@@ -539,15 +560,19 @@ TEST(TransformationMergeBlocksTest, MergeWhenSecondBlockIsSelectionHeader) {
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   for (auto& transformation :
        {TransformationMergeBlocks(101), TransformationMergeBlocks(100)}) {
-    ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-    transformation.Apply(context.get(), &fact_manager);
-    ASSERT_TRUE(IsValid(env, context.get()));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
   }
 
   std::string after_transformation = R"(
@@ -626,14 +651,17 @@ TEST(TransformationMergeBlocksTest,
   const auto env = SPV_ENV_UNIVERSAL_1_4;
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  ASSERT_TRUE(IsValid(env, context.get()));
-
-  FactManager fact_manager;
-
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
   TransformationMergeBlocks transformation(101);
-  ASSERT_TRUE(transformation.IsApplicable(context.get(), fact_manager));
-  transformation.Apply(context.get(), &fact_manager);
-  ASSERT_TRUE(IsValid(env, context.get()));
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
 
   std::string after_transformation = R"(
                OpCapability Shader

@@ -83,6 +83,12 @@ if(BUILD_TESTING)
                                    ${gmock_SOURCE_DIR}/include
                                    ${gtest_SOURCE_DIR}/include)
 
+        if(ENABLE_OPT)
+            target_include_directories(glslangtests
+                PRIVATE ${spirv-tools_SOURCE_DIR}/include
+            )
+        endif(ENABLE_OPT)
+
         set(LIBRARIES
             glslang OSDependent OGLCompiler glslang
             SPIRV glslang-default-resource-limits)

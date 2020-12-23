@@ -42,9 +42,16 @@ TEST(OperandString, AllAreDefinedExceptVariable) {
   // None has no string, so don't test it.
   EXPECT_EQ(0u, SPV_OPERAND_TYPE_NONE);
   // Start testing at enum with value 1, skipping None.
-  for (int i = 1; i < int(SPV_OPERAND_TYPE_FIRST_VARIABLE_TYPE); i++) {
-    EXPECT_NE(nullptr, spvOperandTypeStr(static_cast<spv_operand_type_t>(i)))
-        << " Operand type " << i;
+  for (int i = 1; i < int(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES); i++) {
+    const auto type = static_cast<spv_operand_type_t>(i);
+    if (spvOperandIsVariable(type)) {
+      EXPECT_STREQ("unknown", spvOperandTypeStr(type))
+          << " variable type " << i << " has a name '"
+          << spvOperandTypeStr(type) << "'when it should not";
+    } else {
+      EXPECT_STRNE("unknown", spvOperandTypeStr(type))
+          << " operand type " << i << " has no name when it should";
+    }
   }
 }
 
@@ -69,6 +76,47 @@ TEST(OperandIsConcreteMask, Sample) {
   EXPECT_FALSE(spvOperandIsConcreteMask(SPV_OPERAND_TYPE_OPTIONAL_IMAGE));
   EXPECT_FALSE(
       spvOperandIsConcreteMask(SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS));
+}
+
+TEST(OperandType, NoneTypeClassification) {
+  EXPECT_FALSE(spvOperandIsConcrete(SPV_OPERAND_TYPE_NONE));
+  EXPECT_FALSE(spvOperandIsOptional(SPV_OPERAND_TYPE_NONE));
+  EXPECT_FALSE(spvOperandIsVariable(SPV_OPERAND_TYPE_NONE));
+}
+
+TEST(OperandType, EndSentinelTypeClassification) {
+  EXPECT_FALSE(spvOperandIsConcrete(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES));
+  EXPECT_FALSE(spvOperandIsOptional(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES));
+  EXPECT_FALSE(spvOperandIsVariable(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES));
+}
+
+TEST(OperandType, WidthForcingTypeClassification) {
+  EXPECT_FALSE(spvOperandIsConcrete(SPV_FORCE_32BIT_spv_operand_type_t));
+  EXPECT_FALSE(spvOperandIsOptional(SPV_FORCE_32BIT_spv_operand_type_t));
+  EXPECT_FALSE(spvOperandIsVariable(SPV_FORCE_32BIT_spv_operand_type_t));
+}
+
+TEST(OperandType, EachTypeIsEitherConcreteOrOptionalNotBoth) {
+  EXPECT_EQ(0u, SPV_OPERAND_TYPE_NONE);
+  // Start testing at enum with value 1, skipping None.
+  for (int i = 1; i < int(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES); i++) {
+    const auto type = static_cast<spv_operand_type_t>(i);
+    EXPECT_NE(spvOperandIsConcrete(type), spvOperandIsOptional(type))
+        << " operand type " << int(type) << " concrete? "
+        << int(spvOperandIsConcrete(type)) << " optional? "
+        << int(spvOperandIsOptional(type));
+  }
+}
+
+TEST(OperandType, EachVariableTypeIsOptional) {
+  EXPECT_EQ(0u, SPV_OPERAND_TYPE_NONE);
+  // Start testing at enum with value 1, skipping None.
+  for (int i = 1; i < int(SPV_OPERAND_TYPE_NUM_OPERAND_TYPES); i++) {
+    const auto type = static_cast<spv_operand_type_t>(i);
+    if (spvOperandIsVariable(type)) {
+      EXPECT_TRUE(spvOperandIsOptional(type)) << " variable type " << int(type);
+    }
+  }
 }
 
 }  // namespace

@@ -19,9 +19,9 @@
 #include <set>
 #include <vector>
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -38,8 +38,8 @@ class TransformationOutlineFunction : public Transformation {
       uint32_t new_function_type_id, uint32_t new_function_id,
       uint32_t new_function_region_entry_block, uint32_t new_caller_result_id,
       uint32_t new_callee_result_id,
-      std::map<uint32_t, uint32_t>&& input_id_to_fresh_id,
-      std::map<uint32_t, uint32_t>&& output_id_to_fresh_id);
+      const std::map<uint32_t, uint32_t>& input_id_to_fresh_id,
+      const std::map<uint32_t, uint32_t>& output_id_to_fresh_id);
 
   // - All the fresh ids occurring in the transformation must be distinct and
   //   fresh
@@ -58,8 +58,9 @@ class TransformationOutlineFunction : public Transformation {
   //   defined outside the region but used in the region
   // - |message_.output_id_to_fresh_id| must contain an entry for every id
   //   defined in the region but used outside the region
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // - A new function with id |message_.new_function_id| is added to the module.
   // - If the region generates output ids, the return type of this function is
@@ -72,7 +73,7 @@ class TransformationOutlineFunction : public Transformation {
   // - Unless the type required for the new function is already known,
   //   |message_.new_function_type_id| is used as the type id for a new function
   //   type, and the new function uses this type.
-  // - The new function starts with a dummy block with id
+  // - The new function starts with a placeholder block with id
   //   |message_.new_function_first_block|, which jumps straight to a successor
   //   block, to avoid violating rules on what the first block in a function may
   //   look like.
@@ -95,14 +96,17 @@ class TransformationOutlineFunction : public Transformation {
   //   |message_.new_function_struct_return_type| comprised of all the fresh
   //   output ids (unless the return type is void, in which case no value is
   //   returned.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
   // Returns the set of blocks dominated by |entry_block| and post-dominated
   // by |exit_block|.
   static std::set<opt::BasicBlock*> GetRegionBlocks(
-      opt::IRContext* context, opt::BasicBlock* entry_block,
+      opt::IRContext* ir_context, opt::BasicBlock* entry_block,
       opt::BasicBlock* exit_block);
 
   // Yields ids that are used in |region_set| and that are either parameters
@@ -114,7 +118,7 @@ class TransformationOutlineFunction : public Transformation {
   // - id uses in OpPhi instructions in |region_entry_block| are ignored
   // - id uses in the terminator instruction of |region_exit_block| are ignored
   static std::vector<uint32_t> GetRegionInputIds(
-      opt::IRContext* context, const std::set<opt::BasicBlock*>& region_set,
+      opt::IRContext* ir_context, const std::set<opt::BasicBlock*>& region_set,
       opt::BasicBlock* region_exit_block);
 
   // Yields all ids that are defined in |region_set| and used outside
@@ -124,14 +128,14 @@ class TransformationOutlineFunction : public Transformation {
   // - ids defined in the region and used in the terminator of
   //   |region_exit_block| count as output ids
   static std::vector<uint32_t> GetRegionOutputIds(
-      opt::IRContext* context, const std::set<opt::BasicBlock*>& region_set,
+      opt::IRContext* ir_context, const std::set<opt::BasicBlock*>& region_set,
       opt::BasicBlock* region_exit_block);
 
  private:
   // Ensures that the module's id bound is at least the maximum of any fresh id
   // associated with the transformation.
   void UpdateModuleIdBoundForFreshIds(
-      opt::IRContext* context,
+      opt::IRContext* ir_context,
       const std::map<uint32_t, uint32_t>& input_id_to_fresh_id_map,
       const std::map<uint32_t, uint32_t>& output_id_to_fresh_id_map) const;
 
@@ -142,7 +146,7 @@ class TransformationOutlineFunction : public Transformation {
   // modified, and |original_region_exit_block| allows for some special cases
   // where ids should not be remapped.
   void RemapInputAndOutputIdsInRegion(
-      opt::IRContext* context,
+      opt::IRContext* ir_context,
       const opt::BasicBlock& original_region_exit_block,
       const std::set<opt::BasicBlock*>& region_blocks,
       const std::vector<uint32_t>& region_input_ids,
@@ -160,31 +164,34 @@ class TransformationOutlineFunction : public Transformation {
   // are already present).
   //
   // Facts about the function containing the outlined region that are relevant
-  // to the new function are propagated via |fact_manager|.
+  // to the new function are propagated via the vact manager in
+  // |transformation_context|.
   std::unique_ptr<opt::Function> PrepareFunctionPrototype(
       const std::vector<uint32_t>& region_input_ids,
       const std::vector<uint32_t>& region_output_ids,
       const std::map<uint32_t, uint32_t>& input_id_to_fresh_id_map,
-      opt::IRContext* context, FactManager* fact_manager) const;
+      opt::IRContext* ir_context,
+      TransformationContext* transformation_context) const;
 
   // Creates the body of the outlined function by cloning blocks from the
   // original region, given by |region_blocks|, adapting the cloned version
   // of |original_region_exit_block| so that it returns something appropriate,
   // and patching up branches to |original_region_entry_block| to refer to its
   // clone.  Parameters |region_output_ids| and |output_id_to_fresh_id_map| are
-  // used to determine what the function should return.
+  // used to determine what the function should return.  Parameter
+  // |output_id_to_type_id| provides the type of each output id.
   //
-  // The |fact_manager| argument allow facts about blocks being outlined, e.g.
-  // whether they are dead blocks, to be asserted about blocks that get created
-  // during outlining.
+  // The |transformation_context| argument allow facts about blocks being
+  // outlined, e.g. whether they are dead blocks, to be asserted about blocks
+  // that get created during outlining.
   void PopulateOutlinedFunction(
       const opt::BasicBlock& original_region_entry_block,
       const opt::BasicBlock& original_region_exit_block,
       const std::set<opt::BasicBlock*>& region_blocks,
       const std::vector<uint32_t>& region_output_ids,
+      const std::map<uint32_t, uint32_t>& output_id_to_type_id,
       const std::map<uint32_t, uint32_t>& output_id_to_fresh_id_map,
-      opt::IRContext* context, opt::Function* outlined_function,
-      FactManager* fact_manager) const;
+      opt::IRContext* ir_context, opt::Function* outlined_function) const;
 
   // Shrinks the outlined region, given by |region_blocks|, down to the single
   // block |original_region_entry_block|.  This block is itself shrunk to just
@@ -203,7 +210,8 @@ class TransformationOutlineFunction : public Transformation {
   // function is called, this information cannot be gotten from the def-use
   // manager.
   void ShrinkOriginalRegion(
-      opt::IRContext* context, std::set<opt::BasicBlock*>& region_blocks,
+      opt::IRContext* ir_context,
+      const std::set<opt::BasicBlock*>& region_blocks,
       const std::vector<uint32_t>& region_input_ids,
       const std::vector<uint32_t>& region_output_ids,
       const std::map<uint32_t, uint32_t>& output_id_to_type_id,

@@ -14,8 +14,6 @@
 
 // Validates OpCapability instruction.
 
-#include "source/val/validate.h"
-
 #include <cassert>
 #include <string>
 #include <unordered_set>
@@ -23,6 +21,7 @@
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
@@ -166,7 +165,6 @@ bool IsSupportGuaranteedOpenCL_1_2(uint32_t capability, bool embedded_profile) {
   switch (capability) {
     case SpvCapabilityAddresses:
     case SpvCapabilityFloat16Buffer:
-    case SpvCapabilityGroups:
     case SpvCapabilityInt16:
     case SpvCapabilityInt8:
     case SpvCapabilityKernel:
@@ -175,8 +173,6 @@ bool IsSupportGuaranteedOpenCL_1_2(uint32_t capability, bool embedded_profile) {
       return true;
     case SpvCapabilityInt64:
       return !embedded_profile;
-    case SpvCapabilityPipes:
-      return embedded_profile;
   }
   return false;
 }
@@ -187,6 +183,7 @@ bool IsSupportGuaranteedOpenCL_2_0(uint32_t capability, bool embedded_profile) {
   switch (capability) {
     case SpvCapabilityDeviceEnqueue:
     case SpvCapabilityGenericPointer:
+    case SpvCapabilityGroups:
     case SpvCapabilityPipes:
       return true;
   }

@@ -22,6 +22,8 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
+#include <backend/PresentCallable.h>
+
 #include <math/vec4.h>
 
 #include <array>    // FIXME: STL headers are not allowed in public headers
@@ -41,6 +43,8 @@ namespace backend {
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB = 0x4;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16; // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT = 16;          // Matches the Adreno Vulkan driver.
@@ -881,6 +885,11 @@ struct PolygonOffset {
     float slope = 0;        // factor in GL-speak
     float constant = 0;     // units in GL-speak
 };
+
+
+using FrameScheduledCallback = void(*)(backend::PresentCallable callable, void* user);
+
+using FrameCompletedCallback = void(*)(void* user);
 
 
 } // namespace backend

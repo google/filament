@@ -321,13 +321,20 @@ public:
     // Methods for adding information outside the CFG.
     Instruction* addEntryPoint(ExecutionModel, Function*, const char* name);
     void addExecutionMode(Function*, ExecutionMode mode, int value1 = -1, int value2 = -1, int value3 = -1);
+    void addExecutionMode(Function*, ExecutionMode mode, const std::vector<unsigned>& literals);
+    void addExecutionModeId(Function*, ExecutionMode mode, const std::vector<Id>& operandIds);
     void addName(Id, const char* name);
     void addMemberName(Id, int member, const char* name);
     void addDecoration(Id, Decoration, int num = -1);
     void addDecoration(Id, Decoration, const char*);
+    void addDecoration(Id, Decoration, const std::vector<unsigned>& literals);
+    void addDecoration(Id, Decoration, const std::vector<const char*>& strings);
     void addDecorationId(Id id, Decoration, Id idDecoration);
+    void addDecorationId(Id id, Decoration, const std::vector<Id>& operandIds);
     void addMemberDecoration(Id, unsigned int member, Decoration, int num = -1);
     void addMemberDecoration(Id, unsigned int member, Decoration, const char*);
+    void addMemberDecoration(Id, unsigned int member, Decoration, const std::vector<unsigned>& literals);
+    void addMemberDecoration(Id, unsigned int member, Decoration, const std::vector<const char*>& strings);
 
     // At the end of what block do the next create*() instructions go?
     void setBuildPoint(Block* bp) { buildPoint = bp; }
@@ -350,8 +357,9 @@ public:
     // Generate all the code needed to finish up a function.
     void leaveFunction();
 
-    // Create a discard.
+    // Create a discard or terminate-invocation.
     void makeDiscard();
+    void makeTerminateInvocation();
 
     // Create a global or function local or IO variable.
     Id createVariable(Decoration precision, StorageClass, Id type, const char* name = nullptr,
@@ -714,7 +722,8 @@ public:
     }
 
     // use accessChain and swizzle to store value
-    void accessChainStore(Id rvalue, spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone,
+    void accessChainStore(Id rvalue, Decoration nonUniform,
+        spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone,
         spv::Scope scope = spv::ScopeMax, unsigned int alignment = 0);
 
     // use accessChain and swizzle to load an r-value

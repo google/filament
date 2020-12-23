@@ -623,10 +623,15 @@ void Parser::parse(const Instruction &instruction)
 	{
 		uint32_t id = ops[0];
 
-		auto &base = get<SPIRType>(ops[2]);
+		// Very rarely, we might receive a FunctionPrototype here.
+		// We won't be able to compile it, but we shouldn't crash when parsing.
+		// We should be able to reflect.
+		auto *base = maybe_get<SPIRType>(ops[2]);
 		auto &ptrbase = set<SPIRType>(id);
 
-		ptrbase = base;
+		if (base)
+			ptrbase = *base;
+
 		ptrbase.pointer = true;
 		ptrbase.pointer_depth++;
 		ptrbase.storage = static_cast<StorageClass>(ops[1]);
@@ -634,7 +639,7 @@ void Parser::parse(const Instruction &instruction)
 		if (ptrbase.storage == StorageClassAtomicCounter)
 			ptrbase.basetype = SPIRType::AtomicCounter;
 
-		if (base.forward_pointer)
+		if (base && base->forward_pointer)
 			forward_pointer_fixups.push_back({ id, ops[2] });
 
 		ptrbase.parent_type = ops[2];

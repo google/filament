@@ -3297,7 +3297,16 @@ INSTANTIATE_TEST_SUITE_P(IntegerArithmeticTestCases, GeneralInstructionFoldingTe
             "%2 = OpIMul %int %3 %int_1\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
-        2, 3)
+        2, 3),
+    // Test case 42: Don't fold comparisons of 64-bit types
+    // (https://github.com/KhronosGroup/SPIRV-Tools/issues/3343).
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSLessThan %bool %long_0 %long_2\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+        2, 0)
 ));
 
 INSTANTIATE_TEST_SUITE_P(CompositeExtractFoldingTest, GeneralInstructionFoldingTest,
@@ -3455,7 +3464,18 @@ INSTANTIATE_TEST_SUITE_P(CompositeExtractFoldingTest, GeneralInstructionFoldingT
             "%3 = OpCompositeExtract %float %2 4\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
-        3, 0)
+        3, 0),
+    // Test case 14: https://github.com/KhronosGroup/SPIRV-Tools/issues/3631
+    // Extract the component right after the vector constituent.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpCompositeConstruct %v2int %int_0 %int_0\n" +
+            "%3 = OpCompositeConstruct %v4int %2 %100 %int_0\n" +
+            "%4 = OpCompositeExtract %int %3 2\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        4, INT_0_ID)
 ));
 
 INSTANTIATE_TEST_SUITE_P(CompositeConstructFoldingTest, GeneralInstructionFoldingTest,

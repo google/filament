@@ -16,6 +16,7 @@
 #include <cerrno>
 #include <cstring>
 #include <functional>
+#include <sstream>
 
 #include "source/opt/build_module.h"
 #include "source/opt/ir_context.h"
@@ -102,6 +103,14 @@ Options (in lexicographical order):
   --step-limit=
                32-bit unsigned integer specifying maximum number of steps the
                reducer will take before giving up.
+  --target-function=
+               32-bit unsigned integer specifying the id of a function in the
+               input module.  The reducer will restrict attention to this
+               function, and will not make changes to other functions or to
+               instructions outside of functions, except that some global
+               instructions may be added in support of reducing the target
+               function.  If 0 is specified (the default) then all functions are
+               reduced.
   --temp-file-prefix=
                Specifies a temporary file prefix that will be used to output
                temporary shader files during reduction.  A number and .spv
@@ -169,6 +178,15 @@ ReduceStatus ParseFlags(int argc, const char** argv,
             static_cast<uint32_t>(strtol(split_flag.second.c_str(), &end, 10));
         assert(end != split_flag.second.c_str() && errno == 0);
         reducer_options->set_step_limit(step_limit);
+      } else if (0 == strncmp(cur_arg, "--target-function=",
+                              sizeof("--target-function=") - 1)) {
+        const auto split_flag = spvtools::utils::SplitFlagArgs(cur_arg);
+        char* end = nullptr;
+        errno = 0;
+        const auto target_function =
+            static_cast<uint32_t>(strtol(split_flag.second.c_str(), &end, 10));
+        assert(end != split_flag.second.c_str() && errno == 0);
+        reducer_options->set_target_function(target_function);
       } else if (0 == strcmp(cur_arg, "--fail-on-validation-error")) {
         reducer_options->set_fail_on_validation_error(true);
       } else if (0 == strcmp(cur_arg, "--before-hlsl-legalization")) {
@@ -302,6 +320,29 @@ int main(int argc, const char** argv) {
   std::vector<uint32_t> binary_in;
   if (!ReadFile<uint32_t>(in_binary_file.c_str(), "rb", &binary_in)) {
     return 1;
+  }
+
+  const uint32_t target_function = (*reducer_options).target_function;
+  if (target_function) {
+    // A target function was specified; check that it exists.
+    std::unique_ptr<spvtools::opt::IRContext> context = spvtools::BuildModule(
+        kDefaultEnvironment, spvtools::utils::CLIMessageConsumer,
+        binary_in.data(), binary_in.size());
+    bool found_target_function = false;
+    for (auto& function : *context->module()) {
+      if (function.result_id() == target_function) {
+        found_target_function = true;
+        break;
+      }
+    }
+    if (!found_target_function) {
+      std::stringstream strstr;
+      strstr << "Target function with id " << target_function
+             << " was requested, but not found in the module; stopping.";
+      spvtools::utils::CLIMessageConsumer(SPV_MSG_ERROR, nullptr, {},
+                                          strstr.str().c_str());
+      return 1;
+    }
   }
 
   std::vector<uint32_t> binary_out;

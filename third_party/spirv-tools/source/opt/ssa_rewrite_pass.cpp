@@ -47,6 +47,7 @@
 #include "source/opcode.h"
 #include "source/opt/cfg.h"
 #include "source/opt/mem_pass.h"
+#include "source/opt/types.h"
 #include "source/util/make_unique.h"
 
 // Debug logging (0: Off, 1-N: Verbosity level).  Replace this with the
@@ -66,6 +67,7 @@ namespace opt {
 namespace {
 const uint32_t kStoreValIdInIdx = 1;
 const uint32_t kVariableInitIdInIdx = 1;
+const uint32_t kDebugDeclareOperandVariableIdx = 5;
 }  // namespace
 
 std::string SSARewriter::PhiCandidate::PrettyPrint(const CFG* cfg) const {
@@ -241,8 +243,8 @@ uint32_t SSARewriter::AddPhiOperands(PhiCandidate* phi_candidate) {
   return repl_id;
 }
 
-uint32_t SSARewriter::GetReachingDef(uint32_t var_id, BasicBlock* bb) {
-  // If |var_id| has a definition in |bb|, return it.
+uint32_t SSARewriter::GetValueAtBlock(uint32_t var_id, BasicBlock* bb) {
+  assert(bb != nullptr);
   const auto& bb_it = defs_at_block_.find(bb);
   if (bb_it != defs_at_block_.end()) {
     const auto& current_defs = bb_it->second;
@@ -251,9 +253,15 @@ uint32_t SSARewriter::GetReachingDef(uint32_t var_id, BasicBlock* bb) {
       return var_it->second;
     }
   }
+  return 0;
+}
+
+uint32_t SSARewriter::GetReachingDef(uint32_t var_id, BasicBlock* bb) {
+  // If |var_id| has a definition in |bb|, return it.
+  uint32_t val_id = GetValueAtBlock(var_id, bb);
+  if (val_id != 0) return val_id;
 
   // Otherwise, look up the value for |var_id| in |bb|'s predecessors.
-  uint32_t val_id = 0;
   auto& predecessors = pass_->cfg()->preds(bb->id());
   if (predecessors.size() == 1) {
     // If |bb| has exactly one predecessor, we look for |var_id|'s definition
@@ -307,6 +315,8 @@ void SSARewriter::ProcessStore(Instruction* inst, BasicBlock* bb) {
   }
   if (pass_->IsTargetVar(var_id)) {
     WriteVariable(var_id, bb, val_id);
+    pass_->context()->get_debug_info_mgr()->AddDebugValueIfVarDeclIsVisible(
+        inst, var_id, val_id, inst, &decls_invisible_to_value_assignment_);
 
 #if SSA_REWRITE_DEBUGGING_LEVEL > 1
     std::cerr << "\tFound store '%" << var_id << " = %" << val_id << "': "
@@ -317,32 +327,94 @@ void SSARewriter::ProcessStore(Instruction* inst, BasicBlock* bb) {
 }
 
 bool SSARewriter::ProcessLoad(Instruction* inst, BasicBlock* bb) {
+  // Get the pointer that we are using to load from.
   uint32_t var_id = 0;
   (void)pass_->GetPtr(inst, &var_id);
-  if (pass_->IsTargetVar(var_id)) {
-    // Get the immediate reaching definition for |var_id|.
-    uint32_t val_id = GetReachingDef(var_id, bb);
+
+  // Get the immediate reaching definition for |var_id|.
+  //
+  // In the presence of variable pointers, the reaching definition may be
+  // another pointer.  For example, the following fragment:
+  //
+  //  %2 = OpVariable %_ptr_Input_float Input
+  // %11 = OpVariable %_ptr_Function__ptr_Input_float Function
+  //       OpStore %11 %2
+  // %12 = OpLoad %_ptr_Input_float %11
+  // %13 = OpLoad %float %12
+  //
+  // corresponds to the pseudo-code:
+  //
+  // layout(location = 0) in flat float *%2
+  // float %13;
+  // float *%12;
+  // float **%11;
+  // *%11 = %2;
+  // %12 = *%11;
+  // %13 = *%12;
+  //
+  // which ultimately, should correspond to:
+  //
+  // %13 = *%2;
+  //
+  // During rewriting, the pointer %12 is found to be replaceable by %2 (i.e.,
+  // load_replacement_[12] is 2). However, when processing the load
+  // %13 = *%12, the type of %12's reaching definition is another float
+  // pointer (%2), instead of a float value.
+  //
+  // When this happens, we need to continue looking up the reaching definition
+  // chain until we get to a float value or a non-target var (i.e. a variable
+  // that cannot be SSA replaced, like %2 in this case since it is a function
+  // argument).
+  analysis::DefUseManager* def_use_mgr = pass_->context()->get_def_use_mgr();
+  analysis::TypeManager* type_mgr = pass_->context()->get_type_mgr();
+  analysis::Type* load_type = type_mgr->GetType(inst->type_id());
+  uint32_t val_id = 0;
+  bool found_reaching_def = false;
+  while (!found_reaching_def) {
+    if (!pass_->IsTargetVar(var_id)) {
+      // If the variable we are loading from is not an SSA target (globals,
+      // function parameters), do nothing.
+      return true;
+    }
+
+    val_id = GetReachingDef(var_id, bb);
     if (val_id == 0) {
       return false;
     }
 
-    // Schedule a replacement for the result of this load instruction with
-    // |val_id|. After all the rewriting decisions are made, every use of
-    // this load will be replaced with |val_id|.
-    const uint32_t load_id = inst->result_id();
-    assert(load_replacement_.count(load_id) == 0);
-    load_replacement_[load_id] = val_id;
-    PhiCandidate* defining_phi = GetPhiCandidate(val_id);
-    if (defining_phi) {
-      defining_phi->AddUser(load_id);
+    // If the reaching definition is a pointer type different than the type of
+    // the instruction we are analyzing, then it must be a reference to another
+    // pointer (otherwise, this would be invalid SPIRV).  We continue
+    // de-referencing it by making |val_id| be |var_id|.
+    //
+    // NOTE: if there is no reaching definition instruction, it means |val_id|
+    // is an undef.
+    Instruction* reaching_def_inst = def_use_mgr->GetDef(val_id);
+    if (reaching_def_inst &&
+        !type_mgr->GetType(reaching_def_inst->type_id())->IsSame(load_type)) {
+      var_id = val_id;
+    } else {
+      found_reaching_def = true;
     }
+  }
+
+  // Schedule a replacement for the result of this load instruction with
+  // |val_id|. After all the rewriting decisions are made, every use of
+  // this load will be replaced with |val_id|.
+  uint32_t load_id = inst->result_id();
+  assert(load_replacement_.count(load_id) == 0);
+  load_replacement_[load_id] = val_id;
+  PhiCandidate* defining_phi = GetPhiCandidate(val_id);
+  if (defining_phi) {
+    defining_phi->AddUser(load_id);
+  }
 
 #if SSA_REWRITE_DEBUGGING_LEVEL > 1
-    std::cerr << "\tFound load: "
-              << inst->PrettyPrint(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES)
-              << " (replacement for %" << load_id << " is %" << val_id << ")\n";
+  std::cerr << "\tFound load: "
+            << inst->PrettyPrint(SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES)
+            << " (replacement for %" << load_id << " is %" << val_id << ")\n";
 #endif
-  }
+
   return true;
 }
 
@@ -381,8 +453,8 @@ bool SSARewriter::GenerateSSAReplacements(BasicBlock* bb) {
     }
   }
 
-  // Seal |bb|. This means that all the stores in it have been scanned and it's
-  // ready to feed them into its successors.
+  // Seal |bb|. This means that all the stores in it have been scanned and
+  // it's ready to feed them into its successors.
   SealBlock(bb);
 
 #if SSA_REWRITE_DEBUGGING_LEVEL > 1
@@ -447,9 +519,10 @@ bool SSARewriter::ApplyReplacements() {
            "Tried to instantiate a Phi instruction from an incomplete Phi "
            "candidate");
 
+    auto* local_var = pass_->get_def_use_mgr()->GetDef(phi_candidate->var_id());
+
     // Build the vector of operands for the new OpPhi instruction.
-    uint32_t type_id = pass_->GetPointeeTypeId(
-        pass_->get_def_use_mgr()->GetDef(phi_candidate->var_id()));
+    uint32_t type_id = pass_->GetPointeeTypeId(local_var);
     std::vector<Operand> phi_operands;
     uint32_t arg_ix = 0;
     std::unordered_map<uint32_t, uint32_t> already_seen;
@@ -479,17 +552,23 @@ bool SSARewriter::ApplyReplacements() {
     pass_->get_def_use_mgr()->AnalyzeInstDef(&*phi_inst);
     pass_->context()->set_instr_block(&*phi_inst, phi_candidate->bb());
     auto insert_it = phi_candidate->bb()->begin();
-    insert_it.InsertBefore(std::move(phi_inst));
+    insert_it = insert_it.InsertBefore(std::move(phi_inst));
     pass_->context()->get_decoration_mgr()->CloneDecorations(
         phi_candidate->var_id(), phi_candidate->result_id(),
         {SpvDecorationRelaxedPrecision});
+
+    // Add DebugValue for the new OpPhi instruction.
+    insert_it->SetDebugScope(local_var->GetDebugScope());
+    pass_->context()->get_debug_info_mgr()->AddDebugValueIfVarDeclIsVisible(
+        &*insert_it, phi_candidate->var_id(), phi_candidate->result_id(),
+        &*insert_it, &decls_invisible_to_value_assignment_);
 
     modified = true;
   }
 
   // Scan uses for all inserted Phi instructions. Do this separately from the
-  // registration of the Phi instruction itself to avoid trying to analyze uses
-  // of Phi instructions that have not been registered yet.
+  // registration of the Phi instruction itself to avoid trying to analyze
+  // uses of Phi instructions that have not been registered yet.
   for (Instruction* phi_inst : generated_phis) {
     pass_->get_def_use_mgr()->AnalyzeInstUse(&*phi_inst);
   }
@@ -546,7 +625,8 @@ void SSARewriter::FinalizePhiCandidate(PhiCandidate* phi_candidate) {
   // This candidate is now completed.
   phi_candidate->MarkComplete();
 
-  // If |phi_candidate| is not trivial, add it to the list of Phis to generate.
+  // If |phi_candidate| is not trivial, add it to the list of Phis to
+  // generate.
   if (TryRemoveTrivialPhi(phi_candidate) == phi_candidate->result_id()) {
     // If we could not remove |phi_candidate|, it means that it is complete
     // and not trivial. Add it to the list of Phis to generate.
@@ -568,6 +648,61 @@ void SSARewriter::FinalizePhiCandidates() {
     incomplete_phis_.pop();
     FinalizePhiCandidate(phi_candidate);
   }
+}
+
+Pass::Status SSARewriter::AddDebugValuesForInvisibleDebugDecls(Function* fp) {
+  // For the cases the value assignment is invisible to DebugDeclare e.g.,
+  // the argument passing for an inlined function.
+  //
+  // Before inlining foo(int x):
+  //   a = 3;
+  //   foo(3);
+  // After inlining:
+  //   a = 3; // we want to specify "DebugValue: %x = %int_3"
+  //   foo and x disappeared!
+  //
+  // We want to specify the value for the variable using |defs_at_block_[bb]|,
+  // where |bb| is the basic block contains the decl.
+  DominatorAnalysis* dom_tree = pass_->context()->GetDominatorAnalysis(fp);
+  Pass::Status status = Pass::Status::SuccessWithoutChange;
+  for (auto* decl : decls_invisible_to_value_assignment_) {
+    uint32_t var_id =
+        decl->GetSingleWordOperand(kDebugDeclareOperandVariableIdx);
+    auto* var = pass_->get_def_use_mgr()->GetDef(var_id);
+    if (var->opcode() == SpvOpFunctionParameter) continue;
+
+    auto* bb = pass_->context()->get_instr_block(decl);
+    uint32_t value_id = GetValueAtBlock(var_id, bb);
+    Instruction* value = nullptr;
+    if (value_id) value = pass_->get_def_use_mgr()->GetDef(value_id);
+
+    // If |value| is defined before the function body, it dominates |decl|.
+    // If |value| dominates |decl|, we can set it as DebugValue.
+    if (value && (pass_->context()->get_instr_block(value) == nullptr ||
+                  dom_tree->Dominates(value, decl))) {
+      if (!pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
+              decl, value->result_id())) {
+        return Pass::Status::Failure;
+      }
+    } else {
+      // If |value| in the same basic block does not dominate |decl|, we can
+      // assign the value in the immediate dominator.
+      value_id = GetValueAtBlock(var_id, dom_tree->ImmediateDominator(bb));
+      if (value_id &&
+          !pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
+              decl, value_id)) {
+        return Pass::Status::Failure;
+      }
+    }
+
+    // DebugDeclares of target variables will be removed by
+    // SSARewritePass::Process().
+    if (!pass_->IsTargetVar(var_id)) {
+      pass_->context()->get_debug_info_mgr()->KillDebugDeclares(var_id);
+    }
+    status = Pass::Status::SuccessWithChange;
+  }
+  return status;
 }
 
 Pass::Status SSARewriter::RewriteFunctionIntoSSA(Function* fp) {
@@ -599,6 +734,12 @@ Pass::Status SSARewriter::RewriteFunctionIntoSSA(Function* fp) {
   // Finally, apply all the replacements in the IR.
   bool modified = ApplyReplacements();
 
+  auto status = AddDebugValuesForInvisibleDebugDecls(fp);
+  if (status == Pass::Status::SuccessWithChange ||
+      status == Pass::Status::Failure) {
+    return status;
+  }
+
 #if SSA_REWRITE_DEBUGGING_LEVEL > 0
   std::cerr << "\n\n\nFunction after SSA rewrite:\n"
             << fp->PrettyPrint(0) << "\n";
@@ -613,6 +754,10 @@ Pass::Status SSARewritePass::Process() {
   for (auto& fn : *get_module()) {
     status =
         CombineStatus(status, SSARewriter(this).RewriteFunctionIntoSSA(&fn));
+    // Kill DebugDeclares for target variables.
+    for (auto var_id : seen_target_vars_) {
+      context()->get_debug_info_mgr()->KillDebugDeclares(var_id);
+    }
     if (status == Status::Failure) {
       break;
     }

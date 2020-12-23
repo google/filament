@@ -33,7 +33,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef GLSLANG_WEB
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 
 #include "../Include/Common.h"
 #include "reflection.h"
@@ -639,7 +639,7 @@ public:
 
     int addBlockName(const TString& name, const TType& type, int size)
     {
-        int blockIndex;
+        int blockIndex = 0;
         if (type.isArray()) {
             TType derefType(type, 0);
             for (int e = 0; e < type.getOuterArraySize(); ++e) {
@@ -658,14 +658,17 @@ public:
 
                 blocks.back().numMembers = countAggregateMembers(type);
 
-                EShLanguageMask& stages = blocks.back().stages;
-                stages = static_cast<EShLanguageMask>(stages | 1 << intermediate.getStage());
+                if (updateStageMasks) {
+                    EShLanguageMask& stages = blocks.back().stages;
+                    stages = static_cast<EShLanguageMask>(stages | 1 << intermediate.getStage());
+                }
             }
             else {
                 blockIndex = it->second;
-
-                EShLanguageMask& stages = blocks[blockIndex].stages;
-                stages = static_cast<EShLanguageMask>(stages | 1 << intermediate.getStage());
+                if (updateStageMasks) {
+                    EShLanguageMask& stages = blocks[blockIndex].stages;
+                    stages = static_cast<EShLanguageMask>(stages | 1 << intermediate.getStage());
+                }
             }
         }
 
@@ -1266,4 +1269,4 @@ void TReflection::dump()
 
 } // end namespace glslang
 
-#endif // GLSLANG_WEB
+#endif // !GLSLANG_WEB && !GLSLANG_ANGLE

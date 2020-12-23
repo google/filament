@@ -16,6 +16,7 @@
 
 #include "vulkan/VulkanBinder.h"
 
+#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
@@ -25,6 +26,8 @@
 // to a stack-allocated variable.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
+
+using namespace bluevk;
 
 namespace filament {
 namespace backend {
@@ -280,7 +283,7 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     pipelineCreateInfo.pDynamicState = &dynamicState;
 
     // Filament assumes consistent blend state across all color attachments.
-    mColorBlendState.attachmentCount = mPipelineKey.rasterState.getColorTargetCount;
+    mColorBlendState.attachmentCount = mPipelineKey.rasterState.colorTargetCount;
     for (auto& target : mColorBlendAttachments) {
         target = mPipelineKey.rasterState.blending;
     }
@@ -332,7 +335,7 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
     VkPipelineMultisampleStateCreateInfo& ms0 = mPipelineKey.rasterState.multisampling;
     const VkPipelineMultisampleStateCreateInfo& ms1 = rasterState.multisampling;
     if (
-            mPipelineKey.rasterState.getColorTargetCount != rasterState.getColorTargetCount ||
+            mPipelineKey.rasterState.colorTargetCount != rasterState.colorTargetCount ||
             raster0.polygonMode != raster1.polygonMode ||
             raster0.cullMode != raster1.cullMode ||
             raster0.frontFace != raster1.frontFace ||
@@ -478,9 +481,12 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
 }
 
 void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
-    ASSERT_POSTCONDITION(bindingIndex < SAMPLER_BINDING_COUNT,
-            "Sampler bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, SAMPLER_BINDING_COUNT);
+    assert(bindingIndex < SAMPLER_BINDING_COUNT);
+    if (bindingIndex >= SAMPLER_BINDING_COUNT) {
+        utils::slog.w << "Sampler bindings overflow: " << bindingIndex << " / "
+                << SAMPLER_BINDING_COUNT << utils::io::endl;
+        return;
+    }
     VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex];
     if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
         imageInfo.imageLayout != samplerInfo.imageLayout) {

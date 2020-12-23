@@ -92,9 +92,9 @@ namespace bluevk {
 
     void bindInstance(VkInstance instance);
 
-} // namespace bluevk
-
 %(FUNCTION_POINTERS)s
+
+} // namespace bluevk
 
 #if !defined(NDEBUG)
 #include <utils/Log.h>
@@ -107,31 +107,29 @@ namespace bluevk {
 CPP_FILE_TEMPLATE = COPYRIGHT_HEADER + '''
 #include <bluevk/BlueVK.h>
 
+namespace bluevk {
+
 static void loadLoaderFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void*, const char*));
 static void loadInstanceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void*, const char*));
 static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void*, const char*));
 static PFN_vkVoidFunction vkGetInstanceProcAddrWrapper(void* context, const char* name);
 static PFN_vkVoidFunction vkGetDeviceProcAddrWrapper(void* context, const char* name);
 
-namespace bluevk {
-
 // OS Dependent.
 extern bool loadLibrary();
 extern void* getInstanceProcAddr();
 
-}
-
-bool bluevk::initialize() {
-    if (!bluevk::loadLibrary()) {
+bool initialize() {
+    if (!loadLibrary()) {
         return false;
     }
 
-    vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) bluevk::getInstanceProcAddr();
+    vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) getInstanceProcAddr();
     loadLoaderFunctions(nullptr, vkGetInstanceProcAddrWrapper);
     return true;
 }
 
-void bluevk::bindInstance(VkInstance instance) {
+void bindInstance(VkInstance instance) {
     loadInstanceFunctions(instance, vkGetInstanceProcAddrWrapper);
     loadDeviceFunctions(instance, vkGetInstanceProcAddrWrapper);
 }
@@ -157,6 +155,8 @@ static void loadDeviceFunctions(void* context, PFN_vkVoidFunction (*loadcb)(void
 }
 
 %(FUNCTION_POINTERS)s
+
+} // namespace bluevk
 
 #if !defined(NDEBUG)
 #include <utils/Log.h>
@@ -210,6 +210,7 @@ def consumeXML(spec):
         'VkStencilFaceFlagBits',
         'VkExternalSemaphoreHandleTypeFlagBits',
         'VkSwapchainImageUsageFlagBitsANDROID',
+        'VkSurfaceCounterFlagBitsEXT',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':
@@ -363,8 +364,9 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
         enum_defs.append('utils::io::ostream& operator<<(utils::io::ostream& out, ' +
             'const {}& value) {{'.format(flag_name))
         enum_defs.append('    switch (value) {')
-        for val in vals:
-            enum_defs.append('        case {1}: out << "{0}"; break;'.format(*val))
+        for key, val in vals:
+            if val == '0x00000000': continue
+            enum_defs.append('        case {1}: out << "{0}"; break;'.format(key, val))
         enum_defs.append('        default: out << "UNKNOWN_FLAGS"; break;')
         enum_defs.append('    }')
         enum_defs.append('    return out;')

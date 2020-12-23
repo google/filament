@@ -31,15 +31,14 @@ TransformationAddTypeMatrix::TransformationAddTypeMatrix(
 }
 
 bool TransformationAddTypeMatrix::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // The result id must be fresh.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
   }
   // The column type must be a floating-point vector.
   auto column_type =
-      context->get_type_mgr()->GetType(message_.column_type_id());
+      ir_context->get_type_mgr()->GetType(message_.column_type_id());
   if (!column_type) {
     return false;
   }
@@ -48,23 +47,28 @@ bool TransformationAddTypeMatrix::IsApplicable(
 }
 
 void TransformationAddTypeMatrix::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   opt::Instruction::OperandList in_operands;
   in_operands.push_back({SPV_OPERAND_TYPE_ID, {message_.column_type_id()}});
   in_operands.push_back(
       {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.column_count()}});
-  context->module()->AddType(MakeUnique<opt::Instruction>(
-      context, SpvOpTypeMatrix, 0, message_.fresh_id(), in_operands));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeMatrix, 0, message_.fresh_id(), in_operands));
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddTypeMatrix::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_type_matrix() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddTypeMatrix::GetFreshIds() const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

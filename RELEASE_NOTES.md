@@ -5,11 +5,50 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
+- gltfio: added support for `KHR_materials_sheen`
+
+## v1.9.10
+
+- Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+
+## v1.9.9
+
+- Vulkan: internal robustness improvements
+- Metal: Support CVPixelBuffer SwapChains
+- Metal: Support copyFrame
+- Fix clear behavior with RenderTarget API.
+- Fix GetRefractionMode JNI binding
+- Additional fixes for Fence bug
+
+## v1.9.8
+
+- Fix a few Fence-related bugs
+- gltfio: add createInstance() to AssetLoader.
+- gltfio: fix ASAN issue when consuming invalid animation.
+- gltfio: do not segfault on invalid primitives.
+- gltfio: add safety checks to getAnimator.
+- gltfio: fix segfault when consuming invalid file.
+- Vulkan: various internal refactoring and improvements
+- mathio: add ostream operator for quaternions.
+- Fix color grading not applied when dithering is off.
+
+## v1.9.7
+
+- Vulkan: improvements to the ReadPixels implementation.
+- Vulkan: warn instead of panic for sampler overflow.
+- Vulkan: fix leak with headless swap chain.
+- PlatformVkLinux now supports all combos of XLIB and XCB.
+- Fix TypeScript binding for TextureUsage.
+
 ## v1.9.6
 
 - Added View::setVsmShadowOptions (experimental)
 - Add anisotropic shadow map sampling with VSM (experimental)
 - matc: fixed bug where some compilation failures still exited with code 0
+- Vulkan + Android: fix build break
+- Add optional XCB support to PlatformVkLinux
+- Fix Vulkan black screen on Windows with NVIDIA hardware
 
 ## v1.9.5
 

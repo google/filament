@@ -16,9 +16,10 @@
 #define SOURCE_FUZZ_TRANSFORMATION_H_
 
 #include <memory>
+#include <unordered_set>
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -58,25 +59,6 @@ namespace fuzz {
 
 class Transformation {
  public:
-  // A precondition that determines whether the transformation can be cleanly
-  // applied in a semantics-preserving manner to the SPIR-V module given by
-  // |context|, in the presence of facts captured by |fact_manager|.
-  // Preconditions for individual transformations must be documented in the
-  // associated header file using precise English. The fact manager is used to
-  // provide access to facts about the module that are known to be true, on
-  // which the precondition may depend.
-  virtual bool IsApplicable(opt::IRContext* context,
-                            const FactManager& fact_manager) const = 0;
-
-  // Requires that IsApplicable(context, fact_manager) holds.  Applies the
-  // transformation, mutating |context| and possibly updating |fact_manager|
-  // with new facts established by the transformation.
-  virtual void Apply(opt::IRContext* context,
-                     FactManager* fact_manager) const = 0;
-
-  // Turns the transformation into a protobuf message for serialization.
-  virtual protobufs::Transformation ToMessage() const = 0;
-
   virtual ~Transformation();
 
   // Factory method to obtain a transformation object from the protobuf
@@ -84,13 +66,39 @@ class Transformation {
   static std::unique_ptr<Transformation> FromMessage(
       const protobufs::Transformation& message);
 
+  // A precondition that determines whether the transformation can be cleanly
+  // applied in a semantics-preserving manner to the SPIR-V module given by
+  // |ir_context|, in the presence of facts and other contextual information
+  // captured by |transformation_context|.
+  //
+  // Preconditions for individual transformations must be documented in the
+  // associated header file using precise English. The transformation context
+  // provides access to facts about the module that are known to be true, on
+  // which the precondition may depend.
+  virtual bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const = 0;
+
+  // Requires that IsApplicable(ir_context, *transformation_context) holds.
+  // Applies the transformation, mutating |ir_context| and possibly updating
+  // |transformation_context| with new facts established by the transformation.
+  virtual void Apply(opt::IRContext* ir_context,
+                     TransformationContext* transformation_context) const = 0;
+
+  // Returns the set of fresh ids that appear in the transformation's protobuf
+  // message.
+  virtual std::unordered_set<uint32_t> GetFreshIds() const = 0;
+
+  // Turns the transformation into a protobuf message for serialization.
+  virtual protobufs::Transformation ToMessage() const = 0;
+
   // Helper that returns true if and only if (a) |id| is a fresh id for the
   // module, and (b) |id| is not in |ids_used_by_this_transformation|, a set of
   // ids already known to be in use by a transformation.  This is useful when
   // checking id freshness for a transformation that uses many ids, all of which
   // must be distinct.
   static bool CheckIdIsFreshAndNotUsedByThisTransformation(
-      uint32_t id, opt::IRContext* context,
+      uint32_t id, opt::IRContext* ir_context,
       std::set<uint32_t>* ids_used_by_this_transformation);
 };
 

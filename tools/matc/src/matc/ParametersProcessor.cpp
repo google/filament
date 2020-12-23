@@ -428,6 +428,14 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         }
     }
 
+    const JsonishValue* locationValue = jsonObject.getValue("location");
+    if (locationValue) {
+        if (locationValue->getType() != JsonishValue::NUMBER) {
+            std::cerr << "outputs: location must be a NUMBER." << std::endl;
+            return false;
+        }
+    }
+
     const char* name = nameValue->toJsonString()->getString().c_str();
 
     OutputTarget target = OutputTarget::COLOR;
@@ -449,7 +457,12 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         qualifier = Enums::toEnum<OutputQualifier>(qualifierValue->toJsonString()->getString());
     }
 
-    builder.output(qualifier, target, type, name);
+    int location = -1;
+    if (locationValue) {
+        location = static_cast<int>(locationValue->toJsonNumber()->getFloat());
+    }
+
+    builder.output(qualifier, target, type, name, location);
 
     return true;
 }
@@ -639,6 +652,7 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
         strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
         strToEnum["skinning"] = filament::Variant::SKINNING_OR_MORPHING;
         strToEnum["vsm"] = filament::Variant::VSM;
+        strToEnum["fog"] = filament::Variant::FOG;
         return strToEnum;
     }();
     uint8_t variantFilter = 0;

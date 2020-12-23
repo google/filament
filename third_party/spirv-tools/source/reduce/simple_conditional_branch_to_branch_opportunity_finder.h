@@ -26,7 +26,7 @@ class SimpleConditionalBranchToBranchOpportunityFinder
     : public ReductionOpportunityFinder {
  public:
   std::vector<std::unique_ptr<ReductionOpportunity>> GetAvailableOpportunities(
-      opt::IRContext* context) const override;
+      opt::IRContext* context, uint32_t target_function) const override;
 
   std::string GetName() const override;
 };

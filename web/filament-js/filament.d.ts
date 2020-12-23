@@ -154,7 +154,7 @@ export class Texture$Builder {
     public levels(levels: number): Texture$Builder;
     public sampler(sampler: Texture$Sampler): Texture$Builder;
     public format(format: Texture$InternalFormat): Texture$Builder;
-    public usage(usage: Texture$Usage): Texture$Builder;
+    public usage(usage: number): Texture$Builder;
     public build(engine: Engine) : Texture;
 }
 
@@ -568,6 +568,7 @@ export class gltfio$AssetLoader {
     public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public destroyAsset(asset: gltfio$FilamentAsset): void;
+    public createInstance(asset: gltfio$FilamentAsset): (gltfio$FilamentInstance | null);
     public delete(): void;
 }
 
@@ -895,13 +896,13 @@ export enum Texture$Sampler {
 // It is a "const enum" which means TypeScript will simply create a constant for each member.
 // It does not contain the $ delimiter to avoid interference with the embind class.
 export const enum TextureUsage {
-    DEFAULT,
-    COLOR_ATTACHMENT,
-    DEPTH_ATTACHMENT,
-    STENCIL_ATTACHMENT,
-    UPLOADABLE,
-    SAMPLEABLE,
-    SUBPASS_INPUT,
+    COLOR_ATTACHMENT = 1,
+    DEPTH_ATTACHMENT = 2,
+    STENCIL_ATTACHMENT = 4,
+    UPLOADABLE = 8,
+    SAMPLEABLE = 16,
+    SUBPASS_INPUT = 32,
+    DEFAULT = UPLOADABLE | SAMPLEABLE,
 }
 
 export enum Texture$CubemapFace {

@@ -145,30 +145,27 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
 }
 
 void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
-    auto& v = mHeadlessSwapChains;
-    const bool headless = std::find(v.begin(), v.end(), nsView) != v.end();
-
     NSOpenGLContext* glContext = mGLContext;
 
     // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView" and
     // "update" to be called from the UI thread. This became a hard requirement with the arrival
     // of macOS 10.15 (Catalina). If we were to call these methods from the GL thread, we would
     // see EXC_BAD_INSTRUCTION.
-    if (!headless && UTILS_HAS_THREADING) {
-        dispatch_sync(dispatch_get_main_queue(), ^(void) {
-            if (resetView) {
-                [glContext clearDrawable];
-                [glContext setView:nsView];
-            }
-            [glContext update];
-        });
-    } else {
+    #if UTILS_HAS_THREADING
+    dispatch_sync(dispatch_get_main_queue(), ^(void) {
         if (resetView) {
             [glContext clearDrawable];
             [glContext setView:nsView];
         }
         [glContext update];
-    }
+    });
+    #else
+        if (resetView) {
+            [glContext clearDrawable];
+            [glContext setView:nsView];
+        }
+        [glContext update];
+    #endif
 }
 
 } // namespace filament

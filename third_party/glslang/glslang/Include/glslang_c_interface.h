@@ -203,28 +203,44 @@ typedef struct glsl_include_callbacks_s {
 extern "C" {
 #endif
 
-int glslang_initialize_process();
-void glslang_finalize_process();
+#ifdef GLSLANG_IS_SHARED_LIBRARY
+    #ifdef _WIN32
+        #ifdef GLSLANG_EXPORTING
+            #define GLSLANG_EXPORT __declspec(dllexport)
+        #else
+            #define GLSLANG_EXPORT __declspec(dllimport)
+        #endif
+    #elif __GNUC__ >= 4
+        #define GLSLANG_EXPORT __attribute__((visibility("default")))
+    #endif
+#endif // GLSLANG_IS_SHARED_LIBRARY
 
-glslang_shader_t* glslang_shader_create(const glslang_input_t* input);
-void glslang_shader_delete(glslang_shader_t* shader);
-int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* input);
-int glslang_shader_parse(glslang_shader_t* shader, const glslang_input_t* input);
-const char* glslang_shader_get_preprocessed_code(glslang_shader_t* shader);
-const char* glslang_shader_get_info_log(glslang_shader_t* shader);
-const char* glslang_shader_get_info_debug_log(glslang_shader_t* shader);
+#ifndef GLSLANG_EXPORT
+#define GLSLANG_EXPORT
+#endif
 
-glslang_program_t* glslang_program_create();
-void glslang_program_delete(glslang_program_t* program);
-void glslang_program_add_shader(glslang_program_t* program, glslang_shader_t* shader);
-int glslang_program_link(glslang_program_t* program, int messages); // glslang_messages_t
-void glslang_program_SPIRV_generate(glslang_program_t* program, glslang_stage_t stage);
-size_t glslang_program_SPIRV_get_size(glslang_program_t* program);
-void glslang_program_SPIRV_get(glslang_program_t* program, unsigned int*);
-unsigned int* glslang_program_SPIRV_get_ptr(glslang_program_t* program);
-const char* glslang_program_SPIRV_get_messages(glslang_program_t* program);
-const char* glslang_program_get_info_log(glslang_program_t* program);
-const char* glslang_program_get_info_debug_log(glslang_program_t* program);
+GLSLANG_EXPORT int glslang_initialize_process();
+GLSLANG_EXPORT void glslang_finalize_process();
+
+GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* input);
+GLSLANG_EXPORT void glslang_shader_delete(glslang_shader_t* shader);
+GLSLANG_EXPORT int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* input);
+GLSLANG_EXPORT int glslang_shader_parse(glslang_shader_t* shader, const glslang_input_t* input);
+GLSLANG_EXPORT const char* glslang_shader_get_preprocessed_code(glslang_shader_t* shader);
+GLSLANG_EXPORT const char* glslang_shader_get_info_log(glslang_shader_t* shader);
+GLSLANG_EXPORT const char* glslang_shader_get_info_debug_log(glslang_shader_t* shader);
+
+GLSLANG_EXPORT glslang_program_t* glslang_program_create();
+GLSLANG_EXPORT void glslang_program_delete(glslang_program_t* program);
+GLSLANG_EXPORT void glslang_program_add_shader(glslang_program_t* program, glslang_shader_t* shader);
+GLSLANG_EXPORT int glslang_program_link(glslang_program_t* program, int messages); // glslang_messages_t
+GLSLANG_EXPORT void glslang_program_SPIRV_generate(glslang_program_t* program, glslang_stage_t stage);
+GLSLANG_EXPORT size_t glslang_program_SPIRV_get_size(glslang_program_t* program);
+GLSLANG_EXPORT void glslang_program_SPIRV_get(glslang_program_t* program, unsigned int*);
+GLSLANG_EXPORT unsigned int* glslang_program_SPIRV_get_ptr(glslang_program_t* program);
+GLSLANG_EXPORT const char* glslang_program_SPIRV_get_messages(glslang_program_t* program);
+GLSLANG_EXPORT const char* glslang_program_get_info_log(glslang_program_t* program);
+GLSLANG_EXPORT const char* glslang_program_get_info_debug_log(glslang_program_t* program);
 
 #ifdef __cplusplus
 }

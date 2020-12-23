@@ -21,6 +21,24 @@
 
 namespace spvtools {
 namespace opt {
+namespace {
+
+// Returns the remapped id of |id| from |result_id_mapping|. If the remapped
+// id does not exist, adds a new one to |result_id_mapping| and returns it.
+uint32_t GetRemappedId(
+    std::unordered_map<uint32_t, uint32_t>* result_id_mapping, uint32_t id) {
+  auto it = result_id_mapping->find(id);
+  if (it == result_id_mapping->end()) {
+    const uint32_t new_id =
+        static_cast<uint32_t>(result_id_mapping->size()) + 1;
+    const auto insertion_result = result_id_mapping->emplace(id, new_id);
+    it = insertion_result.first;
+    assert(insertion_result.second);
+  }
+  return it->second;
+}
+
+}  // namespace
 
 Pass::Status CompactIdsPass::Process() {
   bool modified = false;
@@ -34,18 +52,10 @@ Pass::Status CompactIdsPass::Process() {
           if (spvIsIdType(type)) {
             assert(operand->words.size() == 1);
             uint32_t& id = operand->words[0];
-            auto it = result_id_mapping.find(id);
-            if (it == result_id_mapping.end()) {
-              const uint32_t new_id =
-                  static_cast<uint32_t>(result_id_mapping.size()) + 1;
-              const auto insertion_result =
-                  result_id_mapping.emplace(id, new_id);
-              it = insertion_result.first;
-              assert(insertion_result.second);
-            }
-            if (id != it->second) {
+            uint32_t new_id = GetRemappedId(&result_id_mapping, id);
+            if (id != new_id) {
               modified = true;
-              id = it->second;
+              id = new_id;
               // Update data cached in the instruction object.
               if (type == SPV_OPERAND_TYPE_RESULT_ID) {
                 inst->SetResultId(id);
@@ -55,6 +65,23 @@ Pass::Status CompactIdsPass::Process() {
             }
           }
           ++operand;
+        }
+
+        uint32_t scope_id = inst->GetDebugScope().GetLexicalScope();
+        if (scope_id != kNoDebugScope) {
+          uint32_t new_id = GetRemappedId(&result_id_mapping, scope_id);
+          if (scope_id != new_id) {
+            inst->UpdateLexicalScope(new_id);
+            modified = true;
+          }
+        }
+        uint32_t inlinedat_id = inst->GetDebugInlinedAt();
+        if (inlinedat_id != kNoInlinedAt) {
+          uint32_t new_id = GetRemappedId(&result_id_mapping, inlinedat_id);
+          if (inlinedat_id != new_id) {
+            inst->UpdateDebugInlinedAt(new_id);
+            modified = true;
+          }
         }
       },
       true);

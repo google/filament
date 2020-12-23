@@ -286,6 +286,9 @@ class LoopUnrollerUtilsImpl {
   // to be the actual value of the phi at that point.
   void LinkLastPhisToStart(Loop* loop) const;
 
+  // Kill all debug declaration instructions from |bb|.
+  void KillDebugDeclares(BasicBlock* bb);
+
   // A pointer to the IRContext. Used to add/remove instructions and for usedef
   // chains.
   IRContext* context_;
@@ -598,6 +601,20 @@ void LoopUnrollerUtilsImpl::FullyUnroll(Loop* loop) {
       IRContext::Analysis::kAnalysisDefUse);
 }
 
+void LoopUnrollerUtilsImpl::KillDebugDeclares(BasicBlock* bb) {
+  // We cannot kill an instruction inside BasicBlock::ForEachInst()
+  // because it will generate dangling pointers. We use |to_be_killed|
+  // to kill them after the loop.
+  std::vector<Instruction*> to_be_killed;
+
+  bb->ForEachInst([&to_be_killed, this](Instruction* inst) {
+    if (context_->get_debug_info_mgr()->IsDebugDeclare(inst)) {
+      to_be_killed.push_back(inst);
+    }
+  });
+  for (auto* inst : to_be_killed) context_->KillInst(inst);
+}
+
 // Copy a given basic block, give it a new result_id, and store the new block
 // and the id mapping in the state. |preserve_instructions| is used to determine
 // whether or not this function should edit instructions other than the
@@ -607,6 +624,9 @@ void LoopUnrollerUtilsImpl::CopyBasicBlock(Loop* loop, const BasicBlock* itr,
   // Clone the block exactly, including the IDs.
   BasicBlock* basic_block = itr->Clone(context_);
   basic_block->SetParent(itr->GetParent());
+
+  // We do not want to duplicate DebugDeclare.
+  KillDebugDeclares(basic_block);
 
   // Assign each result a new unique ID and keep a mapping of the old ids to
   // the new ones.
@@ -674,21 +694,21 @@ void LoopUnrollerUtilsImpl::CopyBody(Loop* loop, bool eliminate_conditions) {
   std::vector<Instruction*> inductions;
   loop->GetInductionVariables(inductions);
   for (size_t index = 0; index < inductions.size(); ++index) {
-    Instruction* master_copy = inductions[index];
+    Instruction* primary_copy = inductions[index];
 
-    assert(master_copy->result_id() != 0);
+    assert(primary_copy->result_id() != 0);
     Instruction* induction_clone =
-        state_.ids_to_new_inst[state_.new_inst[master_copy->result_id()]];
+        state_.ids_to_new_inst[state_.new_inst[primary_copy->result_id()]];
 
     state_.new_phis_.push_back(induction_clone);
     assert(induction_clone->result_id() != 0);
 
     if (!state_.previous_phis_.empty()) {
-      state_.new_inst[master_copy->result_id()] = GetPhiDefID(
+      state_.new_inst[primary_copy->result_id()] = GetPhiDefID(
           state_.previous_phis_[index], state_.previous_latch_block_->id());
     } else {
       // Do not replace the first phi block ids.
-      state_.new_inst[master_copy->result_id()] = master_copy->result_id();
+      state_.new_inst[primary_copy->result_id()] = primary_copy->result_id();
     }
   }
 
@@ -729,13 +749,19 @@ void LoopUnrollerUtilsImpl::FoldConditionBlock(BasicBlock* condition_block,
   Instruction& old_branch = *condition_block->tail();
   uint32_t new_target = old_branch.GetSingleWordOperand(operand_label);
 
+  DebugScope scope = old_branch.GetDebugScope();
+  const std::vector<Instruction> lines = old_branch.dbg_line_insts();
+
   context_->KillInst(&old_branch);
   // Add the new unconditional branch to the merge block.
   InstructionBuilder builder(
       context_, condition_block,
       IRContext::Analysis::kAnalysisDefUse |
           IRContext::Analysis::kAnalysisInstrToBlockMapping);
-  builder.AddBranch(new_target);
+  Instruction* new_branch = builder.AddBranch(new_target);
+
+  new_branch->set_dbg_line_insts(lines);
+  new_branch->SetDebugScope(scope);
 }
 
 void LoopUnrollerUtilsImpl::CloseUnrolledLoop(Loop* loop) {
@@ -997,7 +1023,8 @@ bool LoopUtils::CanPerformUnroll() {
     const BasicBlock* block = context_->cfg()->block(label_id);
     if (block->ctail()->opcode() == SpvOp::SpvOpKill ||
         block->ctail()->opcode() == SpvOp::SpvOpReturn ||
-        block->ctail()->opcode() == SpvOp::SpvOpReturnValue) {
+        block->ctail()->opcode() == SpvOp::SpvOpReturnValue ||
+        block->ctail()->opcode() == SpvOp::SpvOpTerminateInvocation) {
       return false;
     }
   }

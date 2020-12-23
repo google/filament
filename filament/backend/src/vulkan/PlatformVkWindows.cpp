@@ -22,6 +22,8 @@
 
 #include <bluevk/BlueVK.h>
 
+using namespace bluevk;
+
 namespace filament {
 
 using namespace backend;
@@ -40,7 +42,7 @@ Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
         sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance) noexcept {
+void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
     VkSurfaceKHR surface = nullptr;
 
     HWND window = (HWND) nativeWindow;

@@ -28,10 +28,6 @@ namespace opt {
 // external design of this class may change as the layer evolves.
 class InstBuffAddrCheckPass : public InstrumentPass {
  public:
-  // Deprecated interface
-  InstBuffAddrCheckPass(uint32_t desc_set, uint32_t shader_id, uint32_t version)
-      : InstrumentPass(desc_set, shader_id, kInstValidationIdBuffAddr,
-                       version) {}
   // Preferred interface
   InstBuffAddrCheckPass(uint32_t desc_set, uint32_t shader_id)
       : InstrumentPass(desc_set, shader_id, kInstValidationIdBuffAddr) {}

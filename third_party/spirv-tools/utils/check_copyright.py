@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 # Copyright (c) 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,10 +32,14 @@ AUTHORS = ['The Khronos Group Inc.',
            'Google Inc.',
            'Google LLC',
            'Pierre Moreau',
-           'Samsung Inc']
+           'Samsung Inc',
+           'André Perez Maselco',
+           'Vasyl Teliman',
+           'Advanced Micro Devices, Inc.',
+           'Stefano Milizia']
 CURRENT_YEAR='2020'
 
-YEARS = '(2014-2016|2015-2016|2016|2016-2017|2017|2017-2019|2018|2019|2020)'
+YEARS = '(2014-2016|2015-2016|2015-2020|2016|2016-2017|2017|2017-2019|2018|2019|2020)'
 COPYRIGHT_RE = re.compile(
         'Copyright \(c\) {} ({})'.format(YEARS, '|'.join(AUTHORS)))
 
@@ -167,7 +172,7 @@ def alert_if_no_copyright(glob, comment_prefix):
         has_apache2 = False
         line_num = 0
         apache_expected_end = 0
-        with open(file) as contents:
+        with open(file, encoding='utf-8') as contents:
             for line in contents:
                 line_num += 1
                 if COPYRIGHT_RE.search(line):

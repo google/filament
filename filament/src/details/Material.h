@@ -155,8 +155,6 @@ public:
 
     /** @}*/
 
-    static MaterialParser* createParser(backend::Backend backend, const void* data, size_t size);
-
 private:
     backend::Handle<backend::HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;

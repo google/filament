@@ -1,4 +1,6 @@
-// Copyright (c) 2015-2016 The Khronos Group Inc.
+// Copyright (c) 2015-2020 The Khronos Group Inc.
+// Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -206,6 +208,8 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_MEMORY_ACCESS:
     case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
       return "memory access";
+    case SPV_OPERAND_TYPE_FRAGMENT_SHADING_RATE:
+      return "shading rate";
     case SPV_OPERAND_TYPE_SCOPE_ID:
       return "scope ID";
     case SPV_OPERAND_TYPE_GROUP_OPERATION:
@@ -216,6 +220,14 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
       return "kernel profiling info";
     case SPV_OPERAND_TYPE_CAPABILITY:
       return "capability";
+    case SPV_OPERAND_TYPE_RAY_FLAGS:
+      return "ray flags";
+    case SPV_OPERAND_TYPE_RAY_QUERY_INTERSECTION:
+      return "ray query intersection";
+    case SPV_OPERAND_TYPE_RAY_QUERY_COMMITTED_INTERSECTION_TYPE:
+      return "ray query committed intersection type";
+    case SPV_OPERAND_TYPE_RAY_QUERY_CANDIDATE_INTERSECTION_TYPE:
+      return "ray query candidate intersection type";
     case SPV_OPERAND_TYPE_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
       return "image";
@@ -255,7 +267,6 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_NONE:
       return "NONE";
     default:
-      assert(0 && "Unhandled operand type!");
       break;
   }
   return "unknown";
@@ -323,6 +334,10 @@ bool spvOperandIsConcrete(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_KERNEL_ENQ_FLAGS:
     case SPV_OPERAND_TYPE_KERNEL_PROFILING_INFO:
     case SPV_OPERAND_TYPE_CAPABILITY:
+    case SPV_OPERAND_TYPE_RAY_FLAGS:
+    case SPV_OPERAND_TYPE_RAY_QUERY_INTERSECTION:
+    case SPV_OPERAND_TYPE_RAY_QUERY_COMMITTED_INTERSECTION_TYPE:
+    case SPV_OPERAND_TYPE_RAY_QUERY_CANDIDATE_INTERSECTION_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING:
     case SPV_OPERAND_TYPE_DEBUG_COMPOSITE_TYPE:
     case SPV_OPERAND_TYPE_DEBUG_TYPE_QUALIFIER:
@@ -347,6 +362,7 @@ bool spvOperandIsConcreteMask(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_LOOP_CONTROL:
     case SPV_OPERAND_TYPE_FUNCTION_CONTROL:
     case SPV_OPERAND_TYPE_MEMORY_ACCESS:
+    case SPV_OPERAND_TYPE_FRAGMENT_SHADING_RATE:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
       return true;
@@ -357,13 +373,35 @@ bool spvOperandIsConcreteMask(spv_operand_type_t type) {
 }
 
 bool spvOperandIsOptional(spv_operand_type_t type) {
-  return SPV_OPERAND_TYPE_FIRST_OPTIONAL_TYPE <= type &&
-         type <= SPV_OPERAND_TYPE_LAST_OPTIONAL_TYPE;
+  switch (type) {
+    case SPV_OPERAND_TYPE_OPTIONAL_ID:
+    case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
+    case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
+    case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_INTEGER:
+    case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_NUMBER:
+    case SPV_OPERAND_TYPE_OPTIONAL_TYPED_LITERAL_INTEGER:
+    case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_STRING:
+    case SPV_OPERAND_TYPE_OPTIONAL_ACCESS_QUALIFIER:
+    case SPV_OPERAND_TYPE_OPTIONAL_CIV:
+      return true;
+    default:
+      break;
+  }
+  // Any variable operand is also optional.
+  return spvOperandIsVariable(type);
 }
 
 bool spvOperandIsVariable(spv_operand_type_t type) {
-  return SPV_OPERAND_TYPE_FIRST_VARIABLE_TYPE <= type &&
-         type <= SPV_OPERAND_TYPE_LAST_VARIABLE_TYPE;
+  switch (type) {
+    case SPV_OPERAND_TYPE_VARIABLE_ID:
+    case SPV_OPERAND_TYPE_VARIABLE_LITERAL_INTEGER:
+    case SPV_OPERAND_TYPE_VARIABLE_LITERAL_INTEGER_ID:
+    case SPV_OPERAND_TYPE_VARIABLE_ID_LITERAL_INTEGER:
+      return true;
+    default:
+      break;
+  }
+  return false;
 }
 
 bool spvExpandOperandSequenceOnce(spv_operand_type_t type,
@@ -441,7 +479,7 @@ bool spvIsInIdType(spv_operand_type_t type) {
     return false;
   }
   switch (type) {
-    // Blacklist non-input IDs.
+    // Deny non-input IDs.
     case SPV_OPERAND_TYPE_TYPE_ID:
     case SPV_OPERAND_TYPE_RESULT_ID:
       return false;

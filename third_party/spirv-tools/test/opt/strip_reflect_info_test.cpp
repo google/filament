@@ -25,6 +25,7 @@ namespace opt {
 namespace {
 
 using StripLineReflectInfoTest = PassTest<::testing::Test>;
+using StripNonSemanticInfoTest = PassTest<::testing::Test>;
 
 // This test acts as an end-to-end code example on how to strip
 // reflection info from a SPIR-V module.  Use this code pattern
@@ -130,6 +131,99 @@ OpMemoryModel Logical Simple
 )";
 
   SinglePassRunAndCheck<StripReflectInfoPass>(before, after, false);
+}
+
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticImport) {
+  std::string text = R"(
+; CHECK-NOT: OpExtension "SPV_KHR_non_semantic_info"
+; CHECK-NOT: OpExtInstImport
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+)";
+
+  SinglePassRunAndMatch<StripReflectInfoPass>(text, true);
+}
+
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticGlobal) {
+  std::string text = R"(
+; CHECK-NOT: OpExtInst
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%1 = OpExtInst %void %ext 1
+)";
+
+  SinglePassRunAndMatch<StripReflectInfoPass>(text, true);
+}
+
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticInFunction) {
+  std::string text = R"(
+; CHECK-NOT: OpExtInst
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+%1 = OpExtInst %void %ext 1 %foo
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<StripReflectInfoPass>(text, true);
+}
+
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticAfterFunction) {
+  std::string text = R"(
+; CHECK-NOT: OpExtInst
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%1 = OpExtInst %void %ext 1 %foo
+)";
+
+  SinglePassRunAndMatch<StripReflectInfoPass>(text, true);
+}
+
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticBetweenFunctions) {
+  std::string text = R"(
+; CHECK-NOT: OpExtInst
+OpCapability Shader
+OpCapability Linkage
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.Test"
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%1 = OpExtInst %void %ext 1 %foo
+%bar = OpFunction %void None %void_fn
+%bar_entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<StripReflectInfoPass>(text, true);
 }
 
 }  // namespace

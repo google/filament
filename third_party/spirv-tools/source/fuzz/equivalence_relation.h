@@ -15,6 +15,8 @@
 #ifndef SOURCE_FUZZ_EQUIVALENCE_RELATION_H_
 #define SOURCE_FUZZ_EQUIVALENCE_RELATION_H_
 
+#include <algorithm>
+#include <cassert>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -68,27 +70,14 @@ namespace fuzz {
 template <typename T, typename PointerHashT, typename PointerEqualsT>
 class EquivalenceRelation {
  public:
-  // Merges the equivalence classes associated with |value1| and |value2|.
-  // If any of these values was not previously in the equivalence relation, it
-  // is added to the pool of values known to be in the relation.
+  // Requires that |value1| and |value2| are already registered in the
+  // equivalence relation.  Merges the equivalence classes associated with
+  // |value1| and |value2|.
   void MakeEquivalent(const T& value1, const T& value2) {
-    // Register each value if necessary.
-    for (auto value : {value1, value2}) {
-      if (!Exists(value)) {
-        // Register the value in the equivalence relation.  This relies on
-        // T having a copy constructor.
-        auto unique_pointer_to_value = MakeUnique<T>(value);
-        auto pointer_to_value = unique_pointer_to_value.get();
-        owned_values_.push_back(std::move(unique_pointer_to_value));
-        value_set_.insert(pointer_to_value);
-
-        // Initially say that the value is its own parent and that it has no
-        // children.
-        assert(pointer_to_value && "Representatives should never be null.");
-        parent_[pointer_to_value] = pointer_to_value;
-        children_[pointer_to_value] = std::vector<const T*>();
-      }
-    }
+    assert(Exists(value1) &&
+           "Precondition: value1 must already be registered.");
+    assert(Exists(value2) &&
+           "Precondition: value2 must already be registered.");
 
     // Look up canonical pointers to each of the values in the value pool.
     const T* value1_ptr = *value_set_.find(&value1);
@@ -110,6 +99,27 @@ class EquivalenceRelation {
       parent_[representative1] = representative2;
       children_[representative2].push_back(representative1);
     }
+  }
+
+  // Requires that |value| is not known to the equivalence relation. Registers
+  // it in its own equivalence class and returns a pointer to the equivalence
+  // class representative.
+  const T* Register(const T& value) {
+    assert(!Exists(value));
+
+    // This relies on T having a copy constructor.
+    auto unique_pointer_to_value = MakeUnique<T>(value);
+    auto pointer_to_value = unique_pointer_to_value.get();
+    owned_values_.push_back(std::move(unique_pointer_to_value));
+    value_set_.insert(pointer_to_value);
+
+    // Initially say that the value is its own parent and that it has no
+    // children.
+    assert(pointer_to_value && "Representatives should never be null.");
+    parent_[pointer_to_value] = pointer_to_value;
+    children_[pointer_to_value] = std::vector<const T*>();
+
+    return pointer_to_value;
   }
 
   // Returns exactly one representative per equivalence class.
@@ -168,7 +178,6 @@ class EquivalenceRelation {
     return value_set_.find(&value) != value_set_.end();
   }
 
- private:
   // Returns the representative of the equivalence class of |value|, which must
   // already be known to the equivalence relation.  This is the 'Find' operation
   // in a classic union-find data structure.
@@ -207,6 +216,7 @@ class EquivalenceRelation {
     return result;
   }
 
+ private:
   // Maps every value to a parent.  The representative of an equivalence class
   // is its own parent.  A value's representative can be found by walking its
   // chain of ancestors.

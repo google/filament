@@ -139,12 +139,48 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
     }
 }
 
+static bool validateAnimation(const cgltf_animation& anim) {
+    for (cgltf_size j = 0; j < anim.channels_count; ++j) {
+        const cgltf_animation_channel& channel = anim.channels[j];
+        const cgltf_animation_sampler* sampler = channel.sampler;
+        if (!channel.target_node) {
+            continue;
+        }
+        if (!channel.sampler) {
+            return false;
+        }
+        cgltf_size components = 1;
+        if (channel.target_path == cgltf_animation_path_type_weights) {
+            if (!channel.target_node->mesh || !channel.target_node->mesh->primitives_count) {
+                return false;
+            }
+            components = channel.target_node->mesh->primitives[0].targets_count;
+        }
+        cgltf_size values = sampler->interpolation == cgltf_interpolation_type_cubic_spline ? 3 : 1;
+        if (sampler->input->count * components * values != sampler->output->count) {
+            return false;
+        }
+    }
+    return true;
+}
+
 Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
+    assert(asset->mResourcesLoaded && !asset->mIsReleased);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+
+    const cgltf_data* srcAsset = asset->mSourceAsset;
+    const cgltf_animation* srcAnims = srcAsset->animations;
+    for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
+        const cgltf_animation& anim = srcAnims[i];
+        if (!validateAnimation(anim)) {
+            slog.e << "Disabling animation due to validation failure." << io::endl;
+            return;
+        }
+    }
 
     auto addChannels = [](const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst) {
         cgltf_animation_channel* srcChannels = srcAnim.channels;
@@ -152,7 +188,20 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
         const Sampler* samplers = dst.samplers.data();
         for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
             const cgltf_animation_channel& srcChannel = srcChannels[j];
-            utils::Entity targetEntity = nodeMap.at(srcChannel.target_node);
+            auto iter = nodeMap.find(srcChannel.target_node);
+            if (iter == nodeMap.end()) {
+                slog.w << "No scene root contains node ";
+                if (srcChannel.target_node->name) {
+                    slog.w << "'" << srcChannel.target_node->name << "' ";
+                }
+                slog.w << "for animation ";
+                if (srcAnim.name) {
+                    slog.w << "'" << srcAnim.name << "' ";
+                }
+                slog.w << "in channel " << j << io::endl;
+                continue;
+            }
+            utils::Entity targetEntity = iter.value();
             Channel dstChannel;
             dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
             dstChannel.targetEntity = targetEntity;
@@ -162,8 +211,6 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     };
 
     // Loop over the glTF animation definitions.
-    const cgltf_data* srcAsset = asset->mSourceAsset;
-    const cgltf_animation* srcAnims = srcAsset->animations;
     mImpl->animations.resize(srcAsset->animations_count);
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
@@ -189,7 +236,7 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
         // Import each glTF channel into a custom data structure.
         if (instance) {
             addChannels(instance->nodeMap, srcAnim, dstAnim);
-        } else if (asset->mInstances.empty()) {
+        } else if (!asset->isInstanced()) {
             addChannels(asset->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
@@ -379,7 +426,7 @@ void Animator::updateBoneMatrices() {
 
     if (mImpl->instance) {
         update(mImpl->instance->skins, mImpl->boneMatrices);
-    } else if (mImpl->asset->mInstances.empty()) {
+    } else if (!mImpl->asset->isInstanced()) {
         update(mImpl->asset->mSkins, mImpl->boneMatrices);
     } else {
         for (FFilamentInstance* instance : mImpl->asset->mInstances) {

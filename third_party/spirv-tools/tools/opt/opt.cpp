@@ -111,8 +111,12 @@ Options (in lexicographical order):)",
   printf(R"(
   --amd-ext-to-khr
                Replaces the extensions VK_AMD_shader_ballot, VK_AMD_gcn_shader,
-               and VK_AMD_shader_trinary_minmax with equivalant code using core
+               and VK_AMD_shader_trinary_minmax with equivalent code using core
                instructions and capabilities.)");
+  printf(R"(
+  --before-hlsl-legalization
+               Forwards this option to the validator.  See the validator help
+               for details.)");
   printf(R"(
   --ccp
                Apply the conditional constant propagation transform.  This will
@@ -173,7 +177,7 @@ Options (in lexicographical order):)",
   printf(R"(
   --eliminate-dead-branches
                Convert conditional branches with constant condition to the
-               indicated unconditional brranch. Delete all resulting dead
+               indicated unconditional branch. Delete all resulting dead
                code. Performed only on entry point call tree functions.)");
   printf(R"(
   --eliminate-dead-code-aggressive
@@ -302,7 +306,7 @@ Options (in lexicographical order):)",
                the optimization is above the threshold.)");
   printf(R"(
   --max-id-bound=<n>
-               Sets the maximum value for the id bound for the moudle.  The
+               Sets the maximum value for the id bound for the module.  The
                default is the minimum value for this limit, 0x3FFFFF.  See
                section 2.17 of the Spir-V specification.)");
   printf(R"(
@@ -403,14 +407,21 @@ Options (in lexicographical order):)",
                Looks for instructions in the same function that compute the
                same value, and deletes the redundant ones.)");
   printf(R"(
+  --relax-block-layout
+               Forwards this option to the validator.  See the validator help
+               for details.)");
+  printf(R"(
   --relax-float-ops
                Decorate all float operations with RelaxedPrecision if not already
                so decorated. This does not decorate types or variables.)");
   printf(R"(
+  --relax-logical-pointer
+               Forwards this option to the validator.  See the validator help
+               for details.)");
+  printf(R"(
   --relax-struct-store
-               Allow store from one struct type to a different type with
-               compatible layout and members. This option is forwarded to the
-               validator.)");
+               Forwards this option to the validator.  See the validator help
+               for details.)");
   printf(R"(
   --remove-duplicates
                Removes duplicate types, decorations, capabilities and extension
@@ -425,10 +436,14 @@ Options (in lexicographical order):)",
                Replace loads and stores to function local variables with
                operations on SSA IDs.)");
   printf(R"(
+  --scalar-block-layout
+               Forwards this option to the validator.  See the validator help
+               for details.)");
+  printf(R"(
   --scalar-replacement[=<n>]
                Replace aggregate function scope variables that are only accessed
                via their elements with new function variables representing each
-               element.  <n> is a limit on the size of the aggragates that will
+               element.  <n> is a limit on the size of the aggregates that will
                be replaced.  0 means there is no limit.  The default value is
                100.)");
   printf(R"(
@@ -444,10 +459,14 @@ Options (in lexicographical order):)",
                Will simplify all instructions in the function as much as
                possible.)");
   printf(R"(
+  --skip-block-layout
+               Forwards this option to the validator.  See the validator help
+               for details.)");
+  printf(R"(
   --split-invalid-unreachable
                Attempts to legalize for WebGPU cases where an unreachable
                merge-block is also a continue-target by splitting it into two
-               seperate blocks. There exist legal, for Vulkan, instances of this
+               separate blocks. There exist legal, for Vulkan, instances of this
                pattern that cannot be converted into legal WebGPU, so this
                conversion may not succeed.)");
   printf(R"(
@@ -472,7 +491,7 @@ Options (in lexicographical order):)",
   printf(R"(
   --target-env=<env>
                Set the target environment. Without this flag the target
-               enviroment defaults to spv1.3. <env> must be one of
+               environment defaults to spv1.5. <env> must be one of
                {%s})",
          target_env_list.c_str());
   printf(R"(
@@ -822,6 +841,18 @@ OptStatus ParseFlags(int argc, const char** argv,
         optimizer->RegisterWebGPUToVulkanPasses();
       } else if (0 == strcmp(cur_arg, "--validate-after-all")) {
         optimizer->SetValidateAfterAll(true);
+      } else if (0 == strcmp(cur_arg, "--before-hlsl-legalization")) {
+        validator_options->SetBeforeHlslLegalization(true);
+      } else if (0 == strcmp(cur_arg, "--relax-logical-pointer")) {
+        validator_options->SetRelaxLogicalPointer(true);
+      } else if (0 == strcmp(cur_arg, "--relax-block-layout")) {
+        validator_options->SetRelaxBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--scalar-block-layout")) {
+        validator_options->SetScalarBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--skip-block-layout")) {
+        validator_options->SetSkipBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
+        validator_options->SetRelaxStructStore(true);
       } else {
         // Some passes used to accept the form '--pass arg', canonicalize them
         // to '--pass=arg'.

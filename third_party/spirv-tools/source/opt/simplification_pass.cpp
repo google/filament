@@ -90,7 +90,7 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
             if (inst->opcode() == SpvOpCopyObject) {
               context()->ReplaceAllUsesWithPredicate(
                   inst->result_id(), inst->GetSingleWordInOperand(0),
-                  [](Instruction* user, uint32_t) {
+                  [](Instruction* user) {
                     const auto opcode = user->opcode();
                     if (!spvOpcodeIsDebug(opcode) &&
                         !spvOpcodeIsDecoration(opcode)) {
@@ -137,7 +137,7 @@ bool SimplificationPass::SimplifyFunction(Function* function) {
       if (inst->opcode() == SpvOpCopyObject) {
         context()->ReplaceAllUsesWithPredicate(
             inst->result_id(), inst->GetSingleWordInOperand(0),
-            [](Instruction* user, uint32_t) {
+            [](Instruction* user) {
               const auto opcode = user->opcode();
               if (!spvOpcodeIsDebug(opcode) && !spvOpcodeIsDecoration(opcode)) {
                 return true;

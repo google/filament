@@ -452,6 +452,50 @@ TEST_F(PrivateToLocalTest, IdBoundOverflow1) {
   EXPECT_EQ(Pass::Status::Failure, std::get<1>(result));
 }
 
+TEST_F(PrivateToLocalTest, DebugPrivateToLocal) {
+  // Debug instructions must not have any impact on changing the private
+  // variable to a local.
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+         %10 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+         %11 = OpString "test"
+               OpSource GLSL 430
+         %13 = OpTypeInt 32 0
+         %14 = OpConstant %13 32
+          %3 = OpTypeVoid
+          %4 = OpTypeFunction %3
+; CHECK: [[float:%[a-zA-Z_\d]+]] = OpTypeFloat 32
+          %5 = OpTypeFloat 32
+; CHECK: [[newtype:%[a-zA-Z_\d]+]] = OpTypePointer Function [[float]]
+          %6 = OpTypePointer Private %5
+; CHECK-NOT: OpVariable [[.+]] Private
+          %8 = OpVariable %6 Private
+
+         %12 = OpExtInst %3 %10 DebugTypeBasic %11 %14 Float
+         %15 = OpExtInst %3 %10 DebugSource %11
+         %16 = OpExtInst %3 %10 DebugCompilationUnit 1 4 %15 GLSL
+; CHECK-NOT: DebugGlobalVariable
+; CHECK: [[dbg_newvar:%[a-zA-Z_\d]+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLocalVariable
+         %17 = OpExtInst %3 %10 DebugGlobalVariable %11 %12 %15 0 0 %16 %11 %8 FlagIsDefinition
+
+; CHECK: OpFunction
+          %2 = OpFunction %3 None %4
+; CHECK: OpLabel
+          %7 = OpLabel
+; CHECK-NEXT: [[newvar:%[a-zA-Z_\d]+]] = OpVariable [[newtype]] Function
+; CHECK-NEXT: DebugDeclare [[dbg_newvar]] [[newvar]]
+; CHECK: OpLoad [[float]] [[newvar]]
+          %9 = OpLoad %5 %8
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<PrivateToLocalPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

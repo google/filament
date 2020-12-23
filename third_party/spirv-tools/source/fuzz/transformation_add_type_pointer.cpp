@@ -31,34 +31,39 @@ TransformationAddTypePointer::TransformationAddTypePointer(
 }
 
 bool TransformationAddTypePointer::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // The id must be fresh.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
   }
   // The base type must be known.
-  return context->get_type_mgr()->GetType(message_.base_type_id()) != nullptr;
+  return ir_context->get_type_mgr()->GetType(message_.base_type_id()) !=
+         nullptr;
 }
 
 void TransformationAddTypePointer::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   // Add the pointer type.
   opt::Instruction::OperandList in_operands = {
       {SPV_OPERAND_TYPE_STORAGE_CLASS, {message_.storage_class()}},
       {SPV_OPERAND_TYPE_ID, {message_.base_type_id()}}};
-  context->module()->AddType(MakeUnique<opt::Instruction>(
-      context, SpvOpTypePointer, 0, message_.fresh_id(), in_operands));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypePointer, 0, message_.fresh_id(), in_operands));
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddTypePointer::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_type_pointer() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddTypePointer::GetFreshIds() const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

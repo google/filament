@@ -20,6 +20,8 @@
 
 #include "private/backend/BackendUtils.h"
 
+using namespace bluevk;
+
 namespace filament {
 namespace backend {
 
@@ -279,6 +281,102 @@ VkCullModeFlags getCullMode(CullingMode mode) {
 VkFrontFace getFrontFace(bool inverseFrontFaces) {
     return inverseFrontFaces ?
             VkFrontFace::VK_FRONT_FACE_CLOCKWISE : VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+}
+
+PixelDataType getComponentType(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_R8_UNORM:
+        case VK_FORMAT_R8_SNORM:
+        case VK_FORMAT_R8_USCALED:
+        case VK_FORMAT_R8_SSCALED:
+        case VK_FORMAT_R8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_R8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_R8_SRGB:
+        case VK_FORMAT_R8G8_UNORM:
+        case VK_FORMAT_R8G8_SNORM:
+        case VK_FORMAT_R8G8_USCALED:
+        case VK_FORMAT_R8G8_SSCALED:
+        case VK_FORMAT_R8G8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_R8G8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_R8G8_SRGB:
+        case VK_FORMAT_R8G8B8_UNORM:
+        case VK_FORMAT_R8G8B8_SNORM:
+        case VK_FORMAT_R8G8B8_USCALED:
+        case VK_FORMAT_R8G8B8_SSCALED:
+        case VK_FORMAT_R8G8B8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_R8G8B8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_R8G8B8_SRGB:
+        case VK_FORMAT_B8G8R8_UNORM: return PixelDataType::UBYTE;
+        case VK_FORMAT_B8G8R8_SNORM: return PixelDataType::BYTE;
+        case VK_FORMAT_B8G8R8_USCALED:
+        case VK_FORMAT_B8G8R8_SSCALED:
+        case VK_FORMAT_B8G8R8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_B8G8R8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_B8G8R8_SRGB:
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        case VK_FORMAT_R8G8B8A8_SNORM:
+        case VK_FORMAT_R8G8B8A8_USCALED:
+        case VK_FORMAT_R8G8B8A8_SSCALED:
+        case VK_FORMAT_R8G8B8A8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_R8G8B8A8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_R8G8B8A8_SRGB:
+        case VK_FORMAT_B8G8R8A8_UNORM:
+        case VK_FORMAT_B8G8R8A8_SNORM:
+        case VK_FORMAT_B8G8R8A8_USCALED:
+        case VK_FORMAT_B8G8R8A8_SSCALED:
+        case VK_FORMAT_B8G8R8A8_UINT: return PixelDataType::UBYTE;
+        case VK_FORMAT_B8G8R8A8_SINT: return PixelDataType::BYTE;
+        case VK_FORMAT_B8G8R8A8_SRGB:
+        case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+        case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+        case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+        case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+        case VK_FORMAT_A8B8G8R8_UINT_PACK32: return PixelDataType::UBYTE;
+        case VK_FORMAT_A8B8G8R8_SINT_PACK32: return PixelDataType::BYTE;
+        case VK_FORMAT_A8B8G8R8_SRGB_PACK32: return PixelDataType::UBYTE;
+        case VK_FORMAT_R16_UNORM:
+        case VK_FORMAT_R16_SNORM:
+        case VK_FORMAT_R16_USCALED:
+        case VK_FORMAT_R16_SSCALED:
+        case VK_FORMAT_R16_UINT: return PixelDataType::USHORT;
+        case VK_FORMAT_R16_SINT: return PixelDataType::SHORT;
+        case VK_FORMAT_R16_SFLOAT: return PixelDataType::HALF;
+        case VK_FORMAT_R16G16_UNORM:
+        case VK_FORMAT_R16G16_SNORM:
+        case VK_FORMAT_R16G16_USCALED:
+        case VK_FORMAT_R16G16_SSCALED:
+        case VK_FORMAT_R16G16_UINT: return PixelDataType::USHORT;
+        case VK_FORMAT_R16G16_SINT: return PixelDataType::SHORT;
+        case VK_FORMAT_R16G16_SFLOAT: return PixelDataType::HALF;
+        case VK_FORMAT_R16G16B16_UNORM:
+        case VK_FORMAT_R16G16B16_SNORM:
+        case VK_FORMAT_R16G16B16_USCALED:
+        case VK_FORMAT_R16G16B16_SSCALED:
+        case VK_FORMAT_R16G16B16_UINT: return PixelDataType::USHORT;
+        case VK_FORMAT_R16G16B16_SINT: return PixelDataType::SHORT;
+        case VK_FORMAT_R16G16B16_SFLOAT: return PixelDataType::HALF;
+        case VK_FORMAT_R16G16B16A16_UNORM:
+        case VK_FORMAT_R16G16B16A16_SNORM:
+        case VK_FORMAT_R16G16B16A16_USCALED:
+        case VK_FORMAT_R16G16B16A16_SSCALED:
+        case VK_FORMAT_R16G16B16A16_UINT: return PixelDataType::USHORT;
+        case VK_FORMAT_R16G16B16A16_SINT: return PixelDataType::SHORT;
+        case VK_FORMAT_R16G16B16A16_SFLOAT: return PixelDataType::HALF;
+        case VK_FORMAT_R32_UINT: return PixelDataType::UINT;
+        case VK_FORMAT_R32_SINT: return PixelDataType::INT;
+        case VK_FORMAT_R32_SFLOAT: return PixelDataType::FLOAT;
+        case VK_FORMAT_R32G32_UINT: return PixelDataType::UINT;
+        case VK_FORMAT_R32G32_SINT: return PixelDataType::INT;
+        case VK_FORMAT_R32G32_SFLOAT: return PixelDataType::FLOAT;
+        case VK_FORMAT_R32G32B32_UINT: return PixelDataType::UINT;
+        case VK_FORMAT_R32G32B32_SINT: return PixelDataType::INT;
+        case VK_FORMAT_R32G32B32_SFLOAT: return PixelDataType::FLOAT;
+        case VK_FORMAT_R32G32B32A32_UINT: return PixelDataType::UINT;
+        case VK_FORMAT_R32G32B32A32_SINT: return PixelDataType::INT;
+        case VK_FORMAT_R32G32B32A32_SFLOAT: return PixelDataType::FLOAT;
+        default: assert(false && "Unknown data type, conversion is not supported.");
+    }
+    return {};
 }
 
 } // namespace filament

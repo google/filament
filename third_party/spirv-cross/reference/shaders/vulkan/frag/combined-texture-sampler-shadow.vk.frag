@@ -9,14 +9,12 @@ layout(location = 0) out float FragColor;
 
 float samp2(mediump sampler2DShadow SPIRV_Cross_Combinedts)
 {
-    float _37 = texture(SPIRV_Cross_Combinedts, vec3(vec3(1.0).xy, vec3(1.0).z));
-    return _37;
+    return texture(SPIRV_Cross_Combinedts, vec3(vec3(1.0).xy, vec3(1.0).z));
 }
 
 float samp3(mediump sampler2D SPIRV_Cross_Combinedts)
 {
-    float _52 = texture(SPIRV_Cross_Combinedts, vec2(1.0)).x;
-    return _52;
+    return texture(SPIRV_Cross_Combinedts, vec2(1.0)).x;
 }
 
 float samp(mediump sampler2DShadow SPIRV_Cross_Combinedts, mediump sampler2D SPIRV_Cross_Combinedts1)

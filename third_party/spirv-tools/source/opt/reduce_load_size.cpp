@@ -112,10 +112,10 @@ bool ReduceLoadSize::ReplaceExtract(Instruction* inst) {
   Instruction* new_access_chain = ir_builder.AddAccessChain(
       pointer_to_result_type_id,
       composite_inst->GetSingleWordInOperand(kLoadPointerInIdx), ids);
-  Instruction* new_laod =
+  Instruction* new_load =
       ir_builder.AddLoad(inst->type_id(), new_access_chain->result_id());
 
-  context()->ReplaceAllUsesWith(inst->result_id(), new_laod->result_id());
+  context()->ReplaceAllUsesWith(inst->result_id(), new_load->result_id());
   context()->KillInst(inst);
   return true;
 }
@@ -139,6 +139,7 @@ bool ReduceLoadSize::ShouldReplaceExtract(Instruction* inst) {
 
   all_elements_used =
       !def_use_mgr->WhileEachUser(op_inst, [&elements_used](Instruction* use) {
+        if (use->IsOpenCL100DebugInstr()) return true;
         if (use->opcode() != SpvOpCompositeExtract ||
             use->NumInOperands() == 1) {
           return false;

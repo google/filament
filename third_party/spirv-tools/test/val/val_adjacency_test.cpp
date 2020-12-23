@@ -324,7 +324,7 @@ OpBranch %end_label
 %false_label = OpLabel
 OpBranch %end_label
 %end_label = OpLabel
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 %result = OpPhi %bool %true %true_label %false %false_label
 )";
 
@@ -350,7 +350,7 @@ OpBranch %end_label
 OpBranch %end_label
 %end_label = OpLabel
 %result1 = OpPhi %bool %true %true_label %false %false_label
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 %result2 = OpPhi %bool %true %true_label %false %false_label
 )";
 
@@ -377,7 +377,7 @@ OpBranch %end_label
 %end_label = OpLabel
 OpLine %string 0 0
 %result = OpPhi %bool %true %true_label %false %false_label
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 )";
 
   const std::string extra = R"(OpCapability Shader
@@ -411,7 +411,7 @@ OpExecutionMode %main OriginUpperLeft
 %paramfunc_type = OpTypeFunction %void %int %int
 
 %paramfunc = OpFunction %void None %paramfunc_type
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 %a = OpFunctionParameter %int
 %b = OpFunctionParameter %int
 %paramfunc_entry = OpLabel
@@ -454,7 +454,7 @@ OpExecutionMode %main OriginUpperLeft
 
 %paramfunc = OpFunction %void None %paramfunc_type
 %a = OpFunctionParameter %int
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 %b = OpFunctionParameter %int
 %paramfunc_entry = OpLabel
 OpReturn
@@ -498,7 +498,7 @@ OpExecutionMode %main OriginUpperLeft
 %a = OpFunctionParameter %int
 %b = OpFunctionParameter %int
 %paramfunc_entry = OpLabel
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 OpReturn
 OpFunctionEnd
 
@@ -540,7 +540,7 @@ OpExecutionMode %main OriginUpperLeft
 OpReturn
 OpFunctionEnd
 
-%dummy = OpExtInst %void %extinst 123 %int_1
+%placeholder = OpExtInst %void %extinst 123 %int_1
 
 %main = OpFunction %void None %func
 %main_entry = OpLabel
