@@ -190,7 +190,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Installation
     # ==================================================================================================
-    install(TARGETS ${TARGET} gltfio_core ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
 
 else()
