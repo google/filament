@@ -21,16 +21,15 @@ cd $SRC/filament/build-dir
 
 cmake -DFILAMENT_ENABLE_JAVA=OFF \
 	-DFILAMENT_SKIP_SAMPLES=ON \
-	-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
 	-DVIDEO_X11=OFF \
 	..
-make V=1
+make
 
 # Build fuzzers
 
 cd $SRC/filament/third_party
 
-# Compile fuzzerse
+# Compile fuzzers
 for file in spirv-tools/test/fuzzers/*.cpp; do
         bn=$(basename $file%)
         filename="${bn%.*}"
