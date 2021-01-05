@@ -566,8 +566,12 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
         }
         entry = (mBufferTextureCache[sourceData] = std::make_unique<TextureCacheEntry>()).get();
         entry->srgb = tb.srgb;
-        stbi_info_from_memory(sourceData, totalSize, &entry->width, &entry->height,
-                &entry->numComponents);
+        if (!stbi_info_from_memory(sourceData, totalSize, &entry->width, &entry->height,
+                &entry->numComponents)) {
+            slog.e << "Unable to decode BufferView texture: " << stbi_failure_reason() << io::endl;
+            mBufferTextureCache.erase(sourceData);
+            return;
+        }
         entry->bufferSize = totalSize;
         return;
     }
@@ -585,15 +589,22 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
     auto iter = mUriDataCache.find(uri);
     if (iter != mUriDataCache.end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
-        stbi_info_from_memory(sourceData, iter->second.size, &entry->width,
-                &entry->height, &entry->numComponents);
+        if (!stbi_info_from_memory(sourceData, iter->second.size, &entry->width,
+                &entry->height, &entry->numComponents)) {
+            slog.e << "Unable to decode " << uri << " : " << stbi_failure_reason() << io::endl;
+            mUriTextureCache.erase(uri);
+        }
         return;
     }
     #if !USE_FILESYSTEM
         slog.e << "Unable to load texture: " << uri << io::endl;
     #else
         Path fullpath = Path(mGltfPath).getParent() + uri;
-        stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents);
+        if (!stbi_info(fullpath.c_str(), &entry->width, &entry->height, &entry->numComponents)) {
+            slog.e << "Unable to decode " << fullpath.c_str() << " : " << stbi_failure_reason()
+                    << io::endl;
+            mUriTextureCache.erase(uri);
+        }
     #endif
 }
 
@@ -609,17 +620,21 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
     // First check if this is a buffer-based texture.
     if (data) {
         const uint8_t* sourceData = offset + (const uint8_t*) *data;
-        auto& entry = mBufferTextureCache[sourceData];
-        if (entry.get() && entry->texture) {
-            asset->bindTexture(tb, entry->texture);
+        if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
+            auto& entry = iter->second;
+            if (entry.get() && entry->texture) {
+                asset->bindTexture(tb, entry->texture);
+            }
         }
         return;
     }
 
     // Next check if this is a URI-based texture.
-    auto& entry = mUriTextureCache[uri];
-    if (entry.get() && entry->texture) {
-        asset->bindTexture(tb, entry->texture);
+    if (auto iter = mUriTextureCache.find(uri); iter != mUriTextureCache.end()) {
+        auto& entry = iter->second;
+        if (entry.get() && entry->texture) {
+            asset->bindTexture(tb, entry->texture);
+        }
     }
 }
 void ResourceLoader::Impl::cancelTextureDecoding() {
