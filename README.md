@@ -157,6 +157,41 @@ Here are a few screenshots of applications that use Filament in production:
 - TAA, FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution
 
+### glTF 2.0
+
+- Encodings
+  - [x] Embeded
+  - [x] Binary
+
+- Primitive Types
+  - [x] Points
+  - [x] Lines
+  - [ ] Line Loop
+  - [ ] Line Strip
+  - [x] Triangles
+  - [ ] Triangle Strip
+  - [ ] Triangle Fan
+
+- Animation
+  - [x] Transform animation
+  - [x] Linear interpolation
+  - [x] Morph animation
+    - [x] Sparse accessor
+  - [x] Skin animation
+  - [x] Joint animation
+
+- Extensions
+  - [x] KHR_draco_mesh_compression
+  - [x] KHR_lights_punctual
+  - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_pbrSpecularGlossiness
+  - [x] KHR_materials_sheen
+  - [x] KHR_materials_transmission
+  - [x] KHR_materials_unlit
+  - [x] KHR_mesh_quantization
+  - [x] KHR_texture_transform
+
+
 ## Rendering with Filament
 
 ### Native Linux, macOS and Windows
