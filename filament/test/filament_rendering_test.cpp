@@ -31,10 +31,6 @@
 using namespace filament;
 using namespace backend;
 
-static LinearColor inverseTonemapSRGB(sRGBColor x) {
-    return (x * -0.155) / (x - 1.019);
-}
-
 class RenderingTest : public testing::Test {
 protected:
     Engine* mEngine = nullptr;
@@ -118,7 +114,9 @@ private:
 };
 
 TEST_F(RenderingTest, ClearRed) {
-    mSkybox->setColor({ inverseTonemapSRGB({1, 0, 0}), 1.0f });
+    // We need to clear red to >1 here to ensure a tonemapped value of 255 regardless of LUT
+    // precision.
+    mSkybox->setColor({ 2.0f, 0.0f, 0.0f, 1.0f });
     mView->setDithering(View::Dithering::NONE);
     runTest([this](uint8_t const* rgba, uint32_t width, uint32_t height) {
         EXPECT_EQ(rgba[0], 0xff);
@@ -129,7 +127,9 @@ TEST_F(RenderingTest, ClearRed) {
 }
 
 TEST_F(RenderingTest, ClearGreen) {
-    mSkybox->setColor({ inverseTonemapSRGB({0, 1, 0}), 1.0f });
+    // We need to clear green to >1 here to ensure a tonemapped value of 255 regardless of LUT
+    // precision.
+    mSkybox->setColor({ 0.0f, 2.0f, 0.0f, 1.0f });
     mView->setDithering(View::Dithering::NONE);
     runTest([this](uint8_t const* rgba, uint32_t width, uint32_t height) {
         EXPECT_EQ(rgba[0], 0);
