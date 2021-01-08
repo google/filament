@@ -100,7 +100,7 @@ struct ResourceLoader::Impl {
     int mNumDecoderTasks;
     int mNumDecoderTasksFinished;
     JobSystem::Job* mDecoderRootJob = nullptr;
-    FFilamentAsset* mCurrentAsset;
+    FFilamentAsset* mCurrentAsset = nullptr;
 
     void computeTangents(FFilamentAsset* asset);
     bool createTextures(bool async);
