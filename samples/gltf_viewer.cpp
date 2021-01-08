@@ -71,7 +71,7 @@ struct App {
     Config config;
     Camera* mainCamera;
 
-    AssetLoader* loader;
+    AssetLoader* assetLoader;
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
 
@@ -641,9 +641,9 @@ int main(int argc, char** argv) {
 
         // Parse the glTF file and create Filament entities.
         if (filename.getExtension() == "glb") {
-            app.asset = app.loader->createAssetFromBinary(buffer.data(), buffer.size());
+            app.asset = app.assetLoader->createAssetFromBinary(buffer.data(), buffer.size());
         } else {
-            app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
+            app.asset = app.assetLoader->createAssetFromJson(buffer.data(), buffer.size());
         }
         buffer.clear();
         buffer.shrink_to_fit();
@@ -731,10 +731,10 @@ int main(int argc, char** argv) {
 
         app.materials = (app.materialSource == GENERATE_SHADERS) ?
                 createMaterialGenerator(engine) : createUbershaderLoader(engine);
-        app.loader = AssetLoader::create({engine, app.materials, app.names });
+        app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
-            app.asset = app.loader->createAssetFromBinary(
+            app.asset = app.assetLoader->createAssetFromBinary(
                     GLTF_VIEWER_DAMAGEDHELMET_DATA,
                     GLTF_VIEWER_DAMAGEDHELMET_SIZE);
         } else {
@@ -893,7 +893,7 @@ int main(int argc, char** argv) {
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
         app.automationEngine->terminate();
-        app.loader->destroyAsset(app.asset);
+        app.assetLoader->destroyAsset(app.asset);
         app.materials->destroyMaterials();
 
         engine->destroy(app.scene.groundPlane);
@@ -906,7 +906,7 @@ int main(int argc, char** argv) {
         delete app.materials;
         delete app.names;
 
-        AssetLoader::destroy(&app.loader);
+        AssetLoader::destroy(&app.assetLoader);
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {
@@ -1017,8 +1017,9 @@ int main(int argc, char** argv) {
     filamentApp.resize(resize);
 
     filamentApp.setDropHandler([&] (std::string path) {
+        app.resourceLoader->asyncCancelLoad();
         app.viewer->removeAsset();
-        app.loader->destroyAsset(app.asset);
+        app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);
         loadResources(path);
     });
