@@ -149,9 +149,6 @@ target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
 if(NOT MSVC)
     target_compile_options(${TARGET}
-        PRIVATE -msse2
-        PRIVATE -msse
-        PRIVATE -mmmx
         PRIVATE -Wno-unused-variable
         PRIVATE -Wno-deprecated-declarations
         PRIVATE -Wno-switch
@@ -174,4 +171,8 @@ if (WIN32)
     endif()
 else()
     target_compile_options(${TARGET} PRIVATE -fvisibility=hidden)
+
+    # FIXME: the way SDL does atomics is insane, just disable all atomics because there are no implementation for
+    #        aarch64 on certain targets. ideally, we would just std::atomic
+    target_compile_definitions(${TARGET} PRIVATE SDL_ATOMIC_DISABLED=1)
 endif()

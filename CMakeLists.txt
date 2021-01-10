@@ -88,21 +88,12 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (LINUX)
-
     if (FILAMENT_SUPPORTS_XCB)
         add_definitions(-DFILAMENT_SUPPORTS_XCB)
     endif()
 
     if (FILAMENT_SUPPORTS_XLIB)
         add_definitions(-DFILAMENT_SUPPORTS_XLIB)
-    endif()
-
-    execute_process(COMMAND uname -p
-        OUTPUT_VARIABLE PROCESSOR_ARCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if ("${PROCESSOR_ARCH}" STREQUAL "aarch64")
-        set(LINUX_AARCH64 TRUE)
     endif()
 endif()
 

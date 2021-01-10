@@ -151,7 +151,7 @@ void unbind%(gl_suffix)s();
 }
 
     footer = '''
-}; // namespace bluegl
+} // namespace bluegl
 
 #endif // TNT_FILAMENT_BLUEGL_%s_H
 ''' % suffix.upper()
@@ -220,6 +220,7 @@ def generateProxies(api, functions, output_dir, platforms):
         'Linux': header ,
         'LinuxAArch64': header ,
         'Darwin': header ,
+        'DarwinAArch64': header ,
         'Windows': headerMasM
     }
 
@@ -227,6 +228,7 @@ def generateProxies(api, functions, output_dir, platforms):
         'Linux': '',
         'LinuxAArch64': '' ,
         'Darwin': '',
+        'DarwinAArch64': '',
         'Windows': 'end\n'
     }
 
@@ -254,6 +256,15 @@ def generateProxies(api, functions, output_dir, platforms):
 _%(function)s:
     mov ___blue_gl%(suffix)s_%(function)s@GOTPCREL(%%rip), %%r11
     jmp *(%%r11)
+''',
+        'DarwinAArch64': '''
+.private_extern _%(function)s
+	.align	2
+_%(function)s:
+	adrp	x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGE
+	ldr	x16, [x16, ___blue_gl%(suffix)s_%(function)s@GOTPAGEOFF]
+	ldr	x16, [x16]
+	br	x16
 ''',
         'Windows': '''
 extrn __blue_gl%(suffix)s_%(function)s: qword
@@ -339,7 +350,7 @@ struct {
 
 
 def generateApis(apis, include_dir, output_dir):
-    platforms = ['Linux', 'LinuxAArch64', 'Darwin', 'Windows']
+    platforms = ['Linux', 'LinuxAArch64', 'Darwin', 'DarwinAArch64', 'Windows']
 
     for api in apis:
         functions = []
