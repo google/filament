@@ -38,7 +38,14 @@ bool acquireDrawingSurface(JNIEnv* env, jobject surface,
     jboolean foundJawt = JNI_FALSE;
     for (int jawtVersion : jawtVersions) {
         awt.version = jawtVersion;
+#if defined(__APPLE__) && defined(__aarch64__)
+        // FIXME: enable Apple Silicon build. The problem here is that we attempt to link an x86 jdk and that fails
+        //        so JAWT_GetAWT doesn't exist at link time.
+#warning "FIXME: JAWT_GetAWT() not supported"
+        foundJawt = {};
+#else
         foundJawt = JAWT_GetAWT(env, &awt);
+#endif
         if (foundJawt == JNI_TRUE) {
 #ifndef NDEBUG
             printf("Found valid AWT v%08x.\n", jawtVersion);
