@@ -32,7 +32,7 @@ Animator* FFilamentInstance::getAnimator() noexcept {
             slog.e << "Cannot create animator before resource loading." << io::endl;
             return nullptr;
         }
-        if (owner->mIsReleased) {
+        if (!owner->mSourceAsset) {
             slog.e << "Cannot create animator from frozen asset." << io::endl;
             return nullptr;
         }

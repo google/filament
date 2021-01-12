@@ -116,43 +116,20 @@ struct ResourceLoader::Impl {
 uint32_t computeBindingSize(const cgltf_accessor* accessor);
 uint32_t computeBindingOffset(const cgltf_accessor* accessor);
 
-// The AssetPool tracks references to raw source data (cgltf hierarchies) and frees them
-// appropriately. It releases all source assets only after the pending upload count is zero and the
-// client has destroyed the ResourceLoader object. If the ResourceLoader is destroyed while uploads
-// are still pending, then the AssetPool will stay alive until all uploads are complete.
-class AssetPool {
-public:
-    AssetPool()  {}
-    ~AssetPool() {
-        for (auto asset : mAssets) {
-            asset->releaseSourceAsset();
-        }
-    }
-    void addAsset(FFilamentAsset* asset) {
-        mAssets.push_back(asset);
-        asset->acquireSourceAsset();
-    }
-    void addPendingUpload() {
-        ++mPendingUploads;
-    }
-    static void onLoadedResource(void* buffer, size_t size, void* user) {
-        auto pool = (AssetPool*) user;
-        if (--pool->mPendingUploads == 0 && pool->mLoaderDestroyed) {
-            delete pool;
-        }
-    }
-    void onLoaderDestroyed() {
-        if (mPendingUploads == 0) {
-            delete this;
-        } else {
-            mLoaderDestroyed = true;
-        }
-    }
-private:
-    std::vector<FFilamentAsset*> mAssets;
-    bool mLoaderDestroyed = false;
-    int mPendingUploads = 0;
+// This little struct holds a shared_ptr that wraps cgltf_data (and, potentially, glb data) while
+// uploading vertex buffer data to the GPU.
+struct UploadEvent {
+    FFilamentAsset::SourceHandle handle;
 };
+
+UploadEvent* uploadUserdata(FFilamentAsset* asset) {
+    return new UploadEvent({ asset->mSourceAsset });
+}
+
+static void uploadCallback(void* buffer, size_t size, void* user) {
+    auto event = (UploadEvent*) user;
+    delete event;
+}
 
 static void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
     dstSkins.resize(gltf->skins_count);
@@ -205,7 +182,7 @@ static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count
 }
 
 static void decodeDracoMeshes(FFilamentAsset* asset) {
-    DracoCache* dracoCache = &asset->mDracoCache;
+    DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
 
     // For a given primitive and attribute, find the corresponding accessor.
     auto findAccessor = [](const cgltf_primitive* prim, cgltf_attribute_type type, cgltf_int idx) {
@@ -244,7 +221,7 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
         for (cgltf_size i = 0; i < draco.attributes_count; i++) {
 
             // In cgltf, each Draco attribute's data pointer is an attribute id, not an accessor.
-            const uint32_t id = draco.attributes[i].data - asset->mSourceAsset->accessors;
+            const uint32_t id = draco.attributes[i].data - asset->mSourceAsset->hierarchy->accessors;
 
             // Find the destination accessor; this contains the desired component type, etc.
             const cgltf_attribute_type type = draco.attributes[i].type;
@@ -261,11 +238,9 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     }
 }
 
-ResourceLoader::ResourceLoader(const ResourceConfiguration& config) :
-        mPool(new AssetPool), pImpl(new Impl(config)) { }
+ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new Impl(config)) { }
 
 ResourceLoader::~ResourceLoader() {
-    mPool->onLoaderDestroyed();
     delete pImpl;
 }
 
@@ -296,8 +271,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     if (asset->mResourcesLoaded) {
         return false;
     }
-    mPool->addAsset(asset);
-    const cgltf_data* gltf = asset->mSourceAsset;
+    const cgltf_data* gltf = asset->mSourceAsset->hierarchy;
     cgltf_options options {};
 
     // For emscripten and Android builds we have a custom implementation of cgltf_load_buffers which
@@ -413,8 +387,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
-            mPool->addPendingUpload();
-            VertexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
+            VertexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
             slot.vertexBuffer->setBufferAt(engine, slot.bufferIndex, std::move(bd));
             continue;
         }
@@ -427,8 +400,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
         }
-        mPool->addPendingUpload();
-        IndexBuffer::BufferDescriptor bd(data, size, AssetPool::onLoadedResource, mPool);
+        IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
         slot.indexBuffer->setBuffer(engine, std::move(bd));
     }
 
@@ -637,6 +609,7 @@ void ResourceLoader::Impl::bindTextureToMaterial(const TextureSlot& tb) {
         }
     }
 }
+
 void ResourceLoader::Impl::cancelTextureDecoding() {
     JobSystem* js = &mEngine->getJobSystem();
     if (mDecoderRootJob) {
@@ -989,7 +962,7 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
             floats[i] = weights / sum;
         }
     };
-    const cgltf_data* gltf = asset->mSourceAsset;
+    const cgltf_data* gltf = asset->mSourceAsset->hierarchy;
     cgltf_size mcount = gltf->meshes_count;
     for (cgltf_size mindex = 0; mindex < mcount; ++mindex) {
         const cgltf_mesh& mesh = gltf->meshes[mindex];

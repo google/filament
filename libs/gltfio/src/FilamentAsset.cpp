@@ -75,7 +75,7 @@ Animator* FFilamentAsset::getAnimator() noexcept {
             slog.e << "Cannot create animator before resource loading." << io::endl;
             return nullptr;
         }
-        if (mIsReleased) {
+        if (!mSourceAsset) {
             slog.e << "Cannot create animator from frozen asset." << io::endl;
             return nullptr;
         }
@@ -92,7 +92,6 @@ Entity FFilamentAsset::getWireframe() noexcept {
 }
 
 void FFilamentAsset::releaseSourceData() noexcept {
-    mIsReleased = true;
     // To ensure that all possible memory is freed, we reassign to new containers rather than
     // calling clear(). With many container types (such as robin_map), clearing is a fast
     // operation that merely frees the storage for the items.
@@ -103,24 +102,9 @@ void FFilamentAsset::releaseSourceData() noexcept {
     mPrimitives = {};
     mBufferSlots = {};
     mTextureSlots = {};
-    releaseSourceAsset();
+    mSourceAsset.reset();
     for (FFilamentInstance* instance : mInstances) {
         instance->nodeMap = {};
-    }
-}
-
-void FFilamentAsset::releaseSourceAsset() {
-    if (--mSourceAssetRefCount == 0) {
-        // At this point, all vertex buffers have been uploaded to the GPU and we can finally
-        // release all remaining CPU-side source data, such as aggregated GLB buffers and Draco
-        // meshes. Note that sidecar bin data is already released, because external resources
-        // are released eagerly via BufferDescriptor callbacks.
-        mDracoCache = {};
-        mGlbData = {};
-        if (!mSharedSourceAsset) {
-            cgltf_free((cgltf_data*) mSourceAsset);
-        }
-        mSourceAsset = nullptr;
     }
 }
 

@@ -221,7 +221,7 @@ public:
 
     /**
      * Returns a weak reference to the underlying cgltf hierarchy. This becomes invalid after
-     * calling releaseSourceData();
+     * calling releaseSourceData().
      */
     const void* getSourceAsset() noexcept;
 

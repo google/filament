@@ -165,14 +165,14 @@ static bool validateAnimation(const cgltf_animation& anim) {
 }
 
 Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
-    assert(asset->mResourcesLoaded && !asset->mIsReleased);
+    assert(asset->mResourcesLoaded && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
 
-    const cgltf_data* srcAsset = asset->mSourceAsset;
+    const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& anim = srcAnims[i];
