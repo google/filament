@@ -131,7 +131,7 @@ public:
     void asyncUpdateLoad();
 
     /**
-     * Cancels pending decoder jobs and frees all CPU-side texel data.
+     * Cancels pending decoder jobs, frees all CPU-side texel data, and flushes the Engine.
      *
      * Calling this is only necessary if the asyncBeginLoad API was used
      * and cancellation is required before progress reaches 100%.

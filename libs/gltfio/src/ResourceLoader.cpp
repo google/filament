@@ -426,6 +426,7 @@ bool ResourceLoader::asyncBeginLoad(FilamentAsset* asset) {
 
 void ResourceLoader::asyncCancelLoad() {
     pImpl->cancelTextureDecoding();
+    pImpl->mEngine->flushAndWait();
 }
 
 float ResourceLoader::asyncGetLoadProgress() const {
