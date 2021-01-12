@@ -187,7 +187,7 @@ FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32
     }
     createAsset(sourceAsset, 0);
     if (mResult) {
-        glbdata.swap(mResult->mGlbData);
+        glbdata.swap(mResult->mSourceAsset->glbData);
     }
     return mResult;
 }
@@ -213,14 +213,14 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
     }
     createAsset(sourceAsset, numInstances);
     if (mResult) {
-        glbdata.swap(mResult->mGlbData);
+        glbdata.swap(mResult->mSourceAsset->glbData);
         std::copy_n(mResult->mInstances.data(), numInstances, instances);
     }
     return mResult;
 }
 
 FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
-    if (primary->mIsReleased) {
+    if (!primary->mSourceAsset) {
         slog.e << "Source data has been released; asset is frozen." << io::endl;
         return nullptr;
     }
@@ -228,7 +228,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         slog.e << "Cannot add an instance to a non-instanced asset." << io::endl;
         return nullptr;
     }
-    const cgltf_data* srcAsset = primary->mSourceAsset;
+    const cgltf_data* srcAsset = primary->mSourceAsset->hierarchy;
     const cgltf_scene* scene = srcAsset->scene ? srcAsset->scene : srcAsset->scenes;
     if (!scene) {
         slog.e << "There is no scene in the asset." << io::endl;
@@ -251,9 +251,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
     #endif
 
-    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager);
-    mResult->mSourceAsset = srcAsset;
-    mResult->acquireSourceAsset();
+    mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager, srcAsset);
 
     // If there is no default scene specified, then the default is the first one.
     // It is not an error for a glTF file to have zero scenes.
@@ -304,7 +302,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
 
     if (mError) {
-        delete mResult;
+        destroyAsset(mResult);
         mResult = nullptr;
         mError = false;
     }
@@ -1195,13 +1193,6 @@ FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t 
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
     return upcast(this)->createInstance(upcast(asset));
-}
-
-FilamentAsset* AssetLoader::createAssetFromHandle(const void* handle) {
-    const cgltf_data* sourceAsset = (const cgltf_data*) handle;
-    upcast(this)->createAsset(sourceAsset, 0);
-    upcast(this)->mResult->mSharedSourceAsset = true;
-    return upcast(this)->mResult;
 }
 
 void AssetLoader::enableDiagnostics(bool enable) {
