@@ -297,7 +297,7 @@ impossible materials, however, this might be desirable for artistic reasons.
 The `reflectance` property is designed as a normalized property in the range 0..1 which makes
 it easy to define from a texture.
 
-See the Index of refraction section for more information about the `ior` property and refractive
+See section [Index of refraction] for more information about the `ior` property and refractive
 indices.
 
 ### Sheen color
@@ -306,8 +306,8 @@ The sheen color controls the color appearance and strength of an optional sheen 
 base layer described by the properties above. The sheen layer always sits below the clear coat layer
 if such a layer is present.
 
-The sheen layer can be used to represent cloth and fabric materials. Please refer to the
-[Cloth model] section for more information about cloth and fabric materials.
+The sheen layer can be used to represent cloth and fabric materials. Please refer to 
+section [Cloth model] for more information about cloth and fabric materials.
 
 The effect of `sheenColor` is shown in figure [materialSheenColor]
 (click on the image to see a larger version).
@@ -317,7 +317,7 @@ The effect of `sheenColor` is shown in figure [materialSheenColor]
 !!! Note
     If you do not need the other properties offered by the standard lit material model but want to
     create a cloth-like or fabric-like appearance, it is more efficient to use the dedicated cloth
-    model described in the [Cloth model] section.
+    model described in section [Cloth model].
 
 ### Sheen roughness
 
@@ -528,8 +528,9 @@ Other dielectric materials | 1.33 to 1.58
 [Table [commonMatIOR]: Index of refraction of common materials]
 
 The appearance of a refractive material will greatly depend on the `refractionType` and
-`refractionMode` settings of the material. Refer to the Blending and transparency: refractionType
-section and the Blending and transparency: refractionMode section for more information.
+`refractionMode` settings of the material. Refer to section
+[Blending and transparency: refractionType] and section [Blending and transparency: refractionMode]
+for more information.
 
 The effect of `ior` when `refractionMode` is set to `cubemap` and `refractionType` is set to `solid`
 can be seen in figure [iorProperty2] (click on the image to see a larger version).
@@ -833,7 +834,7 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A minimum viable material definition must contain a `material` section and a `fragment` block. The
+A minimum viable material definition must contain a `material` preamble and a `fragment` block. The
 `vertex` block is optional.
 
 ### Differences with JSON
