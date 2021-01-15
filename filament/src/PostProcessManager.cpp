@@ -1482,6 +1482,9 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,  bool translucen
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
+    // the UBO has been set and committed in colorGradingPrepareSubpass()
+    FMaterialInstance* mi = material.getMaterialInstance();
+    mi->use(driver);
     const uint8_t variant = uint8_t(translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
