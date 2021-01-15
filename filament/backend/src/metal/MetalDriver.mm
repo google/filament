@@ -753,9 +753,6 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
 
-    // Filament's default winding is counter clockwise.
-    [mContext->currentRenderPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
             mContext->currentRenderTarget->isDefaultRenderTarget() ?
@@ -777,6 +774,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->pipelineState.invalidate();
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
+    mContext->windingState.invalidate();
 }
 
 void MetalDriver::nextSubpass(int dummy) {}
@@ -1139,6 +1137,13 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     mContext->cullModeState.updateState(cullMode);
     if (mContext->cullModeState.stateChanged()) {
         [mContext->currentRenderPassEncoder setCullMode:cullMode];
+    }
+
+    // Front face winding
+    MTLWinding winding = rs.inverseFrontFaces ? MTLWindingClockwise : MTLWindingCounterClockwise;
+    mContext->windingState.updateState(winding);
+    if (mContext->windingState.stateChanged()) {
+        [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
     }
 
     // Set the depth-stencil state, if a state change is needed.
