@@ -10,6 +10,7 @@ set(PRIVATE_HDR_DIR     ${OUR_DIR})
 
 # public headers dependencies
 set(PUBLIC_HDRS
+    ${PUBLIC_HDR_DIR}/zconf.h
     ${PUBLIC_HDR_DIR}/zlib.h
 )
 
