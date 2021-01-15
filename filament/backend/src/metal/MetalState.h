@@ -339,6 +339,7 @@ using SamplerStateCache = StateCache<SamplerState, id<MTLSamplerState>, SamplerS
 // Raster-related state
 
 using CullModeStateTracker = StateTracker<MTLCullMode>;
+using WindingStateTracker = StateTracker<MTLWinding>;
 
 } // namespace metal
 } // namespace backend

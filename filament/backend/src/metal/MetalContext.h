@@ -60,6 +60,7 @@ struct MetalContext {
     DepthStencilStateTracker depthStencilState;
     UniformBufferState uniformState[VERTEX_BUFFER_START];
     CullModeStateTracker cullModeState;
+    WindingStateTracker windingState;
 
     // State caches.
     DepthStencilStateCache depthStencilStateCache;
