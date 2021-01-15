@@ -63,7 +63,6 @@ TEST_F(MeshAreEquivalentTest, TestPermutedTwoFaces) {
   ASSERT_TRUE(equiv(*mesh_0, *mesh_1));
 }
 
-//
 TEST_F(MeshAreEquivalentTest, TestPermutedThreeFaces) {
   const std::string file_name_0 = "three_faces_123.obj";
   const std::string file_name_1 = "three_faces_312.obj";

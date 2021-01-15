@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
-#define DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
+#ifndef DRACO_JAVASCRIPT_EMSCRIPTEN_ANIMATION_DECODER_WEBIDL_WRAPPER_H_
+#define DRACO_JAVASCRIPT_EMSCRIPTEN_ANIMATION_DECODER_WEBIDL_WRAPPER_H_
 
 #include <vector>
 
@@ -70,4 +70,4 @@ class AnimationDecoder {
   draco::Status last_status_;
 };
 
-#endif  // DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
+#endif  // DRACO_JAVASCRIPT_EMSCRIPTEN_ANIMATION_DECODER_WEBIDL_WRAPPER_H_

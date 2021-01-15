@@ -288,7 +288,3 @@
 * prediction_degree_
   * Array of current degree prediction for each vertex
 * constrained_multi_num_flags
-
-
-
-  

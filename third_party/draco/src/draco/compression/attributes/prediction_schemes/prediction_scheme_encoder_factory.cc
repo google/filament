@@ -35,7 +35,18 @@ PredictionSchemeMethod SelectPredictionMethod(
 #ifdef DRACO_NORMAL_ENCODING_SUPPORTED
       if (encoder->options()->GetSpeed() < 4) {
         // Use geometric normal prediction for speeds 0, 1, 2, 3.
-        return MESH_PREDICTION_GEOMETRIC_NORMAL;
+        // For this prediction, the position attribute needs to be either
+        // integer or quantized as well.
+        const int pos_att_id = encoder->point_cloud()->GetNamedAttributeId(
+            GeometryAttribute::POSITION);
+        const PointAttribute *const pos_att =
+            encoder->point_cloud()->GetNamedAttribute(
+                GeometryAttribute::POSITION);
+        if (pos_att && (IsDataTypeIntegral(pos_att->data_type()) ||
+                        encoder->options()->GetAttributeInt(
+                            pos_att_id, "quantization_bits", -1) > 0)) {
+          return MESH_PREDICTION_GEOMETRIC_NORMAL;
+        }
       }
 #endif
       return PREDICTION_DIFFERENCE;  // default

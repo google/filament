@@ -1,0 +1,31 @@
+cache: ccache
+language: cpp
+matrix:
+  include:
+    - os: linux
+      dist: xenial
+      compiler: clang
+    - os: linux
+      dist: xenial
+      compiler: gcc
+    - os: osx
+      compiler: clang
+
+addons:
+  apt:
+    packages:
+    - cmake
+
+script:
+  # Output version info for compilers, cmake, and make
+  - ${CC} -v
+  - ${CXX} -v
+  - cmake --version
+  - make --version
+  # Clone googletest
+  - pushd .. && git clone https://github.com/google/googletest.git && popd
+  # Configure and build
+  - mkdir _travis_build && cd _travis_build
+  - cmake -G "Unix Makefiles" -DENABLE_TESTS=ON ..
+  - make -j10
+  - ./draco_tests

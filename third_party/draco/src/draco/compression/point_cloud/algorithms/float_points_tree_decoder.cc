@@ -69,18 +69,29 @@ FloatPointsTreeDecoder::FloatPointsTreeDecoder()
 
 bool FloatPointsTreeDecoder::DecodePointCloudKdTreeInternal(
     DecoderBuffer *buffer, std::vector<Point3ui> *qpoints) {
-  if (!buffer->Decode(&qinfo_.quantization_bits)) return false;
-  if (qinfo_.quantization_bits > 31) return false;
-  if (!buffer->Decode(&qinfo_.range)) return false;
-  if (!buffer->Decode(&num_points_)) return false;
-  if (num_points_from_header_ > 0 && num_points_ != num_points_from_header_)
+  if (!buffer->Decode(&qinfo_.quantization_bits)) {
     return false;
-  if (!buffer->Decode(&compression_level_)) return false;
+  }
+  if (qinfo_.quantization_bits > 31) {
+    return false;
+  }
+  if (!buffer->Decode(&qinfo_.range)) {
+    return false;
+  }
+  if (!buffer->Decode(&num_points_)) {
+    return false;
+  }
+  if (num_points_from_header_ > 0 && num_points_ != num_points_from_header_) {
+    return false;
+  }
+  if (!buffer->Decode(&compression_level_)) {
+    return false;
+  }
 
   // Only allow compression level in [0..6].
   if (6 < compression_level_) {
-    LOGE("FloatPointsTreeDecoder: compression level %i not supported.\n",
-         compression_level_);
+    DRACO_LOGE("FloatPointsTreeDecoder: compression level %i not supported.\n",
+               compression_level_);
     return false;
   }
 

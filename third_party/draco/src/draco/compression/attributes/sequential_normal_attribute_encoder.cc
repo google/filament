@@ -44,9 +44,13 @@ bool SequentialNormalAttributeEncoder::EncodeDataNeededByPortableTransform(
 
 bool SequentialNormalAttributeEncoder::PrepareValues(
     const std::vector<PointIndex> &point_ids, int num_points) {
-  SetPortableAttribute(
-      attribute_octahedron_transform_.GeneratePortableAttribute(
-          *(attribute()), point_ids, num_points));
+  auto portable_att = attribute_octahedron_transform_.InitTransformedAttribute(
+      *(attribute()), point_ids.size());
+  if (!attribute_octahedron_transform_.TransformAttribute(
+          *(attribute()), point_ids, portable_att.get())) {
+    return false;
+  }
+  SetPortableAttribute(std::move(portable_att));
   return true;
 }
 

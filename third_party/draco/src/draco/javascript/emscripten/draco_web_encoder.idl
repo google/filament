@@ -79,6 +79,10 @@ interface MetadataBuilder {
   boolean AddIntEntry(Metadata metadata,
                       [Const] DOMString entry_name,
                       long entry_value);
+  boolean AddIntEntryArray(Metadata metadata,
+                          [Const] DOMString entry_name,
+                          [Const] long[] att_values,
+                          long num_values);
   boolean AddDoubleEntry(Metadata metadata,
                          [Const] DOMString entry_name,
                          double entry_value);

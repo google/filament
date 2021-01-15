@@ -17,23 +17,51 @@
 const fs = require('fs');
 const assert = require('assert');
 const draco3dgltf = require('draco3dgltf');
-const decoderModule = draco3dgltf.createDecoderModule({});
-const encoderModule = draco3dgltf.createEncoderModule({});
 
-fs.readFile('./bunny.drc', function(err, data) {
-  if (err) {
-    return console.log(err);
-  }
-  console.log("Decoding file of size " + data.byteLength + " ..");
-  // Decode mesh
-  const decoder = new decoderModule.Decoder();
-  const decodedGeometry = decodeDracoData(data, decoder);
-  // Encode mesh
-  encodeMeshToFile(decodedGeometry, decoder);
+// Global decoder and encoder module variables.
+let decoderModule = null;
+let encoderModule = null;
 
-  decoderModule.destroy(decoder);
-  decoderModule.destroy(decodedGeometry);
+// The code to create the encoder and decoder modules is asynchronous.
+// draco3d.createDecoderModule will return a promise to a funciton with a
+// module as a parameter when the module has been fully initialized.
+// Create and set the decoder module.
+draco3dgltf.createDecoderModule({}).then(function(module) {
+  // This is reached when everything is ready, and you can call methods on
+  // Module.
+  decoderModule = module;
+  console.log('Decoder Module Initialized!');
+  moduleInitialized();
 });
+
+// Create and set the encoder module.
+draco3dgltf.createEncoderModule({}).then(function(module) {
+  // This is reached when everything is ready, and you can call methods on
+  // Module.
+  encoderModule = module;
+  console.log('Encoder Module Initialized!');
+  moduleInitialized();
+});
+
+function moduleInitialized() {
+  // Check if both the encoder and decoder modules have been initialized.
+  if (encoderModule && decoderModule) {
+    fs.readFile('./bunny.drc', function(err, data) {
+      if (err) {
+        return console.log(err);
+      }
+      console.log("Decoding file of size " + data.byteLength + " ..");
+      // Decode mesh
+      const decoder = new decoderModule.Decoder();
+      const decodedGeometry = decodeDracoData(data, decoder);
+      // Encode mesh
+      encodeMeshToFile(decodedGeometry, decoder);
+
+      decoderModule.destroy(decoder);
+      decoderModule.destroy(decodedGeometry);
+    });
+  }
+}
 
 function decodeDracoData(rawBuffer, decoder) {
   const buffer = new decoderModule.DecoderBuffer();
@@ -139,7 +167,8 @@ function encodeMeshToFile(mesh, decoder) {
   encoderModule.destroy(meshBuilder);
   // Write to file. You can view the the file using webgl_loader_draco.html
   // example.
-  fs.writeFile("bunny_10.drc", Buffer(outputBuffer), "binary", function(err) {
+  fs.writeFile("bunny_10.drc", Buffer.from(outputBuffer), "binary",
+               function(err) {
     if (err) {
         console.log(err);
     } else {

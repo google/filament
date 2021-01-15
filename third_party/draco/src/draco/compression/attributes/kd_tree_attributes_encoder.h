@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_COMPRESSION_ATTRIBUTES_POINT_CLOUD_KD_TREE_ATTRIBUTES_ENCODER_H_
-#define DRACO_COMPRESSION_ATTRIBUTES_POINT_CLOUD_KD_TREE_ATTRIBUTES_ENCODER_H_
+#ifndef DRACO_COMPRESSION_ATTRIBUTES_KD_TREE_ATTRIBUTES_ENCODER_H_
+#define DRACO_COMPRESSION_ATTRIBUTES_KD_TREE_ATTRIBUTES_ENCODER_H_
 
 #include "draco/attributes/attribute_quantization_transform.h"
 #include "draco/compression/attributes/attributes_encoder.h"
@@ -48,4 +48,4 @@ class KdTreeAttributesEncoder : public AttributesEncoder {
 
 }  // namespace draco
 
-#endif  // DRACO_COMPRESSION_ATTRIBUTES_POINT_CLOUD_KD_TREE_ATTRIBUTES_ENCODER_H_
+#endif  // DRACO_COMPRESSION_ATTRIBUTES_KD_TREE_ATTRIBUTES_ENCODER_H_

@@ -37,14 +37,24 @@ class AttributeQuantizationTransform : public AttributeTransform {
   void CopyToAttributeTransformData(
       AttributeTransformData *out_data) const override;
 
-  void SetParameters(int quantization_bits, const float *min_values,
+  bool TransformAttribute(const PointAttribute &attribute,
+                          const std::vector<PointIndex> &point_ids,
+                          PointAttribute *target_attribute) override;
+
+  bool InverseTransformAttribute(const PointAttribute &attribute,
+                                 PointAttribute *target_attribute) override;
+
+  bool SetParameters(int quantization_bits, const float *min_values,
                      int num_components, float range);
 
   bool ComputeParameters(const PointAttribute &attribute,
                          const int quantization_bits);
 
   // Encode relevant parameters into buffer.
-  bool EncodeParameters(EncoderBuffer *encoder_buffer) const;
+  bool EncodeParameters(EncoderBuffer *encoder_buffer) const override;
+
+  bool DecodeParameters(const PointAttribute &attribute,
+                        DecoderBuffer *decoder_buffer) override;
 
   int32_t quantization_bits() const { return quantization_bits_; }
   float min_value(int axis) const { return min_values_[axis]; }
@@ -52,16 +62,30 @@ class AttributeQuantizationTransform : public AttributeTransform {
   float range() const { return range_; }
   bool is_initialized() const { return quantization_bits_ != -1; }
 
+ protected:
   // Create portable attribute using 1:1 mapping between points in the input and
   // output attribute.
-  std::unique_ptr<PointAttribute> GeneratePortableAttribute(
-      const PointAttribute &attribute, int num_points) const;
+  void GeneratePortableAttribute(const PointAttribute &attribute,
+                                 int num_points,
+                                 PointAttribute *target_attribute) const;
 
   // Create portable attribute using custom mapping between input and output
   // points.
-  std::unique_ptr<PointAttribute> GeneratePortableAttribute(
-      const PointAttribute &attribute, const std::vector<PointIndex> &point_ids,
-      int num_points) const;
+  void GeneratePortableAttribute(const PointAttribute &attribute,
+                                 const std::vector<PointIndex> &point_ids,
+                                 int num_points,
+                                 PointAttribute *target_attribute) const;
+
+  DataType GetTransformedDataType(
+      const PointAttribute &attribute) const override {
+    return DT_UINT32;
+  }
+  int GetTransformedNumComponents(
+      const PointAttribute &attribute) const override {
+    return attribute.num_components();
+  }
+
+  static bool IsQuantizationValid(int quantization_bits);
 
  private:
   int32_t quantization_bits_;

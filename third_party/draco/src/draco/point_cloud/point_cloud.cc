@@ -241,7 +241,7 @@ void PointCloud::ApplyPointIdDeduplication(
 bool PointCloud::DeduplicateAttributeValues() {
   // Go over all attributes and create mapping between duplicate entries.
   if (num_points() == 0) {
-    return false;  // Unexpected attribute size.
+    return true;  // Nothing to deduplicate.
   }
   // Deduplicate all attributes.
   for (int32_t att_id = 0; att_id < num_attributes(); ++att_id) {
@@ -255,13 +255,7 @@ bool PointCloud::DeduplicateAttributeValues() {
 
 // TODO(xiaoxumeng): Consider to cash the BBox.
 BoundingBox PointCloud::ComputeBoundingBox() const {
-  BoundingBox bounding_box =
-      BoundingBox(Vector3f(std::numeric_limits<float>::max(),
-                           std::numeric_limits<float>::max(),
-                           std::numeric_limits<float>::max()),
-                  Vector3f(-std::numeric_limits<float>::max(),
-                           -std::numeric_limits<float>::max(),
-                           -std::numeric_limits<float>::max()));
+  BoundingBox bounding_box;
   auto pc_att = GetNamedAttribute(GeometryAttribute::POSITION);
   // TODO(xiaoxumeng): Make the BoundingBox a template type, it may not be easy
   // because PointCloud is not a template.
@@ -274,7 +268,7 @@ BoundingBox PointCloud::ComputeBoundingBox() const {
   for (AttributeValueIndex i(0); i < static_cast<uint32_t>(pc_att->size());
        ++i) {
     pc_att->GetValue(i, &p[0]);
-    bounding_box.update_bounding_box(p);
+    bounding_box.Update(p);
   }
   return bounding_box;
 }

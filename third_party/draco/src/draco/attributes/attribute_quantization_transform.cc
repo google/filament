@@ -1,4 +1,3 @@
-
 // Copyright 2017 The Draco Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,19 +50,83 @@ void AttributeQuantizationTransform::CopyToAttributeTransformData(
   out_data->AppendParameterValue(range_);
 }
 
-void AttributeQuantizationTransform::SetParameters(int quantization_bits,
+bool AttributeQuantizationTransform::TransformAttribute(
+    const PointAttribute &attribute, const std::vector<PointIndex> &point_ids,
+    PointAttribute *target_attribute) {
+  if (point_ids.empty()) {
+    GeneratePortableAttribute(attribute, target_attribute->size(),
+                              target_attribute);
+  } else {
+    GeneratePortableAttribute(attribute, point_ids, target_attribute->size(),
+                              target_attribute);
+  }
+  return true;
+}
+
+bool AttributeQuantizationTransform::InverseTransformAttribute(
+    const PointAttribute &attribute, PointAttribute *target_attribute) {
+  if (target_attribute->data_type() != DT_FLOAT32) {
+    return false;
+  }
+
+  // Convert all quantized values back to floats.
+  const int32_t max_quantized_value =
+      (1u << static_cast<uint32_t>(quantization_bits_)) - 1;
+  const int num_components = target_attribute->num_components();
+  const int entry_size = sizeof(float) * num_components;
+  const std::unique_ptr<float[]> att_val(new float[num_components]);
+  int quant_val_id = 0;
+  int out_byte_pos = 0;
+  Dequantizer dequantizer;
+  if (!dequantizer.Init(range_, max_quantized_value)) {
+    return false;
+  }
+  const int32_t *const source_attribute_data =
+      reinterpret_cast<const int32_t *>(
+          attribute.GetAddress(AttributeValueIndex(0)));
+
+  const int num_values = target_attribute->size();
+
+  for (uint32_t i = 0; i < num_values; ++i) {
+    for (int c = 0; c < num_components; ++c) {
+      float value =
+          dequantizer.DequantizeFloat(source_attribute_data[quant_val_id++]);
+      value = value + min_values_[c];
+      att_val[c] = value;
+    }
+    // Store the floating point value into the attribute buffer.
+    target_attribute->buffer()->Write(out_byte_pos, att_val.get(), entry_size);
+    out_byte_pos += entry_size;
+  }
+  return true;
+}
+
+bool AttributeQuantizationTransform::IsQuantizationValid(
+    int quantization_bits) {
+  // Currently we allow only up to 30 bit quantization.
+  return quantization_bits >= 1 && quantization_bits <= 30;
+}
+
+bool AttributeQuantizationTransform::SetParameters(int quantization_bits,
                                                    const float *min_values,
                                                    int num_components,
                                                    float range) {
+  if (!IsQuantizationValid(quantization_bits)) {
+    return false;
+  }
   quantization_bits_ = quantization_bits;
   min_values_.assign(min_values, min_values + num_components);
   range_ = range;
+  return true;
 }
 
 bool AttributeQuantizationTransform::ComputeParameters(
     const PointAttribute &attribute, const int quantization_bits) {
   if (quantization_bits_ != -1) {
     return false;  // already initialized.
+  }
+  if (!IsQuantizationValid(quantization_bits)) {
+    return false;
   }
   quantization_bits_ = quantization_bits;
 
@@ -121,20 +184,37 @@ bool AttributeQuantizationTransform::EncodeParameters(
   return false;
 }
 
-std::unique_ptr<PointAttribute>
-AttributeQuantizationTransform::GeneratePortableAttribute(
-    const PointAttribute &attribute, int num_points) const {
+bool AttributeQuantizationTransform::DecodeParameters(
+    const PointAttribute &attribute, DecoderBuffer *decoder_buffer) {
+  min_values_.resize(attribute.num_components());
+  if (!decoder_buffer->Decode(&min_values_[0],
+                              sizeof(float) * min_values_.size())) {
+    return false;
+  }
+  if (!decoder_buffer->Decode(&range_)) {
+    return false;
+  }
+  uint8_t quantization_bits;
+  if (!decoder_buffer->Decode(&quantization_bits)) {
+    return false;
+  }
+  if (!IsQuantizationValid(quantization_bits)) {
+    return false;
+  }
+  quantization_bits_ = quantization_bits;
+  return true;
+}
+
+void AttributeQuantizationTransform::GeneratePortableAttribute(
+    const PointAttribute &attribute, int num_points,
+    PointAttribute *target_attribute) const {
   DRACO_DCHECK(is_initialized());
 
-  // Allocate portable attribute.
-  const int num_entries = num_points;
   const int num_components = attribute.num_components();
-  std::unique_ptr<PointAttribute> portable_attribute =
-      InitPortableAttribute(num_entries, num_components, 0, attribute, true);
 
   // Quantize all values using the order given by point_ids.
   int32_t *const portable_attribute_data = reinterpret_cast<int32_t *>(
-      portable_attribute->GetAddress(AttributeValueIndex(0)));
+      target_attribute->GetAddress(AttributeValueIndex(0)));
   const uint32_t max_quantized_value = (1 << (quantization_bits_)) - 1;
   Quantizer quantizer;
   quantizer.Init(range(), max_quantized_value);
@@ -149,24 +229,18 @@ AttributeQuantizationTransform::GeneratePortableAttribute(
       portable_attribute_data[dst_index++] = q_val;
     }
   }
-  return portable_attribute;
 }
 
-std::unique_ptr<PointAttribute>
-AttributeQuantizationTransform::GeneratePortableAttribute(
+void AttributeQuantizationTransform::GeneratePortableAttribute(
     const PointAttribute &attribute, const std::vector<PointIndex> &point_ids,
-    int num_points) const {
+    int num_points, PointAttribute *target_attribute) const {
   DRACO_DCHECK(is_initialized());
 
-  // Allocate portable attribute.
-  const int num_entries = static_cast<int>(point_ids.size());
   const int num_components = attribute.num_components();
-  std::unique_ptr<PointAttribute> portable_attribute = InitPortableAttribute(
-      num_entries, num_components, num_points, attribute, true);
 
   // Quantize all values using the order given by point_ids.
   int32_t *const portable_attribute_data = reinterpret_cast<int32_t *>(
-      portable_attribute->GetAddress(AttributeValueIndex(0)));
+      target_attribute->GetAddress(AttributeValueIndex(0)));
   const uint32_t max_quantized_value = (1 << (quantization_bits_)) - 1;
   Quantizer quantizer;
   quantizer.Init(range(), max_quantized_value);
@@ -181,7 +255,6 @@ AttributeQuantizationTransform::GeneratePortableAttribute(
       portable_attribute_data[dst_index++] = q_val;
     }
   }
-  return portable_attribute;
 }
 
 }  // namespace draco

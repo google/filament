@@ -8,11 +8,17 @@ set(DRACO_CMAKE_UTIL_CMAKE_ 1)
 # parameter.
 function(create_dummy_source_file basename extension out_file_path)
   set(dummy_source_file "${draco_build_dir}/${basename}.${extension}")
-  file(WRITE "${dummy_source_file}"
+  file(WRITE "${dummy_source_file}.new"
        "// Generated file. DO NOT EDIT!\n"
        "// ${target_name} needs a ${extension} file to force link language, \n"
        "// or to silence a harmless CMake warning: Ignore me.\n"
        "void ${target_name}_dummy_function(void) {}\n")
+
+  # Will replace ${dummy_source_file} only if the file content has changed.
+  # This prevents forced Draco rebuilds after CMake runs.
+  configure_file("${dummy_source_file}.new" "${dummy_source_file}")
+  file(REMOVE "${dummy_source_file}.new")
+
   set(${out_file_path} ${dummy_source_file} PARENT_SCOPE)
 endfunction()
 

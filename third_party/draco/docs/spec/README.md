@@ -205,7 +205,7 @@ DecodeHeader() {
 ~~~~~
 {:.draco-syntax}</code></pre>
 
-... **will render as:**  
+... **will render as:**
 
 
 ~~~~~

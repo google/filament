@@ -62,12 +62,14 @@ Status PointCloudEncoder::EncodeHeader() {
   buffer_->Encode("DRACO", 5);
   // Version (major, minor).
   const uint8_t encoder_type = GetGeometryType();
-  const uint8_t version_major = encoder_type == POINT_CLOUD
-                                    ? kDracoPointCloudBitstreamVersionMajor
-                                    : kDracoMeshBitstreamVersionMajor;
-  const uint8_t version_minor = encoder_type == POINT_CLOUD
-                                    ? kDracoPointCloudBitstreamVersionMinor
-                                    : kDracoMeshBitstreamVersionMinor;
+  uint8_t version_major, version_minor;
+  version_major = encoder_type == POINT_CLOUD
+                      ? kDracoPointCloudBitstreamVersionMajor
+                      : kDracoMeshBitstreamVersionMajor;
+  version_minor = encoder_type == POINT_CLOUD
+                      ? kDracoPointCloudBitstreamVersionMinor
+                      : kDracoMeshBitstreamVersionMinor;
+
   buffer_->Encode(version_major);
   buffer_->Encode(version_minor);
   // Type of the encoder (point cloud, mesh, ...).

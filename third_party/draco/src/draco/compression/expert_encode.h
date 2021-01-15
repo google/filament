@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_SRC_DRACO_COMPRESSION_EXPERT_ENCODE_H_
-#define DRACO_SRC_DRACO_COMPRESSION_EXPERT_ENCODE_H_
+#ifndef DRACO_COMPRESSION_EXPERT_ENCODE_H_
+#define DRACO_COMPRESSION_EXPERT_ENCODE_H_
 
 #include "draco/compression/config/compression_shared.h"
 #include "draco/compression/config/encoder_options.h"
@@ -144,4 +144,4 @@ class ExpertEncoder : public EncoderBase<EncoderOptions> {
 
 }  // namespace draco
 
-#endif  // DRACO_SRC_DRACO_COMPRESSION_EXPERT_ENCODE_H_
+#endif  // DRACO_COMPRESSION_EXPERT_ENCODE_H_

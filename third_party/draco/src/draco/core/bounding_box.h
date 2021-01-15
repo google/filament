@@ -19,22 +19,27 @@
 
 namespace draco {
 
-// Class for detecting the bounding box of a point_cloud or mesh.
-// Use the minimum point and the maximum point to define the bounding box.
-// TODO(xiaoxumeng): Change the class of BoundingBox to a template, similar to
-// draco/src/draco/core/vector_d.h
+// Class for computing the bounding box of points in 3D space.
 class BoundingBox {
  public:
-  // Initialization
-  BoundingBox(const Vector3f &min_point_in, const Vector3f &max_point_in);
+  // Creates bounding box object with minimum and maximum points initialized to
+  // the largest positive and the smallest negative values, respectively. The
+  // resulting abstract bounding box effectively has no points and can be
+  // updated by providing any point to Update() method.
+  BoundingBox();
 
-  inline const Vector3f &min_point() const { return min_point_; }
-  inline const Vector3f &max_point() const { return max_point_; }
+  // Creates bounding box object with minimum and maximum points initialized to
+  // |min_point| and |max_point|, respectively.
+  BoundingBox(const Vector3f &min_point, const Vector3f &max_point);
 
-  // Conditionally updates the bounding box.
-  // TODO(xiaoxumeng): Change the function to a template function and change the
-  // argument to an iterator.
-  inline void update_bounding_box(const Vector3f &new_point) {
+  // Returns the minimum point of the bounding box.
+  inline const Vector3f &GetMinPoint() const { return min_point_; }
+
+  // Returns the maximum point of the bounding box.
+  inline const Vector3f &GetMaxPoint() const { return max_point_; }
+
+  // Conditionally updates the bounding box with a given |new_point|.
+  void Update(const Vector3f &new_point) {
     for (int i = 0; i < 3; i++) {
       if (new_point[i] < min_point_[i]) {
         min_point_[i] = new_point[i];
@@ -44,6 +49,19 @@ class BoundingBox {
       }
     }
   }
+
+  // Updates bounding box with minimum and maximum points of the |other|
+  // bounding box.
+  void Update(const BoundingBox &other) {
+    Update(other.GetMinPoint());
+    Update(other.GetMaxPoint());
+  }
+
+  // Returns the size of the bounding box along each axis.
+  Vector3f Size() const { return max_point_ - min_point_; }
+
+  // Returns the center of the bounding box.
+  Vector3f Center() const { return (min_point_ + max_point_) / 2; }
 
  private:
   Vector3f min_point_;

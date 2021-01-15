@@ -7,6 +7,10 @@ _**Contents**_
     * [Debugging and Optimization](#debugging-and-optimization)
     * [Googletest Integration](#googletest-integration)
     * [Javascript Encoder/Decoder](#javascript-encoderdecoder)
+    * [WebAssembly Decoder](#webassembly-decoder)
+    * [WebAssembly Mesh Only Decoder](#webassembly-mesh-only-decoder)
+    * [WebAssembly Point Cloud Only Decoder](#webassembly-point-cloud-only-decoder)
+    * [iOS Builds](#ios-builds)
   * [Android Studio Project Integration](#android-studio-project-integration)
   * [Native Android Builds](#native-android-builds)
   * [vcpkg](#vcpkg)
@@ -52,16 +56,16 @@ Windows
 -------
 
 On a Windows box you would run the following command to generate Visual Studio
-2017 projects:
+2019 projects:
 
 ~~~~~ bash
-C:\Users\nobody> cmake ../ -G "Visual Studio 15 2017"
+C:\Users\nobody> cmake ../ -G "Visual Studio 16 2019" -A Win32
 ~~~~~
 
-To generate 64-bit Windows Visual Studio 2017 projects:
+To generate 64-bit Windows Visual Studio 2019 projects:
 
 ~~~~~ bash
-C:\Users\nobody> cmake ../ -G "Visual Studio 15 2017 Win64"
+C:\Users\nobody> cmake ../ -G "Visual Studio 16 2019" -A x64
 ~~~~~
 
 
@@ -85,49 +89,42 @@ $ cmake ../
 A makefile using release (optimized) flags is produced like this:
 
 ~~~~~ bash
-$ cmake ../ -DCMAKE_BUILD_TYPE=release
+$ cmake ../ -DCMAKE_BUILD_TYPE=Release
 ~~~~~
 
 A release build with debug info can be produced as well:
 
 ~~~~~ bash
-$ cmake ../ -DCMAKE_BUILD_TYPE=relwithdebinfo
+$ cmake ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo
 ~~~~~
 
 And your standard debug build will be produced using:
 
 ~~~~~ bash
-$ cmake ../ -DCMAKE_BUILD_TYPE=debug
+$ cmake ../ -DCMAKE_BUILD_TYPE=Debug
 ~~~~~
 
 To enable the use of sanitizers when the compiler in use supports them, set the
 sanitizer type when running CMake:
 
 ~~~~~ bash
-$ cmake ../ -DSANITIZE=address
+$ cmake ../ -DDRACO_SANITIZE=address
 ~~~~~
 
 Googletest Integration
 ----------------------
 
 Draco includes testing support built using Googletest. To enable Googletest unit
-test support the ENABLE_TESTS cmake variable must be turned on at cmake
+test support the DRACO_TESTS cmake variable must be turned on at cmake
 generation time:
 
 ~~~~~ bash
-$ cmake ../ -DENABLE_TESTS=ON
+$ cmake ../ -DDRACO_TESTS=ON
 ~~~~~
 
-When cmake is used as shown in the above example the Draco cmake file assumes
-that the Googletest source directory is a sibling of the Draco repository. To
-change the location to something else use the GTEST_SOURCE_DIR cmake variable:
-
-~~~~~ bash
-$ cmake ../ -DENABLE_TESTS=ON -DGTEST_SOURCE_DIR=path/to/googletest
-~~~~~
-
-To run the tests just execute `draco_tests` from your toolchain's build output
-directory.
+When cmake is used as shown in the above example the googletest directory must
+be a sibling of the Draco repository root directory. To run the tests execute
+`draco_tests` from your build output directory.
 
 WebAssembly Decoder
 -------------------
@@ -144,7 +141,7 @@ $ export EMSCRIPTEN=/path/to/emscripten/tools/parent
 
 # Emscripten.cmake can be found within your Emscripten installation directory,
 # it should be the subdir: cmake/Modules/Platform/Emscripten.cmake
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DENABLE_WASM=ON
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DDRACO_WASM=ON
 
 # Build the WebAssembly decoder.
 $ make
@@ -160,7 +157,7 @@ WebAssembly Mesh Only Decoder
 ~~~~~ bash
 
 # cmake command line for mesh only WebAssembly decoder.
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DENABLE_WASM=ON -DENABLE_POINT_CLOUD_COMPRESSION=OFF
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DDRACO_WASM=ON -DDRACO_POINT_CLOUD_COMPRESSION=OFF
 
 ~~~~~
 
@@ -170,7 +167,7 @@ WebAssembly Point Cloud Only Decoder
 ~~~~~ bash
 
 # cmake command line for point cloud only WebAssembly decoder.
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DENABLE_WASM=ON -DENABLE_MESH_COMPRESSION=OFF
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake -DDRACO_WASM=ON -DDRACO_MESH_COMPRESSION=OFF
 
 ~~~~~
 
@@ -197,6 +194,32 @@ $ cmake ../ -DCMAKE_TOOLCHAIN_FILE=/path/to/Emscripten.cmake
 $ make
 ~~~~~
 
+iOS Builds
+---------------------
+These are the basic commands needed to build Draco for iOS targets.
+~~~~~ bash
+
+#arm64
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/arm64-ios.cmake
+$ make
+
+#x86_64
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/x86_64-ios.cmake
+$ make
+
+#armv7
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/armv7-ios.cmake
+$ make
+
+#i386
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/i386-ios.cmake
+$ make
+~~~~~~
+
+After building for each target the libraries can be merged into a single
+universal/fat library using lipo, and then used in iOS applications.
+
+
 Native Android Builds
 ---------------------
 
@@ -204,24 +227,13 @@ It's sometimes useful to build Draco command line tools and run them directly on
 Android devices via adb.
 
 ~~~~~ bash
-# All targets require CMAKE_ANDROID_NDK. It must be set in the environment.
-$ export CMAKE_ANDROID_NDK=path/to/ndk
-
-# arm
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/armv7-android-ndk-libcpp.cmake
+# This example is for armeabi-v7a.
+$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/android.cmake \
+  -DDRACO_ANDROID_NDK_PATH=path/to/ndk -DANDROID_ABI=armeabi-v7a
 $ make
 
-# arm64
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/arm64-android-ndk-libcpp.cmake
-$ make
-
-# x86
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/x86-android-ndk-libcpp.cmake
-$ make
-
-# x86_64
-$ cmake ../ -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/x86_64-android-ndk-libcpp.cmake
-$ make
+# See the android.cmake toolchain file for additional ANDROID_ABI options and
+# other configurable Android variables.
 ~~~~~
 
 After building the tools they can be moved to an android device via the use of
@@ -274,7 +286,8 @@ To add Draco to your project:
 
 vcpkg
 ---------------------
-You can download and install Draco using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+You can download and install Draco using the
+[vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
 
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
@@ -282,4 +295,7 @@ You can download and install Draco using the [vcpkg](https://github.com/Microsof
     ./vcpkg integrate install
     vcpkg install draco
 
-The Draco port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+The Draco port in vcpkg is kept up to date by Microsoft team members and
+community contributors. If the version is out of date, please
+[create an issue or pull request](https://github.com/Microsoft/vcpkg) on the
+vcpkg repository.

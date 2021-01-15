@@ -71,16 +71,21 @@ bool KdTreeAttributesEncoder::TransformAttributesToPortableFormat() {
             att->num_components(), range);
       } else {
         // Compute quantization settings from the attribute values.
-        attribute_quantization_transform.ComputeParameters(*att,
-                                                           quantization_bits);
+        if (!attribute_quantization_transform.ComputeParameters(
+                *att, quantization_bits)) {
+          return false;
+        }
       }
       attribute_quantization_transforms_.push_back(
           attribute_quantization_transform);
       // Store the quantized attribute in an array that will be used when we do
       // the actual encoding of the data.
-      quantized_portable_attributes_.push_back(
-          attribute_quantization_transform.GeneratePortableAttribute(
-              *att, static_cast<int>(num_points)));
+      auto portable_att =
+          attribute_quantization_transform.InitTransformedAttribute(*att,
+                                                                    num_points);
+      attribute_quantization_transform.TransformAttribute(*att, {},
+                                                          portable_att.get());
+      quantized_portable_attributes_.push_back(std::move(portable_att));
     } else if (att->data_type() == DT_INT32 || att->data_type() == DT_INT16 ||
                att->data_type() == DT_INT8) {
       // For signed types, find the minimum value for each component. These

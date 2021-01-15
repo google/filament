@@ -48,7 +48,7 @@ draco::DracoMesh *DecodeToDracoMesh(const std::string &file_name) {
 
 TEST(DracoUnityPluginTest, TestDecode) {
   draco::DracoMesh *draco_mesh =
-      DecodeToDracoMesh("test_nm.obj.edgebreaker.1.2.0.drc");
+      DecodeToDracoMesh("test_nm.obj.edgebreaker.cl4.2.2.drc");
   ASSERT_NE(draco_mesh, nullptr);
   ASSERT_EQ(draco_mesh->num_faces, 170);
   ASSERT_EQ(draco_mesh->num_vertices, 99);

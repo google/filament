@@ -18,29 +18,14 @@
 #include "draco/io/file_reader_interface.h"
 #include "draco/io/file_writer_factory.h"
 #include "draco/io/file_writer_interface.h"
+#include "draco/io/file_writer_utils.h"
 #include "draco/io/parser_utils.h"
 
 namespace draco {
 
-bool SplitPath(const std::string &full_path, std::string *out_folder_path,
+void SplitPath(const std::string &full_path, std::string *out_folder_path,
                std::string *out_file_name) {
-  const auto pos = full_path.find_last_of("/\\");
-  if (pos != std::string::npos) {
-    if (out_folder_path) {
-      *out_folder_path = full_path.substr(0, pos);
-    }
-    if (out_file_name) {
-      *out_file_name = full_path.substr(pos + 1, full_path.length());
-    }
-  } else {
-    if (out_folder_path) {
-      *out_folder_path = ".";
-    }
-    if (out_file_name) {
-      *out_file_name = full_path;
-    }
-  }
-  return true;
+  SplitPathPrivate(full_path, out_folder_path, out_file_name);
 }
 
 std::string ReplaceFileExtension(const std::string &in_file_name,

@@ -278,8 +278,10 @@ bool KdTreeAttributesDecoder::DecodeDataNeededByPortableTransforms(
           return false;
         }
         AttributeQuantizationTransform transform;
-        transform.SetParameters(quantization_bits, min_value.data(),
-                                num_components, max_value_dif);
+        if (!transform.SetParameters(quantization_bits, min_value.data(),
+                                     num_components, max_value_dif)) {
+          return false;
+        }
         const int num_transforms =
             static_cast<int>(attribute_quantization_transforms_.size());
         if (!transform.TransferToAttribute(
@@ -293,7 +295,9 @@ bool KdTreeAttributesDecoder::DecodeDataNeededByPortableTransforms(
     // Decode transform data for signed integer attributes.
     for (int i = 0; i < min_signed_values_.size(); ++i) {
       int32_t val;
-      DecodeVarint(&val, in_buffer);
+      if (!DecodeVarint(&val, in_buffer)) {
+        return false;
+      }
       min_signed_values_[i] = val;
     }
     return true;
@@ -353,8 +357,9 @@ bool KdTreeAttributesDecoder::DecodeDataNeededByPortableTransforms(
       return false;
     }
     if (6 < compression_level) {
-      LOGE("KdTreeAttributesDecoder: compression level %i not supported.\n",
-           compression_level);
+      DRACO_LOGE(
+          "KdTreeAttributesDecoder: compression level %i not supported.\n",
+          compression_level);
       return false;
     }
 

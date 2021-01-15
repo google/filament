@@ -43,6 +43,19 @@ TEST(FileUtilsTest, ReplaceExtension) {
   ASSERT_EQ(draco::ReplaceFileExtension("a/b/c.d", "xyz"), "a/b/c.xyz");
 }
 
+TEST(FileUtilsTest, LowercaseFileExtension) {
+  ASSERT_EQ(draco::LowercaseFileExtension("image.jpeg"), "jpeg");
+  ASSERT_EQ(draco::LowercaseFileExtension("image.JPEG"), "jpeg");
+  ASSERT_EQ(draco::LowercaseFileExtension("image.png"), "png");
+  ASSERT_EQ(draco::LowercaseFileExtension("image.pNg"), "png");
+  ASSERT_EQ(draco::LowercaseFileExtension("FILE.glb"), "glb");
+  ASSERT_EQ(draco::LowercaseFileExtension(".file.gltf"), "gltf");
+  ASSERT_EQ(draco::LowercaseFileExtension("the.file.gltf"), "gltf");
+  ASSERT_EQ(draco::LowercaseFileExtension("FILE_glb"), "");
+  ASSERT_EQ(draco::LowercaseFileExtension(""), "");
+  ASSERT_EQ(draco::LowercaseFileExtension("image."), "");
+}
+
 TEST(FileUtilsTest, GetFullPath) {
   // Tests that full path is returned when a sibling file has full path.
   ASSERT_EQ(draco::GetFullPath("xo.png", "/d/i/r/xo.gltf"), "/d/i/r/xo.png");

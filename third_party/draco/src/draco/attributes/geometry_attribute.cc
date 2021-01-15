@@ -43,10 +43,6 @@ void GeometryAttribute::Init(GeometryAttribute::Type attribute_type,
 }
 
 bool GeometryAttribute::CopyFrom(const GeometryAttribute &src_att) {
-  if (buffer_ == nullptr || src_att.buffer_ == nullptr) {
-    return false;
-  }
-  buffer_->Update(src_att.buffer_->data(), src_att.buffer_->data_size());
   num_components_ = src_att.num_components_;
   data_type_ = src_att.data_type_;
   normalized_ = src_att.normalized_;
@@ -55,6 +51,14 @@ bool GeometryAttribute::CopyFrom(const GeometryAttribute &src_att) {
   attribute_type_ = src_att.attribute_type_;
   buffer_descriptor_ = src_att.buffer_descriptor_;
   unique_id_ = src_att.unique_id_;
+  if (src_att.buffer_ == nullptr) {
+    buffer_ = nullptr;
+  } else {
+    if (buffer_ == nullptr) {
+      return false;
+    }
+    buffer_->Update(src_att.buffer_->data(), src_att.buffer_->data_size());
+  }
   return true;
 }
 

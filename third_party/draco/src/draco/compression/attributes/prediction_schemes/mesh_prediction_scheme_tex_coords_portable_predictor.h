@@ -156,6 +156,13 @@ bool MeshPredictionSchemeTexCoordsPortablePredictor<
       const VectorD<int64_t, 2> x_uv =
           n_uv * pn_norm2_squared + (cn_dot_pn * pn_uv);
 
+      const int64_t pn_absmax_element =
+          std::max(std::max(std::abs(pn[0]), std::abs(pn[1])), std::abs(pn[2]));
+      if (cn_dot_pn > std::numeric_limits<int64_t>::max() / pn_absmax_element) {
+        // return false if squared length calculation would overflow.
+        return false;
+      }
+
       // Compute squared length of vector CX in position coordinate system:
       const VectorD<int64_t, 3> x_pos =
           next_pos + (cn_dot_pn * pn) / pn_norm2_squared;

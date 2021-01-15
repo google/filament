@@ -69,7 +69,14 @@ class MeshPredictionSchemeGeometricNormalPredictorArea
 
       // Computing cross product.
       const VectorD<int64_t, 3> cross = CrossProduct(delta_next, delta_prev);
-      normal = normal + cross;
+
+      // Prevent signed integer overflows by doing math as unsigned.
+      auto normal_data = reinterpret_cast<uint64_t *>(normal.data());
+      auto cross_data = reinterpret_cast<const uint64_t *>(cross.data());
+      normal_data[0] = normal_data[0] + cross_data[0];
+      normal_data[1] = normal_data[1] + cross_data[1];
+      normal_data[2] = normal_data[2] + cross_data[2];
+
       cit.Next();
     }
 

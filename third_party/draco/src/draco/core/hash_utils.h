@@ -17,9 +17,8 @@
 
 #include <stdint.h>
 
+#include <cstddef>
 #include <functional>
-
-// TODO(fgalligan): Move this to core.
 
 namespace draco {
 

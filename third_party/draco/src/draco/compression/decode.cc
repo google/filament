@@ -56,7 +56,10 @@ StatusOr<EncodedGeometryType> Decoder::GetEncodedGeometryType(
     DecoderBuffer *in_buffer) {
   DecoderBuffer temp_buffer(*in_buffer);
   DracoHeader header;
-  DRACO_RETURN_IF_ERROR(PointCloudDecoder::DecodeHeader(&temp_buffer, &header))
+  DRACO_RETURN_IF_ERROR(PointCloudDecoder::DecodeHeader(&temp_buffer, &header));
+  if (header.encoder_type >= NUM_ENCODED_GEOMETRY_TYPES) {
+    return Status(Status::DRACO_ERROR, "Unsupported geometry type.");
+  }
   return static_cast<EncodedGeometryType>(header.encoder_type);
 }
 

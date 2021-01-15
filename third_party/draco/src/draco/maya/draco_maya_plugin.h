@@ -10,15 +10,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_MAYA_PLUGIN_H_
-#define DRACO_MAYA_PLUGIN_H_
+#ifndef DRACO_MAYA_DRACO_MAYA_PLUGIN_H_
+#define DRACO_MAYA_DRACO_MAYA_PLUGIN_H_
 
 #include <fstream>
 
 #include "draco/compression/decode.h"
 #include "draco/compression/encode.h"
 
-#ifdef BUILD_MAYA_PLUGIN
+#ifdef DRACO_MAYA_PLUGIN
 
 // If compiling with Visual Studio.
 #if defined(_MSC_VER)
@@ -76,6 +76,6 @@ EXPORT_API EncodeResult drc2py_encode(Drc2PyMesh *in_mesh, char *file_path);
 }  // namespace maya
 }  // namespace draco
 
-#endif  // BUILD_MAYA_PLUGIN
+#endif  // DRACO_MAYA_PLUGIN
 
-#endif  // DRACO_MAYA_PLUGIN_H_
+#endif  // DRACO_MAYA_DRACO_MAYA_PLUGIN_H_

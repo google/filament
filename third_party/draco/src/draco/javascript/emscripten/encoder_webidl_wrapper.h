@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_JAVASCRIPT_EMSCRITPEN_ENCODER_WEBIDL_WRAPPER_H_
-#define DRACO_JAVASCRIPT_EMSCRITPEN_ENCODER_WEBIDL_WRAPPER_H_
+#ifndef DRACO_JAVASCRIPT_EMSCRIPTEN_ENCODER_WEBIDL_WRAPPER_H_
+#define DRACO_JAVASCRIPT_EMSCRIPTEN_ENCODER_WEBIDL_WRAPPER_H_
 
 #include <vector>
 
@@ -48,6 +48,8 @@ class MetadataBuilder {
                       const char *entry_value);
   bool AddIntEntry(draco::Metadata *metadata, const char *entry_name,
                    long entry_value);
+  bool AddIntEntryArray(draco::Metadata *metadata, const char *entry_name,
+                        const int32_t *entry_values, int32_t num_values);
   bool AddDoubleEntry(draco::Metadata *metadata, const char *entry_name,
                       double entry_value);
 };
@@ -181,4 +183,4 @@ class ExpertEncoder {
   draco::PointCloud *pc_;
 };
 
-#endif  // DRACO_JAVASCRIPT_EMSCRITPEN_ENCODER_WEBIDL_WRAPPER_H_
+#endif  // DRACO_JAVASCRIPT_EMSCRIPTEN_ENCODER_WEBIDL_WRAPPER_H_

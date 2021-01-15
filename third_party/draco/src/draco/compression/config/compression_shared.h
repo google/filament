@@ -42,6 +42,7 @@ enum EncodedGeometryType {
   INVALID_GEOMETRY_TYPE = -1,
   POINT_CLOUD = 0,
   TRIANGULAR_MESH,
+  NUM_ENCODED_GEOMETRY_TYPES
 };
 
 // List of encoding methods for point clouds.
@@ -105,6 +106,8 @@ enum PredictionSchemeTransformType {
   // Specialized transform for normal coordinates using canonicalized inverted
   // tiles.
   PREDICTION_TRANSFORM_NORMAL_OCTAHEDRON_CANONICALIZED = 3,
+  // The number of valid (non-negative) prediction scheme transform types.
+  NUM_PREDICTION_SCHEME_TRANSFORM_TYPES
 };
 
 // List of all mesh traversal methods supported by Draco framework.

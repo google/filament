@@ -53,6 +53,11 @@ bool SequentialIntegerAttributeDecoder::DecodeValues(
     if (!in_buffer->Decode(&prediction_transform_type)) {
       return false;
     }
+    // Check that decoded prediction scheme transform type is valid.
+    if (prediction_transform_type < PREDICTION_TRANSFORM_NONE ||
+        prediction_transform_type >= NUM_PREDICTION_SCHEME_TRANSFORM_TYPES) {
+      return false;
+    }
     prediction_scheme_ = CreateIntPredictionScheme(
         static_cast<PredictionSchemeMethod>(prediction_scheme_method),
         static_cast<PredictionSchemeTransformType>(prediction_transform_type));

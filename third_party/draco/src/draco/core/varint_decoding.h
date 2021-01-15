@@ -58,6 +58,7 @@ bool DecodeVarintUnsigned(int depth, IntTypeT *out_val, DecoderBuffer *buffer) {
 
 // Decodes a specified integer as varint. Note that the IntTypeT must be the
 // same as the one used in the corresponding EncodeVarint() call.
+// out_val is undefined if this returns false.
 template <typename IntTypeT>
 bool DecodeVarint(IntTypeT *out_val, DecoderBuffer *buffer) {
   if (std::is_unsigned<IntTypeT>::value) {
