@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --gamma-alpha-mode
+exec ./pngvalid --strict --gamma-alpha-mode

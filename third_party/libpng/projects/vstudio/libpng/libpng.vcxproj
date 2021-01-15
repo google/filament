@@ -84,7 +84,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>$(WarningLevel)</WarningLevel>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -97,9 +97,9 @@
       <BrowseInformation>true</BrowseInformation>
       <CompileAs>CompileAsC</CompileAs>
       <StringPooling>true</StringPooling>
-      <DisableSpecificWarnings>4996;4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>$(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ZLibSrcDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>$(TreatWarningAsError)</TreatWarningAsError>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
@@ -114,7 +114,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug Library|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>$(WarningLevel)</WarningLevel>
       <MinimalRebuild>false</MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -128,9 +128,9 @@
       <BrowseInformation>true</BrowseInformation>
       <CompileAs>CompileAsC</CompileAs>
       <StringPooling>true</StringPooling>
-      <DisableSpecificWarnings>4996;4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>$(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ZLibSrcDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>$(TreatWarningAsError)</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -140,7 +140,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>$(WarningLevel)</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -153,9 +153,9 @@
       <CompileAs>CompileAsC</CompileAs>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
-      <DisableSpecificWarnings>4996;4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>$(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ZLibSrcDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>$(TreatWarningAsError)</TreatWarningAsError>
       <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
@@ -170,7 +170,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Library|Win32'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>$(WarningLevel)</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -184,9 +184,9 @@
       <CompileAs>CompileAsC</CompileAs>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
-      <DisableSpecificWarnings>4996;4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>$(DisableSpecificWarnings)</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ZLibSrcDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>$(TreatWarningAsError)</TreatWarningAsError>
       <Optimization>Full</Optimization>
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>

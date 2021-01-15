@@ -8,19 +8,18 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-# You should also run makefile.ne16bsd
-
 LOCALBASE?=/usr/local
 LIBDIR=	${LOCALBASE}/lib
 MANDIR= ${LOCALBASE}/man
 INCSDIR=${LOCALBASE}/include
 
-LIB=	png
 SHLIB_MAJOR=	16
-SHLIB_MINOR=	1.6.16
-SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
-	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
-	pngwtran.c pngmem.c pngerror.c pngpread.c
+SHLIB_MINOR=	1.6.37
+
+LIB=	png
+SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
+	pngread.c pngrio.c pngrtran.c pngrutil.c pngset.c pngtrans.c \
+	pngwio.c pngwrite.c pngwtran.c pngwutil.c
 INCS=	png.h pngconf.h pnglibconf.h
 MAN=	libpng.3 libpngpf.3 png.5
 
@@ -39,16 +38,16 @@ PNGLIBCONF_H_PREBUILT= scripts/pnglibconf.h.prebuilt
 CLEANFILES+=pngtest.o pngtest pnglibconf.h
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $<
 
-pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
-	cp $(PNGLIBCONF_H_PREBUILT) $@
+pnglibconf.h: ${PNGLIBCONF_H_PREBUILT}
+	cp ${PNGLIBCONF_H_PREBUILT} $@
 
 pngtest.o:	pngtest.c
 	${CC} -c ${CPPFLAGS} ${CFLAGS} ${.ALLSRC} -o ${.TARGET}
 
 pngtest:	pngtest.o libpng.a
-	${CC} ${LDFLAGS} ${.ALLSRC} -o${.TARGET} -lz -lm
+	${CC} ${LDFLAGS} ${.ALLSRC} -o ${.TARGET} -lz -lm
 
 test:	pngtest
 	cd ${.CURDIR} && ${.OBJDIR}/pngtest

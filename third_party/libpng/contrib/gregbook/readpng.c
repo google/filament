@@ -4,7 +4,7 @@
 
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2007 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2007,2017 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -263,6 +263,12 @@ uch *readpng_get_image(double display_exponent, int *pChannels, ulg *pRowbytes)
 
     *pRowbytes = rowbytes = png_get_rowbytes(png_ptr, info_ptr);
     *pChannels = (int)png_get_channels(png_ptr, info_ptr);
+
+    /* Guard against integer overflow */
+    if (height > ((size_t)(-1))/rowbytes) {
+        fprintf(stderr, "readpng:  image_data buffer would be too large\n",
+        return NULL;
+    }
 
     if ((image_data = (uch *)malloc(rowbytes*height)) == NULL) {
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);

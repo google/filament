@@ -1,5 +1,5 @@
 # makefile for SCO OSr5  ELF and Unixware 7 with Native cc
-# Contributed by Mike Hopkirk (hops@sco.com) modified from Makefile.lnx
+# Contributed by Mike Hopkirk (hops at sco.com) modified from Makefile.lnx
 #   force ELF build dynamic linking, SONAME setting in lib and RPATH in app
 # Copyright (C) 2002, 2006, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 1998 Greg Roelofs
@@ -201,7 +201,7 @@ clean:
 	$(LIBSO) $(LIBSOMAJ)* pngtest-static pngtesti \
 	pnglibconf.h libpng.pc
 
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO Y2KINFO
+DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
 writelock:
 	chmod a-w *.[ch35] $(DOCS) scripts/*
 

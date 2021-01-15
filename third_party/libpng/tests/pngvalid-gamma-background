@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --gamma-background
+exec ./pngvalid --strict --gamma-background

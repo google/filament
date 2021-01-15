@@ -16,10 +16,10 @@ OBJS = png.obj, pngset.obj, pngget.obj, pngrutil.obj, pngtrans.obj,\
 CFLAGS= $(C_DEB) $(CC_DEFS) $(PREF)
 
 all : pngtest.exe libpng.olb
-		@ write sys$output " pngtest available"
+	@ write sys$output " pngtest available"
 
 libpng.olb : libpng.olb($(OBJS))
-	@ write sys$output " Libpng available"
+	@ write sys$output " libpng available"
 
 
 pngtest.exe : pngtest.obj libpng.olb

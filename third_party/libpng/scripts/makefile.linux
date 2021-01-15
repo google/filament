@@ -10,7 +10,7 @@
 # Library name:
 LIBNAME = libpng16
 PNGMAJ = 16
-RELEASE = 16
+RELEASE = 37
 
 # Shared library names:
 LIBSO=$(LIBNAME).so
@@ -50,8 +50,7 @@ WARNMORE=-Wwrite-strings -Wpointer-arith -Wshadow \
 # for pgcc version 2.95.1, -O3 is buggy; don't use it.
 
 CPPFLAGS=-I$(ZLIBINC) # -DPNG_DEBUG=5
-CFLAGS= -W -Wall -O3 -funroll-loops \
-	$(ALIGN) # $(WARNMORE) -g -DPNG_DEBUG=5
+CFLAGS=-W -Wall -O3 -funroll-loops $(ALIGN) # $(WARNMORE) -g
 
 LDFLAGS=-L. -Wl,-rpath,. -L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) -lpng16 -lz -lm
 LDFLAGS_A=-L$(ZLIBLIB) -Wl,-rpath,$(ZLIBLIB) libpng.a -lz -lm
@@ -92,7 +91,7 @@ OBJSDLL = $(OBJS:.o=.pic.o)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 .c.pic.o:
-	$(CC) -c $(CFLAGS) -fPIC -o $@ $*.c
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -fPIC -o $@ $*.c
 
 all: libpng.a $(LIBSO) pngtest pngtest-static libpng.pc libpng-config
 
@@ -222,7 +221,7 @@ clean:
 	$(LIBSO) $(LIBSOMAJ)* pngtest-static pngtesti \
 	libpng.pc pnglibconf.h
 
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO Y2KINFO
+DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
 writelock:
 	chmod a-w *.[ch35] $(DOCS) scripts/*
 

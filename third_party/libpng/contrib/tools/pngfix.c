@@ -1,8 +1,7 @@
 /* pngfix.c
  *
- * Copyright (c) 2014 John Cunningham Bowler
- *
- * Last changed in libpng 1.6.14 [October 23, 2014]
+ * Last changed in libpng 1.6.31 [July 27, 2017]
+ * Copyright (c) 2014-2017 John Cunningham Bowler
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -52,7 +51,10 @@
 #ifdef PNG_SETJMP_SUPPORTED
 #include <setjmp.h>
 
-#if defined(PNG_READ_SUPPORTED) && defined(PNG_EASY_ACCESS_SUPPORTED)
+#if defined(PNG_READ_SUPPORTED) && defined(PNG_EASY_ACCESS_SUPPORTED) &&\
+   (defined(PNG_READ_DEINTERLACE_SUPPORTED) ||\
+    defined(PNG_READ_INTERLACING_SUPPORTED))
+
 /* zlib.h defines the structure z_stream, an instance of which is included
  * in this structure and is required for decompressing the LZ compressed
  * data in PNG files.
@@ -71,8 +73,8 @@
  * with older builds.
  */
 #if ZLIB_VERNUM < 0x1260
-#  define PNGZ_MSG_CAST(s) png_constcast(char*,s)
-#  define PNGZ_INPUT_CAST(b) png_constcast(png_bytep,b)
+#  define PNGZ_MSG_CAST(s) constcast(char*,s)
+#  define PNGZ_INPUT_CAST(b) constcast(png_bytep,b)
 #else
 #  define PNGZ_MSG_CAST(s) (s)
 #  define PNGZ_INPUT_CAST(b) (b)
@@ -86,17 +88,17 @@
 
 /* Copied from pngpriv.h */
 #ifdef __cplusplus
-#  define png_voidcast(type, value) static_cast<type>(value)
-#  define png_constcast(type, value) const_cast<type>(value)
-#  define png_aligncast(type, value) \
+#  define voidcast(type, value) static_cast<type>(value)
+#  define constcast(type, value) const_cast<type>(value)
+#  define aligncast(type, value) \
    static_cast<type>(static_cast<void*>(value))
-#  define png_aligncastconst(type, value) \
+#  define aligncastconst(type, value) \
    static_cast<type>(static_cast<const void*>(value))
 #else
-#  define png_voidcast(type, value) (value)
-#  define png_constcast(type, value) ((type)(value))
-#  define png_aligncast(type, value) ((void*)(value))
-#  define png_aligncastconst(type, value) ((const void*)(value))
+#  define voidcast(type, value) (value)
+#  define constcast(type, value) ((type)(value))
+#  define aligncast(type, value) ((void*)(value))
+#  define aligncastconst(type, value) ((const void*)(value))
 #endif /* __cplusplus */
 
 #if PNG_LIBPNG_VER < 10700
@@ -134,7 +136,7 @@
 #define png_zTXt PNG_U32(122,  84,  88, 116)
 #endif
 
-/* The 8 byte signature as a pair of 32 bit quantities */
+/* The 8-byte signature as a pair of 32-bit quantities */
 #define sig1 PNG_U32(137,  80,  78,  71)
 #define sig2 PNG_U32( 13,  10,  26,  10)
 
@@ -156,7 +158,7 @@
  */
 #define UNREACHED 0
 
-/* 80-bit number handling - a PNG image can be up to (2^31-1)x(2^31-1) 8 byte
+/* 80-bit number handling - a PNG image can be up to (2^31-1)x(2^31-1) 8-byte
  * (16-bit RGBA) pixels in size; that's less than 2^65 bytes or 2^68 bits, so
  * arithmetic of 80-bit numbers is sufficient.  This representation uses an
  * arbitrary length array of png_uint_16 digits (0..65535).  The representation
@@ -316,13 +318,13 @@ uarb_mult32(uarb acc, int a_digits, uarb num, int n_digits, png_uint_32 val)
       a_digits = uarb_mult_digit(acc, a_digits, num, n_digits,
          (png_uint_16)(val & 0xffff));
 
-      /* Because n_digits and val are >0 the following must be true: */
-      assert(a_digits > 0);
-
       val >>= 16;
       if (val > 0)
          a_digits = uarb_mult_digit(acc+1, a_digits-1, num, n_digits,
             (png_uint_16)val) + 1;
+
+      /* Because n_digits and val are >0 the following must be true: */
+      assert(a_digits > 0);
    }
 
    return a_digits;
@@ -446,7 +448,7 @@ static void
 make_random_bytes(png_uint_32* seed, void* pv, size_t size)
 {
    png_uint_32 u0 = seed[0], u1 = seed[1];
-   png_bytep bytes = png_voidcast(png_bytep, pv);
+   png_bytep bytes = voidcast(png_bytep, pv);
 
    /* There are thirty-three bits; the next bit in the sequence is bit-33 XOR
     * bit-20.  The top 1 bit is in u1, the bottom 32 are in u0.
@@ -584,7 +586,7 @@ chunk_type_valid(png_uint_32 c)
    c &= ~PNG_U32(32,32,0,32);
    t = (c & ~0x1f1f1f1f) ^ 0x40404040;
 
-   /* Subtract 65 for each 8 bit quantity, this must not overflow
+   /* Subtract 65 for each 8-bit quantity, this must not overflow
     * and each byte must then be in the range 0-25.
     */
    c -= PNG_U32(65,65,65,65);
@@ -667,8 +669,8 @@ IDAT_list_extend(struct IDAT_list *tail)
 
       if (length < tail->length) /* arithmetic overflow */
          length = tail->length;
-            
-      next = png_voidcast(IDAT_list*, malloc(IDAT_list_size(NULL, length)));
+
+      next = voidcast(IDAT_list*, malloc(IDAT_list_size(NULL, length)));
       CLEAR(*next);
 
       /* The caller must handle this: */
@@ -770,7 +772,7 @@ skip_chunk_type(const struct global *global, png_uint_32 type)
          return 0;
 
       /* Chunks that specify gamma encoding which should therefore only be
-       * removed the the user insists:
+       * removed if the user insists:
        */
       case png_gAMA: case png_sRGB:
          if (global->skip >= SKIP_ALL)
@@ -921,7 +923,7 @@ emit_string(const char *str, FILE *out)
 
       else if (isspace(UCHAR_MAX & *str))
          putc('_', out);
-   
+
       else
          fprintf(out, "\\%.3o", *str);
 }
@@ -1821,7 +1823,7 @@ IDAT_init(struct IDAT * const idat, struct file * const file)
 }
 
 static png_uint_32
-rechunk_length(struct IDAT *idat)
+rechunk_length(struct IDAT *idat, int start)
    /* Return the length for the next IDAT chunk, taking into account
     * rechunking.
     */
@@ -1833,7 +1835,7 @@ rechunk_length(struct IDAT *idat)
       const struct IDAT_list *cur;
       unsigned int count;
 
-      if (idat->idat_index == 0) /* at the new chunk (first time) */
+      if (start)
          return idat->idat_length; /* use the cache */
 
       /* Otherwise rechunk_length is called at the end of a chunk for the length
@@ -1945,7 +1947,7 @@ process_IDAT(struct file *file)
       list->count = 0;
       file->idat->idat_list_tail = list;
    }
-   
+
    /* And fill in the next IDAT information buffer. */
    list->lengths[(list->count)++] = file->chunk->chunk_length;
 
@@ -1992,7 +1994,7 @@ process_IDAT(struct file *file)
       idat->idat_index = 0; /* Index into chunk data */
 
       /* Update the chunk length to the correct value for the IDAT chunk: */
-      file->chunk->chunk_length = rechunk_length(idat);
+      file->chunk->chunk_length = rechunk_length(idat, 1/*start*/);
 
       /* Change the state to writing IDAT chunks */
       file->state = STATE_IDAT;
@@ -2138,7 +2140,7 @@ zlib_end(struct zlib *zlib)
           *
           * z-rc is the zlib failure code; message is the error message with
           * spaces replaced by '-'.  The compressed byte count indicates where
-          * in the zlib stream the error occured.
+          * in the zlib stream the error occurred.
           */
          type_name(zlib->chunk->chunk_type, stdout);
          printf(" SKP %s %d %s ", zlib_flevel(zlib), zlib->file_bits,
@@ -2218,7 +2220,7 @@ zlib_init(struct zlib *zlib, struct IDAT *idat, struct chunk *chunk,
    /* These values are sticky across reset (in addition to the stuff in the
     * first block, which is actually constant.)
     */
-   zlib->file_bits = 16;
+   zlib->file_bits = 24;
    zlib->ok_bits = 16; /* unset */
    zlib->cksum = 0; /* set when a checksum error is detected */
 
@@ -2301,10 +2303,12 @@ zlib_advance(struct zlib *zlib, png_uint_32 nbytes)
                zlib->file_bits = file_bits;
 
                /* Check against the existing value - it may not need to be
-                * changed.
+                * changed.  Note that a bogus file_bits is allowed through once,
+                * to see if it works, but the window_bits value is set to 15,
+                * the maximum.
                 */
                if (new_bits == 0) /* no change */
-                  zlib->window_bits = file_bits;
+                  zlib->window_bits = ((file_bits > 15) ? 15 : file_bits);
 
                else if (new_bits != file_bits) /* rewrite required */
                   bIn = (png_byte)((bIn & 0xf) + ((new_bits-8) << 4));
@@ -2325,8 +2329,7 @@ zlib_advance(struct zlib *zlib, png_uint_32 nbytes)
                if (bIn != b2)
                {
                   /* If the first byte wasn't changed this indicates an error in
-                   * the checksum calculation; signal this by setting file_bits
-                   * (not window_bits) to 0.
+                   * the checksum calculation; signal this by setting 'cksum'.
                    */
                   if (zlib->file_bits == zlib->window_bits)
                      zlib->cksum = 1;
@@ -2360,7 +2363,7 @@ zlib_advance(struct zlib *zlib, png_uint_32 nbytes)
       flush = Z_NO_FLUSH;
       out_bytes = 0;
 
-      /* NOTE: expression 3 is only evaluted on 'continue', because of the
+      /* NOTE: expression 3 is only evaluated on 'continue', because of the
        * 'break' at the end of this loop below.
        */
       for (;endrc == ZLIB_OK;
@@ -2412,7 +2415,7 @@ zlib_advance(struct zlib *zlib, png_uint_32 nbytes)
                   endrc = ZLIB_TOO_FAR_BACK;
                   break;
                }
-               /* FALL THROUGH */
+               /* FALLTHROUGH */
 
             default:
                zlib_message(zlib, 0/*stream error*/);
@@ -2511,7 +2514,7 @@ zlib_run(struct zlib *zlib)
        */
       for (;;)
       {
-         const unsigned int count = list->count;
+         unsigned int count = list->count;
          unsigned int i;
 
          for (i = 0; i<count; ++i)
@@ -2566,7 +2569,7 @@ zlib_run(struct zlib *zlib)
                   list->lengths[i] -= zlib->extra_bytes;
                   list->count = i+1;
                   zlib->idat->idat_list_tail = list;
-                  /* FALL THROUGH */
+                  /* FALLTHROUGH */
 
                default:
                   return rc;
@@ -2585,7 +2588,7 @@ zlib_run(struct zlib *zlib)
    {
       struct chunk *chunk = zlib->chunk;
       int rc;
-      
+
       assert(zlib->rewrite_offset < chunk->chunk_length);
 
       rc = zlib_advance(zlib, chunk->chunk_length - zlib->rewrite_offset);
@@ -2661,7 +2664,7 @@ zlib_check(struct file *file, png_uint_32 offset)
              * this case, so do the optimization anyway.
              */
             if (zlib.cksum)
-               chunk_message(zlib.chunk, "zlib checkum");
+               chunk_message(zlib.chunk, "zlib checksum");
             break;
 
 
@@ -2669,7 +2672,7 @@ zlib_check(struct file *file, png_uint_32 offset)
             /* Truncated stream; unrecoverable, gets converted to ZLIB_FATAL */
             zlib.z.msg = PNGZ_MSG_CAST("[truncated]");
             zlib_message(&zlib, 0/*expected*/);
-            /* FALL THROUGH */
+            /* FALLTHROUGH */
 
          default:
             /* Unrecoverable error; skip the chunk; a zlib_message has already
@@ -2788,7 +2791,7 @@ process_chunk(struct file *file, png_uint_32 file_crc, png_uint_32 next_length,
     * to read_chunk.
     */
 {
-   const png_uint_32 type = file->type;
+   png_uint_32 type = file->type;
 
    if (file->global->verbose > 1)
    {
@@ -3149,7 +3152,7 @@ read_chunk(struct file *file)
       }
    }
 
-   /* Control gets to here if the the stream seems invalid or damaged in some
+   /* Control gets to here if the stream seems invalid or damaged in some
     * way.  Either there was a problem reading all the expected data (this
     * chunk's data, its CRC and the length and type of the next chunk) or the
     * next chunk length/type are invalid.  Notice that the cases that end up
@@ -3337,7 +3340,7 @@ read_callback(png_structp png_ptr, png_bytep buffer, size_t count)
                if (file->state != STATE_IDAT && length > 0)
                   setpos(chunk);
             }
-            /* FALL THROUGH */
+            /* FALLTHROUGH */
 
          default:
             assert(chunk != NULL);
@@ -3469,7 +3472,8 @@ read_callback(png_structp png_ptr, png_bytep buffer, size_t count)
                      /* Write another IDAT chunk.  Call rechunk_length to
                       * calculate the length required.
                       */
-                     length = chunk->chunk_length = rechunk_length(file->idat);
+                     length = chunk->chunk_length =
+                         rechunk_length(file->idat, 0/*end*/);
                      assert(type == png_IDAT);
                      file->write_count = 0; /* for the new chunk */
                      --(file->write_count); /* fake out the increment below */
@@ -3535,7 +3539,7 @@ get_control(png_const_structrp png_ptr)
    /* This just returns the (file*).  The chunk and idat control structures
     * don't always exist.
     */
-   struct control *control = png_voidcast(struct control*,
+   struct control *control = voidcast(struct control*,
       png_get_error_ptr(png_ptr));
    return &control->file;
 }
@@ -3543,7 +3547,7 @@ get_control(png_const_structrp png_ptr)
 static void
 allocate(struct file *file, int allocate_idat)
 {
-   struct control *control = png_voidcast(struct control*, file->alloc_ptr);
+   struct control *control = voidcast(struct control*, file->alloc_ptr);
 
    if (allocate_idat)
    {
@@ -3577,10 +3581,9 @@ read_png(struct control *control)
 {
    png_structp png_ptr;
    png_infop info_ptr = NULL;
-   volatile png_bytep row = NULL, display = NULL;
    volatile int rc;
 
-   png_ptr = png_create_read_struct(png_get_libpng_ver(NULL), control,
+   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, control,
       error_handler, warning_handler);
 
    if (png_ptr == NULL)
@@ -3594,6 +3597,16 @@ read_png(struct control *control)
    rc = setjmp(control->file.jmpbuf);
    if (rc == 0)
    {
+#     ifdef PNG_SET_USER_LIMITS_SUPPORTED
+         /* Remove any limits on the size of PNG files that can be read,
+          * without this we may reject files based on built-in safety
+          * limits.
+          */
+         png_set_user_limits(png_ptr, 0x7fffffff, 0x7fffffff);
+         png_set_chunk_cache_max(png_ptr, 0);
+         png_set_chunk_malloc_max(png_ptr, 0);
+#     endif
+
       png_set_read_fn(png_ptr, control, read_callback);
 
       info_ptr = png_create_info_struct(png_ptr);
@@ -3606,32 +3619,22 @@ read_png(struct control *control)
       png_read_info(png_ptr, info_ptr);
 
       {
-         png_size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+        png_uint_32 height = png_get_image_height(png_ptr, info_ptr);
+        int passes = png_set_interlace_handling(png_ptr);
+        int pass;
 
-         row = png_voidcast(png_byte*, malloc(rowbytes));
-         display = png_voidcast(png_byte*, malloc(rowbytes));
+        png_start_read_image(png_ptr);
 
-         if (row == NULL || display == NULL)
-            png_error(png_ptr, "OOM allocating row buffers");
+        for (pass = 0; pass < passes; ++pass)
+        {
+           png_uint_32 y = height;
 
-         {
-            png_uint_32 height = png_get_image_height(png_ptr, info_ptr);
-            int passes = png_set_interlace_handling(png_ptr);
-            int pass;
-
-            png_start_read_image(png_ptr);
-
-            for (pass = 0; pass < passes; ++pass)
-            {
-               png_uint_32 y = height;
-
-               /* NOTE: this trashes the row each time; interlace handling won't
-                * work, but this avoids memory thrashing for speed testing.
-                */
-               while (y-- > 0)
-                  png_read_row(png_ptr, row, display);
-            }
-         }
+           /* NOTE: this skips asking libpng to return either version of
+            * the image row, but libpng still reads the rows.
+            */
+           while (y-- > 0)
+              png_read_row(png_ptr, NULL, NULL);
+        }
       }
 
       if (control->file.global->verbose)
@@ -3642,8 +3645,6 @@ read_png(struct control *control)
    }
 
    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-   if (row != NULL) free(row);
-   if (display != NULL) free(display);
    return rc;
 }
 
@@ -3677,7 +3678,7 @@ usage(const char *prog)
    size_t i;
    static const char *usage_string[] = {
 "  Tests, optimizes and optionally fixes the zlib header in PNG files.",
-"  Optionally, when fixing, strips ancilliary chunks from the file.",
+"  Optionally, when fixing, strips ancillary chunks from the file.",
 0,
 "OPTIONS",
 "  OPERATION",
@@ -3705,21 +3706,21 @@ usage(const char *prog)
 "        gAMA, sRGB [all]: These specify the gamma encoding used for the pixel",
 "            values.",
 "        cHRM, iCCP [color]: These specify how colors are encoded.  iCCP also",
-"            specifies the exact encoding of a pixel value however in practice",
-"            most programs will ignore it.",
+"            specifies the exact encoding of a pixel value; however, in",
+"            practice most programs will ignore it.",
 "        bKGD [transform]: This is used by libpng transforms."
 "    --max=<number>:",
-"      Use IDAT chunks sized <number>.  If no number is given the the IDAT",
+"      Use IDAT chunks sized <number>.  If no number is given the IDAT",
 "      chunks will be the maximum size permitted; 2^31-1 bytes.  If the option",
 "      is omitted the original chunk sizes will not be changed.  When the",
-"      option is given --strip=unsafe is set automatically, this may be",
+"      option is given --strip=unsafe is set automatically. This may be",
 "      cancelled if you know that all unknown unsafe-to-copy chunks really are",
 "      safe to copy across an IDAT size change.  This is true of all chunks",
 "      that have ever been formally proposed as PNG extensions.",
 "  MESSAGES",
 "      By default the program only outputs summaries for each file.",
 "    --quiet (-q):",
-"      Do not output the summaries except for files which cannot be read. With",
+"      Do not output the summaries except for files that cannot be read. With",
 "      two --quiets these are not output either.",
 "    --errors (-e):",
 "      Output errors from libpng and the program (except too-far-back).",
@@ -3752,7 +3753,7 @@ usage(const char *prog)
 "  the following codes.  Notice that the results for each file are combined",
 "  together - check one file at a time to get a meaningful error code!",
 "    0x01: The zlib too-far-back error existed in at least one chunk.",
-"    0x02: At least once chunk had a CRC error.",
+"    0x02: At least one chunk had a CRC error.",
 "    0x04: A chunk length was incorrect.",
 "    0x08: The file was truncated.",
 "  Errors less than 16 are potentially recoverable, for a single file if the",
@@ -3760,7 +3761,7 @@ usage(const char *prog)
 "  non-zero code is returned).",
 "    0x10: The file could not be read, even with corrections.",
 "    0x20: The output file could not be written.",
-"    0x40: An unexpected, potentially internal, error occured.",
+"    0x40: An unexpected, potentially internal, error occurred.",
 "  If the command line arguments are incorrect the program exits with exit",
 "  255.  Some older operating systems only support 7-bit exit codes, on those",
 "  systems it is suggested that this program is first tested by supplying",
@@ -3820,7 +3821,7 @@ usage(const char *prog)
 "          SKP: The chunk was skipped because of a zlib issue (zlib-rc) with",
 "               explanation 'message'",
 "          ERR: The read of the file was aborted.  The parameters explain why.",
-"$3 status:     For 'ERR' the accumulate status code from 'EXIT CODES' above.",
+"$3 status:     For 'ERR' the accumulated status code from 'EXIT CODES' above.",
 "               This is printed as a 2 digit hexadecimal value",
 "   comp-level: The recorded compression level (FLEVEL) of a zlib stream",
 "               expressed as a string {supfast,stdfast,default,maximum}",
@@ -3856,6 +3857,7 @@ usage(const char *prog)
 int
 main(int argc, const char **argv)
 {
+   char temp_name[FILENAME_MAX+1];
    const char *  prog = *argv;
    const char *  outfile = NULL;
    const char *  suffix = NULL;
@@ -3958,7 +3960,6 @@ main(int argc, const char **argv)
       else
       {
          size_t outlen = strlen(*argv);
-         char temp_name[FILENAME_MAX+1];
 
          if (outfile == NULL) /* else this takes precedence */
          {
@@ -4033,7 +4034,7 @@ main(void)
 int
 main(void)
 {
-   fprintf(stderr, "pngfix does not work without read support\n");
+   fprintf(stderr, "pngfix does not work without read deinterlace support\n");
    return 77;
 }
 #endif /* PNG_READ_SUPPORTED && PNG_EASY_ACCESS_SUPPORTED */

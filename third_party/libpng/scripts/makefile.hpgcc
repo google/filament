@@ -209,7 +209,7 @@ clean:
 	libpng-config $(LIBSO) $(LIBSOMAJ)* \
 	libpng.pc pnglibconf.h
 
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO Y2KINFO
+DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
 writelock:
 	chmod a-w *.[ch35] $(DOCS) scripts/*
 

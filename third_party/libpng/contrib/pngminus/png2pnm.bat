@@ -7,7 +7,7 @@ png2pnm.exe -noraw ..\pngsuite\basn0g16.png basn0g16.pgm
 REM -- full-color
 png2pnm.exe -noraw ..\pngsuite\basn2c08.png basn2c08.ppm
 png2pnm.exe -noraw ..\pngsuite\basn2c16.png basn2c16.ppm
-REM -- palletted
+REM -- paletted
 png2pnm.exe -noraw ..\pngsuite\basn3p01.png basn3p01.ppm
 png2pnm.exe -noraw ..\pngsuite\basn3p02.png basn3p02.ppm
 png2pnm.exe -noraw ..\pngsuite\basn3p04.png basn3p04.ppm
@@ -27,7 +27,7 @@ png2pnm.exe -raw ..\pngsuite\basn0g16.png rawn0g16.pgm
 REM -- full-color
 png2pnm.exe -raw ..\pngsuite\basn2c08.png rawn2c08.ppm
 png2pnm.exe -raw ..\pngsuite\basn2c16.png rawn2c16.ppm
-REM -- palletted
+REM -- paletted
 png2pnm.exe -raw ..\pngsuite\basn3p01.png rawn3p01.ppm
 png2pnm.exe -raw ..\pngsuite\basn3p02.png rawn3p02.ppm
 png2pnm.exe -raw ..\pngsuite\basn3p04.png rawn3p04.ppm

@@ -1,14 +1,15 @@
 
 /* arm_init.c - NEON optimised filter functions
  *
- * Copyright (c) 2014 Glenn Randers-Pehrson
+ * Copyright (c) 2018 Cosmin Truta
+ * Copyright (c) 2014,2016 Glenn Randers-Pehrson
  * Written by Mans Rullgard, 2011.
- * Last changed in libpng 1.6.16 [December 22, 2014]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
 /* Below, after checking __linux__, various non-C90 POSIX 1003.1 functions are
  * called.
  */
@@ -66,6 +67,7 @@ png_init_filter_functions_neon(png_structp pp, unsigned int bpp)
     * wrong order of the 'ON' and 'default' cases.  UNSET now defaults to OFF,
     * as documented in png.h
     */
+   png_debug(1, "in png_init_filter_functions_neon");
 #ifdef PNG_ARM_NEON_API_SUPPORTED
    switch ((pp->options >> PNG_ARM_NEON) & 3)
    {

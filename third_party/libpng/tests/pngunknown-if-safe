@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngunknown default=if-safe "${srcdir}/pngtest.png"
+exec ./pngunknown --strict default=if-safe "${srcdir}/pngtest.png"

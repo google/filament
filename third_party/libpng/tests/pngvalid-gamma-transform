@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --gamma-transform
+exec ./pngvalid --strict --gamma-transform

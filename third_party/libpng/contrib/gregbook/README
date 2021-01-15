@@ -15,7 +15,7 @@ of PBMPLUS/NetPBM) and converts them to PNG.
 
 The source code for all three demo programs currently compiles under
 Unix, OpenVMS, and 32-bit Windows.  (Special thanks to Martin Zinser,
-zinser@decus.de, for making the necessary changes for OpenVMS and for
+zinser at decus.de, for making the necessary changes for OpenVMS and for
 providing an appropriate build script.)  Build instructions can be found
 below.
 
@@ -55,7 +55,7 @@ mation and links to the latest version of the source code, and Chapters
 13-15 of the book for detailed discussion of the three programs.
 
 Greg Roelofs
-http://pobox.com/~newt/greg_contact.html
+https://pobox.com/~newt/greg_contact.html
 16 March 2008
 
 
@@ -63,7 +63,7 @@ BUILD INSTRUCTIONS
 
  - Prerequisites (in order of compilation):
 
-      - zlib            http://zlib.net/
+      - zlib            https://zlib.net/
       - libpng          http://www.libpng.org/pub/png/libpng.html
       - pngbook         http://www.libpng.org/pub/png/book/sources.html
 

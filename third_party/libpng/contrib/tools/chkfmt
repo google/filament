@@ -1,4 +1,11 @@
 #!/bin/sh
+
+# chkfmt
+#
+# COPYRIGHT: Written by John Cunningham Bowler, 2010.
+# To the extent possible under law, the author has waived all copyright and
+# related or neighboring rights to this work.  This work is published from:
+# United States.
 #
 # Check the format of the source files in the current directory - checks for a
 # line length of 80 characters max and no tab characters.
@@ -47,7 +54,7 @@ doed(){
 }
 
 # In beta versions the version string which appears in files can be a little
-# long and cause spuriously overlong lines.  To avoid this subtitute the version
+# long and cause spuriously overlong lines.  To avoid this substitute the version
 # string with a 'standard' version a.b.cc before checking for long lines.
 if test -r png.h
 then

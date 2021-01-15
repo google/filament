@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngimage --log "${srcdir}/contrib/pngsuite/"*.png
+exec ./pngimage --list-combos --log "${srcdir}/contrib/pngsuite/"*.png
