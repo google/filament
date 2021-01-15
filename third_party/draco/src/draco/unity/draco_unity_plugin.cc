@@ -14,7 +14,7 @@
 //
 #include "draco/unity/draco_unity_plugin.h"
 
-#ifdef BUILD_UNITY_PLUGIN
+#ifdef DRACO_UNITY_PLUGIN
 
 namespace {
 // Returns a DracoAttribute from a PointAttribute.
@@ -404,4 +404,4 @@ int DecodeMeshForUnity(char *data, unsigned int length,
 
 }  // namespace draco
 
-#endif  // BUILD_UNITY_PLUGIN
+#endif  // DRACO_UNITY_PLUGIN

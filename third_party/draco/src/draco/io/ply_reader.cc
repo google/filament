@@ -116,7 +116,7 @@ bool PlyReader::ParseElement(DecoderBuffer *buffer) {
   if (words.size() >= 3 && words[0] == "element") {
     element_name = words[1];
     const std::string count_str = words[2];
-    count = strtoll(count_str.c_str(), NULL, 10);
+    count = strtoll(count_str.c_str(), nullptr, 10);
   } else {
     return false;
   }

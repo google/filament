@@ -90,7 +90,7 @@ const char *MetadataQuerier::GetEntryName(const Metadata &metadata,
 
 Decoder::Decoder() {}
 
-draco_EncodedGeometryType Decoder::GetEncodedGeometryType(
+draco_EncodedGeometryType Decoder::GetEncodedGeometryType_Deprecated(
     DecoderBuffer *in_buffer) {
   return draco::Decoder::GetEncodedGeometryType(in_buffer).value();
 }
@@ -101,10 +101,25 @@ const Status *Decoder::DecodeBufferToPointCloud(DecoderBuffer *in_buffer,
   return &last_status_;
 }
 
+const draco::Status *Decoder::DecodeArrayToPointCloud(
+    const char *data, size_t data_size, PointCloud *out_point_cloud) {
+  DecoderBuffer buffer;
+  buffer.Init(data, data_size);
+  return DecodeBufferToPointCloud(&buffer, out_point_cloud);
+}
+
 const Status *Decoder::DecodeBufferToMesh(DecoderBuffer *in_buffer,
                                           Mesh *out_mesh) {
   last_status_ = decoder_.DecodeBufferToGeometry(in_buffer, out_mesh);
   return &last_status_;
+}
+
+const draco::Status *Decoder::DecodeArrayToMesh(const char *data,
+                                                size_t data_size,
+                                                Mesh *out_mesh) {
+  DecoderBuffer buffer;
+  buffer.Init(data, data_size);
+  return DecodeBufferToMesh(&buffer, out_mesh);
 }
 
 long Decoder::GetAttributeId(const PointCloud &pc,
@@ -233,7 +248,7 @@ bool Decoder::GetAttributeFloatArrayForAllPoints(const PointCloud &pc,
   if (data_size != out_size) {
     return false;
   }
-
+  const bool requested_type_is_float = pa.data_type() == draco::DT_FLOAT32;
   const int kMaxAttributeFloatValues = 4;
   float values[kMaxAttributeFloatValues] = {-2.0, -2.0, -2.0, -2.0};
   int entry_id = 0;
@@ -241,8 +256,12 @@ bool Decoder::GetAttributeFloatArrayForAllPoints(const PointCloud &pc,
 
   for (draco::PointIndex i(0); i < num_points; ++i) {
     const draco::AttributeValueIndex val_index = pa.mapped_index(i);
-    if (!pa.ConvertValue<float>(val_index, values)) {
-      return false;
+    if (requested_type_is_float) {
+      pa.GetValue(val_index, values);
+    } else {
+      if (!pa.ConvertValue<float>(val_index, values)) {
+        return false;
+      }
     }
     for (int j = 0; j < components; ++j) {
       floats[entry_id++] = values[j];

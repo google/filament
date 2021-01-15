@@ -29,7 +29,7 @@ Static Loading Javascript Decoder
 ---------------------------------
 
 In the previous examples, `DRACOLoader.js` will dynamically load Javascript decoder or
-WASM decoder depending on the support of the browser. To avoid dynamical loading the decoder, e.g. to use with JS bundler like webpack, you could directly include `draco_decoder.js` and set the decoder type to `js`. For example:
+WASM decoder depending on the support of the browser. To avoid dynamically loading the decoder, e.g. to use with JS bundler like webpack, you could directly include `draco_decoder.js` and set the decoder type to `js`. For example:
 
 Include Javascript decoder:
 ~~~~~ html
@@ -39,7 +39,7 @@ Include Javascript decoder:
 Create DracoLoader by setting the decoder type:
 ~~~~~ js
 // (Optional) Change decoder source directory (defaults to
-// 'https://www.gstatic.com/draco/v1/decoders/'). It is recommended to always
+// 'https://www.gstatic.com/draco/versioned/decoders/1.4.1/'). It is recommended to always
 // pull your Draco JavaScript and WASM decoders from this URL. Users will
 // benefit from having the Draco decoder in cache as more sites start using
 // the static URL.

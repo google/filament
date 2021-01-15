@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_SRC_DRACO_MESH_MESH_STRIPIFIER_H_
-#define DRACO_SRC_DRACO_MESH_MESH_STRIPIFIER_H_
+#ifndef DRACO_MESH_MESH_STRIPIFIER_H_
+#define DRACO_MESH_MESH_STRIPIFIER_H_
 
 #include "draco/mesh/mesh_misc_functions.h"
 
@@ -257,4 +257,4 @@ bool MeshStripifier::GenerateTriangleStripsWithDegenerateTriangles(
 
 }  // namespace draco
 
-#endif  // DRACO_SRC_DRACO_MESH_MESH_STRIPIFIER_H_
+#endif  // DRACO_MESH_MESH_STRIPIFIER_H_

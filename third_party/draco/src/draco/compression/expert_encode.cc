@@ -67,7 +67,7 @@ Status ExpertEncoder::EncodePointCloudToBuffer(const PointCloud &pc,
         kd_tree_possible = false;
       }
       if (kd_tree_possible && att->data_type() == DT_FLOAT32 &&
-          options().GetAttributeInt(0, "quantization_bits", -1) <= 0) {
+          options().GetAttributeInt(i, "quantization_bits", -1) <= 0) {
         kd_tree_possible = false;  // Quantization not enabled.
       }
       if (!kd_tree_possible) {

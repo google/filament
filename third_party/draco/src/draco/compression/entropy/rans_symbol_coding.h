@@ -31,11 +31,10 @@ constexpr int ComputeRAnsUnclampedPrecision(int symbols_bit_length) {
 // our rANS library (which is between 12 to 20 bits).
 constexpr int ComputeRAnsPrecisionFromUniqueSymbolsBitLength(
     int symbols_bit_length) {
-  return ComputeRAnsUnclampedPrecision(symbols_bit_length) < 12
-             ? 12
-             : ComputeRAnsUnclampedPrecision(symbols_bit_length) > 20
-                   ? 20
-                   : ComputeRAnsUnclampedPrecision(symbols_bit_length);
+  return ComputeRAnsUnclampedPrecision(symbols_bit_length) < 12 ? 12
+         : ComputeRAnsUnclampedPrecision(symbols_bit_length) > 20
+             ? 20
+             : ComputeRAnsUnclampedPrecision(symbols_bit_length);
 }
 
 // Compute approximate frequency table size needed for storing the provided

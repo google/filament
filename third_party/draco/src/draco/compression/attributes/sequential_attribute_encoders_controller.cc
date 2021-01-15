@@ -26,8 +26,8 @@ SequentialAttributeEncodersController::SequentialAttributeEncodersController(
     : sequencer_(std::move(sequencer)) {}
 
 SequentialAttributeEncodersController::SequentialAttributeEncodersController(
-    std::unique_ptr<PointsSequencer> sequencer, int att_id)
-    : AttributesEncoder(att_id), sequencer_(std::move(sequencer)) {}
+    std::unique_ptr<PointsSequencer> sequencer, int point_attrib_id)
+    : AttributesEncoder(point_attrib_id), sequencer_(std::move(sequencer)) {}
 
 bool SequentialAttributeEncodersController::Init(PointCloudEncoder *encoder,
                                                  const PointCloud *pc) {

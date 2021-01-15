@@ -53,6 +53,18 @@ bool MetadataBuilder::AddIntEntry(Metadata *metadata, const char *entry_name,
   return true;
 }
 
+bool MetadataBuilder::AddIntEntryArray(draco::Metadata *metadata,
+                                       const char *entry_name,
+                                       const int32_t *entry_values,
+                                       int32_t num_values) {
+  if (!metadata) {
+    return false;
+  }
+  const std::string name{entry_name};
+  metadata->AddEntryIntArray(name, {entry_values, entry_values + num_values});
+  return true;
+}
+
 bool MetadataBuilder::AddDoubleEntry(Metadata *metadata, const char *entry_name,
                                      double entry_value) {
   if (!metadata) {

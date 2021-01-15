@@ -20,6 +20,7 @@
 #include <sstream>
 
 #include "draco/attributes/attribute_quantization_transform.h"
+#include "draco/compression/config/compression_shared.h"
 #include "draco/compression/decode.h"
 #include "draco/compression/expert_encode.h"
 #include "draco/core/draco_test_base.h"
@@ -100,6 +101,33 @@ class EncodeTest : public ::testing::Test {
       }
       pc_builder.SetAttributeValueForPoint(gen_att_id_1, i,
                                            gen_att_data_1.data());
+    }
+    return pc_builder.Finalize(false);
+  }
+
+  std::unique_ptr<draco::PointCloud> CreateTestPointCloudPosNorm() const {
+    draco::PointCloudBuilder pc_builder;
+
+    constexpr int kNumPoints = 20;
+    pc_builder.Start(kNumPoints);
+
+    // Add one position attribute and a normal attribute.
+    const int32_t pos_att_id = pc_builder.AddAttribute(
+        draco::GeometryAttribute::POSITION, 3, draco::DT_FLOAT32);
+    const int32_t norm_att_id = pc_builder.AddAttribute(
+        draco::GeometryAttribute::NORMAL, 3, draco::DT_FLOAT32);
+
+    // Initialize the attribute values.
+    for (draco::PointIndex i(0); i < kNumPoints; ++i) {
+      const float pos_coord = static_cast<float>(i.value());
+      pc_builder.SetAttributeValueForPoint(
+          pos_att_id, i,
+          draco::Vector3f(pos_coord, -pos_coord, pos_coord).data());
+
+      // Pseudo-random normal.
+      draco::Vector3f norm(pos_coord * 2.f, pos_coord - 2.f, pos_coord * 3.f);
+      norm.Normalize();
+      pc_builder.SetAttributeValueForPoint(norm_att_id, i, norm.data());
     }
 
     return pc_builder.Finalize(false);
@@ -206,7 +234,7 @@ TEST_F(EncodeTest, TestExpertEncoderQuantization) {
   auto mesh = CreateTestMesh();
   ASSERT_NE(mesh, nullptr);
 
-  draco::ExpertEncoder encoder(*mesh.get());
+  draco::ExpertEncoder encoder(*mesh);
   encoder.SetAttributeQuantization(0, 16);  // Position quantization.
   encoder.SetAttributeQuantization(1, 15);  // Tex-coord 0 quantization.
   encoder.SetAttributeQuantization(2, 14);  // Tex-coord 1 quantization.
@@ -227,7 +255,7 @@ TEST_F(EncodeTest, TestEncoderQuantization) {
   encoder.SetAttributeQuantization(draco::GeometryAttribute::TEX_COORD, 15);
 
   draco::EncoderBuffer buffer;
-  encoder.EncodeMeshToBuffer(*mesh.get(), &buffer);
+  encoder.EncodeMeshToBuffer(*mesh, &buffer);
   VerifyNumQuantizationBits(buffer, 16, 15, 15);
 }
 
@@ -245,6 +273,62 @@ TEST_F(EncodeTest, TestLinesObj) {
   draco::Encoder encoder;
   encoder.SetAttributeQuantization(draco::GeometryAttribute::POSITION, 16);
 
+  draco::EncoderBuffer buffer;
+  ASSERT_TRUE(encoder.EncodePointCloudToBuffer(*pc, &buffer).ok());
+}
+
+TEST_F(EncodeTest, TestQuantizedInfinity) {
+  // This test verifies that Encoder fails to encode point cloud when requesting
+  // quantization of attribute that contains infinity values.
+  std::unique_ptr<draco::PointCloud> pc(
+      draco::ReadPointCloudFromTestFile("float_inf_point_cloud.ply"));
+  ASSERT_NE(pc, nullptr);
+
+  {
+    draco::Encoder encoder;
+    encoder.SetEncodingMethod(draco::POINT_CLOUD_SEQUENTIAL_ENCODING);
+    encoder.SetAttributeQuantization(draco::GeometryAttribute::POSITION, 11);
+
+    draco::EncoderBuffer buffer;
+    ASSERT_FALSE(encoder.EncodePointCloudToBuffer(*pc, &buffer).ok());
+  }
+
+  {
+    draco::Encoder encoder;
+    encoder.SetEncodingMethod(draco::POINT_CLOUD_KD_TREE_ENCODING);
+    encoder.SetAttributeQuantization(draco::GeometryAttribute::POSITION, 11);
+
+    draco::EncoderBuffer buffer;
+    ASSERT_FALSE(encoder.EncodePointCloudToBuffer(*pc, &buffer).ok());
+  }
+}
+
+TEST_F(EncodeTest, TestUnquantizedInfinity) {
+  // This test verifies that Encoder can successfully encode point cloud when
+  // not requesting quantization of attribute that contains infinity values.
+  std::unique_ptr<draco::PointCloud> pc(
+      draco::ReadPointCloudFromTestFile("float_inf_point_cloud.ply"));
+  ASSERT_NE(pc, nullptr);
+
+  // Note that the KD tree encoding method is not applicable to float values.
+  draco::Encoder encoder;
+  encoder.SetEncodingMethod(draco::POINT_CLOUD_SEQUENTIAL_ENCODING);
+
+  draco::EncoderBuffer buffer;
+  ASSERT_TRUE(encoder.EncodePointCloudToBuffer(*pc, &buffer).ok());
+}
+
+TEST_F(EncodeTest, TestQuantizedAndUnquantizedAttributes) {
+  // This test verifies that Encoder can successfully encode point cloud with
+  // two float attribiutes - one quantized and another unquantized. The encoder
+  // defaults to sequential encoding in this case.
+  std::unique_ptr<draco::PointCloud> pc(
+      draco::ReadPointCloudFromTestFile("float_two_att_point_cloud.ply"));
+  ASSERT_NE(pc, nullptr);
+
+  draco::Encoder encoder;
+  encoder.SetAttributeQuantization(draco::GeometryAttribute::POSITION, 11);
+  encoder.SetAttributeQuantization(draco::GeometryAttribute::NORMAL, 0);
   draco::EncoderBuffer buffer;
   ASSERT_TRUE(encoder.EncodePointCloudToBuffer(*pc, &buffer).ok());
 }
@@ -292,6 +376,32 @@ TEST_F(EncodeTest, TestTrackingOfNumberOfEncodedEntriesNotSet) {
   ASSERT_TRUE(encoder.EncodeMeshToBuffer(*mesh, &buffer).ok());
   ASSERT_EQ(encoder.num_encoded_points(), 0);
   ASSERT_EQ(encoder.num_encoded_faces(), 0);
+}
+
+TEST_F(EncodeTest, TestNoPosQuantizationNormalCoding) {
+  // Tests that we can encode and decode a file with quantized normals but
+  // non-quantized positions.
+  const auto mesh = draco::ReadMeshFromTestFile("test_nm.obj");
+  ASSERT_NE(mesh, nullptr);
+
+  // The mesh should have positions and normals.
+  ASSERT_NE(mesh->GetNamedAttribute(draco::GeometryAttribute::POSITION),
+            nullptr);
+  ASSERT_NE(mesh->GetNamedAttribute(draco::GeometryAttribute::NORMAL), nullptr);
+
+  draco::EncoderBuffer buffer;
+  draco::Encoder encoder;
+  // No quantization for positions.
+  encoder.SetAttributeQuantization(draco::GeometryAttribute::NORMAL, 8);
+
+  DRACO_ASSERT_OK(encoder.EncodeMeshToBuffer(*mesh, &buffer));
+
+  draco::Decoder decoder;
+
+  draco::DecoderBuffer in_buffer;
+  in_buffer.Init(buffer.data(), buffer.size());
+  const auto decoded_mesh = decoder.DecodeMeshFromBuffer(&in_buffer).value();
+  ASSERT_NE(decoded_mesh, nullptr);
 }
 
 }  // namespace

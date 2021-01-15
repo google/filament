@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 
 #include "draco/core/macros.h"
 
@@ -236,7 +237,12 @@ class VectorD {
   Scalar AbsSum() const {
     Scalar result(0);
     for (int i = 0; i < dimension; ++i) {
-      result += std::abs(v_[i]);
+      Scalar next_value = std::abs(v_[i]);
+      if (result > std::numeric_limits<Scalar>::max() - next_value) {
+        // Return the max if adding would have caused an overflow.
+        return std::numeric_limits<Scalar>::max();
+      }
+      result += next_value;
     }
     return result;
   }

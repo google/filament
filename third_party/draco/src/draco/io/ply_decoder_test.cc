@@ -86,6 +86,8 @@ TEST_F(PlyDecoderTest, TestPlyDecodingAll) {
   test_decoding("test_pos_color_ascii.ply");
   test_decoding("int_point_cloud.ply", 0, 16, nullptr);
   // test_decoding("test_pos_color.ply"); // tested
+  test_decoding("cube_quads.ply");
+  test_decoding("Box.ply");
 }
 
 }  // namespace draco

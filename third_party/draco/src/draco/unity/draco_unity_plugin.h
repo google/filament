@@ -20,7 +20,7 @@
 #include "draco/compression/decode.h"
 #include "draco/core/draco_types.h"
 
-#ifdef BUILD_UNITY_PLUGIN
+#ifdef DRACO_UNITY_PLUGIN
 
 // If compiling with Visual Studio.
 #if defined(_MSC_VER)
@@ -149,6 +149,6 @@ int EXPORT_API DecodeMeshForUnity(char *data, unsigned int length,
 
 }  // namespace draco
 
-#endif  // BUILD_UNITY_PLUGIN
+#endif  // DRACO_UNITY_PLUGIN
 
 #endif  // DRACO_UNITY_DRACO_UNITY_PLUGIN_H_

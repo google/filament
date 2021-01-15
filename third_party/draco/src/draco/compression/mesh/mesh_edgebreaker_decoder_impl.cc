@@ -162,6 +162,10 @@ bool MeshEdgebreakerDecoderImpl<TraversalDecoder>::CreateAttributesDecoder(
     if (!decoder_->buffer()->Decode(&traversal_method_encoded)) {
       return false;
     }
+    // Check that decoded traversal method is valid.
+    if (traversal_method_encoded >= NUM_TRAVERSAL_METHODS) {
+      return false;
+    }
     traversal_method =
         static_cast<MeshTraversalMethod>(traversal_method_encoded);
   }
@@ -577,11 +581,16 @@ int MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeConnectivity(
       SetOppositeCorners(corner_b, corner + 2);
 
       // Update vertex mapping.
-      corner_table_->MapCornerToVertex(corner, vertex_x);
-      corner_table_->MapCornerToVertex(
-          corner + 1, corner_table_->Vertex(corner_table_->Next(corner_b)));
       const VertexIndex vert_a_prev =
           corner_table_->Vertex(corner_table_->Previous(corner_a));
+      const VertexIndex vert_b_next =
+          corner_table_->Vertex(corner_table_->Next(corner_b));
+      if (vertex_x == vert_a_prev || vertex_x == vert_b_next) {
+        // Encoding is invalid, because face vertices are degenerate.
+        return -1;
+      }
+      corner_table_->MapCornerToVertex(corner, vertex_x);
+      corner_table_->MapCornerToVertex(corner + 1, vert_b_next);
       corner_table_->MapCornerToVertex(corner + 2, vert_a_prev);
       corner_table_->SetLeftMostCorner(vert_a_prev, corner + 2);
       // Mark the vertex |x| as interior.
@@ -952,9 +961,13 @@ MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeHoleAndTopologySplitEvents(
       for (uint32_t i = 0; i < num_topology_splits; ++i) {
         TopologySplitEventData event_data;
         uint32_t delta;
-        DecodeVarint<uint32_t>(&delta, decoder_buffer);
+        if (!DecodeVarint<uint32_t>(&delta, decoder_buffer)) {
+          return -1;
+        }
         event_data.source_symbol_id = delta + last_source_symbol_id;
-        DecodeVarint<uint32_t>(&delta, decoder_buffer);
+        if (!DecodeVarint<uint32_t>(&delta, decoder_buffer)) {
+          return -1;
+        }
         if (delta > event_data.source_symbol_id) {
           return -1;
         }
@@ -1009,7 +1022,9 @@ MeshEdgebreakerDecoderImpl<TraversalDecoder>::DecodeHoleAndTopologySplitEvents(
       for (uint32_t i = 0; i < num_hole_events; ++i) {
         HoleEventData event_data;
         uint32_t delta;
-        DecodeVarint<uint32_t>(&delta, decoder_buffer);
+        if (!DecodeVarint<uint32_t>(&delta, decoder_buffer)) {
+          return -1;
+        }
         event_data.symbol_id = delta + last_symbol_id;
         last_symbol_id = event_data.symbol_id;
         hole_event_data_.push_back(event_data);

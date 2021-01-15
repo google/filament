@@ -16,8 +16,32 @@
 
 const assert = require('assert');
 const draco = require('./draco-animation');
-const decoderModule = draco.createDecoderModule({});
-const encoderModule = draco.createEncoderModule({});
+
+// Global variables to keep track of which modules have been intiailized.
+let encoderModuleInitialized = false;
+let decoderModuleInitialized = false;
+
+// Callback function when encoder module has been intialized.
+let dracoEncoderType = {};
+dracoEncoderType['onModuleLoaded'] = function(module) {
+  encoderModuleInitialized = true;
+  console.log('Encoder Module Initialized!');
+  moduleInitialized();
+};
+
+// Callback function when decoder module has been intialized.
+let dracoDecoderType = {};
+dracoDecoderType['onModuleLoaded'] = function(module) {
+  decoderModuleInitialized = true;
+  console.log('Decoder Module Initialized!');
+  moduleInitialized();
+};
+
+// The code to create the encoder and decoder modules is asynchronous.
+// draco will call the 'onModuleLoaded' callback when the different
+// modules have been fully initialized.
+const encoderModule = draco.createEncoderModule(dracoEncoderType);
+const decoderModule = draco.createDecoderModule(dracoDecoderType);
 
 function generateAnimationData(numKeyframes, numAnimations, numComponents) {
   const timestamps = new Float32Array(numKeyframes);
@@ -141,10 +165,14 @@ function compareAnimation(animation, decodedAnimation) {
   console.log("Done.");
 }
 
-// Create animation with 50 frames and two animations.
-// The first animation has 3 components and the second has 4 components.
-const animation = generateAnimationData(100, 2, [3, 4]);
-const encodedData = encodeAnimation(animation);
+function moduleInitialized() {
+  if (encoderModuleInitialized && decoderModuleInitialized) {
+    // Create animation with 50 frames and two animations.
+    // The first animation has 3 components and the second has 4 components.
+    const animation = generateAnimationData(100, 2, [3, 4]);
+    const encodedData = encodeAnimation(animation);
 
-const decodedAnimation = decodeAnimation(encodedData);
-compareAnimation(animation, decodedAnimation);
+    const decodedAnimation = decodeAnimation(encodedData);
+    compareAnimation(animation, decodedAnimation);
+  }
+}

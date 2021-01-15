@@ -86,7 +86,7 @@ class PointCloudKdTreeEncodingTest : public ::testing::Test {
     std::unique_ptr<PointCloud> pc = ReadPointCloudFromTestFile(file_name);
     ASSERT_NE(pc, nullptr);
 
-    TestKdTreeEncoding(*pc.get());
+    TestKdTreeEncoding(*pc);
   }
 };
 

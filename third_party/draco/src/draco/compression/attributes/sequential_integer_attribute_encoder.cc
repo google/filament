@@ -81,6 +81,9 @@ bool SequentialIntegerAttributeEncoder::TransformAttributeToPortableFormat(
       value_to_value_map[orig_att->mapped_index(point_ids[i])] =
           AttributeValueIndex(i);
     }
+    if (portable_att->is_mapping_identity()) {
+      portable_att->SetExplicitMapping(encoder()->point_cloud()->num_points());
+    }
     // Go over all points of the original attribute and update the mapping in
     // the portable attribute.
     for (PointIndex i(0); i < encoder()->point_cloud()->num_points(); ++i) {

@@ -24,8 +24,7 @@ namespace draco {
 // |out_folder_path| will contain the path to the folder containing the file
 // excluding the final slash. If no folder is specified in the |full_path|, then
 // |out_folder_path| is set to "."
-// Returns false on error.
-bool SplitPath(const std::string &full_path, std::string *out_folder_path,
+void SplitPath(const std::string &full_path, std::string *out_folder_path,
                std::string *out_file_name);
 
 // Replaces file extension in |in_file_name| with |new_extension|.

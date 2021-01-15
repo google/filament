@@ -43,9 +43,18 @@ bool AttributesDecoder::DecodeAttributesDecoderData(DecoderBuffer *in_buffer) {
       return false;
     }
   }
+
+  // Check that decoded number of attributes is valid.
   if (num_attributes == 0) {
     return false;
   }
+  if (num_attributes > 5 * in_buffer->remaining_size()) {
+    // The decoded number of attributes is unreasonably high, because at least
+    // five bytes of attribute descriptor data per attribute are expected.
+    return false;
+  }
+
+  // Decode attribute descriptor data.
   point_attribute_ids_.resize(num_attributes);
   PointCloud *pc = point_cloud_;
   for (uint32_t i = 0; i < num_attributes; ++i) {
@@ -69,9 +78,14 @@ bool AttributesDecoder::DecodeAttributesDecoderData(DecoderBuffer *in_buffer) {
     if (data_type == DT_INVALID || data_type >= DT_TYPES_COUNT) {
       return false;
     }
-    const DataType draco_dt = static_cast<DataType>(data_type);
 
-    // Add the attribute to the point cloud
+    // Check decoded attribute descriptor data.
+    if (num_components == 0) {
+      return false;
+    }
+
+    // Add the attribute to the point cloud.
+    const DataType draco_dt = static_cast<DataType>(data_type);
     GeometryAttribute ga;
     ga.Init(static_cast<GeometryAttribute::Type>(att_type), nullptr,
             num_components, draco_dt, normalized > 0,
@@ -90,7 +104,9 @@ bool AttributesDecoder::DecodeAttributesDecoderData(DecoderBuffer *in_buffer) {
     } else
 #endif
     {
-      DecodeVarint(&unique_id, in_buffer);
+      if (!DecodeVarint(&unique_id, in_buffer)) {
+        return false;
+      }
       ga.set_unique_id(unique_id);
     }
     const int att_id = pc->AddAttribute(
