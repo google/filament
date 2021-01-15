@@ -145,11 +145,6 @@ struct StdExp2dot2Log {
     float operator()(float v) { return std::exp(2.2f * std::log(v)); }
     static const char* label() { return "std::exp(2.2f * std::log(x))"; }
 };
-struct FastPow2dot2 {
-    using result_type = float;
-    float operator()(float v) { return fast::pow2dot2(v); }
-    static const char* label() { return "fast::pow2dot2"; }
-};
 
 struct Float16 {
     using result_type = half;
@@ -176,7 +171,5 @@ BENCHMARK_TEMPLATE(BM_func, Vector, FastISqrt);
 
 BENCHMARK_TEMPLATE(BM_func, Scalar, StdPow2dot2);
 BENCHMARK_TEMPLATE(BM_func, Scalar, StdExp2dot2Log);
-BENCHMARK_TEMPLATE(BM_func, Scalar, FastPow2dot2);
-BENCHMARK_TEMPLATE(BM_func, Vector, FastPow2dot2);
 
 BENCHMARK_TEMPLATE(BM_func, Scalar, Float16);
