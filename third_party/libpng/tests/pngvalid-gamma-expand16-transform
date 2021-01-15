@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --gamma-transform --expand16
+exec ./pngvalid --strict --gamma-transform --expand16

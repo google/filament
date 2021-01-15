@@ -388,7 +388,7 @@ main(int argc, char **argv)
 
    if (!test_only)
    {
-      printf("PNG_CONST png_uint_16 png_sRGB_table[256] =\n{\n   ");
+      printf("const png_uint_16 png_sRGB_table[256] =\n{\n   ");
       for (i=0; i<255; )
       {
          do
@@ -401,7 +401,7 @@ main(int argc, char **argv)
       printf("%d\n};\n\n", png_sRGB_table[i]);
 
 
-      printf("PNG_CONST png_uint_16 png_sRGB_base[512] =\n{\n   ");
+      printf("const png_uint_16 png_sRGB_base[512] =\n{\n   ");
       for (i=0; i<511; )
       {
          do
@@ -413,7 +413,7 @@ main(int argc, char **argv)
       }
       printf("%d\n};\n\n", png_sRGB_base[i]);
 
-      printf("PNG_CONST png_byte png_sRGB_delta[512] =\n{\n   ");
+      printf("const png_byte png_sRGB_delta[512] =\n{\n   ");
       for (i=0; i<511; )
       {
          do

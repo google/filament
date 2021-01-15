@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --standard --progressive-read --interlace
+exec ./pngvalid --strict --standard --progressive-read --interlace

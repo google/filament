@@ -14,7 +14,7 @@
  * All routines take and return a floating point value in the range
  * 0 to 1.0, doing a calculation according to the sRGB specification
  * (in fact the source of the numbers is the wikipedia article at
- * http://en.wikipedia.org/wiki/SRGB).
+ * https://en.wikipedia.org/wiki/SRGB).
  */
 static double
 sRGB_from_linear(double l)

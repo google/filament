@@ -1,4 +1,4 @@
-make -f makefile.tc3
+make
 call png2pnm.bat
 call pnm2png.bat
 

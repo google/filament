@@ -1,7 +1,7 @@
 # makefile for libpng, HPUX (10.20 and 11.00) using the ANSI/C product.
 # Copyright (C) 1999-2002, 2006, 2010-2014 Glenn Randers-Pehrson
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42
-# contributed by Jim Rice and updated by Chris Schleicher, Hewlett Packard
+# Contributed by Jim Rice and updated by Chris Schleicher, Hewlett Packard
 #
 # This code is released under the libpng license.
 # For conditions of distribution and use, see the disclaimer
@@ -204,7 +204,7 @@ clean:
 	libpng-config $(LIBSO) $(LIBSOMAJ)* \
 	libpng.pc pnglibconf.h
 
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO Y2KINFO
+DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
 writelock:
 	chmod a-w *.[ch35] $(DOCS) scripts/*
 

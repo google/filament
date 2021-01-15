@@ -1,9 +1,8 @@
 /*-
  * pngstest.c
  *
- * Copyright (c) 2013-2014 John Cunningham Bowler
- *
- * Last changed in libpng 1.6.16 [December 22, 2014]
+ * Last changed in libpng 1.6.31 [July 27, 2017]
+ * Copyright (c) 2013-2017 John Cunningham Bowler
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -33,6 +32,15 @@
 #  include <png.h>
 #else
 #  include "../../png.h"
+#endif
+
+/* 1.6.1 added support for the configure test harness, which uses 77 to indicate
+ * a skipped test, in earlier versions we need to succeed on a skipped test, so:
+ */
+#if PNG_LIBPNG_VER >= 10601 && defined(HAVE_CONFIG_H)
+#  define SKIP 77
+#else
+#  define SKIP 0
 #endif
 
 #ifdef PNG_SIMPLIFIED_READ_SUPPORTED /* Else nothing can be done */
@@ -99,10 +107,18 @@ make_random_bytes(png_uint_32* seed, void* pv, size_t size)
    seed[1] = u1;
 }
 
+static png_uint_32 color_seed[2];
+
+static void
+reseed(void)
+{
+   color_seed[0] = 0x12345678U;
+   color_seed[1] = 0x9abcdefU;
+}
+
 static void
 random_color(png_colorp color)
 {
-   static png_uint_32 color_seed[2] = { 0x12345678, 0x9abcdef };
    make_random_bytes(color_seed, color, sizeof *color);
 }
 
@@ -307,7 +323,7 @@ compare_16bit(int v1, int v2, int error_limit, int multiple_algorithms)
 }
 #endif /* unused */
 
-#define READ_FILE 1      /* else memory */
+#define USE_FILE 1       /* else memory */
 #define USE_STDIO 2      /* else use file name */
 #define STRICT 4         /* fail on warnings too */
 #define VERBOSE 8
@@ -316,16 +332,19 @@ compare_16bit(int v1, int v2, int error_limit, int multiple_algorithms)
 #define ACCUMULATE 64
 #define FAST_WRITE 128
 #define sRGB_16BIT 256
+#define NO_RESEED  512   /* do not reseed on each new file */
+#define GBG_ERROR 1024   /* do not ignore the gamma+background_rgb_to_gray
+                          * libpng warning. */
 
 static void
 print_opts(png_uint_32 opts)
 {
-   if (opts & READ_FILE)
+   if (opts & USE_FILE)
       printf(" --file");
    if (opts & USE_STDIO)
       printf(" --stdio");
-   if (opts & STRICT)
-      printf(" --strict");
+   if (!(opts & STRICT))
+      printf(" --nostrict");
    if (opts & VERBOSE)
       printf(" --verbose");
    if (opts & KEEP_TMPFILES)
@@ -338,6 +357,12 @@ print_opts(png_uint_32 opts)
       printf(" --slow");
    if (opts & sRGB_16BIT)
       printf(" --sRGB-16bit");
+   if (opts & NO_RESEED)
+      printf(" --noreseed");
+#if PNG_LIBPNG_VER < 10700 /* else on by default */
+   if (opts & GBG_ERROR)
+      printf(" --fault-gbg-warning");
+#endif
 }
 
 #define FORMAT_NO_CHANGE 0x80000000 /* additional flag */
@@ -347,7 +372,7 @@ print_opts(png_uint_32 opts)
  */
 #define FORMAT_COUNT 64
 #define FORMAT_MASK 0x3f
-static PNG_CONST char * PNG_CONST format_names[FORMAT_COUNT] =
+static const char * const format_names[FORMAT_COUNT] =
 {
    "sRGB-gray",
    "sRGB-gray+alpha",
@@ -553,11 +578,11 @@ typedef struct
    int         stride_extra;
    FILE       *input_file;
    png_voidp   input_memory;
-   png_size_t  input_memory_size;
+   size_t      input_memory_size;
    png_bytep   buffer;
    ptrdiff_t   stride;
-   png_size_t  bufsize;
-   png_size_t  allocsize;
+   size_t      bufsize;
+   size_t      allocsize;
    char        tmpfile_name[32];
    png_uint_16 colormap[256*4];
 }
@@ -615,7 +640,7 @@ freeimage(Image *image)
 
    if (image->tmpfile_name[0] != 0 && (image->opts & KEEP_TMPFILES) == 0)
    {
-      remove(image->tmpfile_name);
+      (void)remove(image->tmpfile_name);
       image->tmpfile_name[0] = 0;
    }
 }
@@ -640,7 +665,7 @@ static void initimage(Image *image, png_uint_32 opts, const char *file_name,
 static void
 allocbuffer(Image *image)
 {
-   png_size_t size = PNG_IMAGE_BUFFER_SIZE(image->image, image->stride);
+   size_t size = PNG_IMAGE_BUFFER_SIZE(image->image, image->stride);
 
    if (size+32 > image->bufsize)
    {
@@ -741,8 +766,15 @@ checkopaque(Image *image)
       return logerror(image, image->file_name, ": opaque not NULL", "");
    }
 
-   else if (image->image.warning_or_error != 0 && (image->opts & STRICT) != 0)
-      return logerror(image, image->file_name, " --strict", "");
+   /* Separate out the gamma+background_rgb_to_gray warning because it may
+    * produce opaque component errors:
+    */
+   else if (image->image.warning_or_error != 0 &&
+            (strcmp(image->image.message,
+               "libpng does not support gamma+background+rgb_to_gray") == 0 ?
+                  (image->opts & GBG_ERROR) != 0 : (image->opts & STRICT) != 0))
+      return logerror(image, image->file_name, (image->opts & GBG_ERROR) != 0 ?
+                      " --fault-gbg-warning" : " --strict", "");
 
    else
       return 1;
@@ -1110,7 +1142,7 @@ get_pixel(png_uint_32 format))(Pixel *p, png_const_voidp pb)
    }
 }
 
-/* Convertion between pixel formats.  The code above effectively eliminates the
+/* Conversion between pixel formats.  The code above effectively eliminates the
  * component ordering changes leaving three basic changes:
  *
  * 1) Remove an alpha channel by pre-multiplication or compositing on a
@@ -1984,156 +2016,7 @@ static void (* const gpc_fn_colormapped[8/*in*/][8/*out*/])
  * gpc_error_to_colormap.
  */
 #if PNG_FORMAT_FLAG_COLORMAP == 8 /* extra check also required */
-/* START MACHINE GENERATED */
-static png_uint_16 gpc_error[16/*in*/][16/*out*/][4/*a*/] =
-{
- { /* input: sRGB-gray */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 372, 0 }, { 0, 0, 372, 0 }, { 0, 0, 372, 0 }, { 0, 0, 372, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: sRGB-gray+alpha */
-  { 0, 18, 0, 0 }, { 0, 0, 0, 0 }, { 0, 20, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 897, 788, 0 }, { 0, 897, 788, 0 }, { 0, 897, 788, 0 }, { 0, 897, 788, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: sRGB-rgb */
-  { 0, 0, 19, 0 }, { 0, 0, 19, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 893, 0 }, { 0, 0, 893, 0 }, { 0, 0, 811, 0 }, { 0, 0, 811, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: sRGB-rgb+alpha */
-  { 0, 4, 13, 0 }, { 0, 14, 13, 0 }, { 0, 19, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 832, 764, 0 }, { 0, 832, 764, 0 }, { 0, 897, 788, 0 }, { 0, 897, 788, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: linear-gray */
-  { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: linear-gray+alpha */
-  { 0, 74, 9, 0 }, { 0, 20, 9, 0 }, { 0, 74, 9, 0 }, { 0, 20, 9, 0 },
-  { 0, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 0, 0 }, { 0, 1, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: linear-rgb */
-  { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 },
-  { 0, 0, 4, 0 }, { 0, 0, 4, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: linear-rgb+alpha */
-  { 0, 126, 143, 0 }, { 0, 9, 7, 0 }, { 0, 74, 9, 0 }, { 0, 16, 9, 0 },
-  { 0, 4, 4, 0 }, { 0, 5, 4, 0 }, { 0, 0, 0, 0 }, { 0, 1, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-sRGB-gray */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-sRGB-gray+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-sRGB-rgb */
-  { 0, 0, 13, 0 }, { 0, 0, 13, 0 }, { 0, 0, 8, 0 }, { 0, 0, 8, 0 },
-  { 0, 0, 673, 0 }, { 0, 0, 673, 0 }, { 0, 0, 674, 0 }, { 0, 0, 674, 0 },
-  { 0, 0, 1, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 460, 0 }, { 0, 0, 460, 0 }, { 0, 0, 263, 0 }, { 0, 0, 263, 0 }
- }, { /* input: color-mapped-sRGB-rgb+alpha */
-  { 0, 6, 8, 0 }, { 0, 7, 8, 0 }, { 0, 75, 8, 0 }, { 0, 9, 8, 0 },
-  { 0, 585, 427, 0 }, { 0, 585, 427, 0 }, { 0, 717, 409, 0 }, { 0, 717, 409, 0 },
-  { 0, 1, 1, 0 }, { 0, 1, 1, 0 }, { 0, 1, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 13323, 460, 0 }, { 0, 334, 460, 0 }, { 0, 16480, 263, 0 }, { 0, 243, 263, 0 }
- }, { /* input: color-mapped-linear-gray */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 282, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-gray+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 253, 282, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-rgb */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 265, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-rgb+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 },
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 243, 265, 0 }
- }
-};
-static png_uint_16 gpc_error_via_linear[16][4/*out*/][4] =
-{
- { /* input: sRGB-gray */
-  { 0, 0, 7, 0 }, { 0, 0, 7, 0 }, { 0, 0, 7, 0 }, { 0, 0, 7, 0 }
- }, { /* input: sRGB-gray+alpha */
-  { 0, 15, 15, 0 }, { 0, 186, 15, 0 }, { 0, 15, 15, 0 }, { 0, 186, 15, 0 }
- }, { /* input: sRGB-rgb */
-  { 0, 0, 19, 0 }, { 0, 0, 19, 0 }, { 0, 0, 15, 0 }, { 0, 0, 15, 0 }
- }, { /* input: sRGB-rgb+alpha */
-  { 0, 12, 14, 0 }, { 0, 180, 14, 0 }, { 0, 14, 15, 0 }, { 0, 186, 15, 0 }
- }, { /* input: linear-gray */
-  { 0, 0, 1, 0 }, { 0, 0, 1, 0 }, { 0, 0, 1, 0 }, { 0, 0, 1, 0 }
- }, { /* input: linear-gray+alpha */
-  { 0, 1, 1, 0 }, { 0, 1, 1, 0 }, { 0, 1, 1, 0 }, { 0, 1, 1, 0 }
- }, { /* input: linear-rgb */
-  { 0, 0, 1, 0 }, { 0, 0, 1, 0 }, { 0, 0, 1, 0 }, { 0, 0, 1, 0 }
- }, { /* input: linear-rgb+alpha */
-  { 0, 1, 1, 0 }, { 0, 8, 1, 0 }, { 0, 1, 1, 0 }, { 0, 1, 1, 0 }
- }, { /* input: color-mapped-sRGB-gray */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-sRGB-gray+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-sRGB-rgb */
-  { 0, 0, 13, 0 }, { 0, 0, 13, 0 }, { 0, 0, 14, 0 }, { 0, 0, 14, 0 }
- }, { /* input: color-mapped-sRGB-rgb+alpha */
-  { 0, 4, 8, 0 }, { 0, 9, 8, 0 }, { 0, 8, 3, 0 }, { 0, 32, 3, 0 }
- }, { /* input: color-mapped-linear-gray */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-gray+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-rgb */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }, { /* input: color-mapped-linear-rgb+alpha */
-  { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }
- }
-};
-static png_uint_16 gpc_error_to_colormap[8/*i*/][8/*o*/][4] =
-{
- { /* input: sRGB-gray */
-  { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 }, { 0, 0, 9, 0 },
-  { 0, 0, 560, 0 }, { 0, 0, 560, 0 }, { 0, 0, 560, 0 }, { 0, 0, 560, 0 }
- }, { /* input: sRGB-gray+alpha */
-  { 0, 19, 2, 0 }, { 0, 255, 2, 25 }, { 0, 88, 2, 0 }, { 0, 255, 2, 25 },
-  { 0, 1012, 745, 0 }, { 0, 16026, 745, 6425 }, { 0, 1012, 745, 0 }, { 0, 16026, 745, 6425 }
- }, { /* input: sRGB-rgb */
-  { 0, 0, 19, 0 }, { 0, 0, 19, 0 }, { 0, 0, 25, 0 }, { 0, 0, 25, 0 },
-  { 0, 0, 937, 0 }, { 0, 0, 937, 0 }, { 0, 0, 13677, 0 }, { 0, 0, 13677, 0 }
- }, { /* input: sRGB-rgb+alpha */
-  { 0, 63, 77, 0 }, { 0, 255, 19, 25 }, { 0, 220, 25, 0 }, { 0, 255, 25, 67 },
-  { 0, 17534, 18491, 0 }, { 0, 15614, 2824, 6425 }, { 0, 14019, 13677, 0 }, { 0, 48573, 13677, 17219 }
- }, { /* input: linear-gray */
-  { 0, 0, 73, 0 }, { 0, 0, 73, 0 }, { 0, 0, 73, 0 }, { 0, 0, 73, 0 },
-  { 0, 0, 18817, 0 }, { 0, 0, 18817, 0 }, { 0, 0, 18817, 0 }, { 0, 0, 18817, 0 }
- }, { /* input: linear-gray+alpha */
-  { 0, 74, 74, 0 }, { 0, 255, 74, 25 }, { 0, 97, 74, 0 }, { 0, 255, 74, 25 },
-  { 0, 18919, 18907, 0 }, { 0, 24549, 18907, 6552 }, { 0, 18919, 18907, 0 }, { 0, 24549, 18907, 6552 }
- }, { /* input: linear-rgb */
-  { 0, 0, 73, 0 }, { 0, 0, 73, 0 }, { 0, 0, 98, 0 }, { 0, 0, 98, 0 },
-  { 0, 0, 18664, 0 }, { 0, 0, 18664, 0 }, { 0, 0, 24998, 0 }, { 0, 0, 24998, 0 }
- }, { /* input: linear-rgb+alpha */
-  { 0, 181, 196, 0 }, { 0, 255, 61, 25 }, { 206, 187, 98, 0 }, { 0, 255, 98, 67 },
-  { 0, 18141, 18137, 0 }, { 0, 17494, 17504, 6553 }, { 0, 24979, 24992, 0 }, { 0, 46509, 24992, 17347 }
- }
-};
-/* END MACHINE GENERATED */
+#  include "pngstest-errors.h" /* machine generated */
 #endif /* COLORMAP flag check */
 #endif /* flag checks */
 
@@ -2153,8 +2036,8 @@ typedef struct
    /* Precalculated values: */
    int          in_opaque;   /* Value of input alpha that is opaque */
    int          is_palette;  /* Sample values come from the palette */
-   int          accumulate;  /* Accumlate component errors (don't log) */
-   int          output_8bit; /* Output is 8 bit (else 16 bit) */
+   int          accumulate;  /* Accumulate component errors (don't log) */
+   int          output_8bit; /* Output is 8-bit (else 16-bit) */
 
    void (*in_gp)(Pixel*, png_const_voidp);
    void (*out_gp)(Pixel*, png_const_voidp);
@@ -2463,8 +2346,8 @@ static int
 logpixel(const Transform *transform, png_uint_32 x, png_uint_32 y,
    const Pixel *in, const Pixel *calc, const Pixel *out, const char *reason)
 {
-   const png_uint_32 in_format = transform->in_image->image.format;
-   const png_uint_32 out_format = transform->out_image->image.format;
+   png_uint_32 in_format = transform->in_image->image.format;
+   png_uint_32 out_format = transform->out_image->image.format;
 
    png_uint_32 back_format = out_format & ~PNG_FORMAT_FLAG_ALPHA;
    const char *via_linear = "";
@@ -2719,17 +2602,17 @@ compare_two_images(Image *a, Image *b, int via_linear,
    ptrdiff_t strideb = b->stride;
    png_const_bytep rowa = a->buffer+16;
    png_const_bytep rowb = b->buffer+16;
-   const png_uint_32 width = a->image.width;
-   const png_uint_32 height = a->image.height;
-   const png_uint_32 formata = a->image.format;
-   const png_uint_32 formatb = b->image.format;
-   const unsigned int a_sample = PNG_IMAGE_SAMPLE_SIZE(formata);
-   const unsigned int b_sample = PNG_IMAGE_SAMPLE_SIZE(formatb);
+   png_uint_32 width = a->image.width;
+   png_uint_32 height = a->image.height;
+   png_uint_32 formata = a->image.format;
+   png_uint_32 formatb = b->image.format;
+   unsigned int a_sample = PNG_IMAGE_SAMPLE_SIZE(formata);
+   unsigned int b_sample = PNG_IMAGE_SAMPLE_SIZE(formatb);
    int alpha_added, alpha_removed;
    int bchannels;
-   int btoa[4];
    png_uint_32 y;
    Transform tr;
+   int btoa[4]={0,0,0,0};
 
    /* This should never happen: */
    if (width != b->image.width || height != b->image.height)
@@ -2828,7 +2711,7 @@ compare_two_images(Image *a, Image *b, int via_linear,
 
             else if (y >= b->image.colormap_entries)
             {
-               if ((a->opts & ACCUMULATE) == 0)
+               if ((b->opts & ACCUMULATE) == 0)
                   {
                   char pindex[9];
                   sprintf(pindex, "%lu[%lu]", (unsigned long)y,
@@ -2843,7 +2726,7 @@ compare_two_images(Image *a, Image *b, int via_linear,
                result = 0;
          }
 
-         /* If reqested copy the error values back from the Transform. */
+         /* If requested, copy the error values back from the Transform. */
          if (a->opts & ACCUMULATE)
          {
             tr.error_ptr[0] = tr.error[0];
@@ -2862,22 +2745,27 @@ compare_two_images(Image *a, Image *b, int via_linear,
        */
       else if ((a->opts & ACCUMULATE) == 0)
       {
+#        ifdef __GNUC__
+#           define BYTE_CHARS 20 /* 2^32: GCC sprintf warning */
+#        else
+#           define BYTE_CHARS 3 /* 2^8: real maximum value */
+#        endif
          /* Check the original image first,
           * TODO: deal with input images with bad pixel values?
           */
          if (amax >= a->image.colormap_entries)
          {
-            char pindex[9];
-            sprintf(pindex, "%d[%lu]", amax,
-               (unsigned long)a->image.colormap_entries);
+            char pindex[3+2*BYTE_CHARS];
+            sprintf(pindex, "%d[%u]", amax,
+               (png_byte)/*SAFE*/a->image.colormap_entries);
             return logerror(a, a->file_name, ": bad pixel index: ", pindex);
          }
 
          else if (bmax >= b->image.colormap_entries)
          {
-            char pindex[9];
-            sprintf(pindex, "%d[%lu]", bmax,
-               (unsigned long)b->image.colormap_entries);
+            char pindex[3+2*BYTE_CHARS];
+            sprintf(pindex, "%d[%u]", bmax,
+               (png_byte)/*SAFE*/b->image.colormap_entries);
             return logerror(b, b->file_name, ": bad pixel index: ", pindex);
          }
       }
@@ -2902,8 +2790,7 @@ compare_two_images(Image *a, Image *b, int via_linear,
       (formata & (formatb ^ PNG_FORMAT_FLAG_COLOR) & PNG_FORMAT_FLAG_COLOR)))
    {
       /* Was an alpha channel changed? */
-      const png_uint_32 alpha_changed = (formata ^ formatb) &
-         PNG_FORMAT_FLAG_ALPHA;
+      png_uint_32 alpha_changed = (formata ^ formatb) & PNG_FORMAT_FLAG_ALPHA;
 
       /* Was an alpha channel removed?  (The third test.)  If so the direct
        * comparison is only possible if the input alpha is opaque.
@@ -2997,10 +2884,13 @@ compare_two_images(Image *a, Image *b, int via_linear,
                {
                   case 4:
                      if (pua[btoa[3]] != pub[3]) break;
+                     /* FALLTHROUGH */
                   case 3:
                      if (pua[btoa[2]] != pub[2]) break;
+                     /* FALLTHROUGH */
                   case 2:
                      if (pua[btoa[1]] != pub[1]) break;
+                     /* FALLTHROUGH */
                   case 1:
                      if (pua[btoa[0]] != pub[0]) break;
                      if (alpha_added != 4 && pub[alpha_added] != 65535) break;
@@ -3016,10 +2906,13 @@ compare_two_images(Image *a, Image *b, int via_linear,
                {
                   case 4:
                      if (psa[btoa[3]] != psb[3]) break;
+                     /* FALLTHROUGH */
                   case 3:
                      if (psa[btoa[2]] != psb[2]) break;
+                     /* FALLTHROUGH */
                   case 2:
                      if (psa[btoa[1]] != psb[1]) break;
+                     /* FALLTHROUGH */
                   case 1:
                      if (psa[btoa[0]] != psb[0]) break;
                      if (alpha_added != 4 && psb[alpha_added] != 255) break;
@@ -3038,7 +2931,7 @@ compare_two_images(Image *a, Image *b, int via_linear,
       }
    }
 
-   /* If reqested copy the error values back from the Transform. */
+   /* If requested, copy the error values back from the Transform. */
    if (a->opts & ACCUMULATE)
    {
       tr.error_ptr[0] = tr.error[0];
@@ -3157,14 +3050,14 @@ read_file(Image *image, png_uint_32 format, png_const_colorp background)
 static int
 read_one_file(Image *image)
 {
-   if (!(image->opts & READ_FILE) || (image->opts & USE_STDIO))
+   if (!(image->opts & USE_FILE) || (image->opts & USE_STDIO))
    {
       /* memory or stdio. */
       FILE *f = fopen(image->file_name, "rb");
 
       if (f != NULL)
       {
-         if (image->opts & READ_FILE)
+         if (image->opts & USE_FILE)
             image->input_file = f;
 
          else /* memory */
@@ -3175,7 +3068,9 @@ read_one_file(Image *image)
 
                if (cb > 0)
                {
+#ifndef __COVERITY__
                   if ((unsigned long int)cb <= (size_t)~(size_t)0)
+#endif
                   {
                      png_bytep b = voidcast(png_bytep, malloc((size_t)cb));
 
@@ -3243,7 +3138,41 @@ write_one_file(Image *output, Image *image, int convert_to_8bit)
 
    if (image->opts & USE_STDIO)
    {
+#ifdef PNG_SIMPLIFIED_WRITE_STDIO_SUPPORTED
+#ifndef __COVERITY__
       FILE *f = tmpfile();
+#else
+      /* Experimental. Coverity says tmpfile() is insecure because it
+       * generates predictable names.
+       *
+       * It is possible to satisfy Coverity by using mkstemp(); however,
+       * any platform supporting mkstemp() undoubtedly has a secure tmpfile()
+       * implementation as well, and doesn't need the fix.  Note that
+       * the fix won't work on platforms that don't support mkstemp().
+       *
+       * https://www.securecoding.cert.org/confluence/display/c/
+       * FIO21-C.+Do+not+create+temporary+files+in+shared+directories
+       * says that most historic implementations of tmpfile() provide
+       * only a limited number of possible temporary file names
+       * (usually 26) before file names are recycled. That article also
+       * provides a secure solution that unfortunately depends upon mkstemp().
+       */
+      char tmpfile[] = "pngstest-XXXXXX";
+      int filedes;
+      FILE *f;
+      umask(0177);
+      filedes = mkstemp(tmpfile);
+      if (filedes < 0)
+        f = NULL;
+      else
+      {
+        f = fdopen(filedes,"w+");
+        /* Hide the filename immediately and ensure that the file does
+         * not exist after the program ends
+         */
+        (void) unlink(tmpfile);
+      }
+#endif
 
       if (f != NULL)
       {
@@ -3272,10 +3201,14 @@ write_one_file(Image *output, Image *image, int convert_to_8bit)
 
       else
          return logerror(image, "tmpfile", ": open: ", strerror(errno));
+#else /* SIMPLIFIED_WRITE_STDIO */
+      return logerror(image, "tmpfile", ": open: unsupported", "");
+#endif /* SIMPLIFIED_WRITE_STDIO */
    }
 
-   else
+   else if (image->opts & USE_FILE)
    {
+#ifdef PNG_SIMPLIFIED_WRITE_STDIO_SUPPORTED
       static int counter = 0;
       char name[32];
 
@@ -3295,6 +3228,51 @@ write_one_file(Image *output, Image *image, int convert_to_8bit)
 
       else
          return logerror(image, name, ": write failed", "");
+#else /* SIMPLIFIED_WRITE_STDIO */
+      return logerror(image, "stdio", ": open: unsupported", "");
+#endif /* SIMPLIFIED_WRITE_STDIO */
+   }
+
+   else /* use memory */
+   {
+      png_alloc_size_t size;
+
+      if (png_image_write_get_memory_size(image->image, size, convert_to_8bit,
+               image->buffer+16, (png_int_32)image->stride, image->colormap))
+      {
+         /* This is non-fatal but ignoring it was causing serious problems in
+          * the macro to be ignored:
+          */
+         if (size > PNG_IMAGE_PNG_SIZE_MAX(image->image))
+            return logerror(image, "memory", ": PNG_IMAGE_SIZE_MAX wrong", "");
+
+         initimage(output, image->opts, "memory", image->stride_extra);
+         output->input_memory = malloc(size);
+
+         if (output->input_memory != NULL)
+         {
+            output->input_memory_size = size;
+
+            if (png_image_write_to_memory(&image->image, output->input_memory,
+                  &output->input_memory_size, convert_to_8bit, image->buffer+16,
+                  (png_int_32)image->stride, image->colormap))
+            {
+               /* This is also non-fatal but it safes safer to error out anyway:
+                */
+               if (size != output->input_memory_size)
+                  return logerror(image, "memory", ": memory size wrong", "");
+            }
+
+            else
+               return logerror(image, "memory", ": write failed", "");
+         }
+
+         else
+            return logerror(image, "memory", ": out of memory", "");
+      }
+
+      else
+         return logerror(image, "memory", ": get size:", "");
    }
 
    /* 'output' has an initialized temporary image, read this back in and compare
@@ -3470,6 +3448,8 @@ test_one_file(const char *file_name, format_list *formats, png_uint_32 opts,
    int result;
    Image image;
 
+   if (!(opts & NO_RESEED))
+      reseed(); /* ensure that the random numbers don't depend on file order */
    newimage(&image);
    initimage(&image, opts, file_name, stride_extra);
    result = read_one_file(&image);
@@ -3507,7 +3487,7 @@ test_one_file(const char *file_name, format_list *formats, png_uint_32 opts,
 int
 main(int argc, char **argv)
 {
-   png_uint_32 opts = FAST_WRITE;
+   png_uint_32 opts = FAST_WRITE | STRICT;
    format_list formats;
    const char *touch = NULL;
    int log_pass = 0;
@@ -3516,11 +3496,17 @@ main(int argc, char **argv)
    int retval = 0;
    int c;
 
+#if PNG_LIBPNG_VER >= 10700
+      /* This error should not exist in 1.7 or later: */
+      opts |= GBG_ERROR;
+#endif
+
    init_sRGB_to_d();
 #if 0
    init_error_via_linear();
 #endif
    format_init(&formats);
+   reseed(); /* initialize random number seeds */
 
    for (c=1; c<argc; ++c)
    {
@@ -3535,17 +3521,17 @@ main(int argc, char **argv)
       }
       else if (strcmp(arg, "--file") == 0)
 #        ifdef PNG_STDIO_SUPPORTED
-            opts |= READ_FILE;
+            opts |= USE_FILE;
 #        else
-            return 77; /* skipped: no support */
+            return SKIP; /* skipped: no support */
 #        endif
       else if (strcmp(arg, "--memory") == 0)
-         opts &= ~READ_FILE;
+         opts &= ~USE_FILE;
       else if (strcmp(arg, "--stdio") == 0)
 #        ifdef PNG_STDIO_SUPPORTED
             opts |= USE_STDIO;
 #        else
-            return 77; /* skipped: no support */
+            return SKIP; /* skipped: no support */
 #        endif
       else if (strcmp(arg, "--name") == 0)
          opts &= ~USE_STDIO;
@@ -3571,10 +3557,16 @@ main(int argc, char **argv)
          opts &= ~KEEP_GOING;
       else if (strcmp(arg, "--strict") == 0)
          opts |= STRICT;
+      else if (strcmp(arg, "--nostrict") == 0)
+         opts &= ~STRICT;
       else if (strcmp(arg, "--sRGB-16bit") == 0)
          opts |= sRGB_16BIT;
       else if (strcmp(arg, "--linear-16bit") == 0)
          opts &= ~sRGB_16BIT;
+      else if (strcmp(arg, "--noreseed") == 0)
+         opts |= NO_RESEED;
+      else if (strcmp(arg, "--fault-gbg-warning") == 0)
+         opts |= GBG_ERROR;
       else if (strcmp(arg, "--tmpfile") == 0)
       {
          if (c+1 < argc)
@@ -3588,7 +3580,7 @@ main(int argc, char **argv)
             }
 
             /* Safe: checked above */
-            strcpy(tmpf, argv[c]);
+            strncpy(tmpf, argv[c], sizeof (tmpf)-1);
          }
 
          else
@@ -3634,7 +3626,7 @@ main(int argc, char **argv)
 
          if (arg[0] == '-')
          {
-            const int term = (arg[1] == '0' ? 0 : '\n');
+            int term = (arg[1] == '0' ? 0 : '\n');
             unsigned int ich = 0;
 
             /* Loop reading files, use a static buffer to simplify this and just
@@ -3686,6 +3678,23 @@ main(int argc, char **argv)
    if (opts & ACCUMULATE)
    {
       unsigned int in;
+
+      printf("/* contrib/libtests/pngstest-errors.h\n");
+      printf(" *\n");
+      printf(" * BUILT USING:" PNG_HEADER_VERSION_STRING);
+      printf(" *\n");
+      printf(" * This code is released under the libpng license.\n");
+      printf(" * For conditions of distribution and use, see the disclaimer\n");
+      printf(" * and license in png.h\n");
+      printf(" *\n");
+      printf(" * THIS IS A MACHINE GENERATED FILE: do not edit it directly!\n");
+      printf(" * Instead run:\n");
+      printf(" *\n");
+      printf(" *    pngstest --accumulate\n");
+      printf(" *\n");
+      printf(" * on as many PNG files as possible; at least PNGSuite and\n");
+      printf(" * contrib/libtests/testpngs.\n");
+      printf(" */\n");
 
       printf("static png_uint_16 gpc_error[16/*in*/][16/*out*/][4/*a*/] =\n");
       printf("{\n");
@@ -3776,6 +3785,7 @@ main(int argc, char **argv)
             putchar('\n');
       }
       printf("};\n");
+      printf("/* END MACHINE GENERATED */\n");
    }
 
    if (retval == 0 && touch != NULL)
@@ -3813,6 +3823,6 @@ int main(void)
 {
    fprintf(stderr, "pngstest: no read support in libpng, test skipped\n");
    /* So the test is skipped: */
-   return 77;
+   return SKIP;
 }
 #endif /* PNG_SIMPLIFIED_READ_SUPPORTED */

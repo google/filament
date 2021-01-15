@@ -8,7 +8,7 @@
 # -- full-color
 ./png2pnm -noraw ../pngsuite/basn2c08.png basn2c08.ppm
 ./png2pnm -noraw ../pngsuite/basn2c16.png basn2c16.ppm
-# -- palletted
+# -- paletted
 ./png2pnm -noraw ../pngsuite/basn3p01.png basn3p01.ppm
 ./png2pnm -noraw ../pngsuite/basn3p02.png basn3p02.ppm
 ./png2pnm -noraw ../pngsuite/basn3p04.png basn3p04.ppm
@@ -28,7 +28,7 @@
 # -- full-color
 ./png2pnm -raw ../pngsuite/basn2c08.png rawn2c08.ppm
 ./png2pnm -raw ../pngsuite/basn2c16.png rawn2c16.ppm
-# -- palletted
+# -- paletted
 ./png2pnm -raw ../pngsuite/basn3p01.png rawn3p01.ppm
 ./png2pnm -raw ../pngsuite/basn3p02.png rawn3p02.ppm
 ./png2pnm -raw ../pngsuite/basn3p04.png rawn3p04.ppm

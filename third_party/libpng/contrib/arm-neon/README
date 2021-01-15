@@ -1,7 +1,7 @@
 OPERATING SYSTEM SPECIFIC ARM NEON DETECTION
 --------------------------------------------
 
-Detection of the ability to exexcute ARM NEON on an ARM processor requires
+Detection of the ability to execute ARM NEON on an ARM processor requires
 operating system support.  (The information is not available in user mode.)
 
 HOW TO USE THIS

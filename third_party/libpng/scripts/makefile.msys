@@ -1,10 +1,11 @@
 # makefile for libpng using MSYS/gcc (shared, static library)
+# Copyright (C) 2019 Cosmin Truta
 # Copyright (C) 2012 Glenn Randers-Pehrson and Christopher M. Wheeler
 #
-# Portions taken from makefile.linux:
+# Portions taken from makefile.linux and makefile.gcc:
+# Copyright (C) 2000 Cosmin Truta
 # Copyright (C) 1998, 1999, 2002, 2006, 2008, 2010-2014 Greg Roelofs and
 # Glenn Randers-Pehrson
-# Copyright (C) 2000 Cosmin Truta
 # Copyright (C) 1996, 1997 Andreas Dilger
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
@@ -18,7 +19,7 @@ exec_prefix=$(prefix)
 # Library name:
 LIBNAME = libpng16
 PNGMAJ = 16
-RELEASE = 16
+RELEASE = 37
 
 # Shared library names:
 LIBSO=$(LIBNAME).dll
@@ -176,7 +177,7 @@ test: pngtest$(EXEEXT)
 	./pngtest$(EXEEXT)
 
 pngtest$(EXEEXT): pngtest.o libpng.a
-	$(LD) $(LDFLAGS) -L$(ZLIBLIB) -o $@ pngtest.o libpng.a $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ pngtest.o libpng.a $(LIBS)
 
 clean:
 	$(RM_F) *.o libpng.a pngtest$(EXEEXT) pngout.png pnglibconf.h $(LIBSO) \

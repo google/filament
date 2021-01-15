@@ -28,10 +28,11 @@
     - 2.01:  fixed improper display of usage screen on PNG error(s)
     - 2.02:  Added "void(argc);" statement to quiet pedantic compiler warnings
              about unused variable (GR-P)
+    - 2.03:  check for integer overflow (Glenn R-P)
 
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2008 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2008, 2017 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
