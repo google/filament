@@ -36,12 +36,54 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
+#include <getopt/getopt.h>
+
+#include <iostream>
+
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
+
+struct Vertex {
+    float3 position;
+    float2 uv;
+};
+
+enum class ReflectionMode {
+    RENDERABLES,
+    CAMERA,
+};
+
+struct App {
+    utils::Entity lightEntity;
+    Material* meshMaterial;
+    MaterialInstance* meshMatInstance;
+    MeshReader::Mesh monkeyMesh;
+    utils::Entity reflectedMonkey;
+    mat4f transform;
+
+    Texture* offscreenTexture = nullptr;
+    RenderTarget* offscreenRenderTarget = nullptr;
+    View* offscreenView = nullptr;
+    Scene* offscreenScene = nullptr;
+    Camera* offscreenCamera = nullptr;
+
+    ReflectionMode mode;
+    Config config;
+
+    utils::Entity quadEntity;
+    VertexBuffer* quadVb = nullptr;
+    IndexBuffer* quadIb = nullptr;
+    Material* quadMaterial = nullptr;
+    MaterialInstance* quadMatInstance = nullptr;
+    ColorGrading* colorGrading = nullptr;
+
+    float3 quadCenter;
+    float3 quadNormal;
+};
 
 static mat4f reflectionMatrix(float4 plane) {
     mat4f m;
@@ -64,41 +106,93 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-struct Vertex {
-    float3 position;
-    float2 uv;
-};
+static void setReflectionMode(App& app, ReflectionMode mode) {
+    switch (mode) {
+    case ReflectionMode::RENDERABLES:
+        app.offscreenScene->addEntity(app.reflectedMonkey);
+        app.offscreenScene->remove(app.monkeyMesh.renderable);
+        app.offscreenView->setFrontFaceWindingInverted(false);
+        break;
+    case ReflectionMode::CAMERA:
+        app.offscreenScene->addEntity(app.monkeyMesh.renderable);
+        app.offscreenScene->remove(app.reflectedMonkey);
+        app.offscreenView->setFrontFaceWindingInverted(true);
+        break;
+    }
+    app.mode = mode;
+}
 
-struct App {
-    utils::Entity lightEntity;
-    Material* meshMaterial;
-    MaterialInstance* meshMatInstance;
-    MeshReader::Mesh monkeyMesh;
-    utils::Entity reflectedMonkey;
-    mat4f transform;
+static void printUsage(char* name) {
+    std::string exec_name(utils::Path(name).getName());
+    std::string usage(
+        "SHOWCASE renders suzanne with planar reflection\n"
+        "Usage:\n"
+        "    SHOWCASE [options]\n"
+        "Options:\n"
+        "   --help, -h\n"
+        "       Prints this message\n\n"
+        "   --api, -a\n"
+        "       Specify the backend API: opengl (default), vulkan, or metal\n"
+        "   --mode, -m\n"
+        "       Specify the reflection mode: camera (default), or renderables\n\n"
+    );
+    const std::string from("SHOWCASE");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
 
-    Texture* offscreenTexture = nullptr;
-    RenderTarget* offscreenRenderTarget = nullptr;
-    View* offscreenView = nullptr;
-    Scene* offscreenScene = nullptr;
-
-    utils::Entity quadEntity;
-    VertexBuffer* quadVb = nullptr;
-    IndexBuffer* quadIb = nullptr;
-    Material* quadMaterial = nullptr;
-    MaterialInstance* quadMatInstance = nullptr;
-    ColorGrading* colorGrading = nullptr;
-
-    float3 quadCenter;
-    float3 quadNormal;
-};
+static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+    static constexpr const char* OPTSTR = "ha:m:";
+    static const struct option OPTIONS[] = {
+        { "help", no_argument,       nullptr, 'h' },
+        { "api",  required_argument, nullptr, 'a' },
+        { "mode", required_argument, nullptr, 'm' },
+        { nullptr, 0, nullptr, 0 }
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    app->config.backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    app->config.backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    app->config.backend = Engine::Backend::METAL;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                    exit(1);
+                }
+                break;
+            case 'm':
+                if (arg == "camera") {
+                    app->mode = ReflectionMode::CAMERA;
+                } else if (arg == "renderables") {
+                    app->mode = ReflectionMode::RENDERABLES;
+                } else {
+                    std::cerr << "Unrecognized mode. Must be 'camera'|'renderables'.\n";
+                    exit(1);
+                }
+                break;
+        }
+    }
+    return optind;
+}
 
 int main(int argc, char** argv) {
-    Config config;
-    config.title = "rendertarget";
-
     App app;
-    auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
+    app.config.title = "rendertarget";
+    handleCommandLineArguments(argc, argv, &app);
+
+    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Filmic tone mapping is invertible in GLSL using inverseTonemapSRGB().
         app.colorGrading = ColorGrading::Builder().toneMapping(ColorGrading::ToneMapping::FILMIC).build(*engine);
@@ -123,7 +217,8 @@ int main(int argc, char** argv) {
             .build(*engine);
         app.offscreenView->setRenderTarget(app.offscreenRenderTarget);
         app.offscreenView->setViewport({0, 0, vp.width, vp.height});
-        app.offscreenView->setCamera(&view->getCamera());
+        app.offscreenCamera = engine->createCamera(em.create());
+        app.offscreenView->setCamera(app.offscreenCamera);
         FilamentApp::get().addOffscreenView(app.offscreenView);
 
         // Position and orient the mirror in an interesting way.
@@ -192,7 +287,7 @@ int main(int argc, char** argv) {
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
         scene->addEntity(app.monkeyMesh.renderable);
 
-        // Add reflected monkey into the offscreen scene.
+        // Create a reflected monkey, which is used only for ReflectionMode::RENDERABLES.
         app.reflectedMonkey = em.create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
@@ -201,10 +296,10 @@ int main(int argc, char** argv) {
                 .receiveShadows(true)
                 .castShadows(false)
                 .build(*engine, app.reflectedMonkey);
-        app.offscreenScene->addEntity(app.reflectedMonkey);
+        setReflectionMode(app, ReflectionMode::CAMERA);
 
         // Add light source to both scenes.
-        // NOTE: the reflected scene should use a reflected light dir.
+        // NOTE: this is slightly wrong when the reflection mode is RENDERABLES.
         app.lightEntity = em.create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
@@ -218,6 +313,12 @@ int main(int argc, char** argv) {
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
+
+        auto& em = utils::EntityManager::get();
+        auto camera = app.offscreenCamera->getEntity();
+        engine->destroyCameraComponent(camera);
+        em.destroy(camera);
+
         engine->destroy(app.colorGrading);
         engine->destroy(app.reflectedMonkey);
         engine->destroy(app.lightEntity);
@@ -244,20 +345,32 @@ int main(int argc, char** argv) {
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
         auto& tcm = engine->getTransformManager();
 
-        // Rotate the monkey and slide her along Z.
+        // Animate the monkey by spinning and sliding back and forth along Z.
         auto ti = tcm.getInstance(app.monkeyMesh.renderable);
         mat4f xlate = mat4f::translation(float3(0, 0, 0.5 + sin(now)));
         mat4f xform =  app.transform * xlate * mat4f::rotation(now, float3{ 0, 1, 0 });
         tcm.setTransform(ti, xform);
 
-        // Transform the monkey to obtain the reflected monkey.
-        ti = tcm.getInstance(app.reflectedMonkey);
+        // Generate a reflection matrix from the plane equation Ax + By + Cz + D = 0.
         const float3 planeNormal = app.quadNormal;
-        const float4 planeEqn(planeNormal, -dot(planeNormal, app.quadCenter));
-        tcm.setTransform(ti, reflectionMatrix(planeEqn) * xform);
+        const float4 planeEquation(planeNormal, -dot(planeNormal, app.quadCenter));
+        const mat4f reflection = reflectionMatrix(planeEquation);
+
+        // Apply the reflection matrix to either the renderable or the camera, depending on mode.
+        switch (app.mode) {
+            case ReflectionMode::RENDERABLES:
+                tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
+                app.offscreenCamera->setModelMatrix(view->getCamera().getModelMatrix());
+                app.offscreenCamera->setCustomProjection(view->getCamera().getProjectionMatrix(), 0.1, 100.0);
+                break;
+            case  ReflectionMode::CAMERA:
+                app.offscreenCamera->setModelMatrix(reflection * view->getCamera().getModelMatrix());
+                app.offscreenCamera->setCustomProjection(view->getCamera().getProjectionMatrix(), 0.1, 100.0);
+                break;
+        }
     });
 
-    FilamentApp::get().run(config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
 
     return 0;
 }
