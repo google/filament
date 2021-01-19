@@ -823,9 +823,9 @@ void Froxelizer::froxelizePointAndSpotLight(
                     size_t ex = 0; // horizontal end index
 
                     // find the begin index (left side)
-                    for (size_t ix = x0; ix <= x1; ++ix) {
-                        // froxel that contain the center if ths sphere is special, we don't even
-                        // need to do the intersection check, it's always true.
+                    for (size_t ix = x0; ix < x1; ++ix) {
+                        // The froxel that contains the center of the sphere is special,
+                        // we don't even need to do the intersection check, it's always true.
                         if (UTILS_LIKELY(ix != xcenter)) {
                             float4 const& plane = ix < xcenter ? planesX[ix + 1] : planesX[ix];
                             if (spherePlaneDistanceSquared(cy, plane.x, plane.z) > 0) {
@@ -838,16 +838,17 @@ void Froxelizer::froxelizePointAndSpotLight(
                             // this is the froxel containing the center of the sphere, it is
                             // definitely participating
                             bx = std::min(bx, ix);
-                            assert(ix + 1 >= ex);
-                            ex = ix + 1;
+                            ex = std::max(ex, ix);
                         }
                     }
 
-                    if (UTILS_UNLIKELY(bx >= ex)) {
+                    if (UTILS_UNLIKELY(bx > ex)) {
                         continue;
                     }
 
-                    assert(bx < mFroxelCountX && ex <= mFroxelCountX);
+                    // the loops below assume 1-past the end for the right side of the range
+                    ex++;
+                    assert(bx <= mFroxelCountX && ex <= mFroxelCountX);
 
                     size_t fi = getFroxelIndex(bx, iy, iz);
                     if (light.invSin != std::numeric_limits<float>::infinity()) {
