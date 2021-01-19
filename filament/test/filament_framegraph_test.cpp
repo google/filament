@@ -27,10 +27,13 @@
 using namespace filament;
 using namespace backend;
 
-static CircularBuffer buffer(8192);
-static Backend gBackend = Backend::NOOP;
-static DefaultPlatform* platform = DefaultPlatform::create(&gBackend);
-static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
+class FrameGraphTest : public testing::Test {
+protected:
+    CircularBuffer buffer = CircularBuffer{ 8192 };
+    Backend gBackend = Backend::NOOP;
+    DefaultPlatform* platform = DefaultPlatform::create(&gBackend);
+    CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr), buffer };
+};
 
 class MockResourceAllocator : public ResourceAllocatorInterface {
     uint32_t handle = 0;
@@ -74,7 +77,7 @@ private:
 int GenericResource::state = 0;
 
 
-TEST(FrameGraphTest, SimpleRenderPass) {
+TEST_F(FrameGraphTest, SimpleRenderPass) {
 
     ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
@@ -128,7 +131,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     resourceAllocator.terminate();
 }
 
-TEST(FrameGraphTest, SimpleRenderPass2) {
+TEST_F(FrameGraphTest, SimpleRenderPass2) {
 
     ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
@@ -176,7 +179,7 @@ TEST(FrameGraphTest, SimpleRenderPass2) {
     resourceAllocator.terminate();
 }
 
-TEST(FrameGraphTest, ScenarioDepthPrePass) {
+TEST_F(FrameGraphTest, ScenarioDepthPrePass) {
 
     ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
@@ -252,7 +255,7 @@ TEST(FrameGraphTest, ScenarioDepthPrePass) {
     resourceAllocator.terminate();
 }
 
-TEST(FrameGraphTest, SimplePassCulling) {
+TEST_F(FrameGraphTest, SimplePassCulling) {
 
     ResourceAllocator resourceAllocator(driverApi);
     FrameGraph fg(resourceAllocator);
@@ -356,7 +359,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     resourceAllocator.terminate();
 }
 
-TEST(FrameGraphTest, MoveGenericResource) {
+TEST_F(FrameGraphTest, MoveGenericResource) {
     // This checks that:
     // - two passes writing in the same resource, that is replaced (moved) by
     //   another resource, end-up both using the 'replacing' resource.
