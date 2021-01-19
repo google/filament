@@ -179,17 +179,16 @@ void ResourceAllocator::gc() noexcept {
     const size_t age = mAge++;
 
     // Purging strategy:
-    // + remove entries that are older than a certain age
-    // - remove only one entry per gc(), unless we're at capacity
+    //  - remove entries that are older than a certain age
+    //      - remove only one entry per gc(),
+    //      - unless we're at capacity
+    // - remove LRU entries until we're below capacity
 
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         const size_t ageDiff = age - it->second.age;
         if (ageDiff >= CACHE_MAX_AGE) {
-            mBackend.destroyTexture(it->second.handle);
-            mCacheSize -= it->second.size;
-            //slog.d << "purging " << it->second.handle.getId() << io::endl;
-            it = textureCache.erase(it);
+            it = purge(it);
             if (mCacheSize < CACHE_CAPACITY) {
                 // if we're not at capacity, only purge a single entry per gc, trying to
                 // avoid a burst of work.
@@ -200,22 +199,58 @@ void ResourceAllocator::gc() noexcept {
         }
     }
 
+    if (UTILS_UNLIKELY(mCacheSize >= CACHE_CAPACITY)) {
+        // make a copy of our cache to a vector
+        std::vector<std::pair<TextureKey, TextureCachePayload>> cache;
+        cache.reserve(textureCache.size());
+        for (auto const& item : textureCache) {
+            cache.push_back(item);
+        }
+
+        // sort by least recently used
+        std::sort(cache.begin(), cache.end(), [](auto const& lhs, auto const& rhs) {
+            return lhs.second.age < rhs.second.age;
+        });
+
+        // now remove entries until we're at capacity
+        auto curr = cache.begin();
+        while (mCacheSize >= CACHE_CAPACITY) {
+            // by construction this entry must exist
+            purge(textureCache.find(curr->first));
+            ++curr;
+        }
+
+        // Since we're sorted already, reset the oldestAge of the whole system
+        size_t oldestAge = cache.front().second.age;
+        for (auto& it : textureCache) {
+            it.second.age -= oldestAge;
+        }
+        mAge -= oldestAge;
+    }
     //if (mAge % 60 == 0) dump();
-    // TODO: maybe purge LRU entries if we have more than a certain number
-    // TODO: maybe purge LRU entries if the size of the cache is too large
 }
 
 UTILS_NOINLINE
-void ResourceAllocator::dump() const noexcept {
+void ResourceAllocator::dump(bool brief) const noexcept {
     slog.d << "# entries=" << mTextureCache.size() << ", sz=" << mCacheSize / float(1u << 20u)
            << " MiB" << io::endl;
-    for (auto const & it : mTextureCache) {
-        auto w = it.first.width;
-        auto h = it.first.height;
-        auto f = FTexture::getFormatSize(it.first.format);
-        slog.d << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f << ", sz="
-               << it.second.size / float(1u << 20u) << io::endl;
+    if (!brief) {
+        for (auto const& it : mTextureCache) {
+            auto w = it.first.width;
+            auto h = it.first.height;
+            auto f = FTexture::getFormatSize(it.first.format);
+            slog.d << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f << ", sz="
+                   << it.second.size / float(1u << 20u) << io::endl;
+        }
     }
+}
+
+ResourceAllocator::CacheContainer::iterator ResourceAllocator::purge(
+        ResourceAllocator::CacheContainer::iterator const& pos) {
+    //slog.d << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age << io::endl;
+    mBackend.destroyTexture(pos->second.handle);
+    mCacheSize -= pos->second.size;
+    return mTextureCache.erase(pos);
 }
 
 } // namespace filament
