@@ -191,7 +191,6 @@ public:
      *
      * This cannot be called after FilamentAsset::releaseSourceData().
      * This cannot be called on a non-instanced asset.
-     * Animation is not supported in new instances.
      * See also AssetLoader::createInstancedAsset().
      */
     FilamentInstance* createInstance(FilamentAsset* primary);
