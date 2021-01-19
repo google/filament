@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
 
-        // Load animation data then free the source hierarchy.
+        // Load animation data.
         app.asset->getAnimator();
         if (app.instanceToAnimate > -1) {
             app.instances[app.instanceToAnimate]->getAnimator();
@@ -273,8 +273,9 @@ int main(int argc, char** argv) {
         app.viewer->populateScene(app.asset, true, instance);
         app.viewer->applyAnimation(now);
 
+        // Add a new instance every second until reaching 100 instances.
         static double previous = 0.0;
-        if (now - previous > 1.0) {
+        if (now - previous > 1.0 && app.asset->getAssetInstanceCount() < 100) {
             FilamentInstance* instance = app.loader->createInstance(app.asset);
             app.instances.push_back(instance);
             arrangeIntoCircle();

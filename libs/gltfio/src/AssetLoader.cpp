@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/MaterialProvider.h>
 
@@ -57,6 +58,8 @@ using namespace filament::math;
 using namespace utils;
 
 namespace gltfio {
+
+void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins);
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
@@ -123,7 +126,7 @@ struct FAssetLoader : public AssetLoader {
     }
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
-    FilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
+    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
     void createEntity(const cgltf_node* node, Entity parent, bool enableLight,
             FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
@@ -234,7 +237,15 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         slog.e << "There is no scene in the asset." << io::endl;
         return nullptr;
     }
-    FilamentInstance* instance = createInstance(primary, scene);
+    FFilamentInstance* instance = createInstance(primary, scene);
+
+    // Import the skin data. This is normally done by ResourceLoader but dynamically created
+    // instances are a bit special.
+    importSkins(primary->mSourceAsset->hierarchy, instance->nodeMap, instance->skins);
+    if (primary->mAnimator) {
+        primary->mAnimator->addInstance(instance);
+    }
+
     primary->mDependencyGraph.refinalize();
     return instance;
 }
@@ -308,7 +319,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
 }
 
-FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary, const cgltf_scene* scene) {
+FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary, const cgltf_scene* scene) {
     auto rootTransform = mTransformManager.getInstance(primary->mRoot);
     Entity instanceRoot = mEntityManager.create();
     mTransformManager.create(instanceRoot, rootTransform);

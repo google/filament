@@ -131,7 +131,7 @@ static void uploadCallback(void* buffer, size_t size, void* user) {
     delete event;
 }
 
-static void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
+void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVector& dstSkins) {
     dstSkins.resize(gltf->skins_count);
     for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
         const cgltf_node& node = gltf->nodes[i];
@@ -169,6 +169,10 @@ static void importSkins(const cgltf_data* gltf, const NodeMap& nodeMap, SkinVect
         if (srcMatrices) {
             auto dstMatrices = (uint8_t*) dstSkin.inverseBindMatrices.data();
             uint8_t* bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
+            if (!bytes) {
+                slog.w << "Empty animation buffer, have resources been loaded yet?" << io::endl;
+                continue;
+            }
             auto srcBuffer = (void*) (bytes + srcMatrices->offset + srcMatrices->buffer_view->offset);
             memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
         }
@@ -365,6 +369,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         if (!asset->isInstanced()) {
             importSkins(gltf, asset->mNodeMap, asset->mSkins);
         } else {
+            // NOTE: This takes care of up-front instances, but dynamically added instances also
+            // need to import the skin data, which is done in AssetLoader.
             for (FFilamentInstance* instance : asset->mInstances) {
                 importSkins(gltf, instance->nodeMap, instance->skins);
             }
