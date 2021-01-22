@@ -27,8 +27,8 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
-        include/filament/RenderableManager.h
         include/filament/RenderTarget.h
+        include/filament/RenderableManager.h
         include/filament/Renderer.h
         include/filament/Scene.h
         include/filament/Skybox.h
@@ -39,28 +39,17 @@ set(PUBLIC_HDRS
         include/filament/TransformManager.h
         include/filament/VertexBuffer.h
         include/filament/View.h
-        include/filament/Viewport.h)
+        include/filament/Viewport.h
+)
 
 set(SRCS
-        src/components/CameraManager.cpp
-        src/components/LightManager.cpp
-        src/components/RenderableManager.cpp
-        src/components/TransformManager.cpp
-        src/fg/Blackboard.cpp
-        src/fg/FrameGraph.cpp
-        src/fg/FrameGraphHandle.cpp
-        src/fg/FrameGraphPassResources.cpp
-        src/fg/fg/PassNode.cpp
-        src/fg/fg/RenderTargetResourceEntry.cpp
-        src/fg/fg/ResourceEntry.cpp
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
         src/Culler.cpp
-        src/DebugRegistry.cpp
         src/DFG.cpp
-        src/VertexBuffer.cpp
+        src/DebugRegistry.cpp
         src/Engine.cpp
         src/Exposure.cpp
         src/Fence.cpp
@@ -72,47 +61,68 @@ set(SRCS
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
-        src/MaterialParser.cpp
         src/MaterialInstance.cpp
+        src/MaterialParser.cpp
         src/PostProcessManager.cpp
-        src/Renderer.cpp
-        src/RenderPass.cpp
+        src/FrameGraphRenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
+        src/Renderer.cpp
         src/ResourceAllocator.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
         src/Skybox.cpp
-        src/SwapChain.cpp
         src/Stream.cpp
+        src/SwapChain.cpp
         src/Texture.cpp
         src/UniformBuffer.cpp
+        src/VertexBuffer.cpp
         src/View.cpp
         src/Viewport.cpp
+        src/components/CameraManager.cpp
+        src/components/LightManager.cpp
+        src/components/RenderableManager.cpp
+        src/components/TransformManager.cpp
+        src/fg/Blackboard.cpp
+        src/fg/FrameGraph.cpp
+        src/fg/FrameGraphHandle.cpp
+        src/fg/FrameGraphPassResources.cpp
+        src/fg/fg/PassNode.cpp
+        src/fg/fg/RenderTargetResourceEntry.cpp
+        src/fg/fg/ResourceEntry.cpp
+        src/fg2/Blackboard.cpp
+        src/fg2/DependencyGraph.cpp
+        src/fg2/FrameGraph.cpp
+        src/fg2/FrameGraphResources.cpp
+        src/fg2/FrameGraphPass.cpp
+        src/fg2/PassNode.cpp
+        src/fg2/ResourceNode.cpp
+        src/fg2/FrameGraphTexture.cpp
 )
 
 set(PRIVATE_HDRS
+        src/FilamentAPI-impl.h
+        src/FrameHistory.h
+        src/FrameInfo.h
+        src/GPUBuffer.h
+        src/Intersections.h
+        src/MaterialParser.h
+        src/PostProcessManager.h
+        src/RenderPass.h
+        src/ResourceAllocator.h
+        src/ToneMapping.h
+        src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
-        src/fg/Blackboard.h
-        src/fg/FrameGraph.h
-        src/fg/FrameGraphPass.h
-        src/fg/FrameGraphPassResources.h
-        src/fg/FrameGraphHandle.h
-        src/fg/fg/PassNode.h
-        src/fg/fg/ResourceEntry.h
-        src/fg/fg/RenderTargetResourceEntry.h
-        src/fg/fg/ResourceNode.h
-        src/fg/fg/VirtualResource.h
         src/details/Allocators.h
         src/details/Camera.h
         src/details/ColorGrading.h
         src/details/Culler.h
-        src/details/DebugRegistry.h
         src/details/DFG.h
+        src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
         src/details/FrameSkipper.h
@@ -122,8 +132,8 @@ set(PRIVATE_HDRS
         src/details/Material.h
         src/details/MaterialInstance.h
         src/details/RenderPrimitive.h
-        src/details/Renderer.h
         src/details/RenderTarget.h
+        src/details/Renderer.h
         src/details/ResourceList.h
         src/details/Scene.h
         src/details/ShadowMap.h
@@ -134,18 +144,31 @@ set(PRIVATE_HDRS
         src/details/Texture.h
         src/details/VertexBuffer.h
         src/details/View.h
-        src/FilamentAPI-impl.h
-        src/FrameInfo.h
-        src/FrameHistory.h
-        src/GPUBuffer.h
-        src/Intersections.h
-        src/MaterialParser.h
-        src/PostProcessManager.h
-        src/RenderPass.h
-        src/ResourceAllocator.h
-        src/ToneMapping.h
-        src/UniformBuffer.h
-        src/upcast.h)
+        src/fg/Blackboard.h
+        src/fg/FrameGraph.h
+        src/fg/FrameGraphHandle.h
+        src/fg/FrameGraphPass.h
+        src/fg/FrameGraphPassResources.h
+        src/fg/fg/PassNode.h
+        src/fg/fg/RenderTargetResourceEntry.h
+        src/fg/fg/ResourceEntry.h
+        src/fg/fg/ResourceNode.h
+        src/fg/fg/VirtualResource.h
+        src/fg2/Blackboard.h
+        src/fg2/FrameGraph.h
+        src/fg2/FrameGraphId.h
+        src/fg2/FrameGraphResources.h
+        src/fg2/FrameGraphPass.h
+        src/fg2/FrameGraphRenderPass.h
+        src/fg2/Resource.cpp
+        src/fg2/FrameGraphTexture.h
+        src/fg2/details/DependencyGraph.h
+        src/fg2/details/PassNode.h
+        src/fg2/details/Resource.h
+        src/fg2/details/ResourceNode.h
+        src/fg2/details/Utilities.h
+        src/upcast.h
+)
 
 set(MATERIAL_SRCS
         src/materials/colorGrading/colorGrading.mat
@@ -314,7 +337,6 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-set(DATA_BINS)
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
 
 set(output_path "${GENERATION_ROOT}/generated/data/dfg.inc")

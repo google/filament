@@ -502,6 +502,7 @@ enum class TextureFormat : uint16_t {
 
 //! Bitmask describing the intended Texture Usage
 enum class TextureUsage : uint8_t {
+    NONE                = 0x0,
     COLOR_ATTACHMENT    = 0x1,                      //!< Texture can be used as a color attachment
     DEPTH_ATTACHMENT    = 0x2,                      //!< Texture can be used as a depth attachment
     STENCIL_ATTACHMENT  = 0x4,                      //!< Texture can be used as a stencil attachment

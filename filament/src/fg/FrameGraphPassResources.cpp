@@ -48,9 +48,9 @@ fg::ResourceEntryBase const& FrameGraphPassResources::getResourceEntryBase(Frame
 
     // TODO: we should check for write to
     //    // check that this FrameGraphHandle is indeed used by this pass
-    //    ASSERT_POSTCONDITION_NON_FATAL(mPass.isReadingFrom(r),
+    //    ASSERT_POSTCONDITION_NON_FATAL(mPassNode.isReadingFrom(r),
     //            "Pass \"%s\" doesn't declare reads to resource \"%s\" -- expect graphic corruptions",
-    //            mPass.name, pResource->name);
+    //            mPassNode.name, pResource->name);
 
     return *pResource;
 }
