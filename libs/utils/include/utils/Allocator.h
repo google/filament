@@ -416,6 +416,12 @@ public:
     void* end() const noexcept { return mEnd; }
     size_t getSize() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
 
+    friend void swap(HeapArea& lhs, HeapArea& rhs) noexcept {
+        using std::swap;
+        swap(lhs.mBegin, rhs.mBegin);
+        swap(lhs.mEnd, rhs.mEnd);
+    }
+
 private:
     void* mBegin = nullptr;
     void* mEnd = nullptr;
@@ -630,6 +636,15 @@ public:
     // An arena can't be copied
     Arena(Arena const& rhs) noexcept = delete;
     Arena& operator=(Arena const& rhs) noexcept = delete;
+
+    friend void swap(Arena& lhs, Arena& rhs) noexcept {
+        using std::swap;
+        swap(lhs.mArea, rhs.mArea);
+        swap(lhs.mAllocator, rhs.mAllocator);
+        swap(lhs.mLock, rhs.mLock);
+        swap(lhs.mListener, rhs.mListener);
+        swap(lhs.mArenaName, rhs.mArenaName);
+    }
 
 private:
     HeapArea mArea; // We might want to make that a template parameter too eventually.
