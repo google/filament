@@ -23,7 +23,8 @@
 
 #include "FrameHistory.h"
 
-#include <fg/FrameGraphHandle.h>
+#include <fg2/FrameGraphId.h>
+#include <fg2/FrameGraphResources.h>
 
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
@@ -36,11 +37,11 @@
 
 namespace filament {
 
-class FrameGraph;
 class FColorGrading;
 class FEngine;
 class FMaterial;
 class FMaterialInstance;
+class FrameGraph;
 class FView;
 class RenderPass;
 struct CameraInfo;
@@ -139,9 +140,6 @@ private:
     FEngine& mEngine;
     class PostProcessMaterial;
 
-    FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t level, bool finalize) noexcept;
-
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
         float standardDeviation = 1.0f;
@@ -166,11 +164,11 @@ private:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
-    void commitAndRender(FrameGraphRenderTarget const& out,
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material, uint8_t variant,
             backend::DriverApi& driver) const noexcept;
 
-    void commitAndRender(FrameGraphRenderTarget const& out,
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material,
             backend::DriverApi& driver) const noexcept;
 

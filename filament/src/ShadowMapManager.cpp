@@ -82,7 +82,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> shadows;
         FrameGraphId<FrameGraphTexture> tempDepth;
-        FrameGraphRenderTargetHandle rt[MAX_SHADOW_LAYERS];
+        uint32_t rt[MAX_SHADOW_LAYERS];
     };
 
     using ShadowPass = std::pair<const ShadowMapEntry*, RenderPass>;
@@ -136,20 +136,15 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                     .depth = mTextureRequirements.layers,
                     .levels = mTextureRequirements.levels,
                     .type = SamplerType::SAMPLER_2D_ARRAY,
-                    .format = mTextureFormat,
-                    .usage = TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE
-                        | (fillWithCheckerboard ? TextureUsage::UPLOADABLE : (TextureUsage) 0)
+                    .format = mTextureFormat
                 };
 
                 if (view.hasVsm()) {
                     // TODO: support 16-bit VSM depth textures.
                     shadowTextureDesc.format = TextureFormat::RG32F;
-                    shadowTextureDesc.usage = TextureUsage::COLOR_ATTACHMENT |
-                            TextureUsage::SAMPLEABLE;
                 }
 
                 data.shadows = builder.createTexture("Shadow Texture", shadowTextureDesc);
-                data.shadows = builder.write(data.shadows);
 
                 if (view.hasVsm()) {
                     // When rendering VSM shadow maps, we still need a depth texture for correct
@@ -164,30 +159,33 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         .samples = 1,
                         .type = SamplerType::SAMPLER_2D,
                         .format = TextureFormat::DEPTH16,
-                        .usage = TextureUsage::DEPTH_ATTACHMENT
                     });
                     // We specify "read" for the temporary shadow texture, so it isn't culled.
-                    data.tempDepth = builder.write(builder.read(data.tempDepth));
+//                    data.tempDepth = builder.read(data.tempDepth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 }
 
                 // Create a render target for each layer of the texture array.
                 for (uint8_t i = 0u; i < mTextureRequirements.layers; i++) {
-                    FrameGraphRenderTarget::Descriptor renderTargetDesc {};
+                    FrameGraphRenderPass::Descriptor renderTargetDesc {};
                     if (view.hasVsm()) {
-                        renderTargetDesc.attachments = { { data.shadows, 0u, i }, { data.tempDepth } };
-                        renderTargetDesc.clearFlags = TargetBufferFlags::COLOR |
-                            TargetBufferFlags::DEPTH;
+                        auto attachment = builder.createSubresource(data.shadows, "Shadow Texture Mip", { .layer = i });
+                        attachment = builder.write(attachment, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                        data.tempDepth = builder.write(data.tempDepth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                        renderTargetDesc.attachments = { .color = { attachment }, .depth = data.tempDepth };
+                        renderTargetDesc.clearFlags = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         renderTargetDesc.clearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
                         renderTargetDesc.samples = layerSampleCount[i];
                     } else {
-                        renderTargetDesc.attachments = { {}, { data.shadows, 0u, i } };
+                        auto attachment = builder.createSubresource(data.shadows, "Shadow Texture Mip", { .layer = i });
+                        attachment = builder.write(attachment, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                        renderTargetDesc.attachments = { .depth = attachment };
                         renderTargetDesc.clearFlags = TargetBufferFlags::DEPTH;
                     }
 
-                    data.rt[i] = builder.createRenderTarget("Shadow RT", renderTargetDesc);
+                    data.rt[i] = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 }
             },
-            [=, passes = std::move(passes), &view, &engine](FrameGraphPassResources const& resources,
+            [=, passes = std::move(passes), &view, &engine](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
                 for (auto& [map, pass] : passes) {
                     FCamera const& camera = map->getShadowMap()->getCamera();
@@ -210,7 +208,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                     view.commitUniforms(driver);
 
                     const auto layer = map->getLayout().layer;
-                    auto rt = resources.get(data.rt[layer]);
+                    auto rt = resources.getRenderPassInfo(data.rt[layer]);
                     rt.params.viewport = viewport;
 
                     auto polygonOffset = map->getShadowMap()->getPolygonOffset();
@@ -231,10 +229,11 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         auto& debugPatternPass = fg.addPass<DebugPatternData>("Shadow Debug Pattern Pass",
                 [&](FrameGraph::Builder& builder, DebugPatternData& data) {
-                    assert_invariant(shadows.isValid());
-                    data.shadows = builder.write(shadows);
+                    assert_invariant(shadows);
+                    data.shadows = builder.write(shadows,
+                            FrameGraphTexture::Usage::UPLOADABLE);
                 },
-                [=](FrameGraphPassResources const& resources, DebugPatternData const& data,
+                [=](FrameGraphResources const& resources, DebugPatternData const& data,
                     DriverApi& driver) {
                     fillWithDebugPattern(driver, resources.getTexture(data.shadows),
                             mTextureRequirements.size);

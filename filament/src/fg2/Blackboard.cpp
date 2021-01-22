@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,35 @@
  * limitations under the License.
  */
 
-#include <fg/Blackboard.h>
+#include "fg2/Blackboard.h"
+
+#include <utils/CString.h>
 
 using namespace utils;
 
 namespace filament {
 
+Blackboard::Blackboard() noexcept = default;
+
+Blackboard::~Blackboard() noexcept = default;
+
 FrameGraphHandle Blackboard::getHandle(utils::StaticString const& name) const noexcept {
     auto it = mMap.find(name);
     if (it != mMap.end()) {
-        return it.value();
+        return it->second;
     }
     return {};
 }
+
+FrameGraphHandle& Blackboard::operator [](utils::StaticString const& name) noexcept {
+    auto[pos, _] = mMap.insert_or_assign(name, FrameGraphHandle{});
+    return pos->second;
+}
+
+void Blackboard::put(utils::StaticString const& name, FrameGraphHandle handle) noexcept {
+    operator[](name) = handle;
+}
+
 
 void Blackboard::remove(utils::StaticString const& name) noexcept {
     mMap.erase(name);
