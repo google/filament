@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,47 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FRAMEGRAPHPASS_H
-#define TNT_FILAMENT_FRAMEGRAPHPASS_H
+#ifndef TNT_FILAMENT_FG2_PASS_H
+#define TNT_FILAMENT_FG2_PASS_H
 
 #include "private/backend/DriverApiForward.h"
 
-#include <utils/Allocator.h>
+#include "fg2/FrameGraphResources.h"
 
-#include <stdint.h>
+#include <utils/Allocator.h>
 
 namespace filament {
 
-class FrameGraphPassResources;
-
 class FrameGraphPassExecutor {
     friend class FrameGraph;
-    virtual void execute(FrameGraphPassResources const& resources, backend::DriverApi& driver) noexcept = 0;
+    friend class PassNode;
+    friend class RenderPassNode;
+
+protected:
+    virtual void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept = 0;
+
 public:
-    FrameGraphPassExecutor();
-    virtual ~FrameGraphPassExecutor();
+    FrameGraphPassExecutor() noexcept = default;
+    virtual ~FrameGraphPassExecutor() noexcept;
     FrameGraphPassExecutor(FrameGraphPassExecutor const&) = delete;
     FrameGraphPassExecutor& operator = (FrameGraphPassExecutor const&) = delete;
 };
 
-template <typename Data, typename Execute>
-class FrameGraphPass final : private FrameGraphPassExecutor {
+class FrameGraphPassBase : protected FrameGraphPassExecutor {
+    friend class FrameGraph;
+    friend class PassNode;
+    friend class RenderPassNode;
+    PassNode* mNode = nullptr;
+    void setNode(PassNode* node) noexcept { mNode = node; }
+    PassNode const& getNode() const noexcept { return *mNode; }
+
+public:
+    using FrameGraphPassExecutor::FrameGraphPassExecutor;
+    virtual ~FrameGraphPassBase() noexcept;
+};
+
+template<typename Data, typename Execute>
+class FrameGraphPass : public FrameGraphPassBase {
     friend class FrameGraph;
 
     // allow our allocators to instantiate us
@@ -46,19 +62,21 @@ class FrameGraphPass final : private FrameGraphPassExecutor {
     friend class utils::Arena;
 
     explicit FrameGraphPass(Execute&& execute) noexcept
-            : FrameGraphPassExecutor(), mExecute(std::move(execute)) {
+            : FrameGraphPassBase(), mExecute(std::move(execute)) {
     }
-    void execute(FrameGraphPassResources const& resources, backend::DriverApi& driver) noexcept final {
+
+    void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept final {
         mExecute(resources, mData, driver);
     }
+
     Execute mExecute;
     Data mData;
 
 public:
     Data const& getData() const noexcept { return mData; }
-    Data& getData() noexcept { return mData; }
+    Data const* operator->() const { return &getData(); }
 };
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FRAMEGRAPHPASS_H
+#endif //TNT_FILAMENT_FG2_PASS_H

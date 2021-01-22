@@ -31,6 +31,8 @@
 #include <filament/Renderer.h>
 #include <filament/View.h>
 
+#include <fg2/FrameGraphId.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PresentCallable.h>

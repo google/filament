@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-#include "fg/fg/ResourceEntry.h"
-
-#include <fg/FrameGraph.h>
+#include "fg2/FrameGraphPass.h"
 
 namespace filament {
-namespace fg {
 
-VirtualResource::~VirtualResource() = default;
+FrameGraphPassExecutor::~FrameGraphPassExecutor() noexcept = default;
 
-ResourceEntryBase::ResourceEntryBase(const char* name, uint16_t id, bool imported, uint8_t priority) noexcept
-        : name(name), id(id), imported(imported), priority(priority) {
-}
+FrameGraphPassBase::~FrameGraphPassBase() noexcept = default;
 
-ResourceAllocatorInterface& ResourceEntryBase::getResourceAllocator(FrameGraph& fg) noexcept {
-    return fg.getResourceAllocator();
-}
-
-ResourceEntryBase::~ResourceEntryBase() = default;
-
-} // namespace fg
 } // namespace filament

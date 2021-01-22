@@ -45,12 +45,12 @@
 
 #include <memory>
 
-using namespace filament::math;
 using namespace utils;
 
 namespace filament {
 
 using namespace backend;
+using namespace math;
 
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),

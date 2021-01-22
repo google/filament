@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG_BLACKBOARD_H
-#define TNT_FILAMENT_FG_BLACKBOARD_H
+#ifndef TNT_FILAMENT_FG2_BLACKBOARD_H
+#define TNT_FILAMENT_FG2_BLACKBOARD_H
 
-#include <fg/FrameGraphHandle.h>
+#include <fg2/FrameGraphId.h>
 
 #include <utils/CString.h>
 
-#include <tsl/robin_map.h>
+#include <unordered_map>
 
 namespace filament {
 
 class Blackboard {
-    using Container = tsl::robin_map<utils::StaticString, FrameGraphHandle>;
+    using Container = std::unordered_map<utils::StaticString, FrameGraphHandle>;
 
 public:
-    auto& operator [](utils::StaticString const& name) noexcept {
-        return mMap.insert_or_assign(name, FrameGraphHandle{}).first.value();
-    }
+    Blackboard() noexcept;
+    ~Blackboard() noexcept;
 
-    template<typename T>
-    void put(utils::StaticString const& name, FrameGraphId<T> handle) noexcept {
-        mMap.insert_or_assign(name, handle);
-    }
+    FrameGraphHandle& operator [](utils::StaticString const& name) noexcept;
+
+    void put(utils::StaticString const& name, FrameGraphHandle handle) noexcept;
 
     template<typename T>
     FrameGraphId<T> get(utils::StaticString&& name) const noexcept {
@@ -52,4 +50,5 @@ private:
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG_BLACKBOARD_H
+
+#endif //TNT_FILAMENT_FG2_BLACKBOARD_H
