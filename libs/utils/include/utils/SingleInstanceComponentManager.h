@@ -71,9 +71,9 @@ public:
         mData.push_back();
     }
 
-    SingleInstanceComponentManager(SingleInstanceComponentManager&& rhs) noexcept = default;
+    SingleInstanceComponentManager(SingleInstanceComponentManager&& rhs) noexcept {/* = default */}
     SingleInstanceComponentManager& operator=(SingleInstanceComponentManager&& rhs) noexcept {/* = default */}
-    ~SingleInstanceComponentManager() noexcept {/* = default */}
+    ~SingleInstanceComponentManager() noexcept = default;
 
     // not copyable
     SingleInstanceComponentManager(SingleInstanceComponentManager const& rhs) = delete;
