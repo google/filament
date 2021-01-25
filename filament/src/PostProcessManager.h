@@ -162,6 +162,10 @@ private:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
+    FrameGraphId<FrameGraphTexture> bloomPassPingPong(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+
     void commitAndRender(FrameGraphRenderTarget const& out,
             PostProcessMaterial const& material, uint8_t variant,
             backend::DriverApi& driver) const noexcept;
