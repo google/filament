@@ -257,7 +257,7 @@ Filament.loadClassExtensions = function() {
         const options = {
             dirtStrength: 0.2,
             highlight: 1000.0,
-            strength: 0.90,
+            strength: 0.10,
             resolution: 360,
             anamorphism: 1.0,
             levels: 6,
