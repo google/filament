@@ -190,6 +190,7 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
+    mDisableFeedbackLoops = !driver.areFeedbackLoopsSupported();
 
     registerPostProcessMaterial("sao", MATERIAL(SAO));
     registerPostProcessMaterial("mipmapDepth", MATERIAL(MIPMAPDEPTH));

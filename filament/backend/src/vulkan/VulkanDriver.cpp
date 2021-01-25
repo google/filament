@@ -814,6 +814,10 @@ bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }
 
+bool VulkanDriver::areFeedbackLoopsSupported() {
+    return true;
+}
+
 math::float2 VulkanDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };

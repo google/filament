@@ -155,6 +155,11 @@ public:
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
         bool disable_texture_filter_anisotropic = false;
 
+        // Some drivers have issues when reading from a mip while writing to a different mip.
+        // In the OpenGL ES 3.0 specification this is covered in section 4.4.3,
+        // "Feedback Loops Between Textures and the Framebuffer".
+        bool disable_feedback_loops = false;
+
         // Some drivers don't implement timer queries correctly
         bool dont_use_timer_query = false;
     } bugs;
