@@ -71,6 +71,13 @@ OpenGLContext::OpenGLContext() noexcept {
         }
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
+
+        // We have observed bloom flashing artifacts (as well as failure in test_FeedbackLoop) on a
+        // MacBook Air with an Intel GPU, as well as an Intel NUC Windows PC. For now we're assuming
+        // that all Intel GPU's cannot handle feedback loops properly.
+        // TODO: match a more specific string pattern after Intel discrete GPU's arrive.
+        bugs.disable_feedback_loops = true;
+
     } else if (strstr(renderer, "PowerVR") || strstr(renderer, "Apple")) {
     } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
     } else if (strstr(renderer, "Vivante")) {
@@ -78,6 +85,12 @@ OpenGLContext::OpenGLContext() noexcept {
     } else if (strstr(renderer, "Mozilla")) {
         bugs.disable_invalidate_framebuffer = true;
     }
+
+    // Chrome does not support feedback loops in WebGL 2.0. See also:
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
+#if defined(__EMSCRIPTEN__)
+    bugs.disable_feedback_loops = true;
+#endif
 
     // Figure out if we have the extension we need
     GLint n = 0;

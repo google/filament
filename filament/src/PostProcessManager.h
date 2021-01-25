@@ -221,6 +221,7 @@ private:
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
+    bool mDisableFeedbackLoops;
 };
 
 
