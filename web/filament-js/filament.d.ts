@@ -115,6 +115,7 @@ export interface View$BloomOptions {
     blendMode?: View$BloomOptions$BlendMode;
     threshold?: boolean;
     enabled?: boolean;
+    highlight?: number;
     // TODO: add support for dirt texture in BloomOptions.
 }
 
