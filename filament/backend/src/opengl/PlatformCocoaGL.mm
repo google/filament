@@ -151,21 +151,21 @@ void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
     // "update" to be called from the UI thread. This became a hard requirement with the arrival
     // of macOS 10.15 (Catalina). If we were to call these methods from the GL thread, we would
     // see EXC_BAD_INSTRUCTION.
-    #if UTILS_HAS_THREADING
-    dispatch_sync(dispatch_get_main_queue(), ^(void) {
+    if (![NSThread isMainThread]) {
+        dispatch_sync(dispatch_get_main_queue(), ^(void) {
+            if (resetView) {
+                [glContext clearDrawable];
+                [glContext setView:nsView];
+            }
+            [glContext update];
+        });
+    } else {
         if (resetView) {
             [glContext clearDrawable];
             [glContext setView:nsView];
         }
         [glContext update];
-    });
-    #else
-        if (resetView) {
-            [glContext clearDrawable];
-            [glContext setView:nsView];
-        }
-        [glContext update];
-    #endif
+    }
 }
 
 } // namespace filament
