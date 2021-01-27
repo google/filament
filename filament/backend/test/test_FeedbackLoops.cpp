@@ -176,15 +176,14 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = program;
-            backend::SamplerGroup samplers(1);
-            backend::SamplerParams sparams = {};
+            SamplerGroup samplers(1);
+            SamplerParams sparams = {};
             sparams.filterMag = SamplerMagFilter::LINEAR;
             sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
             samplers.setSampler(0, texture, sparams);
             auto sgroup = api.createSamplerGroup(samplers.getSize());
             api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
-            auto ubuffer = api.createUniformBuffer(sizeof(MaterialParams),
-                    backend::BufferUsage::STATIC);
+            auto ubuffer = api.createUniformBuffer(sizeof(MaterialParams), BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0);
             api.bindSamplers(0, sgroup);
@@ -194,12 +193,14 @@ TEST_F(BackendTest, FeedbackLoops) {
             params.flags.discardStart = TargetBufferFlags::ALL;
             state.rasterState.disableBlending();
             for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
+                const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
+                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
                 uploadUniforms(getDriverApi(), ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(targetLevel - 1),
+                    .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive());
@@ -211,17 +212,21 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
             state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
             for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
+                const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
+                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
                 uploadUniforms(getDriverApi(), ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
-                    .sourceLevel = float(targetLevel + 1),
+                    .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive());
                 api.endRenderPass();
             }
+
+            getDriverApi().setMinMaxLevels(texture, 0, 0x7f);
 
             // Read back the render target corresponding to the base level.
             //
