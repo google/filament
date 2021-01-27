@@ -41,7 +41,9 @@ function print_help {
     echo "    -t"
     echo "        Enable SwiftShader support for Vulkan in desktop builds."
     echo "    -l"
-    echo "        Combine iOS arm64 and x86_64 into universal libraries (implies -s)."
+    echo "        Build arm64/x86_64 universal libraries."
+    echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
+    echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
     echo "    -w"
     echo "        Build Web documents (compiles .md.html files to .html)."
     echo ""
@@ -121,7 +123,7 @@ VULKAN_ANDROID_GRADLE_OPTION=""
 SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
 
 IOS_BUILD_SIMULATOR=false
-IOS_CREATE_UNIVERSAL_LIBRARIES=false
+BUILD_UNIVERSAL_LIBRARIES=false
 
 BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
@@ -158,6 +160,10 @@ function build_desktop_target {
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
     if [[ "${lc_name}" == "darwin" ]]; then
         local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
+
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            local architectures="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+        fi
     fi
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
@@ -169,6 +175,7 @@ function build_desktop_target {
             -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
             ${SWIFTSHADER_OPTION} \
             ${deployment_target} \
+            ${architectures} \
             ../..
     fi
     ${BUILD_COMMAND} ${build_targets}
@@ -521,7 +528,7 @@ function build_ios {
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
 
-        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             build/ios/create-universal-libs.sh \
                 -o out/ios-debug/filament/lib/universal \
                 out/ios-debug/filament/lib/arm64 \
@@ -539,7 +546,7 @@ function build_ios {
             build_ios_target "Release" "x86_64" "iphonesimulator"
         fi
 
-        if [[ "${IOS_CREATE_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             build/ios/create-universal-libs.sh \
                 -o out/ios-release/filament/lib/universal \
                 out/ios-release/filament/lib/arm64 \
@@ -752,9 +759,8 @@ while getopts ":hacfijmp:q:uvslwt" opt; do
             ;;
         l)
             IOS_BUILD_SIMULATOR=true
-            IOS_CREATE_UNIVERSAL_LIBRARIES=true
-            echo "iOS simulator support enabled."
-            echo "Creating iOS universal libraries."
+            BUILD_UNIVERSAL_LIBRARIES=true
+            echo "Building universal libraries."
             ;;
         w)
             ISSUE_WEB_DOCS=true

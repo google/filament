@@ -432,7 +432,18 @@ set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
 # ==================================================================================================
 # choose where to put the objects in the dist folder
 if (NOT DIST_ARCH)
-    set(DIST_ARCH x86_64)
+    # On Apple silicon, the value of CMAKE_HOST_SYSTEM_PROCESSOR varies based on the CMake process's
+    # own architecture. Because of this, running a x86_64 CMake binary on Apple silicon will cause
+    # DIST_ARCH to be set incorrectly.
+    set(DIST_ARCH "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
+    if (CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+        set(DIST_ARCH "universal")
+    else()
+        if (NOT CMAKE_OSX_ARCHITECTURES STREQUAL "")
+            set(DIST_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+        endif()
+    endif()
 endif()
 if (NOT DIST_DIR)
     set(DIST_DIR "${DIST_ARCH}")
