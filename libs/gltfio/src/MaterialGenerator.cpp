@@ -34,7 +34,7 @@ namespace {
 
 class MaterialGenerator : public MaterialProvider {
 public:
-    explicit MaterialGenerator(filament::Engine* engine);
+    explicit MaterialGenerator(filament::Engine* engine, bool optimizeShaders);
     ~MaterialGenerator() override;
 
     MaterialSource getSource() const noexcept override { return GENERATE_SHADERS; }
@@ -49,10 +49,12 @@ public:
     using HashFn = utils::hash::MurmurHashFn<MaterialKey>;
     tsl::robin_map<MaterialKey, filament::Material*, HashFn> mCache;
     std::vector<filament::Material*> mMaterials;
-    filament::Engine* mEngine;
+    filament::Engine* const mEngine;
+    const bool mOptimizeShaders;
 };
 
-MaterialGenerator::MaterialGenerator(Engine* engine) : mEngine(engine) {
+MaterialGenerator::MaterialGenerator(Engine* engine, bool optimizeShaders) : mEngine(engine),
+        mOptimizeShaders(optimizeShaders) {
     MaterialBuilder::init();
 }
 
@@ -285,8 +287,8 @@ std::string shaderFromKey(const MaterialKey& config) {
     return shader;
 }
 
-Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
-        const char* name) {
+static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
+        const char* name, bool optimizeShaders) {
     std::string shader = shaderFromKey(config);
     processShaderString(&shader, uvmap, config);
     MaterialBuilder builder = MaterialBuilder()
@@ -299,9 +301,9 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             .doubleSided(config.doubleSided)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
-#ifndef NDEBUG
-    builder.optimization(MaterialBuilder::Optimization::NONE);
-#endif
+    if (!optimizeShaders) {
+        builder.optimization(MaterialBuilder::Optimization::NONE);
+    }
 
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
     int numUvSets = getNumUvSets(uvmap);
@@ -476,7 +478,13 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
-        Material* mat = createMaterial(mEngine, *config, *uvmap, label);
+
+        bool optimizeShaders = mOptimizeShaders;
+#ifndef NDEBUG
+        optimizeShaders = false;
+#endif
+
+        Material* mat = createMaterial(mEngine, *config, *uvmap, label, optimizeShaders);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
         return mat->createInstance(label);
@@ -488,8 +496,8 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
 
 namespace gltfio {
 
-MaterialProvider* createMaterialGenerator(filament::Engine* engine) {
-    return new MaterialGenerator(engine);
+MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimizeShaders) {
+    return new MaterialGenerator(engine, optimizeShaders);
 }
 
 } // namespace gltfio

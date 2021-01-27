@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
 - gltfio: added support for `KHR_materials_sheen`
+- gltfio: shader optimizations are now disabled by default, unless opting in or using ubershaders
 
 ## v1.9.10
 
