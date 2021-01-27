@@ -1717,6 +1717,24 @@ void OpenGLDriver::update2DImage(Handle<HwTexture> th,
     }
 }
 
+void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
+    DEBUG_MARKER()
+    auto& gl = mContext;
+
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
+    gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
+
+    // Must fit within int8_t.
+    assert(minLevel <= 0x7f && maxLevel <= 0x7f);
+
+    t->gl.baseLevel = minLevel;
+    glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
+
+    t->gl.maxLevel = maxLevel; // NOTE: according to the GL spec, the default value of this 1000
+    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+}
+
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -2675,6 +2693,15 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       getWrapMode(params.wrapR));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
+
+    if (params.baseLevel > 0) {
+        glSamplerParameterf(s, GL_TEXTURE_MIN_LOD, params.baseLevel - 1);
+    }
+
+    if (params.maxLevel > 0) {
+        glSamplerParameterf(s, GL_TEXTURE_MAX_LOD, params.maxLevel - 1);
+    }
+
 // TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
 #if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
     auto& gl = mContext;

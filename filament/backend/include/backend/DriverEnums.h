@@ -670,9 +670,9 @@ struct SamplerParams { // NOLINT
             uint8_t padding0                : 2;    //!< reserved. must be 0.
 
             SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
-            uint8_t padding1                : 5;    //!< reserved. must be 0.
 
-            uint8_t padding2                : 8;    //!< reserved. must be 0.
+            uint8_t baseLevel               : 4;    //!< if non-zero, TEXTURE_BASE_LEVEL + 1
+            uint8_t maxLevel                : 4;    //!< if non-zero, TEXTURE_MAX_LEVEL + 1
         };
         uint32_t u;
     };

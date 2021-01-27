@@ -72,9 +72,9 @@ OpenGLContext::OpenGLContext() noexcept {
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
 
-        // We have observed bloom flashing artifacts (as well as failure in test_FeedbackLoop) on a
-        // MacBook Air with an Intel GPU, as well as an Intel NUC Windows PC. For now we're assuming
-        // that all Intel GPU's cannot handle feedback loops properly.
+        // We have observed bloom artifacts (MacBook Air with an Intel GPU) in release builds, which
+        // goes away in ping-pong mode. This is strange because test_FeedbackLoops seems to produce
+        // reasonable results with these GPU's.
         // TODO: match a more specific string pattern after Intel discrete GPU's arrive.
         bugs.disable_feedback_loops = true;
 
