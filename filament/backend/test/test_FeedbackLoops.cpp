@@ -21,6 +21,9 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#include <utils/Hash.h>
+#include <utils/Log.h>
+
 #include <fstream>
 
 #ifndef IOS
@@ -34,164 +37,216 @@ using namespace image;
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static std::string downsampleVs = R"(#version 450 core
+static std::string fullscreenVs = R"(#version 450 core
 layout(location = 0) in vec4 mesh_position;
 void main() {
     // Hack: move and scale triangle so that it covers entire viewport.
     gl_Position = vec4((mesh_position.xy + 0.5) * 5.0, 0.0, 1.0);
 })";
 
-static std::string downsampleFs = R"(#version 450 core
+static std::string fullscreenFs = R"(#version 450 core
+precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
-uniform sampler2D tex;
+layout(location = 0) uniform sampler2D tex;
+uniform Params {
+    highp float fbWidth;
+    highp float fbHeight;
+    highp float sourceLevel;
+    highp float unused;
+} params;
 void main() {
-    float lod = 0.0;
-    vec2 uv = gl_FragCoord.xy / 256.0 + 0.5 / 256.0;
-    fragColor = textureLod(tex, uv, lod);
+    vec2 fbsize = vec2(params.fbWidth, params.fbHeight);
+    vec2 uv = (gl_FragCoord.xy + 0.5) / fbsize;
+    fragColor = textureLod(tex, uv, params.sourceLevel);
 })";
 
-static uint32_t goldenPixelValue = 0;
+static uint32_t sPixelHashResult = 0;
+
+// Selecting a NPOT texture size seems to exacerbate the bug seen with Intel GPU's.
+// Note that Filament uses a higher precision format (R11F_G11F_B10F) but this does not seem
+// necessary to trigger the bug.
+
+static constexpr int kTexWidth = 360;
+static constexpr int kTexHeight = 180;
+static constexpr int kNumLevels = 3;
+static constexpr int kNumFrames = 2;
+static constexpr auto kTexFormat = filament::backend::TextureFormat::RGB8;
 
 namespace test {
 
 using namespace filament;
 using namespace filament::backend;
+using namespace utils;
+
+struct MaterialParams {
+    float fbWidth;
+    float fbHeight;
+    float sourceLevel;
+    float unused;
+};
+
+static void uploadUniforms(DriverApi& dapi, Handle<HwUniformBuffer> ubh, MaterialParams params) {
+    MaterialParams* tmp = new MaterialParams(params);
+    auto cb = [](void* buffer, size_t size, void* user) {
+        MaterialParams* sp = (MaterialParams*) buffer;
+        delete sp;
+    };
+    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
+    dapi.loadUniformBuffer(ubh, std::move(bd));
+}
+
+static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
+    const size_t size = kTexWidth * kTexHeight * 4;
+    void* buffer = calloc(1, size);
+    auto cb = [](void* buffer, size_t size, void* user) {
+        int w = kTexWidth, h = kTexHeight;
+        const uint32_t* texels = (uint32_t*) buffer;
+        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
+        #ifndef IOS
+        LinearImage image(w, h, 4);
+        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
+        std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
+        #endif
+    };
+    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
+    dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
+}
 
 TEST_F(BackendTest, FeedbackLoops) {
+    auto& api = getDriverApi();
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = createSwapChain();
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ProgramHandle downsampleProgram;
+        ProgramHandle program;
         {
-            ShaderGenerator shaderGen(downsampleVs, downsampleFs, sBackend, sIsMobilePlatform);
+            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform);
             Program prog = shaderGen.getProgram();
-            Program::Sampler psamplers[1];
-            psamplers[0].binding = 0;
-            psamplers[0].name = utils::CString("tex");
-            psamplers[0].strict = false;
+            Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
             prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            downsampleProgram = getDriverApi().createProgram(std::move(prog));
+            prog.setUniformBlock(1, utils::CString("params"));
+            program = api.createProgram(std::move(prog));
         }
 
         TrianglePrimitive triangle(getDriverApi());
 
-        auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
-
-        // Create one texture with two miplevels.
+        // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> texture = getDriverApi().createTexture(
-                    SamplerType::SAMPLER_2D,            // target
-                    2,                                  // levels
-                    TextureFormat::RGBA8,               // format
-                    1,                                  // samples
-                    512,                                // width
-                    512,                                // height
-                    1,                                  // depth
-                    usage);                             // usage
+        Handle<HwTexture> texture = api.createTexture(
+            SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
 
-        // Create a RenderTarget for miplevel 1.
-        Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
-                TargetBufferFlags::COLOR,
-                256,                                       // width of miplevel
-                256,                                       // height of miplevel
-                1,                                         // samples
-                { texture, 1, 0 },                         // color level = 1
-                {},                                        // depth
-                {});                                       // stencil
+        // Create a RenderTarget for each miplevel.
+        Handle<HwRenderTarget> renderTargets[kNumLevels];
+        for (uint8_t level = 0; level < kNumLevels; level++) {
+            slog.i << "Level " << level << ": " <<
+                    (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
+            renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
+                    kTexWidth >> level, kTexHeight >> level, 1, { texture, level, 0 }, {}, {});
+        }
 
-        // Fill the texture with interesting colors.
-        const size_t size = 512 * 512 * 4;
+        // Fill the base level of the texture with interesting colors.
+        const size_t size = kTexHeight * kTexWidth * 4;
         uint8_t* buffer = (uint8_t*) malloc(size);
-        for (int r = 0, i = 0; r < 512; r++) {
-            for (int c = 0; c < 512; c++, i += 4) {
+        for (int r = 0, i = 0; r < kTexHeight; r++) {
+            for (int c = 0; c < kTexWidth; c++, i += 4) {
                 buffer[i + 0] = 0x10;
-                buffer[i + 1] = 0xff * r / 511;
-                buffer[i + 2] = 0xff * c / 511;
+                buffer[i + 1] = 0x1f * r / (kTexHeight - 1);
+                buffer[i + 2] = 0x1f * c / (kTexWidth - 1);
                 buffer[i + 3] = 0xf0;
             }
          }
         auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
         PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
+        api.update2DImage(texture, 0, 0, 0, kTexWidth, kTexHeight, std::move(pb));
 
-        // Upload texture data.
-        getDriverApi().update2DImage(texture, 0, 0, 0, 512, 512, std::move(pb));
+        for (int frame = 0; frame < kNumFrames; frame++) {
 
-        RenderPassParams params = {};
-        params.viewport.left = 0;
-        params.viewport.bottom = 0;
-        params.viewport.width = 256;
-        params.viewport.height = 256;
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {1.f, 0.f, 0.f, 1.f};
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
+            // Prep for rendering.
+            RenderPassParams params = {};
+            params.flags.clear = TargetBufferFlags::NONE;
+            params.flags.discardEnd = TargetBufferFlags::NONE;
+            PipelineState state;
+            state.rasterState.colorWrite = true;
+            state.rasterState.depthWrite = false;
+            state.rasterState.depthFunc = RasterState::DepthFunc::A;
+            state.program = program;
+            backend::SamplerGroup samplers(1);
+            backend::SamplerParams sparams = {};
+            sparams.filterMag = SamplerMagFilter::LINEAR;
+            sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+            samplers.setSampler(0, texture, sparams);
+            auto sgroup = api.createSamplerGroup(samplers.getSize());
+            api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+            auto ubuffer = api.createUniformBuffer(sizeof(MaterialParams),
+                    backend::BufferUsage::STATIC);
+            api.makeCurrent(swapChain, swapChain);
+            api.beginFrame(0, 0);
+            api.bindSamplers(0, sgroup);
+            api.bindUniformBuffer(0, ubuffer);
 
-        PipelineState state;
-        state.program = downsampleProgram;
-        state.rasterState.disableBlending();
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = RasterState::DepthFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
+            // Downsample passes
+            params.flags.discardStart = TargetBufferFlags::ALL;
+            state.rasterState.disableBlending();
+            for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
+                params.viewport.width = kTexWidth >> targetLevel;
+                params.viewport.height = kTexHeight >> targetLevel;
+                uploadUniforms(getDriverApi(), ubuffer, {
+                    .fbWidth = float(params.viewport.width),
+                    .fbHeight = float(params.viewport.height),
+                    .sourceLevel = float(targetLevel - 1),
+                });
+                api.beginRenderPass(renderTargets[targetLevel], params);
+                api.draw(state, triangle.getRenderPrimitive());
+                api.endRenderPass();
+            }
 
-        backend::SamplerGroup samplers(1);
-        backend::SamplerParams sparams = {};
-        sparams.filterMag = SamplerMagFilter::LINEAR;
-        sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+            // Upsample passes
+            params.flags.discardStart = TargetBufferFlags::NONE;
+            state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+            state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
+            for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
+                params.viewport.width = kTexWidth >> targetLevel;
+                params.viewport.height = kTexHeight >> targetLevel;
+                uploadUniforms(getDriverApi(), ubuffer, {
+                    .fbWidth = float(params.viewport.width),
+                    .fbHeight = float(params.viewport.height),
+                    .sourceLevel = float(targetLevel + 1),
+                });
+                api.beginRenderPass(renderTargets[targetLevel], params);
+                api.draw(state, triangle.getRenderPrimitive());
+                api.endRenderPass();
+            }
 
-        samplers.setSampler(0, texture, sparams);
+            // Read back the render target corresponding to the base level.
+            //
+            // NOTE: Calling glReadPixels on any miplevel other than the base level
+            // seems to be un-reliable on some GPU's.
+            if (frame == kNumFrames - 1) {
+                dumpScreenshot(api, renderTargets[0]);
+            }
 
-        auto sgroup = getDriverApi().createSamplerGroup(samplers.getSize());
-        getDriverApi().updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+            api.flush();
+            api.commit(swapChain);
+            api.endFrame(0);
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+        }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
-        getDriverApi().bindSamplers(0, sgroup);
-
-        // Draw a triangle.
-        getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
-        getDriverApi().endRenderPass();
-
-        // Read back the current render target.
-        const size_t size2 = 256 * 256 * 4;
-        void* buffer2 = calloc(1, size2);
-        auto cb2 = [](void* buffer, size_t size, void* user) {
-            uint32_t* texels = (uint32_t*) buffer;
-            goldenPixelValue = texels[0]; // <-- First column, first row of pixels.
-            #ifndef IOS
-            const size_t width = 256, height = 256;
-            LinearImage image(width, height, 4);
-            image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*) buffer);
-            std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-            #endif
-        };
-        PixelBufferDescriptor pb2(buffer2, size2, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb2);
-
-        getDriverApi().readPixels(renderTarget, 0, 0, 256, 256, std::move(pb2));
-
-        getDriverApi().flush();
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
-
-        getDriverApi().destroyProgram(downsampleProgram);
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(defaultRenderTarget);
+        api.destroyProgram(program);
+        api.destroySwapChain(swapChain);
+        for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
 
-    getDriverApi().finish();
-    executeCommands();
-    getDriver().purge();
-
-    const uint32_t expected = 0xf000ff10;
-    printf("Pixel value is %8.8x, Expected %8.8x\n", goldenPixelValue, expected);
-    EXPECT_EQ(goldenPixelValue, expected);
+    const uint32_t expected = 0xe93a4a07;
+    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
+    EXPECT_TRUE(sPixelHashResult == expected);
 }
 
 } // namespace test
