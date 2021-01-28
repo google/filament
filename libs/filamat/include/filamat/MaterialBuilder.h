@@ -478,7 +478,10 @@ public:
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
-    //! Build the material.
+    /**
+     * Build the material. If you are using the Filament engine with this library, you should use
+     * the job system provided by Engine.
+     */
     Package build(utils::JobSystem& jobSystem) noexcept;
 
 public:

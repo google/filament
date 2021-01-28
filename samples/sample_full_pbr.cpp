@@ -375,7 +375,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         }
     }
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine->getJobSystem());
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
     g_materialInstances["DefaultMaterial"] = g_material->createInstance();

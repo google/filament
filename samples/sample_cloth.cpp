@@ -208,7 +208,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             )SHADER")
             .shading(Shading::CLOTH);
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine->getJobSystem());
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize())
             .build(*engine);

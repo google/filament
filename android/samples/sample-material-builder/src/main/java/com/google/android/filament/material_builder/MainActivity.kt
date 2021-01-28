@@ -216,7 +216,9 @@ class MainActivity : Activity() {
                 // variant of the filamat library.
                 .optimization(MaterialBuilder.Optimization.NONE)
 
-                .build()
+                // When compiling more than one material it is more efficient to pass an Engine
+                // instance to reuse the Engine's job system
+                .build(engine)
 
         if (matPackage.isValid) {
             val buffer = matPackage.buffer
