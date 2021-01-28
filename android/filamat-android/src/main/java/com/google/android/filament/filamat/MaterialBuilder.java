@@ -461,7 +461,9 @@ public class MaterialBuilder {
      * instance from the main Filament library (<code>com.google.android.filament.Engine</code>).
      *
      * If you are using Filament and the filamat library together you <em>must</em> pass an
-     * <code>Engine</code> as the job system provider.
+     * <code>Engine</code> as the job system provider, <em>or</em> invoke
+     * <code>MaterialBuilder</code> from a thread other than the thread used to invoke Filament
+     * APIs.
      *
      * @param jobSystemProvider An <code>Engine</code> instance or null
      */
