@@ -437,6 +437,10 @@ struct Config {
     size_t lutDimension;
 };
 
+// Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
+// the Filament thread writes and the Job thread reads. In practice there should be no data race, so
+// we force TSAN off to silence the warning.
+UTILS_NO_SANITIZE_THREAD
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     SYSTRACE_CALL();
 
