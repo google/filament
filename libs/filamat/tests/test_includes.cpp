@@ -23,6 +23,11 @@
 #include "MockIncluder.h"
 
 #include <utils/CString.h>
+#include <utils/JobSystem.h>
+
+#include <memory>
+
+using namespace utils;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -468,15 +473,18 @@ TEST(IncludeResolver, MultipleIncludesSameLineLineDirective) {
 
 class MaterialBuilder : public ::testing::Test {
 protected:
-
+    std::unique_ptr<JobSystem> jobSystem;
     filamat::MaterialBuilder mBuilder;
 
     MaterialBuilder() {
+        jobSystem = std::make_unique<JobSystem>();
+        jobSystem->adopt();
         filamat::MaterialBuilder::init();
         mBuilder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     }
 
     virtual ~MaterialBuilder() {
+        jobSystem->emancipate();
         filamat::MaterialBuilder::shutdown();
     }
 };
@@ -487,7 +495,7 @@ TEST_F(MaterialBuilder, NoIncluder) {
     )");
     mBuilder.material(shaderCode.c_str());
 
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
 
     // Shader code with an include should fail to compile if no includer is specified.
     EXPECT_FALSE(result.isValid());
@@ -507,7 +515,7 @@ TEST_F(MaterialBuilder, Include) {
     )");
     mBuilder.includeCallback(includer);
 
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
@@ -528,7 +536,7 @@ TEST_F(MaterialBuilder, IncludeVertex) {
     )");
     mBuilder.includeCallback(includer);
 
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
@@ -548,7 +556,7 @@ TEST_F(MaterialBuilder, IncludeWithinFunction) {
 
     mBuilder.includeCallback(includer);
 
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
@@ -561,11 +569,11 @@ TEST_F(MaterialBuilder, IncludeFailure) {
     MockIncluder includer;
     mBuilder.includeCallback(includer);
 
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialBuilder, NoShaderCode) {
-    filamat::Package result = mBuilder.build();
+    filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }

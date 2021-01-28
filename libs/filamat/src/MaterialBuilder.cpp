@@ -599,7 +599,7 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
             << shaderCode;
 }
 
-bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants,
+bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Variant>& variants,
         ChunkContainer& container, const MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
@@ -630,10 +630,6 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants,
             mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
 
-    // TODO: PASS THE JOBSYSTEM!
-    JobSystem js;
-    js.adopt();
-
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
 
@@ -655,10 +651,10 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants,
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
 
         // Set when a job fails
-        JobSystem::Job* parent = js.createJob();
+        JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
-            JobSystem::Job* job = jobs::createJob(js, parent, [&]() {
+            JobSystem::Job* job = jobs::createJob(jobSystem, parent, [&]() {
                 if (cancelJobs.load()) {
                     return;
                 }
@@ -773,14 +769,14 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants,
             //       guarantees in glslang. This library performs unguarded global
             //       operations on first use.
             if (firstJob) {
-                js.runAndWait(job);
+                jobSystem.runAndWait(job);
                 firstJob = false;
             } else {
-                js.run(job);
+                jobSystem.run(job);
             }
         }
 
-        js.runAndWait(parent);
+        jobSystem.runAndWait(parent);
     }
 
     if (cancelJobs.load()) {
@@ -833,7 +829,7 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
     }
 
     // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
-    auto& output = mOutputs.emplace_back(name, qualifier, target, type, location);
+    mOutputs.emplace_back(name, qualifier, target, type, location);
 
     uint8_t colorOutputCount = 0;
     uint8_t depthOutputCount = 0;
@@ -863,7 +859,7 @@ MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     return *this;
 }
 
-Package MaterialBuilder::build() noexcept {
+Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     if (materialBuilderClients == 0) {
         utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
             << utils::io::endl;
@@ -910,7 +906,7 @@ Package MaterialBuilder::build() noexcept {
     const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
         determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier) :
         determinePostProcessVariants();
-    bool success = generateShaders(variants, container, info);
+    bool success = generateShaders(jobSystem, variants, container, info);
 
     if (!success) {
         // Return an empty package to signal a failure to build the material.

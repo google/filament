@@ -24,6 +24,8 @@
 
 #include <filamat/Enums.h>
 
+#include <utils/JobSystem.h>
+
 #include "DirIncluder.h"
 #include "MaterialLexeme.h"
 #include "MaterialLexer.h"
@@ -299,9 +301,15 @@ bool MaterialCompiler::run(const Config& config) {
         builder.shaderDefine(define.first.c_str(), define.second.c_str());
     }
 
+    JobSystem js;
+    js.adopt();
+
     // Write builder.build() to output.
-    Package package = builder.build();
+    Package package = builder.build(js);
+
+    js.emancipate();
     MaterialBuilder::shutdown();
+
     if (!package.isValid()) {
         std::cerr << "Could not compile material " << input->getName() << std::endl;
         return false;
