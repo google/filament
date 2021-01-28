@@ -474,7 +474,6 @@ public:
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
-
     //! Build the material.
     Package build() noexcept;
 
