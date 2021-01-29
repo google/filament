@@ -34,3 +34,10 @@ Java_com_google_android_filament_gltfio_MaterialProvider_nDestroyMaterialProvide
     auto provider = (MaterialProvider*) nativeProvider;
     delete provider;
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_MaterialProvider_nDestroyMaterials(JNIEnv*, jclass,
+        jlong nativeProvider) {
+    auto provider = (MaterialProvider*) nativeProvider;
+    provider->destroyMaterials();
+}
