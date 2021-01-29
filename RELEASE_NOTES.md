@@ -8,7 +8,7 @@ A new header is inserted each time a *tag* is created.
 - Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
 - gltfio: added support for `KHR_materials_sheen`
 - gltfio: shader optimizations are now disabled by default, unless opting in or using ubershaders
-- `MaterialBuilder::build()` now excepts a reference to a `JobSystem` to multi-thread shaders
+- `MaterialBuilder::build()` now expects a reference to a `JobSystem` to multi-thread shaders
   generation. A `JobSystem` can be obtained with `Engine::getJobSystem()` when using Filament,
   or created directly otherwise (⚠️ **API change**).
 

@@ -216,7 +216,7 @@ class MainActivity : Activity() {
                 // variant of the filamat library.
                 .optimization(MaterialBuilder.Optimization.NONE)
 
-                // When compiling more than one material it is more efficient to pass an Engine
+                // When compiling more than one material variant, it is more efficient to pass an Engine
                 // instance to reuse the Engine's job system
                 .build(engine)
 
