@@ -8,8 +8,8 @@
 #
 # The default is release
 
-NDK_VERSION="ndk;21.3.6528147"
-ANDROID_NDK_VERSION=21
+NDK_VERSION="ndk;22.0.7026061"
+ANDROID_NDK_VERSION=22
 
 # Exclude Vulkan from CI builds for Android. (It is enabled for other platforms.)
 EXCLUDE_VULKAN=-v
