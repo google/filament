@@ -114,6 +114,11 @@ enum MaterialSource {
  * - The \c UbershaderLoader implementation uses a small number of pre-built materials with complex
  *   fragment shaders, but does not require any run time work or usage of filamat. See
  *   createUbershaderLoader().
+ *
+ * Both implementations of MaterialProvider maintain a small cache of materials which must be
+ * explicitly freed using destroyMaterials(). These materials are not freed automatically when the
+ * MaterialProvider is destroyed, which allows clients to take ownership if desired.
+ *
  */
 class MaterialProvider {
 public:

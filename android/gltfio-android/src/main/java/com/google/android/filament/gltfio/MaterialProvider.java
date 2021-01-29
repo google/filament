@@ -47,10 +47,21 @@ public class MaterialProvider {
         mNativeObject = 0;
     }
 
+    /**
+     * Destroys all cached materials.
+     *
+     * This is not called automatically when MaterialProvider is destroyed, which allows
+     * clients to take ownership of the cache if desired.
+     */
+    public void destroyMaterials() {
+        nDestroyMaterials(mNativeObject);
+    }
+
     long getNativeObject() {
         return mNativeObject;
     }
 
     private static native long nCreateMaterialProvider(long nativeEngine);
     private static native void nDestroyMaterialProvider(long nativeProvider);
+    private static native void nDestroyMaterials(long nativeProvider);
 }

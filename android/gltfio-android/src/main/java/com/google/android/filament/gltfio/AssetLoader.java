@@ -78,9 +78,10 @@ import java.nio.Buffer;
 public class AssetLoader {
     private long mNativeObject;
     private Engine mEngine;
+    private MaterialProvider mMaterialCache;
 
     /**
-     * Constructs an <code>AssetLoader </code>that can be used to create and destroy instances of
+     * Constructs an <code>AssetLoader</code> that can be used to create and destroy instances of
      * {@link FilamentAsset}.
      *
      * @param engine the engine that the loader should pass to builder objects
@@ -100,6 +101,7 @@ public class AssetLoader {
         }
 
         mEngine = engine;
+        mMaterialCache = generator;
     }
 
     /**
@@ -107,6 +109,7 @@ public class AssetLoader {
      */
     public void destroy() {
         nDestroyAssetLoader(mNativeObject);
+        mMaterialCache.destroyMaterials();
         mNativeObject = 0;
     }
 
