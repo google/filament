@@ -18,7 +18,6 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include <utils/Log.h>
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
@@ -469,7 +468,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         builder.shading(Shading::LIT);
     }
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine->getJobSystem());
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
 }
 

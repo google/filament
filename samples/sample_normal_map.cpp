@@ -299,7 +299,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap");
     }
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine->getJobSystem());
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize())
             .build(*engine);

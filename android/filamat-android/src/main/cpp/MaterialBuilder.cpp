@@ -18,6 +18,8 @@
 
 #include <filamat/MaterialBuilder.h>
 
+#include <utils/JobSystem.h>
+
 using namespace filament;
 using namespace filamat;
 
@@ -45,9 +47,23 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nDestroyMaterialBuilder
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nBuilderBuild(JNIEnv*, jclass,
-        jlong nativeBuilder) {
+        jlong nativeBuilder, jlong nativeJobSystem) {
     auto builder = (MaterialBuilder*) nativeBuilder;
-    return (jlong) new Package(builder->build());
+    auto jobSystem = (utils::JobSystem*) nativeJobSystem;
+
+    if (nativeJobSystem == 0) {
+        jobSystem = new utils::JobSystem;
+        jobSystem->adopt();
+    }
+
+    jlong result = (jlong) new Package(builder->build(*jobSystem));
+
+    if (nativeJobSystem == 0) {
+        jobSystem->emancipate();
+        delete jobSystem;
+    }
+
+    return result;
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL

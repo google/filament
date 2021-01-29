@@ -654,13 +654,21 @@ public class Engine {
         return mNativeObject;
     }
 
+    @UsedByReflection("MaterialBuilder.java")
+    public long getNativeJobSystem() {
+        if (mNativeObject == 0) {
+            throw new IllegalStateException("Calling method on destroyed Engine");
+        }
+        return nGetJobSystem(getNativeObject());
+    }
+
     private void clearNativeObject() {
         mNativeObject = 0;
     }
 
     private static void assertDestroy(boolean success) {
         if (!success) {
-            throw new IllegalStateException("Object couldn't be destoyed (double destroy()?)");
+            throw new IllegalStateException("Object couldn't be destroyed (double destroy()?)");
         }
     }
 
@@ -698,4 +706,5 @@ public class Engine {
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
+    private static native long nGetJobSystem(long nativeEngine);
 }

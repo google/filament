@@ -190,7 +190,7 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
 
     builder.shading(config.unlit ? Shading::UNLIT : Shading::LIT);
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine.getJobSystem());
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
 }
 
