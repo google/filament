@@ -64,9 +64,9 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 30,
         'compileSdk': 30,
-        'kotlin': '1.4.10',
-        'buildTools': '30.0.2',
-        'ndk': '21.3.6528147'
+        'kotlin': '1.4.21',
+        'buildTools': '30.0.3',
+        'ndk': '22.0.7026061'
     ]
 
     ext.deps = [
@@ -78,7 +78,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.0'
+        classpath 'com.android.tools.build:gradle:4.1.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
