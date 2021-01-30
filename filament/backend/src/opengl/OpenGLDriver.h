@@ -360,6 +360,8 @@ private:
 
     inline GLuint getSampler(backend::SamplerParams sp) const noexcept {
         assert(!sp.padding0);
+        assert(!sp.padding1);
+        assert(!sp.padding2);
         auto& samplerMap = mSamplerMap;
         auto pos = samplerMap.find(sp.u);
         if (UTILS_UNLIKELY(pos == samplerMap.end())) {
