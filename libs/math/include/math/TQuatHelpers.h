@@ -251,7 +251,7 @@ public:
         static constexpr T value_eps = T(10) * std::numeric_limits<T>::epsilon();
         // Prevent blowing up when slerping between two quaternions that are very near each other.
         if ((T(1) - absd) < value_eps) {
-            return normalize(lerp(p, q, t));
+            return normalize(lerp(d < 0 ? -p : p, q, t));
         }
         const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
         const T a = std::acos(filament::math::clamp(absd / npq, T(-1), T(1)));
