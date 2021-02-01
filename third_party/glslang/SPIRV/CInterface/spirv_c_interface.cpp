@@ -79,7 +79,7 @@ static EShLanguage c_shader_stage(glslang_stage_t stage)
     return EShLangCount;
 }
 
-void glslang_program_SPIRV_generate(glslang_program_t* program, glslang_stage_t stage)
+GLSLANG_EXPORT void glslang_program_SPIRV_generate(glslang_program_t* program, glslang_stage_t stage)
 {
     spv::SpvBuildLogger logger;
     glslang::SpvOptions spvOptions;
@@ -92,19 +92,19 @@ void glslang_program_SPIRV_generate(glslang_program_t* program, glslang_stage_t 
     program->loggerMessages = logger.getAllMessages();
 }
 
-size_t glslang_program_SPIRV_get_size(glslang_program_t* program) { return program->spirv.size(); }
+GLSLANG_EXPORT size_t glslang_program_SPIRV_get_size(glslang_program_t* program) { return program->spirv.size(); }
 
-void glslang_program_SPIRV_get(glslang_program_t* program, unsigned int* out)
+GLSLANG_EXPORT void glslang_program_SPIRV_get(glslang_program_t* program, unsigned int* out)
 {
     memcpy(out, program->spirv.data(), program->spirv.size() * sizeof(unsigned int));
 }
 
-unsigned int* glslang_program_SPIRV_get_ptr(glslang_program_t* program)
+GLSLANG_EXPORT unsigned int* glslang_program_SPIRV_get_ptr(glslang_program_t* program)
 {
     return program->spirv.data();
 }
 
-const char* glslang_program_SPIRV_get_messages(glslang_program_t* program)
+GLSLANG_EXPORT const char* glslang_program_SPIRV_get_messages(glslang_program_t* program)
 {
     return program->loggerMessages.empty() ? nullptr : program->loggerMessages.c_str();
 }

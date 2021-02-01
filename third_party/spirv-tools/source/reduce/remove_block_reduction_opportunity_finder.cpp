@@ -19,25 +19,21 @@
 namespace spvtools {
 namespace reduce {
 
-using opt::Function;
-using opt::IRContext;
-using opt::Instruction;
-
 std::string RemoveBlockReductionOpportunityFinder::GetName() const {
   return "RemoveBlockReductionOpportunityFinder";
 }
 
 std::vector<std::unique_ptr<ReductionOpportunity>>
 RemoveBlockReductionOpportunityFinder::GetAvailableOpportunities(
-    IRContext* context) const {
+    opt::IRContext* context, uint32_t target_function) const {
   std::vector<std::unique_ptr<ReductionOpportunity>> result;
 
-  // Consider every block in every function.
-  for (auto& function : *context->module()) {
-    for (auto bi = function.begin(); bi != function.end(); ++bi) {
-      if (IsBlockValidOpportunity(context, function, bi)) {
-        result.push_back(spvtools::MakeUnique<RemoveBlockReductionOpportunity>(
-            &function, &*bi));
+  // Consider every block in every relevant function.
+  for (auto* function : GetTargetFunctions(context, target_function)) {
+    for (auto bi = function->begin(); bi != function->end(); ++bi) {
+      if (IsBlockValidOpportunity(context, function, &bi)) {
+        result.push_back(
+            MakeUnique<RemoveBlockReductionOpportunity>(function, &*bi));
       }
     }
   }
@@ -45,21 +41,22 @@ RemoveBlockReductionOpportunityFinder::GetAvailableOpportunities(
 }
 
 bool RemoveBlockReductionOpportunityFinder::IsBlockValidOpportunity(
-    IRContext* context, Function& function, Function::iterator& bi) {
-  assert(bi != function.end() && "Block iterator was out of bounds");
+    opt::IRContext* context, opt::Function* function,
+    opt::Function::iterator* bi) {
+  assert(*bi != function->end() && "Block iterator was out of bounds");
 
   // Don't remove first block; we don't want to end up with no blocks.
-  if (bi == function.begin()) {
+  if (*bi == function->begin()) {
     return false;
   }
 
   // Don't remove blocks with references.
-  if (context->get_def_use_mgr()->NumUsers(bi->id()) > 0) {
+  if (context->get_def_use_mgr()->NumUsers((*bi)->id()) > 0) {
     return false;
   }
 
   // Don't remove blocks whose instructions have outside references.
-  if (!BlockInstructionsHaveNoOutsideReferences(context, bi)) {
+  if (!BlockInstructionsHaveNoOutsideReferences(context, *bi)) {
     return false;
   }
 
@@ -67,19 +64,19 @@ bool RemoveBlockReductionOpportunityFinder::IsBlockValidOpportunity(
 }
 
 bool RemoveBlockReductionOpportunityFinder::
-    BlockInstructionsHaveNoOutsideReferences(IRContext* context,
-                                             const Function::iterator& bi) {
+    BlockInstructionsHaveNoOutsideReferences(
+        opt::IRContext* context, const opt::Function::iterator& bi) {
   // Get all instructions in block.
   std::unordered_set<uint32_t> instructions_in_block;
-  for (const Instruction& instruction : *bi) {
+  for (const opt::Instruction& instruction : *bi) {
     instructions_in_block.insert(instruction.unique_id());
   }
 
   // For each instruction...
-  for (const Instruction& instruction : *bi) {
+  for (const opt::Instruction& instruction : *bi) {
     // For each use of the instruction...
     bool no_uses_outside_block = context->get_def_use_mgr()->WhileEachUser(
-        &instruction, [&instructions_in_block](Instruction* user) -> bool {
+        &instruction, [&instructions_in_block](opt::Instruction* user) -> bool {
           // If the use is in this block, continue (return true). Otherwise, we
           // found an outside use; return false (and stop).
           return instructions_in_block.find(user->unique_id()) !=

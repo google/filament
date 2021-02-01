@@ -19,7 +19,7 @@ struct main0_in
     float4 Position [[attribute(0)]];
 };
 
-vertex main0_out main0(main0_in in [[stage_in]], constant MVPs& _19 [[buffer(0)]], uint gl_InstanceIndex [[instance_id]])
+vertex main0_out main0(main0_in in [[stage_in]], constant MVPs& _19 [[buffer(0)]], uint gl_InstanceIndex [[instance_id]], uint gl_BaseInstance [[base_instance]])
 {
     main0_out out = {};
     const uint gl_ViewIndex = 0;

@@ -106,9 +106,6 @@ class BasicBlock {
   /// Returns the immedate post dominator of this basic block
   const BasicBlock* immediate_post_dominator() const;
 
-  /// Ends the block without a successor
-  void RegisterBranchInstruction(SpvOp branch_instruction);
-
   /// Returns the label instruction for the block, or nullptr if not set.
   const Instruction* label() const { return label_; }
 

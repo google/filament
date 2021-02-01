@@ -595,7 +595,7 @@ void waitForIdle(VulkanContext& context) {
             }
         }
         if (nfences > 0) {
-            vkWaitForFences(context.device, nfences, fences, VK_FALSE, ~0ull);
+            vkWaitForFences(context.device, nfences, fences, VK_TRUE, UINT64_MAX);
         }
 
         // Next flush the active command buffer and wait for it to finish.
@@ -638,7 +638,7 @@ bool acquireSwapCommandBuffer(VulkanContext& context) {
     // Ensure that the previous submission of this command buffer has finished.
     auto& cmdfence = swap.commands.fence;
     if (cmdfence) {
-        VkResult result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
+        VkResult result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_TRUE, UINT64_MAX);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
     }
 
@@ -685,7 +685,7 @@ void flushCommandBuffer(VulkanContext& context) {
     cmdfence->condition.notify_all();
 
     // Restart the command buffer.
-    error = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
+    error = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_TRUE, UINT64_MAX);
     ASSERT_POSTCONDITION(!error, "vkWaitForFences error.");
     error = vkResetFences(context.device, 1, &cmdfence->fence);
     ASSERT_POSTCONDITION(!error, "vkResetFences error.");
@@ -720,7 +720,7 @@ VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context) {
     const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     if (work.fence && work.fence->submitted) {
         work.fence->submitted = false;
-        vkWaitForFences(context.device, 1, &work.fence->fence, VK_FALSE, UINT64_MAX);
+        vkWaitForFences(context.device, 1, &work.fence->fence, VK_TRUE, UINT64_MAX);
         vkResetCommandBuffer(work.cmdbuffer, 0);
         vkBeginCommandBuffer(work.cmdbuffer, &binfo);
     }

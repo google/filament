@@ -77,7 +77,7 @@ TEST_P(HexDoubleTest, DecodeCorrectly) {
   EXPECT_THAT(Decode<double>(GetParam().second), Eq(GetParam().first));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float32Tests, HexFloatTest,
     ::testing::ValuesIn(std::vector<std::pair<FloatProxy<float>, std::string>>({
         {0.f, "0x0p+0"},
@@ -129,7 +129,7 @@ INSTANTIATE_TEST_CASE_P(
 
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float32NanTests, HexFloatTest,
     ::testing::ValuesIn(std::vector<std::pair<FloatProxy<float>, std::string>>({
         // Various NAN and INF cases
@@ -147,7 +147,7 @@ INSTANTIATE_TEST_CASE_P(
         {uint32_t(0x7FFFFFFF), "0x1.fffffep+128"},   // +nan
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float64Tests, HexDoubleTest,
     ::testing::ValuesIn(
         std::vector<std::pair<FloatProxy<double>, std::string>>({
@@ -220,7 +220,7 @@ INSTANTIATE_TEST_CASE_P(
 
         })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float64NanTests, HexDoubleTest,
     ::testing::ValuesIn(std::vector<
                         std::pair<FloatProxy<double>, std::string>>({
@@ -262,7 +262,7 @@ TEST_P(DecodeHexDoubleTest, DecodeCorrectly) {
   EXPECT_THAT(Decode<double>(GetParam().first), Eq(GetParam().second));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float32DecodeTests, DecodeHexFloatTest,
     ::testing::ValuesIn(std::vector<std::pair<std::string, FloatProxy<float>>>({
         {"0x0p+000", 0.f},
@@ -284,7 +284,7 @@ INSTANTIATE_TEST_CASE_P(
         {"0x0.4p+0", 0.25f},
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float32DecodeInfTests, DecodeHexFloatTest,
     ::testing::ValuesIn(std::vector<std::pair<std::string, FloatProxy<float>>>({
         // inf cases
@@ -294,7 +294,7 @@ INSTANTIATE_TEST_CASE_P(
         {"-0x32p+127", uint32_t(0xFF800000)},  // -inf
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float64DecodeTests, DecodeHexDoubleTest,
     ::testing::ValuesIn(
         std::vector<std::pair<std::string, FloatProxy<double>>>({
@@ -317,7 +317,7 @@ INSTANTIATE_TEST_CASE_P(
             {"0x0.4p+0", 0.25},
         })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float64DecodeInfTests, DecodeHexDoubleTest,
     ::testing::ValuesIn(
         std::vector<std::pair<std::string, FloatProxy<double>>>({
@@ -465,7 +465,7 @@ TEST_P(FloatProxyDoubleTest, EncodeCorrectly) {
       Eq(GetParam().second));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float32Tests, FloatProxyFloatTest,
     ::testing::ValuesIn(std::vector<std::pair<FloatProxy<float>, std::string>>({
         // Zero
@@ -497,7 +497,7 @@ INSTANTIATE_TEST_CASE_P(
         {-std::numeric_limits<float>::infinity(), "-0x1p+128"},
     })));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float64Tests, FloatProxyDoubleTest,
     ::testing::ValuesIn(
         std::vector<std::pair<FloatProxy<double>, std::string>>({
@@ -747,7 +747,7 @@ TEST_P(HexFloatRoundTest, RoundDownToFP16) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(F32ToF16, HexFloatRoundTest,
+INSTANTIATE_TEST_SUITE_P(F32ToF16, HexFloatRoundTest,
   ::testing::ValuesIn(std::vector<RoundSignificandCase>(
   {
     {float_fractions({0}), std::make_pair(half_bits_set({}), false), spvutils::kRoundToZero},
@@ -828,7 +828,7 @@ TEST_P(HexFloatRoundUpSignificandTest, Widening) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(F16toF32, HexFloatRoundUpSignificandTest,
+INSTANTIATE_TEST_SUITE_P(F16toF32, HexFloatRoundUpSignificandTest,
   // 0xFC00 of the source 16-bit hex value cover the sign and the exponent.
   // They are ignored for this test.
   ::testing::ValuesIn(std::vector<UpCastSignificandCase>(
@@ -879,7 +879,7 @@ TEST_P(HexFloatFP32To16Tests, NarrowingCasts) {
 const uint16_t positive_infinity = 0x7C00;
 const uint16_t negative_infinity = 0xFC00;
 
-INSTANTIATE_TEST_CASE_P(F32ToF16, HexFloatFP32To16Tests,
+INSTANTIATE_TEST_SUITE_P(F32ToF16, HexFloatFP32To16Tests,
   ::testing::ValuesIn(std::vector<DownCastTest>(
   {
     // Exactly representable as half.
@@ -944,7 +944,7 @@ TEST_P(HexFloatFP16To32Tests, WideningCasts) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(F16ToF32, HexFloatFP16To32Tests,
+INSTANTIATE_TEST_SUITE_P(F16ToF32, HexFloatFP16To32Tests,
   ::testing::ValuesIn(std::vector<UpCastCase>(
   {
     {0x0000, 0.f},
@@ -1039,7 +1039,7 @@ FloatParseCase<T> GoodFloatParseCase(std::string literal, bool negate_value,
   return FloatParseCase<T>{literal, negate_value, true, proxy_expected_value};
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FloatParse, ParseNormalFloatTest,
     ::testing::ValuesIn(std::vector<FloatParseCase<float>>{
         // Failing cases due to trivially incorrect syntax.
@@ -1090,7 +1090,7 @@ TEST_P(ParseNormalFloat16Test, Samples) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float16Parse, ParseNormalFloat16Test,
     ::testing::ValuesIn(std::vector<FloatParseCase<Float16>>{
         // Failing cases due to trivially incorrect syntax.
@@ -1137,7 +1137,7 @@ TEST_P(FloatProxyParseOverflowFloatTest, Sample) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FloatOverflow, FloatProxyParseOverflowFloatTest,
     ::testing::ValuesIn(std::vector<OverflowParseCase<float>>({
         {"0", true, 0.0f},
@@ -1164,7 +1164,7 @@ TEST_P(FloatProxyParseOverflowDoubleTest, Sample) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DoubleOverflow, FloatProxyParseOverflowDoubleTest,
     ::testing::ValuesIn(std::vector<OverflowParseCase<double>>({
         {"0", true, 0.0},
@@ -1193,7 +1193,7 @@ TEST_P(FloatProxyParseOverflowFloat16Test, Sample) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Float16Overflow, FloatProxyParseOverflowFloat16Test,
     ::testing::ValuesIn(std::vector<OverflowParseCase<uint16_t>>({
         {"0", true, uint16_t{0}},

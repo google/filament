@@ -17,9 +17,9 @@
 
 #include <vector>
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -50,21 +50,25 @@ class TransformationAddDeadBreak : public Transformation {
   //   maintain validity of the module.
   //   In particular, the new branch must not lead to violations of the rule
   //   that a use must be dominated by its definition.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Replaces the terminator of a with a conditional branch to b or c.
   // The boolean constant associated with |message_.break_condition_value| is
   // used as the condition, and the order of b and c is arranged such that
   // control is guaranteed to jump to c.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
  private:
   // Returns true if and only if adding an edge from |bb_from| to
   // |message_.to_block| respects structured control flow.
-  bool AddingBreakRespectsStructuredControlFlow(opt::IRContext* context,
+  bool AddingBreakRespectsStructuredControlFlow(opt::IRContext* ir_context,
                                                 opt::BasicBlock* bb_from) const;
 
   // Used by 'Apply' to actually apply the transformation to the module of
@@ -73,7 +77,8 @@ class TransformationAddDeadBreak : public Transformation {
   // module.  This is only invoked by 'IsApplicable' after certain basic
   // applicability checks have been made, ensuring that the invocation of this
   // method is legal.
-  void ApplyImpl(opt::IRContext* context) const;
+  void ApplyImpl(opt::IRContext* ir_context,
+                 const TransformationContext& transformation_context) const;
 
   protobufs::TransformationAddDeadBreak message_;
 };

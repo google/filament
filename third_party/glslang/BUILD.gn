@@ -59,13 +59,13 @@ action("glslang_build_info") {
     script,
     template_file,
   ]
-  outputs = [
-    out_file
-  ]
+  outputs = [ out_file ]
   args = [
     rebase_path(src_dir, root_build_dir),
-    "-i", rebase_path(template_file, root_build_dir),
-    "-o", rebase_path(out_file, root_build_dir),
+    "-i",
+    rebase_path(template_file, root_build_dir),
+    "-o",
+    rebase_path(out_file, root_build_dir),
   ]
 }
 
@@ -76,6 +76,9 @@ if (!defined(glslang_angle)) {
 
 config("glslang_public") {
   include_dirs = [ "." ]
+  if (!is_win || is_clang) {
+    cflags = [ "-Wno-conversion" ]
+  }
 }
 
 config("glslang_hlsl") {
@@ -109,7 +112,6 @@ template("glslang_sources_common") {
       "SPIRV/SpvBuilder.cpp",
       "SPIRV/SpvBuilder.h",
       "SPIRV/SpvPostProcess.cpp",
-      "SPIRV/SpvTools.cpp",
       "SPIRV/SpvTools.h",
       "SPIRV/bitutils.h",
       "SPIRV/disassemble.cpp",
@@ -208,7 +210,11 @@ template("glslang_sources_common") {
 
     defines = []
     if (invoker.enable_opt) {
+      sources += [ "SPIRV/SpvTools.cpp" ]
       defines += [ "ENABLE_OPT=1" ]
+    }
+    if (invoker.is_angle) {
+      defines += [ "GLSLANG_ANGLE" ]
     }
 
     if (is_win) {
@@ -225,10 +231,12 @@ template("glslang_sources_common") {
         "-Wno-ignored-qualifiers",
         "-Wno-implicit-fallthrough",
         "-Wno-inconsistent-missing-override",
-        "-Wno-sign-compare",
-        "-Wno-unused-variable",
         "-Wno-missing-field-initializers",
         "-Wno-newline-eof",
+        "-Wno-sign-compare",
+        "-Wno-suggest-destructor-override",
+        "-Wno-suggest-override",
+        "-Wno-unused-variable",
       ]
     }
     if (is_win && !is_clang) {
@@ -238,6 +246,8 @@ template("glslang_sources_common") {
       ]
     }
 
+    include_dirs = [ "${target_gen_dir}/include" ]
+
     deps = [ ":glslang_build_info" ]
 
     if (invoker.enable_opt) {
@@ -245,9 +255,8 @@ template("glslang_sources_common") {
         "${spirv_tools_dir}:spvtools_opt",
         "${spirv_tools_dir}:spvtools_val",
       ]
+      include_dirs += [ "${spirv_tools_dir}/include" ]
     }
-
-    include_dirs = [ "${target_gen_dir}/include" ]
 
     configs -= _configs_to_remove
     configs += _configs_to_add
@@ -257,11 +266,13 @@ template("glslang_sources_common") {
 glslang_sources_common("glslang_lib_sources") {
   enable_opt = !glslang_angle
   enable_hlsl = !glslang_angle
+  is_angle = glslang_angle
 }
 
 glslang_sources_common("glslang_sources") {
   enable_opt = true
   enable_hlsl = true
+  is_angle = false
 }
 
 source_set("glslang_default_resource_limits_sources") {
@@ -286,13 +297,16 @@ executable("glslang_validator") {
   }
   defines = [ "ENABLE_OPT=1" ]
   deps = [
+    ":glslang_build_info",
     ":glslang_default_resource_limits_sources",
     ":glslang_sources",
-    ":glslang_build_info",
   ]
   public_configs = [ ":glslang_hlsl" ]
 
-  include_dirs = [ "${target_gen_dir}/include" ]
+  include_dirs = [
+    "${target_gen_dir}/include",
+    "${spirv_tools_dir}/include",
+  ]
 
   configs -= _configs_to_remove
   configs += _configs_to_add
@@ -302,6 +316,8 @@ executable("spirv-remap") {
   sources = [ "StandAlone/spirv-remap.cpp" ]
   defines = [ "ENABLE_OPT=1" ]
   deps = [ ":glslang_sources" ]
+
+  include_dirs = [ "${spirv_tools_dir}/include" ]
 
   configs -= _configs_to_remove
   configs += _configs_to_add

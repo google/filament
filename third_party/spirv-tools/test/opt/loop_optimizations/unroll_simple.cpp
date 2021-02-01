@@ -194,6 +194,190 @@ OpFunctionEnd
   SinglePassRunAndCheck<LoopUnroller>(text, output, false);
 }
 
+/*
+Generated from the following GLSL
+#version 330 core
+layout(location = 0) out vec4 c;
+void main() {
+  float x[4];
+  for (int i = 0; i < 4; ++i) {
+    x[i] = 1.0f;
+  }
+}
+*/
+TEST_F(PassClassTest, SimpleFullyUnrollWithDebugInstructions) {
+  // We must preserve the debug information including OpenCL.DebugInfo.100
+  // instructions and OpLine instructions. Only the first block has
+  // DebugDeclare and DebugValue used for the declaration (i.e., DebugValue
+  // with Deref). Other blocks unrolled from the loop must not contain them.
+  const std::string text = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+%ext = OpExtInstImport "OpenCL.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main" %3
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 330
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+%i_name = OpString "i"
+OpName %2 "main"
+OpName %5 "x"
+OpName %3 "c"
+OpDecorate %3 Location 0
+%6 = OpTypeVoid
+%7 = OpTypeFunction %6
+%8 = OpTypeInt 32 1
+%9 = OpTypePointer Function %8
+%10 = OpConstant %8 0
+%11 = OpConstant %8 4
+%12 = OpTypeBool
+%13 = OpTypeFloat 32
+%14 = OpTypeInt 32 0
+%uint_32 = OpConstant %14 32
+%15 = OpConstant %14 4
+%16 = OpTypeArray %13 %15
+%17 = OpTypePointer Function %16
+%18 = OpConstant %13 1
+%19 = OpTypePointer Function %13
+%20 = OpConstant %8 1
+%21 = OpTypeVector %13 4
+%22 = OpTypePointer Output %21
+%3 = OpVariable %22 Output
+%null_expr = OpExtInst %6 %ext DebugExpression
+%deref = OpExtInst %6 %ext DebugOperation Deref
+%deref_expr = OpExtInst %6 %ext DebugExpression %deref
+%src = OpExtInst %6 %ext DebugSource %file_name
+%cu = OpExtInst %6 %ext DebugCompilationUnit 1 4 %src HLSL
+%dbg_tf = OpExtInst %6 %ext DebugTypeBasic %float_name %uint_32 Float
+%dbg_v4f = OpExtInst %6 %ext DebugTypeVector %dbg_tf 4
+%main_ty = OpExtInst %6 %ext DebugTypeFunction FlagIsProtected|FlagIsPrivate %dbg_v4f %dbg_v4f
+%dbg_main = OpExtInst %6 %ext DebugFunction %main_name %main_ty %src 0 0 %cu %main_name FlagIsProtected|FlagIsPrivate 10 %2
+%bb = OpExtInst %6 %ext DebugLexicalBlock %src 0 0 %dbg_main
+%dbg_f = OpExtInst %6 %ext DebugLocalVariable %f_name %dbg_v4f %src 0 0 %dbg_main FlagIsLocal
+%dbg_i = OpExtInst %6 %ext DebugLocalVariable %i_name %dbg_v4f %src 1 0 %bb FlagIsLocal
+
+; CHECK: [[f:%\w+]] = OpString "f"
+; CHECK: [[i:%\w+]] = OpString "i"
+; CHECK: [[int_0:%\w+]] = OpConstant {{%\w+}} 0
+
+; CHECK: [[null_expr:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugExpression
+; CHECK: [[deref:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugOperation Deref
+; CHECK: [[deref_expr:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugExpression [[deref]]
+; CHECK: [[dbg_fn:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugFunction
+; CHECK: [[dbg_bb:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLexicalBlock
+; CHECK: [[dbg_f:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLocalVariable [[f]] {{%\w+}} {{%\w+}} 0 0 [[dbg_fn]]
+; CHECK: [[dbg_i:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLocalVariable [[i]] {{%\w+}} {{%\w+}} 1 0 [[dbg_bb]]
+
+%2 = OpFunction %6 None %7
+%23 = OpLabel
+
+; The first block has DebugDeclare and DebugValue with Deref
+;
+; CHECK: OpLabel
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: [[x:%\w+]] = OpVariable {{%\w+}} Function
+; CHECK: OpLine {{%\w+}} 0 0
+; CHECK: OpBranch
+; CHECK: OpLabel
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: DebugValue [[dbg_f]] [[int_0]] [[null_expr]]
+; CHECK: OpBranch
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: OpLine {{%\w+}} 1 1
+; CHECK: OpSLessThan
+; CHECK: OpLine {{%\w+}} 2 0
+; CHECK: OpBranch
+; CHECK: OpLabel
+; CHECK: DebugScope [[dbg_bb]]
+; CHECK: DebugDeclare [[dbg_f]] [[x]] [[null_expr]]
+; CHECK: DebugValue [[dbg_i]] [[x]] [[deref_expr]]
+; CHECK: OpLine {{%\w+}} 3 0
+;
+; CHECK: OpLine {{%\w+}} 6 0
+; CHECK: [[add:%\w+]] = OpIAdd
+; CHECK: DebugValue [[dbg_f]] [[add]] [[null_expr]]
+; CHECK: OpLine {{%\w+}} 7 0
+
+; Other blocks do not have DebugDeclare and DebugValue with Deref
+;
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: OpLine {{%\w+}} 1 1
+; CHECK: OpSLessThan
+; CHECK: OpLine {{%\w+}} 2 0
+; CHECK: OpBranch
+; CHECK: OpLabel
+;
+; CHECK: DebugScope [[dbg_bb]]
+; CHECK-NOT: DebugDeclare [[dbg_f]] [[x]] [[null_expr]]
+; CHECK-NOT: DebugValue [[dbg_i]] [[x]] [[deref_expr]]
+; CHECK: OpLine {{%\w+}} 3 0
+;
+; CHECK: OpLine {{%\w+}} 6 0
+; CHECK: [[add:%\w+]] = OpIAdd
+; CHECK: DebugValue [[dbg_f]] [[add]] [[null_expr]]
+; CHECK: OpLine {{%\w+}} 7 0
+;
+; CHECK-NOT: DebugDeclare [[dbg_f]] [[x]] [[null_expr]]
+; CHECK-NOT: DebugValue [[dbg_i]] [[x]] [[deref_expr]]
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: OpLine {{%\w+}} 8 0
+; CHECK: OpReturn
+
+%s0 = OpExtInst %6 %ext DebugScope %dbg_main
+%5 = OpVariable %17 Function
+OpLine %file_name 0 0
+OpBranch %24
+%24 = OpLabel
+%s1 = OpExtInst %6 %ext DebugScope %dbg_main
+%35 = OpPhi %8 %10 %23 %34 %26
+%value0 = OpExtInst %6 %ext DebugValue %dbg_f %35 %null_expr
+OpLine %file_name 1 0
+OpLoopMerge %25 %26 Unroll
+OpBranch %27
+%27 = OpLabel
+%s2 = OpExtInst %6 %ext DebugScope %dbg_main
+OpLine %file_name 1 1
+%29 = OpSLessThan %12 %35 %11
+OpLine %file_name 2 0
+OpBranchConditional %29 %30 %25
+%30 = OpLabel
+%s3 = OpExtInst %6 %ext DebugScope %bb
+%decl0 = OpExtInst %6 %ext DebugDeclare %dbg_f %5 %null_expr
+%decl1 = OpExtInst %6 %ext DebugValue %dbg_i %5 %deref_expr
+OpLine %file_name 3 0
+%32 = OpAccessChain %19 %5 %35
+OpLine %file_name 4 0
+OpStore %32 %18
+OpLine %file_name 5 0
+OpBranch %26
+%26 = OpLabel
+%s4 = OpExtInst %6 %ext DebugScope %dbg_main
+OpLine %file_name 6 0
+%34 = OpIAdd %8 %35 %20
+%value1 = OpExtInst %6 %ext DebugValue %dbg_f %34 %null_expr
+OpLine %file_name 7 0
+OpBranch %24
+%25 = OpLabel
+%s5 = OpExtInst %6 %ext DebugScope %dbg_main
+OpLine %file_name 8 0
+OpReturn
+OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for ushader:\n"
+                             << text << std::endl;
+
+  LoopUnroller loop_unroller;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
 template <int factor>
 class PartialUnrollerTestPass : public Pass {
  public:
@@ -2996,6 +3180,225 @@ TEST_F(PassClassTest, OpPhiSelfReference) {
   const uint32_t kUnrollFactor = 0;
   SinglePassRunAndMatch<opt::LoopUnroller>(text, true, kFullyUnroll,
                                            kUnrollFactor);
+}
+
+// Test that a loop containing an unreachable merge block can still be unrolled
+// correctly.
+TEST_F(PassClassTest, UnreachableMerge) {
+  const std::string text = R"(
+; Identify the first iteration of the unrolled loop, and make sure it contains
+; the unreachable merge block.
+; The first SelectionMerge corresponds to the original loop merge.
+; The second is the branch in the loop.
+; CHECK: OpSelectionMerge {{%\w+}} None
+; CHECK: OpSelectionMerge [[unrch1:%\w+]] None
+; CHECK: [[unrch1]] = OpLabel
+; CHECK-NEXT: OpUnreachable
+; Identify the second iteration of the unrolled loop, and make sure it contains
+; the unreachable merge block.
+; The first SelectionMerge corresponds to the original loop merge
+; The second is the branch in the loop.
+; CHECK: OpSelectionMerge {{%\w+}} None
+; CHECK: OpSelectionMerge [[unrch2:%\w+]] None
+; CHECK: [[unrch2]] = OpLabel
+; CHECK-NEXT: OpUnreachable
+
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 64 1 1
+               OpSource HLSL 600
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+       %void = OpTypeVoid
+         %18 = OpTypeFunction %void
+       %main = OpFunction %void None %18
+         %23 = OpLabel
+               OpBranch %24
+         %24 = OpLabel
+         %28 = OpPhi %uint %uint_0 %23 %29 %27
+         %30 = OpULessThan %bool %28 %uint_2
+               OpLoopMerge %31 %27 Unroll
+               OpBranchConditional %30 %32 %31
+         %32 = OpLabel
+               OpSelectionMerge %33 None
+               OpSwitch %uint_0 %34
+         %34 = OpLabel
+         %35 = OpUndef %bool
+               OpSelectionMerge %36 None
+               OpBranchConditional %35 %37 %38
+         %38 = OpLabel
+               OpBranch %33
+         %37 = OpLabel
+               OpBranch %33
+         %36 = OpLabel
+               OpUnreachable
+         %33 = OpLabel
+               OpBranch %27
+         %27 = OpLabel
+         %29 = OpIAdd %uint %28 %uint_1
+               OpBranch %24
+         %31 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const bool kFullyUnroll = true;
+  const uint32_t kUnrollFactor = 0;
+  SinglePassRunAndMatch<opt::LoopUnroller>(text, true, kFullyUnroll,
+                                           kUnrollFactor);
+}
+
+TEST_F(PassClassTest, InitValueIsConstantNull) {
+  const std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpConstantNull %6
+         %13 = OpConstant %6 1
+         %21 = OpConstant %6 1
+         %10 = OpTypeBool
+         %17 = OpTypePointer Function %6
+          %4 = OpFunction %2 None %3
+         %11 = OpLabel
+               OpBranch %5
+          %5 = OpLabel
+         %23 = OpPhi %6 %7 %11 %20 %15
+               OpLoopMerge %8 %15 Unroll
+               OpBranch %14
+         %14 = OpLabel
+          %9 = OpSLessThan %10 %23 %13
+               OpBranchConditional %9 %15 %8
+         %15 = OpLabel
+         %20 = OpIAdd %6 %23 %21
+               OpBranch %5
+          %8 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const std::string output = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource ESSL 320
+%3 = OpTypeVoid
+%4 = OpTypeFunction %3
+%5 = OpTypeInt 32 1
+%6 = OpConstantNull %5
+%7 = OpConstant %5 1
+%8 = OpConstant %5 1
+%9 = OpTypeBool
+%10 = OpTypePointer Function %5
+%2 = OpFunction %3 None %4
+%11 = OpLabel
+OpBranch %12
+%12 = OpLabel
+OpBranch %17
+%17 = OpLabel
+%18 = OpSLessThan %9 %6 %7
+OpBranch %15
+%15 = OpLabel
+%14 = OpIAdd %5 %6 %8
+OpBranch %16
+%16 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, shader,
+                             SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
+                             << shader << std::endl;
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndCheck<LoopUnroller>(shader, output, false);
+}
+
+TEST_F(PassClassTest, ConditionValueIsConstantNull) {
+  const std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpConstantNull %6
+         %13 = OpConstant %6 1
+         %21 = OpConstant %6 1
+         %10 = OpTypeBool
+         %17 = OpTypePointer Function %6
+          %4 = OpFunction %2 None %3
+         %11 = OpLabel
+               OpBranch %5
+          %5 = OpLabel
+         %23 = OpPhi %6 %13 %11 %20 %15
+               OpLoopMerge %8 %15 Unroll
+               OpBranch %14
+         %14 = OpLabel
+          %9 = OpSGreaterThan %10 %23 %7
+               OpBranchConditional %9 %15 %8
+         %15 = OpLabel
+         %20 = OpISub %6 %23 %21
+               OpBranch %5
+          %8 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const std::string output = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpSource ESSL 320
+%3 = OpTypeVoid
+%4 = OpTypeFunction %3
+%5 = OpTypeInt 32 1
+%6 = OpConstantNull %5
+%7 = OpConstant %5 1
+%8 = OpConstant %5 1
+%9 = OpTypeBool
+%10 = OpTypePointer Function %5
+%2 = OpFunction %3 None %4
+%11 = OpLabel
+OpBranch %12
+%12 = OpLabel
+OpBranch %17
+%17 = OpLabel
+%18 = OpSGreaterThan %9 %7 %6
+OpBranch %15
+%15 = OpLabel
+%14 = OpISub %5 %7 %8
+OpBranch %16
+%16 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, shader,
+                             SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
+                             << shader << std::endl;
+
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndCheck<LoopUnroller>(shader, output, false);
 }
 
 }  // namespace

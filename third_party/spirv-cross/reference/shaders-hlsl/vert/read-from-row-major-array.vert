@@ -1,6 +1,6 @@
 cbuffer Block : register(b0)
 {
-    column_major float2x3 _106_var[3][4] : packoffset(c0);
+    column_major float2x3 _104_var[3][4] : packoffset(c0);
 };
 
 
@@ -21,8 +21,7 @@ struct SPIRV_Cross_Output
 
 float compare_float(float a, float b)
 {
-    float _37 = float(abs(a - b) < 0.0500000007450580596923828125f);
-    return _37;
+    return float(abs(a - b) < 0.0500000007450580596923828125f);
 }
 
 float compare_vec3(float3 a, float3 b)
@@ -49,7 +48,7 @@ void vert_main()
 {
     gl_Position = a_position;
     float result = 1.0f;
-    float2x3 param = _106_var[0][0];
+    float2x3 param = _104_var[0][0];
     float2x3 param_1 = float2x3(float3(2.0f, 6.0f, -6.0f), float3(0.0f, 5.0f, 5.0f));
     result *= compare_mat2x3(param, param_1);
     v_vtxResult = result;

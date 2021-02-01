@@ -296,8 +296,7 @@ void VulkanDriver::tick(int) {
     }
 }
 
-void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback, void*) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.currentCommands) {
@@ -361,6 +360,16 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
     mFramebufferCache.gc();
     mBinder.gc();
     mDisposer.gc();
+}
+
+void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        backend::FrameScheduledCallback callback, void* user) {
+
+}
+
+void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
+        backend::FrameCompletedCallback callback, void* user) {
+
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -748,7 +757,7 @@ FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     if (cmdfence->swapChainDestroyed) {
         return FenceStatus::ERROR;
     }
-    VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_FALSE, timeout);
+    VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_TRUE, timeout);
     return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
 

@@ -20,15 +20,13 @@
 namespace spvtools {
 namespace reduce {
 
-using opt::IRContext;
-
 std::vector<std::unique_ptr<ReductionOpportunity>>
 OperandToUndefReductionOpportunityFinder::GetAvailableOpportunities(
-    IRContext* context) const {
+    opt::IRContext* context, uint32_t target_function) const {
   std::vector<std::unique_ptr<ReductionOpportunity>> result;
 
-  for (auto& function : *context->module()) {
-    for (auto& block : function) {
+  for (auto* function : GetTargetFunctions(context, target_function)) {
+    for (auto& block : *function) {
       for (auto& inst : block) {
         // Skip instructions that result in a pointer type.
         auto type_id = inst.type_id();

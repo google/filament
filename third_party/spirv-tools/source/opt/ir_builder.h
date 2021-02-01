@@ -601,15 +601,15 @@ class InstructionBuilder {
     return preserved_analyses_ & analysis;
   }
 
-  // Updates the def/use manager if the user requested it. If he did not request
-  // an update, this function does nothing.
+  // Updates the def/use manager if the user requested it. If an update was not
+  // requested, this function does nothing.
   inline void UpdateDefUseMgr(Instruction* insn) {
     if (IsAnalysisUpdateRequested(IRContext::kAnalysisDefUse))
       GetContext()->get_def_use_mgr()->AnalyzeInstDefUse(insn);
   }
 
-  // Updates the instruction to block analysis if the user requested it. If he
-  // did not request an update, this function does nothing.
+  // Updates the instruction to block analysis if the user requested it. If
+  // an update was not requested, this function does nothing.
   inline void UpdateInstrToBlockMapping(Instruction* insn) {
     if (IsAnalysisUpdateRequested(IRContext::kAnalysisInstrToBlockMapping) &&
         parent_)

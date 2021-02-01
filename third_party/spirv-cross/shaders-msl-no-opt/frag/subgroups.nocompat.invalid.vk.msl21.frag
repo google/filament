@@ -28,7 +28,9 @@ void main()
 	FragColor = float(gl_SubgroupLeMask);
 	FragColor = float(gl_SubgroupLtMask);
 	vec4 broadcasted = subgroupBroadcast(vec4(10.0), 8u);
+	bvec2 broadcasted_bool = subgroupBroadcast(bvec2(true), 8u);
 	vec3 first = subgroupBroadcastFirst(vec3(20.0));
+	bvec4 first_bool = subgroupBroadcastFirst(bvec4(false));
 	uvec4 ballot_value = subgroupBallot(true);
 	bool inverse_ballot_value = subgroupInverseBallot(ballot_value);
 	bool bit_extracted = subgroupBallotBitExtract(uvec4(10u), 8u);
@@ -40,17 +42,23 @@ void main()
 
 	// shuffle
 	uint shuffled = subgroupShuffle(10u, 8u);
+	bool shuffled_bool = subgroupShuffle(true, 9u);
 	uint shuffled_xor = subgroupShuffleXor(30u, 8u);
+	bool shuffled_xor_bool = subgroupShuffleXor(false, 9u);
 
 	// shuffle relative 
 	uint shuffled_up = subgroupShuffleUp(20u, 4u);
+	bool shuffled_up_bool = subgroupShuffleUp(true, 4u);
 	uint shuffled_down = subgroupShuffleDown(20u, 4u);
+	bool shuffled_down_bool = subgroupShuffleDown(false, 4u);
 
 	// vote
 	bool has_all = subgroupAll(true);
 	bool has_any = subgroupAny(true);
 	bool has_equal = subgroupAllEqual(0);
 	has_equal = subgroupAllEqual(true);
+	has_equal = subgroupAllEqual(vec3(0.0, 1.0, 2.0));
+	has_equal = subgroupAllEqual(bvec4(true, true, false, true));
 
 	// arithmetic
 	vec4 added = subgroupAdd(vec4(20.0));
@@ -113,7 +121,11 @@ void main()
 
 	// quad
 	vec4 swap_horiz = subgroupQuadSwapHorizontal(vec4(20.0));
+	bvec4 swap_horiz_bool = subgroupQuadSwapHorizontal(bvec4(true));
 	vec4 swap_vertical = subgroupQuadSwapVertical(vec4(20.0));
+	bvec4 swap_vertical_bool = subgroupQuadSwapVertical(bvec4(true));
 	vec4 swap_diagonal = subgroupQuadSwapDiagonal(vec4(20.0));
+	bvec4 swap_diagonal_bool = subgroupQuadSwapDiagonal(bvec4(true));
 	vec4 quad_broadcast = subgroupQuadBroadcast(vec4(20.0), 3u);
+	bvec4 quad_broadcast_bool = subgroupQuadBroadcast(bvec4(true), 3u);
 }

@@ -19,11 +19,9 @@
 namespace spvtools {
 namespace reduce {
 
-using namespace opt;
-
 SimpleConditionalBranchToBranchReductionOpportunity::
     SimpleConditionalBranchToBranchReductionOpportunity(
-        Instruction* conditional_branch_instruction)
+        opt::Instruction* conditional_branch_instruction)
     : conditional_branch_instruction_(conditional_branch_instruction) {}
 
 bool SimpleConditionalBranchToBranchReductionOpportunity::PreconditionHolds() {

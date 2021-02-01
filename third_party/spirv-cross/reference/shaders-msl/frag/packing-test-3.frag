@@ -33,23 +33,23 @@ struct main0_out
 };
 
 static inline __attribute__((always_inline))
-float4 _main(thread const VertexOutput& IN, constant CB0& v_26)
+float4 _main(thread const VertexOutput& IN, constant CB0& _RESERVED_IDENTIFIER_FIXUP_24)
 {
     TestStruct st;
-    st.position = float3(v_26.CB0[1].position);
-    st.radius = v_26.CB0[1].radius;
+    st.position = float3(_RESERVED_IDENTIFIER_FIXUP_24.CB0[1].position);
+    st.radius = _RESERVED_IDENTIFIER_FIXUP_24.CB0[1].radius;
     float4 col = float4(st.position, st.radius);
     return col;
 }
 
-fragment main0_out main0(constant CB0& v_26 [[buffer(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant CB0& _RESERVED_IDENTIFIER_FIXUP_24 [[buffer(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     VertexOutput IN;
     IN.HPosition = gl_FragCoord;
     VertexOutput param = IN;
     VertexOutput param_1 = param;
-    out._entryPointOutput = _main(param_1, v_26);
+    out._entryPointOutput = _main(param_1, _RESERVED_IDENTIFIER_FIXUP_24);
     return out;
 }
 

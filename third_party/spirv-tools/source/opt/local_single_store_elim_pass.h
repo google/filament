@@ -57,8 +57,8 @@ class LocalSingleStoreElimPass : public Pass {
   // any resulting dead code.
   bool LocalSingleStoreElim(Function* func);
 
-  // Initialize extensions whitelist
-  void InitExtensionWhiteList();
+  // Initialize extensions allowlist
+  void InitExtensionAllowList();
 
   // Return true if all extensions in this module are allowed by this pass.
   bool AllExtensionsSupported() const;
@@ -89,12 +89,17 @@ class LocalSingleStoreElimPass : public Pass {
   bool FeedsAStore(Instruction* inst) const;
 
   // Replaces all of the loads in |uses| by the value stored in |store_inst|.
-  // The load instructions are then killed.
+  // The load instructions are then killed. |all_rewritten| is true iff all
+  // uses have been rewritten.
   bool RewriteLoads(Instruction* store_inst,
-                    const std::vector<Instruction*>& uses);
+                    const std::vector<Instruction*>& uses, bool* all_rewritten);
+
+  // Replaces DebugDeclares of |var_id| with DebugValues using the value
+  // assignment of |store_inst|.
+  bool RewriteDebugDeclares(Instruction* store_inst, uint32_t var_id);
 
   // Extensions supported by this pass.
-  std::unordered_set<std::string> extensions_whitelist_;
+  std::unordered_set<std::string> extensions_allowlist_;
 };
 
 }  // namespace opt

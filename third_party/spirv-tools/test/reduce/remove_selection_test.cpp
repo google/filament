@@ -62,7 +62,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseSameTargetBlock) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -96,7 +96,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseSameTargetBlock) {
   CheckEqual(env, after, context.get());
 
   ops = RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -136,7 +136,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseSameTargetBlockMerge) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -168,7 +168,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseSameTargetBlockMerge) {
   CheckEqual(env, after, context.get());
 
   ops = RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -212,7 +212,7 @@ TEST(RemoveSelectionTest, NoOpportunityBecauseDifferentTargetBlocksOneMerge) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -258,7 +258,7 @@ TEST(RemoveSelectionTest, NoOpportunityBecauseDifferentTargetBlocks) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -306,7 +306,7 @@ TEST(RemoveSelectionTest, NoOpportunityBecauseMergeUsed) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -384,7 +384,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseLoopMergeUsed) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -427,7 +427,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseLoopMergeUsed) {
   CheckEqual(env, after, context.get());
 
   ops = RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -505,7 +505,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseLoopContinueUsed) {
 
   auto ops =
       RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -548,7 +548,7 @@ TEST(RemoveSelectionTest, OpportunityBecauseLoopContinueUsed) {
   CheckEqual(env, after, context.get());
 
   ops = RemoveSelectionReductionOpportunityFinder().GetAvailableOpportunities(
-      context.get());
+      context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 

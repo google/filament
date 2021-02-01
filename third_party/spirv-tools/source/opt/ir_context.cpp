@@ -16,6 +16,7 @@
 
 #include <cstring>
 
+#include "OpenCLDebugInfo100.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/opt/log.h"
 #include "source/opt/mem_pass.h"
@@ -28,6 +29,10 @@ static const int kSpvDecorateDecorationInIdx = 1;
 static const int kSpvDecorateBuiltinInIdx = 2;
 static const int kEntryPointInterfaceInIdx = 3;
 static const int kEntryPointFunctionIdInIdx = 1;
+
+// Constants for OpenCL.DebugInfo.100 extension instructions.
+static const uint32_t kDebugFunctionOperandFunctionIndex = 13;
+static const uint32_t kDebugGlobalVariableOperandVariableIndex = 11;
 
 }  // anonymous namespace
 
@@ -80,6 +85,9 @@ void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
   if (set & kAnalysisTypes) {
     BuildTypeManager();
   }
+  if (set & kAnalysisDebugInfo) {
+    BuildDebugInfoManager();
+  }
 }
 
 void IRContext::InvalidateAnalysesExceptFor(
@@ -89,10 +97,12 @@ void IRContext::InvalidateAnalysesExceptFor(
 }
 
 void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
-  // The ConstantManager contains Type pointers. If the TypeManager goes
-  // away, the ConstantManager has to go away.
+  // The ConstantManager and DebugInfoManager contain Type pointers. If the
+  // TypeManager goes away, the ConstantManager and DebugInfoManager have to
+  // go away.
   if (analyses_to_invalidate & kAnalysisTypes) {
     analyses_to_invalidate |= kAnalysisConstants;
+    analyses_to_invalidate |= kAnalysisDebugInfo;
   }
 
   // The dominator analysis hold the psuedo entry and exit nodes from the CFG.
@@ -143,6 +153,10 @@ void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
     type_mgr_.reset(nullptr);
   }
 
+  if (analyses_to_invalidate & kAnalysisDebugInfo) {
+    debug_info_mgr_.reset(nullptr);
+  }
+
   valid_analyses_ = Analysis(valid_analyses_ & ~analyses_to_invalidate);
 }
 
@@ -152,6 +166,8 @@ Instruction* IRContext::KillInst(Instruction* inst) {
   }
 
   KillNamesAndDecorates(inst);
+
+  KillOperandFromDebugInstructions(inst);
 
   if (AreAnalysesValid(kAnalysisDefUse)) {
     get_def_use_mgr()->ClearInst(inst);
@@ -163,6 +179,10 @@ Instruction* IRContext::KillInst(Instruction* inst) {
     if (inst->IsDecoration()) {
       decoration_mgr_->RemoveDecoration(inst);
     }
+  }
+  if (AreAnalysesValid(kAnalysisDebugInfo)) {
+    get_debug_info_mgr()->ClearDebugScopeAndInlinedAtUses(inst);
+    get_debug_info_mgr()->ClearDebugInfo(inst);
   }
   if (type_mgr_ && IsTypeInst(inst->opcode())) {
     type_mgr_->RemoveId(inst->result_id());
@@ -194,6 +214,30 @@ Instruction* IRContext::KillInst(Instruction* inst) {
   return next_instruction;
 }
 
+void IRContext::KillNonSemanticInfo(Instruction* inst) {
+  if (!inst->HasResultId()) return;
+  std::vector<Instruction*> work_list;
+  std::vector<Instruction*> to_kill;
+  std::unordered_set<Instruction*> seen;
+  work_list.push_back(inst);
+
+  while (!work_list.empty()) {
+    auto* i = work_list.back();
+    work_list.pop_back();
+    get_def_use_mgr()->ForEachUser(
+        i, [&work_list, &to_kill, &seen](Instruction* user) {
+          if (user->IsNonSemanticInstruction() && seen.insert(user).second) {
+            work_list.push_back(user);
+            to_kill.push_back(user);
+          }
+        });
+  }
+
+  for (auto* dead : to_kill) {
+    KillInst(dead);
+  }
+}
+
 bool IRContext::KillDef(uint32_t id) {
   Instruction* def = get_def_use_mgr()->GetDef(id);
   if (def != nullptr) {
@@ -204,14 +248,19 @@ bool IRContext::KillDef(uint32_t id) {
 }
 
 bool IRContext::ReplaceAllUsesWith(uint32_t before, uint32_t after) {
-  return ReplaceAllUsesWithPredicate(
-      before, after, [](Instruction*, uint32_t) { return true; });
+  return ReplaceAllUsesWithPredicate(before, after,
+                                     [](Instruction*) { return true; });
 }
 
 bool IRContext::ReplaceAllUsesWithPredicate(
     uint32_t before, uint32_t after,
-    const std::function<bool(Instruction*, uint32_t)>& predicate) {
+    const std::function<bool(Instruction*)>& predicate) {
   if (before == after) return false;
+
+  if (AreAnalysesValid(kAnalysisDebugInfo)) {
+    get_debug_info_mgr()->ReplaceAllUsesInDebugScopeWithPredicate(before, after,
+                                                                  predicate);
+  }
 
   // Ensure that |after| has been registered as def.
   assert(get_def_use_mgr()->GetDef(after) &&
@@ -220,7 +269,7 @@ bool IRContext::ReplaceAllUsesWithPredicate(
   std::vector<std::pair<Instruction*, uint32_t>> uses_to_update;
   get_def_use_mgr()->ForEachUse(
       before, [&predicate, &uses_to_update](Instruction* user, uint32_t index) {
-        if (predicate(user, index)) {
+        if (predicate(user)) {
           uses_to_update.emplace_back(user, index);
         }
       });
@@ -258,14 +307,13 @@ bool IRContext::ReplaceAllUsesWithPredicate(
     }
     AnalyzeUses(user);
   }
-
   return true;
 }
 
 bool IRContext::IsConsistent() {
 #ifndef SPIRV_CHECK_CONTEXT
   return true;
-#endif
+#else
   if (AreAnalysesValid(kAnalysisDefUse)) {
     analysis::DefUseManager new_def_use(module());
     if (*get_def_use_mgr() != new_def_use) {
@@ -317,6 +365,7 @@ bool IRContext::IsConsistent() {
     }
   }
   return true;
+#endif
 }
 
 void IRContext::ForgetUses(Instruction* inst) {
@@ -327,6 +376,9 @@ void IRContext::ForgetUses(Instruction* inst) {
     if (inst->IsDecoration()) {
       get_decoration_mgr()->RemoveDecoration(inst);
     }
+  }
+  if (AreAnalysesValid(kAnalysisDebugInfo)) {
+    get_debug_info_mgr()->ClearDebugInfo(inst);
   }
   RemoveFromIdToName(inst);
 }
@@ -339,6 +391,9 @@ void IRContext::AnalyzeUses(Instruction* inst) {
     if (inst->IsDecoration()) {
       get_decoration_mgr()->AddDecoration(inst);
     }
+  }
+  if (AreAnalysesValid(kAnalysisDebugInfo)) {
+    get_debug_info_mgr()->AnalyzeDebugInst(inst);
   }
   if (id_to_name_ &&
       (inst->opcode() == SpvOpName || inst->opcode() == SpvOpMemberName)) {
@@ -365,6 +420,40 @@ void IRContext::KillNamesAndDecorates(Instruction* inst) {
   KillNamesAndDecorates(rId);
 }
 
+void IRContext::KillOperandFromDebugInstructions(Instruction* inst) {
+  const auto opcode = inst->opcode();
+  const uint32_t id = inst->result_id();
+  // Kill id of OpFunction from DebugFunction.
+  if (opcode == SpvOpFunction) {
+    for (auto it = module()->ext_inst_debuginfo_begin();
+         it != module()->ext_inst_debuginfo_end(); ++it) {
+      if (it->GetOpenCL100DebugOpcode() != OpenCLDebugInfo100DebugFunction)
+        continue;
+      auto& operand = it->GetOperand(kDebugFunctionOperandFunctionIndex);
+      if (operand.words[0] == id) {
+        operand.words[0] =
+            get_debug_info_mgr()->GetDebugInfoNone()->result_id();
+        get_def_use_mgr()->AnalyzeInstUse(&*it);
+      }
+    }
+  }
+  // Kill id of OpVariable for global variable from DebugGlobalVariable.
+  if (opcode == SpvOpVariable || IsConstantInst(opcode)) {
+    for (auto it = module()->ext_inst_debuginfo_begin();
+         it != module()->ext_inst_debuginfo_end(); ++it) {
+      if (it->GetOpenCL100DebugOpcode() !=
+          OpenCLDebugInfo100DebugGlobalVariable)
+        continue;
+      auto& operand = it->GetOperand(kDebugGlobalVariableOperandVariableIndex);
+      if (operand.words[0] == id) {
+        operand.words[0] =
+            get_debug_info_mgr()->GetDebugInfoNone()->result_id();
+        get_def_use_mgr()->AnalyzeInstUse(&*it);
+      }
+    }
+  }
+}
+
 void IRContext::AddCombinatorsForCapability(uint32_t capability) {
   if (capability == SpvCapabilityShader) {
     combinator_ops_[0].insert({SpvOpNop,
@@ -385,6 +474,8 @@ void IRContext::AddCombinatorsForCapability(uint32_t capability) {
                                SpvOpTypeSampler,
                                SpvOpTypeSampledImage,
                                SpvOpTypeAccelerationStructureNV,
+                               SpvOpTypeAccelerationStructureKHR,
+                               SpvOpTypeRayQueryProvisionalKHR,
                                SpvOpTypeArray,
                                SpvOpTypeRuntimeArray,
                                SpvOpTypeStruct,

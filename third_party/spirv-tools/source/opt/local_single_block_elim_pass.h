@@ -63,7 +63,7 @@ class LocalSingleBlockLoadStoreElimPass : public MemPass {
   // where possible. Assumes logical addressing.
   bool LocalSingleBlockLoadStoreElim(Function* func);
 
-  // Initialize extensions whitelist
+  // Initialize extensions allowlist
   void InitExtensions();
 
   // Return true if all extensions in this module are supported by this pass.
@@ -94,7 +94,7 @@ class LocalSingleBlockLoadStoreElimPass : public MemPass {
   std::unordered_set<uint32_t> pinned_vars_;
 
   // Extensions supported by this pass.
-  std::unordered_set<std::string> extensions_whitelist_;
+  std::unordered_set<std::string> extensions_allowlist_;
 
   // Variables that are only referenced by supported operations for this
   // pass ie. loads and stores.

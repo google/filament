@@ -19,6 +19,7 @@
 
 #include <filament/FilamentAPI.h>
 #include <backend/DriverEnums.h>
+#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 
@@ -142,6 +143,9 @@ namespace filament {
  */
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
+    using FrameScheduledCallback = backend::FrameScheduledCallback;
+    using FrameCompletedCallback = backend::FrameCompletedCallback;
+
     static const uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     /**
      * This flag indicates that the swap chain may be used as a source surface
@@ -173,6 +177,50 @@ public:
             backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER;
 
     void* getNativeWindow() const noexcept;
+
+    /**
+     * FrameScheduledCallback is a callback function that notifies an application when Filament has
+     * completed processing a frame and that frame is ready to be scheduled for presentation.
+     *
+     * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
+     * If a SwapChain::FrameScheduledCallback is set, however, the application bares the
+     * responsibility of scheduling a frame for presentation by calling the backend::PresentCallable
+     * passed to the callback function. Currently this functionality is only supported by the Metal
+     * backend.
+     *
+     * A FrameScheduledCallback can be set on an individual SwapChain through
+     * SwapChain::setFrameScheduledCallback. If the callback is set, then the SwapChain will *not*
+     * automatically schedule itself for presentation. Instead, the application must call the
+     * PresentCallable passed to the FrameScheduledCallback.
+     *
+     * @param callback    A callback, or nullptr to unset.
+     * @param user        An optional pointer to user data passed to the callback function.
+     *
+     * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
+     * backends ignore the callback (which will never be called) and proceed normally.
+     *
+     * @remark The SwapChain::FrameScheduledCallback is called on an arbitrary thread.
+     *
+     * @see PresentCallable
+     */
+    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user = nullptr);
+
+    /**
+     * FrameCompletedCallback is a callback function that notifies an application when a frame's
+     * contents have completed rendering on the GPU.
+     *
+     * Use SwapChain::setFrameCompletedCallback to set a callback on an individual SwapChain. Each
+     * time a frame completes GPU rendering, the callback will be called with optional user data.
+     *
+     * The FrameCompletedCallback is guaranteed to be called on the main Filament thread.
+     *
+     * @param callback    A callback, or nullptr to unset.
+     * @param user        An optional pointer to user data passed to the callback function.
+     *
+     * @remark Only Filament's Metal backend supports frame callbacks. Other backends ignore the
+     * callback (which will never be called) and proceed normally.
+     */
+    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user = nullptr);
 };
 
 } // namespace filament

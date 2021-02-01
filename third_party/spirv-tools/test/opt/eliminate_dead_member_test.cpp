@@ -1085,4 +1085,103 @@ TEST_F(EliminateDeadMemberTest, DontChangeOutputStructs) {
   EXPECT_EQ(opt::Pass::Status::SuccessWithoutChange, std::get<1>(result));
 }
 
+TEST_F(EliminateDeadMemberTest, UpdateSpecConstOpExtract) {
+  // Test that an extract in an OpSpecConstantOp is correctly updated.
+  const std::string text = R"(
+; CHECK: OpName
+; CHECK-NEXT: OpMemberName %type__Globals 0 "y"
+; CHECK-NOT: OpMemberName
+; CHECK: OpDecorate [[spec_const:%\w+]] SpecId 1
+; CHECK: OpMemberDecorate %type__Globals 0 Offset 4
+; CHECK: %type__Globals = OpTypeStruct %uint
+; CHECK: [[struct:%\w+]] = OpSpecConstantComposite %type__Globals [[spec_const]]
+; CHECK: OpSpecConstantOp %uint CompositeExtract [[struct]] 0
+               OpCapability Shader
+               OpCapability Addresses
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main"
+               OpSource HLSL 600
+               OpName %type__Globals "type.$Globals"
+               OpMemberName %type__Globals 0 "x"
+               OpMemberName %type__Globals 1 "y"
+               OpMemberName %type__Globals 2 "z"
+               OpName %main "main"
+               OpDecorate %c_0 SpecId 0
+               OpDecorate %c_1 SpecId 1
+               OpDecorate %c_2 SpecId 2
+               OpMemberDecorate %type__Globals 0 Offset 0
+               OpMemberDecorate %type__Globals 1 Offset 4
+               OpMemberDecorate %type__Globals 2 Offset 16
+       %uint = OpTypeInt 32 0
+        %c_0 = OpSpecConstant %uint 0
+        %c_1 = OpSpecConstant %uint 1
+        %c_2 = OpSpecConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%type__Globals = OpTypeStruct %uint %uint %uint
+%spec_const_global = OpSpecConstantComposite %type__Globals %c_0 %c_1 %c_2
+%extract = OpSpecConstantOp %uint CompositeExtract %spec_const_global 1
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+       %main = OpFunction %void None %14
+         %16 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
+}
+
+TEST_F(EliminateDeadMemberTest, UpdateSpecConstOpInsert) {
+  // Test that an insert in an OpSpecConstantOp is correctly updated.
+  const std::string text = R"(
+; CHECK: OpName
+; CHECK-NEXT: OpMemberName %type__Globals 0 "y"
+; CHECK-NOT: OpMemberName
+; CHECK: OpDecorate [[spec_const:%\w+]] SpecId 1
+; CHECK: OpMemberDecorate %type__Globals 0 Offset 4
+; CHECK: %type__Globals = OpTypeStruct %uint
+; CHECK: [[struct:%\w+]] = OpSpecConstantComposite %type__Globals [[spec_const]]
+; CHECK: OpSpecConstantOp %type__Globals CompositeInsert %uint_3 [[struct]] 0
+               OpCapability Shader
+               OpCapability Addresses
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main"
+               OpSource HLSL 600
+               OpName %type__Globals "type.$Globals"
+               OpMemberName %type__Globals 0 "x"
+               OpMemberName %type__Globals 1 "y"
+               OpMemberName %type__Globals 2 "z"
+               OpName %main "main"
+               OpDecorate %c_0 SpecId 0
+               OpDecorate %c_1 SpecId 1
+               OpDecorate %c_2 SpecId 2
+               OpMemberDecorate %type__Globals 0 Offset 0
+               OpMemberDecorate %type__Globals 1 Offset 4
+               OpMemberDecorate %type__Globals 2 Offset 16
+       %uint = OpTypeInt 32 0
+        %c_0 = OpSpecConstant %uint 0
+        %c_1 = OpSpecConstant %uint 1
+        %c_2 = OpSpecConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%type__Globals = OpTypeStruct %uint %uint %uint
+%spec_const_global = OpSpecConstantComposite %type__Globals %c_0 %c_1 %c_2
+%insert = OpSpecConstantOp %type__Globals CompositeInsert %uint_3 %spec_const_global 1
+%extract = OpSpecConstantOp %uint CompositeExtract %insert 1
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+       %main = OpFunction %void None %14
+         %16 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
+}
+
 }  // namespace

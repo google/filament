@@ -4355,6 +4355,17 @@ OpFunctionEnd)";
                         "'23' as an operand of <id> '24'."));
 }
 
+TEST_F(ValidateIdWithMessage, OpCopyObjectSampledImageGood) {
+  std::string spirv = kGLSL450MemoryModel + sampledImageSetup + R"(
+%smpld_img  = OpSampledImage %sampled_image_type %image_inst %sampler_inst
+%smpld_img2 = OpCopyObject %sampled_image_type %smpld_img
+%image_inst2 = OpCopyObject %image_type %image_inst
+OpReturn
+OpFunctionEnd)";
+  CompileSuccessfully(spirv.c_str());
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 // Valid: Get a float in a matrix using CompositeExtract.
 // Valid: Insert float into a matrix using CompositeInsert.
 TEST_F(ValidateIdWithMessage, CompositeExtractInsertGood) {

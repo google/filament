@@ -58,13 +58,7 @@ void BasicBlock::RegisterSuccessors(
   for (auto& block : next_blocks) {
     block->predecessors_.push_back(this);
     successors_.push_back(block);
-    if (block->reachable_ == false) block->set_reachable(reachable_);
   }
-}
-
-void BasicBlock::RegisterBranchInstruction(SpvOp branch_instruction) {
-  if (branch_instruction == SpvOpUnreachable) reachable_ = false;
-  return;
 }
 
 bool BasicBlock::dominates(const BasicBlock& other) const {

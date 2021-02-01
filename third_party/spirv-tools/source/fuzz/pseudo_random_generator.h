@@ -31,6 +31,8 @@ class PseudoRandomGenerator : public RandomGenerator {
 
   uint32_t RandomUint32(uint32_t bound) override;
 
+  uint64_t RandomUint64(uint64_t bound) override;
+
   uint32_t RandomPercentage() override;
 
   bool RandomBool() override;

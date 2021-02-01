@@ -272,6 +272,69 @@ TEST_F(RedundancyEliminationTest, KeepRedundantAddWithoutPhi) {
   EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));
 }
 
+// Test that it can get a simple case of local redundancy elimination
+// when it has OpenCL.DebugInfo.100 instructions.
+TEST_F(RedundancyEliminationTest, OpenCLDebugInfo100) {
+  // When three redundant DebugValues exist, only one DebugValue must remain.
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "OpenCL.DebugInfo.100"
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %3 "main"
+               OpExecutionMode %3 OriginUpperLeft
+               OpSource GLSL 430
+          %4 = OpString "ps.hlsl"
+          %5 = OpString "float"
+          %6 = OpString "s0"
+          %7 = OpString "main"
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+    %uint_32 = OpConstant %uint 32
+%_ptr_Function_float = OpTypePointer Function %float
+         %15 = OpExtInst %void %1 DebugExpression
+         %16 = OpExtInst %void %1 DebugSource %4
+         %17 = OpExtInst %void %1 DebugCompilationUnit 1 4 %16 HLSL
+         %18 = OpExtInst %void %1 DebugTypeBasic %5 %uint_32 Float
+         %19 = OpExtInst %void %1 DebugTypeVector %18 4
+         %20 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %19
+         %21 = OpExtInst %void %1 DebugFunction %7 %20 %16 4 1 %17 %7 FlagIsProtected|FlagIsPrivate 4 %3
+; CHECK:     [[dbg_local_var:%\w+]] = OpExtInst %void {{%\w+}} DebugLocalVariable
+         %22 = OpExtInst %void %1 DebugLocalVariable %6 %19 %16 0 0 %21 FlagIsLocal
+         %14 = OpExtInst %void %1 DebugLocalVariable %6 %19 %16 0 0 %21 FlagIsLocal
+          %3 = OpFunction %void None %9
+         %23 = OpLabel
+         %24 = OpExtInst %void %1 DebugScope %21
+         %25 = OpVariable %_ptr_Function_float Function
+         %26 = OpLoad %float %25
+               OpLine %4 0 0
+; Two `OpFAdd %float %26 %26` are the same. One must be removed.
+; After removing one `OpFAdd %float %26 %26`, two DebugValues are the same.
+; One must be removed.
+;
+; CHECK:      OpLine {{%\w+}} 0 0
+; CHECK-NEXT: [[add:%\w+]] = OpFAdd %float [[value:%\w+]]
+; CHECK-NEXT: DebugValue [[dbg_local_var]] [[add]]
+; CHECK-NEXT: OpLine {{%\w+}} 1 0
+; CHECK-NEXT: OpFAdd %float [[add]] [[value]]
+; CHECK-NEXT: OpReturn
+         %27 = OpFAdd %float %26 %26
+         %28 = OpExtInst %void %1 DebugValue %22 %27 %15 %uint_0
+               OpLine %4 1 0
+         %29 = OpFAdd %float %26 %26
+         %30 = OpExtInst %void %1 DebugValue %14 %29 %15 %uint_0
+         %31 = OpExtInst %void %1 DebugValue %22 %29 %15 %uint_0
+         %32 = OpFAdd %float %29 %26
+         %33 = OpFAdd %float %27 %26
+               OpReturn
+               OpFunctionEnd
+  )";
+  SinglePassRunAndMatch<RedundancyEliminationPass>(text, false);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

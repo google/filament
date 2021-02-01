@@ -80,7 +80,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, Diamond) {
   CheckValid(kEnv, context.get());
 
   auto ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(2, ops.size());
 
@@ -125,7 +125,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, Diamond) {
   }
 
   ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 
   // Start again, and apply the other op.
@@ -134,7 +134,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, Diamond) {
   CheckValid(kEnv, context.get());
 
   ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(2, ops.size());
 
   ASSERT_TRUE(ops[0]->PreconditionHolds());
@@ -225,7 +225,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, AlreadySimplified) {
   CheckValid(kEnv, context.get());
 
   auto ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(0, ops.size());
 }
@@ -276,7 +276,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, DontRemoveBackEdge) {
   CheckValid(kEnv, context.get());
 
   auto ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -313,7 +313,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, DontRemoveBackEdge) {
   CheckEqual(kEnv, after, context.get());
 
   ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -361,7 +361,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest,
   CheckValid(kEnv, context.get());
 
   auto ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -396,7 +396,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest,
   CheckEqual(kEnv, after, context.get());
 
   ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 
@@ -453,7 +453,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, BackEdgeUnreachable) {
   CheckValid(kEnv, context.get());
 
   auto ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-                 .GetAvailableOpportunities(context.get());
+                 .GetAvailableOpportunities(context.get(), 0);
 
   ASSERT_EQ(1, ops.size());
 
@@ -492,7 +492,7 @@ TEST(ConditionalBranchToSimpleConditionalBranchTest, BackEdgeUnreachable) {
   CheckEqual(kEnv, after, context.get());
 
   ops = ConditionalBranchToSimpleConditionalBranchOpportunityFinder()
-            .GetAvailableOpportunities(context.get());
+            .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(0, ops.size());
 }
 

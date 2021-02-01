@@ -1,8 +1,14 @@
 # News
 
-1. The versioning scheme is being improved, and you might notice some differences.  This is currently WIP, but will be coming soon.  See, for example, PR #2277.
+1. Visual Studio 2013 is no longer supported
 
-2. If you get a new **compilation error due to a missing header**, it might be caused by this planned removal:
+   [As scheduled](https://github.com/KhronosGroup/glslang/blob/9eef54b2513ca6b40b47b07d24f453848b65c0df/README.md#planned-deprecationsremovals),
+Microsoft Visual Studio 2013 is no longer officially supported. \
+   Please upgrade to at least Visual Studio 2015.
+
+2. The versioning scheme is being improved, and you might notice some differences.  This is currently WIP, but will be coming soon.  See, for example, PR #2277.
+
+3. If you get a new **compilation error due to a missing header**, it might be caused by this planned removal:
 
 **SPIRV Folder, 1-May, 2020.** Glslang, when installed through CMake,
 will install a `SPIRV` folder into `${CMAKE_INSTALL_INCLUDEDIR}`.
@@ -15,11 +21,6 @@ If people are only using this location to get spirv.hpp, I recommend they get th
 
 [![Build Status](https://travis-ci.org/KhronosGroup/glslang.svg?branch=master)](https://travis-ci.org/KhronosGroup/glslang)
 [![Build status](https://ci.appveyor.com/api/projects/status/q6fi9cb0qnhkla68/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/glslang/branch/master)
-
-## Planned Deprecations/Removals
-
-1. **Visual Studio 2013, 20-July, 2020.** Keeping code compiling for MS Visual Studio 2013 will no longer be
-a goal as of July 20, 2020, the fifth anniversary of the release of Visual Studio 2015.
 
 # Glslang Components and Status
 
@@ -87,7 +88,7 @@ The applied stage-specific rules are based on the file extension:
 There is also a non-shader extension
 * `.conf` for a configuration file of limits, see usage statement for example
 
-## Building
+## Building (CMake)
 
 Instead of building manually, you can also download the binaries for your
 platform directly from the [master-tot release][master-tot-release] on GitHub.
@@ -98,7 +99,7 @@ branch.
 ### Dependencies
 
 * A C++11 compiler.
-  (For MSVS: 2015 is recommended, 2013 is fully supported/tested, and 2010 support is attempted, but not tested.)
+  (For MSVS: use 2015 or later.)
 * [CMake][cmake]: for generating compilation targets.
 * make: _Linux_, ninja is an alternative, if configured.
 * [Python 3.x][python]: for executing SPIRV-Tools scripts. (Optional if not using SPIRV-Tools and the 'External' subdirectory does not exist.)
@@ -122,15 +123,6 @@ git clone https://github.com/KhronosGroup/glslang.git
 ```bash
 cd <the directory glslang was cloned to, "External" will be a subdirectory>
 git clone https://github.com/google/googletest.git External/googletest
-```
-
-If you want to use googletest with Visual Studio 2013, you also need to check out an older version:
-
-```bash
-# to use googletest with Visual Studio 2013
-cd External/googletest
-git checkout 440527a61e1c91188195f7de212c63c77e8f0a45
-cd ../..
 ```
 
 If you wish to assure that SPIR-V generated from HLSL is legal for Vulkan,
@@ -191,6 +183,36 @@ cmake --build . --config Release --target install
 
 If using MSVC, after running CMake to configure, use the
 Configuration Manager to check the `INSTALL` project.
+
+### Building (GN)
+
+glslang can also be built with the [GN build system](https://gn.googlesource.com/gn/).
+
+#### 1) Install `depot_tools`
+
+Download [depot_tools.zip](https://storage.googleapis.com/chrome-infra/depot_tools.zip),
+extract to a directory, and add this directory to your `PATH`.
+
+#### 2) Synchronize dependencies and generate build files
+
+This only needs to be done once after updating `glslang`.
+
+With the current directory set to your `glslang` checkout, type:
+
+```bash
+./update_glslang_sources.py
+gclient sync --gclientfile=standalone.gclient
+gn gen out/Default
+```
+
+#### 3) Build
+
+With the current directory set to your `glslang` checkout, type:
+
+```bash
+cd out/Default
+ninja
+```
 
 ### If you need to change the GLSL grammar
 

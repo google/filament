@@ -406,8 +406,8 @@ class Loop {
   // the iterators.
   bool loop_is_marked_for_removal_;
 
-  // This is only to allow LoopDescriptor::dummy_top_loop_ to add top level
-  // loops as child.
+  // This is only to allow LoopDescriptor::placeholder_top_loop_ to add top
+  // level loops as child.
   friend class LoopDescriptor;
   friend class LoopUtils;
 };
@@ -430,14 +430,14 @@ class LoopDescriptor {
   // Disable copy constructor, to avoid double-free on destruction.
   LoopDescriptor(const LoopDescriptor&) = delete;
   // Move constructor.
-  LoopDescriptor(LoopDescriptor&& other) : dummy_top_loop_(nullptr) {
+  LoopDescriptor(LoopDescriptor&& other) : placeholder_top_loop_(nullptr) {
     // We need to take ownership of the Loop objects in the other
     // LoopDescriptor, to avoid double-free.
     loops_ = std::move(other.loops_);
     other.loops_.clear();
     basic_block_to_loop_ = std::move(other.basic_block_to_loop_);
     other.basic_block_to_loop_.clear();
-    dummy_top_loop_ = std::move(other.dummy_top_loop_);
+    placeholder_top_loop_ = std::move(other.placeholder_top_loop_);
   }
 
   // Destructor
@@ -470,25 +470,27 @@ class LoopDescriptor {
 
   // Iterators for post order depth first traversal of the loops.
   // Inner most loops will be visited first.
-  inline iterator begin() { return iterator::begin(&dummy_top_loop_); }
-  inline iterator end() { return iterator::end(&dummy_top_loop_); }
+  inline iterator begin() { return iterator::begin(&placeholder_top_loop_); }
+  inline iterator end() { return iterator::end(&placeholder_top_loop_); }
   inline const_iterator begin() const { return cbegin(); }
   inline const_iterator end() const { return cend(); }
   inline const_iterator cbegin() const {
-    return const_iterator::begin(&dummy_top_loop_);
+    return const_iterator::begin(&placeholder_top_loop_);
   }
   inline const_iterator cend() const {
-    return const_iterator::end(&dummy_top_loop_);
+    return const_iterator::end(&placeholder_top_loop_);
   }
 
   // Iterators for pre-order depth first traversal of the loops.
   // Inner most loops will be visited first.
-  inline pre_iterator pre_begin() { return ++pre_iterator(&dummy_top_loop_); }
+  inline pre_iterator pre_begin() {
+    return ++pre_iterator(&placeholder_top_loop_);
+  }
   inline pre_iterator pre_end() { return pre_iterator(); }
   inline const_pre_iterator pre_begin() const { return pre_cbegin(); }
   inline const_pre_iterator pre_end() const { return pre_cend(); }
   inline const_pre_iterator pre_cbegin() const {
-    return ++const_pre_iterator(&dummy_top_loop_);
+    return ++const_pre_iterator(&placeholder_top_loop_);
   }
   inline const_pre_iterator pre_cend() const { return const_pre_iterator(); }
 
@@ -524,14 +526,14 @@ class LoopDescriptor {
   void RemoveLoop(Loop* loop);
 
   void SetAsTopLoop(Loop* loop) {
-    assert(std::find(dummy_top_loop_.begin(), dummy_top_loop_.end(), loop) ==
-               dummy_top_loop_.end() &&
+    assert(std::find(placeholder_top_loop_.begin(), placeholder_top_loop_.end(),
+                     loop) == placeholder_top_loop_.end() &&
            "already registered");
-    dummy_top_loop_.nested_loops_.push_back(loop);
+    placeholder_top_loop_.nested_loops_.push_back(loop);
   }
 
-  Loop* GetDummyRootLoop() { return &dummy_top_loop_; }
-  const Loop* GetDummyRootLoop() const { return &dummy_top_loop_; }
+  Loop* GetPlaceholderRootLoop() { return &placeholder_top_loop_; }
+  const Loop* GetPlaceholderRootLoop() const { return &placeholder_top_loop_; }
 
  private:
   // TODO(dneto): This should be a vector of unique_ptr.  But VisualStudio 2013
@@ -558,8 +560,8 @@ class LoopDescriptor {
   // objects.
   LoopContainerType loops_;
 
-  // Dummy root: this "loop" is only there to help iterators creation.
-  Loop dummy_top_loop_;
+  // Placeholder root: this "loop" is only there to help iterators creation.
+  Loop placeholder_top_loop_;
 
   std::unordered_map<uint32_t, Loop*> basic_block_to_loop_;
 

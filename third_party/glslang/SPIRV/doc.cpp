@@ -134,7 +134,7 @@ const char* MemoryString(int mem)
     }
 }
 
-const int ExecutionModeCeiling = 33;
+const int ExecutionModeCeiling = 40;
 
 const char* ExecutionModeString(int mode)
 {
@@ -173,7 +173,21 @@ const char* ExecutionModeString(int mode)
     case 31: return "ContractionOff";
     case 32: return "Bad";
 
-    case 4446:  return "PostDepthCoverage";
+    case ExecutionModeInitializer:              return "Initializer";
+    case ExecutionModeFinalizer:                return "Finalizer";
+    case ExecutionModeSubgroupSize:             return "SubgroupSize";
+    case ExecutionModeSubgroupsPerWorkgroup:    return "SubgroupsPerWorkgroup";
+    case ExecutionModeSubgroupsPerWorkgroupId:  return "SubgroupsPerWorkgroupId";
+    case ExecutionModeLocalSizeId:              return "LocalSizeId";
+    case ExecutionModeLocalSizeHintId:          return "LocalSizeHintId";
+
+    case ExecutionModePostDepthCoverage:        return "PostDepthCoverage";
+    case ExecutionModeDenormPreserve:           return "DenormPreserve";
+    case ExecutionModeDenormFlushToZero:        return "DenormFlushToZero";
+    case ExecutionModeSignedZeroInfNanPreserve: return "SignedZeroInfNanPreserve";
+    case ExecutionModeRoundingModeRTE:          return "RoundingModeRTE";
+    case ExecutionModeRoundingModeRTZ:          return "RoundingModeRTZ";
+    case ExecutionModeStencilRefReplacingEXT:   return "StencilRefReplacingEXT";
 
     case ExecutionModeOutputLinesNV:            return "OutputLinesNV";
     case ExecutionModeOutputPrimitivesNV:       return "OutputPrimitivesNV";
@@ -187,6 +201,11 @@ const char* ExecutionModeString(int mode)
     case ExecutionModeSampleInterlockUnorderedEXT:      return "SampleInterlockUnorderedEXT";
     case ExecutionModeShadingRateInterlockOrderedEXT:   return "ShadingRateInterlockOrderedEXT";
     case ExecutionModeShadingRateInterlockUnorderedEXT: return "ShadingRateInterlockUnorderedEXT";
+
+    case ExecutionModeMaxWorkgroupSizeINTEL:    return "MaxWorkgroupSizeINTEL";
+    case ExecutionModeMaxWorkDimINTEL:          return "MaxWorkDimINTEL";
+    case ExecutionModeNoGlobalOffsetINTEL:      return "NoGlobalOffsetINTEL";
+    case ExecutionModeNumSIMDWorkitemsINTEL:    return "NumSIMDWorkitemsINTEL";
 
     case ExecutionModeCeiling:
     default: return "Bad";
@@ -353,6 +372,8 @@ const char* BuiltInString(int builtIn)
     case 4424: return "BaseVertex";
     case 4425: return "BaseInstance";
     case 4426: return "DrawIndex";
+    case 4432: return "PrimitiveShadingRateKHR";
+    case 4444: return "ShadingRateKHR";
     case 5014: return "FragStencilRefEXT";
 
     case 4992: return "BaryCoordNoPerspAMD";
@@ -502,6 +523,8 @@ const char* ImageFormatString(int format)
     case 37: return "Rg8ui";
     case 38: return "R16ui";
     case 39: return "R8ui";
+    case 40: return "R64ui";
+    case 41: return "R64i";
 
     default:
         return "Bad";
@@ -933,10 +956,16 @@ const char* CapabilityString(int info)
     case CapabilityFragmentShaderPixelInterlockEXT:         return "CapabilityFragmentShaderPixelInterlockEXT";
     case CapabilityFragmentShaderShadingRateInterlockEXT:   return "CapabilityFragmentShaderShadingRateInterlockEXT";
 
+    case CapabilityFragmentShadingRateKHR:                  return "FragmentShadingRateKHR";
+
     case CapabilityDemoteToHelperInvocationEXT:             return "DemoteToHelperInvocationEXT";
     case CapabilityShaderClockKHR:                          return "ShaderClockKHR";
+    case CapabilityInt64ImageEXT:                           return "Int64ImageEXT";
 
     case CapabilityIntegerFunctions2INTEL:              return "CapabilityIntegerFunctions2INTEL";
+
+    case CapabilityAtomicFloat32AddEXT:                     return "AtomicFloat32AddEXT";
+    case CapabilityAtomicFloat64AddEXT:                     return "AtomicFloat64AddEXT";
 
     default: return "Bad";
     }
@@ -1269,6 +1298,7 @@ const char* OpcodeString(int op)
     case 320: return "OpImageSparseRead";
 
     case OpModuleProcessed: return "OpModuleProcessed";
+    case OpExecutionModeId: return "OpExecutionModeId";
     case OpDecorateId:      return "OpDecorateId";
 
     case 333: return "OpGroupNonUniformElect";
@@ -1306,12 +1336,16 @@ const char* OpcodeString(int op)
     case 365: return "OpGroupNonUniformQuadBroadcast";
     case 366: return "OpGroupNonUniformQuadSwap";
 
+    case OpTerminateInvocation: return "OpTerminateInvocation";
+
     case 4421: return "OpSubgroupBallotKHR";
     case 4422: return "OpSubgroupFirstInvocationKHR";
     case 4428: return "OpSubgroupAllKHR";
     case 4429: return "OpSubgroupAnyKHR";
     case 4430: return "OpSubgroupAllEqualKHR";
     case 4432: return "OpSubgroupReadInvocationKHR";
+
+    case OpAtomicFAddEXT: return "OpAtomicFAddEXT";
 
     case 5000: return "OpGroupIAddNonUniformAMD";
     case 5001: return "OpGroupFAddNonUniformAMD";
@@ -1418,6 +1452,7 @@ void Parameterize()
     InstructionDesc[OpMemoryModel].setResultAndType(false, false);
     InstructionDesc[OpEntryPoint].setResultAndType(false, false);
     InstructionDesc[OpExecutionMode].setResultAndType(false, false);
+    InstructionDesc[OpExecutionModeId].setResultAndType(false, false);
     InstructionDesc[OpTypeVoid].setResultAndType(true, false);
     InstructionDesc[OpTypeBool].setResultAndType(true, false);
     InstructionDesc[OpTypeInt].setResultAndType(true, false);
@@ -1471,6 +1506,7 @@ void Parameterize()
     InstructionDesc[OpBranchConditional].setResultAndType(false, false);
     InstructionDesc[OpSwitch].setResultAndType(false, false);
     InstructionDesc[OpKill].setResultAndType(false, false);
+    InstructionDesc[OpTerminateInvocation].setResultAndType(false, false);
     InstructionDesc[OpReturn].setResultAndType(false, false);
     InstructionDesc[OpReturnValue].setResultAndType(false, false);
     InstructionDesc[OpUnreachable].setResultAndType(false, false);
@@ -1604,6 +1640,10 @@ void Parameterize()
     InstructionDesc[OpExecutionMode].operands.push(OperandExecutionMode, "'Mode'");
     InstructionDesc[OpExecutionMode].operands.push(OperandOptionalLiteral, "See <<Execution_Mode,Execution Mode>>");
 
+    InstructionDesc[OpExecutionModeId].operands.push(OperandId, "'Entry Point'");
+    InstructionDesc[OpExecutionModeId].operands.push(OperandExecutionMode, "'Mode'");
+    InstructionDesc[OpExecutionModeId].operands.push(OperandVariableIds, "See <<Execution_Mode,Execution Mode>>");
+
     InstructionDesc[OpTypeInt].operands.push(OperandLiteralNumber, "'Width'");
     InstructionDesc[OpTypeInt].operands.push(OperandLiteralNumber, "'Signedness'");
 
@@ -1697,7 +1737,7 @@ void Parameterize()
 
     InstructionDesc[OpDecorateStringGOOGLE].operands.push(OperandId, "'Target'");
     InstructionDesc[OpDecorateStringGOOGLE].operands.push(OperandDecoration, "");
-    InstructionDesc[OpDecorateStringGOOGLE].operands.push(OperandLiteralString, "'Literal String'");
+    InstructionDesc[OpDecorateStringGOOGLE].operands.push(OperandVariableLiteralStrings, "'Literal Strings'");
 
     InstructionDesc[OpMemberDecorate].operands.push(OperandId, "'Structure Type'");
     InstructionDesc[OpMemberDecorate].operands.push(OperandLiteralNumber, "'Member'");
@@ -1707,7 +1747,7 @@ void Parameterize()
     InstructionDesc[OpMemberDecorateStringGOOGLE].operands.push(OperandId, "'Structure Type'");
     InstructionDesc[OpMemberDecorateStringGOOGLE].operands.push(OperandLiteralNumber, "'Member'");
     InstructionDesc[OpMemberDecorateStringGOOGLE].operands.push(OperandDecoration, "");
-    InstructionDesc[OpMemberDecorateStringGOOGLE].operands.push(OperandLiteralString, "'Literal String'");
+    InstructionDesc[OpMemberDecorateStringGOOGLE].operands.push(OperandVariableLiteralStrings, "'Literal Strings'");
 
     InstructionDesc[OpGroupDecorate].operands.push(OperandId, "'Decoration Group'");
     InstructionDesc[OpGroupDecorate].operands.push(OperandVariableIds, "'Targets'");
@@ -2259,6 +2299,11 @@ void Parameterize()
     InstructionDesc[OpAtomicIAdd].operands.push(OperandScope, "'Scope'");
     InstructionDesc[OpAtomicIAdd].operands.push(OperandMemorySemantics, "'Semantics'");
     InstructionDesc[OpAtomicIAdd].operands.push(OperandId, "'Value'");
+
+    InstructionDesc[OpAtomicFAddEXT].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpAtomicFAddEXT].operands.push(OperandScope, "'Scope'");
+    InstructionDesc[OpAtomicFAddEXT].operands.push(OperandMemorySemantics, "'Semantics'");
+    InstructionDesc[OpAtomicFAddEXT].operands.push(OperandId, "'Value'");
 
     InstructionDesc[OpAtomicISub].operands.push(OperandId, "'Pointer'");
     InstructionDesc[OpAtomicISub].operands.push(OperandScope, "'Scope'");

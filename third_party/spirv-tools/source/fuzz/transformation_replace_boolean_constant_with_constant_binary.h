@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_REPLACE_BOOLEAN_CONSTANT_WITH_CONSTANT_BINARY_H_
 #define SOURCE_FUZZ_TRANSFORMATION_REPLACE_BOOLEAN_CONSTANT_WITH_CONSTANT_BINARY_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -49,20 +49,25 @@ class TransformationReplaceBooleanConstantWithConstantBinary
   //   TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/2902): consider
   //    replacing a boolean in an OpPhi by adding a binary operator instruction
   //    to the parent block for the OpPhi.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // A new instruction is added before the boolean constant usage that computes
   // the result of applying |message_.opcode| to |message_.lhs_id| and
   // |message_.rhs_id| is added, with result id
   // |message_.fresh_id_for_binary_operation|.  The boolean constant usage is
   // replaced with this result id.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
 
   // The same as Apply, except that the newly-added binary instruction is
   // returned.
-  opt::Instruction* ApplyWithResult(opt::IRContext* context,
-                                    FactManager* fact_manager) const;
+  opt::Instruction* ApplyWithResult(
+      opt::IRContext* ir_context,
+      TransformationContext* transformation_context) const;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 

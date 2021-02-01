@@ -92,7 +92,7 @@ std::ostream& operator<<(std::ostream& os, const ParsedInstruction& inst) {
   return os;
 }
 
-// Sanity check for the equality operator on ParsedInstruction.
+// Basic check for the equality operator on ParsedInstruction.
 TEST(ParsedInstruction, ZeroInitializedAreEqual) {
   spv_parsed_instruction_t pi = {};
   ParsedInstruction a(pi);

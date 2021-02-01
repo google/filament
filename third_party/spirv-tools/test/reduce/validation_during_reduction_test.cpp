@@ -22,10 +22,10 @@ namespace reduce {
 namespace {
 
 using opt::Function;
-using opt::Instruction;
 using opt::IRContext;
+using opt::Instruction;
 
-// A dumb reduction opportunity finder that finds opportunities to remove global
+// A reduction opportunity finder that finds opportunities to remove global
 // values regardless of whether they are referenced. This is very likely to make
 // the resulting module invalid.  We use this to test the reducer's behavior in
 // the scenario where a bad reduction pass leads to an invalid module.
@@ -43,7 +43,7 @@ class BlindlyRemoveGlobalValuesReductionOpportunityFinder
   // referenced (directly or indirectly) from elsewhere in the module, each such
   // opportunity will make the module invalid.
   std::vector<std::unique_ptr<ReductionOpportunity>> GetAvailableOpportunities(
-      IRContext* context) const final {
+      IRContext* context, uint32_t /*unused*/) const final {
     std::vector<std::unique_ptr<ReductionOpportunity>> result;
     for (auto& inst : context->module()->types_values()) {
       if (inst.HasResultId()) {
@@ -55,7 +55,7 @@ class BlindlyRemoveGlobalValuesReductionOpportunityFinder
   }
 };
 
-// A dumb reduction opportunity that exists at the start of every function whose
+// A reduction opportunity that exists at the start of every function whose
 // first instruction is an OpVariable instruction. When applied, the OpVariable
 // instruction is duplicated (with a fresh result id). This allows each
 // reduction step to increase the number of variables to check if the validator
@@ -101,7 +101,7 @@ class OpVariableDuplicatorReductionOpportunityFinder
   }
 
   std::vector<std::unique_ptr<ReductionOpportunity>> GetAvailableOpportunities(
-      IRContext* context) const final {
+      IRContext* context, uint32_t /*unused*/) const final {
     std::vector<std::unique_ptr<ReductionOpportunity>> result;
     for (auto& function : *context->module()) {
       Instruction* first_instruction = &*function.begin()[0].begin();

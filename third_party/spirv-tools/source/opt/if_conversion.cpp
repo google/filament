@@ -129,6 +129,7 @@ Pass::Status IfConversion::Process() {
         Instruction* select = builder.AddSelect(phi->type_id(), condition,
                                                 true_value->result_id(),
                                                 false_value->result_id());
+        select->UpdateDebugInfoFrom(phi);
         context()->ReplaceAllUsesWith(phi->result_id(), select->result_id());
         to_kill.push_back(phi);
         modified = true;

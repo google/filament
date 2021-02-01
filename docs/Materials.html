@@ -135,7 +135,7 @@ This document is part of the <a href="https://github.com/google/filament">Filame
 </p><ul>
 <li class="minus"><a href="https://github.com/romainguy">Romain Guy</a>, <a href="https://twitter.com/romainguy">@romainguy</a>
 </li>
-<li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://twitter.com/darthmoosious">@romainguy</a></li></ul>
+<li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://twitter.com/darthmoosious">@darthmoosious</a></li></ul>
 
 <p></p>
 <a class="target" name="overview">&#xA0;</a><a class="target" name="overview">&#xA0;</a><a class="target" name="toc2">&#xA0;</a><h1>Overview</h1>
@@ -2313,7 +2313,7 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldGeometricNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldReflectedVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Reflection of the view vector about the normal (must be used after <code>prepareMaterial()</code>) </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord(float2)</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Normalized viewport position (i.e. clip-space position normalized to [0, 1], can be used before <code>prepareMaterial()</code>) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Normalized viewport position (i.e. clip-space position normalized to [0, 1], can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getNdotV()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> The result of <code>dot(normal, view)</code>, always strictly greater than 0 (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getColor()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Interpolated color of the fragment, if the color attribute is required </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv0 attribute is required </td></tr>

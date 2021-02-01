@@ -71,6 +71,7 @@ spv_result_t ValidateFunction(ValidationState_t& _, const Instruction* inst) {
   }
 
   const std::vector<SpvOp> acceptable = {
+      SpvOpGroupDecorate,
       SpvOpDecorate,
       SpvOpEnqueueKernel,
       SpvOpEntryPoint,

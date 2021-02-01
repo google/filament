@@ -514,17 +514,22 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         windowFlags |= SDL_WINDOW_RESIZABLE;
     }
 
+    if (config.headless) {
+        windowFlags |= SDL_WINDOW_HIDDEN;
+    }
+
     mBackend = config.backend;
 
+    // Even if we're in headless mode, we still need to create a window, otherwise SDL will not poll
+    // events.
+    mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
+
     if (config.headless) {
-        mWindow = nullptr;
         mFilamentApp->mEngine = Engine::create(config.backend);
         mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t) w, (uint32_t) h);
         mWidth = w;
         mHeight = h;
     } else {
-        mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
-
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.

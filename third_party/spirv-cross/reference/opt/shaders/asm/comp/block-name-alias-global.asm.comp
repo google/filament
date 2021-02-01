@@ -7,12 +7,6 @@ struct A
     int b;
 };
 
-struct A_1
-{
-    int a;
-    int b;
-};
-
 layout(binding = 1, std430) buffer C1
 {
     A Data[];
@@ -20,7 +14,7 @@ layout(binding = 1, std430) buffer C1
 
 layout(binding = 2, std140) uniform C2
 {
-    A_1 Data[1024];
+    A Data[1024];
 } C2_1;
 
 layout(binding = 0, std430) buffer B
@@ -30,7 +24,7 @@ layout(binding = 0, std430) buffer B
 
 layout(binding = 3, std140) uniform B
 {
-    A_1 Data[1024];
+    A Data[1024];
 } C4;
 
 void main()

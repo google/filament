@@ -239,22 +239,73 @@ TEST_F(ValidateWebGPU, LogicalAddressingVulkanKHRMemoryGood) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
 }
 
-TEST_F(ValidateWebGPU, NonVulkanKHRMemoryModelBad) {
+TEST_F(ValidateWebGPU, LogicalAddressingGLSL450MemoryGood) {
   std::string spirv = R"(
-     OpCapability Shader
-     OpMemoryModel Logical GLSL450
+          OpCapability Shader
+          OpMemoryModel Logical GLSL450
+          OpEntryPoint Vertex %func "shader"
+%void   = OpTypeVoid
+%void_f = OpTypeFunction %void
+%func   = OpFunction %void None %void_f
+%label  = OpLabel
+          OpReturn
+          OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
+}
+
+TEST_F(ValidateWebGPU, LogicalAddressingSimpleMemoryGood) {
+  std::string spirv = R"(
+          OpCapability Shader
+          OpMemoryModel Logical Simple
+          OpEntryPoint Vertex %func "shader"
+%void   = OpTypeVoid
+%void_f = OpTypeFunction %void
+%func   = OpFunction %void None %void_f
+%label  = OpLabel
+          OpReturn
+          OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
+}
+
+TEST_F(ValidateWebGPU, KernelIsBad) {
+  std::string spirv = R"(
+     OpCapability Kernel
+     OpMemoryModel Logical Simple
      OpNoLine
 )";
 
   CompileSuccessfully(spirv);
 
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_WEBGPU_0));
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_WEBGPU_0));
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Memory model must be VulkanKHR for WebGPU "
-                        "environment.\n  OpMemoryModel Logical GLSL450\n"));
+              HasSubstr("Capability Kernel is not allowed by WebGPU "
+                        "specification (or requires extension)"));
 }
 
-TEST_F(ValidateWebGPU, WhitelistedExtendedInstructionsImportGood) {
+TEST_F(ValidateWebGPU, OpenCLMemoryModelBad) {
+  std::string spirv = R"(
+     OpCapability Shader
+     OpMemoryModel Logical OpenCL
+     OpNoLine
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_CAPABILITY,
+            ValidateInstructions(SPV_ENV_WEBGPU_0));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Operand 2 of MemoryModel requires one of these "
+                        "capabilities: Kernel"));
+}
+
+TEST_F(ValidateWebGPU, AllowListedExtendedInstructionsImportGood) {
   std::string spirv = R"(
           OpCapability Shader
           OpCapability VulkanMemoryModelKHR
@@ -275,7 +326,7 @@ TEST_F(ValidateWebGPU, WhitelistedExtendedInstructionsImportGood) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
 }
 
-TEST_F(ValidateWebGPU, NonWhitelistedExtendedInstructionsImportBad) {
+TEST_F(ValidateWebGPU, NonAllowListedExtendedInstructionsImportBad) {
   std::string spirv = R"(
      OpCapability Shader
      OpCapability VulkanMemoryModelKHR

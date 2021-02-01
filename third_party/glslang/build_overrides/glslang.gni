@@ -34,4 +34,4 @@
 # These are variables that are overridable by projects that include glslang.
 
 # The path to glslang dependencies.
-glslang_spirv_tools_dir = "//Externals/spirv-tools"
+glslang_spirv_tools_dir = "//External/spirv-tools"

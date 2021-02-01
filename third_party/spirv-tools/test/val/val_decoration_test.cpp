@@ -700,6 +700,61 @@ TEST_F(ValidateDecorations, RuntimeArrayOfDescriptorSetsIsAllowed) {
   EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
 }
 
+TEST_F(ValidateDecorations, BlockDecoratingArrayBad) {
+  std::string spirv = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 430
+               OpDecorate %Output Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+        %int = OpTypeInt 32 1
+      %int_3 = OpConstant %int 3
+     %Output = OpTypeArray %float %int_3
+%_ptr_Uniform_Output = OpTypePointer Uniform %Output
+ %dataOutput = OpVariable %_ptr_Uniform_Output Uniform
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateAndRetrieveValidationState());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Block decoration on a non-struct type"));
+}
+
+TEST_F(ValidateDecorations, BlockDecoratingIntBad) {
+  std::string spirv = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 430
+               OpDecorate %Output Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+     %Output = OpTypeInt 32 1
+%_ptr_Uniform_Output = OpTypePointer Uniform %Output
+ %dataOutput = OpVariable %_ptr_Uniform_Output Uniform
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateAndRetrieveValidationState());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Block decoration on a non-struct type"));
+}
+
 TEST_F(ValidateDecorations, BlockMissingOffsetBad) {
   std::string spirv = R"(
                OpCapability Shader
@@ -6298,7 +6353,7 @@ INSTANTIATE_TEST_SUITE_P(
                               "requires one of these capabilities"))));
 
 INSTANTIATE_TEST_SUITE_P(
-    DecorationWhitelistFailure, ValidateWebGPUCombineDecorationResult,
+    DecorationAllowListFailure, ValidateWebGPUCombineDecorationResult,
     Combine(Values("RelaxedPrecision", "BufferBlock", "GLSLShared",
                    "GLSLPacked", "Invariant", "Volatile", "Coherent"),
             Values(TestResult(
@@ -6993,6 +7048,115 @@ OpFunctionEnd
       getDiagnosticString(),
       HasSubstr(
           "contains an array with stride 4, but with an element size of 16"));
+}
+
+TEST_F(ValidateDecorations, FunctionsWithOpGroupDecorate) {
+  std::string spirv = R"(
+                OpCapability Addresses
+                OpCapability Linkage
+                OpCapability Kernel
+                OpCapability Int8
+           %1 = OpExtInstImport "OpenCL.std"
+                OpMemoryModel Physical32 OpenCL
+                OpName %foo "foo"
+                OpName %entry "entry"
+                OpName %bar "bar"
+                OpName %entry_0 "entry"
+                OpName %k "k"
+                OpName %entry_1 "entry"
+                OpName %b "b"
+                OpDecorate %28 FuncParamAttr Zext
+          %28 = OpDecorationGroup
+                OpDecorate %k LinkageAttributes "k" Export
+                OpDecorate %foo LinkageAttributes "foo" Export
+                OpDecorate %bar LinkageAttributes "bar" Export
+                OpDecorate %b Alignment 1
+                OpGroupDecorate %28 %foo %bar
+       %uchar = OpTypeInt 8 0
+        %bool = OpTypeBool
+           %3 = OpTypeFunction %bool
+        %void = OpTypeVoid
+          %10 = OpTypeFunction %void
+ %_ptr_Function_uchar = OpTypePointer Function %uchar
+        %true = OpConstantTrue %bool
+         %foo = OpFunction %bool DontInline %3
+       %entry = OpLabel
+                OpReturnValue %true
+                OpFunctionEnd
+         %bar = OpFunction %bool DontInline %3
+     %entry_0 = OpLabel
+                OpReturnValue %true
+                OpFunctionEnd
+           %k = OpFunction %void DontInline %10
+     %entry_1 = OpLabel
+           %b = OpVariable %_ptr_Function_uchar Function
+                OpReturn
+                OpFunctionEnd
+  )";
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+}
+
+TEST_F(ValidateDecorations, LocationVariableGood) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %in_var Location 0
+%float = OpTypeFloat 32
+%ptr_input_float = OpTypePointer Input %float
+%in_var = OpVariable %ptr_input_float Input
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateDecorations, LocationStructMemberGood) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpMemberDecorate %struct 0 Location 0
+%float = OpTypeFloat 32
+%struct = OpTypeStruct %float
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateDecorations, LocationStructBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %struct Location 0
+%float = OpTypeFloat 32
+%struct = OpTypeStruct %float
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Location decoration can only be applied to a variable "
+                        "or member of a structure type"));
+}
+
+TEST_F(ValidateDecorations, LocationFloatBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpDecorate %float Location 0
+%float = OpTypeFloat 32
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Location decoration can only be applied to a variable "
+                        "or member of a structure type"));
 }
 
 }  // namespace

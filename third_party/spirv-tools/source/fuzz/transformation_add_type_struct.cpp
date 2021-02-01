@@ -32,17 +32,24 @@ TransformationAddTypeStruct::TransformationAddTypeStruct(
 }
 
 bool TransformationAddTypeStruct::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // A fresh id is required.
-  if (!fuzzerutil::IsFreshId(context, message_.fresh_id())) {
+  if (!fuzzerutil::IsFreshId(ir_context, message_.fresh_id())) {
     return false;
   }
   for (auto member_type : message_.member_type_id()) {
-    auto type = context->get_type_mgr()->GetType(member_type);
+    auto type = ir_context->get_type_mgr()->GetType(member_type);
     if (!type || type->AsFunction()) {
       // The member type id either does not refer to a type, or refers to a
       // function type; both are illegal.
+      return false;
+    }
+
+    // From the spec for the BuiltIn decoration:
+    // - When applied to a structure-type member, that structure type cannot
+    //   be contained as a member of another structure type.
+    if (type->AsStruct() &&
+        fuzzerutil::MembersHaveBuiltInDecoration(ir_context, member_type)) {
       return false;
     }
   }
@@ -50,23 +57,25 @@ bool TransformationAddTypeStruct::IsApplicable(
 }
 
 void TransformationAddTypeStruct::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
-  opt::Instruction::OperandList in_operands;
-  for (auto member_type : message_.member_type_id()) {
-    in_operands.push_back({SPV_OPERAND_TYPE_ID, {member_type}});
-  }
-  context->module()->AddType(MakeUnique<opt::Instruction>(
-      context, SpvOpTypeStruct, 0, message_.fresh_id(), in_operands));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  fuzzerutil::AddStructType(
+      ir_context, message_.fresh_id(),
+      std::vector<uint32_t>(message_.member_type_id().begin(),
+                            message_.member_type_id().end()));
   // We have added an instruction to the module, so need to be careful about the
   // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+  ir_context->InvalidateAnalysesExceptFor(
+      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationAddTypeStruct::ToMessage() const {
   protobufs::Transformation result;
   *result.mutable_add_type_struct() = message_;
   return result;
+}
+
+std::unordered_set<uint32_t> TransformationAddTypeStruct::GetFreshIds() const {
+  return {message_.fresh_id()};
 }
 
 }  // namespace fuzz

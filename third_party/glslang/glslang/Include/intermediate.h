@@ -628,13 +628,14 @@ enum TOperator {
     // Branch
     //
 
-    EOpKill,            // Fragment only
+    EOpKill,                // Fragment only
+    EOpTerminateInvocation, // Fragment only
+    EOpDemote,              // Fragment only
     EOpReturn,
     EOpBreak,
     EOpContinue,
     EOpCase,
     EOpDefault,
-    EOpDemote,          // Fragment only
 
     //
     // Constructors
@@ -1282,6 +1283,8 @@ public:
     TIntermTyped* getConstSubtree() const { return constSubtree; }
 #ifndef GLSLANG_WEB
     void setFlattenSubset(int subset) { flattenSubset = subset; }
+    virtual const TString& getAccessName() const;
+
     int getFlattenSubset() const { return flattenSubset; } // -1 means full object
 #endif
 

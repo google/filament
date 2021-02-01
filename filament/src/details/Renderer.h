@@ -77,7 +77,7 @@ public:
             Viewport const& srcViewport, CopyFrameFlag flags);
 
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-            backend::FrameFinishedCallback callback, void* user);
+            backend::FrameScheduledCallback callback, void* user);
     void endFrame();
 
     void resetUserTime();

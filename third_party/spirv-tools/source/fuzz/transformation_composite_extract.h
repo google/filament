@@ -15,9 +15,9 @@
 #ifndef SOURCE_FUZZ_TRANSFORMATION_COMPOSITE_EXTRACT_H_
 #define SOURCE_FUZZ_TRANSFORMATION_COMPOSITE_EXTRACT_H_
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -30,7 +30,8 @@ class TransformationCompositeExtract : public Transformation {
 
   TransformationCompositeExtract(
       const protobufs::InstructionDescriptor& instruction_to_insert_before,
-      uint32_t fresh_id, uint32_t composite_id, std::vector<uint32_t>&& index);
+      uint32_t fresh_id, uint32_t composite_id,
+      const std::vector<uint32_t>& index);
 
   // - |message_.fresh_id| must be available
   // - |message_.instruction_to_insert_before| must identify an instruction
@@ -41,19 +42,31 @@ class TransformationCompositeExtract : public Transformation {
   // - |message_.index| must be a suitable set of indices for
   //   |message_.composite_id|, i.e. it must be possible to follow this chain
   //   of indices to reach a sub-object of |message_.composite_id|
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Adds an OpCompositeConstruct instruction before the instruction identified
   // by |message_.instruction_to_insert_before|, that extracts from
   // |message_.composite_id| via indices |message_.index| into
-  // |message_.fresh_id|.  Generates a data synonym fact relating
-  // |message_.fresh_id| to the extracted element.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  // |message_.fresh_id|.
+  //
+  // Adds a synonym fact associating |message_.fresh_id| with the relevant
+  // element of |message_.composite_id|, as long as these ids support synonym
+  // creation.
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
  private:
+  // Helper method for adding data synonym facts when applying the
+  // transformation to |ir_context| and |transformation_context|.
+  void AddDataSynonymFacts(opt::IRContext* ir_context,
+                           TransformationContext* transformation_context) const;
+
   protobufs::TransformationCompositeExtract message_;
 };
 

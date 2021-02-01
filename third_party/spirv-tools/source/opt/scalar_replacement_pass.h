@@ -199,6 +199,21 @@ class ScalarReplacementPass : public Pass {
   bool ReplaceWholeStore(Instruction* store,
                          const std::vector<Instruction*>& replacements);
 
+  // Replaces the DebugDeclare to the entire composite.
+  //
+  // Generates a DebugValue with Deref operation for each element in the
+  // scalarized variable from the original DebugDeclare.  Returns true if
+  // successful.
+  bool ReplaceWholeDebugDeclare(Instruction* dbg_decl,
+                                const std::vector<Instruction*>& replacements);
+
+  // Replaces the DebugValue to the entire composite.
+  //
+  // Generates a DebugValue for each element in the scalarized variable from
+  // the original DebugValue.  Returns true if successful.
+  bool ReplaceWholeDebugValue(Instruction* dbg_value,
+                              const std::vector<Instruction*>& replacements);
+
   // Replaces an access chain to the composite variable with either a direct use
   // of the appropriate replacement variable or another access chain with the
   // replacement variable as the base and one fewer indexes. Returns true if

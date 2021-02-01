@@ -1063,10 +1063,10 @@ std::string GetUnreachableMergeWithComplexBody(SpvCapability cap,
   Block merge("merge", SpvOpUnreachable);
 
   entry.AppendBody(spvIsWebGPUEnv(env)
-                       ? "%dummy   = OpVariable %intptrt Function %two\n"
-                       : "%dummy   = OpVariable %intptrt Function\n");
+                       ? "%placeholder   = OpVariable %intptrt Function %two\n"
+                       : "%placeholder   = OpVariable %intptrt Function\n");
   entry.AppendBody("%cond    = OpSLessThan %boolt %one %two\n");
-  merge.AppendBody("OpStore %dummy %one\n");
+  merge.AppendBody("OpStore %placeholder %one\n");
 
   std::string str = header;
   if (spvIsWebGPUEnv(env)) {
@@ -1120,9 +1120,9 @@ std::string GetUnreachableContinueWithComplexBody(SpvCapability cap,
   target >> branch;
 
   entry.AppendBody(spvIsWebGPUEnv(env)
-                       ? "%dummy   = OpVariable %intptrt Function %two\n"
-                       : "%dummy   = OpVariable %intptrt Function\n");
-  target.AppendBody("OpStore %dummy %one\n");
+                       ? "%placeholder   = OpVariable %intptrt Function %two\n"
+                       : "%placeholder   = OpVariable %intptrt Function\n");
+  target.AppendBody("OpStore %placeholder %one\n");
 
   std::string str = header;
   if (spvIsWebGPUEnv(env)) {
@@ -1204,14 +1204,6 @@ TEST_P(ValidateCFG, UnreachableMergeWithBranchUse) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
-TEST_F(ValidateCFG, WebGPUUnreachableMergeWithBranchUse) {
-  CompileSuccessfully(
-      GetUnreachableMergeWithBranchUse(SpvCapabilityShader, SPV_ENV_WEBGPU_0));
-  ASSERT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("cannot be the target of a branch."));
-}
-
 std::string GetUnreachableMergeWithMultipleUses(SpvCapability cap,
                                                 spv_target_env env) {
   std::string header =
@@ -1287,8 +1279,8 @@ std::string GetUnreachableContinueWithBranchUse(SpvCapability cap,
   target >> branch;
 
   entry.AppendBody(spvIsWebGPUEnv(env)
-                       ? "%dummy   = OpVariable %intptrt Function %two\n"
-                       : "%dummy   = OpVariable %intptrt Function\n");
+                       ? "%placeholder   = OpVariable %intptrt Function %two\n"
+                       : "%placeholder   = OpVariable %intptrt Function\n");
 
   std::string str = header;
   if (spvIsWebGPUEnv(env)) {
@@ -4294,6 +4286,316 @@ TEST_F(ValidateCFG, ExitFromConstructWhoseHeaderIsAMerge2) {
 
   CompileSuccessfully(text);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, PhiResultInvalidSampler) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%sampler = OpTypeSampler
+%ptr_uc_sampler = OpTypePointer UniformConstant %sampler
+%sampler_var = OpVariable %ptr_uc_sampler UniformConstant
+%undef_bool = OpUndef %bool
+%undef_sampler = OpUndef %sampler
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_sampler = OpLoad %sampler %sampler_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %sampler %undef_sampler %entry %ld_sampler %loop
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result type cannot be OpTypeSampler"));
+}
+
+TEST_F(ValidateCFG, PhiResultInvalidImage) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%image = OpTypeImage %f32 2D 0 0 0 1 Rgba32f
+%ptr_uc_image = OpTypePointer UniformConstant %image
+%image_var = OpVariable %ptr_uc_image UniformConstant
+%undef_bool = OpUndef %bool
+%undef_image = OpUndef %image
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_image = OpLoad %image %image_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %image %undef_image %entry %ld_image %loop
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result type cannot be OpTypeImage"));
+}
+
+TEST_F(ValidateCFG, PhiResultInvalidSampledImage) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%sampler = OpTypeSampler
+%ptr_uc_sampler = OpTypePointer UniformConstant %sampler
+%sampler_var = OpVariable %ptr_uc_sampler UniformConstant
+%image = OpTypeImage %f32 2D 0 0 0 1 Rgba32f
+%ptr_uc_image = OpTypePointer UniformConstant %image
+%image_var = OpVariable %ptr_uc_image UniformConstant
+%sampled_image = OpTypeSampledImage %image
+%undef_bool = OpUndef %bool
+%undef_sampled_image = OpUndef %sampled_image
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_image = OpLoad %image %image_var
+%ld_sampler = OpLoad %sampler %sampler_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %sampled_image %undef_sampled_image %entry %sample %loop
+%sample = OpSampledImage %sampled_image %ld_image %ld_sampler
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Result type cannot be OpTypeSampledImage"));
+}
+
+TEST_F(ValidateCFG, PhiResultValidPreLegalizationSampler) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%sampler = OpTypeSampler
+%ptr_uc_sampler = OpTypePointer UniformConstant %sampler
+%sampler_var = OpVariable %ptr_uc_sampler UniformConstant
+%undef_bool = OpUndef %bool
+%undef_sampler = OpUndef %sampler
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_sampler = OpLoad %sampler %sampler_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %sampler %undef_sampler %entry %ld_sampler %loop
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  options_->before_hlsl_legalization = true;
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, PhiResultValidPreLegalizationImage) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%image = OpTypeImage %f32 2D 0 0 0 1 Rgba32f
+%ptr_uc_image = OpTypePointer UniformConstant %image
+%image_var = OpVariable %ptr_uc_image UniformConstant
+%undef_bool = OpUndef %bool
+%undef_image = OpUndef %image
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_image = OpLoad %image %image_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %image %undef_image %entry %ld_image %loop
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  options_->before_hlsl_legalization = true;
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, PhiResultValidPreLegalizationSampledImage) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%f32 = OpTypeFloat 32
+%sampler = OpTypeSampler
+%ptr_uc_sampler = OpTypePointer UniformConstant %sampler
+%sampler_var = OpVariable %ptr_uc_sampler UniformConstant
+%image = OpTypeImage %f32 2D 0 0 0 1 Rgba32f
+%ptr_uc_image = OpTypePointer UniformConstant %image
+%image_var = OpVariable %ptr_uc_image UniformConstant
+%sampled_image = OpTypeSampledImage %image
+%undef_bool = OpUndef %bool
+%undef_sampled_image = OpUndef %sampled_image
+%void_fn = OpTypeFunction %void
+%fn = OpFunction %void None %void_fn
+%entry = OpLabel
+%ld_image = OpLoad %image %image_var
+%ld_sampler = OpLoad %sampler %sampler_var
+OpBranch %loop
+%loop = OpLabel
+%phi = OpPhi %sampled_image %undef_sampled_image %entry %sample %loop
+%sample = OpSampledImage %sampled_image %ld_image %ld_sampler
+OpLoopMerge %exit %loop None
+OpBranchConditional %undef_bool %exit %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  options_->before_hlsl_legalization = true;
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, UnreachableIsStaticallyReachable) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%1 = OpTypeVoid
+%2 = OpTypeFunction %1
+%3 = OpFunction %1 None %2
+%4 = OpLabel
+OpBranch %5
+%5 = OpLabel
+OpUnreachable
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+
+  auto f = vstate_->function(3);
+  auto entry = f->GetBlock(4).first;
+  ASSERT_TRUE(entry->reachable());
+  auto end = f->GetBlock(5).first;
+  ASSERT_TRUE(end->reachable());
+}
+
+TEST_F(ValidateCFG, BlockOrderDoesNotAffectReachability) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%1 = OpTypeVoid
+%2 = OpTypeFunction %1
+%3 = OpTypeBool
+%4 = OpUndef %3
+%5 = OpFunction %1 None %2
+%6 = OpLabel
+OpBranch %7
+%7 = OpLabel
+OpSelectionMerge %8 None
+OpBranchConditional %4 %9 %10
+%8 = OpLabel
+OpReturn
+%9 = OpLabel
+OpBranch %8
+%10 = OpLabel
+OpBranch %8
+%11 = OpLabel
+OpUnreachable
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
+
+  auto f = vstate_->function(5);
+  auto b6 = f->GetBlock(6).first;
+  auto b7 = f->GetBlock(7).first;
+  auto b8 = f->GetBlock(8).first;
+  auto b9 = f->GetBlock(9).first;
+  auto b10 = f->GetBlock(10).first;
+  auto b11 = f->GetBlock(11).first;
+
+  ASSERT_TRUE(b6->reachable());
+  ASSERT_TRUE(b7->reachable());
+  ASSERT_TRUE(b8->reachable());
+  ASSERT_TRUE(b9->reachable());
+  ASSERT_TRUE(b10->reachable());
+  ASSERT_FALSE(b11->reachable());
+}
+
+TEST_F(ValidateCFG, PhiInstructionWithDuplicateIncomingEdges) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeBool
+          %7 = OpConstantTrue %6
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpSelectionMerge %10 None
+               OpBranchConditional %7 %8 %9
+          %8 = OpLabel
+               OpBranch %10
+          %9 = OpLabel
+	       OpBranch %10
+         %10 = OpLabel
+	 %11 = OpPhi %6 %7 %8 %7 %8
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpPhi references incoming basic block <id> "));
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("multiple times."));
 }
 
 }  // namespace

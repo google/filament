@@ -138,7 +138,7 @@ bool PrivateToLocalPass::MoveVariable(Instruction* variable,
   function->begin()->begin()->InsertBefore(move(var));
 
   // Update uses where the type may have changed.
-  return UpdateUses(variable->result_id());
+  return UpdateUses(variable);
 }
 
 uint32_t PrivateToLocalPass::GetNewType(uint32_t old_type_id) {
@@ -157,6 +157,10 @@ uint32_t PrivateToLocalPass::GetNewType(uint32_t old_type_id) {
 bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
   // The cases in this switch have to match the cases in |UpdateUse|.
   // If we don't know how to update it, it is not valid.
+  if (inst->GetOpenCL100DebugOpcode() ==
+      OpenCLDebugInfo100DebugGlobalVariable) {
+    return true;
+  }
   switch (inst->opcode()) {
     case SpvOpLoad:
     case SpvOpStore:
@@ -175,10 +179,16 @@ bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
   }
 }
 
-bool PrivateToLocalPass::UpdateUse(Instruction* inst) {
+bool PrivateToLocalPass::UpdateUse(Instruction* inst, Instruction* user) {
   // The cases in this switch have to match the cases in |IsValidUse|.  If we
   // don't think it is valid, the optimization will not view the variable as a
   // candidate, and therefore the use will not be updated.
+  if (inst->GetOpenCL100DebugOpcode() ==
+      OpenCLDebugInfo100DebugGlobalVariable) {
+    context()->get_debug_info_mgr()->ConvertDebugGlobalToLocalVariable(inst,
+                                                                       user);
+    return true;
+  }
   switch (inst->opcode()) {
     case SpvOpLoad:
     case SpvOpStore:
@@ -196,7 +206,7 @@ bool PrivateToLocalPass::UpdateUse(Instruction* inst) {
       context()->AnalyzeUses(inst);
 
       // Update uses where the type may have changed.
-      if (!UpdateUses(inst->result_id())) {
+      if (!UpdateUses(inst)) {
         return false;
       }
     } break;
@@ -211,13 +221,14 @@ bool PrivateToLocalPass::UpdateUse(Instruction* inst) {
   return true;
 }
 
-bool PrivateToLocalPass::UpdateUses(uint32_t id) {
+bool PrivateToLocalPass::UpdateUses(Instruction* inst) {
+  uint32_t id = inst->result_id();
   std::vector<Instruction*> uses;
   context()->get_def_use_mgr()->ForEachUser(
       id, [&uses](Instruction* use) { uses.push_back(use); });
 
   for (Instruction* use : uses) {
-    if (!UpdateUse(use)) {
+    if (!UpdateUse(use, inst)) {
       return false;
     }
   }

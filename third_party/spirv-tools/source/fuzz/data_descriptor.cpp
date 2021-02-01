@@ -19,8 +19,8 @@
 namespace spvtools {
 namespace fuzz {
 
-protobufs::DataDescriptor MakeDataDescriptor(uint32_t object,
-                                             std::vector<uint32_t>&& indices) {
+protobufs::DataDescriptor MakeDataDescriptor(
+    uint32_t object, const std::vector<uint32_t>& indices) {
   protobufs::DataDescriptor result;
   result.set_object(object);
   for (auto index : indices) {

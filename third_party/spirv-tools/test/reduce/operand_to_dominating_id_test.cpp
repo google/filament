@@ -56,7 +56,7 @@ TEST(OperandToDominatingIdReductionPassTest, BasicCheck) {
   const auto context =
       BuildModule(env, consumer, original, kReduceAssembleOption);
   const auto ops = OperandToDominatingIdReductionOpportunityFinder()
-                       .GetAvailableOpportunities(context.get());
+                       .GetAvailableOpportunities(context.get(), 0);
   ASSERT_EQ(10, ops.size());
   ASSERT_TRUE(ops[0]->PreconditionHolds());
   ops[0]->TryToApply();

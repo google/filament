@@ -696,6 +696,8 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                 setOpenGlSpv();
                 if (argv[0][2] != 0)
                     ClientInputSemanticsVersion = getAttachedNumber("-G<num> client input semantics");
+                if (ClientInputSemanticsVersion != 100)
+                    Error("unknown client version for -G, should be 100");
                 break;
             case 'H':
                 Options |= EOptionHumanReadableSpv;
@@ -732,6 +734,8 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                 setVulkanSpv();
                 if (argv[0][2] != 0)
                     ClientInputSemanticsVersion = getAttachedNumber("-V<num> client input semantics");
+                if (ClientInputSemanticsVersion != 100)
+                    Error("unknown client version for -V, should be 100");
                 break;
             case 'c':
                 Options |= EOptionDumpConfig;

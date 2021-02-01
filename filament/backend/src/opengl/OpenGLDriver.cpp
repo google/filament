@@ -2857,8 +2857,7 @@ void OpenGLDriver::tick(int) {
     executeEveryNowAndThenOps();
 }
 
-void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
-        backend::FrameFinishedCallback, void*) {
+void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
@@ -2874,6 +2873,16 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId,
             }
         }
     }
+}
+
+void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        backend::FrameScheduledCallback callback, void* user) {
+
+}
+
+void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
+        backend::FrameCompletedCallback callback, void* user) {
+
 }
 
 void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {

@@ -49,7 +49,12 @@ class ReductionPass {
   // Returns an empty vector if there are no more chunks left to apply; in this
   // case, the index will be reset and the granularity lowered for the next
   // round.
-  std::vector<uint32_t> TryApplyReduction(const std::vector<uint32_t>& binary);
+  //
+  // If |target_function| is non-zero, only reduction opportunities that
+  // simplify the internals of the function with result id |target_function|
+  // will be applied.
+  std::vector<uint32_t> TryApplyReduction(const std::vector<uint32_t>& binary,
+                                          uint32_t target_function);
 
   // Notifies the reduction pass whether the binary returned from
   // TryApplyReduction is interesting, so that the next call to

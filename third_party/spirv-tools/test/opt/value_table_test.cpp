@@ -684,6 +684,149 @@ TEST_F(ValueTableTest, EmptyPhiTest) {
   vtable.GetValueNumber(inst);
 }
 
+TEST_F(ValueTableTest, RedundantSampledImageLoad) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragColor
+               OpExecutionMode %main OriginLowerLeft
+               OpSource GLSL 330
+               OpName %main "main"
+               OpName %tex0 "tex0"
+               OpName %gl_FragColor "gl_FragColor"
+               OpDecorate %tex0 Location 0
+               OpDecorate %tex0 DescriptorSet 0
+               OpDecorate %tex0 Binding 0
+               OpDecorate %gl_FragColor Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+          %9 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %10 = OpTypeSampledImage %9
+%_ptr_UniformConstant_10 = OpTypePointer UniformConstant %10
+       %tex0 = OpVariable %_ptr_UniformConstant_10 UniformConstant
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %13 = OpConstantNull %v4float
+%gl_FragColor = OpVariable %_ptr_Output_v4float Output
+         %14 = OpUndef %v4float
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+         %16 = OpLoad %10 %tex0
+         %17 = OpImageSampleProjImplicitLod %v4float %16 %13
+         %18 = OpImageSampleProjImplicitLod %v4float %16 %13
+         %19 = OpFAdd %v4float %18 %17
+               OpStore %gl_FragColor %19
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* load1 = context->get_def_use_mgr()->GetDef(17);
+  Instruction* load2 = context->get_def_use_mgr()->GetDef(18);
+  EXPECT_EQ(vtable.GetValueNumber(load1), vtable.GetValueNumber(load2));
+}
+
+TEST_F(ValueTableTest, DifferentDebugLocalVariableSameValue) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+          %2 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %3 "main"
+               OpExecutionMode %3 OriginUpperLeft
+               OpSource GLSL 430
+          %4 = OpString "test"
+          %5 = OpTypeVoid
+          %6 = OpTypeFunction %5
+          %7 = OpTypeInt 32 0
+          %8 = OpConstant %7 32
+          %9 = OpExtInst %5 %2 DebugSource %4
+         %10 = OpExtInst %5 %2 DebugCompilationUnit 1 4 %9 HLSL
+         %11 = OpExtInst %5 %2 DebugTypeBasic %4 %8 Float
+         %12 = OpExtInst %5 %2 DebugLocalVariable %4 %11 %9 0 0 %10 FlagIsLocal
+         %13 = OpExtInst %5 %2 DebugLocalVariable %4 %11 %9 0 0 %10 FlagIsLocal
+          %3 = OpFunction %5 None %6
+         %14 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* inst1 = context->get_def_use_mgr()->GetDef(12);
+  Instruction* inst2 = context->get_def_use_mgr()->GetDef(13);
+  EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
+}
+
+TEST_F(ValueTableTest, DifferentDebugValueSameValue) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+          %2 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %3 "main"
+               OpExecutionMode %3 OriginUpperLeft
+               OpSource GLSL 430
+          %4 = OpString "test"
+          %5 = OpTypeVoid
+          %6 = OpTypeFunction %5
+          %7 = OpTypeInt 32 0
+          %8 = OpConstant %7 32
+          %9 = OpExtInst %5 %2 DebugSource %4
+         %10 = OpExtInst %5 %2 DebugCompilationUnit 1 4 %9 HLSL
+         %11 = OpExtInst %5 %2 DebugTypeBasic %4 %8 Float
+         %12 = OpExtInst %5 %2 DebugLocalVariable %4 %11 %9 0 0 %10 FlagIsLocal
+         %13 = OpExtInst %5 %2 DebugExpression
+          %3 = OpFunction %5 None %6
+         %14 = OpLabel
+         %15 = OpExtInst %5 %2 DebugValue %12 %8 %13
+         %16 = OpExtInst %5 %2 DebugValue %12 %8 %13
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* inst1 = context->get_def_use_mgr()->GetDef(15);
+  Instruction* inst2 = context->get_def_use_mgr()->GetDef(16);
+  EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
+}
+
+TEST_F(ValueTableTest, DifferentDebugDeclareSameValue) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+          %2 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %3 "main"
+               OpExecutionMode %3 OriginUpperLeft
+               OpSource GLSL 430
+          %4 = OpString "test"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+    %uint_32 = OpConstant %uint 32
+         %10 = OpExtInst %void %2 DebugSource %4
+         %11 = OpExtInst %void %2 DebugCompilationUnit 1 4 %10 HLSL
+         %12 = OpExtInst %void %2 DebugTypeBasic %4 %uint_32 Float
+         %13 = OpExtInst %void %2 DebugLocalVariable %4 %12 %10 0 0 %11 FlagIsLocal
+         %14 = OpExtInst %void %2 DebugExpression
+          %3 = OpFunction %void None %6
+         %15 = OpLabel
+         %16 = OpVariable %_ptr_Function_uint Function
+         %17 = OpExtInst %void %2 DebugDeclare %13 %16 %14
+         %18 = OpExtInst %void %2 DebugDeclare %13 %16 %14
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto context = BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ValueNumberTable vtable(context.get());
+  Instruction* inst1 = context->get_def_use_mgr()->GetDef(17);
+  Instruction* inst2 = context->get_def_use_mgr()->GetDef(18);
+  EXPECT_EQ(vtable.GetValueNumber(inst1), vtable.GetValueNumber(inst2));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

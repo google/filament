@@ -24,6 +24,7 @@ void frag_main()
 void main(SPIRV_Cross_Input stage_input)
 {
     gl_FragCoord = stage_input.gl_FragCoord;
+    gl_FragCoord.w = 1.0 / gl_FragCoord.w;
     vTex = stage_input.vTex;
     vIndex = stage_input.vIndex;
     frag_main();

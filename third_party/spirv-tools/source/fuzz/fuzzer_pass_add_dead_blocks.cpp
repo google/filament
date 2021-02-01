@@ -21,10 +21,11 @@ namespace spvtools {
 namespace fuzz {
 
 FuzzerPassAddDeadBlocks::FuzzerPassAddDeadBlocks(
-    opt::IRContext* ir_context, FactManager* fact_manager,
+    opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
     protobufs::TransformationSequence* transformations)
-    : FuzzerPass(ir_context, fact_manager, fuzzer_context, transformations) {}
+    : FuzzerPass(ir_context, transformation_context, fuzzer_context,
+                 transformations) {}
 
 FuzzerPassAddDeadBlocks::~FuzzerPassAddDeadBlocks() = default;
 
@@ -40,6 +41,12 @@ void FuzzerPassAddDeadBlocks::Apply() {
               GetFuzzerContext()->GetChanceOfAddingDeadBlock())) {
         continue;
       }
+
+      // Make sure the module contains a boolean constant equal to
+      // |condition_value|.
+      bool condition_value = GetFuzzerContext()->ChooseEven();
+      FindOrCreateBoolConstant(condition_value, false);
+
       // We speculatively create a transformation, and then apply it (below) if
       // it turns out to be applicable.  This avoids duplicating the logic for
       // applicability checking.
@@ -47,16 +54,12 @@ void FuzzerPassAddDeadBlocks::Apply() {
       // It means that fresh ids for transformations that turn out not to be
       // applicable end up being unused.
       candidate_transformations.emplace_back(TransformationAddDeadBlock(
-          GetFuzzerContext()->GetFreshId(), block.id(),
-          GetFuzzerContext()->ChooseEven()));
+          GetFuzzerContext()->GetFreshId(), block.id(), condition_value));
     }
   }
   // Apply all those transformations that are in fact applicable.
   for (auto& transformation : candidate_transformations) {
-    if (transformation.IsApplicable(GetIRContext(), *GetFactManager())) {
-      transformation.Apply(GetIRContext(), GetFactManager());
-      *GetTransformations()->add_transformation() = transformation.ToMessage();
-    }
+    MaybeApplyTransformation(transformation);
   }
 }
 

@@ -8,13 +8,6 @@ struct Foo
     int c;
 };
 
-struct Foo_1
-{
-    int a;
-    int b;
-    int c;
-};
-
 layout(binding = 1, std140) buffer SSBO1
 {
     layout(offset = 4) int a;
@@ -27,7 +20,7 @@ layout(binding = 2, std430) buffer SSBO2
 {
     layout(offset = 4) int a;
     layout(offset = 8) int b;
-    layout(offset = 16) Foo_1 foo;
+    layout(offset = 16) Foo foo;
     layout(offset = 48) int c[8];
 } ssbo2;
 

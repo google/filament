@@ -101,7 +101,7 @@ TEST(OperandToConstantReductionPassTest, BasicCheck) {
       BuildModule(env, consumer, original, kReduceAssembleOption);
   const auto ops =
       OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(17, ops.size());
   ASSERT_TRUE(ops[0]->PreconditionHolds());
   ops[0]->TryToApply();
@@ -151,8 +151,156 @@ TEST(OperandToConstantReductionPassTest, WithCalledFunction) {
       BuildModule(env, consumer, shader, kReduceAssembleOption);
   const auto ops =
       OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
-          context.get());
+          context.get(), 0);
   ASSERT_EQ(0, ops.size());
+}
+
+TEST(OperandToConstantReductionPassTest, TargetSpecificFunction) {
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypePointer Function %6
+          %8 = OpTypeFunction %6 %7
+         %17 = OpConstant %6 1
+         %20 = OpConstant %6 2
+         %23 = OpConstant %6 0
+         %24 = OpTypeBool
+         %35 = OpConstant %6 3
+         %53 = OpConstant %6 10
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %65 = OpVariable %7 Function
+         %68 = OpVariable %7 Function
+         %73 = OpVariable %7 Function
+               OpStore %65 %35
+         %66 = OpLoad %6 %65
+         %67 = OpIAdd %6 %66 %17
+               OpStore %65 %67
+         %69 = OpLoad %6 %65
+               OpStore %68 %69
+         %70 = OpFunctionCall %6 %13 %68
+         %71 = OpLoad %6 %65
+         %72 = OpIAdd %6 %71 %70
+               OpStore %65 %72
+         %74 = OpLoad %6 %65
+               OpStore %73 %74
+         %75 = OpFunctionCall %6 %10 %73
+         %76 = OpLoad %6 %65
+         %77 = OpIAdd %6 %76 %75
+               OpStore %65 %77
+               OpReturn
+               OpFunctionEnd
+         %10 = OpFunction %6 None %8
+          %9 = OpFunctionParameter %7
+         %11 = OpLabel
+         %15 = OpVariable %7 Function
+         %16 = OpLoad %6 %9
+         %18 = OpIAdd %6 %16 %17
+               OpStore %15 %18
+         %19 = OpLoad %6 %15
+         %21 = OpIAdd %6 %19 %20
+               OpStore %15 %21
+         %22 = OpLoad %6 %15
+         %25 = OpSGreaterThan %24 %22 %23
+               OpSelectionMerge %27 None
+               OpBranchConditional %25 %26 %27
+         %26 = OpLabel
+         %28 = OpLoad %6 %9
+               OpReturnValue %28
+         %27 = OpLabel
+         %30 = OpLoad %6 %9
+         %31 = OpIAdd %6 %30 %17
+               OpReturnValue %31
+               OpFunctionEnd
+         %13 = OpFunction %6 None %8
+         %12 = OpFunctionParameter %7
+         %14 = OpLabel
+         %41 = OpVariable %7 Function
+         %46 = OpVariable %7 Function
+         %55 = OpVariable %7 Function
+         %34 = OpLoad %6 %12
+         %36 = OpIEqual %24 %34 %35
+               OpSelectionMerge %38 None
+               OpBranchConditional %36 %37 %38
+         %37 = OpLabel
+         %39 = OpLoad %6 %12
+         %40 = OpIMul %6 %20 %39
+               OpStore %41 %40
+         %42 = OpFunctionCall %6 %10 %41
+               OpReturnValue %42
+         %38 = OpLabel
+         %44 = OpLoad %6 %12
+         %45 = OpIAdd %6 %44 %17
+               OpStore %12 %45
+               OpStore %46 %23
+               OpBranch %47
+         %47 = OpLabel
+               OpLoopMerge %49 %50 None
+               OpBranch %51
+         %51 = OpLabel
+         %52 = OpLoad %6 %46
+         %54 = OpSLessThan %24 %52 %53
+               OpBranchConditional %54 %48 %49
+         %48 = OpLabel
+         %56 = OpLoad %6 %12
+               OpStore %55 %56
+         %57 = OpFunctionCall %6 %10 %55
+         %58 = OpLoad %6 %12
+         %59 = OpIAdd %6 %58 %57
+               OpStore %12 %59
+               OpBranch %50
+         %50 = OpLabel
+         %60 = OpLoad %6 %46
+         %61 = OpIAdd %6 %60 %17
+               OpStore %46 %61
+               OpBranch %47
+         %49 = OpLabel
+         %62 = OpLoad %6 %12
+               OpReturnValue %62
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, shader, kReduceAssembleOption);
+
+  // Targeting all functions, there are quite a few opportunities.  To avoid
+  // making the test too sensitive, we check that there are more than a number
+  // somewhat lower than the real number.
+  const auto all_ops =
+      OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
+          context.get(), 0);
+  ASSERT_TRUE(all_ops.size() > 100);
+
+  // Targeting individual functions, there are fewer opportunities.  Again, we
+  // avoid checking against an exact number so that the test is not too
+  // sensitive.
+  const auto ops_for_function_4 =
+      OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
+          context.get(), 4);
+  const auto ops_for_function_10 =
+      OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
+          context.get(), 10);
+  const auto ops_for_function_13 =
+      OperandToConstReductionOpportunityFinder().GetAvailableOpportunities(
+          context.get(), 13);
+  ASSERT_TRUE(ops_for_function_4.size() < 60);
+  ASSERT_TRUE(ops_for_function_10.size() < 50);
+  ASSERT_TRUE(ops_for_function_13.size() < 80);
+
+  // The total number of opportunities should be the sum of the per-function
+  // opportunities.
+  ASSERT_EQ(all_ops.size(), ops_for_function_4.size() +
+                                ops_for_function_10.size() +
+                                ops_for_function_13.size());
 }
 
 }  // namespace

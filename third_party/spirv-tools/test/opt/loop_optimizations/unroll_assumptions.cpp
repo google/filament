@@ -467,6 +467,73 @@ OpFunctionEnd
   SinglePassRunAndCheck<LoopUnroller>(text, text, false);
 }
 
+TEST_F(PassClassTest, KillInBody) {
+  const std::string text = R"(OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%4 = OpTypeBool
+%5 = OpTypeInt 32 0
+%6 = OpConstant %5 0
+%7 = OpConstant %5 1
+%8 = OpConstant %5 5
+%1 = OpFunction %2 None %3
+%9 = OpLabel
+OpBranch %10
+%10 = OpLabel
+%11 = OpPhi %5 %6 %9 %12 %13
+%14 = OpULessThan %4 %11 %8
+OpLoopMerge %15 %13 Unroll
+OpBranchConditional %14 %16 %15
+%16 = OpLabel
+OpKill
+%13 = OpLabel
+%12 = OpIAdd %5 %11 %7
+OpBranch %10
+%15 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndCheck<LoopUnroller>(text, text, false);
+}
+
+TEST_F(PassClassTest, TerminateInvocationInBody) {
+  const std::string text = R"(OpCapability Shader
+OpExtension "SPV_KHR_terminate_invocation"
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%4 = OpTypeBool
+%5 = OpTypeInt 32 0
+%6 = OpConstant %5 0
+%7 = OpConstant %5 1
+%8 = OpConstant %5 5
+%1 = OpFunction %2 None %3
+%9 = OpLabel
+OpBranch %10
+%10 = OpLabel
+%11 = OpPhi %5 %6 %9 %12 %13
+%14 = OpULessThan %4 %11 %8
+OpLoopMerge %15 %13 Unroll
+OpBranchConditional %14 %16 %15
+%16 = OpLabel
+OpTerminateInvocation
+%13 = OpLabel
+%12 = OpIAdd %5 %11 %7
+OpBranch %10
+%15 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndCheck<LoopUnroller>(text, text, false);
+}
+
 /*
 Generated from the following GLSL
 #version 440 core

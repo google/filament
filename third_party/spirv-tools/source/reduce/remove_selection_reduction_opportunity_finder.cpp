@@ -19,10 +19,6 @@
 namespace spvtools {
 namespace reduce {
 
-using opt::BasicBlock;
-using opt::IRContext;
-using opt::Instruction;
-
 namespace {
 const uint32_t kMergeNodeIndex = 0;
 const uint32_t kContinueNodeIndex = 1;
@@ -34,11 +30,11 @@ std::string RemoveSelectionReductionOpportunityFinder::GetName() const {
 
 std::vector<std::unique_ptr<ReductionOpportunity>>
 RemoveSelectionReductionOpportunityFinder::GetAvailableOpportunities(
-    IRContext* context) const {
+    opt::IRContext* context, uint32_t target_function) const {
   // Get all loop merge and continue blocks so we can check for these later.
   std::unordered_set<uint32_t> merge_and_continue_blocks_from_loops;
-  for (auto& function : *context->module()) {
-    for (auto& block : function) {
+  for (auto* function : GetTargetFunctions(context, target_function)) {
+    for (auto& block : *function) {
       if (auto merge_instruction = block.GetMergeInst()) {
         if (merge_instruction->opcode() == SpvOpLoopMerge) {
           uint32_t merge_block_id =
@@ -73,8 +69,8 @@ RemoveSelectionReductionOpportunityFinder::GetAvailableOpportunities(
 }
 
 bool RemoveSelectionReductionOpportunityFinder::CanOpSelectionMergeBeRemoved(
-    IRContext* context, const BasicBlock& header_block,
-    Instruction* merge_instruction,
+    opt::IRContext* context, const opt::BasicBlock& header_block,
+    opt::Instruction* merge_instruction,
     std::unordered_set<uint32_t> merge_and_continue_blocks_from_loops) {
   assert(header_block.GetMergeInst() == merge_instruction &&
          "CanOpSelectionMergeBeRemoved(...): header block and merge "
@@ -122,7 +118,7 @@ bool RemoveSelectionReductionOpportunityFinder::CanOpSelectionMergeBeRemoved(
         merge_instruction->GetSingleWordOperand(kMergeNodeIndex);
     for (uint32_t predecessor_block_id :
          context->cfg()->preds(merge_block_id)) {
-      const BasicBlock* predecessor_block =
+      const opt::BasicBlock* predecessor_block =
           context->cfg()->block(predecessor_block_id);
       assert(predecessor_block);
       bool found_divergent_successor = false;

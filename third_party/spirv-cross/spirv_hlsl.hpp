@@ -124,6 +124,12 @@ public:
 		// Uses half/int16_t/uint16_t instead of min16* types.
 		// Also adds support for 16-bit load-store from (RW)ByteAddressBuffer.
 		bool enable_16bit_types = false;
+
+		// If matrices are used as IO variables, flatten the attribute declaration to use
+		// TEXCOORD{N,N+1,N+2,...} rather than TEXCOORDN_{0,1,2,3}.
+		// If add_vertex_attribute_remap is used and this feature is used,
+		// the semantic name will be queried once per active location.
+		bool flatten_matrix_vertex_input_semantics = false;
 	};
 
 	explicit CompilerHLSL(std::vector<uint32_t> spirv_)
@@ -352,6 +358,9 @@ private:
 	void remap_hlsl_resource_binding(HLSLBindingFlagBits type, uint32_t &desc_set, uint32_t &binding);
 
 	std::unordered_set<SetBindingPair, InternalHasher> force_uav_buffer_bindings;
+
+	// Returns true for BuiltInSampleMask because gl_SampleMask[] is an array in SPIR-V, but SV_Coverage is a scalar in HLSL.
+	bool builtin_translates_to_nonarray(spv::BuiltIn builtin) const override;
 };
 } // namespace SPIRV_CROSS_NAMESPACE
 

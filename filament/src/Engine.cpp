@@ -237,7 +237,6 @@ void FEngine::init() {
     // 3 bands = 9 float3
     const float sh[9 * 3] = { 0.0f };
     mDefaultIbl = upcast(IndirectLight::Builder()
-            .reflections(mDefaultIblTexture)
             .irradiance(3, reinterpret_cast<const float3*>(sh))
             .build(*this));
 

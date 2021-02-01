@@ -17,9 +17,9 @@
 
 #include <vector>
 
-#include "source/fuzz/fact_manager.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation.h"
+#include "source/fuzz/transformation_context.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -52,14 +52,18 @@ class TransformationAddDeadContinue : public Transformation {
   //   In particular, adding an edge from somewhere in the loop to the continue
   //   target must not prevent uses of ids in the continue target from being
   //   dominated by the definitions of those ids.
-  bool IsApplicable(opt::IRContext* context,
-                    const FactManager& fact_manager) const override;
+  bool IsApplicable(
+      opt::IRContext* ir_context,
+      const TransformationContext& transformation_context) const override;
 
   // Replaces the terminator of a with a conditional branch to b or c.
   // The boolean constant associated with |message_.continue_condition_value| is
   // used as the condition, and the order of b and c is arranged such that
   // control is guaranteed to jump to c.
-  void Apply(opt::IRContext* context, FactManager* fact_manager) const override;
+  void Apply(opt::IRContext* ir_context,
+             TransformationContext* transformation_context) const override;
+
+  std::unordered_set<uint32_t> GetFreshIds() const override;
 
   protobufs::Transformation ToMessage() const override;
 
@@ -70,7 +74,8 @@ class TransformationAddDeadContinue : public Transformation {
   // module.  This is only invoked by 'IsApplicable' after certain basic
   // applicability checks have been made, ensuring that the invocation of this
   // method is legal.
-  void ApplyImpl(opt::IRContext* context) const;
+  void ApplyImpl(opt::IRContext* ir_context,
+                 const TransformationContext& transformation_context) const;
 
   protobufs::TransformationAddDeadContinue message_;
 };

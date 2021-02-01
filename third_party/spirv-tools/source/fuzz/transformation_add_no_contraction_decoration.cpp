@@ -31,10 +31,9 @@ TransformationAddNoContractionDecoration::
 }
 
 bool TransformationAddNoContractionDecoration::IsApplicable(
-    opt::IRContext* context,
-    const spvtools::fuzz::FactManager& /*unused*/) const {
+    opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
   // |message_.result_id| must be the id of an instruction.
-  auto instr = context->get_def_use_mgr()->GetDef(message_.result_id());
+  auto instr = ir_context->get_def_use_mgr()->GetDef(message_.result_id());
   if (!instr) {
     return false;
   }
@@ -43,10 +42,10 @@ bool TransformationAddNoContractionDecoration::IsApplicable(
 }
 
 void TransformationAddNoContractionDecoration::Apply(
-    opt::IRContext* context, spvtools::fuzz::FactManager* /*unused*/) const {
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   // Add a NoContraction decoration targeting |message_.result_id|.
-  context->get_decoration_mgr()->AddDecoration(message_.result_id(),
-                                               SpvDecorationNoContraction);
+  ir_context->get_decoration_mgr()->AddDecoration(message_.result_id(),
+                                                  SpvDecorationNoContraction);
 }
 
 protobufs::Transformation TransformationAddNoContractionDecoration::ToMessage()
@@ -104,6 +103,11 @@ bool TransformationAddNoContractionDecoration::IsArithmetic(uint32_t opcode) {
     default:
       return false;
   }
+}
+
+std::unordered_set<uint32_t>
+TransformationAddNoContractionDecoration::GetFreshIds() const {
+  return std::unordered_set<uint32_t>();
 }
 
 }  // namespace fuzz

@@ -2203,11 +2203,11 @@ OpBranchConditional %41 %42 %54
 %45 = OpAccessChain %18 %4 %39
 OpStore %45 %44
 %46 = OpIEqual %12 %39 %19
-OpSelectionMerge %47 None
-OpBranchConditional %46 %51 %47
+OpSelectionMerge %48 None
+OpBranchConditional %46 %47 %48
 %47 = OpLabel
 OpBranch %52
-%51 = OpLabel
+%48 = OpLabel
 OpBranch %52
 %52 = OpLabel
 %53 = OpIAdd %8 %39 %19
@@ -2242,16 +2242,16 @@ OpBranch %21
 OpReturn
 OpFunctionEnd
 )";
-  // clang-format on
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, source,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  Module* module = context->module();
-  EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
-                             << source << std::endl;
+// clang-format on
+std::unique_ptr<IRContext> context =
+    BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, source,
+                SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+Module* module = context->module();
+EXPECT_NE(nullptr, module) << "Assembling failed for shader:\n"
+                           << source << std::endl;
 
-  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
-  SinglePassRunAndCheck<LoopFissionPass>(source, expected, true);
+SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+SinglePassRunAndCheck<LoopFissionPass>(source, expected, true);
 }
 
 /*
