@@ -929,10 +929,6 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 if (any(t->usage & TextureUsage::SAMPLEABLE)) {
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
-                } else {
-                    assert(target == GL_TEXTURE_2D);
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
-                            GL_RENDERBUFFER, t->gl.id);
                 }
                 break;
             case GL_TEXTURE_2D_ARRAY:
