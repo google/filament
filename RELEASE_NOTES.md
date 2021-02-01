@@ -5,9 +5,21 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v.1.9.11
+
 ## v1.9.10
 
-- Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+- Introduce libibl_lite library.
+- engine: Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+- engine: Add new callback API to SwapChain.
+- engine: Fix SwiftShader crash when using an IBL without a reflections texture.
+- filamat: Shrink internal Skybox material size.
+- filamat: improvements to generated material size.
+- filamat: silence spirv-opt warnings in release builds.
+- matc: Add fog variant filter.
+- matc: Fix crash when building mobile materials.
+- math: reduce template bloat for matrices.
+- Vulkan: robustness improvements.
 
 ## v1.9.9
 
