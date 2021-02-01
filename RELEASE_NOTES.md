@@ -15,16 +15,25 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.10
 
-- Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+- Introduce `libibl_lite` library.
+- engine: Fix `EXC_BAD_INSTRUCTION` seen when using headless SwapChains on macOS with OpenGL.
+- engine: Add new callback API to `SwapChain`.
+- engine: Fix SwiftShader crash when using an IBL without a reflections texture.
+- filamat: Shrink internal `Skybox` material size.
+- filamat: improvements to generated material size.
+- filamat: silence spirv-opt warnings in release builds.
+- matc: Add fog variant filter.
+- matc: Fix crash when building mobile materials.
+- math: reduce template bloat for matrices.
 
 ## v1.9.9
 
-- Vulkan: internal robustness improvements
-- Metal: Support CVPixelBuffer SwapChains
-- Metal: Support copyFrame
+- Vulkan: internal robustness improvements.
+- Metal: Support CVPixelBuffer SwapChains.
+- Metal: Support copyFrame.
 - Fix clear behavior with RenderTarget API.
-- Fix GetRefractionMode JNI binding
-- Additional fixes for Fence bug
+- Fix GetRefractionMode JNI binding.
+- Additional fixes for Fence bug.
 
 ## v1.9.8
 
