@@ -977,7 +977,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
 
     mResult->mMaterialInstances.push_back(mi);
 
-    if (inputMat->alpha_mode == cgltf_alpha_mode_mask) {
+    // Check the material blending mode, not the cgltf blending mode, because the provider
+    // might have selected an alternative blend mode (e.g. to support transmission).
+    if (mi->getMaterial()->getBlendingMode() == filament::BlendingMode::MASKED) {
         mi->setMaskThreshold(inputMat->alpha_cutoff);
     }
 
