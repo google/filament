@@ -902,10 +902,9 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         }
     } else
 #endif
-    if (!any(t->usage & TextureUsage::SAMPLEABLE)) {
+    if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
         assert(rt->gl.samples > 1);
         assert(glIsRenderbuffer(t->gl.id));
-        assert(target == GL_TEXTURE_2D);
 
         // Since this attachment is not sampleable, there is no need for a sidecar or explicit
         // resolve. We can simply render directly into the renderbuffer that was allocated in
@@ -919,12 +918,11 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
     } else {
         assert(rt->gl.samples > 1);
-        assert(glIsTexture(t->gl.id));
         assert(pRenderBuffer->rb == 0);
 
         // Here we emulate EXT_multisampled_render_to_texture.
         //
-        // This attachment is sampleable so it needs to be explicitly resolved in endRenderPass().
+        // This attachment needs to be explicitly resolved in endRenderPass().
         // The first step is to create a sidecar multi-sampled renderbuffer, which is where drawing
         // will actually take place, and use that in lieu of the requested attachment.
         // The sidecar will be destroyed when the render target handle is destroyed.
@@ -951,8 +949,14 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
-                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                        target, t->gl.id, binfo.level);
+                if (any(t->usage & TextureUsage::SAMPLEABLE)) {
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                            target, t->gl.id, binfo.level);
+                } else {
+                    assert(target == GL_TEXTURE_2D);
+                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
+                            GL_RENDERBUFFER, t->gl.id);
+                }
                 break;
             case GL_TEXTURE_2D_ARRAY:
                 glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
