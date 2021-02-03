@@ -461,6 +461,10 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size,
 
     const EShLanguage shLang = !strcmp(ext, "vs") ? EShLangVertex : EShLangFragment;
 
+    // Add a terminating null by making a copy of the GLSL string.
+    std::string nullTerminated(glsl, size);
+    glsl = nullTerminated.c_str();
+
     TShader tShader(shLang);
     tShader.setStrings(&glsl, 1);
 
