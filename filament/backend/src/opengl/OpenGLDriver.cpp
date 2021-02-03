@@ -773,35 +773,38 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     assert(rt->width  <= valueForLevel(binfo.level, t->width) &&
            rt->height <= valueForLevel(binfo.level, t->height));
 
+    // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
+    TargetBufferFlags resolveFlags = {};
+
     GLRenderTarget::GL::RenderBuffer const* pRenderBuffer = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
-            rt->gl.resolve |= TargetBufferFlags::COLOR0;
+            resolveFlags = TargetBufferFlags::COLOR0;
             pRenderBuffer = &rt->gl.color[0];
             break;
         case GL_COLOR_ATTACHMENT1:
-            rt->gl.resolve |= TargetBufferFlags::COLOR1;
+            resolveFlags = TargetBufferFlags::COLOR1;
             pRenderBuffer = &rt->gl.color[1];
             break;
         case GL_COLOR_ATTACHMENT2:
-            rt->gl.resolve |= TargetBufferFlags::COLOR2;
+            resolveFlags = TargetBufferFlags::COLOR2;
             pRenderBuffer = &rt->gl.color[2];
             break;
         case GL_COLOR_ATTACHMENT3:
-            rt->gl.resolve |= TargetBufferFlags::COLOR3;
+            resolveFlags = TargetBufferFlags::COLOR3;
             pRenderBuffer = &rt->gl.color[3];
             break;
         case GL_DEPTH_ATTACHMENT:
-            rt->gl.resolve |= TargetBufferFlags::DEPTH;
+            resolveFlags = TargetBufferFlags::DEPTH;
             pRenderBuffer = &rt->gl.depth;
             break;
         case GL_STENCIL_ATTACHMENT:
-            rt->gl.resolve |= TargetBufferFlags::STENCIL;
+            resolveFlags = TargetBufferFlags::STENCIL;
             pRenderBuffer = &rt->gl.stencil;
             break;
         case GL_DEPTH_STENCIL_ATTACHMENT:
-            rt->gl.resolve |= TargetBufferFlags::DEPTH;
-            rt->gl.resolve |= TargetBufferFlags::STENCIL;
+            resolveFlags = TargetBufferFlags::DEPTH;
+            resolveFlags |= TargetBufferFlags::STENCIL;
             pRenderBuffer = &rt->gl.depth;
             break;
         default:
@@ -899,21 +902,43 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         }
     } else
 #endif
-    { // here we emulate ext.EXT_multisampled_render_to_texture
+    if (!any(t->usage & TextureUsage::SAMPLEABLE)) {
         assert(rt->gl.samples > 1);
+        assert(glIsRenderbuffer(t->gl.id));
+        assert(target == GL_TEXTURE_2D);
 
-        // Create a sidecar multi-sampled renderbuffer,
-        // which is where drawing will actually take place, make that our attachment.
+        // Since this attachment is not sampleable, there is no need for a sidecar or explicit
+        // resolve. We can simply render directly into the renderbuffer that was allocated in
+        // createTexture.
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
 
+        // Clear the resolve bit for this particular attachment. Note that other attachment(s)
+        // might be sampleable, so this does not necessarily prevent the resolve from occuring.
+        resolveFlags = TargetBufferFlags::NONE;
+
+    } else {
+        assert(rt->gl.samples > 1);
+        assert(glIsTexture(t->gl.id));
+        assert(pRenderBuffer->rb == 0);
+
+        // Here we emulate EXT_multisampled_render_to_texture.
+        //
+        // This attachment is sampleable so it needs to be explicitly resolved in endRenderPass().
+        // The first step is to create a sidecar multi-sampled renderbuffer, which is where drawing
+        // will actually take place, and use that in lieu of the requested attachment.
+        // The sidecar will be destroyed when the render target handle is destroyed.
+        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         glGenRenderbuffers(1, &pRenderBuffer->rb);
         renderBufferStorage(pRenderBuffer->rb,
                 t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
 
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, pRenderBuffer->rb);
 
-        // We also need a "read" sidecar fbo, used later for the resolve, which takes place in
-        // endRenderPass().
+        // Here we lazily create a "read" sidecar FBO, used later as the resolve target. Note that
+        // at least one of the render target's attachments needs to be both MSAA and sampleable in
+        // order for fbo_read to be created. If we never bother to create it, then endRenderPass()
+        // will skip doing an explicit resolve.
         if (!rt->gl.fbo_read) {
             glGenFramebuffers(1, &rt->gl.fbo_read);
         }
@@ -926,14 +951,8 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
-                if (any(t->usage & TextureUsage::SAMPLEABLE)) {
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                            target, t->gl.id, binfo.level);
-                } else {
-                    assert(target == GL_TEXTURE_2D);
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
-                            GL_RENDERBUFFER, t->gl.id);
-                }
+                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                        target, t->gl.id, binfo.level);
                 break;
             case GL_TEXTURE_2D_ARRAY:
                 glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
@@ -947,10 +966,13 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         CHECK_GL_ERROR(utils::slog.e)
     }
 
+    rt->gl.resolve |= resolveFlags;
+
     if (any(t->usage & TextureUsage::SAMPLEABLE)) {
         // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
         // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.
+        // available.  Note that this can only expand the LOD range (never shrink it), and that
+        // users can override this range by calling setMinMaxLevels().
         updateTextureLodRange(t, binfo.level);
     }
 
