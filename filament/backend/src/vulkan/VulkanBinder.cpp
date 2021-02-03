@@ -107,7 +107,7 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptorSets[3],
         return true;
     }
 
-    // Allocate one descriptor set for each type: uniforms, samplers, and input attachments.
+    // Allocate one descriptor set for each type: uniforms, combined image samplers, and input attachments.
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = mDescriptorPool;
