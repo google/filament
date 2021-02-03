@@ -332,14 +332,20 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targ
     return msg;
 }
 
-void GLSLTools::prepareShaderParser(glslang::TShader& shader, EShLanguage language,
-        int version, filamat::MaterialBuilder::Optimization optimization) {
+void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
+        EShLanguage language, int version, filamat::MaterialBuilder::Optimization optimization) {
     // We must only setup the SPIRV environment when we actually need to output SPIRV
     if (optimization == filamat::MaterialBuilder::Optimization::SIZE ||
             optimization == filamat::MaterialBuilder::Optimization::PERFORMANCE) {
         shader.setAutoMapBindings(true);
-        shader.setEnvInput(EShSourceGlsl, language, EShClientVulkan, version);
-        shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
+        if (targetApi == MaterialBuilder::TargetApi::VULKAN) {
+            shader.setEnvInput(EShSourceGlsl, language, EShClientVulkan, version);
+            shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
+        } else {
+            assert(targetApi == MaterialBuilder::TargetApi::OPENGL);
+            shader.setEnvInput(EShSourceGlsl, language, EShClientOpenGL, version);
+            shader.setEnvClient(EShClientOpenGL, EShTargetOpenGL_450);
+        }
         shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_0);
     }
 }

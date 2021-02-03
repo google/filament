@@ -50,6 +50,7 @@ public:
     struct Config {
         filament::backend::ShaderType shaderType;
         filament::backend::ShaderModel shaderModel;
+        bool hasFramebufferFetch;
         struct {
             std::vector<std::pair<uint32_t, uint32_t>> subpassInputToColorLocation;
         } glsl;

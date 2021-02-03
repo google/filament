@@ -158,8 +158,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
 
     // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
+    // If we're using framebuffer fetch, we also need to force our compilation target to Vulkan, as
+    // it is only supported in GLSL for Vulkan.
     using TargetApi = MaterialBuilder::TargetApi;
-    const TargetApi targetApi = outputSpirv ? TargetApi::VULKAN : TargetApi::OPENGL;
+    const TargetApi targetApi = (outputSpirv || config.hasFramebufferFetch) ? TargetApi::VULKAN :
+        TargetApi::OPENGL;
     if (targetApi == TargetApi::OPENGL && mOptimization == MaterialBuilder::Optimization::NONE) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
@@ -190,7 +193,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     tShader.setStrings(&shaderCString, 1);
 
     internalConfig.langVersion = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
-    GLSLTools::prepareShaderParser(tShader, internalConfig.shLang, internalConfig.langVersion, mOptimization);
+    GLSLTools::prepareShaderParser(targetApi, tShader, internalConfig.shLang,
+            internalConfig.langVersion, mOptimization);
     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
@@ -277,7 +281,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
-        GLSLTools::prepareShaderParser(spirvShader,
+        GLSLTools::prepareShaderParser(targetApi, spirvShader,
                 internalConfig.shLang, internalConfig.langVersion, mOptimization);
         ok = spirvShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
         program.addShader(&spirvShader);

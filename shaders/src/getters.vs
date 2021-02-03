@@ -116,6 +116,15 @@ vec4 getCustom6() { return mesh_custom6; }
 vec4 getCustom7() { return mesh_custom7; }
 #endif
 
+/** @public-api */
+int getVertexIndex() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    return gl_VertexIndex;
+#else
+    return gl_VertexID;
+#endif
+}
+
 //------------------------------------------------------------------------------
 // Helpers
 //------------------------------------------------------------------------------
