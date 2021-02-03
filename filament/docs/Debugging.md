@@ -1,5 +1,9 @@
 # Filament Debugging
 
+## Debugging Vulkan on macOS
+
+See "Enabling Validation" in `third_party/moltenvk/README.md`.
+
 ## Debugging Vulkan on Linux
 
 ### Enable Validation Logs
