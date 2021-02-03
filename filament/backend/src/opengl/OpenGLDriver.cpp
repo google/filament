@@ -912,39 +912,35 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, pRenderBuffer->rb);
 
-        // We also need a "read" sidecar fbo, used later for the resolve, which takes place in
-        // endRenderPass().
-        if (!rt->gl.fbo_read) {
-            glGenFramebuffers(1, &rt->gl.fbo_read);
-        }
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_read);
-        switch (target) {
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
-            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
-            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
-            case GL_TEXTURE_2D:
-                if (any(t->usage & TextureUsage::SAMPLEABLE)) {
+        // If the attachment is sampleable, then we also need a "read" sidecar fbo, used later as
+        // the resolve target, which takes place in endRenderPass().
+        if (any(t->usage & TextureUsage::SAMPLEABLE)) {
+            if (!rt->gl.fbo_read) {
+                glGenFramebuffers(1, &rt->gl.fbo_read);
+            }
+            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_read);
+            switch (target) {
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+                case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+                case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+                case GL_TEXTURE_2D:
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
-                } else {
-                    assert(target == GL_TEXTURE_2D);
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
-                            GL_RENDERBUFFER, t->gl.id);
-                }
-                break;
-            case GL_TEXTURE_2D_ARRAY:
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, binfo.level, binfo.layer);
-                break;
-            default:
-                // we shouldn't be here
-                break;
-        }
+                    break;
+                case GL_TEXTURE_2D_ARRAY:
+                    glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                            t->gl.id, binfo.level, binfo.layer);
+                    break;
+                default:
+                    // we shouldn't be here
+                    break;
+            }
 
-        CHECK_GL_ERROR(utils::slog.e)
+            CHECK_GL_ERROR(utils::slog.e)
+        }
     }
 
     if (any(t->usage & TextureUsage::SAMPLEABLE)) {
