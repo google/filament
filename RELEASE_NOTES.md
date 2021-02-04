@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 
 - Fixed GL errors seen with MSAA on WebGL.
   Warning: this can affect multisampling behavior on devices that do not support OpenGL ES 3.1
+- Added new `getVertexIndex()` API for vertex shaders.
+
+## v1.9.11
+
 - Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
 - gltfio: added support for `KHR_materials_sheen`
 - gltfio: shader optimizations are now disabled by default, unless opting in or using ubershaders
