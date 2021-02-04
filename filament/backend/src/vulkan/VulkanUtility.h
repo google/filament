@@ -37,4 +37,6 @@ PixelDataType getComponentType(VkFormat format);
 } // namespace filament
 } // namespace backend
 
+bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
+
 #endif // TNT_FILAMENT_DRIVER_VULKANUTILITY_H

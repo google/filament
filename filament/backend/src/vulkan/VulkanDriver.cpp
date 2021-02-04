@@ -504,7 +504,7 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto texture = handle_cast<VulkanTexture>(mHandleMap, th);
-        mBinder.unbindImageView(texture->imageView);
+        mBinder.unbindImageView(texture->getPrimaryImageView());
         mDisposer.removeReference(texture);
     }
 }
@@ -857,6 +857,7 @@ void VulkanDriver::update2DImage(Handle<HwTexture> th,
 }
 
 void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
+    handle_cast<VulkanTexture>(mHandleMap, th)->setPrimaryRange(minLevel, maxLevel);
 }
 
 void VulkanDriver::update3DImage(
@@ -1338,7 +1339,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
     const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
-    const VkFormat srcFormat = srcTexture ? srcTexture->vkformat : swapChainFormat;
+    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() : swapChainFormat;
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
@@ -1661,7 +1662,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
             samplers[bindingPoint] = {
                 .sampler = vksampler,
-                .imageView = texture->imageView,
+                .imageView = texture->getPrimaryImageView(),
                 .imageLayout = getTextureLayout(texture->usage)
             };
         }
