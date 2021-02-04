@@ -15,7 +15,6 @@
  */
 
 #include <filament/Camera.h>
-#include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -79,7 +78,6 @@ struct App {
     IndexBuffer* quadIb = nullptr;
     Material* quadMaterial = nullptr;
     MaterialInstance* quadMatInstance = nullptr;
-    ColorGrading* colorGrading = nullptr;
 
     float3 quadCenter;
     float3 quadNormal;
@@ -193,11 +191,6 @@ int main(int argc, char** argv) {
     handleCommandLineArguments(argc, argv, &app);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-
-        // Filmic tone mapping is invertible in GLSL using inverseTonemapSRGB().
-        app.colorGrading = ColorGrading::Builder().toneMapping(ColorGrading::ToneMapping::FILMIC).build(*engine);
-        view->setColorGrading(app.colorGrading);
-
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -207,7 +200,7 @@ int main(int argc, char** argv) {
         app.offscreenView = engine->createView();
         app.offscreenScene = engine->createScene();
         app.offscreenView->setScene(app.offscreenScene);
-        app.offscreenView->setColorGrading(app.colorGrading);
+        app.offscreenView->setPostProcessingEnabled(false);
         app.offscreenTexture = Texture::Builder()
             .width(vp.width).height(vp.height).levels(1)
             .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -319,7 +312,6 @@ int main(int argc, char** argv) {
         engine->destroyCameraComponent(camera);
         em.destroy(camera);
 
-        engine->destroy(app.colorGrading);
         engine->destroy(app.reflectedMonkey);
         engine->destroy(app.lightEntity);
         engine->destroy(app.quadEntity);
