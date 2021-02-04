@@ -95,8 +95,8 @@ static VulkanAttachment createAttachment(VulkanAttachment spec) {
         return spec;
     }
     return {
-        .format = spec.texture->vkformat,
-        .image = spec.texture->textureImage,
+        .format = spec.texture->getVkFormat(),
+        .image = spec.texture->getVkImage(),
         .texture = spec.texture,
         .layout = getTextureLayout(spec.texture->usage),
         .level = spec.level,
@@ -481,18 +481,18 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, VulkanStagePool& stagePool) :
         HwTexture(target, levels, samples, w, h, depth, tformat, usage),
-        vkformat(getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
+        mVkFormat(backend::getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
 
     // Vulkan does not support 24-bit depth, use the official fallback format.
     if (tformat == TextureFormat::DEPTH24) {
-        vkformat = mContext.finalDepthFormat;
+        mVkFormat = mContext.finalDepthFormat;
     }
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = target == SamplerType::SAMPLER_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
-        .format = vkformat,
+        .format = mVkFormat,
         .extent = { w, h, depth },
         .mipLevels = levels,
         .arrayLayers = 1,
@@ -526,9 +526,9 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 #if VK_ENABLE_VALIDATION
         // Validate that the format is actually sampleable.
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(context.physicalDevice, vkformat, &props);
+        vkGetPhysicalDeviceFormatProperties(context.physicalDevice, mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            utils::slog.w << "Texture usage is SAMPLEABLE but format " << vkformat << " is not "
+            utils::slog.w << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -552,68 +552,65 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
-    VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &textureImage);
+    VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &mTextureImage);
     if (error || FILAMENT_VULKAN_VERBOSE) {
         utils::slog.d << "vkCreateImage: "
             << "result = " << error << ", "
-            << "handle = " << utils::io::hex << textureImage << utils::io::dec << ", "
+            << "handle = " << utils::io::hex << mTextureImage << utils::io::dec << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << int(levels) << ", "
             << "usage = " << imageInfo.usage << ", "
             << "samples = " << imageInfo.samples << ", "
-            << "format = " << vkformat << utils::io::endl;
+            << "format = " << mVkFormat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
-    vkGetImageMemoryRequirements(context.device, textureImage, &memReqs);
+    vkGetImageMemoryRequirements(context.device, mTextureImage, &memReqs);
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
         .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
-    error = vkAllocateMemory(context.device, &allocInfo, nullptr, &textureImageMemory);
+    error = vkAllocateMemory(context.device, &allocInfo, nullptr, &mTextureImageMemory);
     ASSERT_POSTCONDITION(!error, "Unable to allocate image memory.");
-    error = vkBindImageMemory(context.device, textureImage, textureImageMemory, 0);
+    error = vkBindImageMemory(context.device, mTextureImage, mTextureImageMemory, 0);
     ASSERT_POSTCONDITION(!error, "Unable to bind image.");
 
     mAspect = any(usage & TextureUsage::DEPTH_ATTACHMENT) ? VK_IMAGE_ASPECT_DEPTH_BIT :
             VK_IMAGE_ASPECT_COLOR_BIT;
 
-    // Create a VkImageView so that shaders can sample from the image.
-    // RenderTarget does not use this view because it selects a single miplevel.
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = textureImage;
-    viewInfo.format = vkformat;
-    viewInfo.subresourceRange.aspectMask = mAspect;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = levels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
+    // Spec out the "primary" VkImageView that shaders use to sample from the image.
+    mPrimaryViewRange.aspectMask = mAspect;
+    mPrimaryViewRange.baseMipLevel = 0;
+    mPrimaryViewRange.levelCount = levels;
+    mPrimaryViewRange.baseArrayLayer = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-        viewInfo.subresourceRange.layerCount = 6;
+        mViewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        mPrimaryViewRange.layerCount = 6;
     } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        viewInfo.subresourceRange.layerCount = depth;
+        mViewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        mPrimaryViewRange.layerCount = depth;
     } else if (target == SamplerType::SAMPLER_3D) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
-        viewInfo.subresourceRange.layerCount = 1;
+        mViewType = VK_IMAGE_VIEW_TYPE_3D;
+        mPrimaryViewRange.layerCount = 1;
     } else {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.subresourceRange.layerCount = 1;
+        mViewType = VK_IMAGE_VIEW_TYPE_2D;
+        mPrimaryViewRange.layerCount = 1;
     }
-    error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &imageView);
-    ASSERT_POSTCONDITION(!error, "Unable to create image view.");
 
+    // Go ahead and create the primary image view, no need to do it lazily.
+    getImageView(mPrimaryViewRange);
+
+    // Transition the layout.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         auto transition = [=](VulkanCommandBuffer commands) {
             // If this is a SAMPLER_2D_ARRAY texture, then the depth argument stores the number of
             // texture layers.
             const uint32_t layers = target == SamplerType::SAMPLER_2D_ARRAY ? depth : 1;
-            VulkanTexture::transitionImageLayout(commands.cmdbuffer, textureImage,
+            VulkanTexture::transitionImageLayout(commands.cmdbuffer, mTextureImage,
                     VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
         };
         if (mContext.currentCommands) {
@@ -627,11 +624,10 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 }
 
 VulkanTexture::~VulkanTexture() {
-    vkDestroyImage(mContext.device, textureImage, VKALLOC);
-    vkDestroyImageView(mContext.device, imageView, VKALLOC);
-    vkFreeMemory(mContext.device, textureImageMemory, VKALLOC);
-    for (auto entry : mImageViews) {
-        vkDestroyImageView(mContext.device, entry.view, VKALLOC);
+    vkDestroyImage(mContext.device, mTextureImage, VKALLOC);
+    vkFreeMemory(mContext.device, mTextureImageMemory, VKALLOC);
+    for (auto entry : mCachedImageViews) {
+        vkDestroyImageView(mContext.device, entry.second, VKALLOC);
     }
 }
 
@@ -672,11 +668,11 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
 
     // Create a copy-to-device functor.
     auto copyToDevice = [this, stage, width, height, depth, miplevel] (VulkanCommandBuffer& commands) {
-        transitionImageLayout(commands.cmdbuffer, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionImageLayout(commands.cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
-        copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height, depth,
+        copyBufferToImage(commands.cmdbuffer, stage->buffer, mTextureImage, width, height, depth,
                 nullptr, miplevel);
-        transitionImageLayout(commands.cmdbuffer, textureImage,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        transitionImageLayout(commands.cmdbuffer, mTextureImage,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 getTextureLayout(usage), miplevel, 1, 1, mAspect);
 
         mStagePool.releaseStage(stage, commands);
@@ -716,11 +712,11 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     auto copyToDevice = [this, faceOffsets, stage, miplevel] (VulkanCommandBuffer& commands) {
         uint32_t width = std::max(1u, this->width >> miplevel);
         uint32_t height = std::max(1u, this->height >> miplevel);
-        transitionImageLayout(commands.cmdbuffer, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionImageLayout(commands.cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
-        copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height, 1,
+        copyBufferToImage(commands.cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
                 &faceOffsets, miplevel);
-        transitionImageLayout(commands.cmdbuffer, textureImage,
+        transitionImageLayout(commands.cmdbuffer, mTextureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
                 1, mAspect);
 
@@ -737,42 +733,30 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     }
 }
 
-VkImageView VulkanTexture::getImageView(int level, int layer, VkImageAspectFlags aspect) {
-    for (auto entry : mImageViews) {
-        if (entry.level == level && entry.layer == layer) {
-            return entry.view;
-        }
+void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {
+    mPrimaryViewRange.baseMipLevel = minMiplevel;
+    mPrimaryViewRange.levelCount = maxMiplevel - minMiplevel + 1;
+    getImageView(mPrimaryViewRange);
+}
+
+VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
+    auto iter = mCachedImageViews.find(range);
+    if (iter != mCachedImageViews.end()) {
+        return iter->second;
     }
     VkImageViewCreateInfo viewInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = textureImage,
-        .format = vkformat,
-        .subresourceRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = uint32_t(level),
-            .levelCount = 1
-        }
+        .pNext = nullptr,
+        .flags = 0,
+        .image = mTextureImage,
+        .viewType = mViewType,
+        .format = mVkFormat,
+        .components = {},
+        .subresourceRange = range
     };
-    if (target == SamplerType::SAMPLER_CUBEMAP) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-        viewInfo.subresourceRange.layerCount = 6;
-    } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        viewInfo.subresourceRange.layerCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = layer;
-    } else {
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.subresourceRange.layerCount = 1;
-    }
-
     VkImageView imageView;
     vkCreateImageView(mContext.device, &viewInfo, VKALLOC, &imageView);
-    mImageViews.emplace_back(ImageViewCacheEntry({level, layer, imageView}));
-
-    // This is a very simplistic cache that exists only for the benefit of VulkanRenderTarget.
-    // If it grows too big, there's a bug or we need to replace it with a more sophisticated cache.
-    assert(mImageViews.size() < 64);
-
+    mCachedImageViews.emplace(range, imageView);
     return imageView;
 }
 
