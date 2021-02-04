@@ -147,8 +147,8 @@ public:
 
     static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi);
 
-    static void prepareShaderParser(glslang::TShader& shader, EShLanguage language,
-            int version, MaterialBuilder::Optimization optimization);
+    static void prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
+            EShLanguage language, int version, MaterialBuilder::Optimization optimization);
 
 private:
 

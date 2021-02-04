@@ -712,6 +712,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .glsl = {}
                 };
 
+                config.hasFramebufferFetch = mEnableFramebufferFetch;
+
                 if (mEnableFramebufferFetch) {
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
                 }
