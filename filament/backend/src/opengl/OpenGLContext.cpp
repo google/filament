@@ -71,13 +71,6 @@ OpenGLContext::OpenGLContext() noexcept {
         }
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
-
-        // We have observed bloom artifacts (MacBook Air with an Intel GPU) in release builds, which
-        // goes away in ping-pong mode. This is strange because test_FeedbackLoops seems to produce
-        // reasonable results with these GPU's.
-        // TODO: match a more specific string pattern after Intel discrete GPU's arrive.
-        bugs.disable_feedback_loops = true;
-
     } else if (strstr(renderer, "PowerVR") || strstr(renderer, "Apple")) {
     } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
     } else if (strstr(renderer, "Vivante")) {
