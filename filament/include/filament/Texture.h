@@ -53,7 +53,7 @@ class Stream;
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
  *  filament::Engine* engine = filament::Engine::create();
  *
- *  filament::IndirectLight* texture = filament::Texture::Builder()
+ *  filament::Texture* texture = filament::Texture::Builder()
  *              .width(64)
  *              .height(64)
  *              .build(*engine);
