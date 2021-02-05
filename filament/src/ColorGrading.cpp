@@ -30,6 +30,7 @@
 #include <math/vec4.h>
 
 #include <utils/JobSystem.h>
+#include <utils/SpinLock.h>
 #include <utils/Systrace.h>
 
 #include <functional>
@@ -446,17 +447,22 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     DriverApi& driver = engine.getDriverApi();
 
-    Config config{
-        .colorGradingTransformIn  = selectColorGradingTransformIn(builder->toneMapping),
-        .colorGradingTransformOut = selectColorGradingTransformOut(builder->toneMapping),
-        .lumaTransform            = selectLumaTransform(builder->toneMapping),
-        .linearToLogTransform     = selectLinearToLogTransform(builder->toneMapping),
-        .logToLinearTransform     = selectLogToLinearTransform(builder->toneMapping),
-        .toneMapper               = selectToneMapping(builder->toneMapping),
-        .lutDimension             = selectLutDimension(builder->quality)
-    };
+    Config c;
+    // This lock protects the data inside Config, which is written to by the Filament thread,
+    // and read from multiple Job threads.
+    utils::SpinLock configLock;
+    {
+        std::lock_guard<utils::SpinLock> lock(configLock);
+        c.colorGradingTransformIn  = selectColorGradingTransformIn(builder->toneMapping);
+        c.colorGradingTransformOut = selectColorGradingTransformOut(builder->toneMapping);
+        c.lumaTransform            = selectLumaTransform(builder->toneMapping);
+        c.linearToLogTransform     = selectLinearToLogTransform(builder->toneMapping);
+        c.logToLinearTransform     = selectLogToLinearTransform(builder->toneMapping);
+        c.toneMapper               = selectToneMapping(builder->toneMapping);
+        c.lutDimension             = selectLutDimension(builder->quality);
+    }
 
-    size_t lutElementCount = config.lutDimension * config.lutDimension * config.lutDimension;
+    size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
     size_t elementSize = sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
 
@@ -479,8 +485,14 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     // This takes about 3-6ms on Android in Release
     JobSystem& js = engine.getJobSystem();
     auto *slices = js.createJob();
-    for (size_t b = 0; b < config.lutDimension; b++) {
-        auto *job = js.createJob(slices, [data, converted, b, &config, builder](JobSystem&, JobSystem::Job*) {
+    for (size_t b = 0; b < c.lutDimension; b++) {
+        auto *job = js.createJob(slices,
+                [data, converted, b, &c, &configLock, builder](JobSystem&, JobSystem::Job*) {
+            Config config;
+            {
+                std::lock_guard<utils::SpinLock> lock(configLock);
+                config = c;
+            }
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
             for (size_t g = 0; g < config.lutDimension; g++) {
                 for (size_t r = 0; r < config.lutDimension; r++) {
@@ -581,7 +593,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
     mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
-            config.lutDimension, config.lutDimension, config.lutDimension, TextureUsage::DEFAULT);
+            c.lutDimension, c.lutDimension, c.lutDimension, TextureUsage::DEFAULT);
 
     if (converted) {
         free(data);
@@ -591,7 +603,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
     driver.update3DImage(mLutHandle, 0,
             0, 0, 0,
-            config.lutDimension, config.lutDimension, config.lutDimension,
+            c.lutDimension, c.lutDimension, c.lutDimension,
             PixelBufferDescriptor{
                     data, lutElementCount * elementSize,format, type,
                     [](void* buffer, size_t, void*) { free(buffer); }
