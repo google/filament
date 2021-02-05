@@ -233,11 +233,10 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("metallicRoughnessMap", mDummyTexture, sampler);
     mi->setParameter("occlusionMap", mDummyTexture, sampler);
     mi->setParameter("emissiveMap", mDummyTexture, sampler);
-    if (config->hasClearCoat) {
-        mi->setParameter("clearCoatMap", mDummyTexture, sampler);
-        mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
-        mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
-    } else {
+    mi->setParameter("clearCoatMap", mDummyTexture, sampler);
+    mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
+    mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    if (!config->hasClearCoat) {
         if (config->hasTransmission) {
             mi->setParameter("transmissionMap", mDummyTexture, sampler);
         }
