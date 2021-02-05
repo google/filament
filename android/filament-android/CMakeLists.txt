@@ -37,6 +37,10 @@ add_library(bluevk STATIC IMPORTED)
 set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
 
+add_library(vkshaders STATIC IMPORTED)
+set_target_properties(vkshaders PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libvkshaders.a)
+
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
@@ -101,6 +105,7 @@ target_link_libraries(filament-jni
     PRIVATE utils
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
 
