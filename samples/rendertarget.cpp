@@ -64,7 +64,8 @@ struct App {
     utils::Entity reflectedMonkey;
     mat4f transform;
 
-    Texture* offscreenTexture = nullptr;
+    Texture* offscreenColorTexture = nullptr;
+    Texture* offscreenDepthTexture = nullptr;
     RenderTarget* offscreenRenderTarget = nullptr;
     View* offscreenView = nullptr;
     Scene* offscreenScene = nullptr;
@@ -201,12 +202,17 @@ int main(int argc, char** argv) {
         app.offscreenScene = engine->createScene();
         app.offscreenView->setScene(app.offscreenScene);
         app.offscreenView->setPostProcessingEnabled(false);
-        app.offscreenTexture = Texture::Builder()
+        app.offscreenColorTexture = Texture::Builder()
             .width(vp.width).height(vp.height).levels(1)
             .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
             .format(Texture::InternalFormat::RGBA8).build(*engine);
+        app.offscreenDepthTexture = Texture::Builder()
+            .width(vp.width).height(vp.height).levels(1)
+            .usage(Texture::Usage::DEPTH_ATTACHMENT)
+            .format(Texture::InternalFormat::DEPTH24).build(*engine);
         app.offscreenRenderTarget = RenderTarget::Builder()
-            .texture(RenderTarget::COLOR, app.offscreenTexture)
+            .texture(RenderTarget::COLOR, app.offscreenColorTexture)
+            .texture(RenderTarget::DEPTH, app.offscreenDepthTexture)
             .build(*engine);
         app.offscreenView->setRenderTarget(app.offscreenRenderTarget);
         app.offscreenView->setViewport({0, 0, vp.width, vp.height});
@@ -252,7 +258,7 @@ int main(int argc, char** argv) {
                 .build(*engine);
         app.quadMatInstance = app.quadMaterial->createInstance();
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
-        app.quadMatInstance->setParameter("albedo", app.offscreenTexture, sampler);
+        app.quadMatInstance->setParameter("albedo", app.offscreenColorTexture, sampler);
         app.quadEntity = em.create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
@@ -320,7 +326,8 @@ int main(int argc, char** argv) {
         engine->destroy(app.monkeyMesh.renderable);
         engine->destroy(app.monkeyMesh.vertexBuffer);
         engine->destroy(app.monkeyMesh.indexBuffer);
-        engine->destroy(app.offscreenTexture);
+        engine->destroy(app.offscreenColorTexture);
+        engine->destroy(app.offscreenDepthTexture);
         engine->destroy(app.offscreenRenderTarget);
         engine->destroy(app.offscreenScene);
         engine->destroy(app.offscreenView);
