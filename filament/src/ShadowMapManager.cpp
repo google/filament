@@ -247,7 +247,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         auto& ppm = engine.getPostProcessManager();
         for (uint8_t layer = 0; layer < mTextureRequirements.layers; layer++) {
             for (size_t level = 0; level < mTextureRequirements.levels - 1; level++) {
-                shadows = ppm.vsmMipmapPass(fg, shadows, layer, level);
+                const bool finalize = mTextureRequirements.levels - 2;
+                shadows = ppm.vsmMipmapPass(fg, shadows, layer, level, finalize);
             }
         }
     }
