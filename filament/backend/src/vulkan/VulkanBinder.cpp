@@ -480,18 +480,16 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
     }
 }
 
-void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
-    assert(bindingIndex < SAMPLER_BINDING_COUNT);
-    if (bindingIndex >= SAMPLER_BINDING_COUNT) {
-        utils::slog.w << "Sampler bindings overflow: " << bindingIndex << " / "
-                << SAMPLER_BINDING_COUNT << utils::io::endl;
-        return;
-    }
-    VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex];
-    if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
-        imageInfo.imageLayout != samplerInfo.imageLayout) {
-        imageInfo = samplerInfo;
-        mDirtyDescriptor = true;
+void VulkanBinder::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT]) noexcept {
+    for (uint32_t bindingIndex = 0; bindingIndex < SAMPLER_BINDING_COUNT; bindingIndex++) {
+        const VkDescriptorImageInfo& requested = samplers[bindingIndex];
+        VkDescriptorImageInfo& existing = mDescriptorKey.samplers[bindingIndex];
+        if (existing.sampler != requested.sampler ||
+            existing.imageView != requested.imageView ||
+            existing.imageLayout != requested.imageLayout) {
+            existing = requested;
+            mDirtyDescriptor = true;
+        }
     }
 }
 
