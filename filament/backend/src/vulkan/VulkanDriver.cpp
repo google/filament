@@ -1611,6 +1611,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
+    VkDescriptorImageInfo samplers[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
         if (samplerGroup.empty()) {
@@ -1651,13 +1653,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerParams& samplerParams = boundSampler->s;
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-            mBinder.bindSampler(bindingPoint, {
+            samplers[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->imageView,
                 .imageLayout = getTextureLayout(texture->usage)
-            });
+            };
         }
     }
+
+    mBinder.bindSamplers(samplers);
 
     // Set scissoring.
     // Compute the intersection of the requested scissor rectangle with the current viewport.
