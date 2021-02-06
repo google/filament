@@ -125,7 +125,7 @@ public:
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level) noexcept;
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
@@ -140,7 +140,7 @@ private:
     class PostProcessMaterial;
 
     FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t level) noexcept;
+            FrameGraphId<FrameGraphTexture> input, size_t level, bool finalize) noexcept;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
