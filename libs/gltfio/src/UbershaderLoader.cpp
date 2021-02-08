@@ -164,7 +164,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         config->hasSheen = false;
     }
 
-    bool clearCoatConflict = config->hasTransmission || config->hasSheen;
+    const bool clearCoatConflict = config->hasTransmission || config->hasSheen;
 
     // Due to sampler overload, disable transmission if necessary and print a friendly warning.
     if (config->hasClearCoat && clearCoatConflict) {
@@ -199,6 +199,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
 
+    bool clearCoatNeedsTexture = true;
+
     if (config->hasClearCoat) {
         mi->setParameter("clearCoatIndex",
                 getUvIndex(config->clearCoatUV, config->hasClearCoatTexture));
@@ -211,6 +213,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         mi->setParameter("clearCoatNormalUvMatrix", identity);
     } else {
         if (config->hasSheen) {
+            clearCoatNeedsTexture = false;
             mi->setParameter("sheenColorIndex",
                     getUvIndex(config->sheenColorUV, config->hasSheenColorTexture));
             mi->setParameter("sheenRoughnessIndex",
@@ -220,6 +223,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
 
         }
         if (config->hasTransmission) {
+            clearCoatNeedsTexture = false;
             mi->setParameter("transmissionUvMatrix", identity);
             mi->setParameter("transmissionIndex",
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
@@ -233,9 +237,11 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("metallicRoughnessMap", mDummyTexture, sampler);
     mi->setParameter("occlusionMap", mDummyTexture, sampler);
     mi->setParameter("emissiveMap", mDummyTexture, sampler);
-    mi->setParameter("clearCoatMap", mDummyTexture, sampler);
-    mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
-    mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    if (clearCoatNeedsTexture) {
+        mi->setParameter("clearCoatMap", mDummyTexture, sampler);
+        mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
+        mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
+    }
     if (!config->hasClearCoat) {
         if (config->hasTransmission) {
             mi->setParameter("transmissionMap", mDummyTexture, sampler);
