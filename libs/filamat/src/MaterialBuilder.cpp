@@ -466,15 +466,12 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
         MaterialBuilder::PropertyList& allProperties) noexcept {
 #ifndef FILAMAT_LITE
-    // Use the first permutation to generate the shader code.
-    assert(!mCodeGenPermutations.empty());
-    CodeGenParams params = mCodeGenPermutations[0];
-
     GLSLTools glslTools;
-    std::string shaderCodeAllProperties = peek(type, params, allProperties);
+    std::string shaderCodeAllProperties = peek(type, mSemanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties, params.targetApi,
-            ShaderModel(params.shaderModel))) {
+    if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
+                mSemanticCodeGenParams.targetApi,
+                ShaderModel(mSemanticCodeGenParams.shaderModel))) {
         return false;
     }
     return true;
@@ -516,11 +513,7 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     using namespace filament::backend;
     GLSLTools glslTools;
 
-    // Use the first permutation to generate the shader code.
-    assert(!mCodeGenPermutations.empty());
-    CodeGenParams params = mCodeGenPermutations[0];
-
-    TargetApi targetApi = params.targetApi;
+    TargetApi targetApi = mSemanticCodeGenParams.targetApi;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -528,12 +521,12 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
         targetApi = TargetApi::VULKAN;
     }
 
-    ShaderModel model = static_cast<ShaderModel>(params.shaderModel);
-    std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
+    ShaderModel model = static_cast<ShaderModel>(mSemanticCodeGenParams.shaderModel);
+    std::string shaderCode = peek(ShaderType::VERTEX, mSemanticCodeGenParams, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mMaterialDomain, targetApi);
     if (!result) return false;
 
-    shaderCode = peek(ShaderType::FRAGMENT, params, mProperties);
+    shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi);
     return result;
 #else
