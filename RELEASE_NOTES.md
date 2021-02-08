@@ -5,17 +5,53 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
-- Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric
-- gltfio: added support for `KHR_materials_sheen`
-- gltfio: shader optimizations are now disabled by default, unless opting in or using ubershaders
-- Materials generation using `libfilamat` is now multi-threaded
+## v1.9.11
+
+- Added support for Apple silicon Macs. build.sh can now be used to build on either Apple silicon or
+  Intel-based Macs. Pass the `-l` flag to build universal binaries.
+- Added `sheenColor` and `sheenRoughness` properties to materials to create cloth/fabric.
+- Materials generation using `libfilamat` is now multi-threaded.
 - `MaterialBuilder::build()` now expects a reference to a `JobSystem` to multi-thread shaders
   generation. A `JobSystem` can be obtained with `Engine::getJobSystem()` when using Filament,
-  or created directly otherwise (⚠️ **API change**)
+  or created directly otherwise. (⚠️ **API change**)
+- Add planar reflection RenderTarget demo.
+- Metal: honor inverseFrontFaces RasterState.
+- Metal: Fix crash when switching between views with shadowing enabled.
+- Metal: Fix crash when calling Texture::setImage() on SAMPLER_2D_ARRAY texture.
+- gltfio: added support for `KHR_materials_sheen`.
+- gltfio: shader optimizations are now disabled by default, unless opting in or using ubershaders.
+- gltfio: Fix "_maskThreshold not found" error.
+- gltfio on Java: fix potential memory leak in AssetLoader#destroy.
+- gltfio: fix crash during async texture decode.
+- gltfio: support animation in dynamically-added instances.
+- gltfio: Improve robustness when decoding textures.
+- gltfio: Fix animator crash for orphaned nodes.
+- gltfio: fix tangents with morphing.
+- gltf_viewer: fix very sporadic crash when exiting.
+- gltf_viewer: fix crash when rapidly switching between glTF models.
+- WebGL: Fix samples erroring on Windows with Chrome.
+- WebGL: Support `highlight` for setBloomOptions in JavaScript.
+- WebGL: Include TypeScript bindings in releases.
+- engine: Fix, punctual lights get clipped at certain angles.
+- engine: Fix memory leak when calling `View::setViewport` frequently.
+- engine: Fix, materials not working on some Qualcomm devices.
+- engine: Modulate emissive by alpha on blended objects.
+- engine: Fix, RenderTarget cleared multiple times.
+- Java: Fix JNI bindings for color grading.
+- Android: reduced binary size.
 
 ## v1.9.10
 
-- Fix EXC_BAD_INSTRUCTION seen when using headless SwapChains on macOS with OpenGL.
+- Introduce `libibl_lite` library.
+- engine: Fix `EXC_BAD_INSTRUCTION` seen when using headless SwapChains on macOS with OpenGL.
+- engine: Add new callback API to `SwapChain`.
+- engine: Fix SwiftShader crash when using an IBL without a reflections texture.
+- filamat: Shrink internal `Skybox` material size.
+- filamat: improvements to generated material size.
+- filamat: silence spirv-opt warnings in release builds.
+- matc: Add fog variant filter.
+- matc: Fix crash when building mobile materials.
+- math: reduce template bloat for matrices.
 
 ## v1.9.9
 
