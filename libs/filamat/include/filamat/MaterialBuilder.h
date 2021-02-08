@@ -113,7 +113,7 @@ protected:
     std::vector<CodeGenParams> mCodeGenPermutations;
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
-    CodeGenParams mSemanticCodeGenParams = {
+    const CodeGenParams mSemanticCodeGenParams = {
         .shaderModel = (int) ShaderModel::GL_ES_30,
         .targetApi = TargetApi::OPENGL,
         .targetLanguage = TargetLanguage::SPIRV
