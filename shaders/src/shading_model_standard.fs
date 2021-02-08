@@ -1,6 +1,14 @@
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+vec3 sheenLobe(const PixelParams pixel, float NoV, float NoL, float NoH) {
+    float D = distributionCloth(pixel.sheenRoughness, NoH);
+    float V = visibilityCloth(NoV, NoL);
+
+    return (D * V) * pixel.sheenColor;
+}
+#endif
+
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH, out float Fcc) {
-
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
@@ -106,13 +114,22 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     // TODO: attenuate the diffuse lobe to avoid energy gain
 
+    // The energy compensation term is used to counteract the darkening effect
+    // at high roughness
+    vec3 color = Fd + Fr * pixel.energyCompensation;
+
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+    color *= pixel.sheenScaling;
+    color += sheenLobe(pixel, NoV, NoL, NoH);
+#endif
+
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
-    vec3 color = (Fd + Fr * pixel.energyCompensation) * attenuation * NoL;
+    color *= attenuation * NoL;
 
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
@@ -123,12 +140,9 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     return (color * light.colorIntensity.rgb) *
             (light.colorIntensity.w * light.attenuation * occlusion);
 #else
-    vec3 color = (Fd + Fr * pixel.energyCompensation) * attenuation + clearCoat;
+    color *= attenuation;
+    color += clearCoat;
 #endif
-#else
-    // The energy compensation term is used to counteract the darkening effect
-    // at high roughness
-    vec3 color = Fd + Fr * pixel.energyCompensation;
 #endif
 
     return (color * light.colorIntensity.rgb) *

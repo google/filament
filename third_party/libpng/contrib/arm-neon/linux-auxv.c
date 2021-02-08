@@ -7,7 +7,7 @@
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
- * 
+ *
  * SEE contrib/arm-neon/README before reporting bugs
  *
  * STATUS: COMPILED, TESTED

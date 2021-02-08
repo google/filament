@@ -78,8 +78,10 @@ bool MetadataDecoder::DecodeMetadata(Metadata *metadata) {
       std::unique_ptr<Metadata> sub_metadata =
           std::unique_ptr<Metadata>(new Metadata());
       metadata = sub_metadata.get();
-      mp.parent_metadata->AddSubMetadata(sub_metadata_name,
-                                         std::move(sub_metadata));
+      if (!mp.parent_metadata->AddSubMetadata(sub_metadata_name,
+                                              std::move(sub_metadata))) {
+        return false;
+      }
     }
     if (metadata == nullptr) {
       return false;
@@ -96,6 +98,10 @@ bool MetadataDecoder::DecodeMetadata(Metadata *metadata) {
     }
     uint32_t num_sub_metadata = 0;
     if (!DecodeVarint(&num_sub_metadata, buffer_)) {
+      return false;
+    }
+    if (num_sub_metadata > buffer_->remaining_size()) {
+      // The decoded number of metadata items is unreasonably high.
       return false;
     }
     for (uint32_t i = 0; i < num_sub_metadata; ++i) {

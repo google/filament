@@ -306,3 +306,9 @@ Java_com_google_android_filament_Engine_nGetRenderableManager(JNIEnv*, jclass,
     Engine* engine = (Engine*) nativeEngine;
     return (jlong) &engine->getRenderableManager();
 }
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_nGetJobSystem(JNIEnv*, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) &engine->getJobSystem();
+}

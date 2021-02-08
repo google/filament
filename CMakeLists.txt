@@ -88,21 +88,12 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (LINUX)
-
     if (FILAMENT_SUPPORTS_XCB)
         add_definitions(-DFILAMENT_SUPPORTS_XCB)
     endif()
 
     if (FILAMENT_SUPPORTS_XLIB)
         add_definitions(-DFILAMENT_SUPPORTS_XLIB)
-    endif()
-
-    execute_process(COMMAND uname -p
-        OUTPUT_VARIABLE PROCESSOR_ARCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    if ("${PROCESSOR_ARCH}" STREQUAL "aarch64")
-        set(LINUX_AARCH64 TRUE)
     endif()
 endif()
 
@@ -271,7 +262,10 @@ if (LINUX)
     # /usr/bin/ld: ../bluegl/libbluegl.a(BlueGL.cpp.o): relocation R_X86_64_32S
     # against `.bss' can not be used when making a shared object; recompile with -fPIC
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
 
+if (ANDROID)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
 
 if (CYGWIN)
@@ -441,7 +435,18 @@ set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
 # ==================================================================================================
 # choose where to put the objects in the dist folder
 if (NOT DIST_ARCH)
-    set(DIST_ARCH x86_64)
+    # On Apple silicon, the value of CMAKE_HOST_SYSTEM_PROCESSOR varies based on the CMake process's
+    # own architecture. Because of this, running a x86_64 CMake binary on Apple silicon will cause
+    # DIST_ARCH to be set incorrectly.
+    set(DIST_ARCH "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
+    if (CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+        set(DIST_ARCH "universal")
+    else()
+        if (NOT CMAKE_OSX_ARCHITECTURES STREQUAL "")
+            set(DIST_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+        endif()
+    endif()
 endif()
 if (NOT DIST_DIR)
     set(DIST_DIR "${DIST_ARCH}")

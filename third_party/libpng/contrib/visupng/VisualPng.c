@@ -2,7 +2,7 @@
  *  VisualPng.C -- Shows a PNG image
  *------------------------------------
  *
- * Copyright 2000, Willem van Schaik.
+ * Copyright 2000,2017 Willem van Schaik.
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -716,7 +716,7 @@ BOOL DisplayImage (HWND hwnd, BYTE **ppDib,
     png_color                   bkgGray  = {127, 127, 127};
     png_color                   bkgWhite = {255, 255, 255};
 
-    /* allocate memory for the Device Independant bitmap */
+    /* allocate memory for the Device Independent bitmap */
 
     wDIRowBytes = (WORD) ((3 * cxWinSize + 3L) >> 2) << 2;
 
@@ -726,6 +726,10 @@ BOOL DisplayImage (HWND hwnd, BYTE **ppDib,
         pDib = NULL;
     }
 
+    if (cyWinSize > ((size_t)(-1))/wDIRowBytes) {
+    {
+        MessageBox (hwnd, TEXT ("Visual PNG: image is too big");
+    }
     if (!(pDib = (BYTE *) malloc (sizeof(BITMAPINFOHEADER) +
         wDIRowBytes * cyWinSize)))
     {
@@ -847,6 +851,10 @@ BOOL FillBitmap (
             cxImgPos = (cxWinSize - cxNewSize) / 2;
         }
 
+        if (cyNewSize > ((size_t)(-1))/(cImgChannels * cxNewSize)) {
+        {
+            MessageBox (hwnd, TEXT ("Visual PNG: stretched image is too big");
+        }
         pStretchedImage = malloc (cImgChannels * cxNewSize * cyNewSize);
         pImg = pStretchedImage;
 

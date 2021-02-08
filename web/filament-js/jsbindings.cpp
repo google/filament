@@ -364,7 +364,8 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("levels", &filament::View::BloomOptions::levels)
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
-    .field("blendMode", &filament::View::BloomOptions::blendMode);
+    .field("blendMode", &filament::View::BloomOptions::blendMode)
+    .field("highlight", &filament::View::BloomOptions::highlight);
 
 // TODO: add support for dirt texture in BloomOptions.
 // Note that simply including the field in the above list causes binding errors for nullptr.

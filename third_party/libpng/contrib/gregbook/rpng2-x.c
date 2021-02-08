@@ -43,12 +43,12 @@
     - 2.03:  deleted runtime MMX-enabling/disabling and obsolete -mmx* options
     - 2.04:  Added "void(foo);" statements to quiet pedantic compiler warnings
              about unused variables (GR-P)
-
-  TO DO:
-             use nanosleep() instead of usleep(), which is obsolete/deprecated.
+    - 2.05:  Use nanosleep() instead of usleep(), which is deprecated (GR-P).
+    - 2.06:  check for integer overflow (Glenn R-P)
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2008 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2010, 2014-2015, 2017 Greg Roelofs.  All rights
+      reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -119,6 +119,7 @@
 # undef usleep
 # define usleep(usec) {        \
    struct timespec ts;         \
+   ts.tv_sec = 0;              \
    ts.tv_nsec = (usec) * 1000; \
    nanosleep(&ts, NULL); }
 #  endif
@@ -497,12 +498,12 @@ int main(int argc, char **argv)
           "\t\t  transparent images; overrides -bgcolor\n",
           num_bgpat-1);
 #ifdef FEATURE_LOOP
-        fprintf(stderr, 
+        fprintf(stderr,
           "    -loop\tloops through background images after initial display\n"
           "\t\t  is complete (depends on -bgpat)\n"
           "    sec \tseconds to display each background image (default = 2)\n");
 #endif
-        fprintf(stderr, 
+        fprintf(stderr,
           "    dur \tduration in microseconds to wait after displaying each\n"
           "\t\t  row (for demo purposes)\n"
           "    -timing\tenables delay for every block read, to simulate modem\n"
@@ -780,6 +781,13 @@ static void rpng2_x_init(void)
     Trace((stderr, "  rowbytes = %d\n", rpng2_info.rowbytes))
     Trace((stderr, "  width  = %ld\n", rpng2_info.width))
     Trace((stderr, "  height = %ld\n", rpng2_info.height))
+
+    /* Guard against integer overflow */
+    if (rpng2_info.height > ((size_t)(-1))/rpng2_info.rowbytes) {
+        fprintf(stderr, PROGNAME ":  image_data buffer would be too large\n");
+        readpng2_cleanup(&rpng2_info);
+        return;
+    }
 
     rpng2_info.image_data = (uch *)malloc(rowbytes * rpng2_info.height);
     if (!rpng2_info.image_data) {

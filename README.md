@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.9.10'
+    implementation 'com.google.android.filament:filament-android:1.9.11'
 }
 ```
 
@@ -63,7 +63,7 @@ A much smaller alternative to `filamat-android` that can only generate OpenGL sh
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.9.10'
+pod 'Filament', '~> 1.9.11'
 ```
 
 ### Snapshots
@@ -136,7 +136,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Clear coat
 - Anisotropic lighting
 - Approximated translucent (subsurface) materials
-- Cloth shading
+- Cloth/fabric/sheen shading
 - Normal mapping & ambient occlusion mapping
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
@@ -156,6 +156,41 @@ Here are a few screenshots of applications that use Filament in production:
   contrast, saturation, etc.
 - TAA, FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution
+
+### glTF 2.0
+
+- Encodings
+  - [x] Embeded
+  - [x] Binary
+
+- Primitive Types
+  - [x] Points
+  - [x] Lines
+  - [ ] Line Loop
+  - [ ] Line Strip
+  - [x] Triangles
+  - [ ] Triangle Strip
+  - [ ] Triangle Fan
+
+- Animation
+  - [x] Transform animation
+  - [x] Linear interpolation
+  - [x] Morph animation
+    - [x] Sparse accessor
+  - [x] Skin animation
+  - [x] Joint animation
+
+- Extensions
+  - [x] KHR_draco_mesh_compression
+  - [x] KHR_lights_punctual
+  - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_pbrSpecularGlossiness
+  - [x] KHR_materials_sheen
+  - [x] KHR_materials_transmission
+  - [x] KHR_materials_unlit
+  - [x] KHR_mesh_quantization
+  - [x] KHR_texture_transform
+
 
 ## Rendering with Filament
 

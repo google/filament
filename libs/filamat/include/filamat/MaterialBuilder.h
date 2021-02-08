@@ -38,6 +38,10 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+namespace utils {
+class JobSystem;
+}
+
 namespace filamat {
 
 struct MaterialInfo;
@@ -474,9 +478,11 @@ public:
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
-
-    //! Build the material.
-    Package build() noexcept;
+    /**
+     * Build the material. If you are using the Filament engine with this library, you should use
+     * the job system provided by Engine.
+     */
+    Package build(utils::JobSystem& jobSystem) noexcept;
 
 public:
     // The methods and types below are for internal use
@@ -595,7 +601,9 @@ private:
     void writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
     void writeSurfaceChunks(ChunkContainer& container) const noexcept;
 
-    bool generateShaders(const std::vector<Variant>& variants, ChunkContainer& container,
+    bool generateShaders(
+            utils::JobSystem& jobSystem,
+            const std::vector<Variant>& variants, ChunkContainer& container,
             const MaterialInfo& info) const noexcept;
 
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }

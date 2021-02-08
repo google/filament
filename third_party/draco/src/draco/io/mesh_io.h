@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_MESH_MESH_IO_H_
-#define DRACO_MESH_MESH_IO_H_
+#ifndef DRACO_IO_MESH_IO_H_
+#define DRACO_IO_MESH_IO_H_
 
 #include "draco/compression/config/compression_shared.h"
 #include "draco/compression/decode.h"
@@ -104,4 +104,4 @@ StatusOr<std::unique_ptr<Mesh>> ReadMeshFromFile(
 
 }  // namespace draco
 
-#endif  // DRACO_MESH_MESH_IO_H_
+#endif  // DRACO_IO_MESH_IO_H_

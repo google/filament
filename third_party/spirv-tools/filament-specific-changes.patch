@@ -129,3 +129,87 @@ index 6ed56a81..2392dfd8 100755
  
  # Check for symbol exports on Linux.
  # At the moment, this check will fail on the OSX build machines for the Android NDK.
+diff --git a/third_party/spirv-tools/external/CMakeLists.txt b/third_party/spirv-tools/external/CMakeLists.txt
+index 179a4012f..152cfc421 100644
+--- a/third_party/spirv-tools/external/CMakeLists.txt
++++ b/third_party/spirv-tools/external/CMakeLists.txt
+@@ -45,8 +45,10 @@ if (IS_DIRECTORY ${SPIRV_HEADER_DIR})
+   # Do this so enclosing projects can use SPIRV-Headers_SOURCE_DIR to find
+   # headers to include.
+   if (NOT DEFINED SPIRV-Headers_SOURCE_DIR)
+-    set(SPIRV_HEADERS_SKIP_INSTALL ON)
+-    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
++# Filament specific changes
++    #set(SPIRV_HEADERS_SKIP_INSTALL ON)
++    #set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
++# End Filament specific changes
+     add_subdirectory(${SPIRV_HEADER_DIR})
+   endif()
+ else()
+diff --git a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
+index eb4694786..d3940532d 100644
+--- a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
++++ b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
+@@ -49,11 +49,11 @@ add_custom_target(install-headers
+     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
+         $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
+
+-option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
+-      ${SPIRV_HEADERS_SKIP_EXAMPLES})
++# Filament specific changes
++option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
+
+-option(SPIRV_HEADERS_SKIP_INSTALL "Skip install"
+-      ${SPIRV_HEADERS_SKIP_INSTALL})
++option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
++# End Filament specific changes
+
+ if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
+   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)
+diff --git a/third_party/spirv-tools/source/CMakeLists.txt b/third_party/spirv-tools/source/CMakeLists.txt
+index 65087f2c..38101ab2 100644
+--- a/third_party/spirv-tools/source/CMakeLists.txt
++++ b/third_party/spirv-tools/source/CMakeLists.txt
+@@ -364,13 +364,15 @@ endfunction()
+
+ # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and
+ # unlike the other SPIRV_TOOLS target, defaults to hidden symbol visibility.
+-add_library(${SPIRV_TOOLS}-shared SHARED ${SPIRV_SOURCES})
+-spirv_tools_default_target_options(${SPIRV_TOOLS}-shared)
+-set_target_properties(${SPIRV_TOOLS}-shared PROPERTIES CXX_VISIBILITY_PRESET hidden)
+-target_compile_definitions(${SPIRV_TOOLS}-shared
+-  PRIVATE SPIRV_TOOLS_IMPLEMENTATION
+-  PUBLIC SPIRV_TOOLS_SHAREDLIB
+-)
++# Filament specific changes
++# add_library(${SPIRV_TOOLS}-shared SHARED ${SPIRV_SOURCES})
++# spirv_tools_default_target_options(${SPIRV_TOOLS}-shared)
++# set_target_properties(${SPIRV_TOOLS}-shared PROPERTIES CXX_VISIBILITY_PRESET hidden)
++# target_compile_definitions(${SPIRV_TOOLS}-shared
++#   PRIVATE SPIRV_TOOLS_IMPLEMENTATION
++#   PUBLIC SPIRV_TOOLS_SHAREDLIB
++# )
++# End Filament specific changes
+
+ if(SPIRV_TOOLS_BUILD_STATIC)
+   add_library(${SPIRV_TOOLS}-static STATIC ${SPIRV_SOURCES})
+@@ -386,11 +388,17 @@ if(SPIRV_TOOLS_BUILD_STATIC)
+     add_library(${SPIRV_TOOLS} ALIAS ${SPIRV_TOOLS}-static)
+   endif()
+
+-  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static ${SPIRV_TOOLS}-shared)
++# Filament specific changes
++  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static ${SPIRV_TOOLS}-shared)
++  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static)
++# End Filament specific changes
+ else()
+   add_library(${SPIRV_TOOLS} ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_SOURCES})
+   spirv_tools_default_target_options(${SPIRV_TOOLS})
+-  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS} ${SPIRV_TOOLS}-shared)
++# Filament specific changes
++  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS} ${SPIRV_TOOLS}-shared)
++  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS})
++# End Filament specific changes
+ endif()
+
+ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")

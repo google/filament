@@ -18,7 +18,6 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include <utils/Log.h>
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
@@ -34,7 +33,7 @@ namespace {
 
 class MaterialGenerator : public MaterialProvider {
 public:
-    explicit MaterialGenerator(filament::Engine* engine);
+    explicit MaterialGenerator(filament::Engine* engine, bool optimizeShaders);
     ~MaterialGenerator() override;
 
     MaterialSource getSource() const noexcept override { return GENERATE_SHADERS; }
@@ -49,10 +48,12 @@ public:
     using HashFn = utils::hash::MurmurHashFn<MaterialKey>;
     tsl::robin_map<MaterialKey, filament::Material*, HashFn> mCache;
     std::vector<filament::Material*> mMaterials;
-    filament::Engine* mEngine;
+    filament::Engine* const mEngine;
+    const bool mOptimizeShaders;
 };
 
-MaterialGenerator::MaterialGenerator(Engine* engine) : mEngine(engine) {
+MaterialGenerator::MaterialGenerator(Engine* engine, bool optimizeShaders) : mEngine(engine),
+        mOptimizeShaders(optimizeShaders) {
     MaterialBuilder::init();
 }
 
@@ -250,14 +251,43 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasSheen) {
+            shader += R"SHADER(
+                material.sheenColor = materialParams.sheenColorFactor;
+                material.sheenRoughness = materialParams.sheenRoughnessFactor;
+            )SHADER";
+
+            if (config.hasSheenColorTexture) {
+                shader += "highp float2 sheenColorUV = ${sheenColor};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "sheenColorUV = (vec3(sheenColorUV, 1.0) * "
+                              "materialParams.sheenColorUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.sheenColor *= texture(materialParams_sheenColorMap, sheenColorUV).rgb;
+                )SHADER";
+            }
+
+            if (config.hasSheenRoughnessTexture) {
+                shader += "highp float2 sheenRoughnessUV = ${sheenRoughness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "sheenRoughnessUV = (vec3(sheenRoughnessUV, 1.0) * "
+                              "materialParams.sheenRoughnessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.sheenRoughness *= texture(materialParams_sheenRoughnessMap, sheenRoughnessUV).a;
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
     return shader;
 }
 
-Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
-        const char* name) {
+static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
+        const char* name, bool optimizeShaders) {
     std::string shader = shaderFromKey(config);
     processShaderString(&shader, uvmap, config);
     MaterialBuilder builder = MaterialBuilder()
@@ -270,9 +300,9 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             .doubleSided(config.doubleSided)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
-#ifndef NDEBUG
-    builder.optimization(MaterialBuilder::Optimization::NONE);
-#endif
+    if (!optimizeShaders) {
+        builder.optimization(MaterialBuilder::Optimization::NONE);
+    }
 
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
     int numUvSets = getNumUvSets(uvmap);
@@ -369,6 +399,24 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
         }
     }
 
+    // SHEEN
+    if (config.hasSheen) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "sheenColorFactor");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "sheenRoughnessFactor");
+        if (config.hasSheenColorTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenColorMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenColorUvMatrix");
+            }
+        }
+        if (config.hasSheenRoughnessTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenRoughnessMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenRoughnessUvMatrix");
+            }
+        }
+    }
+
     // TRANSMISSION
     if (config.hasTransmission) {
 
@@ -420,7 +468,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
         builder.shading(Shading::LIT);
     }
 
-    Package pkg = builder.build();
+    Package pkg = builder.build(engine->getJobSystem());
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
 }
 
@@ -429,7 +477,13 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
-        Material* mat = createMaterial(mEngine, *config, *uvmap, label);
+
+        bool optimizeShaders = mOptimizeShaders;
+#ifndef NDEBUG
+        optimizeShaders = false;
+#endif
+
+        Material* mat = createMaterial(mEngine, *config, *uvmap, label, optimizeShaders);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
         return mat->createInstance(label);
@@ -441,8 +495,8 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
 
 namespace gltfio {
 
-MaterialProvider* createMaterialGenerator(filament::Engine* engine) {
-    return new MaterialGenerator(engine);
+MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimizeShaders) {
+    return new MaterialGenerator(engine, optimizeShaders);
 }
 
 } // namespace gltfio

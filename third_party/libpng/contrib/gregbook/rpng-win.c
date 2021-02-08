@@ -24,10 +24,11 @@
     - 1.10:  enabled "message window"/console (thanks to David Geldreich)
     - 2.00:  dual-licensed (added GNU GPL)
     - 2.01:  fixed improper display of usage screen on PNG error(s)
+    - 2.02:  check for integer overflow (Glenn R-P)
 
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2008 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2008, 2017 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -182,7 +183,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR cmd, int showmode)
 #ifndef __CYGWIN__
     /* First reenable console output, which normally goes to the bit bucket
      * for windowed apps.  Closing the console window will terminate the
-     * app.  Thanks to David.Geldreich@realviz.com for supplying the magical
+     * app.  Thanks to David.Geldreich at realviz.com for supplying the magical
      * incantation. */
 
     AllocConsole();
@@ -495,6 +496,12 @@ static int rpng_win_create_window(HINSTANCE hInst, int showmode)
   ---------------------------------------------------------------------------*/
 
     wimage_rowbytes = ((3*image_width + 3L) >> 2) << 2;
+
+    /* Guard against integer overflow */
+    if (image_height > ((size_t)(-1))/wimage_rowbytes) {
+        fprintf(stderr, PROGNAME ":  image_data buffer would be too large\n");
+        return 4;   /* fail */
+    }
 
     if (!(dib = (uch *)malloc(sizeof(BITMAPINFOHEADER) +
                               wimage_rowbytes*image_height)))

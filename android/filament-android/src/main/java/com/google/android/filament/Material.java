@@ -233,7 +233,8 @@ public class Material {
             SAMPLER_2D_ARRAY,
             SAMPLER_CUBEMAP,
             SAMPLER_EXTERNAL,
-            SAMPLER_3D
+            SAMPLER_3D,
+            SUBPASS_INPUT
         }
 
         public enum Precision {
@@ -246,6 +247,10 @@ public class Material {
         @SuppressWarnings("unused")
         @UsedByNative("Material.cpp")
         private static final int SAMPLER_OFFSET = Type.MAT4.ordinal() + 1;
+
+        @SuppressWarnings("unused")
+        @UsedByNative("Material.cpp")
+        private static final int SUBPASS_OFFSET = Type.SAMPLER_3D.ordinal() + 1;
 
         @NonNull
         public final String name;

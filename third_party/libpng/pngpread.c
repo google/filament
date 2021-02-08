@@ -1,10 +1,10 @@
 
 /* pngpread.c - read a png file in push mode
  *
- * Last changed in libpng 1.6.15 [November 20, 2014]
- * Copyright (c) 1998-2014 Glenn Randers-Pehrson
- * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
- * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+ * Copyright (c) 2018 Cosmin Truta
+ * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
+ * Copyright (c) 1996-1997 Andreas Dilger
+ * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -19,7 +19,6 @@
 #define PNG_READ_SIG_MODE   0
 #define PNG_READ_CHUNK_MODE 1
 #define PNG_READ_IDAT_MODE  2
-#define PNG_SKIP_MODE       3
 #define PNG_READ_tEXt_MODE  4
 #define PNG_READ_zTXt_MODE  5
 #define PNG_READ_DONE_MODE  6
@@ -35,7 +34,7 @@ if (png_ptr->buffer_size < N) \
 
 void PNGAPI
 png_process_data(png_structrp png_ptr, png_inforp info_ptr,
-    png_bytep buffer, png_size_t buffer_size)
+    png_bytep buffer, size_t buffer_size)
 {
    if (png_ptr == NULL || info_ptr == NULL)
       return;
@@ -48,7 +47,7 @@ png_process_data(png_structrp png_ptr, png_inforp info_ptr,
    }
 }
 
-png_size_t PNGAPI
+size_t PNGAPI
 png_process_data_pause(png_structrp png_ptr, int save)
 {
    if (png_ptr != NULL)
@@ -61,7 +60,7 @@ png_process_data_pause(png_structrp png_ptr, int save)
       else
       {
          /* This includes any pending saved bytes: */
-         png_size_t remaining = png_ptr->buffer_size;
+         size_t remaining = png_ptr->buffer_size;
          png_ptr->buffer_size = 0;
 
          /* So subtract the saved buffer size, unless all the data
@@ -78,32 +77,14 @@ png_process_data_pause(png_structrp png_ptr, int save)
 png_uint_32 PNGAPI
 png_process_data_skip(png_structrp png_ptr)
 {
-   png_uint_32 remaining = 0;
-
-   if (png_ptr != NULL && png_ptr->process_mode == PNG_SKIP_MODE &&
-      png_ptr->skip_length > 0)
-   {
-      /* At the end of png_process_data the buffer size must be 0 (see the loop
-       * above) so we can detect a broken call here:
-       */
-      if (png_ptr->buffer_size != 0)
-         png_error(png_ptr,
-            "png_process_data_skip called inside png_process_data");
-
-      /* If is impossible for there to be a saved buffer at this point -
-       * otherwise we could not be in SKIP mode.  This will also happen if
-       * png_process_skip is called inside png_process_data (but only very
-       * rarely.)
-       */
-      if (png_ptr->save_buffer_size != 0)
-         png_error(png_ptr, "png_process_data_skip called with saved data");
-
-      remaining = png_ptr->skip_length;
-      png_ptr->skip_length = 0;
-      png_ptr->process_mode = PNG_READ_CHUNK_MODE;
-   }
-
-   return remaining;
+/* TODO: Deprecate and remove this API.
+ * Somewhere the implementation of this seems to have been lost,
+ * or abandoned.  It was only to support some internal back-door access
+ * to png_struct) in libpng-1.4.x.
+ */
+   png_app_warning(png_ptr,
+"png_process_data_skip is not implemented in any current version of libpng");
+   return 0;
 }
 
 /* What we do with the incoming data depends on what we were previously
@@ -135,12 +116,6 @@ png_process_some_data(png_structrp png_ptr, png_inforp info_ptr)
          break;
       }
 
-      case PNG_SKIP_MODE:
-      {
-         png_push_crc_finish(png_ptr);
-         break;
-      }
-
       default:
       {
          png_ptr->buffer_size = 0;
@@ -158,8 +133,8 @@ png_process_some_data(png_structrp png_ptr, png_inforp info_ptr)
 void /* PRIVATE */
 png_push_read_sig(png_structrp png_ptr, png_inforp info_ptr)
 {
-   png_size_t num_checked = png_ptr->sig_bytes, /* SAFE, does not exceed 8 */ 
-             num_to_check = 8 - num_checked;
+   size_t num_checked = png_ptr->sig_bytes; /* SAFE, does not exceed 8 */
+   size_t num_to_check = 8 - num_checked;
 
    if (png_ptr->buffer_size < num_to_check)
    {
@@ -214,6 +189,7 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
       png_crc_read(png_ptr, chunk_tag, 4);
       png_ptr->chunk_name = PNG_CHUNK_FROM_STRING(chunk_tag);
       png_check_chunk_name(png_ptr, png_ptr->chunk_name);
+      png_check_chunk_length(png_ptr, png_ptr->push_length);
       png_ptr->mode |= PNG_HAVE_CHUNK_HEADER;
    }
 
@@ -235,12 +211,14 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
           (png_ptr->mode & PNG_HAVE_PLTE) == 0)
          png_error(png_ptr, "Missing PLTE before IDAT");
 
-      png_ptr->mode |= PNG_HAVE_IDAT;
       png_ptr->process_mode = PNG_READ_IDAT_MODE;
 
-      if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
-         if (png_ptr->push_length == 0)
-            return;
+      if ((png_ptr->mode & PNG_HAVE_IDAT) != 0)
+         if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
+            if (png_ptr->push_length == 0)
+               return;
+
+      png_ptr->mode |= PNG_HAVE_IDAT;
 
       if ((png_ptr->mode & PNG_AFTER_IDAT) != 0)
          png_benign_error(png_ptr, "Too many IDATs found");
@@ -433,77 +411,14 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
    {
       PNG_PUSH_SAVE_BUFFER_IF_FULL
       png_handle_unknown(png_ptr, info_ptr, png_ptr->push_length,
-         PNG_HANDLE_CHUNK_AS_DEFAULT);
+          PNG_HANDLE_CHUNK_AS_DEFAULT);
    }
 
    png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
 }
 
-void /* PRIVATE */
-png_push_crc_skip(png_structrp png_ptr, png_uint_32 skip)
-{
-   png_ptr->process_mode = PNG_SKIP_MODE;
-   png_ptr->skip_length = skip;
-}
-
-void /* PRIVATE */
-png_push_crc_finish(png_structrp png_ptr)
-{
-   if (png_ptr->skip_length != 0 && png_ptr->save_buffer_size != 0)
-   {
-      png_size_t save_size = png_ptr->save_buffer_size;
-      png_uint_32 skip_length = png_ptr->skip_length;
-
-      /* We want the smaller of 'skip_length' and 'save_buffer_size', but
-       * they are of different types and we don't know which variable has the
-       * fewest bits.  Carefully select the smaller and cast it to the type of
-       * the larger - this cannot overflow.  Do not cast in the following test
-       * - it will break on either 16 or 64 bit platforms.
-       */
-      if (skip_length < save_size)
-         save_size = (png_size_t)skip_length;
-
-      else
-         skip_length = (png_uint_32)save_size;
-
-      png_calculate_crc(png_ptr, png_ptr->save_buffer_ptr, save_size);
-
-      png_ptr->skip_length -= skip_length;
-      png_ptr->buffer_size -= save_size;
-      png_ptr->save_buffer_size -= save_size;
-      png_ptr->save_buffer_ptr += save_size;
-   }
-   if (png_ptr->skip_length != 0 && png_ptr->current_buffer_size != 0)
-   {
-      png_size_t save_size = png_ptr->current_buffer_size;
-      png_uint_32 skip_length = png_ptr->skip_length;
-
-      /* We want the smaller of 'skip_length' and 'current_buffer_size', here,
-       * the same problem exists as above and the same solution.
-       */
-      if (skip_length < save_size)
-         save_size = (png_size_t)skip_length;
-
-      else
-         skip_length = (png_uint_32)save_size;
-
-      png_calculate_crc(png_ptr, png_ptr->current_buffer_ptr, save_size);
-
-      png_ptr->skip_length -= skip_length;
-      png_ptr->buffer_size -= save_size;
-      png_ptr->current_buffer_size -= save_size;
-      png_ptr->current_buffer_ptr += save_size;
-   }
-   if (png_ptr->skip_length == 0)
-   {
-      PNG_PUSH_SAVE_BUFFER_IF_LT(4)
-      png_crc_finish(png_ptr, 0);
-      png_ptr->process_mode = PNG_READ_CHUNK_MODE;
-   }
-}
-
 void PNGCBAPI
-png_push_fill_buffer(png_structp png_ptr, png_bytep buffer, png_size_t length)
+png_push_fill_buffer(png_structp png_ptr, png_bytep buffer, size_t length)
 {
    png_bytep ptr;
 
@@ -513,7 +428,7 @@ png_push_fill_buffer(png_structp png_ptr, png_bytep buffer, png_size_t length)
    ptr = buffer;
    if (png_ptr->save_buffer_size != 0)
    {
-      png_size_t save_size;
+      size_t save_size;
 
       if (length < png_ptr->save_buffer_size)
          save_size = length;
@@ -530,7 +445,7 @@ png_push_fill_buffer(png_structp png_ptr, png_bytep buffer, png_size_t length)
    }
    if (length != 0 && png_ptr->current_buffer_size != 0)
    {
-      png_size_t save_size;
+      size_t save_size;
 
       if (length < png_ptr->current_buffer_size)
          save_size = length;
@@ -552,7 +467,7 @@ png_push_save_buffer(png_structrp png_ptr)
    {
       if (png_ptr->save_buffer_ptr != png_ptr->save_buffer)
       {
-         png_size_t i, istop;
+         size_t i, istop;
          png_bytep sp;
          png_bytep dp;
 
@@ -567,7 +482,7 @@ png_push_save_buffer(png_structrp png_ptr)
    if (png_ptr->save_buffer_size + png_ptr->current_buffer_size >
        png_ptr->save_buffer_max)
    {
-      png_size_t new_max;
+      size_t new_max;
       png_bytep old_buffer;
 
       if (png_ptr->save_buffer_size > PNG_SIZE_MAX -
@@ -579,18 +494,19 @@ png_push_save_buffer(png_structrp png_ptr)
       new_max = png_ptr->save_buffer_size + png_ptr->current_buffer_size + 256;
       old_buffer = png_ptr->save_buffer;
       png_ptr->save_buffer = (png_bytep)png_malloc_warn(png_ptr,
-          (png_size_t)new_max);
+          (size_t)new_max);
 
       if (png_ptr->save_buffer == NULL)
       {
          png_free(png_ptr, old_buffer);
-         old_buffer = NULL;
          png_error(png_ptr, "Insufficient memory for save_buffer");
       }
 
-      memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
+      if (old_buffer)
+         memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
+      else if (png_ptr->save_buffer_size)
+         png_error(png_ptr, "save_buffer error");
       png_free(png_ptr, old_buffer);
-      old_buffer = NULL;
       png_ptr->save_buffer_max = new_max;
    }
    if (png_ptr->current_buffer_size)
@@ -606,7 +522,7 @@ png_push_save_buffer(png_structrp png_ptr)
 
 void /* PRIVATE */
 png_push_restore_buffer(png_structrp png_ptr, png_bytep buffer,
-   png_size_t buffer_length)
+    size_t buffer_length)
 {
    png_ptr->current_buffer = buffer;
    png_ptr->current_buffer_size = buffer_length;
@@ -646,17 +562,17 @@ png_push_read_IDAT(png_structrp png_ptr)
 
    if (png_ptr->idat_size != 0 && png_ptr->save_buffer_size != 0)
    {
-      png_size_t save_size = png_ptr->save_buffer_size;
+      size_t save_size = png_ptr->save_buffer_size;
       png_uint_32 idat_size = png_ptr->idat_size;
 
       /* We want the smaller of 'idat_size' and 'current_buffer_size', but they
        * are of different types and we don't know which variable has the fewest
        * bits.  Carefully select the smaller and cast it to the type of the
        * larger - this cannot overflow.  Do not cast in the following test - it
-       * will break on either 16 or 64 bit platforms.
+       * will break on either 16-bit or 64-bit platforms.
        */
       if (idat_size < save_size)
-         save_size = (png_size_t)idat_size;
+         save_size = (size_t)idat_size;
 
       else
          idat_size = (png_uint_32)save_size;
@@ -673,7 +589,7 @@ png_push_read_IDAT(png_structrp png_ptr)
 
    if (png_ptr->idat_size != 0 && png_ptr->current_buffer_size != 0)
    {
-      png_size_t save_size = png_ptr->current_buffer_size;
+      size_t save_size = png_ptr->current_buffer_size;
       png_uint_32 idat_size = png_ptr->idat_size;
 
       /* We want the smaller of 'idat_size' and 'current_buffer_size', but they
@@ -682,7 +598,7 @@ png_push_read_IDAT(png_structrp png_ptr)
        * larger - this cannot overflow.
        */
       if (idat_size < save_size)
-         save_size = (png_size_t)idat_size;
+         save_size = (size_t)idat_size;
 
       else
          idat_size = (png_uint_32)save_size;
@@ -696,6 +612,7 @@ png_push_read_IDAT(png_structrp png_ptr)
       png_ptr->current_buffer_size -= save_size;
       png_ptr->current_buffer_ptr += save_size;
    }
+
    if (png_ptr->idat_size == 0)
    {
       PNG_PUSH_SAVE_BUFFER_IF_LT(4)
@@ -708,7 +625,7 @@ png_push_read_IDAT(png_structrp png_ptr)
 
 void /* PRIVATE */
 png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
-   png_size_t buffer_length)
+    size_t buffer_length)
 {
    /* The caller checks for a non-zero buffer length. */
    if (!(buffer_length > 0) || buffer == NULL)
@@ -726,7 +643,7 @@ png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
     * or the stream marked as finished.
     */
    while (png_ptr->zstream.avail_in > 0 &&
-      !(png_ptr->flags & PNG_FLAG_ZSTREAM_ENDED))
+      (png_ptr->flags & PNG_FLAG_ZSTREAM_ENDED) == 0)
    {
       int ret;
 
@@ -751,7 +668,7 @@ png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
        * change the current behavior (see comments in inflate.c
        * for why this doesn't happen at present with zlib 1.2.5).
        */
-      ret = inflate(&png_ptr->zstream, Z_SYNC_FLUSH);
+      ret = PNG_INFLATE(png_ptr, Z_SYNC_FLUSH);
 
       /* Check for any failure before proceeding. */
       if (ret != Z_OK && ret != Z_STREAM_END)
@@ -768,7 +685,12 @@ png_process_IDAT_data(png_structrp png_ptr, png_bytep buffer,
             png_warning(png_ptr, "Truncated compressed data in IDAT");
 
          else
-            png_error(png_ptr, "Decompression error in IDAT");
+         {
+            if (ret == Z_DATA_ERROR)
+               png_benign_error(png_ptr, "IDAT: ADLER32 checksum mismatch");
+            else
+               png_error(png_ptr, "Decompression error in IDAT");
+         }
 
          /* Skip the check on unprocessed input */
          return;
@@ -866,7 +788,7 @@ png_push_process_row(png_structrp png_ptr)
    {
       if (png_ptr->pass < 6)
          png_do_read_interlace(&row_info, png_ptr->row_buf + 1, png_ptr->pass,
-            png_ptr->transformations);
+             png_ptr->transformations);
 
       switch (png_ptr->pass)
       {
@@ -1036,6 +958,7 @@ png_push_process_row(png_structrp png_ptr)
       }
    }
    else
+#endif
    {
       png_push_have_row(png_ptr, png_ptr->row_buf + 1);
       png_read_push_finish_row(png_ptr);
@@ -1045,23 +968,24 @@ png_push_process_row(png_structrp png_ptr)
 void /* PRIVATE */
 png_read_push_finish_row(png_structrp png_ptr)
 {
+#ifdef PNG_READ_INTERLACING_SUPPORTED
    /* Arrays to facilitate easy interlacing - use pass (0 - 6) as index */
 
    /* Start of interlace block */
-   static PNG_CONST png_byte png_pass_start[] = {0, 4, 0, 2, 0, 1, 0};
+   static const png_byte png_pass_start[] = {0, 4, 0, 2, 0, 1, 0};
 
    /* Offset to next interlace block */
-   static PNG_CONST png_byte png_pass_inc[] = {8, 8, 4, 4, 2, 2, 1};
+   static const png_byte png_pass_inc[] = {8, 8, 4, 4, 2, 2, 1};
 
    /* Start of interlace block in the y direction */
-   static PNG_CONST png_byte png_pass_ystart[] = {0, 0, 4, 0, 2, 0, 1};
+   static const png_byte png_pass_ystart[] = {0, 0, 4, 0, 2, 0, 1};
 
    /* Offset to next interlace block in the y direction */
-   static PNG_CONST png_byte png_pass_yinc[] = {8, 8, 8, 4, 4, 2, 2};
+   static const png_byte png_pass_yinc[] = {8, 8, 8, 4, 4, 2, 2};
 
    /* Height of interlace block.  This is not currently used - if you need
     * it, uncomment it here and in png.h
-   static PNG_CONST png_byte png_pass_height[] = {8, 8, 4, 4, 2, 2, 1};
+   static const png_byte png_pass_height[] = {8, 8, 4, 4, 2, 2, 1};
    */
 #endif
 
@@ -1069,6 +993,7 @@ png_read_push_finish_row(png_structrp png_ptr)
    if (png_ptr->row_number < png_ptr->num_rows)
       return;
 
+#ifdef PNG_READ_INTERLACING_SUPPORTED
    if (png_ptr->interlaced != 0)
    {
       png_ptr->row_number = 0;
@@ -1103,6 +1028,7 @@ png_read_push_finish_row(png_structrp png_ptr)
 
       } while (png_ptr->iwidth == 0 || png_ptr->num_rows == 0);
    }
+#endif /* READ_INTERLACING */
 }
 
 void /* PRIVATE */
@@ -1124,9 +1050,10 @@ png_push_have_row(png_structrp png_ptr, png_bytep row)
 {
    if (png_ptr->row_fn != NULL)
       (*(png_ptr->row_fn))(png_ptr, row, png_ptr->row_number,
-         (int)png_ptr->pass);
+          (int)png_ptr->pass);
 }
 
+#ifdef PNG_READ_INTERLACING_SUPPORTED
 void PNGAPI
 png_progressive_combine_row(png_const_structrp png_ptr, png_bytep old_row,
     png_const_bytep new_row)
@@ -1141,6 +1068,7 @@ png_progressive_combine_row(png_const_structrp png_ptr, png_bytep old_row,
    if (new_row != NULL)
       png_combine_row(png_ptr, old_row, 1/*blocky display*/);
 }
+#endif /* READ_INTERLACING */
 
 void PNGAPI
 png_set_progressive_read_fn(png_structrp png_ptr, png_voidp progressive_ptr,

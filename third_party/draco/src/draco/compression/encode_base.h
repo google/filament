@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_SRC_DRACO_COMPRESSION_ENCODE_BASE_H_
-#define DRACO_SRC_DRACO_COMPRESSION_ENCODE_BASE_H_
+#ifndef DRACO_COMPRESSION_ENCODE_BASE_H_
+#define DRACO_COMPRESSION_ENCODE_BASE_H_
 
 #include "draco/attributes/geometry_attribute.h"
 #include "draco/compression/config/compression_shared.h"
@@ -128,4 +128,4 @@ void EncoderBase<EncoderOptionsT>::SetTrackEncodedProperties(bool flag) {
 
 }  // namespace draco
 
-#endif  // DRACO_SRC_DRACO_COMPRESSION_ENCODE_BASE_H_
+#endif  // DRACO_COMPRESSION_ENCODE_BASE_H_

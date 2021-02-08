@@ -56,7 +56,7 @@ class IndexTypeVector {
   void push_back(ValueTypeT &&val) { vector_.push_back(std::move(val)); }
 
   template <typename... Args>
-  void emplace_back(Args &&... args) {
+  void emplace_back(Args &&...args) {
     vector_.emplace_back(std::forward<Args>(args)...);
   }
 

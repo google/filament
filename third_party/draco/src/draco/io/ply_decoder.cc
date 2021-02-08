@@ -20,6 +20,21 @@
 #include "draco/io/ply_property_reader.h"
 
 namespace draco {
+namespace {
+int64_t CountNumTriangles(const PlyElement &face_element,
+                          const PlyProperty &vertex_indices) {
+  int64_t num_triangles = 0;
+  for (int i = 0; i < face_element.num_entries(); ++i) {
+    const int64_t list_size = vertex_indices.GetListEntryNumValues(i);
+    if (list_size < 3) {
+      // Correctly encoded ply files don't have less than three vertices.
+      continue;
+    }
+    num_triangles += list_size - 2;
+  }
+  return num_triangles;
+}
+}  // namespace
 
 PlyDecoder::PlyDecoder() : out_mesh_(nullptr), out_point_cloud_(nullptr) {}
 
@@ -81,8 +96,6 @@ Status PlyDecoder::DecodeFaceData(const PlyElement *face_element) {
   if (face_element == nullptr) {
     return Status(Status::INVALID_PARAMETER, "face_element is null");
   }
-  const int64_t num_faces = face_element->num_entries();
-  out_mesh_->SetNumFaces(num_faces);
   const PlyProperty *vertex_indices =
       face_element->GetPropertyByName("vertex_indices");
   if (vertex_indices == nullptr) {
@@ -93,22 +106,31 @@ Status PlyDecoder::DecodeFaceData(const PlyElement *face_element) {
     return Status(Status::DRACO_ERROR, "No faces defined");
   }
 
+  // Allocate faces.
+  out_mesh_->SetNumFaces(CountNumTriangles(*face_element, *vertex_indices));
+  const int64_t num_polygons = face_element->num_entries();
+
   PlyPropertyReader<PointIndex::ValueType> vertex_index_reader(vertex_indices);
   Mesh::Face face;
   FaceIndex face_index(0);
-  for (int i = 0; i < num_faces; ++i) {
+  for (int i = 0; i < num_polygons; ++i) {
     const int64_t list_offset = vertex_indices->GetListEntryOffset(i);
     const int64_t list_size = vertex_indices->GetListEntryNumValues(i);
-    // TODO(ostava): Assume triangular faces only for now.
-    if (list_size != 3) {
-      continue;  // All non-triangular faces are skipped.
+    if (list_size < 3) {
+      continue;  // All invalid polygons are skipped.
     }
-    for (int64_t c = 0; c < 3; ++c) {
-      face[c] =
-          vertex_index_reader.ReadValue(static_cast<int>(list_offset + c));
+
+    // Triangulate polygon assuming the polygon is convex.
+    const int64_t num_triangles = list_size - 2;
+    face[0] = vertex_index_reader.ReadValue(static_cast<int>(list_offset));
+    for (int64_t ti = 0; ti < num_triangles; ++ti) {
+      for (int64_t c = 1; c < 3; ++c) {
+        face[c] = vertex_index_reader.ReadValue(
+            static_cast<int>(list_offset + ti + c));
+      }
+      out_mesh_->SetFace(face_index, face);
+      face_index++;
     }
-    out_mesh_->SetFace(face_index, face);
-    face_index++;
   }
   out_mesh_->SetNumFaces(face_index.value());
   return OkStatus();
@@ -139,8 +161,8 @@ Status PlyDecoder::DecodeVertexData(const PlyElement *vertex_element) {
   if (vertex_element == nullptr) {
     return Status(Status::INVALID_PARAMETER, "vertex_element is null");
   }
-  // TODO(ostava): For now, try to load x,y,z vertices and red,green,blue,alpha
-  // colors. We need to add other properties later.
+  // TODO(b/34330853): For now, try to load x,y,z vertices, red,green,blue,alpha
+  // colors, and nx,ny,nz normals. We need to add other properties later.
   const PlyProperty *const x_prop = vertex_element->GetPropertyByName("x");
   const PlyProperty *const y_prop = vertex_element->GetPropertyByName("y");
   const PlyProperty *const z_prop = vertex_element->GetPropertyByName("z");

@@ -213,7 +213,7 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
-    construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size);
+    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
 }
 
 void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
@@ -420,6 +420,7 @@ void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
             samplerBinding = {};
         }
     }
+    mContext->samplerGroups.erase(metalSampler);
     destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
 }
 
@@ -439,19 +440,18 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     if (!th) {
         return;
     }
+
     // Unbind this texture from any sampler groups that currently reference it.
-    for (auto& samplerBinding : mContext->samplerBindings) {
-        if (!samplerBinding) {
-            continue;
-        }
-        const SamplerGroup::Sampler* samplers = samplerBinding->sb->getSamplers();
-        for (size_t i = 0; i < samplerBinding->sb->getSize(); i++) {
+    for (auto* metalSamplerGroup : mContext->samplerGroups) {
+        const SamplerGroup::Sampler* samplers = metalSamplerGroup->sb->getSamplers();
+        for (size_t i = 0; i < metalSamplerGroup->sb->getSize(); i++) {
             const SamplerGroup::Sampler* sampler = samplers + i;
             if (sampler->t == th) {
-                samplerBinding->sb->setSampler(i, {{}, {}});
+                metalSamplerGroup->sb->setSampler(i, {{}, {}});
             }
         }
     }
+
     destruct_handle<MetalTexture>(mHandleMap, th);
 }
 
@@ -615,6 +615,10 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
+bool MetalDriver::areFeedbackLoopsSupported() {
+    return true;
+}
+
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
@@ -753,9 +757,6 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
 
-    // Filament's default winding is counter clockwise.
-    [mContext->currentRenderPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
             mContext->currentRenderTarget->isDefaultRenderTarget() ?
@@ -777,6 +778,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->pipelineState.invalidate();
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
+    mContext->windingState.invalidate();
 }
 
 void MetalDriver::nextSubpass(int dummy) {}
@@ -1139,6 +1141,13 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     mContext->cullModeState.updateState(cullMode);
     if (mContext->cullModeState.stateChanged()) {
         [mContext->currentRenderPassEncoder setCullMode:cullMode];
+    }
+
+    // Front face winding
+    MTLWinding winding = rs.inverseFrontFaces ? MTLWindingClockwise : MTLWindingCounterClockwise;
+    mContext->windingState.updateState(winding);
+    if (mContext->windingState.stateChanged()) {
+        [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
     }
 
     // Set the depth-stencil state, if a state change is needed.

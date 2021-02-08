@@ -108,7 +108,7 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
 
    do
    {
-      png_size_t index;
+      size_t index;
       int state, failed = 0;
       char buffer[64];
 
@@ -176,7 +176,7 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
       }
       else if (PNG_FP_IS_POSITIVE(state) && !(test > 0))
       {
-         fprintf(stderr, "%g[%d] -> '%s' but postive value not so reported\n",
+         fprintf(stderr, "%g[%d] -> '%s' but positive value not so reported\n",
             test, precision, buffer);
          failed = 1;
          assert(!PNG_FP_IS_NEGATIVE(state));
@@ -329,10 +329,10 @@ static int check_one_character(checkfp_command *co, checkfp_control c, int ch)
 {
    /* Test this character (ch) to ensure the parser does the correct thing.
     */
-   png_size_t index = 0;
+   size_t index = 0;
    const char test = (char)ch;
-   const int number_is_valid = png_check_fp_number(&test, 1, &c.state, &index);
-   const int character_accepted = (index == 1);
+   int number_is_valid = png_check_fp_number(&test, 1, &c.state, &index);
+   int character_accepted = (index == 1);
 
    if (c.check_state != exponent && isdigit(ch) && ch != '0')
       c.is_zero = 0;
@@ -634,7 +634,7 @@ int validation_muldiv(int count, int argc, char **argv)
    {
       png_fixed_point result;
       /* NOTE: your mileage may vary, a type is required below that can
-       * hold 64 bits or more, if floating point is used a 64 bit or
+       * hold 64 bits or more, if floating point is used a 64-bit or
        * better mantissa is required.
        */
       long long int fp, fpround;
@@ -721,7 +721,7 @@ int validation_muldiv(int count, int argc, char **argv)
    }
    while (--count > 0);
 
-   printf("%d tests including %d overflows, %d passed, %d failed (%d 64 bit "
+   printf("%d tests including %d overflows, %d passed, %d failed (%d 64-bit "
       "errors)\n", tested, overflow, passed, error, error64);
    return 0;
 }
@@ -799,13 +799,13 @@ int validation_gamma(int argc, char **argv)
          if (i == 0 && png_log8bit(i) != 0xffffffff ||
              i != 0 && png_log8bit(i) != floor(correct+.5))
          {
-            fprintf(stderr, "8 bit log error: %d: got %u, expected %f\n",
+            fprintf(stderr, "8-bit log error: %d: got %u, expected %f\n",
                i, png_log8bit(i), correct);
          }
       }
 
       if (!silent)
-         printf("maximum 8 bit log error = %f\n", maxerr);
+         printf("maximum 8-bit log error = %f\n", maxerr);
 
       maxerr = 0;
       for (i=0; i<65536; ++i)
@@ -821,14 +821,14 @@ int validation_gamma(int argc, char **argv)
          {
             if (error > .68) /* By experiment error is less than .68 */
             {
-               fprintf(stderr, "16 bit log error: %d: got %u, expected %f"
+               fprintf(stderr, "16-bit log error: %d: got %u, expected %f"
                   " error: %f\n", i, png_log16bit(i), correct, error);
             }
          }
       }
 
       if (!silent)
-         printf("maximum 16 bit log error = %f\n", maxerr);
+         printf("maximum 16-bit log error = %f\n", maxerr);
 
       /* Now exponentiations. */
       maxerr = 0;
@@ -841,13 +841,13 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > 1883) /* By experiment. */
          {
-            fprintf(stderr, "32 bit exp error: %d: got %u, expected %f"
+            fprintf(stderr, "32-bit exp error: %d: got %u, expected %f"
                   " error: %f\n", i, png_exp(i), correct, error);
          }
       }
 
       if (!silent)
-         printf("maximum 32 bit exp error = %f\n", maxerr);
+         printf("maximum 32-bit exp error = %f\n", maxerr);
 
       maxerr = 0;
       for (i=0; i<=0xfffff; ++i)
@@ -859,13 +859,13 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > .50002) /* By experiment */
          {
-            fprintf(stderr, "8 bit exp error: %d: got %u, expected %f"
+            fprintf(stderr, "8-bit exp error: %d: got %u, expected %f"
                   " error: %f\n", i, png_exp8bit(i), correct, error);
          }
       }
 
       if (!silent)
-         printf("maximum 8 bit exp error = %f\n", maxerr);
+         printf("maximum 8-bit exp error = %f\n", maxerr);
 
       maxerr = 0;
       for (i=0; i<=0xfffff; ++i)
@@ -877,13 +877,13 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > .524) /* By experiment */
          {
-            fprintf(stderr, "16 bit exp error: %d: got %u, expected %f"
+            fprintf(stderr, "16-bit exp error: %d: got %u, expected %f"
                   " error: %f\n", i, png_exp16bit(i), correct, error);
          }
       }
 
       if (!silent)
-         printf("maximum 16 bit exp error = %f\n", maxerr);
+         printf("maximum 16-bit exp error = %f\n", maxerr);
    } /* !onlygamma */
 
    /* Test the overall gamma correction. */
@@ -913,7 +913,7 @@ int validation_gamma(int argc, char **argv)
       }
 
       if (!silent)
-         printf("gamma %f: maximum 8 bit error %f\n", g, maxerr);
+         printf("gamma %f: maximum 8-bit error %f\n", g, maxerr);
 
       maxerr = 0;
       for (j=0; j<65536; ++j)
@@ -932,7 +932,7 @@ int validation_gamma(int argc, char **argv)
       }
 
       if (!silent)
-         printf("gamma %f: maximum 16 bit error %f\n", g, maxerr);
+         printf("gamma %f: maximum 16-bit error %f\n", g, maxerr);
    }
 
    return 0;

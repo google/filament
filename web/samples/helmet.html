@@ -52,6 +52,12 @@ class App {
 
         indirectLight.setIntensity(iblIntensity);
 
+        // Rotate the IBL so that a bright light is behind the helmet, to show off bloom.
+        const mat = [];
+        const radians = 3.14;
+        mat3.fromRotation(mat, radians, [0, 1, 0]);
+        indirectLight.setRotation(mat);
+
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
 
@@ -106,6 +112,9 @@ class App {
         this.renderer = engine.createRenderer();
         this.view = engine.createView();
         this.view.setVignetteOptions({ midPoint: 0.8, enabled: true });
+
+        this.view.setBloomOptions({ stength: 0.2, enabled: true });
+
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
         this.view.setColorGrading(colorGrading);

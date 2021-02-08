@@ -16,8 +16,15 @@
 
 namespace draco {
 
-BoundingBox::BoundingBox(const Vector3f &min_point_in,
-                         const Vector3f &max_point_in)
-    : min_point_(min_point_in), max_point_(max_point_in) {}
+BoundingBox::BoundingBox()
+    : BoundingBox(Vector3f(std::numeric_limits<float>::max(),
+                           std::numeric_limits<float>::max(),
+                           std::numeric_limits<float>::max()),
+                  Vector3f(-std::numeric_limits<float>::max(),
+                           -std::numeric_limits<float>::max(),
+                           -std::numeric_limits<float>::max())) {}
+
+BoundingBox::BoundingBox(const Vector3f &min_point, const Vector3f &max_point)
+    : min_point_(min_point), max_point_(max_point) {}
 
 }  // namespace draco

@@ -31,7 +31,7 @@
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #endif
 
@@ -1518,9 +1518,15 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
         case TextureFormat::RGBA16F:
             return gl.ext.EXT_color_buffer_float || gl.ext.EXT_color_buffer_half_float;
 
-        // RGB16F is only supported with EXT_color_buffer_half_float
+        // RGB16F is only supported with EXT_color_buffer_half_float, however
+        // some WebGL implementations do not consider this extension to be sufficient:
+        // https://bugs.chromium.org/p/chromium/issues/detail?id=941671#c10
         case TextureFormat::RGB16F:
+        #if defined(__EMSCRIPTEN__)
+            return false;
+        #else
             return gl.ext.EXT_color_buffer_half_float;
+        #endif
 
         // Float formats from GL_EXT_color_buffer_float
         case TextureFormat::R32F:
@@ -1544,6 +1550,10 @@ bool OpenGLDriver::isFrameBufferFetchSupported() {
 
 bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
+}
+
+bool OpenGLDriver::areFeedbackLoopsSupported() {
+    return !mContext.bugs.disable_feedback_loops;
 }
 
 math::float2 OpenGLDriver::getClipSpaceParams() {

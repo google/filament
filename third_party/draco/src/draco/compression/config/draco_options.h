@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_SRC_DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_
-#define DRACO_SRC_DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_
+#ifndef DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_
+#define DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_
 
 #include <map>
 #include <memory>
@@ -246,4 +246,4 @@ void DracoOptions<AttributeKeyT>::SetAttributeOptions(
 
 }  // namespace draco
 
-#endif  // DRACO_SRC_DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_
+#endif  // DRACO_COMPRESSION_CONFIG_DRACO_OPTIONS_H_

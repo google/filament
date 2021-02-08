@@ -29,6 +29,7 @@
     - 1.04:  fixed DOS/OS2/Win32 detection, including partial Cygwin fix
               (see http://home.att.net/~perlspinr/diffs/GregBook_cygwin.diff)
     - 2.00:  dual-licensed (added GNU GPL)
+    - 2.01:  check for integer overflow (Glenn R-P)
 
         [REPORTED BUG (win32 only):  "contrib/gregbook/wpng.c - cmd line
          dose not work!  In order to do something useful I needed to redirect
@@ -38,7 +39,7 @@
 
   ---------------------------------------------------------------------------
 
-      Copyright (c) 1998-2007 Greg Roelofs.  All rights reserved.
+      Copyright (c) 1998-2007, 2017 Greg Roelofs.  All rights reserved.
 
       This software is provided "as is," without warranty of any kind,
       express or implied.  In no event shall the author or contributors
@@ -702,7 +703,18 @@ int main(int argc, char **argv)
     if (wpng_info.interlaced) {
         long i;
         ulg bytes;
-        ulg image_bytes = rowbytes * wpng_info.height;   /* overflow? */
+        ulg image_bytes;
+
+        /* Guard against integer overflow */
+        if (wpng_info_height > ((size_t)(-1)/rowbytes ||
+            wpng_info_height > ((ulg)(-1)/rowbytes) {
+            fprintf(stderr, PROGNAME ":  image_data buffer too large\n");
+            writepng_cleanup(&wpng_info);
+            wpng_cleanup();
+            exit(5);
+        }
+
+        image_bytes = rowbytes * wpng_info.height;
 
         wpng_info.image_data = (uch *)malloc(image_bytes);
         wpng_info.row_pointers = (uch **)malloc(wpng_info.height*sizeof(uch *));

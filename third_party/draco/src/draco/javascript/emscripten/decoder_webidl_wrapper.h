@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#ifndef DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
-#define DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
+#ifndef DRACO_JAVASCRIPT_EMSCRIPTEN_DECODER_WEBIDL_WRAPPER_H_
+#define DRACO_JAVASCRIPT_EMSCRIPTEN_DECODER_WEBIDL_WRAPPER_H_
 
 #include <vector>
 
@@ -103,16 +103,28 @@ class Decoder {
 
   // Returns the geometry type stored in the |in_buffer|. Return values can be
   // INVALID_GEOMETRY_TYPE, POINT_CLOUD, or MESH.
-  draco_EncodedGeometryType GetEncodedGeometryType(
+  // Deprecated: Use decoder.GetEncodedGeometryType(array), where |array| is
+  // an Int8Array containing the encoded data.
+  static draco_EncodedGeometryType GetEncodedGeometryType_Deprecated(
       draco::DecoderBuffer *in_buffer);
 
   // Decodes a point cloud from the provided buffer.
+  // Deprecated: Use DecodeArrayToPointCloud.
   const draco::Status *DecodeBufferToPointCloud(
       draco::DecoderBuffer *in_buffer, draco::PointCloud *out_point_cloud);
 
+  // Decodes a point cloud from the provided array.
+  const draco::Status *DecodeArrayToPointCloud(
+      const char *data, size_t data_size, draco::PointCloud *out_point_cloud);
+
   // Decodes a triangular mesh from the provided buffer.
+  // Deprecated: Use DecodeArrayToMesh.
   const draco::Status *DecodeBufferToMesh(draco::DecoderBuffer *in_buffer,
                                           draco::Mesh *out_mesh);
+
+  // Decodes a mesh from the provided array.
+  const draco::Status *DecodeArrayToMesh(const char *data, size_t data_size,
+                                         draco::Mesh *out_mesh);
 
   // Returns an attribute id for the first attribute of a given type.
   long GetAttributeId(const draco::PointCloud &pc,
@@ -282,7 +294,8 @@ class Decoder {
     if (data_size != out_size) {
       return false;
     }
-    if (pa.data_type() == type && pa.is_mapping_identity()) {
+    const bool requested_type_matches = pa.data_type() == type;
+    if (requested_type_matches && pa.is_mapping_identity()) {
       // Copy values directly to the output vector.
       const auto ptr = pa.GetAddress(draco::AttributeValueIndex(0));
       ::memcpy(out_values, ptr, data_size);
@@ -296,8 +309,12 @@ class Decoder {
     T *const typed_output = reinterpret_cast<T *>(out_values);
     for (draco::PointIndex i(0); i < num_points; ++i) {
       const draco::AttributeValueIndex val_index = pa.mapped_index(i);
-      if (!pa.ConvertValue<T>(val_index, values.data())) {
-        return false;
+      if (requested_type_matches) {
+        pa.GetValue(val_index, values.data());
+      } else {
+        if (!pa.ConvertValue<T>(val_index, values.data())) {
+          return false;
+        }
       }
       for (int j = 0; j < components; ++j) {
         typed_output[entry_id++] = values[j];
@@ -310,4 +327,4 @@ class Decoder {
   draco::Status last_status_;
 };
 
-#endif  // DRACO_JAVASCRIPT_EMSCRITPEN_DECODER_WEBIDL_WRAPPER_H_
+#endif  // DRACO_JAVASCRIPT_EMSCRIPTEN_DECODER_WEBIDL_WRAPPER_H_

@@ -25,6 +25,16 @@ struct PixelParams {
     float clearCoatRoughness;
 #endif
 
+#if defined(MATERIAL_HAS_SHEEN_COLOR)
+    vec3  sheenColor;
+#if !defined(SHADING_MODEL_CLOTH)
+    float sheenRoughness;
+    float sheenPerceptualRoughness;
+    float sheenScaling;
+    float sheenDFG;
+#endif
+#endif
+
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3  anisotropicT;
     vec3  anisotropicB;

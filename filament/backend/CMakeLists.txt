@@ -297,10 +297,12 @@ if (APPLE)
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
+        test/test_FeedbackLoops.cpp
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
-        test/test_MRT.cpp)
+        test/test_MRT.cpp
+        )
 
     target_link_libraries(backend_test PRIVATE
         backend

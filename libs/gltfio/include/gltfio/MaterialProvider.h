@@ -75,9 +75,15 @@ struct alignas(4) MaterialKey {
     uint8_t normalUV;
     bool hasTransmissionTexture : 1;
     uint8_t transmissionUV : 7;
+    // -- 32 bit boundary --
+    bool hasSheenColorTexture : 1;
+    uint8_t sheenColorUV : 7;
+    bool hasSheenRoughnessTexture : 1;
+    uint8_t sheenRoughnessUV : 7;
+    bool hasSheen : 1;
 };
 
-static_assert(sizeof(MaterialKey) == 12, "MaterialKey has unexpected padding.");
+static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected padding.");
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 
@@ -108,6 +114,11 @@ enum MaterialSource {
  * - The \c UbershaderLoader implementation uses a small number of pre-built materials with complex
  *   fragment shaders, but does not require any run time work or usage of filamat. See
  *   createUbershaderLoader().
+ *
+ * Both implementations of MaterialProvider maintain a small cache of materials which must be
+ * explicitly freed using destroyMaterials(). These materials are not freed automatically when the
+ * MaterialProvider is destroyed, which allows clients to take ownership if desired.
+ *
  */
 class MaterialProvider {
 public:
@@ -156,14 +167,23 @@ void processShaderString(std::string* shader, const UvMap& uvmap,
 /**
  * Creates a material provider that builds materials on the fly, composing GLSL at run time.
  *
+ * @param optimizeShaders Optimizes shaders, but at significant cost to construction time.
+ * @return New material provider that can build materials at run time.
+ *
  * Requires \c libfilamat to be linked in. Not available in \c libgltfio_core.
+ *
+ * @see createUbershaderLoader
  */
-MaterialProvider* createMaterialGenerator(filament::Engine* engine);
+MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimizeShaders = false);
 
 /**
  * Creates a material provider that loads a small set of pre-built materials.
  *
+ * @return New material provider that can quickly load a material from a cache.
+ *
  * Requires \c libgltfio_resources to be linked in.
+ *
+ * @see createMaterialGenerator
  */
 MaterialProvider* createUbershaderLoader(filament::Engine* engine);
 

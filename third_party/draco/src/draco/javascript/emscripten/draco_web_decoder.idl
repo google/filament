@@ -1,5 +1,9 @@
 // Interface exposed to emscripten's WebIDL Binder.
 // http://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/WebIDL-Binder.html
+
+// Deprecated: DecoderBuffer is no longer supported and will be removed in
+//             future releases. Please refer to Decoder declaration below for
+//             new decoding functions that do not use DecoderBuffer.
 [Prefix="draco::"]
 interface DecoderBuffer {
   void DecoderBuffer();
@@ -193,11 +197,14 @@ interface MetadataQuerier {
 
 interface Decoder {
   void Decoder();
-  draco_EncodedGeometryType GetEncodedGeometryType(DecoderBuffer in_buffer);
 
-  [Const] Status DecodeBufferToPointCloud(DecoderBuffer in_buffer,
-                                          PointCloud out_point_cloud);
-  [Const] Status DecodeBufferToMesh(DecoderBuffer in_buffer, Mesh out_mesh);
+  [Const] Status DecodeArrayToPointCloud([Const] byte[] data,
+                                         unsigned long data_size,
+                                         PointCloud out_point_cloud);
+
+  [Const] Status DecodeArrayToMesh([Const] byte[] data,
+                                   unsigned long data_size,
+                                   Mesh out_mesh);
 
   long GetAttributeId([Ref, Const] PointCloud pc,
                       draco_GeometryAttribute_Type type);
@@ -262,4 +269,15 @@ interface Decoder {
                                             long out_size, VoidPtr out_values);
 
   void SkipAttributeTransform(draco_GeometryAttribute_Type att_type);
+
+  // Deprecated: Use decoder.GetEncodedGeometryType(array) instead, where
+  //             |array| is an Int8Array containing the encoded data.
+  draco_EncodedGeometryType GetEncodedGeometryType_Deprecated(
+                                DecoderBuffer in_buffer);
+
+  // Deprecated: UseDecodeArrayToPointCloud instead.
+  [Const] Status DecodeBufferToPointCloud(DecoderBuffer in_buffer,
+                                          PointCloud out_point_cloud);
+  // Deprecated: UseDecodeArrayToMesh instead.
+  [Const] Status DecodeBufferToMesh(DecoderBuffer in_buffer, Mesh out_mesh);
 };

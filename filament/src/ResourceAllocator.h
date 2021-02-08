@@ -149,7 +149,7 @@ private:
         }
     };
 
-    inline void dump() const noexcept;
+    inline void dump(bool brief = false) const noexcept;
 
     template<typename Key, typename Value, typename Hasher = Hasher<Key>>
     class AssociativeContainer {
@@ -176,8 +176,12 @@ private:
         void emplace(ARGS&&... args);
     };
 
+    using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
+
+    CacheContainer::iterator purge(CacheContainer::iterator const& pos);
+
     backend::DriverApi& mBackend;
-    AssociativeContainer<TextureKey, TextureCachePayload> mTextureCache;
+    CacheContainer mTextureCache;
     AssociativeContainer<backend::TextureHandle, TextureKey> mInUseTextures;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;

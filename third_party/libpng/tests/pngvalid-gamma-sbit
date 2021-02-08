@@ -1,2 +1,2 @@
 #!/bin/sh
-exec ./pngvalid --gamma-sbit
+exec ./pngvalid --strict --gamma-sbit

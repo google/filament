@@ -60,8 +60,13 @@ inline bool ComputeParallelogramPrediction(
     const int v_next_off = vert_next * num_components;
     const int v_prev_off = vert_prev * num_components;
     for (int c = 0; c < num_components; ++c) {
-      out_prediction[c] = (in_data[v_next_off + c] + in_data[v_prev_off + c]) -
-                          in_data[v_opp_off + c];
+      const int64_t in_data_next_off = in_data[v_next_off + c];
+      const int64_t in_data_prev_off = in_data[v_prev_off + c];
+      const int64_t in_data_opp_off = in_data[v_opp_off + c];
+      const int64_t result =
+          (in_data_next_off + in_data_prev_off) - in_data_opp_off;
+
+      out_prediction[c] = static_cast<DataTypeT>(result);
     }
     return true;
   }

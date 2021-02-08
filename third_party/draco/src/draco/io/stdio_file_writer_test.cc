@@ -9,26 +9,29 @@
 namespace draco {
 namespace {
 
+void CheckFileWriter(const std::string &data, const std::string &filename) {
+  auto writer = StdioFileWriter::Open(filename);
+  ASSERT_NE(writer, nullptr);
+  ASSERT_TRUE(writer->Write(data.data(), data.size()));
+  writer.reset();
+  std::unique_ptr<FILE, decltype(&fclose)> file(fopen(filename.c_str(), "r"),
+                                                fclose);
+  ASSERT_NE(file, nullptr);
+  std::string read_buffer(data.size(), ' ');
+  ASSERT_EQ(fread(reinterpret_cast<void *>(&read_buffer[0]), 1, data.size(),
+                  file.get()),
+            data.size());
+  ASSERT_EQ(read_buffer, data);
+}
+
 TEST(StdioFileWriterTest, FailOpen) {
   EXPECT_EQ(StdioFileWriter::Open(""), nullptr);
 }
 
 TEST(StdioFileWriterTest, BasicWrite) {
-  const char kWriteBuffer[] = "Hello";
-  const size_t kWriteLength = 5;
+  const std::string kWriteString = "Hello";
   const std::string kTempFilePath = GetTestTempFileFullPath("hello");
-  auto writer = StdioFileWriter::Open(kTempFilePath);
-  ASSERT_NE(writer, nullptr);
-  ASSERT_TRUE(writer->Write(kWriteBuffer, kWriteLength));
-  writer.reset();
-  std::unique_ptr<FILE, decltype(&fclose)> file(
-      fopen(kTempFilePath.c_str(), "rb"), fclose);
-  ASSERT_NE(file, nullptr);
-  char read_buffer[kWriteLength + 1] = {0};
-  ASSERT_EQ(
-      fread(reinterpret_cast<void *>(read_buffer), 1, kWriteLength, file.get()),
-      kWriteLength);
-  ASSERT_STREQ(read_buffer, kWriteBuffer);
+  CheckFileWriter(kWriteString, kTempFilePath);
 }
 
 }  // namespace

@@ -164,15 +164,43 @@ static bool validateAnimation(const cgltf_animation& anim) {
     return true;
 }
 
+static void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst) {
+    cgltf_animation_channel* srcChannels = srcAnim.channels;
+    cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+    const Sampler* samplers = dst.samplers.data();
+    for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
+        const cgltf_animation_channel& srcChannel = srcChannels[j];
+        auto iter = nodeMap.find(srcChannel.target_node);
+        if (iter == nodeMap.end()) {
+            slog.w << "No scene root contains node ";
+            if (srcChannel.target_node->name) {
+                slog.w << "'" << srcChannel.target_node->name << "' ";
+            }
+            slog.w << "for animation ";
+            if (srcAnim.name) {
+                slog.w << "'" << srcAnim.name << "' ";
+            }
+            slog.w << "in channel " << j << io::endl;
+            continue;
+        }
+        utils::Entity targetEntity = iter.value();
+        Channel dstChannel;
+        dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
+        dstChannel.targetEntity = targetEntity;
+        setTransformType(srcChannel, dstChannel);
+        dst.channels.push_back(dstChannel);
+    }
+}
+
 Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
-    assert(asset->mResourcesLoaded && !asset->mIsReleased);
+    assert(asset->mResourcesLoaded && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
 
-    const cgltf_data* srcAsset = asset->mSourceAsset;
+    const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& anim = srcAnims[i];
@@ -181,21 +209,6 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
             return;
         }
     }
-
-    auto addChannels = [](const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst) {
-        cgltf_animation_channel* srcChannels = srcAnim.channels;
-        cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
-        const Sampler* samplers = dst.samplers.data();
-        for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
-            const cgltf_animation_channel& srcChannel = srcChannels[j];
-            utils::Entity targetEntity = nodeMap.at(srcChannel.target_node);
-            Channel dstChannel;
-            dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
-            dstChannel.targetEntity = targetEntity;
-            setTransformType(srcChannel, dstChannel);
-            dst.channels.push_back(dstChannel);
-        }
-    };
 
     // Loop over the glTF animation definitions.
     mImpl->animations.resize(srcAsset->animations_count);
@@ -230,6 +243,16 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
                 addChannels(instance->nodeMap, srcAnim, dstAnim);
             }
         }
+    }
+}
+
+void Animator::addInstance(FFilamentInstance* instance) {
+    const cgltf_data* srcAsset = mImpl->asset->mSourceAsset->hierarchy;
+    const cgltf_animation* srcAnims = srcAsset->animations;
+    for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
+        const cgltf_animation& srcAnim = srcAnims[i];
+        Animation& dstAnim = mImpl->animations[i];
+        addChannels(instance->nodeMap, srcAnim, dstAnim);
     }
 }
 

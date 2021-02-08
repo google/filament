@@ -49,11 +49,10 @@ endif()
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC z)
+# disable ARM neon optimizations, let the compiler do it if it can
+target_compile_definitions(${TARGET} PRIVATE PNG_ARM_NEON_OPT=0)
 
-if (LINUX_AARCH64)
-    target_compile_definitions(${TARGET} PRIVATE PNG_ARM_NEON_OPT=0)
-endif()
+target_link_libraries(${TARGET} PUBLIC z)
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

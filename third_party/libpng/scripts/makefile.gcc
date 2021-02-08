@@ -1,6 +1,6 @@
 # makefile for libpng using gcc (generic, static library)
 # Copyright (C) 2008, 2014 Glenn Randers-Pehrson
-# Copyright (C) 2000 Cosmin Truta
+# Copyright (C) 2000, 2014, 2019 Cosmin Truta
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
 # This code is released under the libpng license.
@@ -24,7 +24,7 @@ WARNMORE = -Wwrite-strings -Wpointer-arith -Wshadow \
 	-Wstrict-prototypes -Wmissing-prototypes # -Wconversion
 CPPFLAGS = -I$(ZLIBINC) # -DPNG_DEBUG=5
 CFLAGS = -W -Wall -O2 # $(WARNMORE) -g
-LDFLAGS =
+LDFLAGS = -L$(ZLIBLIB)
 LIBS = -lz -lm
 
 # File extensions
@@ -63,7 +63,7 @@ test: pngtest$(EXEEXT)
 	./pngtest$(EXEEXT)
 
 pngtest$(EXEEXT): pngtest.o libpng.a
-	$(LD) $(LDFLAGS) -L$(ZLIBLIB) -o $@ pngtest.o libpng.a $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ pngtest.o libpng.a $(LIBS)
 
 clean:
 	$(RM_F) *.o libpng.a pngtest$(EXEEXT) pngout.png pnglibconf.h

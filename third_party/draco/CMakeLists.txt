@@ -1,25 +1,18 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 # Draco requires C++11.
 set(CMAKE_CXX_STANDARD 11)
 project(draco C CXX)
 
-if(NOT CMAKE_BUILD_TYPE AND NOT IGNORE_EMPTY_BUILD_TYPE)
-  if(CMAKE_CURRENT_LIST_FILE STREQUAL CMAKE_PARENT_LIST_FILE)
-    if(NOT MSVC AND NOT XCODE)
-      message(INFO "|Draco: ignoring empty build type, forcing release mode.")
-      set(CMAKE_BUILD_TYPE
-          "Release"
-          CACHE STRING "Draco overridden build type" FORCE)
-    endif()
-  endif()
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
 endif()
 
 set(draco_root "${CMAKE_CURRENT_SOURCE_DIR}")
 set(draco_src_root "${draco_root}/src/draco")
-set(draco_build_dir "${CMAKE_BINARY_DIR}")
+set(draco_build "${CMAKE_BINARY_DIR}")
 
-if("${draco_root}" STREQUAL "${draco_build_dir}")
+if("${draco_root}" STREQUAL "${draco_build}")
   message(
     FATAL_ERROR "Building from within the Draco source tree is not supported.\n"
                 "Hint: Run these commands\n"
@@ -29,289 +22,181 @@ if("${draco_root}" STREQUAL "${draco_build_dir}")
 endif()
 
 include(CMakePackageConfigHelpers)
-include("${draco_root}/cmake/compiler_flags.cmake")
-include("${draco_root}/cmake/draco_features.cmake")
+include(FindPythonInterp)
+include("${draco_root}/cmake/draco_build_definitions.cmake")
+include("${draco_root}/cmake/draco_cpu_detection.cmake")
+include("${draco_root}/cmake/draco_emscripten.cmake")
+include("${draco_root}/cmake/draco_flags.cmake")
+include("${draco_root}/cmake/draco_helpers.cmake")
+include("${draco_root}/cmake/draco_install.cmake")
+include("${draco_root}/cmake/draco_intrinsics.cmake")
+include("${draco_root}/cmake/draco_options.cmake")
+include("${draco_root}/cmake/draco_sanitizer.cmake")
+include("${draco_root}/cmake/draco_targets.cmake")
 include("${draco_root}/cmake/draco_tests.cmake")
-include("${draco_root}/cmake/sanitizers.cmake")
-include("${draco_root}/cmake/util.cmake")
+include("${draco_root}/cmake/draco_variables.cmake")
 
-option(ENABLE_CCACHE "Enable ccache support." OFF)
-option(ENABLE_DISTCC "Enable distcc support." OFF)
-option(ENABLE_EXTRA_SPEED "" OFF)
-option(ENABLE_EXTRA_WARNINGS "" OFF)
-option(ENABLE_GOMA "Enable goma support." OFF)
-option(ENABLE_JS_GLUE "Enable JS Glue and JS targets when using Emscripten." ON)
-option(ENABLE_MESH_COMPRESSION "" ON)
-option(ENABLE_POINT_CLOUD_COMPRESSION "" ON)
-option(ENABLE_PREDICTIVE_EDGEBREAKER "" ON)
-option(ENABLE_STANDARD_EDGEBREAKER "" ON)
-option(ENABLE_BACKWARDS_COMPATIBILITY "" ON)
-option(ENABLE_DECODER_ATTRIBUTE_DEDUPLICATION "" OFF)
-option(ENABLE_TESTS "Enables tests." OFF)
-option(ENABLE_WASM "" OFF)
-option(ENABLE_WERROR "" OFF)
-option(ENABLE_WEXTRA "" OFF)
-option(IGNORE_EMPTY_BUILD_TYPE "" OFF)
-option(BUILD_UNITY_PLUGIN "Build plugin library for Unity." OFF)
-option(BUILD_ANIMATION_ENCODING "" OFF)
-option(BUILD_FOR_GLTF "" OFF)
-option(BUILD_MAYA_PLUGIN "Build plugin library for Maya." OFF)
-option(BUILD_USD_PLUGIN "Build plugin library for USD." OFF)
+# C++ and linker flags.
+draco_track_configuration_variable(DRACO_CXX_FLAGS)
+draco_track_configuration_variable(DRACO_EXE_LINKER_FLAGS)
 
-if(BUILD_FOR_GLTF)
-  # Override settings when building for GLTF.
-  draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
-  draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
-  draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
-else()
-  if(ENABLE_POINT_CLOUD_COMPRESSION)
-    draco_enable_feature(FEATURE "DRACO_POINT_CLOUD_COMPRESSION_SUPPORTED")
-  endif()
-  if(ENABLE_MESH_COMPRESSION)
-    draco_enable_feature(FEATURE "DRACO_MESH_COMPRESSION_SUPPORTED")
-    draco_enable_feature(FEATURE "DRACO_NORMAL_ENCODING_SUPPORTED")
+# Sanitizer integration.
+draco_track_configuration_variable(DRACO_SANITIZE)
 
-    if(ENABLE_STANDARD_EDGEBREAKER)
-      draco_enable_feature(FEATURE "DRACO_STANDARD_EDGEBREAKER_SUPPORTED")
-    endif()
-    if(ENABLE_PREDICTIVE_EDGEBREAKER)
-      draco_enable_feature(FEATURE "DRACO_PREDICTIVE_EDGEBREAKER_SUPPORTED")
-    endif()
-  endif()
+# Generated source file directory.
+draco_track_configuration_variable(DRACO_GENERATED_SOURCES_DIRECTORY)
 
-  if(ENABLE_BACKWARDS_COMPATIBILITY)
-    draco_enable_feature(FEATURE "DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED")
-  endif()
+# Controls use of std::mutex and absl::Mutex in ThreadPool.
+draco_track_configuration_variable(DRACO_THREADPOOL_USE_STD_MUTEX)
+
+if(DRACO_VERBOSE)
+  draco_dump_cmake_flag_variables()
+  draco_dump_tracked_configuration_variables()
+  draco_dump_options()
 endif()
 
-# Turn on more compiler warnings.
-if(ENABLE_EXTRA_WARNINGS)
-  if(MSVC)
-    add_compiler_flag_if_supported("/W3")
-    # Disable MSVC warnings that suggest making code non-portable.
-    add_compiler_flag_if_supported("/wd4996")
-    if(ENABLE_WERROR)
-      add_compiler_flag_if_supported("/WX")
-    endif()
-  else()
-    add_compiler_flag_if_supported("-Wall")
-    add_compiler_flag_if_supported("-Wfloat-conversion")
-    add_compiler_flag_if_supported("-Wimplicit-function-declaration")
-    add_compiler_flag_if_supported("-Wpointer-arith")
-    add_compiler_flag_if_supported("-Wshadow")
-    add_compiler_flag_if_supported("-Wsign-compare")
-    add_compiler_flag_if_supported("-Wtype-limits")
-    add_compiler_flag_if_supported("-Wuninitialized")
-    add_compiler_flag_if_supported("-Wunused")
-  endif()
+# Compiler/linker flags must be lists, but come in from the environment as
+# strings. Break them up:
+if(NOT "${DRACO_CXX_FLAGS}" STREQUAL "")
+  separate_arguments(DRACO_CXX_FLAGS)
+endif()
+if(NOT "${DRACO_EXE_LINKER_FLAGS}" STREQUAL "")
+  separate_arguments(DRACO_EXE_LINKER_FLAGS)
 endif()
 
-if(ENABLE_WERROR)
-  add_compiler_flag_if_supported("-Werror")
-endif()
-if(ENABLE_WEXTRA)
-  add_compiler_flag_if_supported("-Wextra")
-endif()
-if(ENABLE_CCACHE)
-  set_compiler_launcher(ENABLE_CCACHE ccache)
-endif()
-if(ENABLE_DISTCC)
-  set_compiler_launcher(ENABLE_DISTCC distcc)
-endif()
-if(ENABLE_GOMA)
-  set_compiler_launcher(ENABLE_GOMA gomacc)
-endif()
-if(BUILD_UNITY_PLUGIN)
-  set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library for unity plugin.")
-  draco_enable_feature(FEATURE "BUILD_UNITY_PLUGIN")
-endif()
-if(BUILD_MAYA_PLUGIN)
-  set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library for maya plugin.")
-  draco_enable_feature(FEATURE "BUILD_MAYA_PLUGIN")
-endif()
-if(BUILD_USD_PLUGIN)
-  set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library for USD plugin.")
-  draco_enable_feature(FEATURE "BUILD_USD_PLUGIN")
-endif()
-
-if(WIN32 AND BUILD_SHARED_LIBS)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
-endif()
-
-if(ENABLE_EXTRA_SPEED)
-  if(MSVC)
-    # Maximum optimization in Release mode.
-    add_compile_options("$<$<CONFIG:RELEASE>:/Ox>")
-  else()
-    add_compiler_flag_if_supported("-O3")
-  endif()
-endif()
-
-# Generate a version file containing repository info.
-include(FindGit)
-find_package(Git)
-# Default the hash and description to empty strings in case git is unavailable.
-set(draco_git_hash "")
-set(draco_git_desc "")
-if(GIT_FOUND)
-  set(draco_git_dir "${draco_root}/.git")
-  if(NOT EXISTS "${draco_git_dir}")
-    set(draco_git_dir "${draco_root}/../../../.git")
-  endif()
-  if(EXISTS "${draco_git_dir}")
-    execute_process(COMMAND ${GIT_EXECUTABLE}
-                            --git-dir=${draco_git_dir} rev-parse HEAD
-                    OUTPUT_VARIABLE draco_git_hash)
-    execute_process(COMMAND ${GIT_EXECUTABLE}
-                            --git-dir=${draco_git_dir}/.git describe
-                    OUTPUT_VARIABLE draco_git_desc
-                    ERROR_QUIET)
-    # Consume newlines from Git output.
-    string(STRIP "${draco_git_hash}" draco_git_hash)
-    string(STRIP "${draco_git_desc}" draco_git_desc)
-  endif()
-endif()
-if(draco_git_hash STREQUAL "")
-  set(draco_git_desc "unknown")
-endif()
-if(draco_git_desc STREQUAL "")
-  set(draco_git_desc "unreleased")
-endif()
-
-if(EMSCRIPTEN)
-  include(FindPythonInterp)
-  if(NOT PYTHONINTERP_FOUND)
-    message(
-      FATAL_ERROR
-        "Python required for Emscripten builds, but cmake cannot find it.")
-  endif()
-  if(NOT EXISTS "$ENV{EMSCRIPTEN}")
-    message(
-      FATAL_ERROR
-        "The EMSCRIPTEN environment variable must be set. See README.md.")
-  endif()
-endif()
+draco_reset_target_lists()
+draco_setup_options()
+draco_set_build_definitions()
+draco_set_cxx_flags()
+draco_generate_features_h()
 
 # Draco source file listing variables.
-set(draco_attributes_sources
-    "${draco_src_root}/attributes/attribute_octahedron_transform.cc"
-    "${draco_src_root}/attributes/attribute_octahedron_transform.h"
-    "${draco_src_root}/attributes/attribute_quantization_transform.cc"
-    "${draco_src_root}/attributes/attribute_quantization_transform.h"
-    "${draco_src_root}/attributes/attribute_transform.cc"
-    "${draco_src_root}/attributes/attribute_transform.h"
-    "${draco_src_root}/attributes/attribute_transform_data.h"
-    "${draco_src_root}/attributes/attribute_transform_type.h"
-    "${draco_src_root}/attributes/geometry_attribute.cc"
-    "${draco_src_root}/attributes/geometry_attribute.h"
-    "${draco_src_root}/attributes/geometry_indices.h"
-    "${draco_src_root}/attributes/point_attribute.cc"
-    "${draco_src_root}/attributes/point_attribute.h")
+list(APPEND draco_attributes_sources
+            "${draco_src_root}/attributes/attribute_octahedron_transform.cc"
+            "${draco_src_root}/attributes/attribute_octahedron_transform.h"
+            "${draco_src_root}/attributes/attribute_quantization_transform.cc"
+            "${draco_src_root}/attributes/attribute_quantization_transform.h"
+            "${draco_src_root}/attributes/attribute_transform.cc"
+            "${draco_src_root}/attributes/attribute_transform.h"
+            "${draco_src_root}/attributes/attribute_transform_data.h"
+            "${draco_src_root}/attributes/attribute_transform_type.h"
+            "${draco_src_root}/attributes/geometry_attribute.cc"
+            "${draco_src_root}/attributes/geometry_attribute.h"
+            "${draco_src_root}/attributes/geometry_indices.h"
+            "${draco_src_root}/attributes/point_attribute.cc"
+            "${draco_src_root}/attributes/point_attribute.h")
 
-set(
-  draco_compression_attributes_dec_sources
-  "${draco_src_root}/compression/attributes/attributes_decoder.cc"
-  "${draco_src_root}/compression/attributes/attributes_decoder.h"
-  "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.cc"
-  "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.h"
-  "${draco_src_root}/compression/attributes/kd_tree_attributes_shared.h"
-  "${draco_src_root}/compression/attributes/mesh_attribute_indices_encoding_data.h"
-  "${draco_src_root}/compression/attributes/normal_compression_utils.h"
-  "${draco_src_root}/compression/attributes/point_d_vector.h"
-  "${draco_src_root}/compression/attributes/sequential_attribute_decoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_attribute_decoder.h"
-  "${draco_src_root}/compression/attributes/sequential_attribute_decoders_controller.cc"
-  "${draco_src_root}/compression/attributes/sequential_attribute_decoders_controller.h"
-  "${draco_src_root}/compression/attributes/sequential_integer_attribute_decoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_integer_attribute_decoder.h"
-  "${draco_src_root}/compression/attributes/sequential_normal_attribute_decoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_normal_attribute_decoder.h"
-  "${draco_src_root}/compression/attributes/sequential_quantization_attribute_decoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_quantization_attribute_decoder.h"
+list(
+  APPEND
+    draco_compression_attributes_dec_sources
+    "${draco_src_root}/compression/attributes/attributes_decoder.cc"
+    "${draco_src_root}/compression/attributes/attributes_decoder.h"
+    "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.cc"
+    "${draco_src_root}/compression/attributes/kd_tree_attributes_decoder.h"
+    "${draco_src_root}/compression/attributes/kd_tree_attributes_shared.h"
+    "${draco_src_root}/compression/attributes/mesh_attribute_indices_encoding_data.h"
+    "${draco_src_root}/compression/attributes/normal_compression_utils.h"
+    "${draco_src_root}/compression/attributes/point_d_vector.h"
+    "${draco_src_root}/compression/attributes/sequential_attribute_decoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_attribute_decoder.h"
+    "${draco_src_root}/compression/attributes/sequential_attribute_decoders_controller.cc"
+    "${draco_src_root}/compression/attributes/sequential_attribute_decoders_controller.h"
+    "${draco_src_root}/compression/attributes/sequential_integer_attribute_decoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_integer_attribute_decoder.h"
+    "${draco_src_root}/compression/attributes/sequential_normal_attribute_decoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_normal_attribute_decoder.h"
+    "${draco_src_root}/compression/attributes/sequential_quantization_attribute_decoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_quantization_attribute_decoder.h"
   )
 
-set(
-  draco_compression_attributes_enc_sources
-  "${draco_src_root}/compression/attributes/attributes_encoder.cc"
-  "${draco_src_root}/compression/attributes/attributes_encoder.h"
-  "${draco_src_root}/compression/attributes/kd_tree_attributes_encoder.cc"
-  "${draco_src_root}/compression/attributes/kd_tree_attributes_encoder.h"
-  "${draco_src_root}/compression/attributes/linear_sequencer.h"
-  "${draco_src_root}/compression/attributes/points_sequencer.h"
-  "${draco_src_root}/compression/attributes/sequential_attribute_encoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_attribute_encoder.h"
-  "${draco_src_root}/compression/attributes/sequential_attribute_encoders_controller.cc"
-  "${draco_src_root}/compression/attributes/sequential_attribute_encoders_controller.h"
-  "${draco_src_root}/compression/attributes/sequential_integer_attribute_encoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_integer_attribute_encoder.h"
-  "${draco_src_root}/compression/attributes/sequential_normal_attribute_encoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_normal_attribute_encoder.h"
-  "${draco_src_root}/compression/attributes/sequential_quantization_attribute_encoder.cc"
-  "${draco_src_root}/compression/attributes/sequential_quantization_attribute_encoder.h"
+list(
+  APPEND
+    draco_compression_attributes_enc_sources
+    "${draco_src_root}/compression/attributes/attributes_encoder.cc"
+    "${draco_src_root}/compression/attributes/attributes_encoder.h"
+    "${draco_src_root}/compression/attributes/kd_tree_attributes_encoder.cc"
+    "${draco_src_root}/compression/attributes/kd_tree_attributes_encoder.h"
+    "${draco_src_root}/compression/attributes/linear_sequencer.h"
+    "${draco_src_root}/compression/attributes/points_sequencer.h"
+    "${draco_src_root}/compression/attributes/sequential_attribute_encoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_attribute_encoder.h"
+    "${draco_src_root}/compression/attributes/sequential_attribute_encoders_controller.cc"
+    "${draco_src_root}/compression/attributes/sequential_attribute_encoders_controller.h"
+    "${draco_src_root}/compression/attributes/sequential_integer_attribute_encoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_integer_attribute_encoder.h"
+    "${draco_src_root}/compression/attributes/sequential_normal_attribute_encoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_normal_attribute_encoder.h"
+    "${draco_src_root}/compression/attributes/sequential_quantization_attribute_encoder.cc"
+    "${draco_src_root}/compression/attributes/sequential_quantization_attribute_encoder.h"
   )
 
-set(
-  draco_compression_attributes_pred_schemes_dec_sources
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_shared.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_data.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_area.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_multi_parallelogram_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_predictor.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder_factory.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder_interface.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_delta_decoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_factory.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_interface.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_decoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_transform_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_decoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_transform_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_decoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_transform_base.h"
+
+list(
+  APPEND
+    draco_compression_attributes_pred_schemes_dec_sources
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_shared.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_data.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_area.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_multi_parallelogram_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_predictor.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder_factory.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoder_interface.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_decoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_delta_decoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_factory.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_interface.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_decoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_transform_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_decoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_transform_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_decoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_transform_base.h"
   )
 
-set(
-  draco_compression_attributes_pred_schemes_enc_sources
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_shared.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_data.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_area.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_multi_parallelogram_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_predictor.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_delta_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_factory.cc"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_factory.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_interface.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_factory.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_interface.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_encoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_transform_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_encoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_transform_base.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_encoding_transform.h"
-  "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_transform_base.h"
+list(
+  APPEND
+    draco_compression_attributes_pred_schemes_enc_sources
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_constrained_multi_parallelogram_shared.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_data.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_area.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_geometric_normal_predictor_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_multi_parallelogram_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/mesh_prediction_scheme_tex_coords_portable_predictor.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_delta_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_factory.cc"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_factory.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoder_interface.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_encoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_factory.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_interface.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_encoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_canonicalized_transform_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_encoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_normal_octahedron_transform_base.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_encoding_transform.h"
+    "${draco_src_root}/compression/attributes/prediction_schemes/prediction_scheme_wrap_transform_base.h"
   )
 
-set(draco_compression_bit_coders_sources
+list(
+  APPEND
+    draco_compression_bit_coders_sources
     "${draco_src_root}/compression/bit_coders/adaptive_rans_bit_coding_shared.h"
     "${draco_src_root}/compression/bit_coders/adaptive_rans_bit_decoder.cc"
     "${draco_src_root}/compression/bit_coders/adaptive_rans_bit_decoder.h"
@@ -332,793 +217,742 @@ set(draco_compression_bit_coders_sources
     "${draco_src_root}/compression/bit_coders/symbol_bit_encoder.cc"
     "${draco_src_root}/compression/bit_coders/symbol_bit_encoder.h")
 
-set(draco_enc_config_sources
-    "${draco_src_root}/compression/config/compression_shared.h"
-    "${draco_src_root}/compression/config/draco_options.h"
-    "${draco_src_root}/compression/config/encoder_options.h"
-    "${draco_src_root}/compression/config/encoding_features.h")
+list(APPEND draco_enc_config_sources
+            "${draco_src_root}/compression/config/compression_shared.h"
+            "${draco_src_root}/compression/config/draco_options.h"
+            "${draco_src_root}/compression/config/encoder_options.h"
+            "${draco_src_root}/compression/config/encoding_features.h")
 
-set(draco_dec_config_sources
-    "${draco_src_root}/compression/config/compression_shared.h"
-    "${draco_src_root}/compression/config/decoder_options.h"
-    "${draco_src_root}/compression/config/draco_options.h")
+list(APPEND draco_dec_config_sources
+            "${draco_src_root}/compression/config/compression_shared.h"
+            "${draco_src_root}/compression/config/decoder_options.h"
+            "${draco_src_root}/compression/config/draco_options.h")
 
-set(draco_compression_decode_sources "${draco_src_root}/compression/decode.cc"
-                                     "${draco_src_root}/compression/decode.h")
+list(APPEND draco_compression_decode_sources
+            "${draco_src_root}/compression/decode.cc"
+            "${draco_src_root}/compression/decode.h")
 
-set(draco_compression_encode_sources
-    "${draco_src_root}/compression/encode.cc"
-    "${draco_src_root}/compression/encode.h"
-    "${draco_src_root}/compression/encode_base.h"
-    "${draco_src_root}/compression/expert_encode.cc"
-    "${draco_src_root}/compression/expert_encode.h")
+list(APPEND draco_compression_encode_sources
+            "${draco_src_root}/compression/encode.cc"
+            "${draco_src_root}/compression/encode.h"
+            "${draco_src_root}/compression/encode_base.h"
+            "${draco_src_root}/compression/expert_encode.cc"
+            "${draco_src_root}/compression/expert_encode.h")
 
-set(
-  draco_compression_mesh_traverser_sources
-  "${draco_src_root}/compression/mesh/traverser/depth_first_traverser.h"
-  "${draco_src_root}/compression/mesh/traverser/max_prediction_degree_traverser.h"
-  "${draco_src_root}/compression/mesh/traverser/mesh_attribute_indices_encoding_observer.h"
-  "${draco_src_root}/compression/mesh/traverser/mesh_traversal_sequencer.h"
-  "${draco_src_root}/compression/mesh/traverser/traverser_base.h")
+list(
+  APPEND
+    draco_compression_mesh_traverser_sources
+    "${draco_src_root}/compression/mesh/traverser/depth_first_traverser.h"
+    "${draco_src_root}/compression/mesh/traverser/max_prediction_degree_traverser.h"
+    "${draco_src_root}/compression/mesh/traverser/mesh_attribute_indices_encoding_observer.h"
+    "${draco_src_root}/compression/mesh/traverser/mesh_traversal_sequencer.h"
+    "${draco_src_root}/compression/mesh/traverser/traverser_base.h")
 
-set(
-  draco_compression_mesh_dec_sources
-  "${draco_src_root}/compression/mesh/mesh_decoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_decoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl.cc"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl_interface.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_shared.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_decoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_predictive_decoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_valence_decoder.h"
-  "${draco_src_root}/compression/mesh/mesh_sequential_decoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_sequential_decoder.h")
+list(
+  APPEND
+    draco_compression_mesh_dec_sources
+    "${draco_src_root}/compression/mesh/mesh_decoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_decoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl.cc"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_decoder_impl_interface.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_shared.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_decoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_predictive_decoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_valence_decoder.h"
+    "${draco_src_root}/compression/mesh/mesh_sequential_decoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_sequential_decoder.h")
 
-set(
-  draco_compression_mesh_enc_sources
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl.cc"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl_interface.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_shared.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_encoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_predictive_encoder.h"
-  "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_valence_encoder.h"
-  "${draco_src_root}/compression/mesh/mesh_encoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_encoder.h"
-  "${draco_src_root}/compression/mesh/mesh_sequential_encoder.cc"
-  "${draco_src_root}/compression/mesh/mesh_sequential_encoder.h")
+list(
+  APPEND
+    draco_compression_mesh_enc_sources
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl.cc"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_encoder_impl_interface.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_shared.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_encoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_predictive_encoder.h"
+    "${draco_src_root}/compression/mesh/mesh_edgebreaker_traversal_valence_encoder.h"
+    "${draco_src_root}/compression/mesh/mesh_encoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_encoder.h"
+    "${draco_src_root}/compression/mesh/mesh_sequential_encoder.cc"
+    "${draco_src_root}/compression/mesh/mesh_sequential_encoder.h")
 
-set(
-  draco_compression_point_cloud_dec_sources
-  "${draco_src_root}/compression/point_cloud/point_cloud_decoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_decoder.h"
-  "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_decoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_decoder.h"
-  "${draco_src_root}/compression/point_cloud/point_cloud_sequential_decoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_sequential_decoder.h")
-
-set(
-  draco_compression_point_cloud_enc_sources
-  "${draco_src_root}/compression/point_cloud/point_cloud_encoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_encoder.h"
-  "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_encoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_encoder.h"
-  "${draco_src_root}/compression/point_cloud/point_cloud_sequential_encoder.cc"
-  "${draco_src_root}/compression/point_cloud/point_cloud_sequential_encoder.h")
-
-set(draco_compression_entropy_sources
-    "${draco_src_root}/compression/entropy/ans.h"
-    "${draco_src_root}/compression/entropy/rans_symbol_coding.h"
-    "${draco_src_root}/compression/entropy/rans_symbol_decoder.h"
-    "${draco_src_root}/compression/entropy/rans_symbol_encoder.h"
-    "${draco_src_root}/compression/entropy/shannon_entropy.cc"
-    "${draco_src_root}/compression/entropy/shannon_entropy.h"
-    "${draco_src_root}/compression/entropy/symbol_decoding.cc"
-    "${draco_src_root}/compression/entropy/symbol_decoding.h"
-    "${draco_src_root}/compression/entropy/symbol_encoding.cc"
-    "${draco_src_root}/compression/entropy/symbol_encoding.h")
-
-set(draco_core_sources
-    "${draco_src_root}/core/bit_utils.cc"
-    "${draco_src_root}/core/bit_utils.h"
-    "${draco_src_root}/core/bounding_box.cc"
-    "${draco_src_root}/core/bounding_box.h"
-    "${draco_src_root}/core/cycle_timer.cc"
-    "${draco_src_root}/core/cycle_timer.h"
-    "${draco_src_root}/core/data_buffer.cc"
-    "${draco_src_root}/core/data_buffer.h"
-    "${draco_src_root}/core/decoder_buffer.cc"
-    "${draco_src_root}/core/decoder_buffer.h"
-    "${draco_src_root}/core/divide.cc"
-    "${draco_src_root}/core/divide.h"
-    "${draco_src_root}/core/draco_index_type.h"
-    "${draco_src_root}/core/draco_index_type_vector.h"
-    "${draco_src_root}/core/draco_types.cc"
-    "${draco_src_root}/core/draco_types.h"
-    "${draco_src_root}/core/encoder_buffer.cc"
-    "${draco_src_root}/core/encoder_buffer.h"
-    "${draco_src_root}/core/hash_utils.cc"
-    "${draco_src_root}/core/hash_utils.h"
-    "${draco_src_root}/core/macros.h"
-    "${draco_src_root}/core/math_utils.h"
-    "${draco_src_root}/core/options.cc"
-    "${draco_src_root}/core/options.h"
-    "${draco_src_root}/core/quantization_utils.cc"
-    "${draco_src_root}/core/quantization_utils.h"
-    "${draco_src_root}/core/status.h"
-    "${draco_src_root}/core/status_or.h"
-    "${draco_src_root}/core/varint_decoding.h"
-    "${draco_src_root}/core/varint_encoding.h"
-    "${draco_src_root}/core/vector_d.h")
-
-set(draco_io_sources
-    "${draco_src_root}/io/file_reader_factory.cc"
-    "${draco_src_root}/io/file_reader_factory.h"
-    "${draco_src_root}/io/file_reader_interface.h"
-    "${draco_src_root}/io/file_utils.cc"
-    "${draco_src_root}/io/file_utils.h"
-    "${draco_src_root}/io/file_writer_factory.cc"
-    "${draco_src_root}/io/file_writer_factory.h"
-    "${draco_src_root}/io/file_writer_interface.h"
-    "${draco_src_root}/io/mesh_io.cc"
-    "${draco_src_root}/io/mesh_io.h"
-    "${draco_src_root}/io/obj_decoder.cc"
-    "${draco_src_root}/io/obj_decoder.h"
-    "${draco_src_root}/io/obj_encoder.cc"
-    "${draco_src_root}/io/obj_encoder.h"
-    "${draco_src_root}/io/parser_utils.cc"
-    "${draco_src_root}/io/parser_utils.h"
-    "${draco_src_root}/io/ply_decoder.cc"
-    "${draco_src_root}/io/ply_decoder.h"
-    "${draco_src_root}/io/ply_encoder.cc"
-    "${draco_src_root}/io/ply_encoder.h"
-    "${draco_src_root}/io/ply_property_reader.h"
-    "${draco_src_root}/io/ply_property_writer.h"
-    "${draco_src_root}/io/ply_reader.cc"
-    "${draco_src_root}/io/ply_reader.h"
-    "${draco_src_root}/io/point_cloud_io.cc"
-    "${draco_src_root}/io/point_cloud_io.h"
-    "${draco_src_root}/io/stdio_file_reader.cc"
-    "${draco_src_root}/io/stdio_file_reader.h"
-    "${draco_src_root}/io/stdio_file_writer.cc"
-    "${draco_src_root}/io/stdio_file_writer.h")
-
-set(draco_mesh_sources
-    "${draco_src_root}/mesh/corner_table.cc"
-    "${draco_src_root}/mesh/corner_table.h"
-    "${draco_src_root}/mesh/corner_table_iterators.h"
-    "${draco_src_root}/mesh/mesh.cc"
-    "${draco_src_root}/mesh/mesh.h"
-    "${draco_src_root}/mesh/mesh_are_equivalent.cc"
-    "${draco_src_root}/mesh/mesh_are_equivalent.h"
-    "${draco_src_root}/mesh/mesh_attribute_corner_table.cc"
-    "${draco_src_root}/mesh/mesh_attribute_corner_table.h"
-    "${draco_src_root}/mesh/mesh_cleanup.cc"
-    "${draco_src_root}/mesh/mesh_cleanup.h"
-    "${draco_src_root}/mesh/mesh_misc_functions.cc"
-    "${draco_src_root}/mesh/mesh_misc_functions.h"
-    "${draco_src_root}/mesh/mesh_stripifier.cc"
-    "${draco_src_root}/mesh/mesh_stripifier.h"
-    "${draco_src_root}/mesh/triangle_soup_mesh_builder.cc"
-    "${draco_src_root}/mesh/triangle_soup_mesh_builder.h"
-    "${draco_src_root}/mesh/valence_cache.h")
-
-set(draco_point_cloud_sources
-    "${draco_src_root}/point_cloud/point_cloud.cc"
-    "${draco_src_root}/point_cloud/point_cloud.h"
-    "${draco_src_root}/point_cloud/point_cloud_builder.cc"
-    "${draco_src_root}/point_cloud/point_cloud_builder.h")
-
-set(
-  draco_points_common_sources
-  "${draco_src_root}/compression/point_cloud/algorithms/point_cloud_compression_method.h"
-  "${draco_src_root}/compression/point_cloud/algorithms/point_cloud_types.h"
-  "${draco_src_root}/compression/point_cloud/algorithms/quantize_points_3.h"
-  "${draco_src_root}/compression/point_cloud/algorithms/queuing_policy.h")
-
-set(
-  draco_points_dec_sources
-  "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_decoder.cc"
-  "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_decoder.h"
-  "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_decoder.cc"
-  "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_decoder.h"
+list(
+  APPEND
+    draco_compression_point_cloud_dec_sources
+    "${draco_src_root}/compression/point_cloud/point_cloud_decoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_decoder.h"
+    "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_decoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_decoder.h"
+    "${draco_src_root}/compression/point_cloud/point_cloud_sequential_decoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_sequential_decoder.h"
   )
 
-set(
-  draco_points_enc_sources
-  "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_encoder.cc"
-  "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_encoder.h"
-  "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_encoder.cc"
-  "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_encoder.h"
+list(
+  APPEND
+    draco_compression_point_cloud_enc_sources
+    "${draco_src_root}/compression/point_cloud/point_cloud_encoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_encoder.h"
+    "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_encoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_kd_tree_encoder.h"
+    "${draco_src_root}/compression/point_cloud/point_cloud_sequential_encoder.cc"
+    "${draco_src_root}/compression/point_cloud/point_cloud_sequential_encoder.h"
   )
 
-set(draco_metadata_sources "${draco_src_root}/metadata/geometry_metadata.cc"
-                           "${draco_src_root}/metadata/geometry_metadata.h"
-                           "${draco_src_root}/metadata/metadata.cc"
-                           "${draco_src_root}/metadata/metadata.h")
+list(APPEND draco_compression_entropy_sources
+            "${draco_src_root}/compression/entropy/ans.h"
+            "${draco_src_root}/compression/entropy/rans_symbol_coding.h"
+            "${draco_src_root}/compression/entropy/rans_symbol_decoder.h"
+            "${draco_src_root}/compression/entropy/rans_symbol_encoder.h"
+            "${draco_src_root}/compression/entropy/shannon_entropy.cc"
+            "${draco_src_root}/compression/entropy/shannon_entropy.h"
+            "${draco_src_root}/compression/entropy/symbol_decoding.cc"
+            "${draco_src_root}/compression/entropy/symbol_decoding.h"
+            "${draco_src_root}/compression/entropy/symbol_encoding.cc"
+            "${draco_src_root}/compression/entropy/symbol_encoding.h")
 
-set(draco_metadata_enc_sources "${draco_src_root}/metadata/metadata_encoder.cc"
-                               "${draco_src_root}/metadata/metadata_encoder.h")
+list(APPEND draco_core_sources
+            "${draco_src_root}/core/bit_utils.cc"
+            "${draco_src_root}/core/bit_utils.h"
+            "${draco_src_root}/core/bounding_box.cc"
+            "${draco_src_root}/core/bounding_box.h"
+            "${draco_src_root}/core/cycle_timer.cc"
+            "${draco_src_root}/core/cycle_timer.h"
+            "${draco_src_root}/core/data_buffer.cc"
+            "${draco_src_root}/core/data_buffer.h"
+            "${draco_src_root}/core/decoder_buffer.cc"
+            "${draco_src_root}/core/decoder_buffer.h"
+            "${draco_src_root}/core/divide.cc"
+            "${draco_src_root}/core/divide.h"
+            "${draco_src_root}/core/draco_index_type.h"
+            "${draco_src_root}/core/draco_index_type_vector.h"
+            "${draco_src_root}/core/draco_types.cc"
+            "${draco_src_root}/core/draco_types.h"
+            "${draco_src_root}/core/encoder_buffer.cc"
+            "${draco_src_root}/core/encoder_buffer.h"
+            "${draco_src_root}/core/hash_utils.cc"
+            "${draco_src_root}/core/hash_utils.h"
+            "${draco_src_root}/core/macros.h"
+            "${draco_src_root}/core/math_utils.h"
+            "${draco_src_root}/core/options.cc"
+            "${draco_src_root}/core/options.h"
+            "${draco_src_root}/core/quantization_utils.cc"
+            "${draco_src_root}/core/quantization_utils.h"
+            "${draco_src_root}/core/status.h"
+            "${draco_src_root}/core/status_or.h"
+            "${draco_src_root}/core/varint_decoding.h"
+            "${draco_src_root}/core/varint_encoding.h"
+            "${draco_src_root}/core/vector_d.h")
 
-set(draco_metadata_dec_sources "${draco_src_root}/metadata/metadata_decoder.cc"
-                               "${draco_src_root}/metadata/metadata_decoder.h")
+list(APPEND draco_io_sources
+            "${draco_src_root}/io/file_reader_factory.cc"
+            "${draco_src_root}/io/file_reader_factory.h"
+            "${draco_src_root}/io/file_reader_interface.h"
+            "${draco_src_root}/io/file_utils.cc"
+            "${draco_src_root}/io/file_utils.h"
+            "${draco_src_root}/io/file_writer_factory.cc"
+            "${draco_src_root}/io/file_writer_factory.h"
+            "${draco_src_root}/io/file_writer_interface.h"
+            "${draco_src_root}/io/file_writer_utils.h"
+            "${draco_src_root}/io/file_writer_utils.cc"
+            "${draco_src_root}/io/mesh_io.cc"
+            "${draco_src_root}/io/mesh_io.h"
+            "${draco_src_root}/io/obj_decoder.cc"
+            "${draco_src_root}/io/obj_decoder.h"
+            "${draco_src_root}/io/obj_encoder.cc"
+            "${draco_src_root}/io/obj_encoder.h"
+            "${draco_src_root}/io/parser_utils.cc"
+            "${draco_src_root}/io/parser_utils.h"
+            "${draco_src_root}/io/ply_decoder.cc"
+            "${draco_src_root}/io/ply_decoder.h"
+            "${draco_src_root}/io/ply_encoder.cc"
+            "${draco_src_root}/io/ply_encoder.h"
+            "${draco_src_root}/io/ply_property_reader.h"
+            "${draco_src_root}/io/ply_property_writer.h"
+            "${draco_src_root}/io/ply_reader.cc"
+            "${draco_src_root}/io/ply_reader.h"
+            "${draco_src_root}/io/point_cloud_io.cc"
+            "${draco_src_root}/io/point_cloud_io.h"
+            "${draco_src_root}/io/stdio_file_reader.cc"
+            "${draco_src_root}/io/stdio_file_reader.h"
+            "${draco_src_root}/io/stdio_file_writer.cc"
+            "${draco_src_root}/io/stdio_file_writer.h")
 
-set(draco_animation_sources "${draco_src_root}/animation/keyframe_animation.cc"
-                            "${draco_src_root}/animation/keyframe_animation.h")
+list(APPEND draco_mesh_sources
+            "${draco_src_root}/mesh/corner_table.cc"
+            "${draco_src_root}/mesh/corner_table.h"
+            "${draco_src_root}/mesh/corner_table_iterators.h"
+            "${draco_src_root}/mesh/mesh.cc"
+            "${draco_src_root}/mesh/mesh.h"
+            "${draco_src_root}/mesh/mesh_are_equivalent.cc"
+            "${draco_src_root}/mesh/mesh_are_equivalent.h"
+            "${draco_src_root}/mesh/mesh_attribute_corner_table.cc"
+            "${draco_src_root}/mesh/mesh_attribute_corner_table.h"
+            "${draco_src_root}/mesh/mesh_cleanup.cc"
+            "${draco_src_root}/mesh/mesh_cleanup.h"
+            "${draco_src_root}/mesh/mesh_misc_functions.cc"
+            "${draco_src_root}/mesh/mesh_misc_functions.h"
+            "${draco_src_root}/mesh/mesh_stripifier.cc"
+            "${draco_src_root}/mesh/mesh_stripifier.h"
+            "${draco_src_root}/mesh/triangle_soup_mesh_builder.cc"
+            "${draco_src_root}/mesh/triangle_soup_mesh_builder.h"
+            "${draco_src_root}/mesh/valence_cache.h")
 
-set(draco_animation_enc_sources
-    "${draco_src_root}/animation/keyframe_animation_encoder.cc"
-    "${draco_src_root}/animation/keyframe_animation_encoder.h")
+list(APPEND draco_point_cloud_sources
+            "${draco_src_root}/point_cloud/point_cloud.cc"
+            "${draco_src_root}/point_cloud/point_cloud.h"
+            "${draco_src_root}/point_cloud/point_cloud_builder.cc"
+            "${draco_src_root}/point_cloud/point_cloud_builder.h")
 
-set(draco_animation_dec_sources
-    "${draco_src_root}/animation/keyframe_animation_decoder.cc"
-    "${draco_src_root}/animation/keyframe_animation_decoder.h")
+list(
+  APPEND
+    draco_points_common_sources
+    "${draco_src_root}/compression/point_cloud/algorithms/point_cloud_compression_method.h"
+    "${draco_src_root}/compression/point_cloud/algorithms/point_cloud_types.h"
+    "${draco_src_root}/compression/point_cloud/algorithms/quantize_points_3.h"
+    "${draco_src_root}/compression/point_cloud/algorithms/queuing_policy.h")
 
-set(draco_js_dec_sources
-    "${draco_src_root}/javascript/emscripten/decoder_webidl_wrapper.cc"
-    "${draco_src_root}/javascript/emscripten/draco_decoder_glue_wrapper.cc")
-
-set(draco_js_enc_sources
-    "${draco_src_root}/javascript/emscripten/draco_encoder_glue_wrapper.cc"
-    "${draco_src_root}/javascript/emscripten/encoder_webidl_wrapper.cc")
-
-set(
-  draco_animation_js_dec_sources
-  "${draco_src_root}/javascript/emscripten/animation_decoder_webidl_wrapper.cc"
-  "${draco_src_root}/javascript/emscripten/draco_animation_decoder_glue_wrapper.cc"
+list(
+  APPEND
+    draco_points_dec_sources
+    "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_decoder.cc"
+    "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_decoder.h"
+    "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_decoder.cc"
+    "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_decoder.h"
   )
 
-set(
-  draco_animation_js_enc_sources
-  "${draco_src_root}/javascript/emscripten/animation_encoder_webidl_wrapper.cc"
-  "${draco_src_root}/javascript/emscripten/draco_animation_encoder_glue_wrapper.cc"
+list(
+  APPEND
+    draco_points_enc_sources
+    "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_encoder.cc"
+    "${draco_src_root}/compression/point_cloud/algorithms/dynamic_integer_points_kd_tree_encoder.h"
+    "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_encoder.cc"
+    "${draco_src_root}/compression/point_cloud/algorithms/float_points_tree_encoder.h"
   )
 
-set(draco_unity_plug_sources "${draco_src_root}/unity/draco_unity_plugin.cc"
-                             "${draco_src_root}/unity/draco_unity_plugin.h")
+list(APPEND draco_metadata_sources
+            "${draco_src_root}/metadata/geometry_metadata.cc"
+            "${draco_src_root}/metadata/geometry_metadata.h"
+            "${draco_src_root}/metadata/metadata.cc"
+            "${draco_src_root}/metadata/metadata.h")
 
-set(draco_maya_plug_sources "${draco_src_root}/maya/draco_maya_plugin.cc"
-                            "${draco_src_root}/maya/draco_maya_plugin.h")
+list(APPEND draco_metadata_enc_sources
+            "${draco_src_root}/metadata/metadata_encoder.cc"
+            "${draco_src_root}/metadata/metadata_encoder.h")
 
-include_directories("${draco_root}/src" "${draco_build_dir}")
+list(APPEND draco_metadata_dec_sources
+            "${draco_src_root}/metadata/metadata_decoder.cc"
+            "${draco_src_root}/metadata/metadata_decoder.h")
+
+list(APPEND draco_animation_sources
+            "${draco_src_root}/animation/keyframe_animation.cc"
+            "${draco_src_root}/animation/keyframe_animation.h")
+
+list(APPEND draco_animation_enc_sources
+            "${draco_src_root}/animation/keyframe_animation_encoder.cc"
+            "${draco_src_root}/animation/keyframe_animation_encoder.h")
+
+list(APPEND draco_animation_dec_sources
+            "${draco_src_root}/animation/keyframe_animation_decoder.cc"
+            "${draco_src_root}/animation/keyframe_animation_decoder.h")
+
+list(
+  APPEND draco_js_dec_sources
+         "${draco_src_root}/javascript/emscripten/decoder_webidl_wrapper.cc"
+         "${draco_src_root}/javascript/emscripten/draco_decoder_glue_wrapper.cc"
+  )
+
+list(
+  APPEND draco_js_enc_sources
+         "${draco_src_root}/javascript/emscripten/draco_encoder_glue_wrapper.cc"
+         "${draco_src_root}/javascript/emscripten/encoder_webidl_wrapper.cc")
+
+list(
+  APPEND
+    draco_animation_js_dec_sources
+    "${draco_src_root}/javascript/emscripten/animation_decoder_webidl_wrapper.cc"
+    "${draco_src_root}/javascript/emscripten/draco_animation_decoder_glue_wrapper.cc"
+  )
+
+list(
+  APPEND
+    draco_animation_js_enc_sources
+    "${draco_src_root}/javascript/emscripten/animation_encoder_webidl_wrapper.cc"
+    "${draco_src_root}/javascript/emscripten/draco_animation_encoder_glue_wrapper.cc"
+  )
+
+list(APPEND draco_unity_plug_sources
+            "${draco_src_root}/unity/draco_unity_plugin.cc"
+            "${draco_src_root}/unity/draco_unity_plugin.h")
+
+list(APPEND draco_maya_plug_sources
+            "${draco_src_root}/maya/draco_maya_plugin.cc"
+            "${draco_src_root}/maya/draco_maya_plugin.h")
 
 #
 # Draco targets.
 #
-if(EMSCRIPTEN AND ENABLE_JS_GLUE)
-  # Draco js decoder.
-  require_compiler_flag("-s ALLOW_MEMORY_GROWTH=1" YES)
-  require_compiler_flag("-Wno-almost-asm" YES)
-  require_compiler_flag("--memory-init-file 0" YES)
-  require_compiler_flag("-fno-omit-frame-pointer" YES)
-  require_compiler_flag("-s MODULARIZE=1" YES)
-  if(ENABLE_EXTRA_SPEED)
-    require_compiler_flag("--llvm-lto 1" YES)
-  endif()
-  require_compiler_flag("-s NO_FILESYSTEM=1" YES)
-  require_compiler_flag("-s EXPORTED_RUNTIME_METHODS=[]" YES)
-  require_compiler_flag("-s PRECISE_F32=1" YES)
-  if(ENABLE_WASM)
-    require_compiler_flag("-s WASM=1" YES)
-  else()
-    require_compiler_flag("-s WASM=0" YES)
-  endif()
-  if(IE_COMPATIBLE)
-    require_compiler_flag("-s LEGACY_VM_SUPPORT=1" YES)
-  endif()
+if(EMSCRIPTEN AND DRACO_JS_GLUE)
+  # Draco decoder and encoder "executable" targets in various flavors for
+  # Emsscripten.
+  list(APPEND draco_decoder_src
+              ${draco_attributes_sources}
+              ${draco_compression_attributes_dec_sources}
+              ${draco_compression_attributes_pred_schemes_dec_sources}
+              ${draco_compression_bit_coders_sources}
+              ${draco_compression_decode_sources}
+              ${draco_compression_entropy_sources}
+              ${draco_compression_mesh_traverser_sources}
+              ${draco_compression_mesh_dec_sources}
+              ${draco_compression_point_cloud_dec_sources}
+              ${draco_core_sources}
+              ${draco_dec_config_sources}
+              ${draco_js_dec_sources}
+              ${draco_mesh_sources}
+              ${draco_metadata_dec_sources}
+              ${draco_metadata_sources}
+              ${draco_point_cloud_sources}
+              ${draco_points_dec_sources})
 
-  if(CMAKE_BUILD_TYPE STREQUAL "")
-    # Force -O3 when no build type is specified.
-    add_compiler_flag_if_supported("-O3")
-  endif()
+  list(APPEND draco_encoder_src
+              ${draco_attributes_sources}
+              ${draco_compression_attributes_enc_sources}
+              ${draco_compression_attributes_pred_schemes_enc_sources}
+              ${draco_compression_bit_coders_sources}
+              ${draco_compression_encode_sources}
+              ${draco_compression_entropy_sources}
+              ${draco_compression_mesh_traverser_sources}
+              ${draco_compression_mesh_enc_sources}
+              ${draco_compression_point_cloud_enc_sources}
+              ${draco_core_sources}
+              ${draco_enc_config_sources}
+              ${draco_js_enc_sources}
+              ${draco_mesh_sources}
+              ${draco_metadata_enc_sources}
+              ${draco_metadata_sources}
+              ${draco_point_cloud_sources}
+              ${draco_points_enc_sources})
 
-  set(draco_js_dec_idl
-      "${draco_src_root}/javascript/emscripten/draco_web_decoder.idl")
-  set(draco_js_enc_idl
-      "${draco_src_root}/javascript/emscripten/draco_web_encoder.idl")
-  set(draco_animation_js_dec_idl
+  list(APPEND draco_js_dec_idl
+              "${draco_src_root}/javascript/emscripten/draco_web_decoder.idl")
+  list(APPEND draco_js_enc_idl
+              "${draco_src_root}/javascript/emscripten/draco_web_encoder.idl")
+  list(
+    APPEND
+      draco_animation_js_dec_idl
       "${draco_src_root}/javascript/emscripten/draco_animation_web_decoder.idl")
-  set(draco_animation_js_enc_idl
+  list(
+    APPEND
+      draco_animation_js_enc_idl
       "${draco_src_root}/javascript/emscripten/draco_animation_web_encoder.idl")
+  list(APPEND draco_pre_link_js_sources
+              "${draco_src_root}/javascript/emscripten/prepareCallbacks.js"
+              "${draco_src_root}/javascript/emscripten/version.js")
+  list(APPEND draco_post_link_js_sources
+              "${draco_src_root}/javascript/emscripten/finalize.js")
+  list(APPEND draco_post_link_js_decoder_sources ${draco_post_link_js_sources}
+              "${draco_src_root}/javascript/emscripten/decoder_functions.js")
 
-  # Generate ${draco_build_dir}/glue_decoder.cpp at cmake generation time so it
-  # can be added to targets without cmake reporting errors.
-  execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                          $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                          ${draco_js_dec_idl} ${draco_build_dir}/glue_decoder)
+  set(draco_decoder_glue_path "${draco_build}/glue_decoder")
+  set(draco_encoder_glue_path "${draco_build}/glue_encoder")
 
-  execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                          $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                          ${draco_js_enc_idl} ${draco_build_dir}/glue_encoder)
+  draco_generate_emscripten_glue(INPUT_IDL ${draco_js_dec_idl} OUTPUT_PATH
+                                 ${draco_decoder_glue_path})
+  draco_generate_emscripten_glue(INPUT_IDL ${draco_js_enc_idl} OUTPUT_PATH
+                                 ${draco_encoder_glue_path})
 
-  if(NOT EXISTS "${draco_build_dir}/glue_decoder.cpp"
-     OR NOT EXISTS "${draco_build_dir}/glue_encoder.cpp")
-    message(FATAL_ERROR "Glue generation failed.")
+  if(DRACO_DECODER_ATTRIBUTE_DEDUPLICATION)
+    list(APPEND draco_decoder_features
+                "DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED"
+                "DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED")
   endif()
 
-  if(BUILD_ANIMATION_ENCODING)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                            $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                            ${draco_animation_js_dec_idl}
-                            ${draco_build_dir}/glue_animation_decoder)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                            $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                            ${draco_animation_js_enc_idl}
-                            ${draco_build_dir}/glue_animation_encoder)
-    if(NOT EXISTS "${draco_build_dir}/glue_animation_decoder.cpp"
-       OR NOT EXISTS "${draco_build_dir}/glue_animation_encoder.cpp")
-      message(FATAL_ERROR "Animation glue generation failed.")
-    endif()
-  endif()
+  draco_add_emscripten_executable(NAME
+                                  draco_decoder
+                                  SOURCES
+                                  ${draco_decoder_src}
+                                  DEFINES
+                                  ${draco_defines}
+                                  FEATURES
+                                  ${draco_decoder_features}
+                                  INCLUDES
+                                  ${draco_include_paths}
+                                  LINK_FLAGS
+                                  "-sEXPORT_NAME=\"DracoDecoderModule\""
+                                  GLUE_PATH
+                                  ${draco_decoder_glue_path}
+                                  PRE_LINK_JS_SOURCES
+                                  ${draco_pre_link_js_sources}
+                                  POST_LINK_JS_SOURCES
+                                  ${draco_post_link_js_decoder_sources})
 
-  # Add a custom rule depending on the IDL to regenerate
-  # ${draco_build_dir}/glue_decoder.cpp as needed.
-  add_custom_command(OUTPUT ${draco_build_dir}/glue_decoder.cpp
-                     COMMAND ${PYTHON_EXECUTABLE}
-                             $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                             ${draco_js_dec_idl} ${draco_build_dir}/glue_decoder
-                     DEPENDS ${draco_js_dec_idl}
-                     COMMENT "Generating ${draco_build_dir}/glue_decoder.cpp."
-                     WORKING_DIRECTORY ${draco_build_dir}
-                     VERBATIM)
+  draco_add_emscripten_executable(
+    NAME
+    draco_encoder
+    SOURCES
+    ${draco_encoder_src}
+    DEFINES
+    ${draco_defines}
+    FEATURES
+    DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED
+    DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED
+    INCLUDES
+    ${draco_include_paths}
+    LINK_FLAGS
+    "-sEXPORT_NAME=\"DracoEncoderModule\""
+    GLUE_PATH
+    ${draco_encoder_glue_path}
+    PRE_LINK_JS_SOURCES
+    ${draco_pre_link_js_sources}
+    POST_LINK_JS_SOURCES
+    ${draco_post_link_js_sources})
 
-  add_custom_command(OUTPUT ${draco_build_dir}/glue_encoder.cpp
-                     COMMAND ${PYTHON_EXECUTABLE}
-                             $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-                             ${draco_js_enc_idl} ${draco_build_dir}/glue_encoder
-                     DEPENDS ${draco_js_enc_idl}
-                     COMMENT "Generating ${draco_build_dir}/glue_encoder.cpp."
-                     WORKING_DIRECTORY ${draco_build_dir}
-                     VERBATIM)
+  if(DRACO_ANIMATION_ENCODING)
+    set(draco_anim_decoder_glue_path "${draco_build}/glue_animation_decoder")
+    set(draco_anim_encoder_glue_path "${draco_build}/glue_animation_encoder")
 
-  if(BUILD_ANIMATION_ENCODING)
-    add_custom_command(
-      OUTPUT ${draco_build_dir}/glue_animation_decoder.cpp
-      COMMAND ${PYTHON_EXECUTABLE} $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-              ${draco_animation_js_dec_idl}
-              ${draco_build_dir}/glue_animation_decoder
-      DEPENDS ${draco_animation_js_dec_idl}
-      COMMENT "Generating ${draco_build_dir}/glue_animation_decoder.cpp."
-      WORKING_DIRECTORY ${draco_build_dir}
-      VERBATIM)
-    add_custom_command(
-      OUTPUT ${draco_build_dir}/glue_animation_encoder.cpp
-      COMMAND ${PYTHON_EXECUTABLE} $ENV{EMSCRIPTEN}/tools/webidl_binder.py
-              ${draco_animation_js_enc_idl}
-              ${draco_build_dir}/glue_animation_encoder
-      DEPENDS ${draco_animation_js_enc_idl}
-      COMMENT "Generating ${draco_build_dir}/glue_animation_encoder.cpp."
-      WORKING_DIRECTORY ${draco_build_dir}
-      VERBATIM)
-  endif()
+    draco_generate_emscripten_glue(INPUT_IDL ${draco_animation_js_dec_idl}
+                                   OUTPUT_PATH ${draco_anim_decoder_glue_path})
+    draco_generate_emscripten_glue(INPUT_IDL ${draco_animation_js_enc_idl}
+                                   OUTPUT_PATH ${draco_anim_encoder_glue_path})
 
-  set(draco_decoder_src
-      ${draco_attributes_sources}
-      ${draco_compression_attributes_dec_sources}
-      ${draco_compression_attributes_pred_schemes_dec_sources}
-      ${draco_compression_bit_coders_sources}
-      ${draco_compression_decode_sources}
-      ${draco_compression_entropy_sources}
-      ${draco_compression_mesh_traverser_sources}
-      ${draco_compression_mesh_dec_sources}
-      ${draco_compression_point_cloud_dec_sources}
-      ${draco_core_sources}
-      ${draco_dec_config_sources}
-      ${draco_mesh_sources}
-      ${draco_metadata_dec_sources}
-      ${draco_metadata_sources}
-      ${draco_point_cloud_sources}
-      ${draco_points_dec_sources})
-
-  set(draco_encoder_src
-      ${draco_attributes_sources}
-      ${draco_compression_attributes_enc_sources}
-      ${draco_compression_attributes_pred_schemes_enc_sources}
-      ${draco_compression_bit_coders_sources}
-      ${draco_compression_encode_sources}
-      ${draco_compression_entropy_sources}
-      ${draco_compression_mesh_traverser_sources}
-      ${draco_compression_mesh_enc_sources}
-      ${draco_compression_point_cloud_enc_sources}
-      ${draco_core_sources}
-      ${draco_enc_config_sources}
-      ${draco_mesh_sources}
-      ${draco_metadata_enc_sources}
-      ${draco_metadata_sources}
-      ${draco_point_cloud_sources}
-      ${draco_points_enc_sources})
-
-  add_executable(draco_decoder ${draco_js_dec_sources} ${draco_decoder_src})
-  append_link_flag_to_target(draco_decoder
-                             "-s EXPORT_NAME=\"'DracoDecoderModule'\"")
-
-  add_executable(draco_encoder ${draco_js_enc_sources} ${draco_encoder_src})
-  append_link_flag_to_target(draco_encoder
-                             "-s EXPORT_NAME=\"'DracoEncoderModule'\"")
-
-  draco_enable_feature(FEATURE DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED
-                       TARGETS draco_encoder)
-  draco_enable_feature(FEATURE DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED
-                       TARGETS draco_encoder)
-  if(ENABLE_DECODER_ATTRIBUTE_DEDUPLICATION)
-    draco_enable_feature(FEATURE DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED
-                         TARGETS draco_decoder)
-    draco_enable_feature(FEATURE DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED
-                         TARGETS draco_decoder)
-  endif()
-
-  # Make $draco_js_sources source files depend on glue_decoder.cpp.
-  set_property(SOURCE ${draco_js_sources}
-               APPEND
-               PROPERTY OBJECT_DEPENDS ${draco_build_dir}/glue_decoder.cpp)
-  em_link_pre_js(draco_decoder
-                 "${draco_src_root}/javascript/emscripten/prepareCallbacks.js"
-                 "${draco_src_root}/javascript/emscripten/version.js")
-  em_link_post_js(draco_decoder "${draco_build_dir}/glue_decoder.js"
-                  "${draco_src_root}/javascript/emscripten/finalize.js")
-
-  set_property(SOURCE ${draco_js_enc_sources}
-               APPEND
-               PROPERTY OBJECT_DEPENDS ${draco_build_dir}/glue_encoder.cpp)
-  em_link_pre_js(draco_encoder
-                 "${draco_src_root}/javascript/emscripten/prepareCallbacks.js"
-                 "${draco_src_root}/javascript/emscripten/version.js")
-  em_link_post_js(draco_encoder "${draco_build_dir}/glue_encoder.js"
-                  "${draco_src_root}/javascript/emscripten/finalize.js")
-
-  if(BUILD_ANIMATION_ENCODING)
-    add_executable(draco_animation_decoder ${draco_animation_dec_sources}
-                                           ${draco_animation_js_dec_sources}
-                                           ${draco_animation_sources}
-                                           ${draco_decoder_src})
-    add_executable(draco_animation_encoder ${draco_animation_enc_sources}
-                                           ${draco_animation_js_enc_sources}
-                                           ${draco_animation_sources}
-                                           ${draco_encoder_src})
-    append_link_flag_to_target(
+    draco_add_emscripten_executable(
+      NAME
       draco_animation_decoder
-      "-s EXPORT_NAME=\"'DracoAnimationDecoderModule'\"")
-    append_link_flag_to_target(
+      SOURCES
+      ${draco_animation_dec_sources}
+      ${draco_animation_js_dec_sources}
+      ${draco_animation_sources}
+      ${draco_decoder_src}
+      DEFINES
+      ${draco_defines}
+      INCLUDES
+      ${draco_include_paths}
+      LINK_FLAGS
+      "-sEXPORT_NAME=\"DracoAnimationDecoderModule\""
+      GLUE_PATH
+      ${draco_anim_decoder_glue_path}
+      PRE_LINK_JS_SOURCES
+      ${draco_pre_link_js_sources}
+      POST_LINK_JS_SOURCES
+      ${draco_post_link_js_decoder_sources})
+
+    draco_add_emscripten_executable(
+      NAME
       draco_animation_encoder
-      "-s EXPORT_NAME=\"'DracoAnimationEncoderModule'\"")
-
-    set_property(SOURCE ${draco_js_sources}
-                 APPEND
-                 PROPERTY OBJECT_DEPENDS
-                          ${draco_build_dir}/glue_animation_decoder.cpp)
-    em_link_pre_js(draco_animation_decoder
-                   "${draco_src_root}/javascript/emscripten/prepareCallbacks.js"
-                   "${draco_src_root}/javascript/emscripten/version.js")
-    em_link_post_js(draco_animation_decoder
-                    "${draco_build_dir}/glue_animation_decoder.js"
-                    "${draco_src_root}/javascript/emscripten/finalize.js")
-
-    set_property(SOURCE ${draco_js_enc_sources}
-                 APPEND
-                 PROPERTY OBJECT_DEPENDS
-                          ${draco_build_dir}/glue_animation_encoder.cpp)
-    em_link_pre_js(draco_animation_encoder
-                   "${draco_src_root}/javascript/emscripten/prepareCallbacks.js"
-                   "${draco_src_root}/javascript/emscripten/version.js")
-    em_link_post_js(draco_animation_encoder
-                    "${draco_build_dir}/glue_animation_encoder.js"
-                    "${draco_src_root}/javascript/emscripten/finalize.js")
+      SOURCES
+      ${draco_animation_enc_sources}
+      ${draco_animation_js_enc_sources}
+      ${draco_animation_sources}
+      ${draco_encoder_src}
+      DEFINES
+      ${draco_defines}
+      INCLUDES
+      ${draco_include_paths}
+      LINK_FLAGS
+      "-sEXPORT_NAME=\"DracoAnimationEncoderModule\""
+      GLUE_PATH
+      ${draco_anim_encoder_glue_path}
+      PRE_LINK_JS_SOURCES
+      ${draco_pre_link_js_sources}
+      POST_LINK_JS_SOURCES
+      ${draco_post_link_js_sources})
   endif()
 else()
   # Standard Draco libs, encoder and decoder. Object collections that mirror the
   # Draco directory structure.
-  if(BUILD_SHARED_LIBS)
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-  endif()
-  add_library(draco_attributes OBJECT ${draco_attributes_sources})
-  add_library(draco_compression_attributes_dec
-              OBJECT ${draco_compression_attributes_dec_sources})
-  add_library(draco_compression_attributes_enc
-              OBJECT ${draco_compression_attributes_enc_sources})
-  add_library(draco_compression_attributes_pred_schemes_dec
-              OBJECT ${draco_compression_attributes_pred_schemes_dec_sources})
-  add_library(draco_compression_attributes_pred_schemes_enc
-              OBJECT ${draco_compression_attributes_pred_schemes_enc_sources})
-  add_library(draco_compression_bit_coders
-              OBJECT ${draco_compression_bit_coders_sources})
-  add_library(draco_enc_config OBJECT ${draco_enc_config_sources})
-  add_library(draco_dec_config OBJECT ${draco_dec_config_sources})
-  add_library(draco_compression_decode OBJECT
-                                       ${draco_compression_decode_sources})
-  add_library(draco_compression_encode OBJECT
-                                       ${draco_compression_encode_sources})
-  add_library(draco_compression_entropy OBJECT
-                                        ${draco_compression_entropy_sources})
-  add_library(draco_compression_mesh_traverser
-              OBJECT ${draco_compression_mesh_traverser_sources})
-  add_library(draco_compression_mesh_dec OBJECT
-                                         ${draco_compression_mesh_dec_sources})
-  add_library(draco_compression_mesh_enc OBJECT
-                                         ${draco_compression_mesh_enc_sources})
-  add_library(draco_compression_point_cloud_dec
-              OBJECT ${draco_compression_point_cloud_dec_sources})
-  add_library(draco_compression_point_cloud_enc
-              OBJECT ${draco_compression_point_cloud_enc_sources})
-  add_library(draco_core OBJECT ${draco_core_sources})
-  add_library(draco_io OBJECT ${draco_io_sources})
-  add_library(draco_mesh OBJECT ${draco_mesh_sources})
-  add_library(draco_metadata_dec OBJECT ${draco_metadata_dec_sources})
-  add_library(draco_metadata_enc OBJECT ${draco_metadata_enc_sources})
-  add_library(draco_metadata OBJECT ${draco_metadata_sources})
-  add_library(draco_animation_dec OBJECT ${draco_animation_dec_sources})
-  add_library(draco_animation_enc OBJECT ${draco_animation_enc_sources})
-  add_library(draco_animation OBJECT ${draco_animation_sources})
-  add_library(draco_point_cloud OBJECT ${draco_point_cloud_sources})
-  add_library(draco_points_dec OBJECT ${draco_points_common_sources}
-                               ${draco_points_dec_sources})
-  add_library(draco_points_enc OBJECT ${draco_points_common_sources}
-                               ${draco_points_enc_sources})
+  draco_add_library(NAME draco_attributes TYPE OBJECT SOURCES
+                    ${draco_attributes_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME
+                    draco_compression_attributes_dec
+                    OBJECT
+                    ${draco_compression_attributes_dec_sources}
+                    TYPE
+                    OBJECT
+                    SOURCES
+                    ${draco_compression_attributes_dec_sources}
+                    DEFINES
+                    ${draco_defines}
+                    INCLUDES
+                    ${draco_include_paths})
+  draco_add_library(NAME draco_compression_attributes_enc TYPE OBJECT SOURCES
+                    ${draco_compression_attributes_enc_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_attributes_pred_schemes_dec TYPE
+                    OBJECT SOURCES
+                    ${draco_compression_attributes_pred_schemes_dec_sources})
+  draco_add_library(NAME draco_compression_attributes_pred_schemes_enc TYPE
+                    OBJECT SOURCES
+                    ${draco_compression_attributes_pred_schemes_enc_sources}
+                    DEFINES ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_bit_coders TYPE OBJECT SOURCES
+                    ${draco_compression_bit_coders_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_enc_config TYPE OBJECT SOURCES
+                    ${draco_enc_config_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_dec_config TYPE OBJECT SOURCES
+                    ${draco_dec_config_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_decode TYPE OBJECT SOURCES
+                    ${draco_compression_decode_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_encode TYPE OBJECT SOURCES
+                    ${draco_compression_encode_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_entropy TYPE OBJECT SOURCES
+                    ${draco_compression_entropy_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_mesh_traverser TYPE OBJECT SOURCES
+                    ${draco_compression_mesh_traverser_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_mesh_dec TYPE OBJECT SOURCES
+                    ${draco_compression_mesh_dec_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_mesh_enc TYPE OBJECT SOURCES
+                    ${draco_compression_mesh_enc_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_point_cloud_dec TYPE OBJECT SOURCES
+                    ${draco_compression_point_cloud_dec_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_compression_point_cloud_enc TYPE OBJECT SOURCES
+                    ${draco_compression_point_cloud_enc_sources} DEFINES
+                    ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_core TYPE OBJECT SOURCES ${draco_core_sources}
+                    DEFINES ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_io TYPE OBJECT SOURCES ${draco_io_sources}
+                    DEFINES ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_mesh TYPE OBJECT SOURCES ${draco_mesh_sources}
+                    DEFINES ${draco_defines} INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_metadata_dec TYPE OBJECT SOURCES
+                    ${draco_metadata_dec_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_metadata_enc TYPE OBJECT SOURCES
+                    ${draco_metadata_enc_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_metadata TYPE OBJECT SOURCES
+                    ${draco_metadata_sources} DEFINES ${draco_defines} INCLUDES
+                    ${draco_include_paths})
+  draco_add_library(NAME draco_animation_dec TYPE OBJECT SOURCES
+                    ${draco_animation_dec_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_animation_enc TYPE OBJECT SOURCES
+                    ${draco_animation_enc_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME draco_animation TYPE OBJECT SOURCES
+                    ${draco_animation_sources} DEFINES ${draco_defines} INCLUDES
+                    ${draco_include_paths})
+  draco_add_library(NAME draco_point_cloud TYPE OBJECT SOURCES
+                    ${draco_point_cloud_sources} DEFINES ${draco_defines}
+                    INCLUDES ${draco_include_paths})
+  draco_add_library(NAME
+                    draco_points_dec
+                    TYPE
+                    OBJECT
+                    SOURCES
+                    ${draco_points_common_sources}
+                    ${draco_points_dec_sources}
+                    DEFINES
+                    ${draco_defines}
+                    INCLUDES
+                    ${draco_include_paths})
+  draco_add_library(NAME
+                    draco_points_enc
+                    TYPE
+                    OBJECT
+                    SOURCES
+                    ${draco_points_common_sources}
+                    ${draco_points_enc_sources}
+                    DEFINES
+                    ${draco_defines}
+                    INCLUDES
+                    ${draco_include_paths})
 
-  if(BUILD_UNITY_PLUGIN)
-    add_library(draco_unity_plugin OBJECT ${draco_unity_plug_sources})
-  endif()
-
-  if(BUILD_MAYA_PLUGIN)
-    add_library(draco_maya_plugin OBJECT ${draco_maya_plug_sources})
-  endif()
+  set(draco_object_library_deps
+      draco_attributes
+      draco_compression_attributes_dec
+      draco_compression_attributes_enc
+      draco_compression_attributes_pred_schemes_dec
+      draco_compression_attributes_pred_schemes_enc
+      draco_compression_bit_coders
+      draco_compression_decode
+      draco_compression_encode
+      draco_compression_entropy
+      draco_compression_mesh_dec
+      draco_compression_mesh_enc
+      draco_compression_point_cloud_dec
+      draco_compression_point_cloud_enc
+      draco_core
+      draco_dec_config
+      draco_enc_config
+      draco_io
+      draco_mesh
+      draco_metadata
+      draco_metadata_dec
+      draco_metadata_enc
+      draco_animation
+      draco_animation_dec
+      draco_animation_enc
+      draco_point_cloud
+      draco_points_dec
+      draco_points_enc)
 
   # Library targets that consume the object collections.
-  add_library(dracodec
-              $<TARGET_OBJECTS:draco_attributes>
-              $<TARGET_OBJECTS:draco_compression_attributes_dec>
-              $<TARGET_OBJECTS:draco_compression_decode>
-              $<TARGET_OBJECTS:draco_compression_entropy>
-              $<TARGET_OBJECTS:draco_compression_mesh_dec>
-              $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-              $<TARGET_OBJECTS:draco_compression_bit_coders>
-              $<TARGET_OBJECTS:draco_core>
-              $<TARGET_OBJECTS:draco_dec_config>
-              $<TARGET_OBJECTS:draco_io>
-              $<TARGET_OBJECTS:draco_mesh>
-              $<TARGET_OBJECTS:draco_metadata>
-              $<TARGET_OBJECTS:draco_metadata_dec>
-              $<TARGET_OBJECTS:draco_animation>
-              $<TARGET_OBJECTS:draco_animation_dec>
-              $<TARGET_OBJECTS:draco_point_cloud>
-              $<TARGET_OBJECTS:draco_points_dec>)
-  add_library(dracoenc
-              $<TARGET_OBJECTS:draco_attributes>
-              $<TARGET_OBJECTS:draco_compression_attributes_enc>
-              $<TARGET_OBJECTS:draco_compression_entropy>
-              $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-              $<TARGET_OBJECTS:draco_compression_bit_coders>
-              $<TARGET_OBJECTS:draco_compression_encode>
-              $<TARGET_OBJECTS:draco_compression_mesh_enc>
-              $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-              $<TARGET_OBJECTS:draco_core>
-              $<TARGET_OBJECTS:draco_enc_config>
-              $<TARGET_OBJECTS:draco_mesh>
-              $<TARGET_OBJECTS:draco_metadata>
-              $<TARGET_OBJECTS:draco_metadata_enc>
-              $<TARGET_OBJECTS:draco_animation>
-              $<TARGET_OBJECTS:draco_animation_enc>
-              $<TARGET_OBJECTS:draco_point_cloud>
-              $<TARGET_OBJECTS:draco_points_enc>)
-  add_library(draco
-              $<TARGET_OBJECTS:draco_attributes>
-              $<TARGET_OBJECTS:draco_compression_attributes_dec>
-              $<TARGET_OBJECTS:draco_compression_attributes_enc>
-              $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_dec>
-              $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-              $<TARGET_OBJECTS:draco_compression_bit_coders>
-              $<TARGET_OBJECTS:draco_compression_decode>
-              $<TARGET_OBJECTS:draco_compression_encode>
-              $<TARGET_OBJECTS:draco_compression_entropy>
-              $<TARGET_OBJECTS:draco_compression_mesh_dec>
-              $<TARGET_OBJECTS:draco_compression_mesh_enc>
-              $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-              $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-              $<TARGET_OBJECTS:draco_core>
-              $<TARGET_OBJECTS:draco_dec_config>
-              $<TARGET_OBJECTS:draco_enc_config>
-              $<TARGET_OBJECTS:draco_io>
-              $<TARGET_OBJECTS:draco_mesh>
-              $<TARGET_OBJECTS:draco_metadata>
-              $<TARGET_OBJECTS:draco_metadata_dec>
-              $<TARGET_OBJECTS:draco_metadata_enc>
-              $<TARGET_OBJECTS:draco_animation>
-              $<TARGET_OBJECTS:draco_animation_dec>
-              $<TARGET_OBJECTS:draco_animation_enc>
-              $<TARGET_OBJECTS:draco_point_cloud>
-              $<TARGET_OBJECTS:draco_points_dec>
-              $<TARGET_OBJECTS:draco_points_enc>)
-  if(BUILD_UNITY_PLUGIN)
-    set(unity_decoder_lib_type MODULE)
+  if(MSVC OR WIN32)
+    # In order to produce a DLL and import library the Windows tools require
+    # that the exported symbols are part of the DLL target. The unfortunate side
+    # effect of this is that a single configuration cannot output both the
+    # static library and the DLL: This results in an either/or situation.
+    # Windows users of the draco build can have a DLL and an import library,
+    # or they can have a static library; they cannot have both from a single
+    # configuration of the build.
+    if(BUILD_SHARED_LIBS)
+      set(draco_lib_type SHARED)
+    else()
+      set(draco_lib_type STATIC)
+    endif()
+    draco_add_library(NAME
+                      draco
+                      OUTPUT_NAME
+                      draco
+                      TYPE
+                      ${draco_lib_type}
+                      DEFINES
+                      ${draco_defines}
+                      INCLUDES
+                      ${draco_include_paths}
+                      OBJLIB_DEPS
+                      ${draco_object_library_deps})
+
+  else()
+    draco_add_library(NAME
+                      draco_static
+                      OUTPUT_NAME
+                      draco
+                      TYPE
+                      STATIC
+                      DEFINES
+                      ${draco_defines}
+                      INCLUDES
+                      ${draco_include_paths}
+                      OBJLIB_DEPS
+                      ${draco_object_library_deps})
+
+    if(BUILD_SHARED_LIBS)
+      draco_add_library(NAME
+                        draco_shared
+                        SOURCES
+                        "${draco_src_root}/core/draco_version.h"
+                        OUTPUT_NAME
+                        draco
+                        TYPE
+                        SHARED
+                        DEFINES
+                        ${draco_defines}
+                        INCLUDES
+                        ${draco_include_paths}
+                        LIB_DEPS
+                        draco_static)
+    endif()
+  endif()
+
+  if(DRACO_UNITY_PLUGIN)
     if(IOS)
       set(unity_decoder_lib_type STATIC)
+    else()
+      set(unity_decoder_lib_type MODULE)
     endif()
-    list(APPEND draco_header_only_targets dracodec_unity)
-    add_library(dracodec_unity ${unity_decoder_lib_type}
-                $<TARGET_OBJECTS:draco_attributes>
-                $<TARGET_OBJECTS:draco_compression_attributes_dec>
-                $<TARGET_OBJECTS:draco_compression_bit_coders>
-                $<TARGET_OBJECTS:draco_compression_decode>
-                $<TARGET_OBJECTS:draco_compression_entropy>
-                $<TARGET_OBJECTS:draco_compression_mesh_dec>
-                $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-                $<TARGET_OBJECTS:draco_core>
-                $<TARGET_OBJECTS:draco_dec_config>
-                $<TARGET_OBJECTS:draco_io>
-                $<TARGET_OBJECTS:draco_mesh>
-                $<TARGET_OBJECTS:draco_metadata>
-                $<TARGET_OBJECTS:draco_metadata_dec>
-                $<TARGET_OBJECTS:draco_point_cloud>
-                $<TARGET_OBJECTS:draco_points_dec>
-                $<TARGET_OBJECTS:draco_unity_plugin>)
-    # For Mac, we need to build a .bundle for plugin.
+
+    draco_add_library(NAME draco_unity_plugin TYPE OBJECT SOURCES
+                      ${draco_unity_plug_sources} DEFINES ${draco_defines}
+                      INCLUDES ${draco_include_paths})
+
+    draco_add_library(NAME
+                      dracodec_unity
+                      TYPE
+                      ${unity_decoder_lib_type}
+                      DEFINES
+                      ${draco_defines}
+                      INCLUDES
+                      ${draco_include_paths}
+                      OBJLIB_DEPS
+                      draco_unity_plugin
+                      LIB_DEPS
+                      ${draco_plugin_dependency})
+
+    # For Mac, we need to build a .bundle for the unity plugin.
     if(APPLE)
       set_target_properties(dracodec_unity PROPERTIES BUNDLE true)
+    elseif(NOT unity_decoder_lib_type STREQUAL STATIC)
+      set_target_properties(dracodec_unity
+                            PROPERTIES SOVERSION ${DRACO_SOVERSION})
     endif()
   endif()
 
-  if(BUILD_MAYA_PLUGIN)
-    add_library(draco_maya_wrapper MODULE
-                $<TARGET_OBJECTS:draco_attributes>
-                $<TARGET_OBJECTS:draco_compression_attributes_dec>
-                $<TARGET_OBJECTS:draco_compression_attributes_enc>
-                $<TARGET_OBJECTS:draco_compression_attributes_pred_schemes_enc>
-                $<TARGET_OBJECTS:draco_compression_bit_coders>
-                $<TARGET_OBJECTS:draco_compression_decode>
-                $<TARGET_OBJECTS:draco_compression_encode>
-                $<TARGET_OBJECTS:draco_compression_mesh_dec>
-                $<TARGET_OBJECTS:draco_compression_mesh_enc>
-                $<TARGET_OBJECTS:draco_compression_point_cloud_dec>
-                $<TARGET_OBJECTS:draco_compression_point_cloud_enc>
-                $<TARGET_OBJECTS:draco_core>
-                $<TARGET_OBJECTS:draco_dec_config>
-                $<TARGET_OBJECTS:draco_enc_config>
-                $<TARGET_OBJECTS:draco_io>
-                $<TARGET_OBJECTS:draco_maya_plugin>
-                $<TARGET_OBJECTS:draco_mesh>
-                $<TARGET_OBJECTS:draco_metadata>
-                $<TARGET_OBJECTS:draco_metadata_dec>
-                $<TARGET_OBJECTS:draco_metadata_enc>
-                $<TARGET_OBJECTS:draco_point_cloud>
-                $<TARGET_OBJECTS:draco_points_dec>
-                $<TARGET_OBJECTS:draco_points_enc>)
+  if(DRACO_MAYA_PLUGIN)
+    draco_add_library(NAME draco_maya_plugin TYPE OBJECT SOURCES
+                      ${draco_maya_plug_sources} DEFINES ${draco_defines}
+                      INCLUDES ${draco_include_paths})
 
-    # For Mac, we need to build a .bundle for plugin.
+    draco_add_library(NAME
+                      draco_maya_wrapper
+                      TYPE
+                      MODULE
+                      DEFINES
+                      ${draco_defines}
+                      INCLUDES
+                      ${draco_include_paths}
+                      OBJLIB_DEPS
+                      draco_maya_plugin
+                      LIB_DEPS
+                      ${draco_plugin_dependency})
+
+    # For Mac, we need to build a .bundle for the plugin.
     if(APPLE)
       set_target_properties(draco_maya_wrapper PROPERTIES BUNDLE true)
+    else()
+      set_target_properties(draco_maya_wrapper
+                            PROPERTIES SOVERSION ${DRACO_SOVERSION})
     endif()
-  endif()
-
-  list(APPEND draco_header_only_targets
-       draco_compression_attributes_pred_schemes_dec
-       draco_compression_mesh_traverser draco_dec_config draco_enc_config)
-
-  # For now, enable deduplication for both encoder and decoder.
-  # TODO(ostava): Support for disabling attribute deduplication for the C++
-  # decoder is planned in future releases.
-  draco_enable_feature(FEATURE DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED)
-  draco_enable_feature(FEATURE DRACO_ATTRIBUTE_VALUES_DEDUPLICATION_SUPPORTED)
-
-  if(BUILD_SHARED_LIBS)
-    set_target_properties(dracodec PROPERTIES SOVERSION 1)
-    set_target_properties(dracoenc PROPERTIES SOVERSION 1)
-    set_target_properties(draco PROPERTIES SOVERSION 1)
-    if(BUILD_UNITY_PLUGIN AND (NOT APPLE))
-      set_target_properties(dracodec_unity PROPERTIES SOVERSION 1)
-    endif()
-    if(BUILD_MAYA_PLUGIN AND (NOT APPLE))
-      set_target_properties(draco_maya_wrapper PROPERTIES SOVERSION 1)
-    endif()
-  endif()
-
-  extract_version_string("${draco_src_root}/core/draco_version.h" draco_version)
-
-  if(NOT MSVC)
-    # Generate draco.pc.
-    set(prefix "${CMAKE_INSTALL_PREFIX}")
-    set(pkgconfig_file "${draco_build_dir}/draco.pc")
-    file(WRITE "${pkgconfig_file}" "# draco pkg-config.\n")
-    file(APPEND "${pkgconfig_file}" "prefix=${prefix}\n")
-    file(APPEND "${pkgconfig_file}" "exec_prefix=${prefix}/bin\n")
-    file(APPEND "${pkgconfig_file}" "libdir=${prefix}/lib\n")
-    file(APPEND "${pkgconfig_file}" "includedir=${prefix}/include\n\n")
-    file(APPEND "${pkgconfig_file}" "Name: Draco\n")
-    file(APPEND "${pkgconfig_file}" "Description: 3D Compression.\n")
-    file(APPEND "${pkgconfig_file}" "Version: ${draco_version}\n")
-    file(APPEND "${pkgconfig_file}" "Requires:\n")
-    file(APPEND "${pkgconfig_file}" "Conflicts:\n")
-    file(APPEND "${pkgconfig_file}" "Libs: -L${prefix}/lib -ldraco\n")
-    file(APPEND "${pkgconfig_file}" "Cflags: -I${prefix}/include -std=c++11\n")
   endif()
 
   # Draco app targets.
-  add_executable(draco_decoder "${draco_src_root}/tools/draco_decoder.cc"
-                                ${draco_io_sources})
-  target_link_libraries(draco_decoder PRIVATE dracodec)
-  add_executable(draco_encoder "${draco_src_root}/tools/draco_encoder.cc"
-                                ${draco_io_sources})
-  target_link_libraries(draco_encoder PRIVATE draco)
+  draco_add_executable(NAME
+                       draco_decoder
+                       SOURCES
+                       "${draco_src_root}/tools/draco_decoder.cc"
+                       ${draco_io_sources}
+                       DEFINES
+                       ${draco_defines}
+                       INCLUDES
+                       ${draco_include_paths}
+                       LIB_DEPS
+                       ${draco_dependency})
 
-  if(ENABLE_TESTS)
-    draco_setup_test_targets()
-  endif()
+  draco_add_executable(NAME
+                       draco_encoder
+                       SOURCES
+                       "${draco_src_root}/tools/draco_encoder.cc"
+                       ${draco_io_sources}
+                       DEFINES
+                       ${draco_defines}
+                       INCLUDES
+                       ${draco_include_paths}
+                       LIB_DEPS
+                       ${draco_dependency})
 
-  # Collect all of the header files in the tree, and add an install rule for
-  # each.
-  file(GLOB_RECURSE draco_headers RELATIVE ${draco_root}/src/draco "*.h")
-  foreach(filename ${draco_headers})
-    get_filename_component(file_directory ${filename} DIRECTORY)
-    install(
-      FILES src/draco/${filename}
-      DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/${file_directory}")
-  endforeach()
-
-  install(FILES "${draco_build_dir}/draco/draco_features.h"
-          DESTINATION "${CMAKE_INSTALL_PREFIX}/include/draco/")
-
-  if(NOT MSVC)
-    # Install our pkg-config file.
-    install(FILES "${draco_build_dir}/draco.pc"
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
-  endif()
-
-  # Add install rules for lib and executable targets.
-  install(TARGETS dracodec dracoenc draco DESTINATION
-                  "${CMAKE_INSTALL_PREFIX}/lib")
-  if(BUILD_UNITY_PLUGIN)
-    install(TARGETS dracodec_unity DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
-  endif()
-  if(BUILD_MAYA_PLUGIN)
-    install(
-      TARGETS draco_maya_wrapper DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
-  endif()
-
-  install(TARGETS draco_decoder draco_encoder DESTINATION
-                  "${CMAKE_INSTALL_PREFIX}/bin")
-
-  # Generate a CMake config file.
-  set(draco_include_install_dir "include/draco")
-  set(draco_lib_install_dir "lib")
-  set(draco_script_install_dir
-      "${CMAKE_INSTALL_PREFIX}/${draco_lib_install_dir}/draco/cmake")
-  set(draco_config_in_file "${draco_root}/cmake/DracoConfig.cmake")
-  set(draco_config_out_file "${draco_build_dir}/DracoConfig.cmake")
-
-  configure_package_config_file("${draco_config_in_file}"
-                                "${draco_config_out_file}"
-                                NO_CHECK_REQUIRED_COMPONENTS_MACRO
-                                INSTALL_DESTINATION
-                                "${draco_lib_install_dir}/draco/cmake" PATH_VARS
-                                draco_include_install_dir draco_lib_install_dir)
-  write_basic_package_version_file("${draco_build_dir}/DracoConfigVersion.cmake"
-                                   VERSION ${draco_version}
-                                   COMPATIBILITY SameMajorVersion)
-
-  # Read in the config file and rewrite it with a version string included.
-  file(STRINGS "${draco_config_out_file}" draco_config_strings)
-  file(WRITE "${draco_config_out_file}"
-       "set(draco_VERSION \"${draco_version}\")\n")
-  foreach(config_string ${draco_config_strings})
-    file(APPEND "${draco_config_out_file}" "${config_string}\n")
-  endforeach()
-
-  # Add install rules for CMake helper scripts.
-  set(draco_cmake_helper_scripts "${draco_root}/cmake/FindDraco.cmake"
-                                 "${draco_build_dir}/DracoConfig.cmake"
-                                 "${draco_build_dir}/DracoConfigVersion.cmake")
-  install(FILES ${draco_cmake_helper_scripts}
-          DESTINATION "${draco_script_install_dir}")
-
-  # Some generators complain about unknown link language for header only
-  # targets. Silence the harmless warnings/errors with some dummy source files.
-  foreach(target ${draco_header_only_targets})
-    add_dummy_source_file_to_target("${target}" "cc")
-  endforeach()
+  draco_setup_install_target()
+  draco_setup_test_targets()
 endif()
 
-# Generate $draco_build_dir/draco/draco_features.h.
-draco_generate_features_h()
+if(DRACO_VERBOSE)
+  draco_dump_cmake_flag_variables()
+  draco_dump_tracked_configuration_variables()
+  draco_dump_options()
+endif()

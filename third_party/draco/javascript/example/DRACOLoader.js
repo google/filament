@@ -580,7 +580,7 @@ THREE.DRACOLoader.DRACOWorker = function () {
 			case Int8Array:
 				ptr = draco._malloc( numValues );
 				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_INT8, numValues, ptr );
-				geometryBuffer[ attributeName ] = new Int8Array( draco.HEAP8.buffer, ptr, numValues ).slice();
+				array = new Int8Array( draco.HEAP8.buffer, ptr, numValues ).slice();
 				draco._free( ptr );
 				break;
 
@@ -603,7 +603,7 @@ THREE.DRACOLoader.DRACOWorker = function () {
 			case Uint8Array:
 				ptr = draco._malloc( numValues );
 				decoder.GetAttributeDataArrayForAllPoints( dracoGeometry, attribute, draco.DT_UINT8, numValues, ptr );
-				geometryBuffer[ attributeName ] = new Uint8Array( draco.HEAPU8.buffer, ptr, numValues ).slice();
+				array = new Uint8Array( draco.HEAPU8.buffer, ptr, numValues ).slice();
 				draco._free( ptr );
 				break;
 

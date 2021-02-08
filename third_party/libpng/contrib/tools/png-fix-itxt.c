@@ -1,14 +1,14 @@
 
 /* png-fix-itxt version 1.0.0
  *
- * Copyright 2013 Glenn Randers-Pehrson
- * Last changed in libpng 1.6.3 [July 18, 2013]
+ * Copyright 2015 Glenn Randers-Pehrson
+ * Last changed in libpng 1.6.18 [July 23, 2015]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  *
- * Usage:            
+ * Usage:
  *
  *     png-fix-itxt.exe < bad.png > good.png
  *
@@ -34,8 +34,10 @@
 
 #define MAX_LENGTH 500000
 
-#define GETBREAK ((unsigned char)(inchar=getchar())); if (inchar == EOF) break
-
+/* Read one character (inchar), also return octet (c), break if EOF */
+#define GETBREAK inchar=getchar(); \
+                 c=(inchar & 0xffU);\
+                 if (inchar != c) break
 int
 main(void)
 {
@@ -48,25 +50,25 @@ main(void)
 /* Skip 8-byte signature */
    for (i=8; i; i--)
    {
-      c=GETBREAK;
+      GETBREAK;
       putchar(c);
    }
 
-if (inchar != EOF)
+if (inchar == c) /* !EOF */
 for (;;)
  {
    /* Read the length */
    unsigned long length; /* must be 32 bits! */
-   c=GETBREAK; buf[0] = c; length  = c; length <<= 8;
-   c=GETBREAK; buf[1] = c; length += c; length <<= 8;
-   c=GETBREAK; buf[2] = c; length += c; length <<= 8;
-   c=GETBREAK; buf[3] = c; length += c;
+   GETBREAK; buf[0] = c; length  = c; length <<= 8;
+   GETBREAK; buf[1] = c; length += c; length <<= 8;
+   GETBREAK; buf[2] = c; length += c; length <<= 8;
+   GETBREAK; buf[3] = c; length += c;
 
    /* Read the chunkname */
-   c=GETBREAK; buf[4] = c;
-   c=GETBREAK; buf[5] = c;
-   c=GETBREAK; buf[6] = c;
-   c=GETBREAK; buf[7] = c;
+   GETBREAK; buf[4] = c;
+   GETBREAK; buf[5] = c;
+   GETBREAK; buf[6] = c;
+   GETBREAK; buf[7] = c;
 
 
    /* The iTXt chunk type expressed as integers is (105, 84, 88, 116) */
@@ -81,8 +83,11 @@ for (;;)
       /* Copy the data bytes */
       for (i=8; i < length + 12; i++)
       {
-         c=GETBREAK; buf[i] = c;
+         GETBREAK; buf[i] = c;
       }
+
+      if (inchar != c) /* EOF */
+         break;
 
       /* Calculate the CRC */
       crc = crc32(crc, buf+4, (uInt)length+4);
@@ -90,10 +95,10 @@ for (;;)
       for (;;)
       {
         /* Check the CRC */
-        if (((crc >> 24) & 0xff) == buf[length+8] &&
-            ((crc >> 16) & 0xff) == buf[length+9] &&
-            ((crc >>  8) & 0xff) == buf[length+10] &&
-            ((crc      ) & 0xff) == buf[length+11])
+        if (((crc >> 24) & 0xffU) == buf[length+8] &&
+            ((crc >> 16) & 0xffU) == buf[length+9] &&
+            ((crc >>  8) & 0xffU) == buf[length+10] &&
+            ((crc      ) & 0xffU) == buf[length+11])
            break;
 
         length++;
@@ -101,18 +106,21 @@ for (;;)
         if (length >= MAX_LENGTH-12)
            break;
 
-        c=GETBREAK;
-        buf[length+11]=c;
+        GETBREAK;
+        buf[length+11] = c;
 
         /* Update the CRC */
         crc = crc32(crc, buf+7+length, 1);
       }
 
+      if (inchar != c) /* EOF */
+         break;
+
       /* Update length bytes */
-      buf[0] = (unsigned char)((length << 24) & 0xff);
-      buf[1] = (unsigned char)((length << 16) & 0xff);
-      buf[2] = (unsigned char)((length <<  8) & 0xff);
-      buf[3] = (unsigned char)((length      ) & 0xff);
+      buf[0] = (unsigned char)((length >> 24) & 0xffU);
+      buf[1] = (unsigned char)((length >> 16) & 0xffU);
+      buf[2] = (unsigned char)((length >>  8) & 0xffU);
+      buf[3] = (unsigned char)((length      ) & 0xffU);
 
       /* Write the fixed iTXt chunk (length, name, data, crc) */
       for (i=0; i<length+12; i++)
@@ -121,6 +129,9 @@ for (;;)
 
    else
    {
+      if (inchar != c) /* EOF */
+         break;
+
       /* Copy bytes that were already read (length and chunk name) */
       for (i=0; i<8; i++)
          putchar(buf[i]);
@@ -128,11 +139,11 @@ for (;;)
       /* Copy data bytes and CRC */
       for (i=8; i< length+12; i++)
       {
-         c=GETBREAK;
+         GETBREAK;
          putchar(c);
       }
 
-      if (inchar == EOF)
+      if (inchar != c) /* EOF */
       {
          break;
       }
@@ -142,7 +153,7 @@ for (;;)
          break;
    }
 
-   if (inchar == EOF)
+   if (inchar != c) /* EOF */
       break;
 
    if (buf[4] == 73 && buf[5] == 69 && buf[6] == 78 && buf[7] == 68)

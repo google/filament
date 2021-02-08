@@ -129,10 +129,11 @@ struct SandboxParameters {
     float ior = 1.5;
     float emissiveExposureWeight = 1.0f;
     float emissiveEV = 0.0f;
+    float sheenRoughness = 0.0f;
     sRGBColor transmittanceColor =  { 1.0f };
     sRGBColor specularColor = { 0.0f };
     sRGBColor subsurfaceColor = { 0.0f };
-    sRGBColor sheenColor = { 0.83f, 0.0f, 0.0f };
+    sRGBColor sheenColor = { 0.0f, 0.0f, 0.0f };
     sRGBColor emissiveColor = { 0.0f };
     int currentMaterialModel = MATERIAL_MODEL_LIT;
     int currentBlending = BLENDING_OPAQUE;

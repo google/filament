@@ -5,55 +5,9 @@
 
 News
 =======
-### Version 1.3.6 release
-* WASM and JavaScript decoders are now hosted from a static URL
-  * It is recommended to always pull your Draco WASM and JavaScript decoders from this URL:
-  * https://www.gstatic.com/draco/v1/decoders/
-  * Users will benefit from having the Draco decoder in cache as more sites start using the static URL
-* Changed web examples to pull Draco decoders from static URL
-* Added new API to Draco WASM decoder, which increased performance by ~15%
-* Decreased Draco WASM decoder size by ~20%
-* Added support for generic and multiple attributes to Draco Unity plug-ins
-* Added new API to Draco Unity, which increased decoder performance by ~15%
-* Changed quantization defaults:
-  * POSITION: 11
-  * NORMAL: 7
-  * TEX_COORD: 10
-  * COLOR: 8
-  * GENERIC: 8
-* Code cleanup
-* Bug fixes
 
-### Version 1.3.5 release
-* Added option to build Draco for Universal Scene Description
-* Code cleanup
-* Bug fixes
-
-### Version 1.3.4 release
-* Fixes for Unity
-
-### Version 1.3.3 release
-* Added ExpertEncoder to the JavaScript API
-  * Allows developers to set quantization options per attribute id
-* Bug fixes
-
-### Version 1.3.2 release
-* Bug fixes
-
-### Version 1.3.1 release
-* Fix issue with multiple attributes when skipping an attribute transform
-
-### Version 1.3.0 release
-* Improved kD-tree based point cloud encoding
-  * Now applicable to point clouds with any number of attributes
-  * Support for all integer attribute types and quantized floating point types
-* Improved mesh compression up to 10% (on average ~2%)
-  * For meshes, the 1.3.0 bitstream is fully compatible with 1.2.x decoders
-* Improved JavaScript API
-  * Added support for all signed and unsigned integer types
-  * Added support for point clouds to our JavaScript encoder API
-* Added support for integer properties to the PLY decoder
-* Bug fixes
+Check out the [README](https://github.com/google/draco/blob/1.4.1/README.md)
+file for news about this release.
 
 Description
 ===========
@@ -80,7 +34,6 @@ NPM Package
 The code shows a simple example of using Draco encoder and decoder with Node.js.
 `draco_encoder_node.js` and `draco_decoder_node.js` are modified Javascript
 encoding/decoding files that are compatible with Node.js.
-`draco_nodejs_example.js` has the example code for usage.
 
 How to run the code:
 
@@ -89,6 +42,9 @@ How to run the code:
 ~~~~~ bash
 $ npm install draco3d
 ~~~~~
+
+### Working example
+`draco_nodejs_example.js` has the example code for usage.
 
 (2) Run example code to test:
 
@@ -100,6 +56,24 @@ $ node draco_nodejs_example.js
 
 The code loads the [Bunny] model, it will first decode to a mesh
 and then encode it with different settings.
+
+
+### Minimal examples
+These examples only show how to load the encoder and decoder modules. `draco_minimal_encoder_decoder_example.js`, `draco_minimal_encoder_example.js`, and `draco_minimal_decoder_example.js` has the example code for usage.
+
+(2) Run the code to test:
+
+~~~~~ bash
+$ node draco_minimal_encoder_decoder_example.js
+~~~~~
+
+~~~~~ bash
+$ node draco_minimal_encoder_example.js
+~~~~~
+
+~~~~~ bash
+$ node draco_minimal_decoder_example.js
+~~~~~
 
 References
 ==========

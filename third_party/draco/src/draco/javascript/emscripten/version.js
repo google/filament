@@ -19,7 +19,7 @@ function isVersionSupported(versionString) {
   const version = versionString.split('.');
   if (version.length < 2 || version.length > 3)
     return false;  // Unexpected version string.
-  if (version[0] == 1 && version[1] >= 0 && version[1] <= 3)
+  if (version[0] == 1 && version[1] >= 0 && version[1] <= 4)
     return true;
   if (version[0] != 0 || version[1] > 10)
     return false;

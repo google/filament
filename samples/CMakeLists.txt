@@ -24,6 +24,7 @@ set(MATERIAL_SRCS
         materials/aoPreview.mat
         materials/groundShadow.mat
         materials/heightfield.mat
+        materials/mirror.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
@@ -228,6 +229,7 @@ if (NOT ANDROID)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(point_sprites)
+    add_demo(rendertarget)
     add_demo(sample_cloth)
     add_demo(sample_full_pbr)
     add_demo(sample_normal_map)
@@ -243,6 +245,7 @@ if (NOT ANDROID)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
+    target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)

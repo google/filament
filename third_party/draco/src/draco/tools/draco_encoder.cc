@@ -45,7 +45,7 @@ Options::Options()
       pos_quantization_bits(11),
       tex_coords_quantization_bits(10),
       tex_coords_deleted(false),
-      normals_quantization_bits(7),
+      normals_quantization_bits(8),
       normals_deleted(false),
       generic_quantization_bits(8),
       generic_deleted(false),
@@ -70,7 +70,7 @@ void Usage() {
       "attribute, default=10.\n");
   printf(
       "  -qn <value>           quantization bits for the normal vector "
-      "attribute, default=7.\n");
+      "attribute, default=8.\n");
   printf(
       "  -qg <value>           quantization bits for any generic attribute, "
       "default=8.\n");

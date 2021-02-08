@@ -42,17 +42,13 @@
     <div style="white-space: pre">
 name = {{ name }}
 version = {{ version }}
+{{#required_attributes.length}}
 
 <b>Required attributes</b>
 {{#required_attributes}}
 {{.}}
 {{/required_attributes}}
-
-DIR = DIRECTIONAL_LIGHTING
-DYN = DYNAMIC_LIGHTING
-SRE = SHADOW_RECEIVER
-SKN = SKINNING_OR_MORPHING
-DEP = DEPTH
+{{/required_attributes.length}}
 
 <b>OpenGL shaders</b>
 {{#opengl}}

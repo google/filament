@@ -191,18 +191,9 @@ public:
      *
      * This cannot be called after FilamentAsset::releaseSourceData().
      * This cannot be called on a non-instanced asset.
-     * Animation is not supported in new instances.
      * See also AssetLoader::createInstancedAsset().
      */
     FilamentInstance* createInstance(FilamentAsset* primary);
-
-    /**
-     * Takes a pointer to an opaque pipeline object and returns a bundle of Filament objects.
-     *
-     * This exists solely for interop with AssetPipeline, which is optional according to the build
-     * configuration.
-     */
-    FilamentAsset* createAssetFromHandle(const void* cgltf);
 
     /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
@@ -213,7 +204,8 @@ public:
      * Destroys the given asset and all of its associated Filament objects.
      *
      * This destroys entities, components, material instances, vertex buffers, index buffers,
-     * and textures.
+     * and textures. This does not necessarily immediately free all source data, since
+     * texture decoding or GPU uploading might be underway.
      */
     void destroyAsset(const FilamentAsset* asset);
 

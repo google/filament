@@ -29,6 +29,8 @@ void SkipWhitespace(DecoderBuffer *buffer);
 // Returns true if the next character is a whitespace.
 // |end_reached| is set to true when the end of the stream is reached.
 bool PeekWhitespace(DecoderBuffer *buffer, bool *end_reached);
+
+// Skips all characters until the end of the line.
 void SkipLine(DecoderBuffer *buffer);
 
 // Parses signed floating point number or returns false on error.
@@ -49,7 +51,7 @@ int GetSignValue(char c);
 // Parses a string until a whitespace or end of file is reached.
 bool ParseString(DecoderBuffer *buffer, std::string *out_string);
 
-// Parses the entire line into the buffer (excluding the new line character).
+// Parses the entire line into the buffer (excluding the new line characters).
 void ParseLine(DecoderBuffer *buffer, std::string *out_string);
 
 // Parses line and stores into a new decoder buffer.

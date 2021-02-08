@@ -88,7 +88,9 @@ Status PointCloudDecoder::Decode(const DecoderOptions &options,
   const uint8_t max_supported_minor_version =
       header.encoder_type == POINT_CLOUD ? kDracoPointCloudBitstreamVersionMinor
                                          : kDracoMeshBitstreamVersionMinor;
+
   // Check for version compatibility.
+#ifdef DRACO_BACKWARDS_COMPATIBILITY_SUPPORTED
   if (version_major_ < 1 || version_major_ > max_supported_major_version) {
     return Status(Status::UNKNOWN_VERSION, "Unknown major version.");
   }
@@ -96,6 +98,14 @@ Status PointCloudDecoder::Decode(const DecoderOptions &options,
       version_minor_ > max_supported_minor_version) {
     return Status(Status::UNKNOWN_VERSION, "Unknown minor version.");
   }
+#else
+  if (version_major_ != max_supported_major_version) {
+    return Status(Status::UNKNOWN_VERSION, "Unsupported major version.");
+  }
+  if (version_minor_ != max_supported_minor_version) {
+    return Status(Status::UNKNOWN_VERSION, "Unsupported minor version.");
+  }
+#endif
   buffer_->set_bitstream_version(
       DRACO_BITSTREAM_VERSION(version_major_, version_minor_));
 

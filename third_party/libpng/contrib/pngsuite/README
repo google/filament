@@ -1,8 +1,8 @@
 
 pngsuite
 --------
-(c) Willem van Schaik, 1999, 2011, 2012
-Two images are by Glenn Randers-Pehrson, 2012
+Copyright (c) Willem van Schaik, 1999, 2011, 2012
+Two images (ftbbn0g01.png and ftbbn0g02.png) are by Glenn Randers-Pehrson, 2012
 
 Permission to use, copy, modify, and distribute these images for any
 purpose and without fee is hereby granted.
@@ -15,6 +15,8 @@ chunks, etc.
 
 The "ft*.png" images are "free/libre" replacements for the transparent
 corresponding t*.png images in the PngSuite.
+
+The "i*.png" images are the same images, but interlaced.
 
 The images in this directory represent the basic PNG color-types:
 grayscale (1-16 bit deep), full color (8 or 16 bit), paletted
@@ -101,5 +103,5 @@ Testing basn6a16.png: PASS (1072 zero samples)
 libpng passes test
 
 Willem van Schaik
-<willem@schaik.com>
+<willem at schaik.com>
 October 1999

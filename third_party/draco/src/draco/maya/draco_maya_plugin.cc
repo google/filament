@@ -12,7 +12,7 @@
 //
 #include "draco/maya/draco_maya_plugin.h"
 
-#ifdef BUILD_MAYA_PLUGIN
+#ifdef DRACO_MAYA_PLUGIN
 
 namespace draco {
 namespace maya {
@@ -262,4 +262,4 @@ EncodeResult drc2py_encode(Drc2PyMesh *in_mesh, char *file_path) {
 
 }  // namespace draco
 
-#endif  // BUILD_MAYA_PLUGIN
+#endif  // DRACO_MAYA_PLUGIN

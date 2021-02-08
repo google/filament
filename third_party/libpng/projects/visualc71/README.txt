@@ -12,7 +12,7 @@ Assumptions:
 * The libpng source files are in ..\..
 * The zlib source files are in ..\..\..\zlib
 * The zlib project file is in . /* Warning: This is until the zlib project
-  files get intergrated into the next zlib release. The final zlib project
+  files get integrated into the next zlib release. The final zlib project
   directory will then be ..\..\..\zlib\projects\visualc71. */
 
 To use:

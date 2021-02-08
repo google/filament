@@ -251,11 +251,12 @@ Filament.loadClassExtensions = function() {
 
     /// setBloomOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled.
+    /// enabled, strength, resolution, anomorphism, levels, blendMode, threshold, highlight.
     /// NOTE: dirt texture is not yet supported in the JavaScript API.
     Filament.View.prototype.setBloomOptions = function(overrides) {
         const options = {
             dirtStrength: 0.2,
+            highlight: 1000.0,
             strength: 0.10,
             resolution: 360,
             anamorphism: 1.0,

@@ -68,6 +68,9 @@ public:
      */
     const char* getAnimationName(size_t animationIndex) const;
 
+    // For internal use only.
+    void addInstance(FFilamentInstance* instance);
+
 private:
 
     /*! \cond PRIVATE */

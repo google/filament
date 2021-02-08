@@ -225,7 +225,7 @@ const char* toString(backend::SamplerFormat format) noexcept {
 
 // Returns a human-readable variant description.
 // For example: DYN|DIR
-std::string formatVariantString(uint8_t variant) noexcept;
+std::string formatVariantString(uint8_t variant, MaterialDomain domain) noexcept;
 
 } // namespace matdbg
 } // namespace filament

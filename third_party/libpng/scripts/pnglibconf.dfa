@@ -8,7 +8,8 @@ com pnglibconf.h - library build configuration
 com
 version
 com
-com Copyright (c) 1998-2014 Glenn Randers-Pehrson
+com Copyright (c) 2018-2019 Cosmin Truta
+com Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
 com
 com This code is released under the libpng license.
 com For conditions of distribution and use, see the disclaimer
@@ -189,7 +190,7 @@ setting USER_VERSIONINFO_LEGALTRADEMARKS
 
 setting API_RULE default 0
 
-# This allows a prefix to be added to the front of every API functon name (and
+# This allows a prefix to be added to the front of every API function name (and
 # therefore every symbol) by redefining all the function names with the prefix
 # at the end of pnglibconf.h.  It also turns on similar internal symbol renaming
 # by causing a similar build-time only file, pngprefix.h, to be generated.
@@ -222,12 +223,39 @@ option SET_OPTION disabled
 #                 with png_set_option
 # ARM_NEON_CHECK: (PNG_ARM_NEON == 1) compile a run-time check to see if Neon
 #                 extensions are supported. This is poorly supported and
-#                 deprectated - use the png_set_option API.
+#                 deprecated - use the png_set_option API.
 setting ARM_NEON_OPT
 option ARM_NEON_API disabled requires ALIGNED_MEMORY enables SET_OPTION,
    sets ARM_NEON_OPT 1
 option ARM_NEON_CHECK disabled requires ALIGNED_MEMORY,
    sets ARM_NEON_OPT 1
+
+# These options are specific to the PowerPC VSX hardware optimizations.
+#
+# POWERPC_VSX_OPT: unset: check at compile time (__PPC64__,__ALTIVEC__,__VSX__
+#                      must be defined by the compiler, typically as a result
+#                      of specifying
+#                      "-mvsx -maltivec" compiler flags)
+#                   0: disable (even if the CPU supports VSX.)
+#                   1: check at run time (via POWERPC_VSX_{API,CHECK})
+#                   2: switch on unconditionally (inadvisable - instead pass
+#                      -mvsx -maltivec to compiler options)
+#           When building libpng avoid using any setting other than '0'; '1' is
+#           set automatically when either 'API' or 'CHECK' are configured in,
+#           '2' should not be necessary as "-mvsx -maltivec" will achieve the same
+#           effect as well as applying VSX optimizations to the rest of the
+#           libpng code.
+# POWERPC_VSX_API:   (PNG_POWERPC_VSX == 1) allow the optimization to be switched on
+#                 with png_set_option
+# POWERPC_VSX_CHECK: (PNG_POWERPC_VSX == 1) compile a run-time check to see if VSX
+#                 extensions are supported. This is supported not for all OSes
+#                 (see contrib/powerpc/README)
+setting POWERPC_VSX_OPT
+option POWERPC_VSX_API disabled enables SET_OPTION,
+  sets POWERPC_VSX_OPT 1
+option POWERPC_VSX_CHECK disabled,
+  sets POWERPC_VSX_OPT 1
+
 
 # These settings configure the default compression level (0-9) and 'strategy';
 # strategy is as defined by the implementors of zlib. It describes the input
@@ -249,6 +277,17 @@ setting Z_DEFAULT_STRATEGY default @Z_FILTERED
 setting Z_DEFAULT_NOFILTER_STRATEGY default @Z_DEFAULT_STRATEGY
 setting ZLIB_VERNUM default @ZLIB_VERNUM
 
+# Linkage of:
+#
+#  API:      libpng API functions
+#  CALLBACK: internal non-file-local callbacks
+#  FUNCTION: internal non-file-local functions
+#  DATA:     internal non-file-local (const) data
+setting LINKAGE_API default extern
+setting LINKAGE_CALLBACK default extern
+setting LINKAGE_FUNCTION default extern
+setting LINKAGE_DATA default extern
+
 setting TEXT_Z_DEFAULT_COMPRESSION default @Z_DEFAULT_COMPRESSION
 setting TEXT_Z_DEFAULT_STRATEGY default @Z_DEFAULT_STRATEGY
 
@@ -263,12 +302,12 @@ setting DEFAULT_READ_MACROS default 1
 
 option READ_INT_FUNCTIONS requires READ
 
-# The same for write, but these can only be switched off if
-# no writing is required at all - hence the use of an 'enables'
-# not a 'requires' below:
+# The same for write  but these can only be switched off if no writing
+# is required at all - hence the use of a 'disabled', not a 'requires'.
+# If these are needed, they are enabled in the 'WRITE options' section
+# below.
 
 option WRITE_INT_FUNCTIONS disabled
-option WRITE enables WRITE_INT_FUNCTIONS
 
 # Error controls
 #
@@ -286,7 +325,7 @@ option WRITE enables WRITE_INT_FUNCTIONS
 #     By default recoverable errors on write should just generate warnings,
 #     not generally safe because this allows the application to write invalid
 #     PNG files.  Applications should enable this themselves; it's useful
-#     because it means that a failure to write an ancilliary chunk can often be
+#     because it means that a failure to write an ancillary chunk can often be
 #     ignored.
 
 option WARNINGS
@@ -350,36 +389,15 @@ option USER_MEM
 
 option IO_STATE
 
-# This is only for PowerPC big-endian and 680x0 systems
-# some testing, not enabled by default.
-# NO LONGER USED
-
-#option READ_BIG_ENDIAN disabled
-
-# Allow users to control limits on what the READ code will
-# read:
-
-# Added at libpng-1.2.43; adds limit fields to png_struct,
-# allows some usages of these fields
-
-option USER_LIMITS
-
-# Added at libpng-1.2.6; adds setting APIs, allows additional
-# usage of this field (UTSL)
-
-option SET_USER_LIMITS requires USER_LIMITS
-
-# Feature added at libpng-1.4.0, this flag added at 1.4.1
-option SET_USER_LIMITS enables SET_CHUNK_CACHE_LIMIT
-# Feature added at libpng-1.4.1, this flag added at 1.4.1
-
-option SET_USER_LIMITS enables SET_CHUNK_MALLOC_LIMIT
-
-# Libpng limits.
+# Libpng limits: limit the size of images and data on read.
 #
-# If these settings are *not* set libpng will not limit the size of
-# images or the size of data in ancilliary chunks.  This does lead to
-# security issues if PNG files come from untrusted sources.  Settings have the
+# If this option is disabled all the limit checking code will be disabled:
+
+option USER_LIMITS requires READ
+
+# The default settings given below for the limits mean that libpng will
+# limit the size of images or the size of data in ancillary chunks to less
+# than the specification or implementation limits. Settings have the
 # following interpretations:
 #
 # USER_WIDTH_MAX: maximum width of an image that will be read
@@ -388,18 +406,18 @@ option SET_USER_LIMITS enables SET_CHUNK_MALLOC_LIMIT
 # USER_CHUNK_CACHE_MAX: maximum number of chunks to be cached
 #
 # Only chunks that are variable in number are counted towards the
-# USER_CHUNK_CACHE_MAX limit
-setting USER_WIDTH_MAX
-setting USER_HEIGHT_MAX
-setting USER_CHUNK_CACHE_MAX
-setting USER_CHUNK_MALLOC_MAX
 
-# To default all these settings to values that are large but probably
-# safe turn the SAFE_LIMITS option on; this will cause the value in
-# pngpriv.h to be used.  Individual values can also be set, simply set
-# them in pngusr.dfa with '@#define PNG_setting value' lines.
-option SAFE_LIMITS enables USER_LIMITS disabled
-= SAFE_LIMITS SAFE_LIMITS
+# Use 0x7fffffff for unlimited
+setting USER_WIDTH_MAX default        1000000
+setting USER_HEIGHT_MAX default       1000000
+
+# Use 0 for unlimited
+setting USER_CHUNK_CACHE_MAX default     1000
+setting USER_CHUNK_MALLOC_MAX default 8000000
+
+# If this option is enabled APIs to set the above limits at run time are added;
+# without this the hardwired (compile time) limits will be used.
+option SET_USER_LIMITS requires USER_LIMITS
 
 # All of the following options relate to code capabilities for
 # processing image data before creating a PNG or after reading one.
@@ -500,7 +518,7 @@ option BUILD_GRAYSCALE_PALETTE
 
 # WRITE options
 
-option WRITE
+option WRITE enables WRITE_INT_FUNCTIONS
 
 # Disabling WRITE_16BIT prevents 16-bit PNG files from being
 # generated.
@@ -525,9 +543,7 @@ option WRITE_USER_TRANSFORM requires WRITE_TRANSFORMS
 
 option WRITE_INTERLACING requires WRITE
 
-# The following depends, internally, on WEIGHT_SHIFT and COST_SHIFT
-# where are set below.
-
+# Deprecated, will be removed.
 option WRITE_WEIGHTED_FILTER requires WRITE
 
 option WRITE_FLUSH requires WRITE
@@ -541,9 +557,10 @@ option USER_TRANSFORM_INFO if READ_USER_TRANSFORM, WRITE_USER_TRANSFORM
 # non-IDAT chunks (zTXt, iTXt, iCCP, and unknown chunks).  This feature
 # was added at libpng-1.5.3.
 option WRITE_CUSTOMIZE_ZTXT_COMPRESSION requires WRITE
+option WRITE_CUSTOMIZE_COMPRESSION requires WRITE
 
 # Any chunks you are not interested in, you can undef here.  The
-# ones that allocate memory may be expecially important (hIST,
+# ones that allocate memory may be especially important (hIST,
 # tEXt, zTXt, tRNS, pCAL).  Others will just save time and make png_info
 # a bit smaller.
 
@@ -563,6 +580,7 @@ option WRITE_ANCILLARY_CHUNKS requires WRITE
 
 # These options disable *all* the text chunks if turned off
 
+option TEXT disabled
 option READ_TEXT requires READ_ANCILLARY_CHUNKS enables TEXT
 option WRITE_TEXT requires WRITE_ANCILLARY_CHUNKS enables TEXT
 
@@ -666,7 +684,7 @@ setting QUANTIZE_BLUE_BITS default 5
 # are only interested in 8 bits anyway.  Increasing this value
 # results in more memory being used, and more pow() functions
 # being called to fill in the gamma tables.  Don't set this value
-# less then 8, and even that may not work (I haven't tested it).
+# less than 8, and even that may not work (I haven't tested it).
 
 setting MAX_GAMMA_8 default 11
 
@@ -676,11 +694,6 @@ setting MAX_GAMMA_8 default 11
 # the range 0.95 to 1.05
 
 setting GAMMA_THRESHOLD_FIXED default 5000
-
-# Scaling factor for filter heuristic weighting calculations
-
-setting WEIGHT_SHIFT default 8
-setting COST_SHIFT default 3
 
 # Precision to use when converting a floating point value to a PNG
 # extension format string in an sCAL chunk (only relevant if the
@@ -703,7 +716,7 @@ setting sCAL_PRECISION default 5
 setting ZBUF_SIZE default 8192
 
 # This is the size of the decompression buffer used when counting or checking
-# the decompressed size of an LZ stream from a compressed ancilliary chunk; the
+# the decompressed size of an LZ stream from a compressed ancillary chunk; the
 # decompressed data is never used so a different size may be optimal.  This size
 # was determined using contrib/libtests/timepng.c with compressed zTXt data
 # around 11MByte in size.  Slight speed improvements (up to about 14% in
@@ -729,6 +742,7 @@ setting IDAT_READ_SIZE default PNG_ZBUF_SIZE
 # Ancillary chunks
 chunk bKGD
 chunk cHRM enables COLORSPACE
+chunk eXIf
 chunk gAMA enables GAMMA
 chunk hIST
 chunk iCCP enables COLORSPACE, GAMMA
@@ -889,8 +903,11 @@ option SIMPLIFIED_READ_BGR enables FORMAT_BGR,
 
 # Write:
 option SIMPLIFIED_WRITE,
-   requires WRITE STDIO, SETJMP, WRITE_SWAP, WRITE_PACK,
+   requires WRITE, SETJMP, WRITE_SWAP, WRITE_PACK,
       WRITE_tRNS, WRITE_gAMA, WRITE_sRGB, WRITE_cHRM
+
+# 1.6.22: allow simplified write without stdio support:
+option SIMPLIFIED_WRITE_STDIO requires SIMPLIFIED_WRITE STDIO
 
 option SIMPLIFIED_WRITE_AFIRST enables FORMAT_AFIRST,
    requires SIMPLIFIED_WRITE WRITE_SWAP_ALPHA

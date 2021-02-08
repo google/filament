@@ -8,7 +8,7 @@
 # -- full-color
 ./pnm2png basn2c08.ppm basn2c08.png
 ./pnm2png basn2c16.ppm basn2c16.png
-# -- palletted
+# -- paletted
 ./pnm2png basn3p01.ppm basn3p01.png
 ./pnm2png basn3p02.ppm basn3p02.png
 ./pnm2png basn3p04.ppm basn3p04.png
@@ -28,7 +28,7 @@
 # -- full-color
 ./pnm2png rawn2c08.ppm rawn2c08.png
 ./pnm2png rawn2c16.ppm rawn2c16.png
-# -- palletted
+# -- paletted
 ./pnm2png rawn3p01.ppm rawn3p01.png
 ./pnm2png rawn3p02.ppm rawn3p02.png
 ./pnm2png rawn3p04.ppm rawn3p04.png

@@ -24,21 +24,17 @@ bool AttributeTransform::TransferToAttribute(PointAttribute *attribute) const {
   return true;
 }
 
-std::unique_ptr<PointAttribute> AttributeTransform::InitPortableAttribute(
-    int num_entries, int num_components, int num_points,
-    const PointAttribute &attribute, bool is_unsigned) const {
-  const DataType dt = is_unsigned ? DT_UINT32 : DT_INT32;
+std::unique_ptr<PointAttribute> AttributeTransform::InitTransformedAttribute(
+    const PointAttribute &src_attribute, int num_entries) {
+  const int num_components = GetTransformedNumComponents(src_attribute);
+  const DataType dt = GetTransformedDataType(src_attribute);
   GeometryAttribute va;
-  va.Init(attribute.attribute_type(), nullptr, num_components, dt, false,
+  va.Init(src_attribute.attribute_type(), nullptr, num_components, dt, false,
           num_components * DataTypeLength(dt), 0);
-  std::unique_ptr<PointAttribute> portable_attribute(new PointAttribute(va));
-  portable_attribute->Reset(num_entries);
-  if (num_points) {
-    portable_attribute->SetExplicitMapping(num_points);
-  } else {
-    portable_attribute->SetIdentityMapping();
-  }
-  return portable_attribute;
+  std::unique_ptr<PointAttribute> transformed_attribute(new PointAttribute(va));
+  transformed_attribute->Reset(num_entries);
+  transformed_attribute->SetIdentityMapping();
+  return transformed_attribute;
 }
 
 }  // namespace draco

@@ -211,7 +211,7 @@ clean:
 	$(RM_F) libpng.a pngtest pngtesti pngout.png libpng.pc \
 	so_locations libpng-config $(LIBSO) $(LIBSOMAJ)* pnglibconf.h
 
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO Y2KINFO
+DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
 writelock:
 	chmod a-w *.[ch35] $(DOCS) scripts/*
 

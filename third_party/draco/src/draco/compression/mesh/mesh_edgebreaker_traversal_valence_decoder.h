@@ -106,7 +106,12 @@ class MeshEdgebreakerTraversalValenceDecoder
     context_counters_.resize(context_symbols_.size());
     for (int i = 0; i < context_symbols_.size(); ++i) {
       uint32_t num_symbols;
-      DecodeVarint<uint32_t>(&num_symbols, out_buffer);
+      if (!DecodeVarint<uint32_t>(&num_symbols, out_buffer)) {
+        return false;
+      }
+      if (num_symbols > static_cast<uint32_t>(corner_table_->num_faces())) {
+        return false;
+      }
       if (num_symbols > 0) {
         context_symbols_[i].resize(num_symbols);
         DecodeSymbols(num_symbols, 1, out_buffer, context_symbols_[i].data());

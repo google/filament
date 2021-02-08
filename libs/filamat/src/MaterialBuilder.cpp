@@ -16,10 +16,13 @@
 
 #include "filamat/MaterialBuilder.h"
 
+#include <atomic>
 #include <vector>
 
-#include <utils/Panic.h>
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/Mutex.h>
+#include <utils/Panic.h>
 
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -596,8 +599,8 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
             << shaderCode;
 }
 
-bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, ChunkContainer& container,
-        const MaterialInfo& info) const noexcept {
+bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Variant>& variants,
+        ChunkContainer& container, const MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
     uint32_t flags = 0;
@@ -606,21 +609,19 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     GLSLPostProcessor postProcessor(mOptimization, flags);
 #endif
 
-    // Generate all shaders.
+    // Start: must be protected by lock
+    Mutex entriesLock;
     std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
-
-    // Dictionary used to compress text-based shading languages (GLSL and MSL).
     LineDictionary textDictionary;
-
 #ifndef FILAMAT_LITE
     BlobDictionary spirvDictionary;
 #endif
-    std::vector<uint32_t> spirv;
-    std::string msl;
+    // End: must be protected by lock
 
-    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
+    ShaderGenerator sg(
+            mProperties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
             mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
@@ -629,7 +630,14 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
             mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
 
+    std::atomic_bool cancelJobs(false);
+    bool firstJob = true;
+
     for (const auto& params : mCodeGenPermutations) {
+        if (cancelJobs.load()) {
+            return false;
+        }
+
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetLanguage targetLanguage = params.targetLanguage;
@@ -641,101 +649,138 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
                 (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL);
         const bool targetApiNeedsMsl = targetApi == TargetApi::METAL;
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
-        std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
-        std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
-        TextEntry glslEntry{0};
-        SpirvEntry spirvEntry{0};
-        TextEntry metalEntry{0};
-
-        glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
-        spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
-        metalEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
+        // Set when a job fails
+        JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
-            glslEntry.variant = v.variant;
-            spirvEntry.variant = v.variant;
-            metalEntry.variant = v.variant;
-
-            // Generate raw shader code.
-            // The quotes in Google-style line directives cause problems with certain drivers. These
-            // directives are optimized away when using the full filamat, so down below we
-            // explicitly remove them when using filamat lite.
-            std::string shader;
-            if (v.stage == filament::backend::ShaderType::VERTEX) {
-                shader = sg.createVertexProgram(
-                        shaderModel, targetApi, targetLanguage, info, v.variant,
-                        mInterpolation, mVertexDomain);
-#ifdef FILAMAT_LITE
-                GLSLToolsLite glslTools;
-                glslTools.removeGoogleLineDirectives(shader);
-#endif
-            } else if (v.stage == filament::backend::ShaderType::FRAGMENT) {
-                shader = sg.createFragmentProgram(
-                        shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
-#ifdef FILAMAT_LITE
-                GLSLToolsLite glslTools;
-                glslTools.removeGoogleLineDirectives(shader);
-#endif
-            }
-
-            std::string* pGlsl = nullptr;
-            if (targetApiNeedsGlsl) {
-                pGlsl = &shader;
-            }
-
-#ifndef FILAMAT_LITE
-
-            GLSLPostProcessor::Config config{
-                    .shaderType = v.stage,
-                    .shaderModel = shaderModel,
-                    .glsl = {}
-            };
-
-            if (mEnableFramebufferFetch) {
-                config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
-            }
-
-            bool ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
-#else
-            bool ok = true;
-#endif
-            if (!ok) {
-                showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
-                return false;
-            }
-
-            if (targetApi == TargetApi::OPENGL) {
-                if (targetLanguage == TargetLanguage::SPIRV) {
-                    sg.fixupExternalSamplers(shaderModel, shader, info);
+            JobSystem::Job* job = jobs::createJob(jobSystem, parent, [&]() {
+                if (cancelJobs.load()) {
+                    return;
                 }
 
-                glslEntry.stage = v.stage;
-                glslEntry.shader = shader;
-                textDictionary.addText(glslEntry.shader);
-                glslEntries.push_back(glslEntry);
-            }
+                // TODO: avoid allocations when not required
+                std::vector<uint32_t> spirv;
+                std::string msl;
+
+                std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
+                std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
+
+                TextEntry glslEntry{0};
+                SpirvEntry spirvEntry{0};
+                TextEntry metalEntry{0};
+
+                glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
+                spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
+                metalEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
+
+                glslEntry.variant = v.variant;
+                spirvEntry.variant = v.variant;
+                metalEntry.variant = v.variant;
+
+                // Generate raw shader code.
+                // The quotes in Google-style line directives cause problems with certain drivers. These
+                // directives are optimized away when using the full filamat, so down below we
+                // explicitly remove them when using filamat lite.
+                std::string shader;
+                if (v.stage == filament::backend::ShaderType::VERTEX) {
+                    shader = sg.createVertexProgram(
+                            shaderModel, targetApi, targetLanguage, info, v.variant,
+                            mInterpolation, mVertexDomain);
+#ifdef FILAMAT_LITE
+                    GLSLToolsLite glslTools;
+                    glslTools.removeGoogleLineDirectives(shader);
+#endif
+                } else if (v.stage == filament::backend::ShaderType::FRAGMENT) {
+                    shader = sg.createFragmentProgram(
+                            shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
+#ifdef FILAMAT_LITE
+                    GLSLToolsLite glslTools;
+                    glslTools.removeGoogleLineDirectives(shader);
+#endif
+                }
+
+                std::string* pGlsl = nullptr;
+                if (targetApiNeedsGlsl) {
+                    pGlsl = &shader;
+                }
 
 #ifndef FILAMAT_LITE
-            if (targetApi == TargetApi::VULKAN) {
-                assert(!spirv.empty());
-                spirvEntry.stage = v.stage;
-                spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
-                spirv.clear();
-                spirvEntries.push_back(spirvEntry);
-            }
-            if (targetApi == TargetApi::METAL) {
-                assert(!spirv.empty());
-                assert(msl.length() > 0);
-                metalEntry.stage = v.stage;
-                metalEntry.shader = msl;
-                spirv.clear();
-                msl.clear();
-                textDictionary.addText(metalEntry.shader);
-                metalEntries.push_back(metalEntry);
-            }
+                GLSLPostProcessor::Config config{
+                        .shaderType = v.stage,
+                        .shaderModel = shaderModel,
+                        .glsl = {}
+                };
+
+                if (mEnableFramebufferFetch) {
+                    config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
+                }
+
+                bool ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
+#else
+                bool ok = true;
 #endif
+                if (!ok) {
+                    showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
+                    cancelJobs = true;
+                    return;
+                }
+
+                if (targetApi == TargetApi::OPENGL) {
+                    if (targetLanguage == TargetLanguage::SPIRV) {
+                        sg.fixupExternalSamplers(shaderModel, shader, info);
+                    }
+                }
+
+                // NOTE: Everything below touches shared structures protected by a lock
+                // NOTE: do not execute expensive work from here on!
+                std::unique_lock<utils::Mutex> lock(entriesLock);
+
+                if (targetApi == TargetApi::OPENGL) {
+                    glslEntry.stage = v.stage;
+                    glslEntry.shader = shader;
+
+                    textDictionary.addText(glslEntry.shader);
+                    glslEntries.push_back(glslEntry);
+                }
+
+#ifndef FILAMAT_LITE
+                if (targetApi == TargetApi::VULKAN) {
+                    assert(!spirv.empty());
+                    spirvEntry.stage = v.stage;
+
+                    spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
+                    spirvEntries.push_back(spirvEntry);
+                }
+
+                if (targetApi == TargetApi::METAL) {
+                    assert(!spirv.empty());
+                    assert(msl.length() > 0);
+                    metalEntry.stage = v.stage;
+                    metalEntry.shader = msl;
+
+                    textDictionary.addText(metalEntry.shader);
+                    metalEntries.push_back(metalEntry);
+                }
+#endif
+            });
+
+            // NOTE: We run the first job separately to work the lack of thread safety
+            //       guarantees in glslang. This library performs unguarded global
+            //       operations on first use.
+            if (firstJob) {
+                jobSystem.runAndWait(job);
+                firstJob = false;
+            } else {
+                jobSystem.run(job);
+            }
         }
+
+        jobSystem.runAndWait(parent);
+    }
+
+    if (cancelJobs.load()) {
+        return false;
     }
 
     // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)
@@ -784,7 +829,7 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
     }
 
     // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
-    auto& output = mOutputs.emplace_back(name, qualifier, target, type, location);
+    mOutputs.emplace_back(name, qualifier, target, type, location);
 
     uint8_t colorOutputCount = 0;
     uint8_t depthOutputCount = 0;
@@ -814,7 +859,7 @@ MaterialBuilder& MaterialBuilder::enableFramebufferFetch() noexcept {
     return *this;
 }
 
-Package MaterialBuilder::build() noexcept {
+Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     if (materialBuilderClients == 0) {
         utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
             << utils::io::endl;
@@ -861,7 +906,7 @@ Package MaterialBuilder::build() noexcept {
     const auto variants = mMaterialDomain == MaterialDomain::SURFACE ?
         determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier) :
         determinePostProcessVariants();
-    bool success = generateShaders(variants, container, info);
+    bool success = generateShaders(jobSystem, variants, container, info);
 
     if (!success) {
         // Return an empty package to signal a failure to build the material.

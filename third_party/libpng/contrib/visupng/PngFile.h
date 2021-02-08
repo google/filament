@@ -23,8 +23,8 @@ BOOL PngSaveImage (PTSTR pstrFileName, png_byte *pDiData,
                    int iWidth, int iHeight, png_color BkgColor);
 
 #ifndef PNG_STDIO_SUPPORTED
-static void png_read_data(png_structp png_ptr, png_bytep data, png_size_t length);
-static void png_write_data(png_structp png_ptr, png_bytep data, png_size_t length);
+static void png_read_data(png_structp png_ptr, png_bytep data, size_t length);
+static void png_write_data(png_structp png_ptr, png_bytep data, size_t length);
 static void png_flush(png_structp png_ptr);
 #endif
 

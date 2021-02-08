@@ -7,7 +7,7 @@ pnm2png.exe basn0g16.pgm basn0g16.png
 REM -- full-color
 pnm2png.exe basn2c08.ppm basn2c08.png
 pnm2png.exe basn2c16.ppm basn2c16.png
-REM -- palletted
+REM -- paletted
 pnm2png.exe basn3p01.ppm basn3p01.png
 pnm2png.exe basn3p02.ppm basn3p02.png
 pnm2png.exe basn3p04.ppm basn3p04.png
@@ -27,7 +27,7 @@ pnm2png.exe rawn0g16.pgm rawn0g16.png
 REM -- full-color
 pnm2png.exe rawn2c08.ppm rawn2c08.png
 pnm2png.exe rawn2c16.ppm rawn2c16.png
-REM -- palletted
+REM -- paletted
 pnm2png.exe rawn3p01.ppm rawn3p01.png
 pnm2png.exe rawn3p02.ppm rawn3p02.png
 pnm2png.exe rawn3p04.ppm rawn3p04.png
