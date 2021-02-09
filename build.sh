@@ -563,11 +563,10 @@ function build_web_docs {
     echo "Building Web documents..."
 
     mkdir -p out/web-docs
+    cp -f docs/web-docs-package.json out/web-docs/package.json
     cd out/web-docs
 
-    # Create an empty npm package to link markdeep-rasterizer into
-    npm list | grep web-docs@1.0.0 > /dev/null || npm init --yes > /dev/null
-    npm list | grep markdeep-rasterizer > /dev/null || npm install ../../third_party/markdeep-rasterizer > /dev/null
+    npm install > /dev/null
 
     # Generate documents
     npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/
