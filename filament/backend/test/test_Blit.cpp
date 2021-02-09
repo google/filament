@@ -18,6 +18,9 @@
 
 #include <private/filament/EngineEnums.h>
 
+#include "ShaderGenerator.h"
+#include "TrianglePrimitive.h"
+
 #include <utils/Hash.h>
 #include <utils/Log.h>
 
@@ -34,6 +37,26 @@ using namespace filament;
 using namespace filament::backend;
 using namespace filament::math;
 using namespace utils;
+
+static const char* const triangleVs = R"(#version 450 core
+layout(location = 0) in vec4 mesh_position;
+uniform Params { highp vec4 color; highp vec4 scale; } params;
+void main() {
+    gl_Position = vec4((mesh_position.xy + 0.5) * params.scale.xy, params.scale.z, 1.0);
+})";
+
+static const char* const triangleFs = R"(#version 450 core
+precision mediump int; precision highp float;
+layout(location = 0) out vec4 fragColor;
+uniform Params { highp vec4 color; highp vec4 scale; } params;
+void main() {
+    fragColor = params.color;
+})";
+
+struct MaterialParams {
+    float4 color;
+    float4 scale;
+};
 
 struct ScreenshotParams {
     int width;
@@ -64,6 +87,16 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, Screensho
     dapi.readPixels(rt, 0, 0, params->width, params->height, std::move(pb));
 }
 #endif
+
+static void uploadUniforms(DriverApi& dapi, Handle<HwUniformBuffer> ubh, MaterialParams params) {
+    MaterialParams* tmp = new MaterialParams(params);
+    auto cb = [](void* buffer, size_t size, void* user) {
+        MaterialParams* sp = (MaterialParams*) buffer;
+        delete sp;
+    };
+    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
+    dapi.loadUniformBuffer(ubh, std::move(bd));
+}
 
 static uint32_t toUintColor(float4 color) {
     color = saturate(color);
@@ -108,10 +141,10 @@ TEST_F(BackendTest, ColorMagnify) {
 
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
-    constexpr auto kSrcTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
     constexpr int kDstTexWidth = 384;
     constexpr int kDstTexHeight = 384;
-    constexpr auto kDstTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr auto kDstTexFormat = TextureFormat::RGBA8;
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
@@ -174,6 +207,7 @@ TEST_F(BackendTest, ColorMagnify) {
     api.destroySwapChain(swapChain);
     for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
     for (auto rt : dstRenderTargets)  api.destroyRenderTarget(rt);
+    executeCommands();
 }
 
 TEST_F(BackendTest, ColorMinify) {
@@ -181,10 +215,10 @@ TEST_F(BackendTest, ColorMinify) {
 
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
-    constexpr auto kSrcTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
     constexpr int kDstTexWidth = 384;
     constexpr int kDstTexHeight = 384;
-    constexpr auto kDstTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr auto kDstTexFormat = TextureFormat::RGBA8;
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
@@ -247,6 +281,148 @@ TEST_F(BackendTest, ColorMinify) {
     api.destroySwapChain(swapChain);
     for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
     for (auto rt : dstRenderTargets)  api.destroyRenderTarget(rt);
+    executeCommands();
+}
+
+TEST_F(BackendTest, DepthMinify) {
+    auto& api = getDriverApi();
+
+    constexpr int kSrcTexWidth = 1024;
+    constexpr int kSrcTexHeight = 1024;
+    constexpr int kDstTexWidth = 256;
+    constexpr int kDstTexHeight = 256;
+    constexpr auto kColorTexFormat = TextureFormat::RGBA8;
+    constexpr auto kDepthTexFormat = TextureFormat::DEPTH24;
+    constexpr int kNumLevels = 3;
+
+    // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
+    auto swapChain = api.createSwapChainHeadless(256, 256, 0);
+    api.makeCurrent(swapChain, swapChain);
+
+    // Create a program.
+    ProgramHandle program;
+    {
+        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
+        Program prog = shaderGen.getProgram();
+        Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+        prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+        prog.setUniformBlock(1, utils::CString("params"));
+        program = api.createProgram(std::move(prog));
+    }
+
+    // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
+    TrianglePrimitive* triangle = new TrianglePrimitive(api);
+
+    // Create textures for the first rendering pass.
+    Handle<HwTexture> srcColorTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, kNumLevels, kColorTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
+
+    Handle<HwTexture> srcDepthTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kSrcTexWidth, kSrcTexHeight,
+        1, TextureUsage::DEPTH_ATTACHMENT);
+
+    // Create textures for the second rendering pass.
+    Handle<HwTexture> dstColorTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, kNumLevels, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
+
+    Handle<HwTexture> dstDepthTexture = api.createTexture(
+        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kDstTexWidth, kDstTexHeight,
+        1, TextureUsage::DEPTH_ATTACHMENT);
+
+    // Create render targets.
+    const int level = 0;
+
+    Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
+            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
+            kSrcTexWidth >> level, kSrcTexHeight >> level, 1,
+            { srcColorTexture, level, 0 },
+            { srcDepthTexture, level, 0 }, {});
+
+    Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
+            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
+            kDstTexWidth >> level, kDstTexHeight >> level, 1,
+            { dstColorTexture, level, 0 },
+            { dstDepthTexture, level, 0 }, {});
+
+    // Prep for rendering.
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
+    params.clearColor = float4(1, 1, 0, 1);
+    params.clearDepth = 1.0;
+    params.viewport.width = kSrcTexWidth;
+    params.viewport.height = kSrcTexHeight;
+
+    PipelineState state = {};
+    state.rasterState.colorWrite = true;
+    state.rasterState.depthWrite = true;
+    state.rasterState.depthFunc = RasterState::DepthFunc::L;
+    state.rasterState.culling = RasterState::CullingMode::NONE;
+    state.program = program;
+    auto ubuffer = api.createUniformBuffer(sizeof(MaterialParams), BufferUsage::STATIC);
+    api.makeCurrent(swapChain, swapChain);
+    api.beginFrame(0, 0);
+    api.bindUniformBuffer(0, ubuffer);
+
+    // Draw red triangle into srcRenderTarget.
+    uploadUniforms(api, ubuffer, {
+        .color = float4(1, 0, 0, 1),
+        .scale = float4(1, 1, 0.5, 0),
+    });
+    api.beginRenderPass(srcRenderTarget, params);
+    api.draw(state, triangle->getRenderPrimitive());
+    api.endRenderPass();
+    getDriverApi().endFrame(0);
+
+    // Copy over the color buffer and the depth buffer.
+    const int srcLevel = 0;
+    api.blit(TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, dstRenderTarget,
+            {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTarget,
+            {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
+
+    // Draw a larger blue triangle into dstRenderTarget. We carefully place it below the red
+    // triangle in order to exercise depth testing.
+    params.viewport.width = kDstTexWidth;
+    params.viewport.height = kDstTexHeight;
+    params.flags.clear = TargetBufferFlags::NONE;
+    uploadUniforms(api, ubuffer, {
+        .color = float4(0, 0, 1, 1),
+        .scale = float4(1.2, 1.2, 0.75, 0),
+    });
+    api.beginRenderPass(dstRenderTarget, params);
+    api.draw(state, triangle->getRenderPrimitive());
+    api.endRenderPass();
+
+    // Grab a screenshot.
+    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthBlit.png" };
+    getDriverApi().beginFrame(0, 0);
+    dumpScreenshot(api, dstRenderTarget, &sparams);
+    getDriverApi().commit(swapChain);
+    getDriverApi().endFrame(0);
+
+    // Wait for the ReadPixels result to come back.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    // Check if the image matches perfectly to our golden run.
+    const uint32_t expected = 0x92b6f5c1;
+    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sparams.pixelHashResult, expected);
+    EXPECT_TRUE(sparams.pixelHashResult == expected);
+
+    // Cleanup.
+    api.destroyUniformBuffer(ubuffer);
+    api.destroyProgram(program);
+    api.destroyTexture(srcColorTexture);
+    api.destroyTexture(dstColorTexture);
+    api.destroyTexture(srcDepthTexture);
+    api.destroyTexture(dstDepthTexture);
+    api.destroySwapChain(swapChain);
+    api.destroyRenderTarget(srcRenderTarget);
+    api.destroyRenderTarget(dstRenderTarget);
+    delete triangle;
+    executeCommands();
 }
 
 } // namespace test
