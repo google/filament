@@ -191,6 +191,8 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setDoubleSided(config->doubleSided);
     mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
 
+    bool clearCoatNeedsTexture = true;
+
     #if !GLTFIO_LITE
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);
@@ -198,8 +200,6 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("normalUvMatrix", identity);
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
-
-    bool clearCoatNeedsTexture = true;
 
     if (config->hasClearCoat) {
         mi->setParameter("clearCoatIndex",
