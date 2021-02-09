@@ -29,107 +29,107 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 </p><center><a href="images/filament_logo.png" target="_blank"><img class="markdeep" src="images/filament_logo.png"></a></center>
 
 <p></p>
-<div class="longTOC"><div class="tocHeader">Contents</div><p><a href="#about" class="level1"><span class="tocNumber">1&#xA0; </span>About</a><br>
-&#xA0;&#xA0;<a href="#about/authors" class="level2"><span class="tocNumber">1.1&#xA0; </span>Authors</a><br>
-<a href="#overview" class="level1"><span class="tocNumber">2&#xA0; </span>Overview</a><br>
-&#xA0;&#xA0;<a href="#overview/coreconcepts" class="level2"><span class="tocNumber">2.1&#xA0; </span>Core concepts</a><br>
-<a href="#materialmodels" class="level1"><span class="tocNumber">3&#xA0; </span>Material models</a><br>
-&#xA0;&#xA0;<a href="#materialmodels/litmodel" class="level2"><span class="tocNumber">3.1&#xA0; </span>Lit model</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/basecolor" class="level3"><span class="tocNumber">3.1.1&#xA0; </span>Base color</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/metallic" class="level3"><span class="tocNumber">3.1.2&#xA0; </span>Metallic</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/roughness" class="level3"><span class="tocNumber">3.1.3&#xA0; </span>Roughness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/non-metals" class="level3"><span class="tocNumber">3.1.4&#xA0; </span>Non-metals</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/metals" class="level3"><span class="tocNumber">3.1.5&#xA0; </span>Metals</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/refraction" class="level3"><span class="tocNumber">3.1.6&#xA0; </span>Refraction</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/reflectance" class="level3"><span class="tocNumber">3.1.7&#xA0; </span>Reflectance</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/sheencolor" class="level3"><span class="tocNumber">3.1.8&#xA0; </span>Sheen color</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/sheenroughness" class="level3"><span class="tocNumber">3.1.9&#xA0; </span>Sheen roughness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/clearcoat" class="level3"><span class="tocNumber">3.1.10&#xA0; </span>Clear coat</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/clearcoatroughness" class="level3"><span class="tocNumber">3.1.11&#xA0; </span>Clear coat roughness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/anisotropy" class="level3"><span class="tocNumber">3.1.12&#xA0; </span>Anisotropy</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/anisotropydirection" class="level3"><span class="tocNumber">3.1.13&#xA0; </span>Anisotropy direction</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/ambientocclusion" class="level3"><span class="tocNumber">3.1.14&#xA0; </span>Ambient occlusion</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/normal" class="level3"><span class="tocNumber">3.1.15&#xA0; </span>Normal</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/bentnormal" class="level3"><span class="tocNumber">3.1.16&#xA0; </span>Bent normal</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/clearcoatnormal" class="level3"><span class="tocNumber">3.1.17&#xA0; </span>Clear coat normal</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/emissive" class="level3"><span class="tocNumber">3.1.18&#xA0; </span>Emissive</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/post-lightingcolor" class="level3"><span class="tocNumber">3.1.19&#xA0; </span>Post-lighting color</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/indexofrefraction" class="level3"><span class="tocNumber">3.1.20&#xA0; </span>Index of refraction</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/transmission" class="level3"><span class="tocNumber">3.1.21&#xA0; </span>Transmission</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/absorption" class="level3"><span class="tocNumber">3.1.22&#xA0; </span>Absorption</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/micro-thicknessandthickness" class="level3"><span class="tocNumber">3.1.23&#xA0; </span>Micro-thickness and thickness</a><br>
-&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel" class="level2"><span class="tocNumber">3.2&#xA0; </span>Subsurface model</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel/thickness" class="level3"><span class="tocNumber">3.2.1&#xA0; </span>Thickness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel/subsurfacecolor" class="level3"><span class="tocNumber">3.2.2&#xA0; </span>Subsurface color</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel/subsurfacepower" class="level3"><span class="tocNumber">3.2.3&#xA0; </span>Subsurface power</a><br>
-&#xA0;&#xA0;<a href="#materialmodels/clothmodel" class="level2"><span class="tocNumber">3.3&#xA0; </span>Cloth model</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/clothmodel/sheencolor" class="level3"><span class="tocNumber">3.3.1&#xA0; </span>Sheen color</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/clothmodel/subsurfacecolor" class="level3"><span class="tocNumber">3.3.2&#xA0; </span>Subsurface color</a><br>
-&#xA0;&#xA0;<a href="#materialmodels/unlitmodel" class="level2"><span class="tocNumber">3.4&#xA0; </span>Unlit model</a><br>
-&#xA0;&#xA0;<a href="#materialmodels/specularglossiness" class="level2"><span class="tocNumber">3.5&#xA0; </span>Specular glossiness</a><br>
-<a href="#materialdefinitions" class="level1"><span class="tocNumber">4&#xA0; </span>Material definitions</a><br>
-&#xA0;&#xA0;<a href="#materialdefinitions/format" class="level2"><span class="tocNumber">4.1&#xA0; </span>Format</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/format/differenceswithjson" class="level3"><span class="tocNumber">4.1.1&#xA0; </span>Differences with JSON</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/format/example" class="level3"><span class="tocNumber">4.1.2&#xA0; </span>Example</a><br>
-&#xA0;&#xA0;<a href="#materialdefinitions/materialblock" class="level2"><span class="tocNumber">4.2&#xA0; </span>Material block</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/general:name" class="level3"><span class="tocNumber">4.2.1&#xA0; </span>General: name</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/general:shadingmodel" class="level3"><span class="tocNumber">4.2.2&#xA0; </span>General: shadingModel</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/general:parameters" class="level3"><span class="tocNumber">4.2.3&#xA0; </span>General: parameters</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/general:variantfilter" class="level3"><span class="tocNumber">4.2.4&#xA0; </span>General: variantFilter</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/general:flipuv" class="level3"><span class="tocNumber">4.2.5&#xA0; </span>General: flipUV</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexandattributes:requires" class="level3"><span class="tocNumber">4.2.6&#xA0; </span>Vertex and attributes: requires</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexandattributes:variables" class="level3"><span class="tocNumber">4.2.7&#xA0; </span>Vertex and attributes: variables</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexandattributes:vertexdomain" class="level3"><span class="tocNumber">4.2.8&#xA0; </span>Vertex and attributes: vertexDomain</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexandattributes:interpolation" class="level3"><span class="tocNumber">4.2.9&#xA0; </span>Vertex and attributes: interpolation</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:blending" class="level3"><span class="tocNumber">4.2.10&#xA0; </span>Blending and transparency: blending</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:postlightingblending" class="level3"><span class="tocNumber">4.2.11&#xA0; </span>Blending and transparency: postLightingBlending</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:transparency" class="level3"><span class="tocNumber">4.2.12&#xA0; </span>Blending and transparency: transparency</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:maskthreshold" class="level3"><span class="tocNumber">4.2.13&#xA0; </span>Blending and transparency: maskThreshold</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:refractionmode" class="level3"><span class="tocNumber">4.2.14&#xA0; </span>Blending and transparency: refractionMode</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blendingandtransparency:refractiontype" class="level3"><span class="tocNumber">4.2.15&#xA0; </span>Blending and transparency: refractionType</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/rasterization:culling" class="level3"><span class="tocNumber">4.2.16&#xA0; </span>Rasterization: culling</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/rasterization:colorwrite" class="level3"><span class="tocNumber">4.2.17&#xA0; </span>Rasterization: colorWrite</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/rasterization:depthwrite" class="level3"><span class="tocNumber">4.2.18&#xA0; </span>Rasterization: depthWrite</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/rasterization:depthculling" class="level3"><span class="tocNumber">4.2.19&#xA0; </span>Rasterization: depthCulling</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/rasterization:doublesided" class="level3"><span class="tocNumber">4.2.20&#xA0; </span>Rasterization: doubleSided</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.21&#xA0; </span>Lighting: shadowMultiplier</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.22&#xA0; </span>Lighting: clearCoatIorChange</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.23&#xA0; </span>Lighting: multiBounceAmbientOcclusion</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.24&#xA0; </span>Lighting: specularAmbientOcclusion</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.25&#xA0; </span>Anti-aliasing: specularAntiAliasing</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.26&#xA0; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.27&#xA0; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
-&#xA0;&#xA0;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&#xA0; </span>Vertex block</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&#xA0; </span>Material vertex inputs</a><br>
-&#xA0;&#xA0;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&#xA0; </span>Fragment block</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&#xA0; </span>prepareMaterial function</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&#xA0; </span>Material fragment inputs</a><br>
-&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis" class="level2"><span class="tocNumber">4.5&#xA0; </span>Shader public APIs</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/types" class="level3"><span class="tocNumber">4.5.1&#xA0; </span>Types</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/math" class="level3"><span class="tocNumber">4.5.2&#xA0; </span>Math</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/matrices" class="level3"><span class="tocNumber">4.5.3&#xA0; </span>Matrices</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/frameconstants" class="level3"><span class="tocNumber">4.5.4&#xA0; </span>Frame constants</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/vertexonly" class="level3"><span class="tocNumber">4.5.5&#xA0; </span>Vertex only</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/shaderpublicapis/fragmentonly" class="level3"><span class="tocNumber">4.5.6&#xA0; </span>Fragment only</a><br>
-<a href="#compilingmaterials" class="level1"><span class="tocNumber">5&#xA0; </span>Compiling materials</a><br>
-&#xA0;&#xA0;<a href="#compilingmaterials/shadervalidation" class="level2"><span class="tocNumber">5.1&#xA0; </span>Shader validation</a><br>
-&#xA0;&#xA0;<a href="#compilingmaterials/flags" class="level2"><span class="tocNumber">5.2&#xA0; </span>Flags</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#compilingmaterials/flags/&#x2014;platform" class="level3"><span class="tocNumber">5.2.1&#xA0; </span>&#x2014;platform</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#compilingmaterials/flags/&#x2014;api" class="level3"><span class="tocNumber">5.2.2&#xA0; </span>&#x2014;api</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#compilingmaterials/flags/&#x2014;optimize-size" class="level3"><span class="tocNumber">5.2.3&#xA0; </span>&#x2014;optimize-size</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#compilingmaterials/flags/&#x2014;reflect" class="level3"><span class="tocNumber">5.2.4&#xA0; </span>&#x2014;reflect</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#compilingmaterials/flags/&#x2014;variant-filter" class="level3"><span class="tocNumber">5.2.5&#xA0; </span>&#x2014;variant-filter</a><br>
-<a href="#handlingcolors" class="level1"><span class="tocNumber">6&#xA0; </span>Handling colors</a><br>
-&#xA0;&#xA0;<a href="#handlingcolors/linearcolors" class="level2"><span class="tocNumber">6.1&#xA0; </span>Linear colors</a><br>
-&#xA0;&#xA0;<a href="#handlingcolors/pre-multipliedalpha" class="level2"><span class="tocNumber">6.2&#xA0; </span>Pre-multiplied alpha</a><br>
-</p></div><a class="target" name="about">&#xA0;</a><a class="target" name="about">&#xA0;</a><a class="target" name="toc1">&#xA0;</a><h1>About</h1>
+<div class="longTOC"><div class="tocHeader">Contents</div><p><a href="#about" class="level1"><span class="tocNumber">1&nbsp; </span>About</a><br>
+&nbsp;&nbsp;<a href="#about/authors" class="level2"><span class="tocNumber">1.1&nbsp; </span>Authors</a><br>
+<a href="#overview" class="level1"><span class="tocNumber">2&nbsp; </span>Overview</a><br>
+&nbsp;&nbsp;<a href="#overview/coreconcepts" class="level2"><span class="tocNumber">2.1&nbsp; </span>Core concepts</a><br>
+<a href="#materialmodels" class="level1"><span class="tocNumber">3&nbsp; </span>Material models</a><br>
+&nbsp;&nbsp;<a href="#materialmodels/litmodel" class="level2"><span class="tocNumber">3.1&nbsp; </span>Lit model</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/basecolor" class="level3"><span class="tocNumber">3.1.1&nbsp; </span>Base color</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/metallic" class="level3"><span class="tocNumber">3.1.2&nbsp; </span>Metallic</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/roughness" class="level3"><span class="tocNumber">3.1.3&nbsp; </span>Roughness</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/non-metals" class="level3"><span class="tocNumber">3.1.4&nbsp; </span>Non-metals</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/metals" class="level3"><span class="tocNumber">3.1.5&nbsp; </span>Metals</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/refraction" class="level3"><span class="tocNumber">3.1.6&nbsp; </span>Refraction</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/reflectance" class="level3"><span class="tocNumber">3.1.7&nbsp; </span>Reflectance</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/sheencolor" class="level3"><span class="tocNumber">3.1.8&nbsp; </span>Sheen color</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/sheenroughness" class="level3"><span class="tocNumber">3.1.9&nbsp; </span>Sheen roughness</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/clearcoat" class="level3"><span class="tocNumber">3.1.10&nbsp; </span>Clear coat</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/clearcoatroughness" class="level3"><span class="tocNumber">3.1.11&nbsp; </span>Clear coat roughness</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/anisotropy" class="level3"><span class="tocNumber">3.1.12&nbsp; </span>Anisotropy</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/anisotropydirection" class="level3"><span class="tocNumber">3.1.13&nbsp; </span>Anisotropy direction</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/ambientocclusion" class="level3"><span class="tocNumber">3.1.14&nbsp; </span>Ambient occlusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/normal" class="level3"><span class="tocNumber">3.1.15&nbsp; </span>Normal</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/bentnormal" class="level3"><span class="tocNumber">3.1.16&nbsp; </span>Bent normal</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/clearcoatnormal" class="level3"><span class="tocNumber">3.1.17&nbsp; </span>Clear coat normal</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/emissive" class="level3"><span class="tocNumber">3.1.18&nbsp; </span>Emissive</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/post-lightingcolor" class="level3"><span class="tocNumber">3.1.19&nbsp; </span>Post-lighting color</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/indexofrefraction" class="level3"><span class="tocNumber">3.1.20&nbsp; </span>Index of refraction</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/transmission" class="level3"><span class="tocNumber">3.1.21&nbsp; </span>Transmission</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/absorption" class="level3"><span class="tocNumber">3.1.22&nbsp; </span>Absorption</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/litmodel/micro-thicknessandthickness" class="level3"><span class="tocNumber">3.1.23&nbsp; </span>Micro-thickness and thickness</a><br>
+&nbsp;&nbsp;<a href="#materialmodels/subsurfacemodel" class="level2"><span class="tocNumber">3.2&nbsp; </span>Subsurface model</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/subsurfacemodel/thickness" class="level3"><span class="tocNumber">3.2.1&nbsp; </span>Thickness</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/subsurfacemodel/subsurfacecolor" class="level3"><span class="tocNumber">3.2.2&nbsp; </span>Subsurface color</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/subsurfacemodel/subsurfacepower" class="level3"><span class="tocNumber">3.2.3&nbsp; </span>Subsurface power</a><br>
+&nbsp;&nbsp;<a href="#materialmodels/clothmodel" class="level2"><span class="tocNumber">3.3&nbsp; </span>Cloth model</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/clothmodel/sheencolor" class="level3"><span class="tocNumber">3.3.1&nbsp; </span>Sheen color</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialmodels/clothmodel/subsurfacecolor" class="level3"><span class="tocNumber">3.3.2&nbsp; </span>Subsurface color</a><br>
+&nbsp;&nbsp;<a href="#materialmodels/unlitmodel" class="level2"><span class="tocNumber">3.4&nbsp; </span>Unlit model</a><br>
+&nbsp;&nbsp;<a href="#materialmodels/specularglossiness" class="level2"><span class="tocNumber">3.5&nbsp; </span>Specular glossiness</a><br>
+<a href="#materialdefinitions" class="level1"><span class="tocNumber">4&nbsp; </span>Material definitions</a><br>
+&nbsp;&nbsp;<a href="#materialdefinitions/format" class="level2"><span class="tocNumber">4.1&nbsp; </span>Format</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/format/differenceswithjson" class="level3"><span class="tocNumber">4.1.1&nbsp; </span>Differences with JSON</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/format/example" class="level3"><span class="tocNumber">4.1.2&nbsp; </span>Example</a><br>
+&nbsp;&nbsp;<a href="#materialdefinitions/materialblock" class="level2"><span class="tocNumber">4.2&nbsp; </span>Material block</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/general:name" class="level3"><span class="tocNumber">4.2.1&nbsp; </span>General: name</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/general:shadingmodel" class="level3"><span class="tocNumber">4.2.2&nbsp; </span>General: shadingModel</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/general:parameters" class="level3"><span class="tocNumber">4.2.3&nbsp; </span>General: parameters</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/general:variantfilter" class="level3"><span class="tocNumber">4.2.4&nbsp; </span>General: variantFilter</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/general:flipuv" class="level3"><span class="tocNumber">4.2.5&nbsp; </span>General: flipUV</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/vertexandattributes:requires" class="level3"><span class="tocNumber">4.2.6&nbsp; </span>Vertex and attributes: requires</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/vertexandattributes:variables" class="level3"><span class="tocNumber">4.2.7&nbsp; </span>Vertex and attributes: variables</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/vertexandattributes:vertexdomain" class="level3"><span class="tocNumber">4.2.8&nbsp; </span>Vertex and attributes: vertexDomain</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/vertexandattributes:interpolation" class="level3"><span class="tocNumber">4.2.9&nbsp; </span>Vertex and attributes: interpolation</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:blending" class="level3"><span class="tocNumber">4.2.10&nbsp; </span>Blending and transparency: blending</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:postlightingblending" class="level3"><span class="tocNumber">4.2.11&nbsp; </span>Blending and transparency: postLightingBlending</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:transparency" class="level3"><span class="tocNumber">4.2.12&nbsp; </span>Blending and transparency: transparency</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:maskthreshold" class="level3"><span class="tocNumber">4.2.13&nbsp; </span>Blending and transparency: maskThreshold</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:refractionmode" class="level3"><span class="tocNumber">4.2.14&nbsp; </span>Blending and transparency: refractionMode</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/blendingandtransparency:refractiontype" class="level3"><span class="tocNumber">4.2.15&nbsp; </span>Blending and transparency: refractionType</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:culling" class="level3"><span class="tocNumber">4.2.16&nbsp; </span>Rasterization: culling</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:colorwrite" class="level3"><span class="tocNumber">4.2.17&nbsp; </span>Rasterization: colorWrite</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthwrite" class="level3"><span class="tocNumber">4.2.18&nbsp; </span>Rasterization: depthWrite</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthculling" class="level3"><span class="tocNumber">4.2.19&nbsp; </span>Rasterization: depthCulling</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:doublesided" class="level3"><span class="tocNumber">4.2.20&nbsp; </span>Rasterization: doubleSided</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.21&nbsp; </span>Lighting: shadowMultiplier</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.22&nbsp; </span>Lighting: clearCoatIorChange</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.23&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.24&nbsp; </span>Lighting: specularAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.25&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
+&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br>
+&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&nbsp; </span>prepareMaterial function</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&nbsp; </span>Material fragment inputs</a><br>
+&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis" class="level2"><span class="tocNumber">4.5&nbsp; </span>Shader public APIs</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/types" class="level3"><span class="tocNumber">4.5.1&nbsp; </span>Types</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/math" class="level3"><span class="tocNumber">4.5.2&nbsp; </span>Math</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/matrices" class="level3"><span class="tocNumber">4.5.3&nbsp; </span>Matrices</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/frameconstants" class="level3"><span class="tocNumber">4.5.4&nbsp; </span>Frame constants</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/vertexonly" class="level3"><span class="tocNumber">4.5.5&nbsp; </span>Vertex only</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/fragmentonly" class="level3"><span class="tocNumber">4.5.6&nbsp; </span>Fragment only</a><br>
+<a href="#compilingmaterials" class="level1"><span class="tocNumber">5&nbsp; </span>Compiling materials</a><br>
+&nbsp;&nbsp;<a href="#compilingmaterials/shadervalidation" class="level2"><span class="tocNumber">5.1&nbsp; </span>Shader validation</a><br>
+&nbsp;&nbsp;<a href="#compilingmaterials/flags" class="level2"><span class="tocNumber">5.2&nbsp; </span>Flags</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/—platform" class="level3"><span class="tocNumber">5.2.1&nbsp; </span>—platform</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/—api" class="level3"><span class="tocNumber">5.2.2&nbsp; </span>—api</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/—optimize-size" class="level3"><span class="tocNumber">5.2.3&nbsp; </span>—optimize-size</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/—reflect" class="level3"><span class="tocNumber">5.2.4&nbsp; </span>—reflect</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/—variant-filter" class="level3"><span class="tocNumber">5.2.5&nbsp; </span>—variant-filter</a><br>
+<a href="#handlingcolors" class="level1"><span class="tocNumber">6&nbsp; </span>Handling colors</a><br>
+&nbsp;&nbsp;<a href="#handlingcolors/linearcolors" class="level2"><span class="tocNumber">6.1&nbsp; </span>Linear colors</a><br>
+&nbsp;&nbsp;<a href="#handlingcolors/pre-multipliedalpha" class="level2"><span class="tocNumber">6.2&nbsp; </span>Pre-multiplied alpha</a><br>
+</p></div><a class="target" name="about">&nbsp;</a><a class="target" name="about">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1>About</h1>
 <p>
 
 
-This document is part of the <a href="https://github.com/google/filament">Filament project</a>. To report errors in this document please use the <a href="https://github.com/google/filament/issues">project&apos;s issue tracker</a>.
+This document is part of the <a href="https://github.com/google/filament">Filament project</a>. To report errors in this document please use the <a href="https://github.com/google/filament/issues">project's issue tracker</a>.
 
 </p>
-<a class="target" name="authors">&#xA0;</a><a class="target" name="about/authors">&#xA0;</a><a class="target" name="toc1.1">&#xA0;</a><h2>Authors</h2>
+<a class="target" name="authors">&nbsp;</a><a class="target" name="about/authors">&nbsp;</a><a class="target" name="toc1.1">&nbsp;</a><h2>Authors</h2>
 <p>
 
 
@@ -140,7 +140,7 @@ This document is part of the <a href="https://github.com/google/filament">Filame
 <li class="minus"><a href="https://github.com/pixelflinger">Mathias Agopian</a>, <a href="https://twitter.com/darthmoosious">@darthmoosious</a></li></ul>
 
 <p></p>
-<a class="target" name="overview">&#xA0;</a><a class="target" name="overview">&#xA0;</a><a class="target" name="toc2">&#xA0;</a><h1>Overview</h1>
+<a class="target" name="overview">&nbsp;</a><a class="target" name="overview">&nbsp;</a><a class="target" name="toc2">&nbsp;</a><h1>Overview</h1>
 <p>
 
 
@@ -149,7 +149,7 @@ material system that you can use to create both simple and complex materials. Th
 describes all the features available to materials and how to create your own material.
 
 </p>
-<a class="target" name="coreconcepts">&#xA0;</a><a class="target" name="overview/coreconcepts">&#xA0;</a><a class="target" name="toc2.1">&#xA0;</a><h2>Core concepts</h2>
+<a class="target" name="coreconcepts">&nbsp;</a><a class="target" name="overview/coreconcepts">&nbsp;</a><a class="target" name="toc2.1">&nbsp;</a><h2>Core concepts</h2>
 <p>
 
 
@@ -184,10 +184,10 @@ describes all the features available to materials and how to create your own mat
 
 </p></dd><dt>Material instance</dt><dd><p>    A material instance is a reference to a material and a set of values for the different values of
     that material. Material instances are not covered in this document as they are created and
-    manipulated directly from code using Filament&apos;s APIs.
+    manipulated directly from code using Filament's APIs.
 
 </p></dd></dl><p></p>
-<a class="target" name="materialmodels">&#xA0;</a><a class="target" name="materialmodels">&#xA0;</a><a class="target" name="toc3">&#xA0;</a><h1>Material models</h1>
+<a class="target" name="materialmodels">&nbsp;</a><a class="target" name="materialmodels">&nbsp;</a><a class="target" name="toc3">&nbsp;</a><h1>Material models</h1>
 <p>
 
 
@@ -207,11 +207,11 @@ Filament materials can use one of the following material models:
 <li class="minus">Specular glossiness (legacy)</li></ul>
 
 <p></p>
-<a class="target" name="litmodel">&#xA0;</a><a class="target" name="materialmodels/litmodel">&#xA0;</a><a class="target" name="toc3.1">&#xA0;</a><h2>Lit model</h2>
+<a class="target" name="litmodel">&nbsp;</a><a class="target" name="materialmodels/litmodel">&nbsp;</a><a class="target" name="toc3.1">&nbsp;</a><h2>Lit model</h2>
 <p>
 
 
-The lit model is Filament&apos;s standard material model. This physically-based shading model was
+The lit model is Filament's standard material model. This physically-based shading model was
 designed after to offer good interoperability with other common tools and engines such as <em class="underscore">Unity 5</em>,
 <em class="underscore">Unreal Engine 4</em>, <em class="underscore">Substance Designer</em> or <em class="underscore">Marmoset Toolbag</em>.
 
@@ -223,7 +223,7 @@ or metallic surfaces (<em class="underscore">conductors</em>).
 </p><p>
 
 The appearance of a material using the standard model is controlled using the properties described
-in <a href="#table_standardproperties">table&#xA0;1</a>.
+in <a href="#table_standardproperties">table&nbsp;1</a>.
 
 </p><p>
 
@@ -250,35 +250,35 @@ in <a href="#table_standardproperties">table&#xA0;1</a>.
 <tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:left"> Absorption factor for refractive objects </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:left"> Thickness of the thin layer of refractive objects </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">thickness</strong> </td><td style="text-align:left"> Thickness of the solid volume of refractive objects </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_standardproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;1:</b> Properties of the standard model</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_standardproperties">&nbsp;</a><b style="font-style:normal;">Table&nbsp;1:</b> Properties of the standard model</div></div>
 
 <p></p><p>
 
-The type and range of each property is described in <a href="#table_standardpropertiestypes">table&#xA0;2</a>.
+The type and range of each property is described in <a href="#table_standardpropertiestypes">table&nbsp;2</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">metallic</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Should be 0 or 1 </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">roughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">roughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &nbsp; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">reflectance</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Prefer values &gt; 0.35 </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">sheenRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">sheenRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &nbsp; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoat</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Should be 0 or 1 </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [&#x2212;1..1] </td><td style="text-align:left"> Anisotropy is in the tangent direction when this value is positive </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &nbsp; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [−1..1] </td><td style="text-align:left"> Anisotropy is in the tangent direction when this value is positive </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &nbsp; </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">bentNormal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..n], a=[0..1] </td><td style="text-align:left"> Linear RGB intensity in nits, alpha encodes the exposure weight </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [1..n] </td><td style="text-align:left"> Optional, usually deduced from the reflectance </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &#xA0; </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &#xA0; </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &#xA0; </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">thickness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &#xA0; </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_standardpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;2:</b> Range and type of the standard model&apos;s properties</div></div>
+<tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> &nbsp; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &nbsp; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &nbsp; </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">thickness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..n] </td><td style="text-align:left"> &nbsp; </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_standardpropertiestypes">&nbsp;</a><b style="font-style:normal;">Table&nbsp;2:</b> Range and type of the standard model's properties</div></div>
 
 <p></p><p>
 
@@ -316,7 +316,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <p></p><p>
 
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
-    therefore they don&apos;t need to be both specified. Typically, only the reflectance is specified
+    therefore they don't need to be both specified. Typically, only the reflectance is specified
     and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
     deduced automatically. It is possible to specify both, in which case their values are kept
     as-is, which can lead to physically impossible materials, however, this might be desirable
@@ -336,7 +336,7 @@ The type and range of each property is described in <a href="#table_standardprop
     used when <code>refractionType</code> is set to <code>thin</code>.</p></div>
 
 <p></p>
-<a class="target" name="basecolor">&#xA0;</a><a class="target" name="materialmodels/litmodel/basecolor">&#xA0;</a><a class="target" name="toc3.1.1">&#xA0;</a><h3>Base color</h3>
+<a class="target" name="basecolor">&nbsp;</a><a class="target" name="materialmodels/litmodel/basecolor">&nbsp;</a><a class="target" name="toc3.1.1">&nbsp;</a><h3>Base color</h3>
 <p>
 
 
@@ -349,40 +349,40 @@ explained in the <a href="#metallic">Metallic</a> section.
 </p><dl><dt>Non-metals (dielectrics)</dt><dd><p>  Defines the diffuse color of the surface. Real-world values are typically found in the range
   \([10..240]\) if the value is encoded between 0 and 255, or in the range \([0.04..0.94]\) between 0
   and 1. Several examples of base colors for non-metallic surfaces can be found in
-  <a href="#table_basecolorsdielectrics">table&#xA0;3</a>.
+  <a href="#table_basecolorsdielectrics">table&nbsp;3</a>.
 
 </p></dd></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Metal </th><th style="text-align:center"> sRGB </th><th style="text-align:center"> Hexadecimal </th><th style="text-align:left"> Color </th></tr>
-<tr><td style="text-align:right"> Coal </td><td style="text-align:center"> 0.19, 0.19, 0.19 </td><td style="text-align:center"> #323232 </td><td style="text-align:left"> <div style="background-color: #323232; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Rubber </td><td style="text-align:center"> 0.21, 0.21, 0.21 </td><td style="text-align:center"> #353535 </td><td style="text-align:left"> <div style="background-color: #353535; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Mud </td><td style="text-align:center"> 0.33, 0.24, 0.19 </td><td style="text-align:center"> #553d31 </td><td style="text-align:left"> <div style="background-color: #875c3c; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Wood </td><td style="text-align:center"> 0.53, 0.36, 0.24 </td><td style="text-align:center"> #875c3c </td><td style="text-align:left"> <div style="background-color: #c4c6c6; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Vegetation </td><td style="text-align:center"> 0.48, 0.51, 0.31 </td><td style="text-align:center"> #7b824e </td><td style="text-align:left"> <div style="background-color: #7b824e; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Brick </td><td style="text-align:center"> 0.58, 0.49, 0.46 </td><td style="text-align:center"> #947d75 </td><td style="text-align:left"> <div style="background-color: #947d75; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Sand </td><td style="text-align:center"> 0.69, 0.66, 0.52 </td><td style="text-align:center"> #b1a884 </td><td style="text-align:left"> <div style="background-color: #b1a884; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Concrete </td><td style="text-align:center"> 0.75, 0.75, 0.73 </td><td style="text-align:center"> #c0bfbb </td><td style="text-align:left"> <div style="background-color: #c0bfbb; width: 60px">&#xA0;</div> </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_basecolorsdielectrics">&#xA0;</a><b style="font-style:normal;">Table&#xA0;3:</b> <code>baseColor</code> for common non-metals</div></div>
+<tr><td style="text-align:right"> Coal </td><td style="text-align:center"> 0.19, 0.19, 0.19 </td><td style="text-align:center"> #323232 </td><td style="text-align:left"> <div style="background-color: #323232; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Rubber </td><td style="text-align:center"> 0.21, 0.21, 0.21 </td><td style="text-align:center"> #353535 </td><td style="text-align:left"> <div style="background-color: #353535; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Mud </td><td style="text-align:center"> 0.33, 0.24, 0.19 </td><td style="text-align:center"> #553d31 </td><td style="text-align:left"> <div style="background-color: #875c3c; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Wood </td><td style="text-align:center"> 0.53, 0.36, 0.24 </td><td style="text-align:center"> #875c3c </td><td style="text-align:left"> <div style="background-color: #c4c6c6; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Vegetation </td><td style="text-align:center"> 0.48, 0.51, 0.31 </td><td style="text-align:center"> #7b824e </td><td style="text-align:left"> <div style="background-color: #7b824e; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Brick </td><td style="text-align:center"> 0.58, 0.49, 0.46 </td><td style="text-align:center"> #947d75 </td><td style="text-align:left"> <div style="background-color: #947d75; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Sand </td><td style="text-align:center"> 0.69, 0.66, 0.52 </td><td style="text-align:center"> #b1a884 </td><td style="text-align:left"> <div style="background-color: #b1a884; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Concrete </td><td style="text-align:center"> 0.75, 0.75, 0.73 </td><td style="text-align:center"> #c0bfbb </td><td style="text-align:left"> <div style="background-color: #c0bfbb; width: 60px">&nbsp;</div> </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_basecolorsdielectrics">&nbsp;</a><b style="font-style:normal;">Table&nbsp;3:</b> <code>baseColor</code> for common non-metals</div></div>
 
 <p></p><p>
 
 </p><dl><dt>Metals (conductors)</dt><dd><p>  Defines the specular color of the surface. Real-world values are typically found in the range
   \([170..255]\) if the value is encoded between 0 and 255, or in the range \([0.66..1.0]\) between 0 and
-  1. Several examples of base colors for metallic surfaces can be found in <a href="#table_basecolorsconductors">table&#xA0;4</a>.
+  1. Several examples of base colors for metallic surfaces can be found in <a href="#table_basecolorsconductors">table&nbsp;4</a>.
 
 </p></dd></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Metal </th><th style="text-align:center"> sRGB </th><th style="text-align:center"> Hexadecimal </th><th style="text-align:left"> Color </th></tr>
-<tr><td style="text-align:right"> Silver </td><td style="text-align:center"> 0.97, 0.96, 0.91 </td><td style="text-align:center"> #f7f4e8 </td><td style="text-align:left"> <div style="background-color: #faf9f5; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Aluminum </td><td style="text-align:center"> 0.91, 0.92, 0.92 </td><td style="text-align:center"> #e8eaea </td><td style="text-align:left"> <div style="background-color: #f4f5f5; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Titanium </td><td style="text-align:center"> 0.76, 0.73, 0.69 </td><td style="text-align:center"> #c1baaf </td><td style="text-align:left"> <div style="background-color: #cec8c2; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Iron </td><td style="text-align:center"> 0.77, 0.78, 0.78 </td><td style="text-align:center"> #c4c6c6 </td><td style="text-align:left"> <div style="background-color: #c0bdba; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Platinum </td><td style="text-align:center"> 0.83, 0.81, 0.78 </td><td style="text-align:center"> #d3cec6 </td><td style="text-align:left"> <div style="background-color: #d6d1c8; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Gold </td><td style="text-align:center"> 1.00, 0.85, 0.57 </td><td style="text-align:center"> #ffd891 </td><td style="text-align:left"> <div style="background-color: #fedc9d; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Brass </td><td style="text-align:center"> 0.98, 0.90, 0.59 </td><td style="text-align:center"> #f9e596 </td><td style="text-align:left"> <div style="background-color: #f4e4ad; width: 60px">&#xA0;</div> </td></tr>
-<tr><td style="text-align:right"> Copper </td><td style="text-align:center"> 0.97, 0.74, 0.62 </td><td style="text-align:center"> #f7bc9e </td><td style="text-align:left"> <div style="background-color: #fbd8b8; width: 60px">&#xA0;</div> </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_basecolorsconductors">&#xA0;</a><b style="font-style:normal;">Table&#xA0;4:</b> <code>baseColor</code> for common metals</div></div>
+<tr><td style="text-align:right"> Silver </td><td style="text-align:center"> 0.97, 0.96, 0.91 </td><td style="text-align:center"> #f7f4e8 </td><td style="text-align:left"> <div style="background-color: #faf9f5; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Aluminum </td><td style="text-align:center"> 0.91, 0.92, 0.92 </td><td style="text-align:center"> #e8eaea </td><td style="text-align:left"> <div style="background-color: #f4f5f5; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Titanium </td><td style="text-align:center"> 0.76, 0.73, 0.69 </td><td style="text-align:center"> #c1baaf </td><td style="text-align:left"> <div style="background-color: #cec8c2; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Iron </td><td style="text-align:center"> 0.77, 0.78, 0.78 </td><td style="text-align:center"> #c4c6c6 </td><td style="text-align:left"> <div style="background-color: #c0bdba; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Platinum </td><td style="text-align:center"> 0.83, 0.81, 0.78 </td><td style="text-align:center"> #d3cec6 </td><td style="text-align:left"> <div style="background-color: #d6d1c8; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Gold </td><td style="text-align:center"> 1.00, 0.85, 0.57 </td><td style="text-align:center"> #ffd891 </td><td style="text-align:left"> <div style="background-color: #fedc9d; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Brass </td><td style="text-align:center"> 0.98, 0.90, 0.59 </td><td style="text-align:center"> #f9e596 </td><td style="text-align:left"> <div style="background-color: #f4e4ad; width: 60px">&nbsp;</div> </td></tr>
+<tr><td style="text-align:right"> Copper </td><td style="text-align:center"> 0.97, 0.74, 0.62 </td><td style="text-align:center"> #f7bc9e </td><td style="text-align:left"> <div style="background-color: #fbd8b8; width: 60px">&nbsp;</div> </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_basecolorsconductors">&nbsp;</a><b style="font-style:normal;">Table&nbsp;4:</b> <code>baseColor</code> for common metals</div></div>
 
 <p></p>
-<a class="target" name="metallic">&#xA0;</a><a class="target" name="materialmodels/litmodel/metallic">&#xA0;</a><a class="target" name="toc3.1.2">&#xA0;</a><h3>Metallic</h3>
+<a class="target" name="metallic">&nbsp;</a><a class="target" name="materialmodels/litmodel/metallic">&nbsp;</a><a class="target" name="toc3.1.2">&nbsp;</a><h3>Metallic</h3>
 <p>
 
 
@@ -400,65 +400,65 @@ color). Metallic surfaces do not have any diffuse reflection and chromatic specu
 
 </p><p>
 
-The effect of <code>metallic</code> is shown in <a href="#figure_metallicproperty">figure&#xA0;1</a> (click on the image to see a
+The effect of <code>metallic</code> is shown in <a href="#figure_metallicproperty">figure&nbsp;1</a> (click on the image to see a
 larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/metallic.png" target="_blank"><img class="markdeep" src="images/materials/metallic.png"></a><div class="imagecaption"><a class="target" name="figure_metallicproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;1:</b> <code>metallic</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/metallic.png" target="_blank"><img class="markdeep" src="images/materials/metallic.png"></a><div class="imagecaption"><a class="target" name="figure_metallicproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;1:</b> <code>metallic</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="roughness">&#xA0;</a><a class="target" name="materialmodels/litmodel/roughness">&#xA0;</a><a class="target" name="toc3.1.3">&#xA0;</a><h3>Roughness</h3>
+<a class="target" name="roughness">&nbsp;</a><a class="target" name="materialmodels/litmodel/roughness">&nbsp;</a><a class="target" name="toc3.1.3">&nbsp;</a><h3>Roughness</h3>
 <p>
 
 
 The <code>roughness</code> property controls the perceived smoothness of the surface. When <code>roughness</code> is set
-to 0, the surface is perfectly smooth and highly glossy. The rougher a surface is, the &#x201C;blurrier&#x201D;
+to 0, the surface is perfectly smooth and highly glossy. The rougher a surface is, the “blurrier”
 the reflections are. This property is often called <em class="underscore">glossiness</em> in other engines and tools, and is
 simply the opposite of the roughness (<code>roughness = 1 - glossiness</code>).
 
 </p>
-<a class="target" name="non-metals">&#xA0;</a><a class="target" name="materialmodels/litmodel/non-metals">&#xA0;</a><a class="target" name="toc3.1.4">&#xA0;</a><h3>Non-metals</h3>
+<a class="target" name="non-metals">&nbsp;</a><a class="target" name="materialmodels/litmodel/non-metals">&nbsp;</a><a class="target" name="toc3.1.4">&nbsp;</a><h3>Non-metals</h3>
 <p>
 
 
-The effect of <code>roughness</code> on non-metallic surfaces is shown in <a href="#figure_roughnessproperty">figure&#xA0;2</a> (click
+The effect of <code>roughness</code> on non-metallic surfaces is shown in <a href="#figure_roughnessproperty">figure&nbsp;2</a> (click
 on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/dielectric_roughness.png" target="_blank"><img class="markdeep" src="images/materials/dielectric_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;2:</b> Dielectric <code>roughness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/dielectric_roughness.png" target="_blank"><img class="markdeep" src="images/materials/dielectric_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;2:</b> Dielectric <code>roughness</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="metals">&#xA0;</a><a class="target" name="materialmodels/litmodel/metals">&#xA0;</a><a class="target" name="toc3.1.5">&#xA0;</a><h3>Metals</h3>
+<a class="target" name="metals">&nbsp;</a><a class="target" name="materialmodels/litmodel/metals">&nbsp;</a><a class="target" name="toc3.1.5">&nbsp;</a><h3>Metals</h3>
 <p>
 
 
-The effect of <code>roughness</code> on metallic surfaces is shown in <a href="#figure_roughnessconductorproperty">figure&#xA0;3</a>
+The effect of <code>roughness</code> on metallic surfaces is shown in <a href="#figure_roughnessconductorproperty">figure&nbsp;3</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/conductor_roughness.png" target="_blank"><img class="markdeep" src="images/materials/conductor_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessconductorproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;3:</b> Conductor <code>roughness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/conductor_roughness.png" target="_blank"><img class="markdeep" src="images/materials/conductor_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessconductorproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;3:</b> Conductor <code>roughness</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="refraction">&#xA0;</a><a class="target" name="materialmodels/litmodel/refraction">&#xA0;</a><a class="target" name="toc3.1.6">&#xA0;</a><h3>Refraction</h3>
+<a class="target" name="refraction">&nbsp;</a><a class="target" name="materialmodels/litmodel/refraction">&nbsp;</a><a class="target" name="toc3.1.6">&nbsp;</a><h3>Refraction</h3>
 <p>
 
 
 When refraction through an object is enabled (using a <code>refractonType</code> of <code>thin</code> or <code>solid</code>), the
-<code>roughness</code> property will also affect the refractions, as shown in <a href="#figure_roughnessrefractionproperty">figure&#xA0;4</a> (click on the image to see a larger version).
+<code>roughness</code> property will also affect the refractions, as shown in <a href="#figure_roughnessrefractionproperty">figure&nbsp;4</a> (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/refraction_roughness.png" target="_blank"><img class="markdeep" src="images/materials/refraction_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessrefractionproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;4:</b> Refractive sphere with <code>roughness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/refraction_roughness.png" target="_blank"><img class="markdeep" src="images/materials/refraction_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughnessrefractionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;4:</b> Refractive sphere with <code>roughness</code> varying from 0.0
  (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="reflectance">&#xA0;</a><a class="target" name="materialmodels/litmodel/reflectance">&#xA0;</a><a class="target" name="toc3.1.7">&#xA0;</a><h3>Reflectance</h3>
+<a class="target" name="reflectance">&nbsp;</a><a class="target" name="materialmodels/litmodel/reflectance">&nbsp;</a><a class="target" name="toc3.1.7">&nbsp;</a><h3>Reflectance</h3>
 <p>
 
 
@@ -470,25 +470,25 @@ be avoided as no real-world materials have such low reflectance.
 
 </p><p>
 
-The effect of <code>reflectance</code> on non-metallic surfaces is shown in <a href="#figure_reflectanceproperty">figure&#xA0;5</a>
+The effect of <code>reflectance</code> on non-metallic surfaces is shown in <a href="#figure_reflectanceproperty">figure&nbsp;5</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/reflectance.png" target="_blank"><img class="markdeep" src="images/materials/reflectance.png"></a><div class="imagecaption"><a class="target" name="figure_reflectanceproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;5:</b> <code>reflectance</code> varying from 0.0 (left)
+</p><center><div class="image" style=""><a href="images/materials/reflectance.png" target="_blank"><img class="markdeep" src="images/materials/reflectance.png"></a><div class="imagecaption"><a class="target" name="figure_reflectanceproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;5:</b> <code>reflectance</code> varying from 0.0 (left)
 to 1.0 (right)</div></div></center>
 
 <p></p><p>
 
-<a href="#figure_reflectance">Figure&#xA0;6</a> shows common values and how they relate to the mapping function.
+<a href="#figure_reflectance">Figure&nbsp;6</a> shows common values and how they relate to the mapping function.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/diagram_reflectance.png" target="_blank"><img class="markdeep" src="images/diagram_reflectance.png"></a><div class="imagecaption"><a class="target" name="figure_reflectance">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;6:</b> Common reflectance values</div></div></center>
+</p><center><div class="image" style=""><a href="images/diagram_reflectance.png" target="_blank"><img class="markdeep" src="images/diagram_reflectance.png"></a><div class="imagecaption"><a class="target" name="figure_reflectance">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;6:</b> Common reflectance values</div></div></center>
 
 <p></p><p>
 
-<a href="#table_commonmatreflectance">Table&#xA0;5</a> describes acceptable reflectance values for various types of materials
+<a href="#table_commonmatreflectance">Table&nbsp;5</a> describes acceptable reflectance values for various types of materials
 (no real world material has a value under 2%).
 
 </p><p>
@@ -506,7 +506,7 @@ to 1.0 (right)</div></div></center>
 <tr><td style="text-align:right"> Hair </td><td style="text-align:left"> 4.6% </td><td style="text-align:left"> 1.55 </td><td style="text-align:left"> 0.54 </td></tr>
 <tr><td style="text-align:right"> Teeth </td><td style="text-align:left"> 5.8% </td><td style="text-align:left"> 1.63 </td><td style="text-align:left"> 0.6 </td></tr>
 <tr><td style="text-align:right"> Default value </td><td style="text-align:left"> 4% </td><td style="text-align:left"> 1.5 </td><td style="text-align:left"> 0.5 </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_commonmatreflectance">&#xA0;</a><b style="font-style:normal;">Table&#xA0;5:</b> Reflectance of common materials</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_commonmatreflectance">&nbsp;</a><b style="font-style:normal;">Table&nbsp;5:</b> Reflectance of common materials</div></div>
 
 <p></p><p>
 
@@ -527,7 +527,7 @@ See section  <a href="#toc3.1.20">3.1.20</a> for more information about the <cod
 indices.
 
 </p>
-<a class="target" name="sheencolor">&#xA0;</a><a class="target" name="materialmodels/litmodel/sheencolor">&#xA0;</a><a class="target" name="toc3.1.8">&#xA0;</a><h3>Sheen color</h3>
+<a class="target" name="sheencolor">&nbsp;</a><a class="target" name="materialmodels/litmodel/sheencolor">&nbsp;</a><a class="target" name="toc3.1.8">&nbsp;</a><h3>Sheen color</h3>
 <p>
 
 
@@ -542,12 +542,12 @@ section  <a href="#toc3.3">3.3</a> for more information about cloth and fabric m
 
 </p><p>
 
-The effect of <code>sheenColor</code> is shown in <a href="#figure_materialsheencolor">figure&#xA0;7</a>
+The effect of <code>sheenColor</code> is shown in <a href="#figure_materialsheencolor">figure&nbsp;7</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_sheen_color.png" target="_blank"><img class="markdeep" src="images/screenshot_sheen_color.png"></a><div class="imagecaption"><a class="target" name="figure_materialsheencolor">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;7:</b> Different sheen colors</div></div></center>
+</p><center><div class="image" style=""><a href="images/screenshot_sheen_color.png" target="_blank"><img class="markdeep" src="images/screenshot_sheen_color.png"></a><div class="imagecaption"><a class="target" name="figure_materialsheencolor">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;7:</b> Different sheen colors</div></div></center>
 
 <p></p><p>
 
@@ -556,7 +556,7 @@ The effect of <code>sheenColor</code> is shown in <a href="#figure_materialsheen
     model described in section  <a href="#toc3.3">3.3</a>.</div>
 
 <p></p>
-<a class="target" name="sheenroughness">&#xA0;</a><a class="target" name="materialmodels/litmodel/sheenroughness">&#xA0;</a><a class="target" name="toc3.1.9">&#xA0;</a><h3>Sheen roughness</h3>
+<a class="target" name="sheenroughness">&nbsp;</a><a class="target" name="materialmodels/litmodel/sheenroughness">&nbsp;</a><a class="target" name="toc3.1.9">&nbsp;</a><h3>Sheen roughness</h3>
 <p>
 
 
@@ -565,17 +565,17 @@ sheen layer.
 
 </p><p>
 
-The effect of <code>sheenRoughness</code> on a rough metal is shown in <a href="#figure_sheenroughnessproperty">figure&#xA0;8</a>
+The effect of <code>sheenRoughness</code> on a rough metal is shown in <a href="#figure_sheenroughnessproperty">figure&nbsp;8</a>
 (click on the image to see a larger version). In this picture, the base layer is a dark blue, with
 <code>metallic</code> set to <code>0.0</code> and <code>roughness</code> set to <code>1.0</code>.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/sheen_roughness.png" target="_blank"><img class="markdeep" src="images/materials/sheen_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_sheenroughnessproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;8:</b> <code>sheenRoughness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/sheen_roughness.png" target="_blank"><img class="markdeep" src="images/materials/sheen_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_sheenroughnessproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;8:</b> <code>sheenRoughness</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="clearcoat">&#xA0;</a><a class="target" name="materialmodels/litmodel/clearcoat">&#xA0;</a><a class="target" name="toc3.1.10">&#xA0;</a><h3>Clear coat</h3>
+<a class="target" name="clearcoat">&nbsp;</a><a class="target" name="materialmodels/litmodel/clearcoat">&nbsp;</a><a class="target" name="toc3.1.10">&nbsp;</a><h3>Clear coat</h3>
 <p>
 
 
@@ -590,36 +590,36 @@ will always be isotropic and dielectric.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_carbon_fiber.png" target="_blank"><img class="markdeep" src="images/material_carbon_fiber.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoat">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;9:</b> Comparison of a carbon-fiber material under the standard material model
+</p><center><div class="image" style=""><a href="images/material_carbon_fiber.png" target="_blank"><img class="markdeep" src="images/material_carbon_fiber.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoat">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;9:</b> Comparison of a carbon-fiber material under the standard material model
 (left) and the clear coat model (right)</div></div></center>
 
 <p></p><p>
 
 The <code>clearCoat</code> property controls the strength of the clear coat layer. This should be treated as a
 binary value, set to either 0 or 1. Intermediate values are useful to control transitions between
-parts of the surface that have a clear coat layers and parts that don&apos;t.
+parts of the surface that have a clear coat layers and parts that don't.
 
 </p><p>
 
-The effect of <code>clearCoat</code> on a rough metal is shown in <a href="#figure_clearcoatproperty">figure&#xA0;10</a>
+The effect of <code>clearCoat</code> on a rough metal is shown in <a href="#figure_clearcoatproperty">figure&nbsp;10</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/clear_coat.png" target="_blank"><img class="markdeep" src="images/materials/clear_coat.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoatproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;10:</b> <code>clearCoat</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/clear_coat.png" target="_blank"><img class="markdeep" src="images/materials/clear_coat.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoatproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;10:</b> <code>clearCoat</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p><p>
 
 </p><div class="admonition warning">The clear coat layer effectively doubles the cost of specular computations. Do not assign a
-    value, even 0.0, to the clear coat property if you don&apos;t need this second layer.</div>
+    value, even 0.0, to the clear coat property if you don't need this second layer.</div>
 
 <p></p><p>
 
 </p><div class="admonition note">The clear coat layer is added on top of the sheen layer if present.</div>
 
 <p></p>
-<a class="target" name="clearcoatroughness">&#xA0;</a><a class="target" name="materialmodels/litmodel/clearcoatroughness">&#xA0;</a><a class="target" name="toc3.1.11">&#xA0;</a><h3>Clear coat roughness</h3>
+<a class="target" name="clearcoatroughness">&nbsp;</a><a class="target" name="materialmodels/litmodel/clearcoatroughness">&nbsp;</a><a class="target" name="toc3.1.11">&nbsp;</a><h3>Clear coat roughness</h3>
 <p>
 
 
@@ -628,16 +628,16 @@ clear coat layer.
 
 </p><p>
 
-The effect of <code>clearCoatRoughness</code> on a rough metal is shown in <a href="#figure_clearcoatroughnessproperty">figure&#xA0;11</a>
+The effect of <code>clearCoatRoughness</code> on a rough metal is shown in <a href="#figure_clearcoatroughnessproperty">figure&nbsp;11</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/clear_coat_roughness.png" target="_blank"><img class="markdeep" src="images/materials/clear_coat_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoatroughnessproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;11:</b> <code>clearCoatRoughness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/clear_coat_roughness.png" target="_blank"><img class="markdeep" src="images/materials/clear_coat_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_clearcoatroughnessproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;11:</b> <code>clearCoatRoughness</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p>
-<a class="target" name="anisotropy">&#xA0;</a><a class="target" name="materialmodels/litmodel/anisotropy">&#xA0;</a><a class="target" name="toc3.1.12">&#xA0;</a><h3>Anisotropy</h3>
+<a class="target" name="anisotropy">&nbsp;</a><a class="target" name="materialmodels/litmodel/anisotropy">&nbsp;</a><a class="target" name="toc3.1.12">&nbsp;</a><h3>Anisotropy</h3>
 <p>
 
 
@@ -647,37 +647,37 @@ model by using the <code>anisotropy</code> property.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_anisotropic.png" target="_blank"><img class="markdeep" src="images/material_anisotropic.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropic">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;12:</b> Comparison of isotropic material
+</p><center><div class="image" style=""><a href="images/material_anisotropic.png" target="_blank"><img class="markdeep" src="images/material_anisotropic.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropic">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;12:</b> Comparison of isotropic material
 (left) and anistropic material (right)</div></div></center>
 
 <p></p><p>
 
-The effect of <code>anisotropy</code> on a rough metal is shown in <a href="#figure_anisotropyproperty">figure&#xA0;13</a>
+The effect of <code>anisotropy</code> on a rough metal is shown in <a href="#figure_anisotropyproperty">figure&nbsp;13</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/anisotropy.png" target="_blank"><img class="markdeep" src="images/materials/anisotropy.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropyproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;13:</b> <code>anisotropy</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/anisotropy.png" target="_blank"><img class="markdeep" src="images/materials/anisotropy.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropyproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;13:</b> <code>anisotropy</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p><p>
 
-The <a href="#figure_anisotropydir">figure&#xA0;14</a> below shows how the direction of the anisotropic highlights can be
+The <a href="#figure_anisotropydir">figure&nbsp;14</a> below shows how the direction of the anisotropic highlights can be
 controlled by using either positive or negative values: positive values define anisotropy in the
 tangent direction and negative values in the bitangent direction.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_anisotropy_direction.png" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy_direction.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropydir">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;14:</b> Positive (left) vs negative
+</p><center><div class="image" style=""><a href="images/screenshot_anisotropy_direction.png" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy_direction.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropydir">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;14:</b> Positive (left) vs negative
 (right) <code>anisotropy</code> values</div></div></center>
 
 <p></p><p>
 
 </p><div class="admonition tip">The anisotropic material model is slightly more expensive than the standard material model. Do
-    not assign a value (even 0.0) to the <code>anisotropy</code> property if you don&apos;t need anisotropy.</div>
+    not assign a value (even 0.0) to the <code>anisotropy</code> property if you don't need anisotropy.</div>
 
 <p></p>
-<a class="target" name="anisotropydirection">&#xA0;</a><a class="target" name="materialmodels/litmodel/anisotropydirection">&#xA0;</a><a class="target" name="toc3.1.13">&#xA0;</a><h3>Anisotropy direction</h3>
+<a class="target" name="anisotropydirection">&nbsp;</a><a class="target" name="materialmodels/litmodel/anisotropydirection">&nbsp;</a><a class="target" name="toc3.1.13">&nbsp;</a><h3>Anisotropy direction</h3>
 <p>
 
 
@@ -687,25 +687,25 @@ come from a texture, encoding the directions local to the surface.
 
 </p><p>
 
-The effect of <code>anisotropyDirection</code> on a metal is shown in <a href="#figure_anisotropydirectionproperty">figure&#xA0;16</a>
+The effect of <code>anisotropyDirection</code> on a metal is shown in <a href="#figure_anisotropydirectionproperty">figure&nbsp;16</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_anisotropy.png" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;15:</b> Anisotropic metal rendered
+</p><center><div class="image" style=""><a href="images/screenshot_anisotropy.png" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy.png"></a><div class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;15:</b> Anisotropic metal rendered
 with a direction map</div></div></center>
 
 <p></p><p>
 
-The result shown in <a href="#figure_anisotropydirectionproperty">figure&#xA0;16</a> was obtained using the direction map shown
-in <a href="#figure_anisotropydirectionproperty">figure&#xA0;16</a>.
+The result shown in <a href="#figure_anisotropydirectionproperty">figure&nbsp;16</a> was obtained using the direction map shown
+in <a href="#figure_anisotropydirectionproperty">figure&nbsp;16</a>.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_anisotropy_map.jpg" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy_map.jpg"></a><div class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;16:</b> Example of a direction map</div></div></center>
+</p><center><div class="image" style=""><a href="images/screenshot_anisotropy_map.jpg" target="_blank"><img class="markdeep" src="images/screenshot_anisotropy_map.jpg"></a><div class="imagecaption"><a class="target" name="figure_anisotropydirectionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;16:</b> Example of a direction map</div></div></center>
 
 <p></p>
-<a class="target" name="ambientocclusion">&#xA0;</a><a class="target" name="materialmodels/litmodel/ambientocclusion">&#xA0;</a><a class="target" name="toc3.1.14">&#xA0;</a><h3>Ambient occlusion</h3>
+<a class="target" name="ambientocclusion">&nbsp;</a><a class="target" name="materialmodels/litmodel/ambientocclusion">&nbsp;</a><a class="target" name="toc3.1.14">&nbsp;</a><h3>Ambient occlusion</h3>
 <p>
 
 
@@ -716,11 +716,11 @@ directional, point and spot lights, nor specular lighting.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_ao.jpg" target="_blank"><img class="markdeep" src="images/screenshot_ao.jpg"></a><div class="imagecaption"><a class="target" name="figure_aoexample">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;17:</b> Comparison of materials without diffuse ambient occlusion
+</p><center><div class="image" style=""><a href="images/screenshot_ao.jpg" target="_blank"><img class="markdeep" src="images/screenshot_ao.jpg"></a><div class="imagecaption"><a class="target" name="figure_aoexample">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;17:</b> Comparison of materials without diffuse ambient occlusion
 (left) and with (right)</div></div></center>
 
 <p></p>
-<a class="target" name="normal">&#xA0;</a><a class="target" name="materialmodels/litmodel/normal">&#xA0;</a><a class="target" name="toc3.1.15">&#xA0;</a><h3>Normal</h3>
+<a class="target" name="normal">&nbsp;</a><a class="target" name="materialmodels/litmodel/normal">&nbsp;</a><a class="target" name="toc3.1.15">&nbsp;</a><h3>Normal</h3>
 <p>
 
 
@@ -730,10 +730,10 @@ space, which means that +Z points outside of the surface.
 
 </p><p>
 
-For example, let&apos;s imagine that we want to render a piece of furniture covered in tufted leather.
+For example, let's imagine that we want to render a piece of furniture covered in tufted leather.
 Modeling the geometry to accurately represent the tufted pattern would require too many triangles
 so we instead bake a high-poly mesh into a normal map. Once the base map is applied to a simplified
-mesh, we get the result in <a href="#figure_normalmapped">figure&#xA0;18</a>.
+mesh, we get the result in <a href="#figure_normalmapped">figure&nbsp;18</a>.
 
 </p><p>
 
@@ -741,7 +741,7 @@ Note that the <code>normal</code> property affects the <em class="underscore">ba
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_normal_mapping.jpg" target="_blank"><img class="markdeep" src="images/screenshot_normal_mapping.jpg"></a><div class="imagecaption"><a class="target" name="figure_normalmapped">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;18:</b> Low-poly mesh without normal mapping (left)
+</p><center><div class="image" style=""><a href="images/screenshot_normal_mapping.jpg" target="_blank"><img class="markdeep" src="images/screenshot_normal_mapping.jpg"></a><div class="imagecaption"><a class="target" name="figure_normalmapped">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;18:</b> Low-poly mesh without normal mapping (left)
 and with (right)</div></div></center>
 
 <p></p><p>
@@ -749,7 +749,7 @@ and with (right)</div></div></center>
 </p><div class="admonition warning">Using a normal map increases the runtime cost of the material model.</div>
 
 <p></p>
-<a class="target" name="bentnormal">&#xA0;</a><a class="target" name="materialmodels/litmodel/bentnormal">&#xA0;</a><a class="target" name="toc3.1.16">&#xA0;</a><h3>Bent normal</h3>
+<a class="target" name="bentnormal">&nbsp;</a><a class="target" name="materialmodels/litmodel/bentnormal">&nbsp;</a><a class="target" name="toc3.1.16">&nbsp;</a><h3>Bent normal</h3>
 <p>
 
 
@@ -761,16 +761,16 @@ specular ambient occlusion (see section  <a href="#toc4.2.24">4.2.24</a> about
 </p><p>
 
 Bent normals can greatly increase the visual fidelity of an asset with various cavities and concave
-areas, as shown in <a href="#figure_bentnormalmapped">figure&#xA0;19</a>. See the areas of the ears, nostrils and eyes for
+areas, as shown in <a href="#figure_bentnormalmapped">figure&nbsp;19</a>. See the areas of the ears, nostrils and eyes for
 instance.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_bent_normal.gif" target="_blank"><img class="markdeep" src="images/material_bent_normal.gif"></a><div class="imagecaption"><a class="target" name="figure_bentnormalmapped">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;19:</b> Example of a model rendered with and without a bent normal map. Both
+</p><center><div class="image" style=""><a href="images/material_bent_normal.gif" target="_blank"><img class="markdeep" src="images/material_bent_normal.gif"></a><div class="imagecaption"><a class="target" name="figure_bentnormalmapped">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;19:</b> Example of a model rendered with and without a bent normal map. Both
 versions use the same ambient occlusion map.</div></div></center>
 
 <p></p>
-<a class="target" name="clearcoatnormal">&#xA0;</a><a class="target" name="materialmodels/litmodel/clearcoatnormal">&#xA0;</a><a class="target" name="toc3.1.17">&#xA0;</a><h3>Clear coat normal</h3>
+<a class="target" name="clearcoatnormal">&nbsp;</a><a class="target" name="materialmodels/litmodel/clearcoatnormal">&nbsp;</a><a class="target" name="toc3.1.17">&nbsp;</a><h3>Clear coat normal</h3>
 <p>
 
 
@@ -779,7 +779,7 @@ behaves otherwise like the <code>normal</code> property.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_clear_coat_normal.jpg" target="_blank"><img class="markdeep" src="images/screenshot_clear_coat_normal.jpg"></a><div class="imagecaption"><a class="target" name="figure_clearcoatnormalmapped">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;20:</b> A material with a clear coat normal
+</p><center><div class="image" style=""><a href="images/screenshot_clear_coat_normal.jpg" target="_blank"><img class="markdeep" src="images/screenshot_clear_coat_normal.jpg"></a><div class="imagecaption"><a class="target" name="figure_clearcoatnormalmapped">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;20:</b> A material with a clear coat normal
 map and a surface normal map</div></div></center>
 
 <p></p><p>
@@ -787,7 +787,7 @@ map and a surface normal map</div></div></center>
 </p><div class="admonition warning">Using a clear coat normal map increases the runtime cost of the material model.</div>
 
 <p></p>
-<a class="target" name="emissive">&#xA0;</a><a class="target" name="materialmodels/litmodel/emissive">&#xA0;</a><a class="target" name="toc3.1.18">&#xA0;</a><h3>Emissive</h3>
+<a class="target" name="emissive">&nbsp;</a><a class="target" name="materialmodels/litmodel/emissive">&nbsp;</a><a class="target" name="toc3.1.18">&nbsp;</a><h3>Emissive</h3>
 <p>
 
 
@@ -815,7 +815,7 @@ not affected by the camera exposure. When the weight is set to 1, the intensity 
 the camera exposure like with any regular light.
 
 </p>
-<a class="target" name="post-lightingcolor">&#xA0;</a><a class="target" name="materialmodels/litmodel/post-lightingcolor">&#xA0;</a><a class="target" name="toc3.1.19">&#xA0;</a><h3>Post-lighting color</h3>
+<a class="target" name="post-lightingcolor">&nbsp;</a><a class="target" name="materialmodels/litmodel/post-lightingcolor">&nbsp;</a><a class="target" name="toc3.1.19">&nbsp;</a><h3>Post-lighting color</h3>
 <p>
 
 
@@ -836,7 +836,7 @@ this option for more information.
     <code>postLightingBlending</code> to <code>add</code> and by providing an RGB color with alpha set to <code>0.0</code>.</div>
 
 <p></p>
-<a class="target" name="indexofrefraction">&#xA0;</a><a class="target" name="materialmodels/litmodel/indexofrefraction">&#xA0;</a><a class="target" name="toc3.1.20">&#xA0;</a><h3>Index of refraction</h3>
+<a class="target" name="indexofrefraction">&nbsp;</a><a class="target" name="materialmodels/litmodel/indexofrefraction">&nbsp;</a><a class="target" name="toc3.1.20">&nbsp;</a><h3>Index of refraction</h3>
 <p>
 
 
@@ -855,7 +855,7 @@ light to bend further away from the initial path.
 
 </p><p>
 
-<a href="#table_commonmatior">Table&#xA0;6</a> describes acceptable refractive indices for various types of materials.
+<a href="#table_commonmatior">Table&nbsp;6</a> describes acceptable refractive indices for various types of materials.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Material </th><th style="text-align:left"> IOR </th></tr>
 <tr><td style="text-align:right"> Air </td><td style="text-align:left"> 1.0 </td></tr>
@@ -864,7 +864,7 @@ light to bend further away from the initial path.
 <tr><td style="text-align:right"> Common gemstones </td><td style="text-align:left"> 1.58 to 2.33 </td></tr>
 <tr><td style="text-align:right"> Plastics, glass </td><td style="text-align:left"> 1.5 to 1.58 </td></tr>
 <tr><td style="text-align:right"> Other dielectric materials </td><td style="text-align:left"> 1.33 to 1.58 </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_commonmatior">&#xA0;</a><b style="font-style:normal;">Table&#xA0;6:</b> Index of refraction of common materials</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_commonmatior">&nbsp;</a><b style="font-style:normal;">Table&nbsp;6:</b> Index of refraction of common materials</div></div>
 
 <p></p><p>
 
@@ -875,22 +875,22 @@ for more information.
 </p><p>
 
 The effect of <code>ior</code> when <code>refractionMode</code> is set to <code>cubemap</code> and <code>refractionType</code> is set to <code>solid</code>
-can be seen in <a href="#figure_iorproperty2">figure&#xA0;21</a> (click on the image to see a larger version).
+can be seen in <a href="#figure_iorproperty2">figure&nbsp;21</a> (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/ior.png" target="_blank"><img class="markdeep" src="images/materials/ior.png"></a><div class="imagecaption"><a class="target" name="figure_iorproperty2">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;21:</b> <code>transmission</code> varying from 1.0
+</p><center><div class="image" style=""><a href="images/materials/ior.png" target="_blank"><img class="markdeep" src="images/materials/ior.png"></a><div class="imagecaption"><a class="target" name="figure_iorproperty2">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;21:</b> <code>transmission</code> varying from 1.0
 (left) to 1.5 (right)</div></div></center>
 
 <p></p><p>
 
-<a href="#figure_iorproperty">Figure&#xA0;22</a> shows the comparison of a sphere of <code>ior</code> 1.0 with a sphere of <code>ior</code> 1.33, with
+<a href="#figure_iorproperty">Figure&nbsp;22</a> shows the comparison of a sphere of <code>ior</code> 1.0 with a sphere of <code>ior</code> 1.33, with
 the <code>refractionMode</code> set to <code>screenspace</code> and the <code>refractionType</code> set to <code>solid</code>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_ior.png" target="_blank"><img class="markdeep" src="images/material_ior.png"></a><div class="imagecaption"><a class="target" name="figure_iorproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;22:</b> <code>ior</code> of 1.0 (left) and 1.33 (right)</div></div></center>
+</p><center><div class="image" style=""><a href="images/material_ior.png" target="_blank"><img class="markdeep" src="images/material_ior.png"></a><div class="imagecaption"><a class="target" name="figure_iorproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;22:</b> <code>ior</code> of 1.0 (left) and 1.33 (right)</div></div></center>
 
 <p></p><p>
 
@@ -907,11 +907,11 @@ See the <a href="#reflectance">Reflectance</a> section for more information on t
 </p><p>
 
 </p><div class="admonition tip">Refractive materials are affected by the <code>roughness</code> property. Rough materials will scatter
-    light, creating a diffusion effect useful to recreate &#x201C;blurry&#x201D; appearances such as frosted
+    light, creating a diffusion effect useful to recreate “blurry” appearances such as frosted
     glass, certain plastics, etc.</div>
 
 <p></p>
-<a class="target" name="transmission">&#xA0;</a><a class="target" name="materialmodels/litmodel/transmission">&#xA0;</a><a class="target" name="toc3.1.21">&#xA0;</a><h3>Transmission</h3>
+<a class="target" name="transmission">&nbsp;</a><a class="target" name="materialmodels/litmodel/transmission">&nbsp;</a><a class="target" name="toc3.1.21">&nbsp;</a><h3>Transmission</h3>
 <p>
 
 
@@ -928,12 +928,12 @@ diffuse component is not visible anymore, only the specular component is.
 </p><p>
 
 The effect of <code>transmission</code> on a glossy dielectric (<code>ior</code> of 1.5, <code>refractionMode</code> set to
-<code>cubemap</code>, <code>refractionType</code> set to <code>solid</code>) is shown in <a href="#figure_transmissionproperty">figure&#xA0;23</a>
+<code>cubemap</code>, <code>refractionType</code> set to <code>solid</code>) is shown in <a href="#figure_transmissionproperty">figure&nbsp;23</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/transmission.png" target="_blank"><img class="markdeep" src="images/materials/transmission.png"></a><div class="imagecaption"><a class="target" name="figure_transmissionproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;23:</b> <code>transmission</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/transmission.png" target="_blank"><img class="markdeep" src="images/materials/transmission.png"></a><div class="imagecaption"><a class="target" name="figure_transmissionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;23:</b> <code>transmission</code> varying from 0.0
 (left) to 1.0 (right)</div></div></center>
 
 <p></p><p>
@@ -942,17 +942,17 @@ The effect of <code>transmission</code> on a glossy dielectric (<code>ior</code>
     materials.</div>
 
 <p></p>
-<a class="target" name="absorption">&#xA0;</a><a class="target" name="materialmodels/litmodel/absorption">&#xA0;</a><a class="target" name="toc3.1.22">&#xA0;</a><h3>Absorption</h3>
+<a class="target" name="absorption">&nbsp;</a><a class="target" name="materialmodels/litmodel/absorption">&nbsp;</a><a class="target" name="toc3.1.22">&nbsp;</a><h3>Absorption</h3>
 <p>
 
 
 The <code>absorption</code> property defines the absorption coefficients of light transmitted through the
-material. <a href="#figure_absorptionexample">Figure&#xA0;24</a> shows the effect of <code>absorption</code> on a refracting object with
+material. <a href="#figure_absorptionexample">Figure&nbsp;24</a> shows the effect of <code>absorption</code> on a refracting object with
 an index of refraction of 1.5 and a base color set to white.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_absorption.png" target="_blank"><img class="markdeep" src="images/material_absorption.png"></a><div class="imagecaption"><a class="target" name="figure_absorptionexample">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;24:</b> Refracting object without (left)
+</p><center><div class="image" style=""><a href="images/material_absorption.png" target="_blank"><img class="markdeep" src="images/material_absorption.png"></a><div class="imagecaption"><a class="target" name="figure_absorptionexample">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;24:</b> Refracting object without (left)
 and with (right) absorption</div></div></center>
 
 <p></p><p>
@@ -976,19 +976,19 @@ $$color \cdot (1 - absorption)$$
 
 </p><p>
 
-The effect of varying the <code>absorption</code> coefficients is shown in <a href="#figure_absorptionproperty">figure&#xA0;25</a>
+The effect of varying the <code>absorption</code> coefficients is shown in <a href="#figure_absorptionproperty">figure&nbsp;25</a>
 (click on the image to see a larger version). In this picture, the object has a fixed <code>thickness</code>
 of 4.5 and an index of refraction set to 1.3.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/absorption.png" target="_blank"><img class="markdeep" src="images/materials/absorption.png"></a><div class="imagecaption"><a class="target" name="figure_absorptionproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;25:</b> <code>absorption</code> varying from (0.0, 0.02, 0.14)
+</p><center><div class="image" style=""><a href="images/materials/absorption.png" target="_blank"><img class="markdeep" src="images/materials/absorption.png"></a><div class="imagecaption"><a class="target" name="figure_absorptionproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;25:</b> <code>absorption</code> varying from (0.0, 0.02, 0.14)
 (left) to (0.0, 0.36, 2.3) (right)</div></div></center>
 
 <p></p><p>
 
 Setting the absorption coefficients directly can be unintuitive which is why we recommend working
-with a <em class="underscore">transmittance color</em> and a <em class="underscore">&#x201C;at distance&#x201D;</em> factor instead. These two parameters allow an
+with a <em class="underscore">transmittance color</em> and a <em class="underscore">“at distance”</em> factor instead. These two parameters allow an
 artist to specify the precise color the material should have at a specified distance through the
 volume. The value to pass to <code>absorption</code> can be computed this way:
 
@@ -1002,7 +1002,7 @@ While this computation can be done in the material itself we recommend doing it 
 possible. Filament provides an API for this purpose, <code>Color::absorptionAtDistance()</code>.
 
 </p>
-<a class="target" name="micro-thicknessandthickness">&#xA0;</a><a class="target" name="materialmodels/litmodel/micro-thicknessandthickness">&#xA0;</a><a class="target" name="toc3.1.23">&#xA0;</a><h3>Micro-thickness and thickness</h3>
+<a class="target" name="micro-thicknessandthickness">&nbsp;</a><a class="target" name="materialmodels/litmodel/micro-thicknessandthickness">&nbsp;</a><a class="target" name="toc3.1.23">&nbsp;</a><h3>Micro-thickness and thickness</h3>
 <p>
 
 
@@ -1032,35 +1032,35 @@ rays are refracted.
 </p><p>
 
 The effect <code>thickness</code> in a solid volume with <code>refractionMode</code> set to <code>screenSpace</code> is shown in
-<a href="#figure_thicknessproperty">figure&#xA0;26</a> (click on the image to see a larger version). Note how the <code>thickness</code>
+<a href="#figure_thicknessproperty">figure&nbsp;26</a> (click on the image to see a larger version). Note how the <code>thickness</code>
 value not only changes the effect of <code>absorption</code> but also modifies the direction of the refracted
 light.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/materials/thickness.png" target="_blank"><img class="markdeep" src="images/materials/thickness.png"></a><div class="imagecaption"><a class="target" name="figure_thicknessproperty">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;26:</b> <code>thickness</code> varying from 0.0
+</p><center><div class="image" style=""><a href="images/materials/thickness.png" target="_blank"><img class="markdeep" src="images/materials/thickness.png"></a><div class="imagecaption"><a class="target" name="figure_thicknessproperty">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;26:</b> <code>thickness</code> varying from 0.0
 (left) to 2.0 (right)</div></div></center>
 
 <p></p><p>
 
-<a href="#figure_varyingthickness">Figure&#xA0;27</a> shows what a prism with spatially varying <code>thickness</code> looks like when
+<a href="#figure_varyingthickness">Figure&nbsp;27</a> shows what a prism with spatially varying <code>thickness</code> looks like when
 the <code>refractionType</code> is set to <code>solid</code> and <code>absorption</code> coefficients are set.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/material_thickness.png" target="_blank"><img class="markdeep" src="images/material_thickness.png"></a><div class="imagecaption"><a class="target" name="figure_varyingthickness">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;27:</b> <code>thickness</code> varying from 0.0 at the top of the prism to 3.0 at the
+</p><center><div class="image" style=""><a href="images/material_thickness.png" target="_blank"><img class="markdeep" src="images/material_thickness.png"></a><div class="imagecaption"><a class="target" name="figure_varyingthickness">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;27:</b> <code>thickness</code> varying from 0.0 at the top of the prism to 3.0 at the
 bottom of the prism</div></div></center>
 
 <p></p>
-<a class="target" name="subsurfacemodel">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel">&#xA0;</a><a class="target" name="toc3.2">&#xA0;</a><h2>Subsurface model</h2>
+<a class="target" name="subsurfacemodel">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel">&nbsp;</a><a class="target" name="toc3.2">&nbsp;</a><h2>Subsurface model</h2>
 
-<a class="target" name="thickness">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel/thickness">&#xA0;</a><a class="target" name="toc3.2.1">&#xA0;</a><h3>Thickness</h3>
+<a class="target" name="thickness">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel/thickness">&nbsp;</a><a class="target" name="toc3.2.1">&nbsp;</a><h3>Thickness</h3>
 
-<a class="target" name="subsurfacecolor">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel/subsurfacecolor">&#xA0;</a><a class="target" name="toc3.2.2">&#xA0;</a><h3>Subsurface color</h3>
+<a class="target" name="subsurfacecolor">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel/subsurfacecolor">&nbsp;</a><a class="target" name="toc3.2.2">&nbsp;</a><h3>Subsurface color</h3>
 
-<a class="target" name="subsurfacepower">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel/subsurfacepower">&#xA0;</a><a class="target" name="toc3.2.3">&#xA0;</a><h3>Subsurface power</h3>
+<a class="target" name="subsurfacepower">&nbsp;</a><a class="target" name="materialmodels/subsurfacemodel/subsurfacepower">&nbsp;</a><a class="target" name="toc3.2.3">&nbsp;</a><h3>Subsurface power</h3>
 
-<a class="target" name="clothmodel">&#xA0;</a><a class="target" name="materialmodels/clothmodel">&#xA0;</a><a class="target" name="toc3.3">&#xA0;</a><h2>Cloth model</h2>
+<a class="target" name="clothmodel">&nbsp;</a><a class="target" name="materialmodels/clothmodel">&nbsp;</a><a class="target" name="toc3.3">&nbsp;</a><h2>Cloth model</h2>
 <p>
 
 
@@ -1073,19 +1073,19 @@ forward/backward scattering. Some fabrics also exhibit two-tone specular colors
 
 </p><p>
 
-<a href="#figure_materialcloth">Figure&#xA0;28</a> shows how the standard material model fails to capture the appearance of a
+<a href="#figure_materialcloth">Figure&nbsp;28</a> shows how the standard material model fails to capture the appearance of a
 sample of denim fabric. The surface appears rigid (almost plastic-like), more similar to a tarp
 than a piece of clothing. This figure also shows how important the softer specular lobe caused by
 absorption and scattering is to the faithful recreation of the fabric.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_cloth.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth.png"></a><div class="imagecaption"><a class="target" name="figure_materialcloth">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;28:</b> Comparison of denim fabric rendered using the standard model
+</p><center><div class="image" style=""><a href="images/screenshot_cloth.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth.png"></a><div class="imagecaption"><a class="target" name="figure_materialcloth">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;28:</b> Comparison of denim fabric rendered using the standard model
 (left) and the cloth model (right)</div></div></center>
 
 <p></p><p>
 
-Velvet is an interesting use case for a cloth material model. As shown in <a href="#figure_materialvelvet">figure&#xA0;29</a>
+Velvet is an interesting use case for a cloth material model. As shown in <a href="#figure_materialvelvet">figure&nbsp;29</a>
 this type of fabric exhibits strong rim lighting due to forward and backward scattering. These
 scattering events are caused by fibers standing straight at the surface of the fabric. When the
 incident light comes from the direction opposite to the view direction, the fibers will forward
@@ -1094,7 +1094,7 @@ direction, the fibers will scatter the light backward.
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_cloth_velvet.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_velvet.png"></a><div class="imagecaption"><a class="target" name="figure_materialvelvet">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;29:</b> Velvet fabric showcasing forward and
+</p><center><div class="image" style=""><a href="images/screenshot_cloth_velvet.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_velvet.png"></a><div class="imagecaption"><a class="target" name="figure_materialvelvet">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;29:</b> Velvet fabric showcasing forward and
 backward scattering</div></div></center>
 
 <p></p><p>
@@ -1107,7 +1107,7 @@ anisotropic material models.
 
 The cloth material model encompasses all the parameters previously defined for the standard
 material mode except for <em class="underscore">metallic</em> and <em class="underscore">reflectance</em>. Two extra parameters described in
-<a href="#table_clothproperties">table&#xA0;7</a> are also available.
+<a href="#table_clothproperties">table&nbsp;7</a> are also available.
 
 </p><p>
 
@@ -1115,16 +1115,16 @@ material mode except for <em class="underscore">metallic</em> and <em class="und
 <table class="table"><tbody><tr><th style="text-align:right"> Parameter </th><th style="text-align:left"> Definition </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:left"> Specular tint to create two-tone specular fabrics (defaults to \(\sqrt{baseColor}\)) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">subsurfaceColor</strong> </td><td style="text-align:left"> Tint for the diffuse color after scattering and absorption through the material </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_clothproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;7:</b> Cloth model parameters</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_clothproperties">&nbsp;</a><b style="font-style:normal;">Table&nbsp;7:</b> Cloth model parameters</div></div>
 
 <p></p><p>
 
-The type and range of each property is described in <a href="#table_clothpropertiestypes">table&#xA0;8</a>.
+The type and range of each property is described in <a href="#table_clothpropertiestypes">table&nbsp;8</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">subsurfaceColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_clothpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;8:</b> Range and type of the cloth model&apos;s properties</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_clothpropertiestypes">&nbsp;</a><b style="font-style:normal;">Table&nbsp;8:</b> Range and type of the cloth model's properties</div></div>
 
 <p></p><p>
 
@@ -1146,7 +1146,7 @@ or set the sheen color to the luminance of the base color.
     in some areas. It is best suited for subtle transmission effects through the material.</div>
 
 <p></p>
-<a class="target" name="sheencolor">&#xA0;</a><a class="target" name="materialmodels/clothmodel/sheencolor">&#xA0;</a><a class="target" name="toc3.3.1">&#xA0;</a><h3>Sheen color</h3>
+<a class="target" name="sheencolor">&nbsp;</a><a class="target" name="materialmodels/clothmodel/sheencolor">&nbsp;</a><a class="target" name="toc3.3.1">&nbsp;</a><h3>Sheen color</h3>
 <p>
 
 
@@ -1156,15 +1156,15 @@ two-tone specular materials.
 
 </p><p>
 
-The effect of <code>sheenColor</code> is shown in <a href="#figure_materialclothsheen">figure&#xA0;30</a>
+The effect of <code>sheenColor</code> is shown in <a href="#figure_materialclothsheen">figure&nbsp;30</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_cloth_sheen.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_sheen.png"></a><div class="imagecaption"><a class="target" name="figure_materialclothsheen">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;30:</b> Blue fabric without (left) and with (right) sheen</div></div></center>
+</p><center><div class="image" style=""><a href="images/screenshot_cloth_sheen.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_sheen.png"></a><div class="imagecaption"><a class="target" name="figure_materialclothsheen">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;30:</b> Blue fabric without (left) and with (right) sheen</div></div></center>
 
 <p></p>
-<a class="target" name="subsurfacecolor">&#xA0;</a><a class="target" name="materialmodels/clothmodel/subsurfacecolor">&#xA0;</a><a class="target" name="toc3.3.2">&#xA0;</a><h3>Subsurface color</h3>
+<a class="target" name="subsurfacecolor">&nbsp;</a><a class="target" name="materialmodels/clothmodel/subsurfacecolor">&nbsp;</a><a class="target" name="toc3.3.2">&nbsp;</a><h3>Subsurface color</h3>
 <p>
 
 
@@ -1178,39 +1178,39 @@ useful to create softer fabrics.
 
 <p></p><p>
 
-The effect of <code>subsurfaceColor</code> is shown in <a href="#figure_materialclothsubsurface">figure&#xA0;31</a>
+The effect of <code>subsurfaceColor</code> is shown in <a href="#figure_materialclothsubsurface">figure&nbsp;31</a>
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_cloth_subsurface.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_subsurface.png"></a><div class="imagecaption"><a class="target" name="figure_materialclothsubsurface">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;31:</b> White cloth (left column) vs white cloth with
+</p><center><div class="image" style=""><a href="images/screenshot_cloth_subsurface.png" target="_blank"><img class="markdeep" src="images/screenshot_cloth_subsurface.png"></a><div class="imagecaption"><a class="target" name="figure_materialclothsubsurface">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;31:</b> White cloth (left column) vs white cloth with
 brown subsurface scatting (right)</div></div></center>
 
 <p></p>
-<a class="target" name="unlitmodel">&#xA0;</a><a class="target" name="materialmodels/unlitmodel">&#xA0;</a><a class="target" name="toc3.4">&#xA0;</a><h2>Unlit model</h2>
+<a class="target" name="unlitmodel">&nbsp;</a><a class="target" name="materialmodels/unlitmodel">&nbsp;</a><a class="target" name="toc3.4">&nbsp;</a><h2>Unlit model</h2>
 <p>
 
 
 The unlit material model can be used to turn off all lighting computations. Its primary purpose is
 to render pre-lit elements such as a cubemap, external content (such as a video or camera stream),
 user interfaces, visualization/debugging etc. The unlit model exposes only two properties described
-in <a href="#table_unlitproperties">table&#xA0;9</a>.
+in <a href="#table_unlitproperties">table&nbsp;9</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:left"> Definition </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Surface diffuse color </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse color to simulate emissive surfaces. This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color to blend with base color and emissive </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_unlitproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;9:</b> Properties of the standard model</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_unlitproperties">&nbsp;</a><b style="font-style:normal;">Table&nbsp;9:</b> Properties of the standard model</div></div>
 
 <p></p><p>
 
-The type and range of each property is described in <a href="#table_unlitpropertiestypes">table&#xA0;10</a>.
+The type and range of each property is described in <a href="#table_unlitpropertiestypes">table&nbsp;10</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..n], a=[0..1] </td><td style="text-align:left"> Linear RGB intensity in nits, alpha encodes the exposure weight </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_unlitpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;10:</b> Range and type of the unlit model&apos;s properties</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_unlitpropertiestypes">&nbsp;</a><b style="font-style:normal;">Table&nbsp;10:</b> Range and type of the unlit model's properties</div></div>
 
 <p></p><p>
 
@@ -1219,15 +1219,15 @@ the blending mode specified by the <code>postLightingBlending</code> material op
 
 </p><p>
 
-<a href="#figure_materialunlit">Figure&#xA0;32</a> shows an example of the unlit material model
+<a href="#figure_materialunlit">Figure&nbsp;32</a> shows an example of the unlit material model
 (click on the image to see a larger version).
 
 </p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_unlit.jpg" target="_blank"><img class="markdeep" src="images/screenshot_unlit.jpg"></a><div class="imagecaption"><a class="target" name="figure_materialunlit">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;32:</b> The unlit model is used to render debug information</div></div></center>
+</p><center><div class="image" style=""><a href="images/screenshot_unlit.jpg" target="_blank"><img class="markdeep" src="images/screenshot_unlit.jpg"></a><div class="imagecaption"><a class="target" name="figure_materialunlit">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;32:</b> The unlit model is used to render debug information</div></div></center>
 
 <p></p>
-<a class="target" name="specularglossiness">&#xA0;</a><a class="target" name="materialmodels/specularglossiness">&#xA0;</a><a class="target" name="toc3.5">&#xA0;</a><h2>Specular glossiness</h2>
+<a class="target" name="specularglossiness">&nbsp;</a><a class="target" name="materialmodels/specularglossiness">&nbsp;</a><a class="target" name="toc3.5">&nbsp;</a><h2>Specular glossiness</h2>
 <p>
 
 
@@ -1243,20 +1243,20 @@ This model encompasses the parameters previously defined for the standard lit mo
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Surface diffuse color </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">specularColor</strong> </td><td style="text-align:left"> Specular tint (defaults to black) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">glossiness</strong> </td><td style="text-align:left"> Glossiness (defaults to 0.0) </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_glossinessproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;11:</b> Properties of the specular-glossiness shading model</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_glossinessproperties">&nbsp;</a><b style="font-style:normal;">Table&nbsp;11:</b> Properties of the specular-glossiness shading model</div></div>
 
 <p></p><p>
 
-The type and range of each property is described in <a href="#table_glossinesspropertiestypes">table&#xA0;12</a>.
+The type and range of each property is described in <a href="#table_glossinesspropertiestypes">table&nbsp;12</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">specularColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">glossiness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Inverse of roughness </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_glossinesspropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;12:</b> Range and type of the specular-glossiness model&apos;s properties</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_glossinesspropertiestypes">&nbsp;</a><b style="font-style:normal;">Table&nbsp;12:</b> Range and type of the specular-glossiness model's properties</div></div>
 
 <p></p>
-<a class="target" name="materialdefinitions">&#xA0;</a><a class="target" name="materialdefinitions">&#xA0;</a><a class="target" name="toc4">&#xA0;</a><h1>Material definitions</h1>
+<a class="target" name="materialdefinitions">&nbsp;</a><a class="target" name="materialdefinitions">&nbsp;</a><a class="target" name="toc4">&nbsp;</a><h1>Material definitions</h1>
 <p>
 
 
@@ -1280,7 +1280,7 @@ A material definition is a text file that describes all the information required
 <li class="minus">Shader code (fragment shader, optionally vertex shader)</li></ul>
 
 <p></p>
-<a class="target" name="format">&#xA0;</a><a class="target" name="materialdefinitions/format">&#xA0;</a><a class="target" name="toc4.1">&#xA0;</a><h2>Format</h2>
+<a class="target" name="format">&nbsp;</a><a class="target" name="materialdefinitions/format">&nbsp;</a><a class="target" name="toc4.1">&nbsp;</a><h2>Format</h2>
 <p>
 
 
@@ -1304,13 +1304,13 @@ A minimum viable material definition must contain a <code>material</code> preamb
 <code>vertex</code> block is optional.
 
 </p>
-<a class="target" name="differenceswithjson">&#xA0;</a><a class="target" name="materialdefinitions/format/differenceswithjson">&#xA0;</a><a class="target" name="toc4.1.1">&#xA0;</a><h3>Differences with JSON</h3>
+<a class="target" name="differenceswithjson">&nbsp;</a><a class="target" name="materialdefinitions/format/differenceswithjson">&nbsp;</a><a class="target" name="toc4.1.1">&nbsp;</a><h3>Differences with JSON</h3>
 <p>
 
 
 In JSON, an object is made of key/value <em class="underscore">pairs</em>. A JSON pair has the following syntax:
 
-</p><pre class="listing tilde"><code><span class="line">&quot;key&quot; : value</span></code></pre><p>
+</p><pre class="listing tilde"><code><span class="line">"key" : value</span></code></pre><p>
 
 Where value can be a string, number, object, array or a literal (<code>true</code>, <code>false</code> or <code>null</code>). While
 this syntax is perfectly valid in a material definition, a variant without quotes around strings is
@@ -1337,7 +1337,7 @@ The key of a pair is case-sensitive.
 The value of a pair is not case-sensitive.
 
 </p>
-<a class="target" name="example">&#xA0;</a><a class="target" name="materialdefinitions/format/example">&#xA0;</a><a class="target" name="toc4.1.2">&#xA0;</a><h3>Example</h3>
+<a class="target" name="example">&nbsp;</a><a class="target" name="materialdefinitions/format/example">&nbsp;</a><a class="target" name="toc4.1.2">&nbsp;</a><h3>Example</h3>
 <p>
 
 
@@ -1347,7 +1347,7 @@ that a set of UV coordinates be presented in the rendered mesh and defines 3 use
 following sections of this document describe the <code>material</code> and <code>fragment</code> blocks in detail.
 
 </p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    name : &quot;Textured material&quot;,</span>
+<span class="line">    name : "Textured material",</span>
 <span class="line">    parameters : [</span>
 <span class="line">        {</span>
 <span class="line">           type : sampler2d,</span>
@@ -1377,7 +1377,7 @@ following sections of this document describe the <code>material</code> and <code
 <span class="line">        material.roughness = materialParams.roughness;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="materialblock">&#xA0;</a><a class="target" name="materialdefinitions/materialblock">&#xA0;</a><a class="target" name="toc4.2">&#xA0;</a><h2>Material block</h2>
+<a class="target" name="materialblock">&nbsp;</a><a class="target" name="materialdefinitions/materialblock">&nbsp;</a><a class="target" name="toc4.2">&nbsp;</a><h2>Material block</h2>
 <p>
 
 
@@ -1385,7 +1385,7 @@ The material block is mandatory block that contains a list of property pairs to 
 non-shader data.
 
 </p>
-<a class="target" name="general:name">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/general:name">&#xA0;</a><a class="target" name="toc4.2.1">&#xA0;</a><h3>General: name</h3>
+<a class="target" name="general:name">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/general:name">&nbsp;</a><a class="target" name="toc4.2.1">&nbsp;</a><h3>General: name</h3>
 <p>
 
 
@@ -1400,9 +1400,9 @@ non-shader data.
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line">material {</span>
-<span class="line">    name : &quot;Wet pavement&quot;</span>
+<span class="line">    name : "Wet pavement"</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="general:shadingmodel">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/general:shadingmodel">&#xA0;</a><a class="target" name="toc4.2.2">&#xA0;</a><h3>General: shadingModel</h3>
+<a class="target" name="general:shadingmodel">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/general:shadingmodel">&nbsp;</a><a class="target" name="toc4.2.2">&nbsp;</a><h3>General: shadingModel</h3>
 <p>
 
 
@@ -1417,9 +1417,9 @@ non-shader data.
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line">material {</span>
-<span class="line">    shadingModel : &quot;subsurface&quot;</span>
+<span class="line">    shadingModel : "subsurface"</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="general:parameters">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/general:parameters">&#xA0;</a><a class="target" name="toc4.2.3">&#xA0;</a><h3>General: parameters</h3>
+<a class="target" name="general:parameters">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/general:parameters">&nbsp;</a><a class="target" name="toc4.2.3">&nbsp;</a><h3>General: parameters</h3>
 <p>
 
 
@@ -1427,7 +1427,7 @@ non-shader data.
 
 </p></dd><dt>Value</dt><dd><p>      Each entry is an object with the properties <code>name</code> and <code>type</code>, both of <code>string</code> type. The
       name must be a valid GLSL identifier. The type must be one of the types described in
-      <a href="#table_materialparamstypes">table&#xA0;13</a>.
+      <a href="#table_materialparamstypes">table&nbsp;13</a>.
 
 </p></dd></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:left"> Type </th><th style="text-align:left"> Description </th></tr>
@@ -1447,12 +1447,12 @@ non-shader data.
 <tr><td style="text-align:left"> uint2 </td><td style="text-align:left"> Vector of 2 unsigned integers </td></tr>
 <tr><td style="text-align:left"> uint3 </td><td style="text-align:left"> Vector of 3 unsigned integers </td></tr>
 <tr><td style="text-align:left"> uint4 </td><td style="text-align:left"> Vector of 4 unsigned integers </td></tr>
-<tr><td style="text-align:left"> float3&#xD7;3 </td><td style="text-align:left"> Matrix of 3&#xD7;3 floats </td></tr>
-<tr><td style="text-align:left"> float4&#xD7;4 </td><td style="text-align:left"> Matrix of 4&#xD7;4 floats </td></tr>
+<tr><td style="text-align:left"> float3×3 </td><td style="text-align:left"> Matrix of 3×3 floats </td></tr>
+<tr><td style="text-align:left"> float4×4 </td><td style="text-align:left"> Matrix of 4×4 floats </td></tr>
 <tr><td style="text-align:left"> sampler2d </td><td style="text-align:left"> 2D texture </td></tr>
 <tr><td style="text-align:left"> samplerExternal </td><td style="text-align:left"> External texture (platform-specific) </td></tr>
 <tr><td style="text-align:left"> samplerCubemap </td><td style="text-align:left"> Cubemap texture </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_materialparamstypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;13:</b> Material parameter types</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_materialparamstypes">&nbsp;</a><b style="font-style:normal;">Table&nbsp;13:</b> Material parameter types</div></div>
 
 <p></p><p>
 
@@ -1466,7 +1466,7 @@ non-shader data.
       values. Arrays of samplers are <em class="underscore">not</em> supported at the moment.
 
 </p></dd><dt>Description</dt><dd><p>      Lists the parameters required by your material. These parameters can be set at runtime using
-      Filament&apos;s material API. Accessing parameters from the shaders varies depending on the type of
+      Filament's material API. Accessing parameters from the shaders varies depending on the type of
       parameter:
 
 </p><p>
@@ -1510,7 +1510,7 @@ non-shader data.
 <span class="line">        material.reflectance = materialParams.metallicReflectance.y;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="general:variantfilter">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/general:variantfilter">&#xA0;</a><a class="target" name="toc4.2.4">&#xA0;</a><h3>General: variantFilter</h3>
+<a class="target" name="general:variantfilter">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/general:variantfilter">&nbsp;</a><a class="target" name="toc4.2.4">&nbsp;</a><h3>General: variantFilter</h3>
 <p>
 
 
@@ -1540,13 +1540,13 @@ non-shader data.
 <li class="minus"><code>skinning</code>, used when an object is animated using GPU skinning</li></ul>
 
 <p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    name : &quot;Invisible shadow plane&quot;,</span>
+<span class="line">    name : "Invisible shadow plane",</span>
 <span class="line">    shadingModel : unlit,</span>
 <span class="line">    shadowMultiplier : true,</span>
 <span class="line">    blending : transparent,</span>
 <span class="line">    variantFilter : [ skinning ]</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="general:flipuv">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/general:flipuv">&#xA0;</a><a class="target" name="toc4.2.5">&#xA0;</a><h3>General: flipUV</h3>
+<a class="target" name="general:flipuv">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/general:flipuv">&nbsp;</a><a class="target" name="toc4.2.5">&nbsp;</a><h3>General: flipUV</h3>
 <p>
 
 
@@ -1555,13 +1555,13 @@ non-shader data.
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>true</code>.
 
 </p></dd><dt>Description</dt><dd><p>     When set to <code>true</code> (default value), the Y coordinate of UV attributes will be flipped when
-     read by this material&apos;s vertex shader. Flipping is equivalent to <code>y = 1.0 - y</code>. When set
+     read by this material's vertex shader. Flipping is equivalent to <code>y = 1.0 - y</code>. When set
      to <code>false</code>, flipping is disabled and the UV attributes are read as is.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    flipUV : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexandattributes:requires">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:requires">&#xA0;</a><a class="target" name="toc4.2.6">&#xA0;</a><h3>Vertex and attributes: requires</h3>
+<a class="target" name="vertexandattributes:requires">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:requires">&nbsp;</a><a class="target" name="toc4.2.6">&nbsp;</a><h3>Vertex and attributes: requires</h3>
 <p>
 
 
@@ -1593,7 +1593,7 @@ non-shader data.
 <span class="line">        material.baseColor = texture(materialParams_texture, getUV0());</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexandattributes:variables">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:variables">&#xA0;</a><a class="target" name="toc4.2.7">&#xA0;</a><h3>Vertex and attributes: variables</h3>
+<a class="target" name="vertexandattributes:variables">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:variables">&nbsp;</a><a class="target" name="toc4.2.7">&nbsp;</a><h3>Vertex and attributes: variables</h3>
 <p>
 
 
@@ -1601,7 +1601,7 @@ non-shader data.
 
 </p></dd><dt>Value</dt><dd><p>      Up to 4 strings, each must be a valid GLSL identifier.
 
-</p></dd><dt>Description</dt><dd><p>      Defines custom interpolants (or variables) that are output by the material&apos;s vertex shader.
+</p></dd><dt>Description</dt><dd><p>      Defines custom interpolants (or variables) that are output by the material's vertex shader.
       Each entry of the array defines the name of an  interpolant. The full name in the fragment
       shader is the name of the interpolant with the <code>variable_</code> prefix. For instance, if you
       declare a variable called <code>eyeDirection</code> you can access it in the fragment shader using
@@ -1640,7 +1640,7 @@ non-shader data.
 <span class="line">        material.eyeDirection.xyz = mulMat3x3Float3(getWorldFromViewMatrix(), u);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexandattributes:vertexdomain">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:vertexdomain">&#xA0;</a><a class="target" name="toc4.2.8">&#xA0;</a><h3>Vertex and attributes: vertexDomain</h3>
+<a class="target" name="vertexandattributes:vertexdomain">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:vertexdomain">&nbsp;</a><a class="target" name="toc4.2.8">&nbsp;</a><h3>Vertex and attributes: vertexDomain</h3>
 <p>
 
 
@@ -1655,21 +1655,21 @@ non-shader data.
 
 </p><ul>
      <li class="minus"><strong class="asterisk">Object</strong>: the vertices are defined in the object (or model) coordinate space. The
-            vertices are transformed using the rendered object&apos;s transform matrix
+            vertices are transformed using the rendered object's transform matrix
 </li>
      <li class="minus"><strong class="asterisk">World</strong>: the vertices are defined in world coordinate space. The vertices are not
-            transformed using the rendered object&apos;s transform.
+            transformed using the rendered object's transform.
 </li>
      <li class="minus"><strong class="asterisk">View</strong>: the vertices are defined in view (or eye or camera) coordinate space. The
-            vertices are not transformed using the rendered object&apos;s transform.
+            vertices are not transformed using the rendered object's transform.
 </li>
      <li class="minus"><strong class="asterisk">Device</strong>:  the vertices are defined in normalized device (or clip) coordinate space.
-            The vertices are not transformed using the rendered object&apos;s transform.</li></ul>
+            The vertices are not transformed using the rendered object's transform.</li></ul>
 
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    vertexDomain : device</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexandattributes:interpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:interpolation">&#xA0;</a><a class="target" name="toc4.2.9">&#xA0;</a><h3>Vertex and attributes: interpolation</h3>
+<a class="target" name="vertexandattributes:interpolation">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/vertexandattributes:interpolation">&nbsp;</a><a class="target" name="toc4.2.9">&nbsp;</a><h3>Vertex and attributes: interpolation</h3>
 <p>
 
 
@@ -1685,7 +1685,7 @@ non-shader data.
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    interpolation : flat</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="blendingandtransparency:blending">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:blending">&#xA0;</a><a class="target" name="toc4.2.10">&#xA0;</a><h3>Blending and transparency: blending</h3>
+<a class="target" name="blendingandtransparency:blending">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:blending">&nbsp;</a><a class="target" name="toc4.2.10">&nbsp;</a><h3>Blending and transparency: blending</h3>
 <p>
 
 
@@ -1699,33 +1699,33 @@ non-shader data.
 </p><p>
 
 </p><ul>
-    <li class="minus"><strong class="asterisk">Opaque</strong>: blending is disabled, the alpha channel of the material&apos;s output is ignored.
+    <li class="minus"><strong class="asterisk">Opaque</strong>: blending is disabled, the alpha channel of the material's output is ignored.
 </li>
-    <li class="minus"><strong class="asterisk">Transparent</strong>: blending is enabled. The material&apos;s output is alpha composited with the
-          render target, using Porter-Duff&apos;s <code>source over</code> rule. This blending mode assumes
+    <li class="minus"><strong class="asterisk">Transparent</strong>: blending is enabled. The material's output is alpha composited with the
+          render target, using Porter-Duff's <code>source over</code> rule. This blending mode assumes
           pre-multiplied alpha.
 </li>
     <li class="minus"><strong class="asterisk">Fade</strong>: acts as <code>transparent</code> but transparency is also applied to specular lighting. In
-          <code>transparent</code> mode, the material&apos;s alpha values only applies to diffuse lighting. This
+          <code>transparent</code> mode, the material's alpha values only applies to diffuse lighting. This
           blending mode is useful to fade lit objects in and out.
 </li>
-    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s output is added to the content of the
+    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material's output is added to the content of the
           render target.
 </li>
-    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material&apos;s output is multiplied with the content of the
+    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material's output is multiplied with the content of the
           render target, darkening the content.
 </li>
     <li class="minus"><strong class="asterisk">Screen</strong>: blending is enabled. Effectively the opposite of the <code>multiply</code>, the content of the
           render target is brightened.
 </li>
     <li class="minus"><strong class="asterisk">Masked</strong>: blending is disabled. This blending mode enables alpha masking. The alpha channel
-          of the material&apos;s output defines whether a fragment is discarded or not. See the maskThreshold
+          of the material's output defines whether a fragment is discarded or not. See the maskThreshold
           section for more information.</li></ul>
 
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    blending : transparent</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="blendingandtransparency:postlightingblending">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:postlightingblending">&#xA0;</a><a class="target" name="toc4.2.11">&#xA0;</a><h3>Blending and transparency: postLightingBlending</h3>
+<a class="target" name="blendingandtransparency:postlightingblending">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:postlightingblending">&nbsp;</a><a class="target" name="toc4.2.11">&nbsp;</a><h3>Blending and transparency: postLightingBlending</h3>
 <p>
 
 
@@ -1741,21 +1741,21 @@ non-shader data.
 </p><ul>
     <li class="minus"><strong class="asterisk">Opaque</strong>: blending is disabled, the material will output <code>postLightingColor</code> directly.
 </li>
-    <li class="minus"><strong class="asterisk">Transparent</strong>: blending is enabled. The material&apos;s computed color is alpha composited with
-          the <code>postLightingColor</code>, using Porter-Duff&apos;s <code>source over</code> rule. This blending mode assumes
+    <li class="minus"><strong class="asterisk">Transparent</strong>: blending is enabled. The material's computed color is alpha composited with
+          the <code>postLightingColor</code>, using Porter-Duff's <code>source over</code> rule. This blending mode assumes
           pre-multiplied alpha.
 </li>
-    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s computed color is added to <code>postLightingColor</code>.
+    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material's computed color is added to <code>postLightingColor</code>.
 </li>
-    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material&apos;s computed color is multiplied with <code>postLightingColor</code>.
+    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material's computed color is multiplied with <code>postLightingColor</code>.
 </li>
-    <li class="minus"><strong class="asterisk">Screen</strong>: blending is enabled. The material&apos;s computed color is inverted and multiplied with <code>postLightingColor</code>,
-          and the result is added to the material&apos;s computed color.</li></ul>
+    <li class="minus"><strong class="asterisk">Screen</strong>: blending is enabled. The material's computed color is inverted and multiplied with <code>postLightingColor</code>,
+          and the result is added to the material's computed color.</li></ul>
 
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    postLightingBlending : add</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="blendingandtransparency:transparency">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:transparency">&#xA0;</a><a class="target" name="toc4.2.12">&#xA0;</a><h3>Blending and transparency: transparency</h3>
+<a class="target" name="blendingandtransparency:transparency">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:transparency">&nbsp;</a><a class="target" name="toc4.2.12">&nbsp;</a><h3>Blending and transparency: transparency</h3>
 <p>
 
 
@@ -1772,37 +1772,37 @@ non-shader data.
 <p></p><p>
 
 </p><ul>
-<li class="minus"><code>default</code>: the transparent object is rendered normally (as seen in <a href="#figure_transparencydefault">figure&#xA0;33</a>),
+<li class="minus"><code>default</code>: the transparent object is rendered normally (as seen in <a href="#figure_transparencydefault">figure&nbsp;33</a>),
    honoring the <code>culling</code> mode, etc.
 </li>
 <li class="minus"><code>twoPassesOneSide</code>: the transparent object is first rendered in the depth buffer, then again in
   the color buffer, honoring the <code>culling</code> mode. This effectively renders only half of the
-  transparent object as shown in <a href="#figure_transparencytwopassesoneside">figure&#xA0;34</a>.
+  transparent object as shown in <a href="#figure_transparencytwopassesoneside">figure&nbsp;34</a>.
 </li>
 <li class="minus"><code>twoPassesTwoSides</code>: the transparent object is rendered twice in the color buffer: first with its
   back faces, then with its front faces. This mode lets you render both set of faces while reducing
-  or eliminating sorting issues, as shown in <a href="#figure_transparencytwopassestwosides">figure&#xA0;35</a>.
+  or eliminating sorting issues, as shown in <a href="#figure_transparencytwopassestwosides">figure&nbsp;35</a>.
   <code>twoPassesTwoSides</code> can be combined with <code>doubleSided</code> for better effect.</li></ul>
 
 <p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    transparency : twoPassesOneSide</span>
 <span class="line">}</span></code></pre><p>
 
-</p><center><div class="image" style><a href="images/screenshot_transparency_default.png" target="_blank"><img class="markdeep" src="images/screenshot_transparency_default.png"></a><div class="imagecaption"><a class="target" name="figure_transparencydefault">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;33:</b> This double sided model shows the type of sorting issues transparent
+</p><center><div class="image" style=""><a href="images/screenshot_transparency_default.png" target="_blank"><img class="markdeep" src="images/screenshot_transparency_default.png"></a><div class="imagecaption"><a class="target" name="figure_transparencydefault">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;33:</b> This double sided model shows the type of sorting issues transparent
 objects can be subject to in <code>default</code> mode</div></div></center>
 
 <p></p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_twopasses_oneside.png" target="_blank"><img class="markdeep" src="images/screenshot_twopasses_oneside.png"></a><div class="imagecaption"><a class="target" name="figure_transparencytwopassesoneside">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;34:</b> In <code>twoPassesOneSide</code> mode, only one set of faces is visible
+</p><center><div class="image" style=""><a href="images/screenshot_twopasses_oneside.png" target="_blank"><img class="markdeep" src="images/screenshot_twopasses_oneside.png"></a><div class="imagecaption"><a class="target" name="figure_transparencytwopassesoneside">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;34:</b> In <code>twoPassesOneSide</code> mode, only one set of faces is visible
 and correctly sorted</div></div></center>
 
 <p></p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_twopasses_twosides.png" target="_blank"><img class="markdeep" src="images/screenshot_twopasses_twosides.png"></a><div class="imagecaption"><a class="target" name="figure_transparencytwopassestwosides">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;35:</b> In <code>twoPassesTwoSides</code> mode, both set of faces are visible
+</p><center><div class="image" style=""><a href="images/screenshot_twopasses_twosides.png" target="_blank"><img class="markdeep" src="images/screenshot_twopasses_twosides.png"></a><div class="imagecaption"><a class="target" name="figure_transparencytwopassestwosides">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;35:</b> In <code>twoPassesTwoSides</code> mode, both set of faces are visible
 and sorting issues are minimized or eliminated</div></div></center>
 
 <p></p>
-<a class="target" name="blendingandtransparency:maskthreshold">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:maskthreshold">&#xA0;</a><a class="target" name="toc4.2.13">&#xA0;</a><h3>Blending and transparency: maskThreshold</h3>
+<a class="target" name="blendingandtransparency:maskthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:maskthreshold">&nbsp;</a><a class="target" name="toc4.2.13">&nbsp;</a><h3>Blending and transparency: maskThreshold</h3>
 <p>
 
 
@@ -1818,7 +1818,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 <span class="line">    blending : masked,</span>
 <span class="line">    maskThreshold : 0.5</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="blendingandtransparency:refractionmode">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:refractionmode">&#xA0;</a><a class="target" name="toc4.2.14">&#xA0;</a><h3>Blending and transparency: refractionMode</h3>
+<a class="target" name="blendingandtransparency:refractionmode">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:refractionmode">&nbsp;</a><a class="target" name="toc4.2.14">&nbsp;</a><h3>Blending and transparency: refractionMode</h3>
 <p>
 
 
@@ -1839,7 +1839,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    refractionMode : cubemap,</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="blendingandtransparency:refractiontype">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:refractiontype">&#xA0;</a><a class="target" name="toc4.2.15">&#xA0;</a><h3>Blending and transparency: refractionType</h3>
+<a class="target" name="blendingandtransparency:refractiontype">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:refractiontype">&nbsp;</a><a class="target" name="toc4.2.15">&nbsp;</a><h3>Blending and transparency: refractionType</h3>
 <p>
 
 
@@ -1858,7 +1858,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 <span class="line">    refractionMode : cubemap,</span>
 <span class="line">    refractionType : thin,</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="rasterization:culling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/rasterization:culling">&#xA0;</a><a class="target" name="toc4.2.16">&#xA0;</a><h3>Rasterization: culling</h3>
+<a class="target" name="rasterization:culling">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:culling">&nbsp;</a><a class="target" name="toc4.2.16">&nbsp;</a><h3>Rasterization: culling</h3>
 <p>
 
 
@@ -1872,7 +1872,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    culling : none</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="rasterization:colorwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/rasterization:colorwrite">&#xA0;</a><a class="target" name="toc4.2.17">&#xA0;</a><h3>Rasterization: colorWrite</h3>
+<a class="target" name="rasterization:colorwrite">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:colorwrite">&nbsp;</a><a class="target" name="toc4.2.17">&nbsp;</a><h3>Rasterization: colorWrite</h3>
 <p>
 
 
@@ -1885,7 +1885,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    colorWrite : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="rasterization:depthwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/rasterization:depthwrite">&#xA0;</a><a class="target" name="toc4.2.18">&#xA0;</a><h3>Rasterization: depthWrite</h3>
+<a class="target" name="rasterization:depthwrite">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:depthwrite">&nbsp;</a><a class="target" name="toc4.2.18">&nbsp;</a><h3>Rasterization: depthWrite</h3>
 <p>
 
 
@@ -1898,7 +1898,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    depthWrite : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="rasterization:depthculling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/rasterization:depthculling">&#xA0;</a><a class="target" name="toc4.2.19">&#xA0;</a><h3>Rasterization: depthCulling</h3>
+<a class="target" name="rasterization:depthculling">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:depthculling">&nbsp;</a><a class="target" name="toc4.2.19">&nbsp;</a><h3>Rasterization: depthCulling</h3>
 <p>
 
 
@@ -1912,7 +1912,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    depthCulling : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="rasterization:doublesided">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/rasterization:doublesided">&#xA0;</a><a class="target" name="toc4.2.20">&#xA0;</a><h3>Rasterization: doubleSided</h3>
+<a class="target" name="rasterization:doublesided">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:doublesided">&nbsp;</a><a class="target" name="toc4.2.20">&nbsp;</a><h3>Rasterization: doubleSided</h3>
 <p>
 
 
@@ -1921,14 +1921,14 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
 
 </p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
-      <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle&apos;s
+      <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle's
       normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
       double-sidedness to be toggled at run time.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    doubleSided : true</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:shadowmultiplier">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&#xA0;</a><a class="target" name="toc4.2.21">&#xA0;</a><h3>Lighting: shadowMultiplier</h3>
+<a class="target" name="lighting:shadowmultiplier">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&nbsp;</a><a class="target" name="toc4.2.21">&nbsp;</a><h3>Lighting: shadowMultiplier</h3>
 <p>
 
 
@@ -1941,7 +1941,7 @@ and sorting issues are minimized or eliminated</div></div></center>
       create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    name : &quot;Invisible shadow plane&quot;,</span>
+<span class="line">    name : "Invisible shadow plane",</span>
 <span class="line">    shadingModel : unlit,</span>
 <span class="line">    shadowMultiplier : true,</span>
 <span class="line">    blending : transparent</span>
@@ -1954,7 +1954,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 <span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:clearcoatiorchange">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&#xA0;</a><a class="target" name="toc4.2.22">&#xA0;</a><h3>Lighting: clearCoatIorChange</h3>
+<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.22">&nbsp;</a><h3>Lighting: clearCoatIorChange</h3>
 <p>
 
 
@@ -1964,19 +1964,19 @@ and sorting issues are minimized or eliminated</div></div></center>
 
 </p></dd><dt>Description</dt><dd><p>     When adding a clear coat layer, the change in index of refraction (IoR) is taken into account
      to modify the specular color of the base layer. This appears to darken <code>baseColor</code>. When this
-     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&#xA0;36</a> for an
+     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&nbsp;36</a> for an
      example of how this property can affect a red metallic base layer.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    clearCoatIorChange : false</span>
 <span class="line">}</span></code></pre><p>
 
-</p><center><div class="image" style><a href="images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="images/screenshot_clear_coat_ior_change.jpg"></a><div class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;36:</b> The same rough metallic ball with a clear coat layer rendered
+</p><center><div class="image" style=""><a href="images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="images/screenshot_clear_coat_ior_change.jpg"></a><div class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;36:</b> The same rough metallic ball with a clear coat layer rendered
 with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</div></div></center>
 
 <p></p>
-<a class="target" name="lighting:multibounceambientocclusion">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&#xA0;</a><a class="target" name="toc4.2.23">&#xA0;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
+<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.23">&nbsp;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
 <p>
 
 
@@ -1987,25 +1987,25 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 </p></dd><dt>Description</dt><dd><p>     Multi-bounce ambient occlusion takes into account interreflections when applying ambient
      occlusion to image-based lighting. Turning this feature on avoids over-darkening occluded
      areas. It also takes the surface color into account to generate colored ambient occlusion.
-     <a href="#figure_multibounceao">Figure&#xA0;37</a> compares the ambient occlusion term of a surface with and without
+     <a href="#figure_multibounceao">Figure&nbsp;37</a> compares the ambient occlusion term of a surface with and without
      multi-bounce ambient occlusion. Notice how multi-bounce ambient occlusion introduces color
-     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&#xA0;38</a> toggles between multi-bounce ambient
+     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&nbsp;38</a> toggles between multi-bounce ambient
      occlusion on and off on a lit brick material to highlight the effects of this property.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    multiBounceAmbientOcclusion : true</span>
 <span class="line">}</span></code></pre><p>
 
-</p><center><div class="image" style><a href="images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="images/screenshot_multi_bounce_ao.jpg"></a><div class="imagecaption"><a class="target" name="figure_multibounceao">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;37:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
+</p><center><div class="image" style=""><a href="images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="images/screenshot_multi_bounce_ao.jpg"></a><div class="imagecaption"><a class="target" name="figure_multibounceao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;37:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
 occclusion enabled (left) and disabled (right).</div></div></center>
 
 <p></p><p>
 
-</p><center><div class="image" style><a href="images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="images/screenshot_multi_bounce_ao.gif"></a><div class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;38:</b> Brick texture rendered with multi-bounce ambient
+</p><center><div class="image" style=""><a href="images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="images/screenshot_multi_bounce_ao.gif"></a><div class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;38:</b> Brick texture rendered with multi-bounce ambient
 occclusion enabled and disabled.</div></div></center>
 
 <p></p>
-<a class="target" name="lighting:specularambientocclusion">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&#xA0;</a><a class="target" name="toc4.2.24">&#xA0;</a><h3>Lighting: specularAmbientOcclusion</h3>
+<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.24">&nbsp;</a><h3>Lighting: specularAmbientOcclusion</h3>
 <p>
 
 
@@ -2018,22 +2018,22 @@ occclusion enabled and disabled.</div></div></center>
 </p></dd><dt>Description</dt><dd><p>     Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
      indirect lighting. When setting this property to other than <code>none</code>, a new ambient occlusion
      term is derived from the surface roughness and applied to specular indirect lighting.
-     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&#xA0;39</a>.
+     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;39</a>.
      When this value is set to <code>simple</code>, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to <code>bentNormals</code>, Filament will use
      a much more accurate but much more expensive method. <code>bentNormals</code> only works if the material
-     sets the <code>bentNormal</code> property inside the fragment shader. If that property isn&apos;t set,
+     sets the <code>bentNormal</code> property inside the fragment shader. If that property isn't set,
      <code>bentNormals</code> will behave like <code>simple</code>.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAmbientOcclusion : simple</span>
 <span class="line">}</span></code></pre><p>
 
-</p><center><div class="image" style><a href="images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="images/screenshot_specular_ao.gif"></a><div class="imagecaption"><a class="target" name="figure_specularao">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;39:</b> Comparison of specular ambient occlusion on and off. The effect is
+</p><center><div class="image" style=""><a href="images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="images/screenshot_specular_ao.gif"></a><div class="imagecaption"><a class="target" name="figure_specularao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;39:</b> Comparison of specular ambient occlusion on and off. The effect is
 particularly visible under the hose.</div></div></center>
 
 <p></p>
-<a class="target" name="anti-aliasing:specularantialiasing">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&#xA0;</a><a class="target" name="toc4.2.25">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
+<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
 <p>
 
 
@@ -2050,7 +2050,7 @@ particularly visible under the hose.</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasing : true</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingvariance">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&#xA0;</a><a class="target" name="toc4.2.26">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
+<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.26">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
 <p>
 
 
@@ -2065,7 +2065,7 @@ particularly visible under the hose.</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingVariance : 0.2</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingthreshold">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&#xA0;</a><a class="target" name="toc4.2.27">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
+<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.27">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
 <p>
 
 
@@ -2079,7 +2079,7 @@ particularly visible under the hose.</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingThreshold : 0.1</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexblock">&#xA0;</a><a class="target" name="materialdefinitions/vertexblock">&#xA0;</a><a class="target" name="toc4.3">&#xA0;</a><h2>Vertex block</h2>
+<a class="target" name="vertexblock">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Vertex block</h2>
 <p>
 
 
@@ -2119,7 +2119,7 @@ In addition to the <code>MaterialVertexInputs</code> structure, your vertex shad
 APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
 
 </p>
-<a class="target" name="materialvertexinputs">&#xA0;</a><a class="target" name="materialdefinitions/vertexblock/materialvertexinputs">&#xA0;</a><a class="target" name="toc4.3.1">&#xA0;</a><h3>Material vertex inputs</h3>
+<a class="target" name="materialvertexinputs">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/materialvertexinputs">&nbsp;</a><a class="target" name="toc4.3.1">&nbsp;</a><h3>Material vertex inputs</h3>
 <pre class="listing tilde"><code><span class="line">struct MaterialVertexInputs {</span>
 <span class="line">    float4 color;              <span class="hljs-comment">// if the color attribute is required</span></span>
 <span class="line">    float2 uv0;                <span class="hljs-comment">// if the uv0 attribute is required</span></span>
@@ -2157,7 +2157,7 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
     this behavior using the <code>flipUV</code> property and setting it to <code>false</code>.</p></div>
 
 <p></p>
-<a class="target" name="fragmentblock">&#xA0;</a><a class="target" name="materialdefinitions/fragmentblock">&#xA0;</a><a class="target" name="toc4.4">&#xA0;</a><h2>Fragment block</h2>
+<a class="target" name="fragmentblock">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2>Fragment block</h2>
 <p>
 
 
@@ -2194,7 +2194,7 @@ standard lit shading model:
 <span class="line">        material.roughness = <span class="hljs-number">0.0</span>;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="preparematerialfunction">&#xA0;</a><a class="target" name="materialdefinitions/fragmentblock/preparematerialfunction">&#xA0;</a><a class="target" name="toc4.4.1">&#xA0;</a><h3>prepareMaterial function</h3>
+<a class="target" name="preparematerialfunction">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/preparematerialfunction">&nbsp;</a><a class="target" name="toc4.4.1">&nbsp;</a><h3>prepareMaterial function</h3>
 <p>
 
 
@@ -2225,7 +2225,7 @@ plastic with bump mapping:
 <span class="line">        material.roughness = <span class="hljs-number">1.0</span>;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="materialfragmentinputs">&#xA0;</a><a class="target" name="materialdefinitions/fragmentblock/materialfragmentinputs">&#xA0;</a><a class="target" name="toc4.4.2">&#xA0;</a><h3>Material fragment inputs</h3>
+<a class="target" name="materialfragmentinputs">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/materialfragmentinputs">&nbsp;</a><a class="target" name="toc4.4.2">&nbsp;</a><h3>Material fragment inputs</h3>
 <pre class="listing tilde"><code><span class="line">struct MaterialInputs {</span>
 <span class="line">    float4 baseColor;           <span class="hljs-comment">// default: float4(1.0)</span></span>
 <span class="line">    float4 emissive;            <span class="hljs-comment">// default: float4(0.0, 0.0, 0.0, 1.0)</span></span>
@@ -2269,11 +2269,11 @@ plastic with bump mapping:
 <span class="line">    <span class="hljs-type">float</span> transmission;         <span class="hljs-comment">// default: 1.0</span></span>
 <span class="line">    float3 absorption;          <span class="hljs-comment">// default float3(0.0, 0.0, 0.0)</span></span>
 <span class="line">    <span class="hljs-type">float</span> ior;                  <span class="hljs-comment">// default: 1.5</span></span>
-<span class="line">    <span class="hljs-type">float</span> microThickness;       <span class="hljs-comment">// default: 0.0, not available with refractionType &quot;solid&quot;</span></span>
+<span class="line">    <span class="hljs-type">float</span> microThickness;       <span class="hljs-comment">// default: 0.0, not available with refractionType "solid"</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="shaderpublicapis">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis">&#xA0;</a><a class="target" name="toc4.5">&#xA0;</a><h2>Shader public APIs</h2>
+<a class="target" name="shaderpublicapis">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2>Shader public APIs</h2>
 
-<a class="target" name="types">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/types">&#xA0;</a><a class="target" name="toc4.5.1">&#xA0;</a><h3>Types</h3>
+<a class="target" name="types">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/types">&nbsp;</a><a class="target" name="toc4.5.1">&nbsp;</a><h3>Types</h3>
 <p>
 
 
@@ -2292,12 +2292,12 @@ type aliases:
 <tr><td style="text-align:left"> <strong class="asterisk">float2</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> A vector of 2 floats </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">float3</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> A vector of 3 floats </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">float4</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> A vector of 4 floats </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">float4&#xD7;4</strong> </td><td style="text-align:center"> mat4 </td><td style="text-align:left"> A 4&#xD7;4 float matrix </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">float3&#xD7;3</strong> </td><td style="text-align:center"> mat3 </td><td style="text-align:left"> A 3&#xD7;3 float matrix </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">float4×4</strong> </td><td style="text-align:center"> mat4 </td><td style="text-align:left"> A 4×4 float matrix </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">float3×3</strong> </td><td style="text-align:center"> mat3 </td><td style="text-align:left"> A 3×3 float matrix </td></tr>
 </tbody></table></div>
 
 <p></p>
-<a class="target" name="math">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/math">&#xA0;</a><a class="target" name="toc4.5.2">&#xA0;</a><h3>Math</h3>
+<a class="target" name="math">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/math">&nbsp;</a><a class="target" name="toc4.5.2">&nbsp;</a><h3>Math</h3>
 <p>
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">PI</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> A constant that represent \(\pi\) </td></tr>
@@ -2306,25 +2306,25 @@ type aliases:
 <tr><td style="text-align:left"> <strong class="asterisk">pow5(float x)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes \(x^5\) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">sq(float x)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes \(x^2\) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">max3(float3 v)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Returns the maximum value of the specified <code>float3</code> </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">mulMat4&#xD7;4Float3(float4&#xD7;4 m, float3 v)</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Returns \(m * v\) </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">mulMat3&#xD7;3Float3(float4&#xD7;4 m, float3 v)</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Returns \(m * v\) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">mulMat4×4Float3(float4×4 m, float3 v)</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Returns \(m * v\) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">mulMat3×3Float3(float4×4 m, float3 v)</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Returns \(m * v\) </td></tr>
 </tbody></table></div>
 
 <p></p>
-<a class="target" name="matrices">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/matrices">&#xA0;</a><a class="target" name="toc4.5.3">&#xA0;</a><h3>Matrices</h3>
+<a class="target" name="matrices">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/matrices">&nbsp;</a><a class="target" name="toc4.5.3">&nbsp;</a><h3>Matrices</h3>
 <p>
 
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getViewFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from world space to view/eye space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromViewMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from view/eye space to world space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getClipFromViewMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from view/eye space to clip (NDC) space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getViewFromClipMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to view/eye space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromClipMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getViewFromWorldMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from world space to view/eye space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromViewMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from view/eye space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getClipFromViewMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from view/eye space to clip (NDC) space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getViewFromClipMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to view/eye space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromClipMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to world space </td></tr>
 </tbody></table></div>
 
 <p></p>
-<a class="target" name="frameconstants">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/frameconstants">&#xA0;</a><a class="target" name="toc4.5.4">&#xA0;</a><h3>Frame constants</h3>
+<a class="target" name="frameconstants">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/frameconstants">&nbsp;</a><a class="target" name="toc4.5.4">&nbsp;</a><h3>Frame constants</h3>
 <p>
 
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
@@ -2344,12 +2344,12 @@ type aliases:
 
 <p></p><p>
 
-    To achieve good precision, the &#x201C;world space&#x201D; in Filament&apos;s shading system does not necessarily
+    To achieve good precision, the “world space” in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can add <code>getWorldOffset()</code> to <code>getWorldCameraPosition()</code>.</p></div>
 
 <p></p>
-<a class="target" name="vertexonly">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/vertexonly">&#xA0;</a><a class="target" name="toc4.5.5">&#xA0;</a><h3>Vertex only</h3>
+<a class="target" name="vertexonly">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/vertexonly">&nbsp;</a><a class="target" name="toc4.5.5">&nbsp;</a><h3>Vertex only</h3>
 <p>
 
 
@@ -2357,18 +2357,19 @@ The following APIs are only available from the vertex block:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getPosition()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Vertex position in the domain defined by the material (default: object/model space) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getCustom0()</strong> to <strong class="asterisk">getCustom7()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Custom vertex attribute </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelMatrix()</strong> </td><td style="text-align:center"> float4&#xD7;4 </td><td style="text-align:left"> Matrix that converts from model (object) space to world space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelNormalMatrix()</strong> </td><td style="text-align:center"> float3&#xD7;3 </td><td style="text-align:left"> Matrix that converts normals from model (object) space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from model (object) space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelNormalMatrix()</strong> </td><td style="text-align:center"> float3×3 </td><td style="text-align:left"> Matrix that converts normals from model (object) space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getVertexIndex()</strong> </td><td style="text-align:center"> int </td><td style="text-align:left"> Index of the current vertex </td></tr>
 </tbody></table></div>
 
 <p></p>
-<a class="target" name="fragmentonly">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis/fragmentonly">&#xA0;</a><a class="target" name="toc4.5.6">&#xA0;</a><h3>Fragment only</h3>
+<a class="target" name="fragmentonly">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/fragmentonly">&nbsp;</a><a class="target" name="toc4.5.6">&nbsp;</a><h3>Fragment only</h3>
 <p>
 
 
 The following APIs are only available from the fragment block:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldTangentFrame()</strong> </td><td style="text-align:center"> float3&#xD7;3 </td><td style="text-align:left"> Matrix containing in each column the <code>tangent</code> (<code>frame[0]</code>), <code>bi-tangent</code> (<code>frame[1]</code>) and <code>normal</code> (<code>frame[2]</code>) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the <code>normal</code> is valid in this matrix. </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldTangentFrame()</strong> </td><td style="text-align:center"> float3×3 </td><td style="text-align:left"> Matrix containing in each column the <code>tangent</code> (<code>frame[0]</code>), <code>bi-tangent</code> (<code>frame[1]</code>) and <code>normal</code> (<code>frame[2]</code>) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the <code>normal</code> is valid in this matrix. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in world space (see note below about world-space) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldViewVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized vector in world space from the fragment position to the eye </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
@@ -2407,7 +2408,7 @@ The following APIs are only available from the fragment block:
     coordinate. This will flip the coordinate depending on which backend is being used.</p></div>
 
 <p></p>
-<a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="compilingmaterials">&#xA0;</a><a class="target" name="toc5">&#xA0;</a><h1>Compiling materials</h1>
+<a class="target" name="compilingmaterials">&nbsp;</a><a class="target" name="compilingmaterials">&nbsp;</a><a class="target" name="toc5">&nbsp;</a><h1>Compiling materials</h1>
 <p>
 
 
@@ -2416,7 +2417,7 @@ Material packages can be compiled from material definitions using the command li
 in the example below) and an output material package (<code>car_paint.filamat</code> in the example below):
 
 </p><pre class="listing backtick"><code><span class="line">$ matc -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat</span></code></pre>
-<a class="target" name="shadervalidation">&#xA0;</a><a class="target" name="compilingmaterials/shadervalidation">&#xA0;</a><a class="target" name="toc5.1">&#xA0;</a><h2>Shader validation</h2>
+<a class="target" name="shadervalidation">&nbsp;</a><a class="target" name="compilingmaterials/shadervalidation">&nbsp;</a><a class="target" name="toc5.1">&nbsp;</a><h2>Shader validation</h2>
 <p>
 
 
@@ -2425,25 +2426,25 @@ example of an error message generated when compiling a material definition conta
 fragment shader (<code>metalic</code> instead of <code>metallic</code>). The reported line numbers are line numbers in the
 source material definition file.
 
-</p><pre class="listing backtick"><code><span class="line">ERROR: 0:13: &apos;metalic&apos; : no such field in structure</span>
-<span class="line">ERROR: 0:13: &apos;&apos; : compilation terminated</span>
+</p><pre class="listing backtick"><code><span class="line">ERROR: 0:13: 'metalic' : no such field in structure</span>
+<span class="line">ERROR: 0:13: '' : compilation terminated</span>
 <span class="line">ERROR: 2 compilation errors.  No code generated.</span>
 <span class="line"></span>
 <span class="line">Could not compile material metal.mat</span></code></pre>
-<a class="target" name="flags">&#xA0;</a><a class="target" name="compilingmaterials/flags">&#xA0;</a><a class="target" name="toc5.2">&#xA0;</a><h2>Flags</h2>
+<a class="target" name="flags">&nbsp;</a><a class="target" name="compilingmaterials/flags">&nbsp;</a><a class="target" name="toc5.2">&nbsp;</a><h2>Flags</h2>
 <p>
 
 
-The command line flags relevant to application development are described in <a href="#table_matcflags">table&#xA0;14</a>.
+The command line flags relevant to application development are described in <a href="#table_matcflags">table&nbsp;14</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Flag </th><th style="text-align:center"> Value </th><th style="text-align:left"> Usage </th></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-o</strong>, <strong class="asterisk">&#x2014;output</strong> </td><td style="text-align:center"> [path] </td><td style="text-align:left"> Specify the output file path </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-p</strong>, <strong class="asterisk">&#x2014;platform</strong> </td><td style="text-align:center"> desktop/mobile/all </td><td style="text-align:left"> Select the target platform(s) </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-a</strong>, <strong class="asterisk">&#x2014;api</strong> </td><td style="text-align:center"> opengl/vulkan/all </td><td style="text-align:left"> Specify the target graphics API </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-S</strong>, <strong class="asterisk">&#x2014;optimize-size</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Optimize compiled material for size instead of just performance </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-r</strong>, <strong class="asterisk">&#x2014;reflect</strong> </td><td style="text-align:center"> parameters </td><td style="text-align:left"> Outputs the specified metadata as JSON </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">-v</strong>, <strong class="asterisk">&#x2014;variant-filter</strong> </td><td style="text-align:center"> [variant] </td><td style="text-align:left"> Filters out the specified, comma-separated variants </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_matcflags">&#xA0;</a><b style="font-style:normal;">Table&#xA0;14:</b> List of <code>matc</code> flags</div></div>
+<tr><td style="text-align:right"> <strong class="asterisk">-o</strong>, <strong class="asterisk">—output</strong> </td><td style="text-align:center"> [path] </td><td style="text-align:left"> Specify the output file path </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-p</strong>, <strong class="asterisk">—platform</strong> </td><td style="text-align:center"> desktop/mobile/all </td><td style="text-align:left"> Select the target platform(s) </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-a</strong>, <strong class="asterisk">—api</strong> </td><td style="text-align:center"> opengl/vulkan/all </td><td style="text-align:left"> Specify the target graphics API </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-S</strong>, <strong class="asterisk">—optimize-size</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Optimize compiled material for size instead of just performance </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-r</strong>, <strong class="asterisk">—reflect</strong> </td><td style="text-align:center"> parameters </td><td style="text-align:left"> Outputs the specified metadata as JSON </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-v</strong>, <strong class="asterisk">—variant-filter</strong> </td><td style="text-align:center"> [variant] </td><td style="text-align:left"> Filters out the specified, comma-separated variants </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_matcflags">&nbsp;</a><b style="font-style:normal;">Table&nbsp;14:</b> List of <code>matc</code> flags</div></div>
 
 <p></p><p>
 
@@ -2451,7 +2452,7 @@ The command line flags relevant to application development are described in <a h
 use only.
 
 </p>
-<a class="target" name="--platform">&#xA0;</a><a class="target" name="compilingmaterials/flags/&#x2014;platform">&#xA0;</a><a class="target" name="toc5.2.1">&#xA0;</a><h3>&#x2014;platform</h3>
+<a class="target" name="--platform">&nbsp;</a><a class="target" name="compilingmaterials/flags/—platform">&nbsp;</a><a class="target" name="toc5.2.1">&nbsp;</a><h3>—platform</h3>
 <p>
 
 
@@ -2461,7 +2462,7 @@ appropriate target platform. For instance, to compile a material package for And
 the following command:
 
 </p><pre class="listing backtick"><code><span class="line">$ matc -p mobile -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat</span></code></pre>
-<a class="target" name="--api">&#xA0;</a><a class="target" name="compilingmaterials/flags/&#x2014;api">&#xA0;</a><a class="target" name="toc5.2.2">&#xA0;</a><h3>&#x2014;api</h3>
+<a class="target" name="--api">&nbsp;</a><a class="target" name="compilingmaterials/flags/—api">&nbsp;</a><a class="target" name="toc5.2.2">&nbsp;</a><h3>—api</h3>
 <p>
 
 
@@ -2471,7 +2472,7 @@ only Vulkan capable devices, you can reduce the size of the material packages by
 the set of Vulkan shaders:
 
 </p><pre class="listing backtick"><code><span class="line">$ matc -a vulkan -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat</span></code></pre>
-<a class="target" name="--optimize-size">&#xA0;</a><a class="target" name="compilingmaterials/flags/&#x2014;optimize-size">&#xA0;</a><a class="target" name="toc5.2.3">&#xA0;</a><h3>&#x2014;optimize-size</h3>
+<a class="target" name="--optimize-size">&nbsp;</a><a class="target" name="compilingmaterials/flags/—optimize-size">&nbsp;</a><a class="target" name="toc5.2.3">&nbsp;</a><h3>—optimize-size</h3>
 <p>
 
 
@@ -2480,32 +2481,32 @@ possible. If the compiled material is deemed too large by default, using this fl
 a good compromise between runtime performance and size.
 
 </p>
-<a class="target" name="--reflect">&#xA0;</a><a class="target" name="compilingmaterials/flags/&#x2014;reflect">&#xA0;</a><a class="target" name="toc5.2.4">&#xA0;</a><h3>&#x2014;reflect</h3>
+<a class="target" name="--reflect">&nbsp;</a><a class="target" name="compilingmaterials/flags/—reflect">&nbsp;</a><a class="target" name="toc5.2.4">&nbsp;</a><h3>—reflect</h3>
 <p>
 
 
 This flag was designed to help build tools around <code>matc</code>. It allows you to print out specific
-metadata in JSON format. The example below prints out the list of parameters defined in Filament&apos;s
+metadata in JSON format. The example below prints out the list of parameters defined in Filament's
 standard skybox material. It produces a list of 2 parameters, named <code>showSun</code> and <code>skybox</code>,
 respectively a boolean and a cubemap texture.
 
 </p><pre class="listing backtick"><code><span class="line">$ matc --reflect parameters filament/src/materials/skybox.mat </span>
 <span class="line">{</span>
-<span class="line">  &quot;parameters&quot;: [</span>
+<span class="line">  "parameters": [</span>
 <span class="line">    {</span>
-<span class="line">      &quot;name&quot;: &quot;showSun&quot;,</span>
-<span class="line">      &quot;type&quot;: &quot;bool&quot;,</span>
-<span class="line">      &quot;size&quot;: &quot;1&quot;</span>
+<span class="line">      "name": "showSun",</span>
+<span class="line">      "type": "bool",</span>
+<span class="line">      "size": "1"</span>
 <span class="line">    },</span>
 <span class="line">    {</span>
-<span class="line">      &quot;name&quot;: &quot;skybox&quot;,</span>
-<span class="line">      &quot;type&quot;: &quot;samplerCubemap&quot;,</span>
-<span class="line">      &quot;format&quot;: &quot;float&quot;,</span>
-<span class="line">      &quot;precision&quot;: &quot;default&quot;</span>
+<span class="line">      "name": "skybox",</span>
+<span class="line">      "type": "samplerCubemap",</span>
+<span class="line">      "format": "float",</span>
+<span class="line">      "precision": "default"</span>
 <span class="line">    }</span>
 <span class="line">  ]</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="--variant-filter">&#xA0;</a><a class="target" name="compilingmaterials/flags/&#x2014;variant-filter">&#xA0;</a><a class="target" name="toc5.2.5">&#xA0;</a><h3>&#x2014;variant-filter</h3>
+<a class="target" name="--variant-filter">&nbsp;</a><a class="target" name="compilingmaterials/flags/—variant-filter">&nbsp;</a><a class="target" name="toc5.2.5">&nbsp;</a><h3>—variant-filter</h3>
 <p>
 
 
@@ -2528,7 +2529,11 @@ variants:
 </li>
 <li class="minus"><code>shadowReceiver</code>, used when an object can receive shadows
 </li>
-<li class="minus"><code>skinning</code>, used when an object is animated using GPU skinning or vertex morphing</li></ul>
+<li class="minus"><code>skinning</code>, used when an object is animated using GPU skinning or vertex morphing
+</li>
+<li class="minus"><code>fog</code>, used when global fog is applied to the scene
+</li>
+<li class="minus"><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver</li></ul>
 
 <p></p><p>
 
@@ -2548,9 +2553,9 @@ in the material itself.
 Use this flag with caution, filtering out a variant required at runtime may lead to crashes.
 
 </p>
-<a class="target" name="handlingcolors">&#xA0;</a><a class="target" name="handlingcolors">&#xA0;</a><a class="target" name="toc6">&#xA0;</a><h1>Handling colors</h1>
+<a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1>Handling colors</h1>
 
-<a class="target" name="linearcolors">&#xA0;</a><a class="target" name="handlingcolors/linearcolors">&#xA0;</a><a class="target" name="toc6.1">&#xA0;</a><h2>Linear colors</h2>
+<a class="target" name="linearcolors">&nbsp;</a><a class="target" name="handlingcolors/linearcolors">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2>Linear colors</h2>
 <p>
 
 
@@ -2569,7 +2574,7 @@ Alternatively you can use one of the two cheaper but less accurate versions show
 <span class="line">linearColor = <span class="hljs-built_in">pow</span>(color, <span class="hljs-number">2.2</span>);</span>
 <span class="line"><span class="hljs-comment">// Cheapest</span></span>
 <span class="line">linearColor = color * color;</span></code></pre>
-<a class="target" name="pre-multipliedalpha">&#xA0;</a><a class="target" name="handlingcolors/pre-multipliedalpha">&#xA0;</a><a class="target" name="toc6.2">&#xA0;</a><h2>Pre-multiplied alpha</h2>
+<a class="target" name="pre-multipliedalpha">&nbsp;</a><a class="target" name="handlingcolors/pre-multipliedalpha">&nbsp;</a><a class="target" name="toc6.2">&nbsp;</a><h2>Pre-multiplied alpha</h2>
 <p>
 
 
@@ -2585,5 +2590,5 @@ pre-multiplied by default.
 
 </p><p>
 
-</p></span><div class="markdeepFooter"><i>formatted by <a href="http://casual-effects.com/markdeep" style="color:#999">Markdeep&#xA0;1.03&#xA0;&#xA0;</a></i><div style="display:inline-block;font-size:13px;font-family:&apos;Times New Roman&apos;,serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</p></span><div class="markdeepFooter"><i>formatted by <a href="http://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.03&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">✒</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
 </body></html>
