@@ -23,7 +23,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
-const env = 'venetian_crossroads_2k';
+const env = 'default_env';
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
 const mesh_url = 'FlightHelmet.gltf';
@@ -48,8 +48,15 @@ class App {
 
         const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
         const iblColor = IndirectLight.getColorEstimate(indirectLight.shfloats, iblDirection);
+        const iblIntensity = 20000;
 
-        indirectLight.setIntensity(50000);
+        indirectLight.setIntensity(iblIntensity);
+
+        // Rotate the IBL so that a bright light is behind the helmet, to show off bloom.
+        const mat = [];
+        const radians = 3.14;
+        mat3.fromRotation(mat, radians, [0, 1, 0]);
+        indirectLight.setRotation(mat);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -57,7 +64,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color(iblColor.slice(0, 3))
-            .intensity(150000)
+            .intensity(iblColor[3] * iblIntensity)
             .direction(iblDirection)
             .sunAngularRadius(1.9)
             .castShadows(true)
@@ -66,16 +73,19 @@ class App {
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const loader = engine.createAssetLoader();
+        const loader = this.loader = engine.createAssetLoader();
+
+        this.allowRefresh = false;
         const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        this.assetRoot = this.asset.getRoot();
 
         const messages = document.getElementById('messages');
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
+
         const onDone = () => {
-            // Destroy the asset loader.
-            loader.delete();
+            this.allowRefresh = true;
 
             // Enable shadows on every renderable.
             const entities = asset.getEntities();
@@ -91,24 +101,51 @@ class App {
         };
         asset.loadResources(onDone, onFetched);
 
+        const cameraEntity = Filament.EntityManager.get().create();
+        this.camera = engine.createCamera(cameraEntity);
+
+        const colorGrading = Filament.ColorGrading.Builder()
+            .toneMapping(Filament.ColorGrading$ToneMapping.ACES_LEGACY)
+            .build(engine);
+
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
-        this.camera = engine.createCamera();
-        this.camera.setExposure(32, 1/125.0, 100);
         this.view = engine.createView();
+        this.view.setVignetteOptions({ midPoint: 0.8, enabled: true });
+
+        this.view.setBloomOptions({ stength: 0.2, enabled: true });
+
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
+        this.view.setColorGrading(colorGrading);
         this.resize();
         this.render = this.render.bind(this);
         this.resize = this.resize.bind(this);
+        this.refresh = this.refresh.bind(this);
         window.addEventListener('resize', this.resize);
+        window.addEventListener('dblclick', this.refresh);
         window.requestAnimationFrame(this.render);
+    }
+
+    // Test for memory leaks by destroying and recreating the asset.
+    refresh() {
+        if (!this.allowRefresh) {
+            console.warn('Refresh not allowed while the model is still loading.');
+            return;
+        }
+        console.info('Refreshing...');
+        this.allowRefresh = false;
+        this.scene.removeEntities(this.asset.getEntities());
+        this.loader.destroyAsset(this.asset);
+        this.asset = this.loader.createAssetFromJson(mesh_url);
+        const onDone = () => { this.allowRefresh = true; }
+        this.asset.loadResources(onDone);
     }
 
     render() {
         // Spin the model according to the trackball controller.
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.asset.getRoot());
+        const inst = tcm.getInstance(this.assetRoot);
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
 
@@ -120,10 +157,17 @@ class App {
         }
         while (popRenderable()) {
             this.scene.addEntity(entity);
+            entity.delete();
         }
+        entity.delete();
 
         // Render the scene and request the next animation frame.
-        this.renderer.render(this.swapChain, this.view);
+        if (this.renderer.beginFrame(this.swapChain)) {
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+        }
+        this.engine.execute();
+
         window.requestAnimationFrame(this.render);
     }
 

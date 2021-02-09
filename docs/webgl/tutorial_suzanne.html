@@ -125,7 +125,7 @@ Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
 
         <span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createSwapChain();
         <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createRenderer();
-        <span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createCamera();
+        <span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createCamera(Filament.EntityManager.get().create());
         <span style="color: #008000; font-weight: bold">this</span>.view <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createView();
         <span style="color: #008000; font-weight: bold">this</span>.view.setCamera(<span style="color: #008000; font-weight: bold">this</span>.camera);
         <span style="color: #008000; font-weight: bold">this</span>.view.setScene(<span style="color: #008000; font-weight: bold">this</span>.scene);
@@ -236,7 +236,7 @@ was created in the app constructor.</p>
 <h2>Introduce trackball rotation</h2>
 <p>Add the following script tag to your HTML file. This imports a small third-party library that
 listens for drag events and computes a rotation matrix.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>&lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;https://unpkg.com/gltumble&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>&lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gltumble&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
 </pre></div>
 
 <p>Next, replace the <strong>initialize gltumble</strong> and <strong>apply gltumble matrix</strong> comments with the following
