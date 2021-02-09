@@ -29,8 +29,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include "fg/FrameGraph.h"
-#include "fg/FrameGraphPassResources.h"
+#include "fg2/FrameGraph.h"
 
 #include <math/vec3.h>
 
@@ -70,7 +69,7 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all of the shadow maps.
-    void render(FrameGraph& fg, FEngine& engine, FView& view, backend::DriverApi& driver,
+    void render(fg2::FrameGraph& fg, FEngine& engine, FView& view, backend::DriverApi& driver,
             RenderPass& pass) noexcept;
 
     // Prepares the shadow sampler.

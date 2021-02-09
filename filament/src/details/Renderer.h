@@ -31,6 +31,8 @@
 #include <filament/Renderer.h>
 #include <filament/View.h>
 
+#include <fg2/FrameGraphId.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PresentCallable.h>
@@ -142,13 +144,13 @@ private:
         bool hasContactShadows;
     };
 
-    FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,
-            FrameGraphTexture::Descriptor const& colorBufferDesc,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> colorPass(fg2::FrameGraph& fg, const char* name,
+            fg2::FrameGraphTexture::Descriptor const& colorBufferDesc,
             ColorPassConfig const& config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;
 
-    FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> refractionPass(fg2::FrameGraph& fg,
             ColorPassConfig config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass const& pass, FView const& view) const noexcept;

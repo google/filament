@@ -17,7 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEHISTORY_H
 #define TNT_FILAMENT_FRAMEHISTORY_H
 
-#include <fg/FrameGraphHandle.h>
+#include <fg2/FrameGraphId.h>
+#include <fg2/FrameGraphTexture.h>
 
 #include <math/mat4.h>
 
@@ -25,8 +26,8 @@ namespace filament {
 
 // This is where we store all the history of a frame
 struct FrameHistoryEntry {
-    FrameGraphTexture color;
-    FrameGraphTexture::Descriptor colorDesc;
+    fg2::FrameGraphTexture color;
+    fg2::FrameGraphTexture::Descriptor colorDesc;
     math::mat4f projection;
     math::float2 jitter{};
     uint32_t frameId = 0;

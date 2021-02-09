@@ -84,13 +84,6 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
-        src/fg/Blackboard.cpp
-        src/fg/FrameGraph.cpp
-        src/fg/FrameGraphHandle.cpp
-        src/fg/FrameGraphPassResources.cpp
-        src/fg/fg/PassNode.cpp
-        src/fg/fg/RenderTargetResourceEntry.cpp
-        src/fg/fg/ResourceEntry.cpp
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
@@ -144,16 +137,6 @@ set(PRIVATE_HDRS
         src/details/Texture.h
         src/details/VertexBuffer.h
         src/details/View.h
-        src/fg/Blackboard.h
-        src/fg/FrameGraph.h
-        src/fg/FrameGraphHandle.h
-        src/fg/FrameGraphPass.h
-        src/fg/FrameGraphPassResources.h
-        src/fg/fg/PassNode.h
-        src/fg/fg/RenderTargetResourceEntry.h
-        src/fg/fg/ResourceEntry.h
-        src/fg/fg/ResourceNode.h
-        src/fg/fg/VirtualResource.h
         src/fg2/Blackboard.h
         src/fg2/FrameGraph.h
         src/fg2/FrameGraphId.h

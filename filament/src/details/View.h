@@ -179,7 +179,7 @@ public:
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
 
-    void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
+    void renderShadowMaps(fg2::FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
             RenderPass& pass) noexcept;
 
     void updatePrimitivesLod(

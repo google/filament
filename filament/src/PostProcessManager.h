@@ -23,7 +23,8 @@
 
 #include "FrameHistory.h"
 
-#include <fg/FrameGraphHandle.h>
+#include <fg2/FrameGraphId.h>
+#include <fg2/FrameGraphResources.h>
 
 #include <backend/DriverEnums.h>
 #include <filament/View.h>
@@ -36,7 +37,10 @@
 
 namespace filament {
 
+namespace fg2 {
 class FrameGraph;
+} // namespace fg2
+
 class FColorGrading;
 class FEngine;
 class FMaterial;
@@ -63,23 +67,23 @@ public:
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
-    FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> structure(fg2::FrameGraph& fg, RenderPass const& pass,
             uint32_t width, uint32_t height, float scale) noexcept;
 
     // SSAO
-    FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> screenSpaceAmbientOcclusion(fg2::FrameGraph& fg,
             RenderPass& pass, filament::Viewport const& svp,
             CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions options) noexcept;
 
     // Used in refraction pass
-    FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> generateGaussianMipmap(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, size_t roughnessLodCount, bool reinhard,
             size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
 
     // Depth-of-field
-    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> dof(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input,
             const View::DepthOfFieldOptions& dofOptions,
             bool translucent,
             const CameraInfo& cameraInfo) noexcept;
@@ -91,14 +95,14 @@ public:
 
     void colorGradingSubpass(backend::DriverApi& driver, bool translucent) noexcept;
 
-    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> colorGrading(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, const FColorGrading* colorGrading,
             backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
             View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept;
 
     // Anti-aliasing
-    FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> fxaa(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
@@ -106,26 +110,26 @@ public:
             CameraInfo const& cameraInfo,
             View::TemporalAntiAliasingOptions const& taaOptions) const noexcept;
 
-    FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> taa(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, FrameHistory& frameHistory,
             View::TemporalAntiAliasingOptions taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
     // Blit/rescaling/resolves
-    FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> opaqueBlit(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, fg2::FrameGraphTexture::Descriptor outDesc,
             backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
-    FrameGraphId<FrameGraphTexture> blendBlit(
-            FrameGraph& fg, bool translucent, View::QualityLevel quality,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
+    fg2::FrameGraphId<fg2::FrameGraphTexture> blendBlit(
+            fg2::FrameGraph& fg, bool translucent, View::QualityLevel quality,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, fg2::FrameGraphTexture::Descriptor outDesc) noexcept;
 
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
+    fg2::FrameGraphId<fg2::FrameGraphTexture> resolve(fg2::FrameGraph& fg,
+            const char* outputBufferName, fg2::FrameGraphId<fg2::FrameGraphTexture> input) noexcept;
 
     // VSM shadow mipmap pass
-    FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
+    fg2::FrameGraphId<fg2::FrameGraphTexture> vsmMipmapPass(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
@@ -139,9 +143,6 @@ private:
     FEngine& mEngine;
     class PostProcessMaterial;
 
-    FrameGraphId<FrameGraphTexture> mipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, size_t level, bool finalize) noexcept;
-
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
         float standardDeviation = 1.0f;
@@ -149,28 +150,28 @@ private:
         float scale = 1.0f;
     };
 
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(
-            FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> bilateralBlurPass(
+            fg2::FrameGraph& fg, fg2::FrameGraphId<fg2::FrameGraphTexture> input, math::int2 axis, float zf,
             backend::TextureFormat format, BilateralPassConfig config) noexcept;
 
-    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> gaussianBlurPass(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, uint8_t srcLevel,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> output, uint8_t dstLevel,
             bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> bloomPass(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bloomPassPingPong(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+    fg2::FrameGraphId<fg2::FrameGraphTexture> bloomPassPingPong(fg2::FrameGraph& fg,
+            fg2::FrameGraphId<fg2::FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
-    void commitAndRender(FrameGraphRenderTarget const& out,
+    void commitAndRender(fg2::FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material, uint8_t variant,
             backend::DriverApi& driver) const noexcept;
 
-    void commitAndRender(FrameGraphRenderTarget const& out,
+    void commitAndRender(fg2::FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material,
             backend::DriverApi& driver) const noexcept;
 
