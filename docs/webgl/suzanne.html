@@ -19,7 +19,7 @@ canvas { touch-action: none; width: 100%; height: 100%; }
 const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
-const env = 'venetian_crossroads_2k'
+const env = 'default_env'
 const ibl_url = `${env}/${env}_ibl.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
 const albedo_url = `albedo${albedo_suffix}.ktx`;
@@ -59,7 +59,7 @@ class App {
         const sunlight = Filament.EntityManager.get().create();
         Filament.LightManager.Builder(LightType.SUN)
             .color([0.98, 0.92, 0.89])
-            .intensity(100000.0)
+            .intensity(80000.0)
             .direction([0.6, -1.0, -0.8])
             .castShadows(true)
             .sunAngularRadius(1.9)
@@ -70,7 +70,7 @@ class App {
 
         const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
         this.scene.setIndirectLight(indirectLight);
-        indirectLight.setIntensity(100000);
+        indirectLight.setIntensity(80000);
 
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
@@ -101,7 +101,7 @@ class App {
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
-        this.camera = engine.createCamera();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
         this.view = engine.createView();
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);

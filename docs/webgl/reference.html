@@ -182,6 +182,14 @@
 <td align="left"></td>
 </tr>
 <tr>
+<td align="left"><a href="#ColorGrading%24QualityLevel">ColorGrading$QualityLevel</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#ColorGrading%24ToneMapping">ColorGrading$ToneMapping</a></td>
+<td align="left"></td>
+</tr>
+<tr>
 <td align="left"><a href="#CompressedPixelDataType">CompressedPixelDataType</a></td>
 <td align="left"></td>
 </tr>
@@ -306,6 +314,11 @@
 <h2>class <a id='Engine' href='#Engine'>Engine</a></h2>
 <p>Central manager and resource owner.</p>
 <ul>
+<li><strong>engine.addEntities(entities)</strong>
+<ul>
+<li><em>entities</em> array of entities</li>
+</ul>
+</li>
 <li><strong>Engine.create(canvas, options)</strong>
 <ul>
 <li>Creates an Engine instance for the given canvas.</li>
@@ -319,8 +332,9 @@
 <li><em>returns</em> an instance of <a href="#AssetLoader">AssetLoader</a></li>
 </ul>
 </li>
-<li><strong>engine.createCamera()</strong>
+<li><strong>engine.createCamera(entity)</strong>
 <ul>
+<li><em>entity</em> the <a href="#Entity">Entity</a> to add the camera component to</li>
 <li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
 </ul>
 </li>
@@ -396,9 +410,14 @@
 <li><em>engine</em> the instance to destroy</li>
 </ul>
 </li>
-<li><strong>engine.destroyCamera(camera)</strong>
+<li><strong>engine.destroyCameraComponent(camera)</strong>
 <ul>
-<li><em>camera</em> an instance of <a href="#Camera">Camera</a></li>
+<li><em>camera</em> an <a href="#Entity">Entity</a> with a camera component</li>
+</ul>
+</li>
+<li><strong>engine.destroyColorGrading(entity)</strong>
+<ul>
+<li><em>entity</em> an <a href="#ColorGrading">ColorGrading</a></li>
 </ul>
 </li>
 <li><strong>engine.destroyEntity(entity)</strong>
@@ -466,6 +485,11 @@
 <li><em>view</em> an instance of <a href="#View">View</a></li>
 </ul>
 </li>
+<li><strong>engine.getCameraComponent()</strong>
+<ul>
+<li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
+</ul>
+</li>
 <li><strong>engine.getLightManager()</strong>
 <ul>
 <li><em>returns</em> an instance of <a href="#LightManager">LightManager</a></li>
@@ -490,6 +514,11 @@
 <li><em>returns</em> JavaScript object with keys <code>renderable</code>, <code>vertexBuffer</code>, and <code>indexBuffer</code>. These are of type <a href="#Entity">Entity</a>, <a href="#VertexBuffer">VertexBuffer</a>, and <a href="#IndexBuffer">IndexBuffer</a>.</li>
 </ul>
 </li>
+<li><strong>engine.removeEntities(entities)</strong>
+<ul>
+<li><em>entities</em> array of entities</li>
+</ul>
+</li>
 <li><strong>engine.setAmbientOcclusionOptions(overrides)</strong>
 <ul>
 <li><em>overrides</em> Dictionary with one or more of the following properties: radius, power, bias, resolution, intensity, quality.</li>
@@ -497,7 +526,7 @@
 </li>
 <li><strong>engine.setBloomOptions(overrides)</strong>
 <ul>
-<li><em>overrides</em> Dictionary with one or more of the following properties: dirtStrength, strength, resolution, anomorphism, levels, blendMode, threshold, enabled, dirt.</li>
+<li><em>overrides</em> Dictionary with one or more of the following properties: enabled, strength, resolution, anomorphism, levels, blendMode, threshold, highlight.</li>
 </ul>
 </li>
 <li><strong>engine.setClearOptions(overrides)</strong>
@@ -507,7 +536,23 @@
 </li>
 <li><strong>engine.setDepthOfFieldOptions(overrides)</strong>
 <ul>
-<li><em>overrides</em> Dictionary with one or more of the following properties: focusDistance, blurScale, maxApertureDiameter, enabled.</li>
+<li><em>overrides</em> Dictionary with one or more of the following properties: focusDistance, cocScale, maxApertureDiameter, enabled.</li>
+</ul>
+</li>
+<li><strong>engine.setFogOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: distance, maximumOpacity, height, heightFalloff, color, density, inScatteringStart,</li>
+</ul>
+</li>
+<li><strong>engine.setShadowOptions(instance, overrides)</strong>
+<ul>
+<li><em>instance</em> Instance of a light component obtained from <code>getInstance</code>.</li>
+<li><em>overrides</em> Dictionary with one or more of the following properties: mapSize, shadowCascades, constantBias, normalBias, shadowFar, shadowNearHint, shadowFarHint, stable, polygonOffsetConstant, polygonOffsetSlope, \</li>
+</ul>
+</li>
+<li><strong>engine.setVignetteOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: midPoint, roundness, feather, color, enabled.</li>
 </ul>
 </li>
 </ul>
@@ -515,6 +560,13 @@
 <div class='classdoc'>
 <h2>class <a id='Entity' href='#Entity'>Entity</a></h2>
 <p>Handle to an object consisting of a set of components.</p>
+<ul>
+<li><strong>entity.delete()</strong>
+<ul>
+<li>Frees an entity.</li>
+</ul>
+</li>
+</ul>
 <p>To create an entity with no components, use <a href="#EntityManager">EntityManager</a>.
 TODO: It would be better to expose these as JS numbers rather than as JS objects.
 This would also be more consistent with Filament's Java bindings.</p>
@@ -628,19 +680,19 @@ wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
 <h2>class <a id='KtxInfo' href='#KtxInfo'>KtxInfo</a></h2>
 <p>Property accessor for KTX header.</p>
 <ul>
-<li><strong>KtxInfo.createAssetFromBinary(buffer)</strong>
+<li><strong>ktxInfo.createAssetFromBinary(buffer)</strong>
 <ul>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
 <li><em>returns</em> an instance of <a href="#FilamentAsset">FilamentAsset</a></li>
 </ul>
 </li>
-<li><strong>KtxInfo.createAssetFromJson(buffer)</strong>
+<li><strong>ktxInfo.createAssetFromJson(buffer)</strong>
 <ul>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
 <li><em>returns</em> an instance of <a href="#FilamentAsset">FilamentAsset</a></li>
 </ul>
 </li>
-<li><strong>KtxInfo.createInstancedAsset(buffer)</strong>
+<li><strong>ktxInfo.createInstancedAsset(buffer)</strong>
 <ul>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
 <li><em>returns</em> an instance of <a href="#FilamentAsset">FilamentAsset</a></li>
@@ -858,7 +910,7 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 </ul>
 </div>
 <div class='funcdoc'>
-<h2>function <a id='fetch' href='#fetch'>fetch</a>(assets, onDone, onFetch)</h2>
+<h2>function <a id='fetch' href='#fetch'>fetch</a>(assets, onDone, onFetched)</h2>
 <p>Downloads assets and invokes a callback when done.</p>
 <ul>
 <li><strong>assets</strong>
@@ -871,7 +923,7 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 <li>callback that gets invoked after all assets have been downloaded.</li>
 </ul>
 </li>
-<li><strong>onFetch</strong>
+<li><strong>onFetched</strong>
 <ul>
 <li>optional callback that's invoked after each asset is downloaded.</li>
 </ul>
@@ -934,7 +986,7 @@ callback. This callback gets invoked only after all assets have been downloaded 
 WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
 be ready at initialization time.
 When the callback is called, each downloaded asset is available in the <code>Filament.assets</code> global
-object, which contains a mapping from URL's to Uint8Array objects and DOM images.</p>
+object, which contains a mapping from URL's to Uint8Array objects.</p>
 </div>
 <div class='funcdoc'>
 <h2>function <a id='loadMathExtensions' href='#loadMathExtensions'>loadMathExtensions</a>()</h2>
@@ -975,6 +1027,27 @@ This defines the following functions:</p>
 <ul>
 <li>PERSPECTIVE</li>
 <li>ORTHO</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='ColorGrading$QualityLevel' href='#ColorGrading$QualityLevel'>ColorGrading$QualityLevel</a></h2>
+<ul>
+<li>LOW</li>
+<li>MEDIUM</li>
+<li>HIGH</li>
+<li>ULTRA</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='ColorGrading$ToneMapping' href='#ColorGrading$ToneMapping'>ColorGrading$ToneMapping</a></h2>
+<ul>
+<li>LINEAR</li>
+<li>ACES_LEGACY</li>
+<li>ACES</li>
+<li>FILMIC</li>
+<li>UCHIMURA</li>
+<li>REINHARD</li>
+<li>DISPLAY_RANGE</li>
 </ul>
 </div>
 <div class='enumdoc'>
@@ -1272,6 +1345,7 @@ This defines the following functions:</p>
 <li>STENCIL_ATTACHMENT</li>
 <li>UPLOADABLE</li>
 <li>SAMPLEABLE</li>
+<li>SUBPASS_INPUT</li>
 </ul>
 </div>
 <div class='enumdoc'>
