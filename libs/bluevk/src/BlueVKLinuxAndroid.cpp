@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <utils/Log.h>
+
 namespace bluevk {
 
 static void* module = nullptr;
@@ -49,8 +51,7 @@ bool loadLibrary() {
 
     module = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (module == nullptr) {
-        printf("Unable to load Vulkan from %s\n", path);
-        fflush(stdout);
+        utils::slog.e << "Unable to load Vulkan from " << path << utils::io::endl;
     }
     return module != nullptr;
 }
