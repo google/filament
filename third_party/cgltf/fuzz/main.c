@@ -10,7 +10,7 @@ cp -r data temp
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-	cgltf_options options = {0};
+	cgltf_options options = {cgltf_file_type_invalid};
 	cgltf_data* data = NULL;
 	cgltf_result res = cgltf_parse(&options, Data, Size, &data);
 	if (res == cgltf_result_success)
