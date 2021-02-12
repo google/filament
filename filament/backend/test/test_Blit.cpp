@@ -28,14 +28,6 @@
 #include <image/ColorTransform.h>
 #endif
 
-static uint32_t sPixelHashResult = 0;
-
-static constexpr int kDstTexWidth = 384;
-static constexpr int kDstTexHeight = 384;
-static constexpr auto kDstTexFormat = filament::backend::TextureFormat::RGBA8;
-
-static constexpr int kNumLevels = 3;
-
 namespace test {
 
 using namespace filament;
@@ -43,43 +35,33 @@ using namespace filament::backend;
 using namespace filament::math;
 using namespace utils;
 
-struct MaterialParams {
-    float fbWidth;
-    float fbHeight;
-    float sourceLevel;
-    float unused;
+struct ScreenshotParams {
+    int width;
+    int height;
+    const char* filename;
+    uint32_t pixelHashResult;
 };
 
-static void uploadUniforms(DriverApi& dapi, Handle<HwUniformBuffer> ubh, MaterialParams params) {
-    MaterialParams* tmp = new MaterialParams(params);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        MaterialParams* sp = (MaterialParams*) buffer;
-        delete sp;
-    };
-    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-    dapi.loadUniformBuffer(ubh, std::move(bd));
-}
-
 #ifdef IOS
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, const char* filename) {}
+static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {}
 #else
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, const char* filename) {
+static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {
     using namespace image;
-    const size_t size = kDstTexWidth * kDstTexHeight * 4;
+    const size_t size = params->width * params->height * 4;
     void* buffer = calloc(1, size);
     auto cb = [](void* buffer, size_t size, void* user) {
-        const char* file = (char*) user;
-        int w = kDstTexWidth, h = kDstTexHeight;
+        ScreenshotParams* params = (ScreenshotParams*) user;
+        int w = params->width, h = params->height;
         const uint32_t* texels = (uint32_t*) buffer;
-        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
+        params->pixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
         LinearImage image(w, h, 4);
         image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm(file, std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", file);
+        std::ofstream pngstrm(params->filename, std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", params->filename);
     };
     PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb,
-            (void*) filename);
-    dapi.readPixels(rt, 0, 0, kDstTexWidth, kDstTexHeight, std::move(pb));
+            (void*) params);
+    dapi.readPixels(rt, 0, 0, params->width, params->height, std::move(pb));
 }
 #endif
 
@@ -127,6 +109,10 @@ TEST_F(BackendTest, ColorMagnify) {
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
     constexpr auto kSrcTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr int kDstTexWidth = 384;
+    constexpr int kDstTexHeight = 384;
+    constexpr auto kDstTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
     auto swapChain = api.createSwapChainHeadless(256, 256, 0);
@@ -154,20 +140,21 @@ TEST_F(BackendTest, ColorMagnify) {
                 kDstTexWidth >> level, kDstTexHeight >> level, 1, { dstTexture, level, 0 }, {}, {});
     }
 
-    // Do a "magnify" blit from level 1 of the source RT to the level 0 of the desination RT.
+    // Do a "magnify" blit from level 1 of the source RT to the level 0 of the destination RT.
     const int srcLevel = 1;
     api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
             {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTargets[srcLevel],
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
-    // Push through an empty frame to allow the texture to upload and the blit to exectue.
+    // Push through an empty frame to allow the texture to upload and the blit to execute.
     getDriverApi().beginFrame(0, 0);
     getDriverApi().commit(swapChain);
     getDriverApi().endFrame(0);
 
     // Grab a screenshot.
+    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMagnify.png" };
     getDriverApi().beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTargets[0], "ColorMagnify.png");
+    dumpScreenshot(api, dstRenderTargets[0], &params);
     getDriverApi().commit(swapChain);
     getDriverApi().endFrame(0);
 
@@ -178,8 +165,8 @@ TEST_F(BackendTest, ColorMagnify) {
 
     // Check if the image matches perfectly to our golden run.
     const uint32_t expected = 0xb830a36a;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
+    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
+    EXPECT_TRUE(params.pixelHashResult == expected);
 
     // Cleanup.
     api.destroyTexture(srcTexture);
@@ -195,6 +182,10 @@ TEST_F(BackendTest, ColorMinify) {
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
     constexpr auto kSrcTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr int kDstTexWidth = 384;
+    constexpr int kDstTexHeight = 384;
+    constexpr auto kDstTexFormat = filament::backend::TextureFormat::RGBA8;
+    constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
     auto swapChain = api.createSwapChainHeadless(256, 256, 0);
@@ -222,20 +213,21 @@ TEST_F(BackendTest, ColorMinify) {
                 kDstTexWidth >> level, kDstTexHeight >> level, 1, { dstTexture, level, 0 }, {}, {});
     }
 
-    // Do a "magnify" blit from level 1 of the source RT to the level 0 of the desination RT.
+    // Do a "minify" blit from level 1 of the source RT to the level 0 of the destination RT.
     const int srcLevel = 1;
     api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
             {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTargets[srcLevel],
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
-    // Push through an empty frame to allow the texture to upload and the blit to exectue.
+    // Push through an empty frame to allow the texture to upload and the blit to execute.
     getDriverApi().beginFrame(0, 0);
     getDriverApi().commit(swapChain);
     getDriverApi().endFrame(0);
 
     // Grab a screenshot.
+    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMinify.png" };
     getDriverApi().beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTargets[0], "ColorMinify.png");
+    dumpScreenshot(api, dstRenderTargets[0], &params);
     getDriverApi().commit(swapChain);
     getDriverApi().endFrame(0);
 
@@ -246,8 +238,8 @@ TEST_F(BackendTest, ColorMinify) {
 
     // Check if the image matches perfectly to our golden run.
     const uint32_t expected = 0xe2353ca6;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
+    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
+    EXPECT_TRUE(params.pixelHashResult == expected);
 
     // Cleanup.
     api.destroyTexture(srcTexture);
