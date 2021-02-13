@@ -159,6 +159,11 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         imageInfo.usage |= blittable;
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        // Depth resolves uses a custom shader and therefore needs to be sampleable.
+        if (imageInfo.samples > 1) {
+            imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
     }
 
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &mTextureImage);

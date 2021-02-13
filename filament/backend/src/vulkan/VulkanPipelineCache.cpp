@@ -581,6 +581,16 @@ void VulkanPipelineCache::bindVertexArray(const VertexArray& varray) noexcept {
     }
 }
 
+VulkanPipelineCache::UniformBufferBinding VulkanPipelineCache::getUniformBufferBinding(
+            uint32_t bindingIndex) const noexcept {
+    auto& key = mDescriptorKey;
+    return {
+        key.uniformBuffers[bindingIndex],
+        key.uniformBufferOffsets[bindingIndex],
+        key.uniformBufferSizes[bindingIndex],
+    };
+}
+
 void VulkanPipelineCache::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
     auto& key = mDescriptorKey;
     for (uint32_t bindingIndex = 0u; bindingIndex < UBUFFER_BINDING_COUNT; ++bindingIndex) {

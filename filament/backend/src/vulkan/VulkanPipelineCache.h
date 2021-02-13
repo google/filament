@@ -118,6 +118,12 @@ public:
 
     static_assert(sizeof(RasterState) == 124, "RasterState must not have any padding.");
 
+    struct UniformBufferBinding {
+        VkBuffer buffer;
+        VkDeviceSize offset;
+        VkDeviceSize size;
+    };
+
     // Upon construction, the pipeCache initializes some internal state but does not make any Vulkan
     // calls. On destruction it will free any cached Vulkan objects that haven't already been freed.
     VulkanPipelineCache();
@@ -148,6 +154,9 @@ public:
     void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT]) noexcept;
     void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
     void bindVertexArray(const VertexArray& varray) noexcept;
+
+    // Gets the current UBO at the given slot, useful for push / pop.
+    UniformBufferBinding getUniformBufferBinding(uint32_t bindingIndex) const noexcept;
 
     // Checks if the given uniform is bound to any slot, and if so binds "null" to that slot.
     // Also invalidates all cached descriptors that refer to the given buffer.
