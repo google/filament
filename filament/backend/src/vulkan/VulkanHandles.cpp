@@ -84,6 +84,12 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
 #endif
 }
 
+VulkanProgram::VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShaderModule fs) noexcept :
+        context(context) {
+    bundle.vertex = vs;
+    bundle.fragment = fs;
+}
+
 VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.vertex, VKALLOC);
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);

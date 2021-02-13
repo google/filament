@@ -484,7 +484,7 @@ TEST_F(BackendTest, DepthMinify) {
     api.endFrame(0);
 
     // Grab a screenshot.
-    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthBlit.png" };
+    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthMinify.png" };
     api.beginFrame(0, 0);
     dumpScreenshot(api, dstRenderTarget, &sparams);
     api.commit(swapChain);
@@ -652,11 +652,11 @@ TEST_F(BackendTest, DepthResolve) {
     // Create 4-sample textures.
     Handle<HwTexture> srcColorTexture = api.createTexture(
         SamplerType::SAMPLER_2D, 1, kColorTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight, 1,
-        TextureUsage::COLOR_ATTACHMENT);
+        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
 
     Handle<HwTexture> srcDepthTexture = api.createTexture(
         SamplerType::SAMPLER_2D, 1, kDepthTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight, 1,
-        TextureUsage::DEPTH_ATTACHMENT);
+        TextureUsage::SAMPLEABLE | TextureUsage::DEPTH_ATTACHMENT);
 
     // Create 1-sample textures.
     Handle<HwTexture> dstColorTexture = api.createTexture(
@@ -665,7 +665,7 @@ TEST_F(BackendTest, DepthResolve) {
 
     Handle<HwTexture> dstDepthTexture = api.createTexture(
         SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-        TextureUsage::DEPTH_ATTACHMENT);
+        TextureUsage::SAMPLEABLE | TextureUsage::DEPTH_ATTACHMENT);
 
     // Create a 4-sample render target with 4-sample textures.
     Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
