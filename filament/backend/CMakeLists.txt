@@ -235,8 +235,8 @@ function(build_vkshader SOURCE TARGET_PATH)
             DEPENDS matc ${SOURCE_PATH}
             COMMENT "Building SPIR-V")
 endfunction()
-build_vkshader("BlitColor.vs" "BlitColorVs.spv")
-build_vkshader("BlitColor.fs" "BlitColorFs.spv")
+build_vkshader("BlitDepth.vs" "BlitDepthVs.spv")
+build_vkshader("BlitDepth.fs" "BlitDepthFs.spv")
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
