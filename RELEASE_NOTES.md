@@ -7,9 +7,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.12
 
-- Fixed GL errors seen with MSAA on WebGL.
+- engine: Fixed GL errors seen with MSAA on WebGL.
   Warning: this can affect multisampling behavior on devices that do not support OpenGL ES 3.1
-- Added new `getVertexIndex()` API for vertex shaders.
+- materials: Added new `getVertexIndex()` API for vertex shaders.
+- samples: RenderTarget demo now disables post-processing in offscreen view and creates depth attachment.
+- gltfio: Fix, animation jolt when time delta is very small.
 
 ## v1.9.11
 
