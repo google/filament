@@ -180,14 +180,6 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, Vk
 VkImageLayout getTextureLayout(TextureUsage usage);
 void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);
 
-void blitDepth(VulkanContext* context, const VulkanRenderTarget* dstTarget,
-        const VkOffset3D dstRect[2], const VulkanRenderTarget* srcTarget,
-        const VkOffset3D srcRect[2]);
-
-void blitColor(VulkanContext* context, const VulkanRenderTarget* dstTarget,
-        const VkOffset3D dstRect[2], const VulkanRenderTarget* srcTarget,
-        const VkOffset3D srcRect[2], VkFilter filter, int index);
-
 } // namespace filament
 } // namespace backend
 

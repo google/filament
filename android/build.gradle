@@ -64,7 +64,7 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 30,
         'compileSdk': 30,
-        'kotlin': '1.4.21',
+        'kotlin': '1.4.30',
         'buildTools': '30.0.3',
         'ndk': '22.0.7026061'
     ]

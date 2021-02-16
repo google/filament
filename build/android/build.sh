@@ -50,6 +50,11 @@ elif [[ "$LC_UNAME" == "darwin" ]]; then
 fi
 source `dirname $0`/../common/build-common.sh
 
+# For continuous builds, do not exclude Vulkan.
+if [[ "$TARGET" == "continuous" ]]; then
+    EXCLUDE_VULKAN=
+fi
+
 # Only update and install the NDK if necessary, as this can be slow
 ndk_side_by_side="${ANDROID_HOME}/ndk/"
 if [[ -d $ndk_side_by_side ]]; then

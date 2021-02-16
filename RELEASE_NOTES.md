@@ -5,6 +5,14 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.12
+
+- engine: Fixed GL errors seen with MSAA on WebGL.
+  Warning: this can affect multisampling behavior on devices that do not support OpenGL ES 3.1
+- materials: Added new `getVertexIndex()` API for vertex shaders.
+- samples: RenderTarget demo now disables post-processing in offscreen view and creates depth attachment.
+- gltfio: Fix, animation jolt when time delta is very small.
+
 ## v1.9.11
 
 - Added support for Apple silicon Macs. build.sh can now be used to build on either Apple silicon or
@@ -55,12 +63,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.9
 
-- Vulkan: internal robustness improvements
-- Metal: Support CVPixelBuffer SwapChains
-- Metal: Support copyFrame
+- Vulkan: internal robustness improvements.
+- Metal: Support CVPixelBuffer SwapChains.
+- Metal: Support copyFrame.
 - Fix clear behavior with RenderTarget API.
-- Fix GetRefractionMode JNI binding
-- Additional fixes for Fence bug
+- Fix GetRefractionMode JNI binding.
+- Additional fixes for Fence bug.
 
 ## v1.9.8
 

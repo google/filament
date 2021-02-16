@@ -273,6 +273,20 @@ TEST_F(QuatTest, ArithmeticFunc) {
     qs = slerp(qa, qb, 0.5);
     EXPECT_NEAR(qs[3], -0.92, 0.1);
     EXPECT_NEAR(qs[2], +0.38, 0.1);
+
+    // Create two quats that are near to each other, but with opposite signs.
+    qa = { 0.76,   0.39,   0.51,  0.19};
+    qb = {-0.759, -0.385, -0.50, -0.19};
+    qs = slerp(qa, qb, 0.5);
+
+    // The rotation angle produced by v * slerp(A, B, .5) should be between the rotation angles
+    // produced by (v * A) and (v * B).
+    double3 v(0, 0, 1);
+    double3 va = qa * v;
+    double3 vb = qb * v;
+    double3 vs = qs * v;
+    EXPECT_LT(dot(v, va), dot(v, vs));
+    EXPECT_LT(dot(v, vs), dot(v, vb));
 }
 
 TEST_F(QuatTest, MultiplicationExhaustive) {

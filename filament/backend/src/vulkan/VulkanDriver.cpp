@@ -89,7 +89,10 @@ Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>()),
-        mContextManager(*platform), mStagePool(mContext, mDisposer), mFramebufferCache(mContext),
+        mContextManager(*platform),
+        mBlitter(mContext),
+        mStagePool(mContext, mDisposer),
+        mFramebufferCache(mContext),
         mSamplerCache(mContext) {
     mContext.rasterState = mBinder.getDefaultRasterState();
 
@@ -250,6 +253,8 @@ void VulkanDriver::terminate() {
     acquireWorkCommandBuffer(mContext);
 
     delete mContext.emptyTexture;
+
+    mBlitter.shutdown();
 
     mDisposer.release(mContext.work.resources);
 
@@ -843,6 +848,9 @@ void VulkanDriver::update2DImage(Handle<HwTexture> th,
     assert(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
     handle_cast<VulkanTexture>(mHandleMap, th)->update2DImage(data, width, height, level);
     scheduleDestroy(std::move(data));
+}
+
+void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
 }
 
 void VulkanDriver::update3DImage(
@@ -1497,24 +1505,35 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
     const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
     const VkOffset3D dstOffsets[2] = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }};
 
+    VkCommandBuffer cmdbuf;
+    if (mContext.currentCommands) {
+        cmdbuf = mContext.currentCommands->cmdbuffer;
+    } else {
+        cmdbuf = acquireWorkCommandBuffer(mContext);;
+    }
+
     if (any(buffers & TargetBufferFlags::DEPTH) && srcTarget->hasDepth() && dstTarget->hasDepth()) {
-        blitDepth(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets);
+        mBlitter.blitDepth(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets});
     }
 
     if (any(buffers & TargetBufferFlags::COLOR0)) {
-        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 0);
+        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 0});
     }
 
     if (any(buffers & TargetBufferFlags::COLOR1)) {
-        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 1);
+        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 1});
     }
 
     if (any(buffers & TargetBufferFlags::COLOR2)) {
-        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 2);
+        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 2});
     }
 
     if (any(buffers & TargetBufferFlags::COLOR3)) {
-        blitColor(&mContext, dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 3);
+        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 3});
+    }
+
+    if (!mContext.currentCommands) {
+        flushWorkCommandBuffer(mContext);
     }
 }
 

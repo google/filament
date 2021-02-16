@@ -17,10 +17,8 @@
 #ifndef TNT_MATERIALCOMPILER_H
 #define TNT_MATERIALCOMPILER_H
 
-#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "Compiler.h"
 #include "MaterialLexeme.h"
@@ -64,6 +62,9 @@ private:
             filamat::MaterialBuilder& builder) const noexcept;
     bool ignoreLexemeJSON(const JsonishValue*, filamat::MaterialBuilder& builder) const noexcept;
     bool isValidJsonStart(const char* buffer, size_t size) const noexcept;
+
+    bool compileRawShader(const char* glsl, size_t size, Config::Output* output,
+                const char* ext) const noexcept;
 
     // Member function pointer type, this is used to implement a Command design
     // pattern.

@@ -1373,6 +1373,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                     });
                     mi->setParameter("level", float(i));
+                    driver.setMinMaxLevels(hwOut, i, i); // safe because we're using LINEAR_MIPMAP_NEAREST
                 }
             });
 
@@ -1416,12 +1417,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                     });
                     mi->setParameter("level", float(i));
+                    driver.setMinMaxLevels(hwIn, i, i);
                     mi->commit(driver);
 
                     driver.beginRenderPass(hwDstRT.target, hwDstRT.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive);
                     driver.endRenderPass();
                 }
+
+                driver.setMinMaxLevels(hwIn, 0, bloomOptions.levels - 1);
             });
 
     return bloomUpsamplePass.getData().out;

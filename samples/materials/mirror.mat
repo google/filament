@@ -21,7 +21,7 @@ fragment {
 
             // Make a lookup into the mirror texture.
             vec2 uv = getResolution().zw * gl_FragCoord.xy;
-            material.baseColor.rgb = inverseTonemapSRGB(texture(materialParams_albedo, uv).rgb);
+            material.baseColor.rgb = texture(materialParams_albedo, uv).rgb;
 
             // Add black borders to the mirror.
             vec2 st = getUV0();
