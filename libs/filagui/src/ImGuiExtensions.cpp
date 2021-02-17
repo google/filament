@@ -271,7 +271,7 @@ bool ArrowWidget::draw() {
                 qrot = quatf::fromAxisAngle(axis, angle);
                 float nqorig = sqrt(origQuat.x * origQuat.x + origQuat.y * origQuat.y +
                         origQuat.z * origQuat.z + origQuat.w * origQuat.w);
-                if (abs(nqorig) > FLT_EPSILON * FLT_EPSILON) {
+                if (std::abs(nqorig) > FLT_EPSILON * FLT_EPSILON) {
                     qorig = origQuat / nqorig;
                     qres = qrot * qorig;
                     mDirectionQuat = qres;
@@ -315,7 +315,7 @@ bool ArrowWidget::draw() {
             norm = quat * norm;
             s_ArrowTriProj[j][i] = ImVec2(quatPX(coord.x, w, h), quatPY(coord.y, w, h));
             ImU32 col = (DirColor | 0xff000000) & alpha;
-            s_ArrowColLight[j][i] = blendColor(0xff000000, col, abs(clamp(norm.z, -1.0f, 1.0f)));
+            s_ArrowColLight[j][i] = blendColor(0xff000000, col, std::abs(clamp(norm.z, -1.0f, 1.0f)));
         }
         drawTriangles(draw_list, inner_pos, s_ArrowTriProj[j], s_ArrowColLight[j], ntri);
     }
