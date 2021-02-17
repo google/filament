@@ -29,6 +29,7 @@
 #include <utils/ashmem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 using namespace utils;
 
@@ -146,7 +147,7 @@ void CircularBuffer::circularize() noexcept {
     if (mUsesAshmem > 0) {
         intptr_t overflow = intptr_t(mHead) - (intptr_t(mData) + ssize_t(mSize));
         if (overflow >= 0) {
-            assert(size_t(overflow) <= mSize);
+            assert_invariant(size_t(overflow) <= mSize);
             mHead = (void *) (intptr_t(mData) + overflow);
             #ifndef NDEBUG
             memset(mData, 0xA5, size_t(overflow));

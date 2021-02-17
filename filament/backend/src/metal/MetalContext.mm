@@ -18,7 +18,7 @@
 
 #include "MetalHandles.h"
 
-#include <utils/Panic.h>
+#include <utils/debug.h>
 
 namespace filament {
 namespace backend {
@@ -42,7 +42,7 @@ void submitPendingCommands(MetalContext* context) {
     if (!context->pendingCommandBuffer) {
         return;
     }
-    assert(context->pendingCommandBuffer.status != MTLCommandBufferStatusCommitted);
+    assert_invariant(context->pendingCommandBuffer.status != MTLCommandBufferStatusCommitted);
     [context->pendingCommandBuffer commit];
     context->pendingCommandBuffer = nil;
 }

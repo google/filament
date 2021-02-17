@@ -17,6 +17,8 @@
 #include "GPUBuffer.h"
 #include "private/backend/DriverApi.h"
 
+#include <utils/debug.h>
+
 #include <math/half.h>
 
 namespace filament {
@@ -51,7 +53,7 @@ static backend::TextureFormat dataTypeToTextureFormat(GPUBuffer::Element element
     };
 
     size_t index = size_t(element.type);
-    assert(index < 8 && element.size > 0 && element.size <= 4);
+    assert_invariant(index < 8 && element.size > 0 && element.size <= 4);
     return formats[index][element.size - 1];
 }
 
@@ -119,7 +121,7 @@ void GPUBuffer::terminate(backend::DriverApi& driverApi) noexcept {
 
 void GPUBuffer::commitSlow(backend::DriverApi& driverApi, void const* begin, void const* end) noexcept {
     const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
-    assert(sizeInBytes <= mRowSizeInBytes * mHeight);
+    assert_invariant(sizeInBytes <= mRowSizeInBytes * mHeight);
     driverApi.update2DImage(mTexture, 0, 0, 0, mWidth, mHeight,
             { begin, sizeInBytes, mFormat, mType });
 }

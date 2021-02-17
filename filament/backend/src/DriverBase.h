@@ -32,7 +32,6 @@
 #include <mutex>
 #include <utility>
 
-#include <assert.h>
 #include <stdint.h>
 
 namespace filament {

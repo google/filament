@@ -20,6 +20,7 @@
 #include <math/vec4.h>
 
 #include <utils/CString.h>
+#include <utils/debug.h>
 
 #include "GLUtils.h"
 
@@ -315,7 +316,7 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 #endif
         default: index = 13; break; // should never happen
     }
-    assert(index < 13 && index < state.enables.caps.size());
+    assert_invariant(index < 13 && index < state.enables.caps.size());
     return index;
 }
 
@@ -334,21 +335,21 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
         case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
         default: index = 8; break; // should never happen
     }
-    assert(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
+    assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
 }
 
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLContext::activeTexture(GLuint unit) noexcept {
-    assert(unit < MAX_TEXTURE_UNIT_COUNT);
+    assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
     });
 }
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
-    assert(unit < MAX_TEXTURE_UNIT_COUNT);
+    assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.units[unit].sampler, sampler, [&]() {
         glBindSampler(unit, sampler);
     });
@@ -393,7 +394,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
-    assert(targetIndex <= 1); // validity check
+    assert_invariant(targetIndex <= 1); // validity check
 
     // this ALSO sets the generic binding
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer
@@ -433,8 +434,8 @@ void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
 }
 
 void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept {
-    assert(targetIndex == getIndexForTextureTarget(target));
-    assert(targetIndex < TEXTURE_TARGET_COUNT);
+    assert_invariant(targetIndex == getIndexForTextureTarget(target));
+    assert_invariant(targetIndex < TEXTURE_TARGET_COUNT);
     update_state(state.textures.units[unit].targets[targetIndex].texture_id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
@@ -452,8 +453,8 @@ void OpenGLContext::useProgram(GLuint program) noexcept {
 }
 
 void OpenGLContext::enableVertexAttribArray(GLuint index) noexcept {
-    assert(state.vao.p);
-    assert(index < state.vao.p->vertexAttribArray.size());
+    assert_invariant(state.vao.p);
+    assert_invariant(index < state.vao.p->vertexAttribArray.size());
     if (UTILS_UNLIKELY(!state.vao.p->vertexAttribArray[index])) {
         state.vao.p->vertexAttribArray.set(index);
         glEnableVertexAttribArray(index);
@@ -461,8 +462,8 @@ void OpenGLContext::enableVertexAttribArray(GLuint index) noexcept {
 }
 
 void OpenGLContext::disableVertexAttribArray(GLuint index) noexcept {
-    assert(state.vao.p);
-    assert(index < state.vao.p->vertexAttribArray.size());
+    assert_invariant(state.vao.p);
+    assert_invariant(index < state.vao.p->vertexAttribArray.size());
     if (UTILS_UNLIKELY(state.vao.p->vertexAttribArray[index])) {
         state.vao.p->vertexAttribArray.unset(index);
         glDisableVertexAttribArray(index);

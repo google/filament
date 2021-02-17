@@ -16,6 +16,7 @@
 
 #include "VirtualMachineEnv.h"
 
+#include <utils/debug.h>
 
 namespace filament {
 
@@ -44,7 +45,7 @@ void VirtualMachineEnv::handleException(JNIEnv* const env) noexcept {
 UTILS_NOINLINE
 JNIEnv* VirtualMachineEnv::getEnvironmentSlow() noexcept {
     mVirtualMachine->AttachCurrentThread(&mJniEnv, nullptr);
-    assert(mJniEnv);
+    assert_invariant(mJniEnv);
     return mJniEnv;
 }
 

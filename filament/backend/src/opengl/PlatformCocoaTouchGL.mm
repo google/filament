@@ -87,7 +87,7 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext) noexcept
 
     CVReturn success = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault, nullptr,
             pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
-    assert(success == kCVReturnSuccess);
+    assert_invariant(success == kCVReturnSuccess);
 
     pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
 

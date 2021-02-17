@@ -39,8 +39,7 @@
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
-
-#include <assert.h>
+#include <utils/debug.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -159,7 +158,7 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
 void FRenderer::render(FView const* view) {
     SYSTRACE_CALL();
 
-    assert(mSwapChain);
+    assert_invariant(mSwapChain);
 
     if (mBeginFrameInternal) {
         mBeginFrameInternal();
@@ -696,7 +695,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.structure = blackboard.get<FrameGraphTexture>("structure");
 
                 if (config.hasContactShadows) {
-                    assert(data.structure.isValid());
+                    assert_invariant(data.structure.isValid());
                     data.structure = builder.sample(data.structure);
                 }
 
@@ -780,7 +779,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareShadow(data.shadows.isValid() ?
                         resources.getTexture(data.shadows) : ppm.getOneTextureArray());
 
-                assert(data.structure.isValid());
+                assert_invariant(data.structure.isValid());
                 if (data.structure.isValid()) {
                     const auto& structure = resources.getTexture(data.structure);
                     view.prepareStructure(structure ? structure : ppm.getOneTexture());
@@ -827,8 +826,8 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
         filament::Viewport const& srcViewport, CopyFrameFlag flags) {
     SYSTRACE_CALL();
 
-    assert(mSwapChain);
-    assert(dstSwapChain);
+    assert_invariant(mSwapChain);
+    assert_invariant(dstSwapChain);
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
@@ -853,7 +852,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     driver.beginRenderPass(mRenderTarget, params);
 
     // Verify that the source swap chain is readable.
-    assert(mSwapChain->isReadable());
+    assert_invariant(mSwapChain->isReadable());
     driver.blit(TargetBufferFlags::COLOR,
             mRenderTarget, dstViewport, mRenderTarget, srcViewport, SamplerMagFilter::LINEAR);
     if (flags & SET_PRESENTATION_TIME) {
@@ -873,7 +872,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
         backend::FrameScheduledCallback callback, void* user) {
-    assert(swapChain);
+    assert_invariant(swapChain);
 
     SYSTRACE_CALL();
 

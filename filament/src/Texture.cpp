@@ -97,7 +97,7 @@ Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
 }
 
 Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
-    assert(id); // imported id can't be zero
+    assert_invariant(id); // imported id can't be zero
     mImpl->mImportedId = id;
     return *this;
 }
@@ -555,7 +555,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
             // this cannot happen due to the checks above
             break;
     }
-    assert(bytesPerPixel);
+    assert_invariant(bytesPerPixel);
 
     Image temp;
     Cubemap cml = CubemapUtils::create(temp, size);

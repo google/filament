@@ -21,6 +21,7 @@
 #include "details/Texture.h"
 
 #include <utils/Log.h>
+#include <utils/debug.h>
 
 using namespace utils;
 
@@ -82,12 +83,12 @@ ResourceAllocator::ResourceAllocator(DriverApi& driverApi) noexcept
 }
 
 ResourceAllocator::~ResourceAllocator() noexcept {
-    assert(!mTextureCache.size());
-    assert(!mInUseTextures.size());
+    assert_invariant(!mTextureCache.size());
+    assert_invariant(!mInUseTextures.size());
 }
 
 void ResourceAllocator::terminate() noexcept {
-    assert(!mInUseTextures.size());
+    assert_invariant(!mInUseTextures.size());
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         mBackend.destroyTexture(it->second.handle);
@@ -156,7 +157,7 @@ void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
     if (mEnabled) {
         // find the texture in the in-use list (it must be there!)
         auto it = mInUseTextures.find(h);
-        assert(it != mInUseTextures.end());
+        assert_invariant(it != mInUseTextures.end());
 
         // move it to the cache
         const TextureKey key = it->second;

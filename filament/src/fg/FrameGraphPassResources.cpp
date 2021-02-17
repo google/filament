@@ -44,7 +44,7 @@ fg::ResourceEntryBase const& FrameGraphPassResources::getResourceEntryBase(Frame
     ResourceNode& node = mFrameGraph.getResourceNodeUnchecked(r);
 
     fg::ResourceEntryBase const* const pResource = node.resource;
-    assert(pResource);
+    assert_invariant(pResource);
 
     // TODO: we should check for write to
     //    // check that this FrameGraphHandle is indeed used by this pass

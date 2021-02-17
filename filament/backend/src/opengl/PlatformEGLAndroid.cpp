@@ -33,8 +33,6 @@
 
 #include <sys/system_properties.h>
 
-#include <assert.h>
-
 #include <jni.h>
 
 

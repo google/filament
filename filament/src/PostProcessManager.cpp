@@ -99,7 +99,7 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial
 }
 
 PostProcessManager::PostProcessMaterial::~PostProcessMaterial() {
-    assert(!mHasMaterial || mMaterial == nullptr);
+    assert_invariant(!mHasMaterial || mMaterial == nullptr);
 }
 
 void PostProcessManager::PostProcessMaterial::terminate(FEngine& engine) noexcept {
@@ -181,7 +181,7 @@ void PostProcessManager::registerPostProcessMaterial(utils::StaticString name, u
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(utils::StaticString name) noexcept {
-    assert(mMaterialRegistry.find(name) != mMaterialRegistry.end());
+    assert_invariant(mMaterialRegistry.find(name) != mMaterialRegistry.end());
     return mMaterialRegistry[name];
 }
 
@@ -294,7 +294,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 
     // We limit the lowest lod size to 32 pixels (which is where the -5 comes from)
     const size_t levelCount = FTexture::maxLevelCount(width, height) - 5;
-    assert(levelCount >= 1);
+    assert_invariant(levelCount >= 1);
 
     // generate depth pass at the requested resolution
     auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
@@ -380,7 +380,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
     FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
-    assert(depth.isValid());
+    assert_invariant(depth.isValid());
 
     const size_t levelCount = fg.getDescriptor(depth).levels;
 
@@ -603,7 +603,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                         .width = desc.width, .height = desc.height, .format = format });
 
                 auto depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
-                assert(depth.isValid());
+                assert_invariant(depth.isValid());
                 builder.read(depth);
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
@@ -792,8 +792,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 // vertical pass
                 auto width = FTexture::valueForLevel(dstLevel, outDesc.width);
                 auto height = FTexture::valueForLevel(dstLevel, outDesc.height);
-                assert(width == hwOutRT.params.viewport.width);
-                assert(height == hwOutRT.params.viewport.height);
+                assert_invariant(width == hwOutRT.params.viewport.width);
+                assert_invariant(height == hwOutRT.params.viewport.height);
 
                 mi->setParameter("source", hwTemp, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -850,7 +850,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     Blackboard& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
-    assert(depth.isValid());
+    assert_invariant(depth.isValid());
 
     // the downsampled target is multiple of 8, so we can have 4 clean mipmap levels
     constexpr const uint32_t maxMipLevels = 4u;
@@ -935,7 +935,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphRenderTargetHandle rt[3];
     };
 
-    assert(mipmapCount - 1
+    assert_invariant(mipmapCount - 1
            <= sizeof(PostProcessDofMipmap::rt) / sizeof(FrameGraphRenderTargetHandle));
 
     auto& ppDoFMipmap = fg.addPass<PostProcessDofMipmap>("DoF Mipmap",
@@ -1880,7 +1880,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
     Blackboard& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
-    assert(depth.isValid());
+    assert_invariant(depth.isValid());
 
     struct TAAData {
         FrameGraphId<FrameGraphTexture> color;
@@ -2005,7 +2005,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 
                 // we currently have no use for this case, so we just assert. This is better for now to trap
                 // cases that we might not intend.
-                assert(inputDesc.samples <= 1);
+                assert_invariant(inputDesc.samples <= 1);
 
                 // FIXME: here we use sample() instead of read() because this forces the
                 //      backend to use a texture (instead of a renderbuffer). We need this because
@@ -2174,7 +2174,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
                 auto width = resources.getDescriptor(data.in).width;
                 UTILS_UNUSED_IN_RELEASE auto height = resources.getDescriptor(data.in).height;
-                assert(width == height);
+                assert_invariant(width == height);
                 int dim = width >> (level + 1);
 
                 driver.setMinMaxLevels(in, level, level);

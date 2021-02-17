@@ -19,10 +19,9 @@
 
 #include <utils/compiler.h>
 #include <utils/ThreadLocal.h>
+#include <utils/debug.h>
 
 #include <jni.h>
-
-#include <assert.h>
 
 namespace filament {
 
@@ -39,7 +38,7 @@ public:
 
     static JNIEnv* getThreadEnvironment() noexcept {
         JNIEnv* env;
-        assert(sVirtualMachine);
+        assert_invariant(sVirtualMachine);
         if (sVirtualMachine->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
             return nullptr; // this should not happen
         }
@@ -59,7 +58,7 @@ public:
     }
 
     inline JNIEnv* getEnvironment() noexcept {
-        assert(mVirtualMachine);
+        assert_invariant(mVirtualMachine);
         JNIEnv* env = mJniEnv;
         if (UTILS_UNLIKELY(!env)) {
             return getEnvironmentSlow();

@@ -30,6 +30,7 @@
 
 #include <filament/Exposure.h>
 #include <filament/TextureSampler.h>
+#include <filament/View.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>
@@ -37,12 +38,12 @@
 #include <utils/Profiler.h>
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
+#include <utils/debug.h>
 
 #include <math/scalar.h>
 #include <math/fast.h>
 
 #include <memory>
-#include <filament/View.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -227,7 +228,7 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
-        assert(shadowOptions.shadowCascades >= 1 &&
+        assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
         mShadowMapManager.setShadowCascades(0, shadowOptions.shadowCascades);
     }
@@ -500,7 +501,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
             }
-            assert(mRenderableUbh);
+            assert_invariant(mRenderableUbh);
             scene->updateUBOs(merged, mRenderableUbh);
         }
     }
@@ -806,7 +807,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
                     [](auto const& it) {
                         return it.template get<FScene::VISIBILITY>() != 0;
                     });
-    assert(visibleLightCount == size_t(last - lightData.begin()));
+    assert_invariant(visibleLightCount == size_t(last - lightData.begin()));
 
     lightData.resize(visibleLightCount);
 }

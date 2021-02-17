@@ -19,7 +19,6 @@
 
 #include <array>
 #include <stddef.h>
-#include <assert.h>
 
 #include <utils/compiler.h>
 #include <utils/bitset.h>
@@ -101,7 +100,7 @@ private:
         }
 
         explicit static_vector(size_t count) noexcept : mSize(count) {
-            assert(count < N);
+            assert_invariant(count < N);
             std::uninitialized_fill_n(begin(), count, T{});
         }
 
@@ -129,12 +128,12 @@ private:
         }
 
         const T& operator[](size_t pos) const noexcept {
-            assert(pos < mSize);
+            assert_invariant(pos < mSize);
             return data()[pos];
         }
 
         T& operator[](size_t pos) noexcept {
-            assert(pos < mSize);
+            assert_invariant(pos < mSize);
             return data()[pos];
         }
 

@@ -23,6 +23,8 @@
 
 #include <private/filament/SibGenerator.h>
 
+#include <utils/debug.h>
+
 namespace filament {
 
 using namespace backend;
@@ -61,7 +63,7 @@ void ShadowMapManager::reset() noexcept {
 }
 
 void ShadowMapManager::setShadowCascades(size_t lightIndex, size_t cascades) noexcept {
-    assert(cascades <= CONFIG_MAX_SHADOW_CASCADES);
+    assert_invariant(cascades <= CONFIG_MAX_SHADOW_CASCADES);
     for (size_t c = 0; c < cascades; c++) {
         mCascadeShadowMaps.emplace_back(mCascadeShadowMapCache[c].get(), lightIndex);
     }
@@ -69,7 +71,7 @@ void ShadowMapManager::setShadowCascades(size_t lightIndex, size_t cascades) noe
 
 void ShadowMapManager::addSpotShadowMap(size_t lightIndex) noexcept {
     const size_t maps = mSpotShadowMaps.size();
-    assert(maps < CONFIG_MAX_SHADOW_CASTING_SPOTS);
+    assert_invariant(maps < CONFIG_MAX_SHADOW_CASTING_SPOTS);
     mSpotShadowMaps.emplace_back(mSpotShadowMapCache[maps].get(), lightIndex);
 }
 
@@ -88,7 +90,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     passes.reserve(MAX_SHADOW_LAYERS);
     uint8_t layerSampleCount[MAX_SHADOW_LAYERS] = {};
 
-    assert(mTextureRequirements.layers <= MAX_SHADOW_LAYERS);
+    assert_invariant(mTextureRequirements.layers <= MAX_SHADOW_LAYERS);
 
     // These loops fill render passes with appropriate rendering commands for each shadow map.
     // The actual render pass execution is deferred to the frame graph.
@@ -99,11 +101,11 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         map.getShadowMap()->render(driver, view.getVisibleDirectionalShadowCasters(), pass, view);
 
-        assert(map.getLayout().layer < mTextureRequirements.layers);
+        assert_invariant(map.getLayout().layer < mTextureRequirements.layers);
         passes.emplace_back(&map, pass);
 
         const uint8_t layer = map.getLayout().layer;
-        assert(layer < MAX_SHADOW_LAYERS);
+        assert_invariant(layer < MAX_SHADOW_LAYERS);
         layerSampleCount[layer] = map.getLayout().vsmSamples;
     }
     for (size_t i = 0; i < mSpotShadowMaps.size(); i++) {
@@ -116,14 +118,14 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         map.getShadowMap()->render(driver, view.getVisibleSpotShadowCasters(), pass, view);
         pass.clearVisibilityMask();
 
-        assert(map.getLayout().layer < mTextureRequirements.layers);
+        assert_invariant(map.getLayout().layer < mTextureRequirements.layers);
         passes.emplace_back(&map, pass);
 
         const uint8_t layer = map.getLayout().layer;
-        assert(layer < MAX_SHADOW_LAYERS);
+        assert_invariant(layer < MAX_SHADOW_LAYERS);
         layerSampleCount[layer] = map.getLayout().vsmSamples;
     }
-    assert(passes.size() <= mTextureRequirements.layers);
+    assert_invariant(passes.size() <= mTextureRequirements.layers);
 
     const bool fillWithCheckerboard = engine.debug.shadowmap.checkerboard && !view.hasVsm();
 
@@ -229,7 +231,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         auto& debugPatternPass = fg.addPass<DebugPatternData>("Shadow Debug Pattern Pass",
                 [&](FrameGraph::Builder& builder, DebugPatternData& data) {
-                    assert(shadows.isValid());
+                    assert_invariant(shadows.isValid());
                     data.shadows = builder.write(shadows);
                 },
                 [=](FrameGraphPassResources const& resources, DebugPatternData const& data,
@@ -380,7 +382,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         // Compute the frustum for the directional light.
         ShadowMap& shadowMap = *entry.getShadowMap();
         UTILS_UNUSED_IN_RELEASE size_t l = entry.getLightIndex();
-        assert(l == 0);
+        assert_invariant(l == 0);
 
         const size_t textureDimension = entry.getLayout().size;
         const ShadowMap::ShadowMapLayout layout{

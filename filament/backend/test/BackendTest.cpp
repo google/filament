@@ -53,7 +53,7 @@ BackendTest::~BackendTest() {
 void BackendTest::initializeDriver() {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
     DefaultPlatform* platform = DefaultPlatform::create(&backend);
-    assert(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
+    assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
     driver = platform->createDriver(nullptr);
     commandStream = CommandStream(*driver, commandBufferQueue.getCircularBuffer());
 }

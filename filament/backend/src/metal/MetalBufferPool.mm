@@ -103,7 +103,7 @@ void MetalBufferPool::gc() noexcept {
 void MetalBufferPool::reset() noexcept {
     std::lock_guard<std::mutex> lock(mMutex);
 
-    assert(mUsedStages.empty());
+    assert_invariant(mUsedStages.empty());
     for (auto pair : mFreeStages) {
         delete pair.second;
     }
