@@ -152,7 +152,7 @@ void MetalExternalImage::set(CVPixelBufferRef image, size_t plane) noexcept {
     };
 
     const MTLPixelFormat format = getPlaneFormat(plane);
-    assert(format != MTLPixelFormatInvalid);
+    assert_invariant(format != MTLPixelFormatInvalid);
     mTexture = createTextureFromImage(image, format, plane);
 }
 

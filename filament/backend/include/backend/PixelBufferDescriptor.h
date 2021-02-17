@@ -23,8 +23,8 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -117,7 +117,7 @@ public:
      */
     static constexpr size_t computeDataSize(PixelDataFormat format, PixelDataType type,
             size_t stride, size_t height, size_t alignment) noexcept {
-        assert(alignment);
+        assert_invariant(alignment);
 
         if (type == PixelDataType::COMPRESSED) {
             return 0;
@@ -166,17 +166,17 @@ public:
                 break;
             case PixelDataType::UINT_10F_11F_11F_REV:
                 // Special case, format must be RGB and uses 4 bytes
-                assert(format == PixelDataFormat::RGB);
+                assert_invariant(format == PixelDataFormat::RGB);
                 bpp = 4;
                 break;
             case PixelDataType::UINT_2_10_10_10_REV:
                 // Special case, format must be RGBA and uses 4 bytes
-                assert(format == PixelDataFormat::RGBA);
+                assert_invariant(format == PixelDataFormat::RGBA);
                 bpp = 4;
                 break;
             case PixelDataType::USHORT_565:
                 // Special case, format must be RGB and uses 2 bytes
-                assert(format == PixelDataFormat::RGB);
+                assert_invariant(format == PixelDataFormat::RGB);
                 bpp = 2;
                 break;
         }

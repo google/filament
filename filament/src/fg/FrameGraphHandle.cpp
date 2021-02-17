@@ -22,10 +22,8 @@
 
 
 #ifndef NDEBUG
-#include "details/Texture.h"    // only needed for assert()
+#include "details/Texture.h"    // only needed for assert_invariant()
 #endif
-
-#include <assert.h>
 
 namespace filament {
 
@@ -43,7 +41,7 @@ void FrameGraphTexture::create(ResourceAllocatorInterface& allocator, const char
         return;
     }
 
-    assert(any(desc.usage));
+    assert_invariant(any(desc.usage));
 
     // texture that can't be sampled can't have LOD -- they obviously can't be accessed
     // note: this could happen if a texture was created with LODs, but a later pass didn't
@@ -52,10 +50,10 @@ void FrameGraphTexture::create(ResourceAllocatorInterface& allocator, const char
     if (!(desc.usage & TextureUsage::SAMPLEABLE)) {
         levels = 1;
     }
-    assert(levels <= FTexture::maxLevelCount(desc.width, desc.height));
+    assert_invariant(levels <= FTexture::maxLevelCount(desc.width, desc.height));
 
     uint8_t samples = desc.samples;
-    assert(samples <= 1 || none(desc.usage & TextureUsage::SAMPLEABLE));
+    assert_invariant(samples <= 1 || none(desc.usage & TextureUsage::SAMPLEABLE));
     if (samples > 1 && any(desc.usage & TextureUsage::SAMPLEABLE)) {
         // Sampleable textures can't be multi-sampled
         // This should never happen (and will be caught by the assert above), but just to be safe,
@@ -66,7 +64,7 @@ void FrameGraphTexture::create(ResourceAllocatorInterface& allocator, const char
     texture = allocator.createTexture(name, desc.type, levels,
             desc.format, samples, desc.width, desc.height, desc.depth, desc.usage);
 
-    assert(texture);
+    assert_invariant(texture);
 }
 
 void FrameGraphTexture::destroy(ResourceAllocatorInterface& allocator) noexcept {

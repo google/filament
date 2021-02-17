@@ -103,7 +103,7 @@ void ExternalStreamManagerAndroid::release(Stream* handle) noexcept {
         ASurfaceTexture_release(stream->nSurfaceTexture);
     }
     JNIEnv* const env = getEnvironment();
-    assert(env); // we should have called attach() by now
+    assert_invariant(env); // we should have called attach() by now
     env->DeleteGlobalRef(stream->jSurfaceTexture);
     delete stream;
 }
@@ -124,7 +124,7 @@ void ExternalStreamManagerAndroid::attach(Stream* handle, intptr_t tname) noexce
         }
     } else {
         JNIEnv* const env = getEnvironment();
-        assert(env); // we should have called attach() by now
+        assert_invariant(env); // we should have called attach() by now
 
         // associate our GL texture to the SurfaceTexture
         jobject jSurfaceTexture = stream->jSurfaceTexture;
@@ -152,7 +152,7 @@ void ExternalStreamManagerAndroid::detach(Stream* handle) noexcept {
         ASurfaceTexture_detachFromGLContext(stream->nSurfaceTexture);
     } else {
         JNIEnv* const env = mVm.getEnvironment();
-        assert(env); // we should have called attach() by now
+        assert_invariant(env); // we should have called attach() by now
         env->CallVoidMethod(stream->jSurfaceTexture, mSurfaceTextureClass_detachFromGLContext);
         VirtualMachineEnv::handleException(env);
     }
@@ -170,7 +170,7 @@ void ExternalStreamManagerAndroid::updateTexImage(Stream* handle, int64_t* times
         }
     } else {
         JNIEnv* const env = mVm.getEnvironment();
-        assert(env); // we should have called attach() by now
+        assert_invariant(env); // we should have called attach() by now
         env->CallVoidMethod(stream->jSurfaceTexture, mSurfaceTextureClass_updateTexImage);
         VirtualMachineEnv::handleException(env);
         *timestamp = env->CallLongMethod(stream->jSurfaceTexture, mSurfaceTextureClass_getTimestamp);

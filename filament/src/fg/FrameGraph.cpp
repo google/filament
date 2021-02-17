@@ -57,7 +57,7 @@ const char* FrameGraph::Builder::getPassName() const noexcept {
 const char* FrameGraph::Builder::getName(FrameGraphHandle const& r) const noexcept {
     ResourceNode& resourceNode = mFrameGraph.getResourceNodeUnchecked(r);
     fg::ResourceEntryBase* pResource = resourceNode.resource;
-    assert(pResource);
+    assert_invariant(pResource);
     return pResource ? pResource->name : "(invalid)";
 }
 
@@ -108,7 +108,7 @@ FrameGraph::~FrameGraph() = default;
 bool FrameGraph::isValid(FrameGraphHandle handle) const noexcept {
     if (!handle.isValid()) return false;
     auto const& registry = mResourceNodes;
-    assert(handle.index < registry.size());
+    assert_invariant(handle.index < registry.size());
     ResourceNode const& node = *registry[handle.index];
     return node.version == node.resource->version;
 }
@@ -121,10 +121,10 @@ bool FrameGraph::equal(FrameGraphHandle lhs, FrameGraphHandle rhs) const noexcep
         return false;
     }
     auto const& registry = mResourceNodes;
-    assert(lhs.index < registry.size());
-    assert(rhs.index < registry.size());
-    assert(registry[lhs.index]->resource);
-    assert(registry[rhs.index]->resource);
+    assert_invariant(lhs.index < registry.size());
+    assert_invariant(rhs.index < registry.size());
+    assert_invariant(registry[lhs.index]->resource);
+    assert_invariant(registry[rhs.index]->resource);
     return registry[lhs.index]->resource == registry[rhs.index]->resource;
 }
 
@@ -148,10 +148,10 @@ void FrameGraph::moveResourceBase(FrameGraphHandle fromHandle, FrameGraphHandle 
     // (note: there can only be a single pass that can be a writer)
     if (from.writerIndex.isValid()) {
         PassNode* const pass = &mPassNodes[from.writerIndex.index];
-        assert(pass);
+        assert_invariant(pass);
         auto pos = std::find_if(pass->writes.begin(), pass->writes.end(),
                 [fromHandle](auto handle) { return handle == fromHandle; });
-        assert(pos != pass->writes.end());
+        assert_invariant(pos != pass->writes.end());
         pass->writes.erase(pos);
         from.writerIndex = to.writerIndex;
     }
@@ -235,9 +235,9 @@ FrameGraphHandle FrameGraph::create(fg::ResourceEntryBase* pResourceEntry) noexc
 
 ResourceNode& FrameGraph::getResourceNodeUnchecked(FrameGraphHandle r) {
     auto& resourceNodes = mResourceNodes;
-    assert(r.index < resourceNodes.size());
+    assert_invariant(r.index < resourceNodes.size());
     ResourceNode& node = *resourceNodes[r.index];
-    assert(node.resource);
+    assert_invariant(node.resource);
     return node;
 }
 
@@ -253,13 +253,13 @@ ResourceNode& FrameGraph::getResourceNode(FrameGraphHandle r) {
 
 fg::ResourceEntryBase& FrameGraph::getResourceEntryBase(FrameGraphHandle r) noexcept {
     ResourceNode& node = getResourceNode(r);
-    assert(node.resource);
+    assert_invariant(node.resource);
     return *node.resource;
 }
 
 fg::ResourceEntryBase& FrameGraph::getResourceEntryBaseUnchecked(FrameGraphHandle r) noexcept {
     ResourceNode& node = getResourceNodeUnchecked(r);
-    assert(node.resource);
+    assert_invariant(node.resource);
     return *node.resource;
 }
 
@@ -278,14 +278,14 @@ FrameGraph& FrameGraph::compile() noexcept {
 
         // compute resources reference counts (i.e. resources we're reading from)
         for (FrameGraphHandle resource : pass.reads) {
-            assert(resource.isValid());
+            assert_invariant(resource.isValid());
             // add a reference for each pass that reads from this resource
             resourceNodes[resource.index]->readerCount++;
         }
 
         // set the writers
         for (FrameGraphHandle resource : pass.writes) {
-            assert(resource.isValid());
+            assert_invariant(resource.isValid());
             resourceNodes[resource.index]->writer = &pass;
         }
     }
@@ -306,10 +306,10 @@ FrameGraph& FrameGraph::compile() noexcept {
         stack.pop_back();
         PassNode* const writer = pNode->writer;
         if (writer) {
-            assert(writer->refCount >= 1);
+            assert_invariant(writer->refCount >= 1);
             if (--writer->refCount == 0) {
                 // this pass is culled
-                assert(!writer->hasSideEffect);
+                assert_invariant(!writer->hasSideEffect);
                 auto const& reads = writer->reads;
                 for (FrameGraphHandle resource : reads) {
                     ResourceNode& r = *resourceNodes[resource.index];
@@ -372,7 +372,7 @@ FrameGraph& FrameGraph::compile() noexcept {
             if (resource->priority == priority && resource->refs) {
                 auto *pFirst = resource->first;
                 auto *pLast = resource->last;
-                assert(!pFirst == !pLast);
+                assert_invariant(!pFirst == !pLast);
                 if (pFirst && pLast) {
                     pFirst->devirtualize.push_back(resource.get());
                     pLast->destroy.push_back(resource.get());
@@ -385,7 +385,7 @@ FrameGraph& FrameGraph::compile() noexcept {
 }
 
 void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexcept {
-    assert(node.base);
+    assert_invariant(node.base);
     // create concrete resources and rendertargets
     for (VirtualResource* resource : node.devirtualize) {
         resource->preExecuteDevirtualize(*this);

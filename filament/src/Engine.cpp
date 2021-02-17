@@ -44,6 +44,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+#include <utils/debug.h>
 
 #include <memory>
 
@@ -796,7 +797,7 @@ bool FEngine::destroy(const FMaterial* ptr) {
 bool FEngine::destroy(const FMaterialInstance* ptr) {
     if (ptr == nullptr) return true;
     auto pos = mMaterialInstances.find(ptr->getMaterial());
-    assert(pos != mMaterialInstances.cend());
+    assert_invariant(pos != mMaterialInstances.cend());
     if (pos != mMaterialInstances.cend()) {
         return terminateAndDestroy(ptr, pos->second);
     }

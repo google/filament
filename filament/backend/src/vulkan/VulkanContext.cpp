@@ -596,7 +596,7 @@ void waitForIdle(VulkanContext& context) {
         uint32_t nfences = 0;
         auto& surfaceContext = *context.currentSurface;
         for (auto& swapContext : surfaceContext.swapContexts) {
-            assert(nfences < 4);
+            assert_invariant(nfences < 4);
             if (swapContext.commands.fence && swapContext.commands.fence->submitted) {
                 fences[nfences++] = swapContext.commands.fence->fence;
                 swapContext.commands.fence->submitted = false;
@@ -638,7 +638,7 @@ bool acquireSwapCommandBuffer(VulkanContext& context) {
             return false;
         }
 
-        assert(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
+        assert_invariant(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
     }
 
     SwapContext& swap = getSwapContext(context);
@@ -767,7 +767,7 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfac
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     };
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &depthImage);
-    assert(!error && "Unable to create depth image.");
+    assert_invariant(!error && "Unable to create depth image.");
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs;
@@ -780,9 +780,9 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfac
     };
     error = vkAllocateMemory(context.device, &allocInfo, nullptr,
             &surfaceContext.depth.memory);
-    assert(!error && "Unable to allocate depth memory.");
+    assert_invariant(!error && "Unable to allocate depth memory.");
     error = vkBindImageMemory(context.device, depthImage, surfaceContext.depth.memory, 0);
-    assert(!error && "Unable to bind depth memory.");
+    assert_invariant(!error && "Unable to bind depth memory.");
 
     // Create a VkImageView so that we can attach depth to the framebuffer.
     VkImageView depthView;
@@ -798,7 +798,7 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfac
         },
     };
     error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &depthView);
-    assert(!error && "Unable to create depth view.");
+    assert_invariant(!error && "Unable to create depth view.");
 
     // Unlike the color attachments (which are double-buffered or triple-buffered), we only need one
     // depth attachment in the entire chain.

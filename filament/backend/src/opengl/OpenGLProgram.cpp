@@ -21,6 +21,7 @@
 #include <utils/Log.h>
 #include <utils/compiler.h>
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 #include <private/backend/BackendUtils.h>
 
@@ -210,7 +211,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
         SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
         for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here
             const uint8_t index = indicesRun[tmu];
-            assert(index < sb.getSize());
+            assert_invariant(index < sb.getSize());
 
             Handle<HwTexture> th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {

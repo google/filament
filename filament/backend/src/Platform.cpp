@@ -17,6 +17,7 @@
 #include <backend/Platform.h>
 
 #include <utils/Systrace.h>
+#include <utils/debug.h>
 
 #if defined(ANDROID)
     #ifndef FILAMENT_USE_EXTERNAL_GLES3
@@ -78,7 +79,7 @@ Platform::~Platform() noexcept = default;
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
 DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     SYSTRACE_CALL();
-    assert(backend);
+    assert_invariant(backend);
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
     }

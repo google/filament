@@ -23,7 +23,7 @@
 #include <math/fast.h>
 #include <math/scalar.h>
 
-#include <assert.h>
+#include <utils/debug.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -148,7 +148,7 @@ FLightManager::FLightManager(FEngine& engine) noexcept : mEngine(engine) {
 FLightManager::~FLightManager() {
     // all components should have been destroyed when we get here
     // (terminate should have been called from Engine's shutdown())
-    assert(mManager.getComponentCount() == 0);
+    assert_invariant(mManager.getComponentCount() == 0);
 }
 
 void FLightManager::init(FEngine& engine) noexcept {
@@ -161,7 +161,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         destroy(entity);
     }
     Instance i = manager.addComponent(entity);
-    assert(i);
+    assert_invariant(i);
 
     if (i) {
         // This needs to happen before we call the set() methods below
@@ -228,13 +228,13 @@ void FLightManager::terminate() noexcept {
 }
 
 void FLightManager::setLocalPosition(Instance i, const float3& position) noexcept {
-    assert(i);
+    assert_invariant(i);
     auto& manager = mManager;
     manager[i].position = position;
 }
 
 void FLightManager::setLocalDirection(Instance i, float3 direction) noexcept {
-    assert(i);
+    assert_invariant(i);
     auto& manager = mManager;
     manager[i].direction = direction;
 }
@@ -264,7 +264,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                     // li = lp / (4 * pi)
                     luminousIntensity = luminousPower * f::ONE_OVER_PI * 0.25f;
                 } else {
-                    assert(unit == IntensityUnit::CANDELA);
+                    assert_invariant(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
                     luminousIntensity = luminousPower;
                 }
@@ -277,7 +277,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                     // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
                     luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
                 } else {
-                    assert(unit == IntensityUnit::CANDELA);
+                    assert_invariant(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
                     luminousIntensity = luminousPower;
                     // lp = li * (2 * pi * (1 - cos(cone_outer / 2)))
@@ -291,7 +291,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                     // li = lp / pi
                     luminousIntensity = luminousPower * f::ONE_OVER_PI;
                 } else {
-                    assert(unit == IntensityUnit::CANDELA);
+                    assert_invariant(unit == IntensityUnit::CANDELA);
                     // intensity specified directly in candela, no conversion needed
                     luminousIntensity = luminousPower;
                 }

@@ -77,7 +77,7 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptorSets[3],
     // If no bindings have been dirtied, update the timestamp (most recent access) and return false
     // to indicate there's no need to re-bind.
     if (!mDirtyDescriptor) {
-        assert(mCurrentDescriptorBundle && mCurrentDescriptorBundle->bound);
+        assert_invariant(mCurrentDescriptorBundle && mCurrentDescriptorBundle->bound);
         descriptorSets[0] = mCurrentDescriptorBundle->handles[0];
         descriptorSets[1] = mCurrentDescriptorBundle->handles[1];
         descriptorSets[2] = mCurrentDescriptorBundle->handles[2];
@@ -196,12 +196,12 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     // If no bindings have been dirtied, update the timestamp (most recent access) and return false
     // to indicate there's no need to re-bind.
     if (!mDirtyPipeline) {
-        assert(mCurrentPipeline && mCurrentPipeline->bound);
+        assert_invariant(mCurrentPipeline && mCurrentPipeline->bound);
         *pipeline = mCurrentPipeline->handle;
         mCurrentPipeline->timestamp = mCurrentTime;
         return false;
     }
-    assert(mPipelineKey.shaders[0] && "Vertex shader is not bound.");
+    assert_invariant(mPipelineKey.shaders[0] && "Vertex shader is not bound.");
 
     // Release the previously bound pipeline and update its time stamp.
     if (mCurrentPipeline) {

@@ -228,7 +228,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             // If there are subpasses, we require the input attachment to be the first attachment.
             // Breaking this assumption would likely require enhancements to the Driver API in order
             // to supply Vulkan with all the information needed.
-            assert(config.subpassMask == 1);
+            assert_invariant(config.subpassMask == 1);
 
             if (config.subpassMask & (1 << i)) {
                 index = subpasses[0].colorAttachmentCount++;

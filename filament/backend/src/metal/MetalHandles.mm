@@ -24,6 +24,7 @@
 
 #include <utils/Panic.h>
 #include <utils/trap.h>
+#include <utils/debug.h>
 
 #include <math.h>
 
@@ -78,10 +79,10 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t hei
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
         : context(context), externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
-    assert(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
+    assert_invariant(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
     MetalExternalImage::assertWritableImage(pixelBuffer);
     externalImage.set(pixelBuffer);
-    assert(externalImage.isValid());
+    assert_invariant(externalImage.isValid());
 }
 
 MetalSwapChain::~MetalSwapChain() {
@@ -138,7 +139,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         return externalImage.getMetalTextureForDraw();
     }
 
-    assert(isCaMetalLayer());
+    assert_invariant(isCaMetalLayer());
     drawable = [layer nextDrawable];
 
     ASSERT_POSTCONDITION(drawable != nil, "Could not obtain drawable.");
@@ -220,7 +221,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
         return;
     }
 
-    assert(drawable);
+    assert_invariant(drawable);
     backend::FrameScheduledCallback callback = frameScheduledCallback;
     // This block strongly captures drawable to keep it alive until the handler executes.
     // We cannot simply reference this->drawable inside the block because the block would then only
@@ -424,7 +425,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     metalPixelFormat = decidePixelFormat(context.device, reshapedFormat);
 
     bytesPerElement = static_cast<uint8_t>(getFormatSize(reshapedFormat));
-    assert(bytesPerElement > 0);
+    assert_invariant(bytesPerElement > 0);
     blockWidth = static_cast<uint8_t>(getBlockWidth(reshapedFormat));
     blockHeight = static_cast<uint8_t>(getBlockHeight(reshapedFormat));
 
@@ -561,7 +562,7 @@ void MetalTexture::load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
         loadSlice(level, xoffset, yoffset, 0, width, height, depth, 0, zoffset, p,
                 blitCommandEncoder, blitCommandBuffer);
     } else {
-        assert(target == SamplerType::SAMPLER_3D);
+        assert_invariant(target == SamplerType::SAMPLER_3D);
         loadSlice(level, xoffset, yoffset, zoffset, width, height, depth, 0, 0, p,
                 blitCommandEncoder, blitCommandBuffer);
     }
@@ -609,8 +610,8 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
     const size_t sourceOffset = (data.left * bytesPerPixel) + (data.top * bytesPerRow) + byteOffset;
 
     if (data.type == PixelDataType::COMPRESSED) {
-        assert(blockWidth > 0);
-        assert(blockHeight > 0);
+        assert_invariant(blockWidth > 0);
+        assert_invariant(blockHeight > 0);
         // From https://developer.apple.com/documentation/metal/mtltexture/1515464-replaceregion:
         // For an ordinary or packed pixel format, the stride, in bytes, between rows of source
         // data. For a compressed pixel format, the stride is the number of bytes from the
@@ -757,7 +758,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         if (multisampledColor[i]) {
             // We're rendering into our temporary MSAA texture and doing an automatic resolve.
             // We should not be attempting to load anything into the MSAA texture.
-            assert(descriptor.colorAttachments[i].loadAction != MTLLoadActionLoad);
+            assert_invariant(descriptor.colorAttachments[i].loadAction != MTLLoadActionLoad);
 
             descriptor.colorAttachments[i].texture = multisampledColor[i];
             descriptor.colorAttachments[i].level = 0;
@@ -783,7 +784,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     if (multisampledDepth) {
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
-        assert(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
+        assert_invariant(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
 
         descriptor.depthAttachment.texture = multisampledDepth;
         descriptor.depthAttachment.level = 0;
@@ -799,20 +800,20 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
-    assert(index < MRT::TARGET_COUNT);
+    assert_invariant(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
-        assert(context->currentDrawSwapChain);
+        assert_invariant(context->currentDrawSwapChain);
         result.texture = context->currentDrawSwapChain->acquireDrawable();
     }
     return result;
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t index) {
-    assert(index < MRT::TARGET_COUNT);
+    assert_invariant(index < MRT::TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
-        assert(context->currentReadSwapChain);
+        assert_invariant(context->currentReadSwapChain);
         result.texture = context->currentReadSwapChain->acquireDrawable();
     }
     return result;

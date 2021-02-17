@@ -470,7 +470,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     PixelDataFormat format;
     PixelDataType type;
     selectLutTextureParams(builder->quality, textureFormat, format, type);
-     assert(FTexture::validatePixelFormatAndType(textureFormat, format, type));
+     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
      void* converted = nullptr;
     if (type == PixelDataType::UINT_2_10_10_10_REV) {

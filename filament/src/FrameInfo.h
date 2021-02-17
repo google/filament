@@ -24,7 +24,6 @@
 #include <array>
 #include <chrono>
 
-#include <assert.h>
 #include <stdint.h>
 
 namespace filament {

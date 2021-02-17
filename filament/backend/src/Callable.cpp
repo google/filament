@@ -17,13 +17,14 @@
 #include <backend/PresentCallable.h>
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 namespace filament {
 namespace backend {
 
 PresentCallable::PresentCallable(PresentFn fn, void* user) noexcept
     : mPresentFn(fn), mUser(user) {
-    assert(fn != nullptr);
+    assert_invariant(fn != nullptr);
 }
 
 void PresentCallable::operator()(bool presentFrame) noexcept {

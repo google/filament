@@ -30,8 +30,6 @@
 
 #include <set>
 
-#include <assert.h>
-
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
 #endif
@@ -289,12 +287,12 @@ private:
             std::is_pointer<Dp>::value &&
             std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
     handle_cast(backend::Handle<B>& handle) noexcept {
-        assert(handle);
+        assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
         // assert that this handle is even a valid one
-        assert(base + offset + sizeof(typename std::remove_pointer<Dp>::type) <= (char *)mHandleArena.getArea().end());
+        assert_invariant(base + offset + sizeof(typename std::remove_pointer<Dp>::type) <= (char *)mHandleArena.getArea().end());
         return static_cast<Dp>(static_cast<void *>(base + offset));
     }
 
@@ -359,9 +357,9 @@ private:
     GLuint getSamplerSlow(backend::SamplerParams sp) const noexcept;
 
     inline GLuint getSampler(backend::SamplerParams sp) const noexcept {
-        assert(!sp.padding0);
-        assert(!sp.padding1);
-        assert(!sp.padding2);
+        assert_invariant(!sp.padding0);
+        assert_invariant(!sp.padding1);
+        assert_invariant(!sp.padding2);
         auto& samplerMap = mSamplerMap;
         auto pos = samplerMap.find(sp.u);
         if (UTILS_UNLIKELY(pos == samplerMap.end())) {

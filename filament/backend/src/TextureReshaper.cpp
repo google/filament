@@ -19,6 +19,7 @@
 #include "DataReshaper.h"
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 namespace filament {
 namespace backend {
@@ -71,7 +72,7 @@ TextureFormat TextureReshaper::getReshapedFormat() const noexcept {
 }
 
 PixelBufferDescriptor TextureReshaper::reshape(PixelBufferDescriptor& p) const {
-    assert(mReshapeFunction);
+    assert_invariant(mReshapeFunction);
     return mReshapeFunction(p);
 }
 

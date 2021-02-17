@@ -96,7 +96,6 @@ enum class TargetBufferFlags : uint8_t {
 };
 
 inline TargetBufferFlags getMRTColorFlag(size_t index) noexcept {
-    assert(index < 4);
     return TargetBufferFlags(1u << index);
 }
 

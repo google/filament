@@ -166,7 +166,7 @@ void RenderTargetResourceEntry::update(FrameGraph& fg, PassNode const& pass) noe
 
 void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept {
     if (!imported) {
-        assert(any(attachments));
+        assert_invariant(any(attachments));
 
         // TODO: we could cache the result of this loop
         backend::TargetBufferInfo info[FrameGraphRenderTarget::Attachments::COUNT];
@@ -182,7 +182,7 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
                     TargetBufferFlags::STENCIL };
             static_assert(sizeof(flags)/sizeof(*flags) == FrameGraphRenderTarget::Attachments::COUNT,
                     "array sizes don't match");
-            assert(bool(attachments & flags[i]) == attachmentInfo.isValid());
+            assert_invariant(bool(attachments & flags[i]) == attachmentInfo.isValid());
 #endif
             if (attachmentInfo.isValid()) {
                 fg::ResourceEntry<FrameGraphTexture> const& entry =
@@ -191,11 +191,11 @@ void RenderTargetResourceEntry::preExecuteDevirtualize(FrameGraph& fg) noexcept 
                 info[i].level = attachmentInfo.getLevel();
                 info[i].layer = attachmentInfo.getLayer();
                 // the attachment buffer (texture or renderbuffer) must be valid
-                assert(info[i].handle);
+                assert_invariant(info[i].handle);
                 // the attachment level must be within range
-                assert(info[i].level < entry.descriptor.levels);
+                assert_invariant(info[i].level < entry.descriptor.levels);
                 // if the attachment is multisampled, then the rendertarget must be too
-                assert(entry.descriptor.samples <= 1 || entry.descriptor.samples == descriptor.samples);
+                assert_invariant(entry.descriptor.samples <= 1 || entry.descriptor.samples == descriptor.samples);
             }
         }
 

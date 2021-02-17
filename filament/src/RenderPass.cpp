@@ -90,7 +90,7 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
     if (UTILS_UNLIKELY(vr.empty())) {
         return commands.end();
     }
-    assert(mRenderableSoa);
+    assert_invariant(mRenderableSoa);
 
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());

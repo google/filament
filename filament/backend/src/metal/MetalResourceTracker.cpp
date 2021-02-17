@@ -16,6 +16,8 @@
 
 #include "MetalResourceTracker.h"
 
+#include <utils/debug.h>
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -31,7 +33,7 @@ bool MetalResourceTracker::trackResource(CommandBuffer buffer, Resource resource
         return true;
     }
 
-    assert(found != mResources.end());
+    assert_invariant(found != mResources.end());
     Resources& resources = found.value();
     auto inserted = resources.insert({resource, deleter});
     return inserted.second;

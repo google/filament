@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 namespace filament {
 
@@ -74,20 +75,20 @@ CocoaTouchExternalImage::SharedGl::SharedGl() noexcept {
     glShaderSource(vertexShader, 1, &s_vertexES, nullptr);
     glCompileShader(vertexShader);
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
+    assert_invariant(status == GL_TRUE);
 
     fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &s_fragmentES, nullptr);
     glCompileShader(fragmentShader);
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-    assert(status == GL_TRUE);
+    assert_invariant(status == GL_TRUE);
 
     program = glCreateProgram();
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
-    assert(status == GL_TRUE);
+    assert_invariant(status == GL_TRUE);
 
     // Save current program state.
     GLint currentProgram;
@@ -145,7 +146,7 @@ bool CocoaTouchExternalImage::set(CVPixelBufferRef image) noexcept {
     // The pixel buffer must be locked whenever we do rendering with it. We'll unlock it before
     // releasing.
     UTILS_UNUSED_IN_RELEASE CVReturn lockStatus = CVPixelBufferLockBaseAddress(image, 0);
-    assert(lockStatus == kCVReturnSuccess);
+    assert_invariant(lockStatus == kCVReturnSuccess);
 
     if (planeCount == 0) {
         mImage = image;
@@ -222,7 +223,7 @@ CVOpenGLESTextureRef CocoaTouchExternalImage::createTextureFromImage(CVPixelBuff
             CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
             mTextureCache, image, nullptr, GL_TEXTURE_2D, glFormat, width, height,
             glFormat, GL_UNSIGNED_BYTE, plane, &texture);
-    assert(success == kCVReturnSuccess);
+    assert_invariant(success == kCVReturnSuccess);
 
     return texture;
 }

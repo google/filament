@@ -46,7 +46,7 @@ namespace metal {
 
 UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform) {
-    assert(platform);
+    assert_invariant(platform);
     return new MetalDriver(platform);
 }
 
@@ -626,7 +626,7 @@ math::float2 MetalDriver::getClipSpaceParams() {
 
 void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
         BufferDescriptor&& data, uint32_t byteOffset) {
-    assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
+    assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
     auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     vb->buffers[index]->copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
@@ -634,7 +634,7 @@ void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
-    assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
+    assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
@@ -1135,7 +1135,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     if (mContext->pipelineState.stateChanged()) {
         id<MTLRenderPipelineState> pipeline =
                 mContext->pipelineStateCache.getOrCreateState(pipelineState);
-        assert(pipeline != nil);
+        assert_invariant(pipeline != nil);
         [mContext->currentRenderPassEncoder setRenderPipelineState:pipeline];
     }
 
@@ -1162,7 +1162,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     if (mContext->depthStencilState.stateChanged()) {
         id<MTLDepthStencilState> state =
                 mContext->depthStencilStateCache.getOrCreateState(depthState);
-        assert(state != nil);
+        assert_invariant(state != nil);
         [mContext->currentRenderPassEncoder setDepthStencilState:state];
     }
 
@@ -1296,7 +1296,7 @@ void MetalDriver::enumerateSamplerGroups(
             continue;
         }
         SamplerGroup* sb = metalSamplerGroup->sb.get();
-        assert(sb->getSize() == samplerGroup.size());
+        assert_invariant(sb->getSize() == samplerGroup.size());
         size_t samplerIdx = 0;
         for (const auto& sampler : samplerGroup) {
             size_t bindingPoint = sampler.binding;

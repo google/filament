@@ -209,7 +209,7 @@ public:
     }
 
     ResourceAllocator& getResourceAllocator() noexcept {
-        assert(mResourceAllocator);
+        assert_invariant(mResourceAllocator);
         return *mResourceAllocator;
     }
 

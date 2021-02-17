@@ -24,6 +24,7 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/debug.h>
 
 #include <backend/BufferDescriptor.h>
 
@@ -31,8 +32,6 @@
 #include <math/mat4.h>
 
 #include <stddef.h>
-#include <assert.h>
-
 
 namespace filament {
 
@@ -68,7 +67,7 @@ public:
 
     // invalidate a range of uniforms and return a pointer to it. offset and size given in bytes
     void* invalidateUniforms(size_t offset, size_t size) {
-        assert(offset + size <= mSize);
+        assert_invariant(offset + size <= mSize);
         mSomethingDirty = true;
         return static_cast<char*>(mBuffer) + offset;
     }

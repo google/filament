@@ -245,8 +245,8 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         };
-        assert(iCreateInfo.extent.width > 0);
-        assert(iCreateInfo.extent.height > 0);
+        assert_invariant(iCreateInfo.extent.width > 0);
+        assert_invariant(iCreateInfo.extent.height > 0);
         vkCreateImage(context.device, &iCreateInfo, VKALLOC, &image);
 
         VkMemoryRequirements memReqs = {};
@@ -638,7 +638,7 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
 
 void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         uint32_t depth, int miplevel) {
-    assert(width <= this->width && height <= this->height && depth <= this->depth);
+    assert_invariant(width <= this->width && height <= this->height && depth <= this->depth);
     const uint32_t srcBytesPerTexel = getBytesPerPixel(format);
     const bool reshape = srcBytesPerTexel == 3 || srcBytesPerTexel == 6;
     const void* cpuData = data.buffer;
@@ -690,7 +690,7 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         const FaceOffsets& faceOffsets, int miplevel) {
-    assert(this->target == SamplerType::SAMPLER_CUBEMAP);
+    assert_invariant(this->target == SamplerType::SAMPLER_CUBEMAP);
     const bool reshape = getBytesPerPixel(format) == 3;
     const void* cpuData = data.buffer;
     const uint32_t numSrcBytes = data.size;
@@ -824,7 +824,7 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
         uint32_t width, uint32_t height, uint32_t depth, FaceOffsets const* faceOffsets, uint32_t miplevel) {
     VkExtent3D extent { width, height, depth };
     if (target == SamplerType::SAMPLER_CUBEMAP) {
-        assert(faceOffsets);
+        assert_invariant(faceOffsets);
         VkBufferImageCopy regions[6] = {{}};
         for (size_t face = 0; face < 6; face++) {
             auto& region = regions[face];
@@ -882,7 +882,7 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
     memset(varray.buffers, 0, sizeof(varray.buffers));
 
     // Position should always be present.
-    assert(enabledAttributes & 1);
+    assert_invariant(enabledAttributes & 1);
 
     // For each enabled attribute, append to each of the above lists. Note that a single VkBuffer
     // handle might be appended more than once, which is perfectly fine.
@@ -930,7 +930,7 @@ VulkanTimerQuery::VulkanTimerQuery(VulkanContext& context) : mContext(context) {
     std::unique_lock<utils::Mutex> lock(context.timestamps.mutex);
     utils::bitset32& bitset = context.timestamps.used;
     const size_t maxTimers = bitset.size();
-    assert(bitset.count() < maxTimers);
+    assert_invariant(bitset.count() < maxTimers);
     for (size_t timerIndex = 0; timerIndex < maxTimers; ++timerIndex) {
         if (!bitset.test(timerIndex)) {
             bitset.set(timerIndex);

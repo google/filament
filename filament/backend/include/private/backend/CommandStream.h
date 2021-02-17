@@ -179,7 +179,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new(std::size_t size, void* ptr) {
-            assert(ptr);
+            assert_invariant(ptr);
             return ptr;
         }
     };
@@ -300,14 +300,14 @@ private:
     bool mUsePerformanceCounter = false;
 
     inline void* allocateCommand(size_t size) {
-        assert(mThreadId == std::this_thread::get_id());
+        assert_invariant(mThreadId == std::this_thread::get_id());
         return mCurrentBuffer->allocate(size);
     }
 };
 
 void* CommandStream::allocate(size_t size, size_t alignment) noexcept {
     // make sure alignment is a power of two
-    assert(alignment && !(alignment & alignment-1));
+    assert_invariant(alignment && !(alignment & alignment-1));
 
     // pad the requested size to accommodate NoopCommand and alignment
     const size_t s = CustomCommand::align(sizeof(NoopCommand) + size + alignment - 1);
@@ -318,7 +318,7 @@ void* CommandStream::allocate(size_t size, size_t alignment) noexcept {
 
     // calculate the "user" data pointer
     void* data = (void *)((uintptr_t(p) + sizeof(NoopCommand) + alignment - 1) & ~(alignment - 1));
-    assert(data >= p + sizeof(NoopCommand));
+    assert_invariant(data >= p + sizeof(NoopCommand));
     return data;
 }
 

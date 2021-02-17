@@ -278,7 +278,7 @@ TEST_F(BackendTest, ReadPixels) {
                 t.alignment, t.left, t.top, t.getPixelBufferStride(), [](void* buffer, size_t size,
                     void* user) {
                     const TestCase* test = (const TestCase*) user;
-                    assert(test);
+                    assert_invariant(test);
 
                     test->exportScreenshot(buffer);
 

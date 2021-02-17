@@ -93,7 +93,7 @@ void VulkanStagePool::gc() noexcept {
 }
 
 void VulkanStagePool::reset() noexcept {
-    assert(mUsedStages.empty());
+    assert_invariant(mUsedStages.empty());
     for (auto pair : mFreeStages) {
         vmaDestroyBuffer(mContext.allocator, pair.second->buffer, pair.second->memory);
         delete pair.second;
