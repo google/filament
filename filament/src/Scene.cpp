@@ -167,6 +167,16 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     for (size_t i = lightData.size(), e = (lightData.size() + 3u) & ~3u; i < e; i++) {
         new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
     }
+
+    // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
+    // unused scene elements between the end of the array and the rounded-up count.
+    if (UTILS_HAS_SANITIZE_MEMORY) {
+        for (size_t i = sceneData.size(), e = (sceneData.size() + 0xFu) & ~0xFu; i < e; i++) {
+            sceneData.data<LAYERS>()[i] = 0;
+            sceneData.data<VISIBLE_MASK>()[i] = 0;
+            sceneData.data<VISIBILITY_STATE>()[i] = {};
+        }
+    }
 }
 
 void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept {
