@@ -851,7 +851,7 @@ This corresponds to a Fresnel reflectance of 4% that we know is associated with 
 Because we must take into account the loss of energy caused by the addition of the clear coat layer, we can reformulate the BRDF from equation $\ref{brdf}$ thusly:
 
 $$\begin{equation}
-f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c) + f_c(n,l)
+f(v,l)=\fDiffuse(v,l) (1 - F_c) + \fSpecular(v,l) (1 - F_c) + f_c(v,l)
 \end{equation}$$
 
 Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF 
