@@ -24,6 +24,7 @@
 #include <filament/Box.h>
 #include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/Exposure.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
@@ -984,7 +985,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     }
 
     const float* e = inputMat->emissive_factor;
-    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
+    // To force emissive to bloom when emissiveFactor is at 1, we multiply by a luminance
+    // of 6EV. At 6EV, the luminance will be 2^(6-3) = 8 which is about the HDR range of
+    // our default tone mappers.
+    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]) * Exposure::luminance(6.0f));
 
     const float* c = mrConfig.base_color_factor;
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));
