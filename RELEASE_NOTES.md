@@ -5,7 +5,14 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.14
+
 ## v1.9.13
+
+- Android: fix "No implementation found" error.
+- Android: fix compilation error in UbershaderLoader.
+- engine: computeDataSize now returns correct value for USHORT_565.
+- Vulkan: various internal improvements.
 
 ## v1.9.12
 
