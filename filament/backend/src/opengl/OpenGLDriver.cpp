@@ -361,7 +361,12 @@ template<typename D, typename ... ARGS>
 backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
     static_assert(sizeof(D) <= 208, "Handle<> too large");
     backend::Handle<D> h{ allocateHandle(sizeof(D)) };
+#ifndef NDEBUG
+    mHandleSet.insert(h.getId());
+#endif
+
     D* addr = handle_cast<D *>(h);
+
     new(addr) D(std::forward<ARGS>(args)...);
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
     addr->typeId = typeid(D).name();
@@ -391,6 +396,9 @@ template <typename B, typename D, typename>
 void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
     // allow to destroy the nullptr, similarly to operator delete
     if (p) {
+#ifndef NDEBUG
+        assert_invariant(mHandleSet.find(handle.getId()) != mHandleSet.end());
+#endif
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
         if (UTILS_UNLIKELY(p->typeId != typeid(D).name())) {
             slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
@@ -401,6 +409,9 @@ void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
 #endif
         p->~D();
         mHandleArena.free(const_cast<D*>(p), sizeof(D));
+#ifndef NDEBUG
+        mHandleSet.erase(handle.getId());
+#endif
     }
 }
 
