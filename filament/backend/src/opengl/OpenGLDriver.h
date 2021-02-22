@@ -27,8 +27,7 @@
 #include <math/vec4.h>
 
 #include <tsl/robin_map.h>
-
-#include <set>
+#include <tsl/robin_set.h>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
@@ -254,6 +253,9 @@ private:
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock,
             utils::TrackingPolicy::Debug>;
+
+    tsl::robin_set<backend::HandleBase::HandleId> mHandleSet;
+
 #else
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock>;
@@ -289,6 +291,9 @@ private:
     handle_cast(backend::Handle<B>& handle) noexcept {
         assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
+#ifndef NDEBUG
+        assert_invariant(mHandleSet.find(handle.getId()) != mHandleSet.end());
+#endif
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
         // assert that this handle is even a valid one
