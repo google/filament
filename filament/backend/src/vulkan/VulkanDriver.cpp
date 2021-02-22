@@ -62,6 +62,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
+    // TODO: For now, we are silencing an error message relating to mutable comparison samplers.
+    // It is likely that the internal "depthSampleCompare" feature flag is mistakenly set to false
+    // by the Molten implementation. In my case, the GPU is an AMD Radeon Pro 5500M. See this bug:
+    // https://vulkan.lunarg.com/issue/view/602578385df1127a24f3cb4b
+    if (!strcmp(cbdata->pMessageIdName, "VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450")) {
+        return VK_FALSE;
+    }
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
@@ -498,7 +505,7 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto texture = handle_cast<VulkanTexture>(mHandleMap, th);
-        mBinder.unbindImageView(texture->imageView);
+        mBinder.unbindImageView(texture->getPrimaryImageView());
         mDisposer.removeReference(texture);
     }
 }
@@ -851,6 +858,7 @@ void VulkanDriver::update2DImage(Handle<HwTexture> th,
 }
 
 void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
+    handle_cast<VulkanTexture>(mHandleMap, th)->setPrimaryRange(minLevel, maxLevel);
 }
 
 void VulkanDriver::update3DImage(
@@ -1332,7 +1340,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
     const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
-    const VkFormat srcFormat = srcTexture ? srcTexture->vkformat : swapChainFormat;
+    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() : swapChainFormat;
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
@@ -1611,6 +1619,8 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
+    VkDescriptorImageInfo samplers[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
         if (samplerGroup.empty()) {
@@ -1651,13 +1661,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerParams& samplerParams = boundSampler->s;
             VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
 
-            mBinder.bindSampler(bindingPoint, {
+            samplers[bindingPoint] = {
                 .sampler = vksampler,
-                .imageView = texture->imageView,
+                .imageView = texture->getPrimaryImageView(),
                 .imageLayout = getTextureLayout(texture->usage)
-            });
+            };
         }
     }
+
+    mBinder.bindSamplers(samplers);
 
     // Set scissoring.
     // Compute the intersection of the requested scissor rectangle with the current viewport.

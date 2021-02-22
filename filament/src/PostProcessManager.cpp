@@ -324,7 +324,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 
     // The first mip already exists, so we process n-1 lods
     for (size_t level = 0; level < levelCount - 1; level++) {
-        depth = mipmapPass(fg, depth, level);
+        depth = mipmapPass(fg, depth, level, level == levelCount - 2);
     }
 
     fg.getBlackboard().put("structure", depth);
@@ -332,7 +332,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, size_t level) noexcept {
+        FrameGraphId<FrameGraphTexture> input, size_t level, bool finalize) noexcept {
 
     struct DepthMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -354,12 +354,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::mipmapPass(FrameGraph& fg,
                 auto in = resources.getTexture(data.in);
                 auto out = resources.get(data.rt);
 
+                driver.setMinMaxLevels(in, level, level);
+
                 auto& material = getPostProcessMaterial("mipmapDepth");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("depth", in, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("level", uint32_t(level));
 
                 commitAndRender(out, material, driver);
+
+                if (finalize) {
+                   driver.setMinMaxLevels(resources.getTexture(data.out), 0, level);
+                }
             });
 
     return depthMipmapPass.getData().out;
@@ -2140,7 +2146,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level) noexcept {
+        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept {
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -2171,6 +2177,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 assert(width == height);
                 int dim = width >> (level + 1);
 
+                driver.setMinMaxLevels(in, level, level);
+
                 auto& material = getPostProcessMaterial("vsmMipmap");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", in, {
@@ -2186,6 +2194,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 out.params.viewport = { 1, 1, vpWidth, vpWidth };
 
                 commitAndRender(out, material, driver);
+
+                if (finalize) {
+                   driver.setMinMaxLevels(resources.getTexture(data.out), 0, level);
+                }
             });
 
     return depthMipmapPass.getData().out;

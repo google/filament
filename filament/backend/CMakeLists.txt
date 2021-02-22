@@ -143,6 +143,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
+            src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
@@ -341,6 +342,7 @@ if (APPLE)
         test/TrianglePrimitive.cpp
         test/Arguments.cpp
         test/test_FeedbackLoops.cpp
+        test/test_Blit.cpp
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp

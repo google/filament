@@ -105,6 +105,7 @@ struct VulkanContext {
     VkQueue graphicsQueue;
     bool debugMarkersSupported;
     bool debugUtilsSupported;
+    bool portabilitySubsetSupported;
     VulkanBinder::RasterState rasterState;
     VulkanCommandBuffer* currentCommands;
     VulkanSurfaceContext* currentSurface;

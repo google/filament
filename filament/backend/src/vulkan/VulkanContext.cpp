@@ -17,21 +17,8 @@
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
 #pragma clang diagnostic ignored "-Wundef"
 #pragma clang diagnostic ignored "-Wunused-variable"
-#pragma clang diagnostic ignored "-Wmissing-field-initializers"
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#pragma clang diagnostic ignored "-Wnullability-completeness"
-#pragma clang diagnostic ignored "-Wweak-vtables"
-#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
-
-static const PFN_vkGetInstanceProcAddr& vkGetInstanceProcAddr = bluevk::vkGetInstanceProcAddr;
-static const PFN_vkGetDeviceProcAddr& vkGetDeviceProcAddr = bluevk::vkGetDeviceProcAddr;
-
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#define VMA_IMPLEMENTATION
-#include <cstdio>
 #include "vk_mem_alloc.h"
 #pragma clang diagnostic pop
 
@@ -40,6 +27,10 @@ static const PFN_vkGetDeviceProcAddr& vkGetDeviceProcAddr = bluevk::vkGetDeviceP
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>
+
+#ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
+#endif
 
 using namespace bluevk;
 
@@ -125,6 +116,9 @@ void selectPhysicalDevice(VulkanContext& context) {
             if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
                 context.debugMarkersSupported = true;
             }
+            if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+                context.portabilitySubsetSupported = true;
+            }
         }
         if (!supportsSwapchain) continue;
 
@@ -170,9 +164,9 @@ void selectPhysicalDevice(VulkanContext& context) {
         utils::slog.i << "Selected physical device '"
                 << context.physicalDeviceProperties.deviceName
                 << "' from " << physicalDeviceCount << " physical devices. "
-                << "(vendor 0x" << utils::io::hex << vendorID << ", "
-                << "device 0x" << deviceID << ", "
-                << "driver 0x" << driverVersion << ", "
+                << "(vendor " << utils::io::hex << vendorID << ", "
+                << "device " << deviceID << ", "
+                << "driver " << driverVersion << ", "
                 << utils::io::dec << "api " << major << "." << minor << ")"
                 << utils::io::endl;
         return;
@@ -189,6 +183,9 @@ void createLogicalDevice(VulkanContext& context) {
     };
     if (context.debugMarkersSupported && !context.debugUtilsSupported) {
         deviceExtensionNames.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
+    if (context.portabilitySubsetSupported) {
+        deviceExtensionNames.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
     }
     deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     deviceQueueCreateInfo->queueFamilyIndex = context.graphicsQueueFamilyIndex;

@@ -1,7 +1,7 @@
 # :diamond_shape_with_a_dot_inside: cgltf
 **Single-file/stb-style C glTF loader and writer**
 
-[![Build Status](https://travis-ci.org/jkuhlmann/cgltf.svg?branch=master)](https://travis-ci.org/jkuhlmann/cgltf)
+[![Build Status](https://github.com/jkuhlmann/cgltf/workflows/build/badge.svg)](https://github.com/jkuhlmann/cgltf/actions)
 
 Used in: [bgfx](https://github.com/bkaradzic/bgfx), [Filament](https://github.com/google/filament), [gltfpack](https://github.com/zeux/meshoptimizer/tree/master/gltf), [raylib](https://github.com/raysan5/raylib), and more!
 
@@ -111,6 +111,8 @@ cgltf also supports some glTF extensions:
 - KHR_materials_specular
 - KHR_materials_transmission
 - KHR_materials_unlit
+- KHR_materials_variants
+- KHR_materials_volume
 - KHR_texture_transform
 
 cgltf does **not** yet support unlisted extensions. However, unlisted extensions can be accessed via "extensions" member on objects.
