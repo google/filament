@@ -149,7 +149,7 @@ void TPanic<T>::panic(char const* function, char const* file, int line, const ch
 
 namespace details {
 
-void logAndPanic(char const* function, char const* file, int line, const char* format, ...) noexcept {
+void panicLog(char const* function, char const* file, int line, const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
     std::string reason(formatString(format, args));
