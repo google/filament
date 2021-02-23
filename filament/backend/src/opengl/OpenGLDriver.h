@@ -254,11 +254,34 @@ private:
             utils::LockingPolicy::SpinLock,
             utils::TrackingPolicy::Debug>;
 
+    utils::SpinLock mHandleSetLock;
     tsl::robin_set<backend::HandleBase::HandleId> mHandleSet;
+    void registerHandleId(backend::HandleBase::HandleId id) noexcept {
+        mHandleSetLock.lock();
+        auto result = mHandleSet.insert(id);
+        assert_invariant(result.second);
+        mHandleSetLock.unlock();
+    }
+    void unregisterHandleId(backend::HandleBase::HandleId id) noexcept {
+        mHandleSetLock.lock();
+        assert_invariant(mHandleSet.find(id) != mHandleSet.cend() );
+        mHandleSet.erase(id);
+        mHandleSetLock.unlock();
+    }
+    void assertHandleId(backend::HandleBase::HandleId id) noexcept {
+        mHandleSetLock.lock();
+        assert_invariant(mHandleSet.find(id) != mHandleSet.cend() );
+        mHandleSetLock.unlock();
+    }
 
 #else
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock>;
+
+    inline void registerHandleId(backend::HandleBase::HandleId id) noexcept {}
+    inline void unregisterHandleId(backend::HandleBase::HandleId id) noexcept {}
+    inline void assertHandleId(backend::HandleBase::HandleId id) noexcept {}
+
 #endif
 
     HandleArena mHandleArena;
@@ -291,9 +314,7 @@ private:
     handle_cast(backend::Handle<B>& handle) noexcept {
         assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-#ifndef NDEBUG
-        assert_invariant(mHandleSet.find(handle.getId()) != mHandleSet.end());
-#endif
+        assertHandleId(handle.getId());
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
         // assert that this handle is even a valid one
