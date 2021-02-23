@@ -441,6 +441,8 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
 
+    mContext->deletedTextureHandleIds.insert(th.getId());
+
     // Unbind this texture from any sampler groups that currently reference it.
     for (auto* metalSamplerGroup : mContext->samplerGroups) {
         const SamplerGroup::Sampler* samplers = metalSamplerGroup->sb->getSamplers();
@@ -746,6 +748,16 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     *sb->sb = samplerGroup;
+
+#ifndef NDEBUG
+    // Verify that the textures referenced in this sampler group have not already been deleted.
+    const SamplerGroup::Sampler* samplers = sb->sb->getSamplers();
+    for (size_t i = 0; i < sb->sb->getSize(); i++) {
+        const SamplerGroup::Sampler* sampler = samplers + i;
+        auto iter = mHandleMap.find(sampler->t.getId());
+        assert_invariant(iter == mHandleMap.end());
+    }
+#endif
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,

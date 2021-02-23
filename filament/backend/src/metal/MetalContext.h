@@ -72,6 +72,11 @@ struct MetalContext {
     // Keeps track of all alive sampler groups.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
 
+#ifndef NDEBUG
+    // Keeps track of deleted textures, to ensure they aren't referenced again in a sampler group.
+    tsl::robin_set<uint32_t> deletedTextureHandleIds;
+#endif
+
     MetalBufferPool* bufferPool;
 
     MetalSwapChain* currentDrawSwapChain = nil;
