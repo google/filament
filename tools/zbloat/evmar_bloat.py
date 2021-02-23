@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
 import operator
 import optparse
 import os
@@ -102,7 +103,7 @@ def parse_nm(input):
                 # external or weak symbol
                 continue
 
-        print >>sys.stderr, 'unparsed:', repr(line)
+        print('unparsed:', repr(line), file=sys.stderr)
 
 def demangle(ident, cppfilt):
     if cppfilt and ident.startswith('_Z'):
@@ -266,7 +267,7 @@ def treeify_syms(symbols, strip_prefix=None, cppfilt=None):
             old_symbols[type] += 1
             tree[key] = (old_size + size, old_symbols)
         except:
-            print >>sys.stderr, 'sym `%s`\tparts `%s`\tkey `%s`' % (sym, parts, key)
+            print('sym `%s`\tparts `%s`\tkey `%s`' % (sym, parts, key), file=sys.stderr)
             raise
     return dirs
 
@@ -319,7 +320,7 @@ def jsonify_tree(tree, name):
 
 def dump_nm(nmfile, strip_prefix, cppfilt):
     dirs = treeify_syms(parse_nm(nmfile), strip_prefix, cppfilt)
-    print (json.dumps(jsonify_tree(dirs, '[everything]')))
+    print(json.dumps(jsonify_tree(dirs, '[everything]')))
 
 
 def parse_objdump(input):
@@ -370,11 +371,11 @@ def dump_sections(objdump):
     sections = jsonify_sections('sections', sections)
     debug_sections = jsonify_sections('debug', debug_sections)
     size = sections['data']['$area'] + debug_sections['data']['$area']
-    print(json.dumps({
+    print((json.dumps({
             'name': 'top ' + format_bytes(size),
             'detail': 'top ' + format_bytes_precise(size),
             'data': { '$area': size },
-            'children': [ debug_sections, sections ]}))
+            'children': [ debug_sections, sections ]})))
 
 
 usage="""%prog [options] MODE
@@ -418,12 +419,12 @@ if mode == 'syms':
     try:
         res = subprocess.check_output([opts.cppfilt, 'main'])
         if res.strip() != 'main':
-            print >>sys.stderr, ("%s failed demangling, "
-                                 "output won't be demangled." % opt.cppfilt)
+            print(("%s failed demangling, "
+                                 "output won't be demangled." % opt.cppfilt), file=sys.stderr)
             opts.cppfilt = None
     except:
-        print >>sys.stderr, ("Could not find c++filt at %s, "
-                             "output won't be demangled." % opt.cppfilt)
+        print(("Could not find c++filt at %s, "
+                             "output won't be demangled." % opt.cppfilt), file=sys.stderr)
         opts.cppfilt = None
     dump_nm(nmfile, strip_prefix=opts.strip_prefix, cppfilt=opts.cppfilt)
 elif mode == 'sections':
@@ -442,10 +443,10 @@ elif mode == 'dump':
             path = ''
         if opts.filter and not (opts.filter in sym or opts.filter in path):
             continue
-        print '%6s %s (%s) %s' % (format_bytes(size), sym,
-                                  symbol_type_to_human(type), path)
+        print('%6s %s (%s) %s' % (format_bytes(size), sym,
+                                  symbol_type_to_human(type), path))
         total += size
-    print '%6s %s' % (format_bytes(total), 'total'),
+    print('%6s %s' % (format_bytes(total), 'total'), end=' ')
 else:
-    print 'unknown mode'
+    print('unknown mode')
     parser.print_usage()
