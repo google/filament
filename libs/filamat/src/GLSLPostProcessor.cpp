@@ -41,6 +41,11 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
         : mOptimization(optimization),
           mPrintShaders(flags & PRINT_SHADERS),
           mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
+    // SPIRV error handler registration needs to occur only once. To avoid a race we do it up here
+    // in the constructor, which gets invoked before MaterialBuilder kicks off jobs.
+    spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
+        utils::slog.e << str << utils::io::endl;
+    });
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() {
@@ -54,10 +59,6 @@ static uint32_t shaderVersionFromModel(filament::backend::ShaderModel model) {
         case filament::backend::ShaderModel::GL_CORE_41:
             return 410;
     }
-}
-
-static void errorHandler(const std::string& str) {
-    utils::slog.e << str << utils::io::endl;
 }
 
 static bool filterSpvOptimizerMessage(spv_message_level_t level) {
@@ -383,7 +384,6 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
 
     // Remove dead module-level objects: functions, types, vars
     spv::spirvbin_t remapper(0);
-    remapper.registerErrorHandler(errorHandler);
     remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
 }
 
