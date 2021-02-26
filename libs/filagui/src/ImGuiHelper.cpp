@@ -21,7 +21,6 @@
 
 #include <imgui.h>
 
-#include <filamat/MaterialBuilder.h>
 #include <filament/Fence.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
