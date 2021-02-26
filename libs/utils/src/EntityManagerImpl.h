@@ -23,6 +23,7 @@
 #include <utils/Entity.h>
 #include <utils/Mutex.h>
 #include <utils/CallStack.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <tsl/robin_set.h>
 
@@ -136,14 +137,12 @@ public:
         mListeners.erase(l);
     }
 
-    std::vector<EntityManager::Listener*> getListeners() const noexcept {
+    utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
         std::unique_lock<Mutex> lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
-        std::vector<EntityManager::Listener*> result(listeners.size()); // unfortunately this memset()
-        auto d = result.begin();
-        for (Listener* listener : listeners) {
-            *d++ = listener;
-        }
+        utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
+        result.resize(result.capacity()); // unfortunately this memset()
+        std::copy(listeners.begin(), listeners.end(), result.begin());
         return result; // the c++ standard guarantees a move
     }
 
