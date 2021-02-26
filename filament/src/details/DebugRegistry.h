@@ -23,6 +23,7 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/vector.h>
 
 #include <tsl/robin_map.h>
 
@@ -60,7 +61,7 @@ public:
 
 private:
     void registerProperty(utils::StaticString name, void* p, Type type) noexcept;
-    std::vector<Property> mProperties;
+    utils::vector<Property> mProperties;
     tsl::robin_map<utils::StaticString, void*> mPropertyMap;
 };
 
