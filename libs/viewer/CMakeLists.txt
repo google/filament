@@ -26,7 +26,7 @@ set(SRCS
 # Include and target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
-target_link_libraries(${TARGET} PUBLIC imgui filament gltfio filagui jsmn imageio)
+target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================

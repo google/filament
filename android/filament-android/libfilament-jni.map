@@ -10,10 +10,12 @@ LIBFILAMENT {
     *filament*Aabb*;
     *filament*IndirectLight*;
     *filament*LightManager*;
+    *filament*Renderer*;
     *filament*Transform*;
     *filament*Material*;
     *filament*IndexBuffer*;
     *filament*VertexBuffer*;
+    *filament*View*;
     *filament*Texture*;
     *filament*geometry*;
 
