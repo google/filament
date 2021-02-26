@@ -88,7 +88,7 @@ public:
 
 private:
     FrameGraph& mFrameGraph;
-    std::vector<ResourceEdgeBase *> mReaderPasses;
+    Vector<ResourceEdgeBase *> mReaderPasses;
     ResourceEdgeBase* mWriterPass = nullptr;
     FrameGraphHandle mParentHandle;
     DependencyGraph::Edge* mParentReadEdge = nullptr;
