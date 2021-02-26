@@ -373,9 +373,6 @@ private:
     friend class ResourceNode;
     friend class RenderPassNode;
 
-    template<typename T> using Allocator = utils::STLAllocator<T, LinearAllocatorArena>;
-    template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
-
     LinearAllocatorArena& getArena() noexcept { return mArena; }
     DependencyGraph& getGraph() noexcept { return mGraph; }
     ResourceAllocatorInterface& getResourceAllocator() noexcept { return mResourceAllocator; }
