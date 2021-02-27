@@ -20,6 +20,8 @@
 #include "fg2/details/DependencyGraph.h"
 #include "fg2/details/Utilities.h"
 
+#include <utils/vector.h>
+
 namespace utils {
 class CString;
 } // namespace utils
@@ -88,7 +90,7 @@ public:
 
 private:
     FrameGraph& mFrameGraph;
-    std::vector<ResourceEdgeBase *> mReaderPasses;
+    Vector<ResourceEdgeBase *> mReaderPasses;
     ResourceEdgeBase* mWriterPass = nullptr;
     FrameGraphHandle mParentHandle;
     DependencyGraph::Edge* mParentReadEdge = nullptr;

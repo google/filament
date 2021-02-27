@@ -19,6 +19,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
+#include <utils/compressed_pair.h>
 
 #include <algorithm>
 #include <utility>
@@ -70,21 +71,36 @@ protected:
     using size_type = uint32_t;
     using allocator_type = ALLOCATOR;
 
+    // our compressed_pair works only with classes
+    struct Capacity {
+        Capacity() = default;
+        Capacity(size_type v) : value(v) {}
+        Capacity(Capacity const& rhs) noexcept = default;
+        Capacity(Capacity&& rhs) noexcept {
+            std::swap(value, rhs.value);
+        }
+        size_type value = 0;
+    };
+
     char* mBegin = nullptr;
     size_type mItemCount = 0;
-    size_type mCapacity = 0;
-    ALLOCATOR mAllocator{};
+    utils::compressed_pair<Capacity, allocator_type> mCompressedCapacity;
 
-    TrivialVectorBase() noexcept = default;
+    size_type& capacity() { return mCompressedCapacity.first().value; }
+    allocator_type& allocator() { return mCompressedCapacity.second(); }
 
-    explicit TrivialVectorBase(const allocator_type& allocator) noexcept : mAllocator(allocator) { }
+    TrivialVectorBase() = default;
 
-    TrivialVectorBase(size_type itemSize, size_type count, const allocator_type& allocator) noexcept
-            : mItemCount(count), mCapacity(count), mAllocator(allocator) {
-        mBegin = (char*)mAllocator.alloc(mCapacity * itemSize);
+    explicit TrivialVectorBase(const allocator_type& allocator)
+            : mCompressedCapacity(0, allocator) {
     }
 
-    TrivialVectorBase(size_type itemSize, size_type count) noexcept
+    TrivialVectorBase(size_type itemSize, size_type count, const allocator_type& a)
+            : mItemCount(count), mCompressedCapacity(count, a) {
+        mBegin = (char*)allocator().alloc(capacity() * itemSize);
+    }
+
+    TrivialVectorBase(size_type itemSize, size_type count)
             : TrivialVectorBase(itemSize, count, allocator_type()) {
     }
 
@@ -93,17 +109,16 @@ protected:
         memcpy(mBegin, rhs.mBegin, mItemCount * itemSize);
     }
 
-    TrivialVectorBase(TrivialVectorBase&& rhs) noexcept
-            : mAllocator(std::move(rhs.mAllocator)) {
+    TrivialVectorBase(TrivialVectorBase&& rhs)
+            : mCompressedCapacity(std::move(rhs.mCompressedCapacity)) {
         using std::swap;
         swap(mBegin, rhs.mBegin);
         swap(mItemCount, rhs.mItemCount);
-        swap(mCapacity, rhs.mCapacity);
     }
 
     UTILS_NOINLINE
     void terminate(size_type itemSize) noexcept {
-        mAllocator.free(mBegin, mCapacity * itemSize);
+        allocator().free(mBegin, capacity() * itemSize);
     }
 
     ~TrivialVectorBase() noexcept = default;
@@ -117,7 +132,7 @@ protected:
 
     UTILS_ALWAYS_INLINE
     void* assert_capacity_for_size(size_type c, size_type itemSize) {
-        if (UTILS_UNLIKELY(mCapacity < c)) {
+        if (UTILS_UNLIKELY(capacity() < c)) {
             assert_capacity_slow(c, itemSize);
         }
         size_type offset = mItemCount * itemSize;
@@ -133,14 +148,14 @@ protected:
 
     UTILS_NOINLINE
     void set_capacity(size_type n, size_type itemSize) {
-        if (UTILS_UNLIKELY(n == mCapacity)) {
+        if (UTILS_UNLIKELY(n == capacity())) {
             return;
         }
-        char* addr = (char*)mAllocator.alloc(n * itemSize);
+        char* addr = (char*)allocator().alloc(n * itemSize);
         memcpy(addr, mBegin, ((mItemCount < n) ? mItemCount : n) * itemSize);
-        mAllocator.free(mBegin, mCapacity * itemSize);
+        allocator().free(mBegin, capacity() * itemSize);
         mBegin = addr;
-        mCapacity = n;
+        capacity() = n;
     }
 
     UTILS_NOINLINE
@@ -148,8 +163,7 @@ protected:
         using std::swap;
         swap(mBegin, other.mBegin);
         swap(mItemCount, other.mItemCount);
-        swap(mCapacity, other.mCapacity);
-        swap(mAllocator, other.mAllocator);
+        mCompressedCapacity.swap(other.mCompressedCapacity);
     }
 
     char* begin() noexcept { return mBegin; }
@@ -199,7 +213,7 @@ private:
     static_assert(std::is_trivially_destructible_v<T>);
 
 public:
-    vector() noexcept = default;
+    vector() = default;
 
     ~vector() noexcept {
         this->terminate(sizeof(T));
@@ -207,18 +221,18 @@ public:
 
     vector(vector const& rhs) : base(sizeof(value_type), rhs) {}
 
-    vector(vector&& rhs) noexcept = default;
+    vector(vector&& rhs) = default;
 
-    explicit vector(const allocator_type& allocator) noexcept
+    explicit vector(const allocator_type& allocator)
             : base(allocator) {
     }
 
-    explicit vector(size_type count) noexcept
+    explicit vector(size_type count)
             : base(sizeof(value_type), count, allocator_type()) {
         construct(begin(), end());
     }
 
-    vector(size_type count, const allocator_type& allocator) noexcept
+    vector(size_type count, const allocator_type& allocator)
             : base(sizeof(value_type), count, allocator) {
         if constexpr (!std::is_trivially_constructible_v<T>) {
             construct(begin(), end());
@@ -227,7 +241,7 @@ public:
 
     vector(size_type count,
             const_reference_or_value proto,
-            const allocator_type& allocator = allocator_type{}) noexcept
+            const allocator_type& allocator = allocator_type{})
             : base(sizeof(value_type), count, allocator) {
         construct(begin(), end(), proto);
     }
@@ -272,7 +286,7 @@ public:
 
     size_type size() const noexcept { return this->mItemCount; }
 
-    size_type capacity() const noexcept { return this->mCapacity; }
+    size_type capacity() const noexcept { return this->capacity(); }
 
     bool empty() const noexcept { return this->mItemCount == 0; }
 

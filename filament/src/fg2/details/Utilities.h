@@ -19,6 +19,8 @@
 
 #include "details/Allocators.h"
 
+#include <utils/vector.h>
+
 #include <vector>
 #include <memory>
 
@@ -35,7 +37,27 @@ struct Deleter {
 
 template<typename T, typename ARENA> using UniquePtr = std::unique_ptr<T, Deleter<T, ARENA>>;
 template<typename T> using Allocator = utils::STLAllocator<T, LinearAllocatorArena>;
-template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
+
+template <typename ARENA>
+class CopyableAllocator {
+public:
+    // we don't make this explicit, so that we can initialize a vector using a CopyableAllocator
+    // from an Arena, avoiding to have to repeat the vector type.
+    CopyableAllocator(ARENA& arena) noexcept : mArena(arena) { } // NOLINT(google-explicit-constructor)
+
+    void* alloc(size_t n) {
+        return mArena.alloc(n);
+    }
+
+    void free(void* p, size_t size) {
+        mArena.free(p, size);
+    }
+
+private:
+    ARENA& mArena;
+};
+
+template<typename T> using Vector = utils::vector<T, CopyableAllocator<LinearAllocatorArena>>; // 32 bytes
 
 } // namespace filament
 

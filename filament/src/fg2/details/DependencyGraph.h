@@ -20,8 +20,8 @@
 #include <utils/ostream.h>
 #include <utils/debug.h>
 
-#include <vector>
 #include <utils/CString.h>
+#include <utils/vector.h>
 
 namespace filament {
 
@@ -126,8 +126,8 @@ public:
         const NodeID mId;           // unique id
     };
 
-    using EdgeContainer = std::vector<Edge*>;
-    using NodeContainer = std::vector<Node*>;
+    using EdgeContainer = utils::vector<Edge*>;
+    using NodeContainer = utils::vector<Node*>;
 
     /**
      * Removes all edges and nodes from the graph.
