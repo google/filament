@@ -36,6 +36,7 @@
 #include <functional>
 
 #include <math.h>
+#include <stdlib.h>
 
 namespace filament {
 
@@ -258,6 +259,7 @@ mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) {
         case ColorGrading::ToneMapping::ACES:
             return sRGB_to_AP1;
         case ColorGrading::ToneMapping::FILMIC:
+        case ColorGrading::ToneMapping::EVILS:
             return mat3f{}; // stay in sRGB
         default:
             return sRGB_to_REC2020;
@@ -270,6 +272,7 @@ mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) {
         case ColorGrading::ToneMapping::ACES:
             return AP1_to_sRGB;
         case ColorGrading::ToneMapping::FILMIC:
+        case ColorGrading::ToneMapping::EVILS:
             return mat3f{}; // stay in sRGB
         default:
             return REC2020_to_sRGB;
@@ -415,8 +418,8 @@ ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
             return tonemap::ACES;
         case ColorGrading::ToneMapping::FILMIC:
             return tonemap::Filmic;
-        case ColorGrading::ToneMapping::UCHIMURA:
-            return tonemap::Uchimura;
+        case ColorGrading::ToneMapping::EVILS:
+            return tonemap::EVILS;
         case ColorGrading::ToneMapping::REINHARD:
             return tonemap::Reinhard;
         case ColorGrading::ToneMapping::DISPLAY_RANGE:
@@ -470,9 +473,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     PixelDataFormat format;
     PixelDataType type;
     selectLutTextureParams(builder->quality, textureFormat, format, type);
-     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
+    assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
-     void* converted = nullptr;
+    void* converted = nullptr;
     if (type == PixelDataType::UINT_2_10_10_10_REV) {
         // convert input to UINT_2_10_10_10_REV if needed
         converted = malloc(lutElementCount * sizeof(uint32_t));
@@ -573,10 +576,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
                 #pragma clang loop vectorize_width(8)
                 for (size_t i = 0; i < count; ++i) {
-                    float4 v{ src[i] };
-                    uint32_t r = uint32_t(floorf(v.x * 1023.0f + 0.5f));
-                    uint32_t g = uint32_t(floorf(v.y * 1023.0f + 0.5f));
-                    uint32_t b = uint32_t(floorf(v.z * 1023.0f + 0.5f));
+                    float4 v{src[i]};
+                    uint32_t r = uint32_t(floor(v.x * 1023.0f + 0.5f));
+                    uint32_t g = uint32_t(floor(v.y * 1023.0f + 0.5f));
+                    uint32_t b = uint32_t(floor(v.z * 1023.0f + 0.5f));
                     dst[i] = (b << 20u) | (g << 10u) | r;
                 }
             }

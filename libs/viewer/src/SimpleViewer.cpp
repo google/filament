@@ -151,7 +151,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
 
         if (ImGui::CollapsingHeader("White balance")) {

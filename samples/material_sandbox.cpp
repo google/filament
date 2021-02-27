@@ -714,7 +714,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Indent();
             ImGui::Checkbox("Enabled##colorGrading", &params.colorGrading);
             ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
-                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+                    "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
             if (ImGui::CollapsingHeader("While balance")) {
                 ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
                 ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
