@@ -5,6 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.14
+
+- Improve bloom/emissive with glTF files.
+- Publicly expose Exposure API for gltfio.
+
 ## v1.9.13
 
 - Android: fix "No implementation found" error.

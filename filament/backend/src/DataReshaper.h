@@ -21,6 +21,8 @@
 
 #include <math/scalar.h>
 
+#include <utils/debug.h>
+
 namespace filament {
 namespace backend {
 
@@ -62,7 +64,7 @@ public:
         const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
         const size_t width = (srcBytesPerRow / sizeof(srcComponentType)) / srcChannelCount;
         const size_t minChannelCount = filament::math::min(srcChannelCount, dstChannelCount);
-        assert(minChannelCount <= 4);
+        assert_invariant(minChannelCount <= 4);
         const int inds[4] = {swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3};
 
         int srcStride;

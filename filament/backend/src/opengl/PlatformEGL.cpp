@@ -26,9 +26,6 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <assert.h>
-
-
 using namespace utils;
 
 namespace filament {
@@ -85,7 +82,7 @@ PlatformEGL::PlatformEGL() noexcept = default;
 
 Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    assert(mEGLDisplay != EGL_NO_DISPLAY);
+    assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
     EGLint major, minor;
     EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);

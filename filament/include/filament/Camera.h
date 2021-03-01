@@ -39,20 +39,18 @@ namespace filament {
  * Creation and destruction
  * ========================
  *
- * Like all Filament objects, Camera can only be constructed on the heap, however, unlike most
- * Filament objects it doesn't require a builder and can be constructed directly
- * using Engine::createCamera(). At the very least, a projection must be defined
- * using setProjection(). In most case, the camera position also needs to be set.
- *
- * A Camera object is destroyed using Engine::destroy(const Camera*).
+ * In Filament, Camera is a component that must be associated with an entity. To do so,
+ * use Engine::createCamera(Entity). A Camera component is destroyed using
+ * Engine::destroyCameraComponent(Entity).
  *
  * ~~~~~~~~~~~{.cpp}
  *  filament::Engine* engine = filament::Engine::create();
  *
- *  filament::Camera* myCamera = engine->createCamera();
+ *  utils::Entity myCameraEntity = utils::EntityManager::get().create();
+ *  filament::Camera* myCamera = engine->createCamera(myCameraEntity);
  *  myCamera->setProjection(45, 16.0/9.0, 0.1, 1.0);
  *  myCamera->lookAt({0, 1.60, 1}, {0, 0, 0});
- *  engine->destroy(myCamera);
+ *  engine->destroyCameraComponent(myCamera);
  * ~~~~~~~~~~~
  *
  *

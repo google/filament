@@ -106,7 +106,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst.level, 1, 1, aspect);
 
     if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
-        assert(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
+        assert_invariant(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
         vkCmdResolveImage(cmdbuffer, src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, resolveRegions);
     } else {
@@ -144,7 +144,7 @@ void VulkanBlitter::lazyInit() noexcept {
     if (mVertex) {
         return;
     }
-    assert(mContext.device);
+    assert_invariant(mContext.device);
 
     VkShaderModuleCreateInfo moduleInfo = {};
     moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

@@ -28,6 +28,7 @@
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -60,7 +61,7 @@ struct RenderableManager::BuilderDetails {
 using BuilderType = RenderableManager;
 BuilderType::Builder::Builder(size_t count) noexcept
         : BuilderBase<RenderableManager::BuilderDetails>(count) {
-    assert(mImpl->mEntries.size() == count);
+    assert_invariant(mImpl->mEntries.size() == count);
 }
 BuilderType::Builder::~Builder() noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
@@ -250,7 +251,7 @@ FRenderableManager::FRenderableManager(FEngine& engine) noexcept : mEngine(engin
 FRenderableManager::~FRenderableManager() {
     // all components should have been destroyed when we get here
     // (terminate should have been called from Engine's shutdown())
-    assert(mManager.getComponentCount() == 0);
+    assert_invariant(mManager.getComponentCount() == 0);
 }
 
 void FRenderableManager::create(
@@ -263,7 +264,7 @@ void FRenderableManager::create(
         destroy(entity);
     }
     Instance ci = manager.addComponent(entity);
-    assert(ci);
+    assert_invariant(ci);
 
     if (ci) {
         // create and initialize all needed RenderPrimitives
@@ -307,7 +308,7 @@ void FRenderableManager::create(
                     UniformBuffer{ count * sizeof(PerRenderableUibBone) },
                     count
             });
-            assert(bones);
+            assert_invariant(bones);
             if (bones) {
                 setSkinning(ci, count > 0);
                 if (builder->mUserBones) {
@@ -384,7 +385,7 @@ void FRenderableManager::prepare(
     std::unique_ptr<Bones>  const * const UTILS_RESTRICT bones = manager.raw_array<BONES>();
     for (uint32_t index : list) {
         size_t i = instances[index].asValue();
-        assert(i);  // we should never get the null instance here
+        assert_invariant(i);  // we should never get the null instance here
         if (UTILS_UNLIKELY(bones[i])) {
             if (bones[i]->bones.isDirty()) {
                 driver.loadUniformBuffer(bones[i]->handle, bones[i]->bones.toBufferDescriptor(driver));
@@ -470,7 +471,7 @@ void FRenderableManager::setBones(Instance ci,
         Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
         std::unique_ptr<Bones> const& bones = mManager[ci].bones;
-        assert(bones && offset + boneCount <= bones->count);
+        assert_invariant(bones && offset + boneCount <= bones->count);
         if (bones) {
             boneCount = std::min(boneCount, bones->count - offset);
             PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(
@@ -489,7 +490,7 @@ void FRenderableManager::setBones(Instance ci,
         mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
         std::unique_ptr<Bones> const& bones = mManager[ci].bones;
-        assert(bones && offset + boneCount <= bones->count);
+        assert_invariant(bones && offset + boneCount <= bones->count);
         if (bones) {
             boneCount = std::min(boneCount, bones->count - offset);
             PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(

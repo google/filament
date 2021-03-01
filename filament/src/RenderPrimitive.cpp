@@ -21,12 +21,14 @@
 #include "details/IndexBuffer.h"
 #include "details/Material.h"
 
+#include <utils/debug.h>
+
 namespace filament {
 
 void FRenderPrimitive::init(backend::DriverApi& driver,
         const RenderableManager::Builder::Entry& entry) noexcept {
 
-    assert(entry.materialInstance);
+    assert_invariant(entry.materialInstance);
 
     mHandle = driver.createRenderPrimitive();
     mMaterialInstance = upcast(entry.materialInstance);

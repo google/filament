@@ -22,6 +22,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/debug.h>
 
 #include <tsl/robin_map.h>
 
@@ -114,33 +115,33 @@ private:
 
     template<typename Dp, typename B>
     Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
-        assert(handle);
+        assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         auto iter = handleMap.find(handle.getId());
-        assert(iter != handleMap.end());
+        assert_invariant(iter != handleMap.end());
         Blob& blob = iter.value();
         return reinterpret_cast<Dp*>(blob);
     }
 
     template<typename Dp, typename B>
     const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        assert(handle);
+        assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         auto iter = handleMap.find(handle.getId());
-        assert(iter != handleMap.end());
+        assert_invariant(iter != handleMap.end());
         Blob& blob = iter.value();
         return reinterpret_cast<const Dp*>(blob);
     }
 
     template<typename Dp, typename B, typename ... ARGS>
     Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
-        assert(handle);
+        assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         auto iter = handleMap.find(handle.getId());
-        assert(iter != handleMap.end());
+        assert_invariant(iter != handleMap.end());
         Blob& blob = iter.value();
         Dp* addr = reinterpret_cast<Dp*>(blob);
         new(addr) Dp(std::forward<ARGS>(args)...);
@@ -150,10 +151,10 @@ private:
     template<typename Dp, typename B>
     void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        assert(handle);
+        assert_invariant(handle);
         // Call the destructor, remove the blob, don't bother reclaiming the integer id.
         auto iter = handleMap.find(handle.getId());
-        assert(iter != handleMap.end());
+        assert_invariant(iter != handleMap.end());
         Blob& blob = iter.value();
         reinterpret_cast<Dp*>(blob)->~Dp();
         free(blob);

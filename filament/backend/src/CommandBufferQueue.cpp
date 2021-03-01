@@ -16,11 +16,10 @@
 
 #include "private/backend/CommandBufferQueue.h"
 
-#include <assert.h>
-
 #include <utils/Log.h>
 #include <utils/Systrace.h>
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 #include "private/backend/CommandStream.h"
 
@@ -33,11 +32,11 @@ CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
         : mRequiredSize((requiredSize + CircularBuffer::BLOCK_MASK) & ~CircularBuffer::BLOCK_MASK),
           mCircularBuffer(bufferSize),
           mFreeSpace(mCircularBuffer.size()) {
-    assert(mCircularBuffer.size() > requiredSize);
+    assert_invariant(mCircularBuffer.size() > requiredSize);
 }
 
 CommandBufferQueue::~CommandBufferQueue() {
-    assert(mCommandBuffersToExecute.empty());
+    assert_invariant(mCommandBuffersToExecute.empty());
 }
 
 void CommandBufferQueue::requestExit() {
@@ -81,7 +80,7 @@ void CommandBufferQueue::flush() noexcept {
     mCommandBuffersToExecute.push_back({ tail, head });
 
     // circular buffer is too small, we corrupted the stream
-    assert(used <= mFreeSpace);
+    assert_invariant(used <= mFreeSpace);
 
     // wait until there is enough space in the buffer
     mFreeSpace -= used;

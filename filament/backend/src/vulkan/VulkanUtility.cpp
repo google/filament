@@ -17,6 +17,7 @@
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 #include "private/backend/BackendUtils.h"
 
@@ -374,7 +375,7 @@ PixelDataType getComponentType(VkFormat format) {
         case VK_FORMAT_R32G32B32A32_UINT: return PixelDataType::UINT;
         case VK_FORMAT_R32G32B32A32_SINT: return PixelDataType::INT;
         case VK_FORMAT_R32G32B32A32_SFLOAT: return PixelDataType::FLOAT;
-        default: assert(false && "Unknown data type, conversion is not supported.");
+        default: assert_invariant(false && "Unknown data type, conversion is not supported.");
     }
     return {};
 }

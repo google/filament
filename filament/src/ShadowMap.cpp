@@ -26,6 +26,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/debug.h>
+
 #include <limits>
 
 using namespace filament::math;
@@ -385,8 +387,8 @@ void ShadowMap::computeShadowCameraDirectional(
             return;
         }
 
-        assert(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
-        assert(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
+        assert_invariant(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
+        assert_invariant(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
 
         // compute focus scale and offset
         float2 s = 2.0f / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
@@ -899,7 +901,7 @@ size_t ShadowMap::intersectFrustumWithBox(
         }
     }
 
-    assert(vertexCount <= outVertices.size());
+    assert_invariant(vertexCount <= outVertices.size());
 
     return vertexCount;
 }

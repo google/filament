@@ -14,6 +14,7 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
         ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
@@ -46,6 +47,7 @@ set(DIST_GENERIC_HDRS
 set(SRCS
         src/api_level.cpp
         src/ashmem.cpp
+        src/debug.cpp
         src/Allocator.cpp
         src/CallStack.cpp
         src/CString.cpp

@@ -44,7 +44,7 @@ VulkanBuffer::~VulkanBuffer() {
 }
 
 void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) {
-    assert(byteOffset == 0);
+    assert_invariant(byteOffset == 0);
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);

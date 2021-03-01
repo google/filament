@@ -21,6 +21,7 @@
 
 #include <utils/Entity.h>
 #include <utils/Log.h>
+#include <utils/debug.h>
 
 #include <math/mat4.h>
 
@@ -82,7 +83,7 @@ void FCameraManager::destroy(Entity e) noexcept {
     Instance i = manager.getInstance(e);
     if (i) {
         FCamera* camera = manager.elementAt<CAMERA>(i);
-        assert(camera);
+        assert_invariant(camera);
         camera->terminate(mEngine);
         mEngine.getHeapAllocator().destroy(camera);
         manager.removeComponent(e);

@@ -15,6 +15,8 @@
  */
 
 #include <utils/Log.h>
+#include <utils/debug.h>
+
 #include "details/FrameSkipper.h"
 #include "details/Engine.h"
 
@@ -25,7 +27,7 @@ using namespace backend;
 
 FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
         : mEngine(engine), mLast(latency) {
-    assert(latency <= MAX_FRAME_LATENCY);
+    assert_invariant(latency <= MAX_FRAME_LATENCY);
 }
 
 FrameSkipper::~FrameSkipper() noexcept {

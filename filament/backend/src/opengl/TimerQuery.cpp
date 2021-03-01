@@ -21,6 +21,7 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>
+#include <utils/debug.h>
 
 namespace filament {
 
@@ -125,7 +126,7 @@ void TimerQueryFence::flush() {
 }
 
 void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
-    assert(!mActiveQuery);
+    assert_invariant(!mActiveQuery);
     // We can't use a fence to figure out when a GPU operation starts (only when it finishes)
     // so instead, we use when glFlush() was issued as a proxy.
     if (UTILS_UNLIKELY(!query->gl.emulation)) {
@@ -137,7 +138,7 @@ void TimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
 }
 
 void TimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
-    assert(mActiveQuery);
+    assert_invariant(mActiveQuery);
     Platform::Fence* fence = mPlatform.createFence();
     std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
     mActiveQuery = nullptr;

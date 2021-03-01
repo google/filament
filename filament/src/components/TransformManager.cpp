@@ -18,6 +18,8 @@
 
 #include <math/mat4.h>
 
+#include <utils/debug.h>
+
 using namespace utils;
 using namespace filament::math;
 
@@ -43,8 +45,8 @@ void FTransformManager::create(Entity entity, Instance parent, const mat4f& loca
         destroy(entity);
     }
     Instance i = manager.addComponent(entity);
-    assert(i);
-    assert(i != parent);
+    assert_invariant(i);
+    assert_invariant(i != parent);
 
     if (i && i != parent) {
         manager[i].parent = 0;
@@ -148,7 +150,7 @@ void FTransformManager::updateNodeTransform(Instance i) noexcept {
 
     validateNode(i);
     auto& manager = mManager;
-    assert(i);
+    assert_invariant(i);
 
     // find our parent's world transform, if any
     // note: by using the raw_array() we don't need to check that parent is valid.
@@ -185,7 +187,7 @@ void FTransformManager::commitLocalTransformTransaction() noexcept {
                 swapNode(i, manager[i].parent);
             }
             Instance parent = manager[i].parent;
-            assert(parent < i);
+            assert_invariant(parent < i);
             manager[i].world = world[parent] * static_cast<mat4f const&>(manager[i].local);
         }
     }
@@ -195,7 +197,7 @@ void FTransformManager::commitLocalTransformTransaction() noexcept {
 void FTransformManager::insertNode(Instance i, Instance parent) noexcept {
     auto& manager = mManager;
 
-    assert(manager[i].parent == Instance{});
+    assert_invariant(manager[i].parent == Instance{});
 
     manager[i].parent = parent;
     manager[i].prev = 0;
@@ -231,7 +233,7 @@ void FTransformManager::swapNode(Instance i, Instance j) noexcept {
     // node to fix-up the linked-list pointers
     // Here we are guaranteed to have enough capacity for our temporary storage, so we
     // can safely use the item just past the end of the array.
-    assert(manager.getSoA().capacity() >= manager.getSoA().size() + 1);
+    assert_invariant(manager.getSoA().capacity() >= manager.getSoA().size() + 1);
 
     const Instance t = manager.end();
 
@@ -301,7 +303,7 @@ void FTransformManager::updateNode(Instance i) noexcept {
     // re-parent our children to us
     Instance child = manager[i].firstChild;
     while (child) {
-        assert(child != i);
+        assert_invariant(child != i);
         manager[child].parent = i;
         child = manager[child].next;
     }
@@ -338,35 +340,35 @@ void FTransformManager::validateNode(Instance i) noexcept {
         Instance firstChild = manager[i].firstChild;
         Instance prev = manager[i].prev;
         Instance next = manager[i].next;
-        assert(parent != i);
-        assert(prev != i);
-        assert(next != i);
-        assert(firstChild != i);
+        assert_invariant(parent != i);
+        assert_invariant(prev != i);
+        assert_invariant(next != i);
+        assert_invariant(firstChild != i);
         if (prev) {
             if (parent) {
-                assert(manager[parent].firstChild != i);
+                assert_invariant(manager[parent].firstChild != i);
             }
-            assert(manager[prev].next == i);
+            assert_invariant(manager[prev].next == i);
         } else {
             if (parent) {
-                assert(manager[parent].firstChild == i);
+                assert_invariant(manager[parent].firstChild == i);
             }
         }
         if (next) {
-            assert(manager[next].prev == i);
+            assert_invariant(manager[next].prev == i);
         }
         if (parent) {
             // make sure we are in the child list of our parent
             Instance child = manager[parent].firstChild;
-            assert(child);
+            assert_invariant(child);
             while (child && child != i) {
                 child = manager[child].next;
             }
-            assert(child);
+            assert_invariant(child);
         }
         if (firstChild) {
-            assert(manager[firstChild].parent == i);
-            assert(manager[firstChild].prev == 0);
+            assert_invariant(manager[firstChild].parent == i);
+            assert_invariant(manager[firstChild].prev == 0);
         }
     }
 #endif

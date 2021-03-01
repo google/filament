@@ -79,7 +79,7 @@ using namespace GLUtils;
 UTILS_NOINLINE
 Driver* OpenGLDriver::create(
         OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
-    assert(platform);
+    assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
     {
@@ -187,7 +187,7 @@ void OpenGLDriver::terminate() {
     executeGpuCommandsCompleteOps();
 
     // because we called glFinish(), all callbacks should have been executed
-    assert(mGpuCommandCompleteOps.empty());
+    assert_invariant(mGpuCommandCompleteOps.empty());
 
     for (auto& item : mSamplerMap) {
         mContext.unbindSampler(item.second);
@@ -212,7 +212,7 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
-    assert(t != nullptr);
+    assert_invariant(t != nullptr);
     mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.targetIndex);
 }
 
@@ -332,7 +332,7 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
 }
 
 void* OpenGLDriver::HandleAllocator::alloc(size_t size, size_t alignment, size_t extra) noexcept {
-    assert(size <= mPool2.getSize());
+    assert_invariant(size <= mPool2.getSize());
     if (size <= mPool0.getSize()) return mPool0.alloc(size, 16, extra);
     if (size <= mPool1.getSize()) return mPool1.alloc(size, 32, extra);
     if (size <= mPool2.getSize()) return mPool2.alloc(size, 32, extra);
@@ -351,7 +351,7 @@ void OpenGLDriver::HandleAllocator::free(void* p, size_t size) noexcept {
 UTILS_NOINLINE
 HandleBase::HandleId OpenGLDriver::allocateHandle(size_t size) noexcept {
     void* addr = mHandleArena.alloc(size);
-    assert(addr);
+    assert_invariant(addr);
     char* const base = (char *)mHandleArena.getArea().begin();
     size_t offset = (char*)addr - base;
     return HandleBase::HandleId(offset >> HandleAllocator::MIN_ALIGNMENT_SHIFT);
@@ -373,7 +373,7 @@ backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
 template<typename D, typename B, typename ... ARGS>
 typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
 OpenGLDriver::construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
-    assert(handle);
+    assert_invariant(handle);
     D* addr = handle_cast<D *>(const_cast<Handle<B>&>(handle));
 
     // currently we implement construct<> with dtor+ctor, we could use operator= also
@@ -487,7 +487,7 @@ void OpenGLDriver::createVertexBufferR(
 
     GLsizei n = GLsizei(vb->bufferCount);
 
-    assert(n <= (GLsizei)vb->gl.buffers.size());
+    assert_invariant(n <= (GLsizei)vb->gl.buffers.size());
     glGenBuffers(n, vb->gl.buffers.data());
 
     for (GLsizei i = 0; i < n; i++) {
@@ -622,7 +622,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             glGenTextures(1, &t->gl.id);
 
             t->gl.internalFormat = getInternalFormat(format);
-            assert(t->gl.internalFormat);
+            assert_invariant(t->gl.internalFormat);
 
             // We DO NOT update targetIndex at function exit to take advantage of the fact that
             // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
@@ -662,12 +662,12 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             textureStorage(t, w, h, depth);
         }
     } else {
-        assert(any(usage & (
+        assert_invariant(any(usage & (
                 TextureUsage::COLOR_ATTACHMENT |
                 TextureUsage::DEPTH_ATTACHMENT |
                 TextureUsage::STENCIL_ATTACHMENT)));
-        assert(levels == 1);
-        assert(target == SamplerType::SAMPLER_2D);
+        assert_invariant(levels == 1);
+        assert_invariant(target == SamplerType::SAMPLER_2D);
         t->gl.internalFormat = getInternalFormat(format);
         t->gl.target = GL_RENDERBUFFER;
         glGenRenderbuffers(1, &t->gl.id);
@@ -683,7 +683,7 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     DEBUG_MARKER()
 
-    assert(uint8_t(usage) & uint8_t(TextureUsage::SAMPLEABLE));
+    assert_invariant(uint8_t(usage) & uint8_t(TextureUsage::SAMPLEABLE));
 
     createTextureR(th, target, levels, format, samples, w, h, depth, usage);
 
@@ -715,7 +715,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     t->gl.id = (GLuint)id;
     t->gl.imported = true;
     t->gl.internalFormat = getInternalFormat(format);
-    assert(t->gl.internalFormat);
+    assert_invariant(t->gl.internalFormat);
 
     // We DO NOT update targetIndex at function exit to take advantage of the fact that
     // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
@@ -761,7 +761,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         GLRenderTarget const* rt, GLenum attachment) noexcept {
 
 #if !defined(NDEBUG)
-    // Only used by assert() checks below
+    // Only used by assert_invariant() checks below
     UTILS_UNUSED_IN_RELEASE auto valueForLevel = [](size_t level, size_t value) {
         return std::max(size_t(1), value >> level);
     };
@@ -769,8 +769,8 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
     GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
 
-    assert(t->target != SamplerType::SAMPLER_EXTERNAL);
-    assert(rt->width  <= valueForLevel(binfo.level, t->width) &&
+    assert_invariant(t->target != SamplerType::SAMPLER_EXTERNAL);
+    assert_invariant(rt->width  <= valueForLevel(binfo.level, t->width) &&
            rt->height <= valueForLevel(binfo.level, t->height));
 
     // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
@@ -811,7 +811,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             break;
     }
 
-    assert(pRenderBuffer);
+    assert_invariant(pRenderBuffer);
 
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
@@ -866,7 +866,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
                 } else {
-                    assert(target == GL_TEXTURE_2D);
+                    assert_invariant(target == GL_TEXTURE_2D);
                     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                             GL_RENDERBUFFER, t->gl.id);
                 }
@@ -887,7 +887,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     if (!attachmentTypeNotSupportedByMSRTT && (t->depth <= 1)
         && ((gl.ext.EXT_multisampled_render_to_texture && attachment == GL_COLOR_ATTACHMENT0)
             || gl.ext.EXT_multisampled_render_to_texture2)) {
-        assert(rt->gl.samples > 1);
+        assert_invariant(rt->gl.samples > 1);
         // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
         // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
         // will happen automagically and efficiently in the driver.
@@ -903,8 +903,8 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     } else
 #endif
     if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
-        assert(rt->gl.samples > 1);
-        assert(glIsRenderbuffer(t->gl.id));
+        assert_invariant(rt->gl.samples > 1);
+        assert_invariant(glIsRenderbuffer(t->gl.id));
 
         // Since this attachment is not sampleable, there is no need for a sidecar or explicit
         // resolve. We can simply render directly into the renderbuffer that was allocated in
@@ -917,8 +917,8 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         resolveFlags = TargetBufferFlags::NONE;
 
     } else {
-        assert(rt->gl.samples > 1);
-        assert(pRenderBuffer->rb == 0);
+        assert_invariant(rt->gl.samples > 1);
+        assert_invariant(pRenderBuffer->rb == 0);
 
         // Here we emulate EXT_multisampled_render_to_texture.
         //
@@ -953,7 +953,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
                 } else {
-                    assert(target == GL_TEXTURE_2D);
+                    assert_invariant(target == GL_TEXTURE_2D);
                     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                             GL_RENDERBUFFER, t->gl.id);
                 }
@@ -1087,7 +1087,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     // handle special cases first (where depth/stencil are packed)
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
-        assert(!stencil.handle || stencil.handle == depth.handle);
+        assert_invariant(!stencil.handle || stencil.handle == depth.handle);
         rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
         rt->gl.depth.level = depth.level;
         if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) ||
@@ -1266,7 +1266,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                     glDeleteTextures(1, &t->gl.id);
                 }
             } else {
-                assert(t->gl.target == GL_RENDERBUFFER);
+                assert_invariant(t->gl.target == GL_RENDERBUFFER);
                 glDeleteRenderbuffers(1, &t->gl.id);
             }
             if (t->gl.fence) {
@@ -1403,7 +1403,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLBlitter::State state;
         for (GLTexture* t : mExternalStreams) {
-            assert(t);
+            assert_invariant(t);
 
             GLStream* s = static_cast<GLStream*>(t->hwStream);
             if (UTILS_UNLIKELY(s == nullptr)) {
@@ -1632,7 +1632,7 @@ void OpenGLDriver::updateIndexBuffer(
 
     auto& gl = mContext;
     GLIndexBuffer* ib = handle_cast<GLIndexBuffer *>(ibh);
-    assert(ib->elementSize == 2 || ib->elementSize == 4);
+    assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -1658,8 +1658,8 @@ void OpenGLDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescript
 
 void OpenGLDriver::updateBuffer(GLenum target,
         GLBuffer* buffer, BufferDescriptor const& p, uint32_t alignment) noexcept {
-    assert(buffer->capacity >= p.size);
-    assert(buffer->id);
+    assert_invariant(buffer->capacity >= p.size);
+    assert_invariant(buffer->id);
 
     auto& gl = mContext;
     gl.bindBuffer(target, buffer->id);
@@ -1752,7 +1752,7 @@ void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint
     gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
 
     // Must fit within int8_t.
-    assert(minLevel <= 0x7f && maxLevel <= 0x7f);
+    assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
 
     t->gl.baseLevel = minLevel;
     glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
@@ -1794,7 +1794,7 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     auto& gl = mContext;
     GLTexture* t = handle_cast<GLTexture *>(th);
-    assert(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
+    assert_invariant(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
     // Note: glGenerateMimap can also fail if the internal format is not both
     // color-renderable and filterable (i.e.: doesn't work for depth)
     bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
@@ -1823,9 +1823,9 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert(xoffset + width <= std::max(1u, t->width >> level));
-    assert(yoffset + height <= std::max(1u, t->height >> level));
-    assert(t->samples <= 1);
+    assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
+    assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
+    assert_invariant(t->samples <= 1);
 
     if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
         // this is in fact an external texture, this becomes a no-op.
@@ -1849,32 +1849,32 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            assert(t->gl.target == GL_TEXTURE_2D);
+            assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
                     width, height, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_3D:
-            assert(zoffset + depth <= std::max(1u, t->depth >> level));
+            assert_invariant(zoffset + depth <= std::max(1u, t->depth >> level));
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            assert(t->gl.target == GL_TEXTURE_3D);
+            assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
                     width, height, depth, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
-            assert(zoffset + depth <= t->depth);
+            assert_invariant(zoffset + depth <= t->depth);
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            assert(t->gl.target == GL_TEXTURE_2D_ARRAY);
+            assert_invariant(t->gl.target == GL_TEXTURE_2D_ARRAY);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
                     width, height, depth, glFormat, glType, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
-            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
+            assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
@@ -1913,10 +1913,10 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert(xoffset + width <= t->width >> level);
-    assert(yoffset + height <= t->height >> level);
-    assert(zoffset + depth <= t->depth);
-    assert(t->samples <= 1);
+    assert_invariant(xoffset + width <= t->width >> level);
+    assert_invariant(yoffset + height <= t->height >> level);
+    assert_invariant(zoffset + depth <= t->depth);
+    assert_invariant(t->samples <= 1);
 
     if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
         // this is in fact an external texture, this becomes a no-op.
@@ -1938,7 +1938,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            assert(t->gl.target == GL_TEXTURE_2D);
+            assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glCompressedTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
                     width, height, t->gl.internalFormat, imageSize, p.buffer);
@@ -1946,20 +1946,20 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
         case SamplerType::SAMPLER_3D:
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
-            assert(t->gl.target == GL_TEXTURE_3D);
+            assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glCompressedTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
                     width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
-            assert(t->gl.target == GL_TEXTURE_2D_ARRAY);
+            assert_invariant(t->gl.target == GL_TEXTURE_2D_ARRAY);
             glCompressedTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
                     width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
-            assert(faceOffsets);
-            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
+            assert_invariant(faceOffsets);
+            assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
             bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
             gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
@@ -2015,8 +2015,8 @@ void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
     if (gl.ext.OES_EGL_image_external_essl3) {
         DEBUG_MARKER()
 
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        assert(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
+        assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
+        assert_invariant(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
 
         bindTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1, t);
         gl.activeTexture(OpenGLContext::MAX_TEXTURE_UNIT_COUNT - 1);
@@ -2061,7 +2061,7 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
             mPlatform.attach(hwStream->stream, t->gl.id);
             break;
         case StreamType::TEXTURE_ID:
-            assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+            assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
             // The texture doesn't need a texture name anymore, get rid of it
             gl.unbindTexture(t->gl.target, t->gl.id);
             glDeleteTextures(1, &t->gl.id);
@@ -2103,7 +2103,7 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
 
 UTILS_NOINLINE
 void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexcept {
-    assert(newStream && "Do not use replaceStream to detach a stream.");
+    assert_invariant(newStream && "Do not use replaceStream to detach a stream.");
 
     // This could be implemented via detachStream + attachStream but inlining allows
     // a few small optimizations, like not touching the mExternalStreams list.
@@ -2125,7 +2125,7 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
             mPlatform.attach(newStream->stream, texture->gl.id);
             break;
         case StreamType::TEXTURE_ID:
-            assert(texture->target == SamplerType::SAMPLER_EXTERNAL);
+            assert_invariant(texture->target == SamplerType::SAMPLER_EXTERNAL);
             texture->gl.id = newStream->user_thread.read[newStream->user_thread.cur];
             break;
         case StreamType::ACQUIRED:
@@ -2255,7 +2255,7 @@ void OpenGLDriver::endRenderPass(int) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert(mRenderPassTarget); // endRenderPass() called without beginRenderPass()?
+    assert_invariant(mRenderPassTarget); // endRenderPass() called without beginRenderPass()?
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
@@ -2303,7 +2303,7 @@ void OpenGLDriver::nextSubpass(int) {}
 
 void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
         backend::TargetBufferFlags discardFlags) noexcept {
-    assert(rt->gl.fbo_read);
+    assert_invariant(rt->gl.fbo_read);
     auto& gl = mContext;
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
     GLbitfield mask = getAttachmentBitfield(resolve);
@@ -2328,7 +2328,7 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
 
 GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
         GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept {
-    assert(buffers <= rt->targets);
+    assert_invariant(buffers <= rt->targets);
 
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
@@ -2337,15 +2337,15 @@ GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
         attachments[attachmentCount++] = defaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
     }
     if (any(buffers & TargetBufferFlags::COLOR1)) {
-        assert(!defaultFramebuffer);
+        assert_invariant(!defaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT1;
     }
     if (any(buffers & TargetBufferFlags::COLOR2)) {
-        assert(!defaultFramebuffer);
+        assert_invariant(!defaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT2;
     }
     if (any(buffers & TargetBufferFlags::COLOR3)) {
-        assert(!defaultFramebuffer);
+        assert_invariant(!defaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT3;
     }
     if (any(buffers & TargetBufferFlags::DEPTH)) {
@@ -2368,7 +2368,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
         GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
 
-        assert(ib->elementSize == 2 || ib->elementSize == 4);
+        assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
         gl.bindVertexArray(&rp->gl);
         CHECK_GL_ERROR(utils::slog.e)
@@ -2378,7 +2378,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         for (size_t i = 0, n = eb->attributes.size(); i < n; i++) {
             if (enabledAttributes & (1U << i)) {
                 uint8_t bi = eb->attributes[i].buffer;
-                assert(bi != 0xFF);
+                assert_invariant(bi != 0xFF);
                 gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
                 if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
 
@@ -2473,8 +2473,8 @@ void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver)
     SYSTRACE_CALL();
 
     GLStream* glstream = static_cast<GLStream*>(gltexture->hwStream);
-    assert(glstream);
-    assert(glstream->streamType == StreamType::ACQUIRED);
+    assert_invariant(glstream);
+    assert_invariant(glstream->streamType == StreamType::ACQUIRED);
 
     // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
     // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an EGLimage from
@@ -2505,8 +2505,8 @@ void OpenGLDriver::updateStreamTexId(GLTexture* t, DriverApi* driver) noexcept {
     auto& gl = mContext;
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
-    assert(s);
-    assert(s->streamType == StreamType::TEXTURE_ID);
+    assert_invariant(s);
+    assert_invariant(s->streamType == StreamType::TEXTURE_ID);
 
     // round-robin to the next texture name
     if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
@@ -2679,7 +2679,7 @@ void OpenGLDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) 
     DEBUG_MARKER()
     auto& gl = mContext;
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    assert(ub->gl.ubo.base == 0);
+    assert_invariant(ub->gl.ubo.base == 0);
     gl.bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo.id, 0, ub->gl.ubo.capacity);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2691,8 +2691,8 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> 
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
     // TODO: Is this assert really needed? Note that size is only populated for STREAM buffers.
-    assert(size <= ub->gl.ubo.size);
-    assert(ub->gl.ubo.base + offset + size <= ub->gl.ubo.capacity);
+    assert_invariant(size <= ub->gl.ubo.size);
+    assert_invariant(ub->gl.ubo.base + offset + size <= ub->gl.ubo.capacity);
     gl.bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo.id, ub->gl.ubo.base + offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2701,14 +2701,14 @@ void OpenGLDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
 
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
-    assert(index < Program::SAMPLER_BINDING_COUNT);
+    assert_invariant(index < Program::SAMPLER_BINDING_COUNT);
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
 }
 
 
 GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
-    assert(mSamplerMap.find(params.u) == mSamplerMap.end());
+    assert_invariant(mSamplerMap.find(params.u) == mSamplerMap.end());
 
     GLuint s;
     glGenSamplers(1, &s);
@@ -2918,9 +2918,9 @@ void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mExternalStreams) {
-            assert(t && t->hwStream);
+            assert_invariant(t && t->hwStream);
             if (t->hwStream->streamType == StreamType::NATIVE) {
-                assert(t->hwStream->stream);
+                assert_invariant(t->hwStream->stream);
                 platform.updateTexImage(t->hwStream->stream,
                         &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp);
                 // NOTE: We assume that updateTexImage() binds the texture on our behalf
@@ -2966,7 +2966,7 @@ void OpenGLDriver::finish(int) {
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
     // Note: since we executed a glFinish(), all pending tasks should be done
-    assert(mGpuCommandCompleteOps.empty());
+    assert_invariant(mGpuCommandCompleteOps.empty());
 
     // however, some tasks rely on a separated thread to publish their result (e.g.
     // endTimerQuery), so the result could very well not be ready, and the task will
@@ -3045,7 +3045,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // With GLES 3.x, GL_INVALID_OPERATION is generated if the value of GL_SAMPLE_BUFFERS
         // for the draw buffer is greater than zero. This works with OpenGL, so we want to
         // make sure to catch this scenario.
-        assert(d->gl.samples <= 1);
+        assert_invariant(d->gl.samples <= 1);
 
         // GL_INVALID_OPERATION is generated if GL_SAMPLE_BUFFERS for the read buffer is greater
         // than zero and the formats of draw and read buffers are not identical.
@@ -3060,7 +3060,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // happens when blitting from an "implicit" resolve render target (does it work?), so
         // to ere on the safe side, we don't allow it.
         if (s->gl.samples > 1) {
-            assert(!memcmp(&dstRect, &srcRect, sizeof(srcRect)));
+            assert_invariant(!memcmp(&dstRect, &srcRect, sizeof(srcRect)));
         }
 
         gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);

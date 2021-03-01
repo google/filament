@@ -29,6 +29,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Slice.h>
+#include <utils/debug.h>
 
 #include <limits>
 
@@ -194,7 +195,7 @@ public:
 
     template<typename T>
     static CommandKey makeField(T value, uint64_t mask, unsigned shift) noexcept {
-        assert(!((uint64_t(value) << shift) & ~mask));
+        assert_invariant(!((uint64_t(value) << shift) & ~mask));
         return uint64_t(value) << shift;
     }
 
@@ -225,7 +226,7 @@ public:
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t size, void* ptr) {
-            assert(ptr);
+            assert_invariant(ptr);
             return ptr;
         }
     };

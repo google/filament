@@ -31,6 +31,58 @@ class FStream;
 
 class Engine;
 
+/**
+ * Stream is used to attach a video stream to a Filament `Texture`.
+ *
+ * Note that the `Stream` class is fairly Android centric. It supports three different
+ * configurations:
+ *
+ *   - TEXTURE_ID...takes an OpenGL texture ID and incurs a copy
+ *   - ACQUIRED.....connects to an Android AHardwareBuffer
+ *   - NATIVE.......connects to an Android SurfaceTexture
+ *
+ * Before explaining these different configurations, let's review the high-level structure of an AR
+ * or video application that uses Filament:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * while (true) {
+ *
+ *     // Misc application work occurs here, such as:
+ *     // - Writing the image data for a video frame into a Stream
+ *     // - Moving the Filament Camera
+ *
+ *     if (renderer->beginFrame(swapChain)) {
+ *         renderer->render(view);
+ *         renderer->endFrame();
+ *     }
+ * }
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Let's say that the video image data at the time of a particular invocation of `beginFrame`
+ * becomes visible to users at time A. The 3D scene state (including the camera) at the time of
+ * that same invocation becomes apparent to users at time B.
+ *
+ * - If time A matches time B, we say that the stream is \em{synchronized}.
+ * - Filament invokes low-level graphics commands on the \em{driver thread}.
+ * - The thread that calls `beginFrame` is called the \em{main thread}.
+ *
+ * The TEXTURE_ID configuration achieves synchronization automatically. In this mode, Filament
+ * performs a copy on the main thread during `beginFrame` by blitting the external image into
+ * an internal round-robin queue of images. This copy has a run-time cost.
+ *
+ * For ACQUIRED streams, there is no need to perform the copy because Filament explictly acquires
+ * the stream, then releases it later via a callback function. This configuration is especially
+ * useful when the Vulkan backend is enabled.
+ *
+ * For NATIVE streams, Filament does not make any synchronization guarantee. However they are simple
+ * to use and do not incur a copy. These are often appropriate in video applications.
+ *
+ * Please see `sample-stream-test` and `sample-hello-camera` for usage examples.
+ *
+ * @see backend::StreamType
+ * @see Texture#setExternalStream
+ * @see Engine#destroyStream
+ */
 class UTILS_PUBLIC Stream : public FilamentAPI {
     struct BuilderDetails;
 
@@ -123,8 +175,23 @@ public:
     /**
      * Updates an ACQUIRED stream with an image that is guaranteed to be used in the next frame.
      *
+     * This method tells Filament to immediately "acquire" the image and trigger a callback
+     * when it is done with it. This should be called by the user outside of beginFrame / endFrame,
+     * and should be called only once per frame. If the user pushes images to the same stream
+     * multiple times in a single frame, only the final image is honored, but all callbacks are
+     * invoked.
+     *
      * This method should be called on the same thread that calls Renderer::beginFrame, which is
-     * also where the callback is invoked.
+     * also where the callback is invoked. This method can only be used for streams that were
+     * constructed without calling the `stream` method on the builder.
+     *
+     * @see Stream for more information about NATIVE, TEXTURE_ID, and ACQUIRED configurations.
+     *
+     * @param image      Pointer to AHardwareBuffer, casted to void* since this is a public header.
+     * @param callback   This is triggered by Filament when it wishes to release the image.
+     *                   It callback tales two arguments: the AHardwareBuffer and the userdata.
+     * @param userdata   Optional closure data. Filament will pass this into the callback when it
+     *                   releases the image.
      */
     void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
 

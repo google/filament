@@ -128,14 +128,14 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isM
         std::cerr << "ERROR: Unable to parse " <<
             (stage == ShaderStage::VERTEX ? "vertex" : "fragment") << " shader:" << std::endl;
         std::cerr << tShader.getInfoLog() << std::endl;
-        assert(false);
+        assert_invariant(false);
     }
 
     program.addShader(&tShader);
     bool linkOk = program.link(msg);
     if (!linkOk) {
         std::cerr << tShader.getInfoLog() << std::endl;
-        assert(false);
+        assert_invariant(false);
     }
 
     SpirvBlob spirv;
@@ -144,7 +144,7 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isM
 
     std::string result;
 
-    assert(backend == Backend::OPENGL ||
+    assert_invariant(backend == Backend::OPENGL ||
            backend == Backend::METAL  ||
            backend == Backend::VULKAN);
 

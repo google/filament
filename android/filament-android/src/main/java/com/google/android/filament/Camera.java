@@ -27,16 +27,12 @@ import androidx.annotation.Size;
  *
  * <h1><u>Creation and destruction</u></h1>
  *
- * Unlike most Filament objects, Camera doesn't require a builder and can be constructed directly
- * using {@link Engine#createCamera}. At the very least, a projection must be defined
- * using {@link #setProjection}. In most case, the camera position also needs to be set.
- * <p>
- * A Camera object is destroyed using {@link Engine#destroyCamera}.
+ * In Filament, Camera is a component that must be associated with an entity. To do so,
+ * use {@link Engine#createCamera(int)}. A Camera component is destroyed using
+ * {@link Engine#destroyCamera(Camera)}.
  *
  * <pre>
- *  Engine engine = Engine.create();
- *
- *  Camera myCamera = engine.createCamera();
+ *  Camera myCamera = engine.createCamera(myCameraEntity);
  *  myCamera.setProjection(45, 16.0/9.0, 0.1, 1.0);
  *  myCamera.lookAt(0, 1.60, 1,
  *                  0, 0, 0,

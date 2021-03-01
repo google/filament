@@ -19,8 +19,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
-
-#include <assert.h>
+#include <utils/debug.h>
 
 namespace filament {
 namespace backend {
@@ -53,7 +52,7 @@ public:
     constexpr HandleBase() noexcept: object(nullid) {}
 
     explicit HandleBase(HandleId id) noexcept : object(id) {
-        assert(object != nullid); // usually means an uninitialized handle is used
+        assert_invariant(object != nullid); // usually means an uninitialized handle is used
     }
 
     HandleBase(HandleBase const& rhs) noexcept = default;
