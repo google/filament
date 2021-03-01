@@ -62,6 +62,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
+    // TODO: For now, we are silencing an error message relating to writes to the depth buffer
+    // and the fact that we are not using a read-only depth layout.
+    if (!strcmp(cbdata->pMessageIdName, "VUID-vkCmdDrawIndexed-None-04584")) {
+        return VK_FALSE;
+    }
     // TODO: For now, we are silencing an error message relating to mutable comparison samplers.
     // It is likely that the internal "depthSampleCompare" feature flag is mistakenly set to false
     // by the Molten implementation. In my case, the GPU is an AMD Radeon Pro 5500M. See this bug:

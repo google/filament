@@ -2,7 +2,7 @@
 
 This folder contains prebuilt dylib files extracted from `macOS/lib` in the following LunarG SDK:
 
-    vulkansdk-macos-1.2.162.1.dmg
+    vulkansdk-macos-1.2.170.0.dmg
 
 The purpose of these files is to allow Filament developers to avoid installing the LunarG SDK.
 However, to enable validation you must install the SDK.
