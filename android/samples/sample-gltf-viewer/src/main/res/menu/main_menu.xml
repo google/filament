@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_qrcode"
+        android:icon="@drawable/qrcode"
+        android:title="@string/action_qrcode"
+        app:showAsAction="always"/>
+
+</menu>

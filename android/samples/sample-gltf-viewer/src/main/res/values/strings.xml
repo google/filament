@@ -1,3 +1,5 @@
 <resources>
   <string name="app_name">gltf viewer</string>
+  <string name="action_qrcode">QR Code</string>
+  <string name="action_settings">settings</string>
 </resources>

@@ -17,22 +17,41 @@
 package com.google.android.filament.gltf
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.os.Bundle
-import android.view.Choreographer
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.SurfaceView
+import android.util.Log
+import android.util.Size
+import android.view.*
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.mlkit.vision.barcode.Barcode
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.*
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
 
     companion object {
         // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
+        private const val TAG = "gltf"
     }
 
     private lateinit var surfaceView: SurfaceView
@@ -41,11 +60,31 @@ class MainActivity : Activity() {
     private lateinit var modelViewer: ModelViewer
     private val doubleTapListener = DoubleTapListener()
     private lateinit var doubleTapDetector: GestureDetector
+    private lateinit var previewView: androidx.camera.view.PreviewView
+    private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        surfaceView = SurfaceView(this).apply { setContentView(this) }
+        setContentView(R.layout.layout)
+
+        setSupportActionBar(findViewById(R.id.toolbar))
+
+        // The app has two modes, 3D viewer mode and QR code scanning mode.
+        // To toggle quickly between the two modes, we have two Views and collapse
+        // one or the other within the linear layout.
+        surfaceView = findViewById(R.id.surfaceView)
+        previewView = findViewById(R.id.previewView)
+        surfaceView.visibility = View.VISIBLE
+        previewView.visibility = View.GONE
+
+        cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            bindPreview(cameraProvider)
+        }, ContextCompat.getMainExecutor(this))
+
         choreographer = Choreographer.getInstance()
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
@@ -72,6 +111,132 @@ class MainActivity : Activity() {
         val bloomOptions = modelViewer.view.bloomOptions
         bloomOptions.enabled = true
         modelViewer.view.bloomOptions = bloomOptions
+    }
+
+    private fun bindPreview(cameraProvider: ProcessCameraProvider) {
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.createSurfaceProvider())
+        }
+
+        val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .build()
+
+        val imageAnalysis = ImageAnalysis.Builder()
+                .setTargetResolution(Size(1280, 720))
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+
+        imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), {
+            imageProxy -> scanQRCode(imageProxy)
+        })
+
+        try {
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, imageAnalysis, preview)
+        } catch (exc: Exception) {
+            Log.e(TAG, "Preview binding failed", exc)
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.action_qrcode -> {
+            if (previewView.visibility == View.GONE) {
+                surfaceView.visibility = View.GONE
+                previewView.visibility = View.VISIBLE
+            } else {
+                surfaceView.visibility = View.VISIBLE
+                previewView.visibility = View.GONE
+            }
+            true
+        }
+        else -> {
+            super.onOptionsItemSelected(item)
+        }
+    }
+
+    @SuppressLint("UnsafeExperimentalUsageError")
+    private fun scanQRCode(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image ?: return
+        if (previewView.visibility != View.VISIBLE) {
+            imageProxy.close()
+            return
+        }
+        val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        val scanner = BarcodeScanning.getClient(options)
+        scanner.process(image)
+                .addOnSuccessListener { barcodes ->
+                    if (barcodes.size > 0) {
+                        downloadFromBarcode(barcodes[0])
+                    }
+                    imageProxy.close()
+                }
+                .addOnFailureListener {
+                    imageProxy.close()
+                }
+    }
+
+    private fun setStatusText(text: String) {
+        runOnUiThread {
+            val toast = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT)
+            toast.show()
+        }
+    }
+
+    private fun downloadFromBarcode(barcode: Barcode) {
+        if (barcode.valueType != Barcode.TYPE_URL) return
+        val url = barcode.url!!.url!!
+
+        // At this point we successfully scanned a QR Code with a well-formed URL, so we go back to
+        // the 3D view immediately, without waiting to see if we can successfully fetch anything
+        // from the URL. This lets the user know that we detected a QR code and prevents a stream
+        // of repeated fetch requests.
+        surfaceView.visibility = View.VISIBLE
+        previewView.visibility = View.GONE
+
+        val callback = { buffer: Buffer ->
+            setStatusText("Received model data.")
+            Log.i(TAG, "Fetched " + buffer.capacity().toString() + " bytes")
+            Unit
+        }
+
+        setStatusText("Downloading model data...")
+        Log.i(TAG, "Fetching URL $url")
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                downloadGlb(url, callback)
+            } catch (exc: IOException) {
+                setStatusText("URL fetch failed.")
+                Log.e(TAG, "URL fetch failed", exc)
+            }
+        }
+    }
+
+    private suspend fun downloadGlb(url: String, callback: (Buffer) -> Unit) {
+        var buffer: Buffer? = null
+
+        withContext(Dispatchers.IO) {
+            val connection = URL(url).openConnection() as HttpURLConnection
+            connection.readTimeout = 2000 // two second timeout
+            val reader = connection.inputStream
+            val bytes = reader.readBytes()
+            buffer = ByteBuffer.wrap(bytes)
+            callback(buffer!!)
+        }
+
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGlb(buffer!!)
+            modelViewer.transformToUnitCube()
+        }
+
     }
 
     private fun createRenderables() {
