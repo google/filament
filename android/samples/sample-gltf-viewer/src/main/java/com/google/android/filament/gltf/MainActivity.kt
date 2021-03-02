@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Size
 import android.view.*
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var surfaceView: SurfaceView
     private lateinit var choreographer: Choreographer
+    private lateinit var progressBar: ProgressBar
     private val frameScheduler = FrameCallback()
     private lateinit var modelViewer: ModelViewer
     private val doubleTapListener = DoubleTapListener()
@@ -70,6 +72,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.layout)
 
         setSupportActionBar(findViewById(R.id.toolbar))
+
+        progressBar = findViewById(R.id.model_loading)
 
         // The app has two modes, 3D viewer mode and QR code scanning mode.
         // To toggle quickly between the two modes, we have two Views and collapse
@@ -238,14 +242,19 @@ class MainActivity : AppCompatActivity() {
     private suspend fun downloadZip(url: String) {
         var gltfPath: String? = null
 
+        progressBar.progress = 0
+        progressBar.visibility = View.VISIBLE
+
         val pathToBufferMapping = withContext(Dispatchers.IO) {
             val connection = URL(url).openConnection() as HttpURLConnection
+            progressBar.max = connection.contentLength
             connection.readTimeout = 2000 // two second timeout
             val reader = connection.inputStream
             val deflater = ZipInputStream(reader)
             val mapping = HashMap<String, Buffer>()
             while (true) {
                 val entry = deflater.nextEntry ?: break
+                progressBar.incrementProgressBy(entry.compressedSize.toInt())
                 if (entry.isDirectory) continue
                 if (entry.name.startsWith("__MACOSX")) continue
                 val uri = entry.name
@@ -261,6 +270,8 @@ class MainActivity : AppCompatActivity() {
             }
             mapping
         }
+
+        progressBar.visibility = View.INVISIBLE
 
         if (gltfPath == null) {
             setStatusText("Could not find .gltf in the zip.")

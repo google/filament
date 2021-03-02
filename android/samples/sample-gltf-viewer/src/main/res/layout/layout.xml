@@ -12,8 +12,20 @@
         android:layout_height="?attr/actionBarSize"
         android:layout_weight="0"
         android:background="?attr/colorButtonNormal"
+        android:gravity="center_horizontal"
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
-        app:menu="@menu/main_menu" />
+        app:menu="@menu/main_menu">
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/model_loading"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:progress="0"
+            android:visibility="invisible" />
+
+    </androidx.appcompat.widget.Toolbar>
 
     <SurfaceView
         android:id="@+id/surfaceView"
