@@ -69,7 +69,7 @@
     <div class="container">
         <div id="central" class="central-area">
             <div>
-                <p>Drop a <b>glb</b> file here.</p>
+                <p>Drop a <b>glb</b> or <b>zip</b> file here.</p>
             </div>
         </div>
     </div>
@@ -78,6 +78,7 @@
 
         const central = document.getElementById("central");
         const pipeId = generatePipeId();
+        let fileType = "glb";
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             central.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
@@ -100,7 +101,10 @@
             if (!event.dataTransfer) return;
             if (event.dataTransfer.items[0].kind !== "file") return;
             const file = event.dataTransfer.items[0].getAsFile();
-            if (!file.name.match(/\.(glb)$/i)) return;
+            const is_glb = file.name.match(/\.(glb)$/i);
+            const is_zip = file.name.match(/\.(zip)$/i);
+            if (!is_glb && !is_zip) return;
+            if (is_zip) fileType = "zip";
             console.info(`Uploading ${file.name} to ${getPipeUrl()}`)
 
             const files = event.dataTransfer.files;
@@ -134,7 +138,7 @@
         }
 
         function getPipeUrl() {
-            return `https://ppng.io/filament-qrcode-${pipeId}`;
+            return `https://ppng.io/filament-qrcode-${pipeId}-${fileType}`;
         }
 
     </script>

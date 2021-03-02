@@ -45,13 +45,14 @@ import java.net.URL
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
+import java.util.zip.ZipInputStream
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
         // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
-        private const val TAG = "gltf"
+        private const val TAG = "gltf-viewer"
     }
 
     private lateinit var surfaceView: SurfaceView
@@ -127,8 +128,8 @@ class MainActivity : AppCompatActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-        imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), {
-            imageProxy -> scanQRCode(imageProxy)
+        imageAnalysis.setAnalyzer(Executors.newSingleThreadExecutor(), { imageProxy ->
+            scanQRCode(imageProxy)
         })
 
         try {
@@ -200,18 +201,16 @@ class MainActivity : AppCompatActivity() {
         surfaceView.visibility = View.VISIBLE
         previewView.visibility = View.GONE
 
-        val callback = { buffer: Buffer ->
-            setStatusText("Received model data.")
-            Log.i(TAG, "Fetched " + buffer.capacity().toString() + " bytes")
-            Unit
-        }
-
         setStatusText("Downloading model data...")
         Log.i(TAG, "Fetching URL $url")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                downloadGlb(url, callback)
+                if (url.endsWith("-zip")) {
+                    downloadZip(url)
+                } else {
+                    downloadGlb(url)
+                }
             } catch (exc: IOException) {
                 setStatusText("URL fetch failed.")
                 Log.e(TAG, "URL fetch failed", exc)
@@ -219,24 +218,78 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun downloadGlb(url: String, callback: (Buffer) -> Unit) {
-        var buffer: Buffer? = null
-
-        withContext(Dispatchers.IO) {
+    private suspend fun downloadGlb(url: String) {
+        val buffer = withContext(Dispatchers.IO) {
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.readTimeout = 2000 // two second timeout
             val reader = connection.inputStream
             val bytes = reader.readBytes()
-            buffer = ByteBuffer.wrap(bytes)
-            callback(buffer!!)
+            val buffer = ByteBuffer.wrap(bytes)
+            setStatusText("Received model data.")
+            buffer
+        }
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGlb(buffer)
+            modelViewer.transformToUnitCube()
+        }
+    }
+
+    private suspend fun downloadZip(url: String) {
+        var gltfPath: String? = null
+
+        val pathToBufferMapping = withContext(Dispatchers.IO) {
+            val connection = URL(url).openConnection() as HttpURLConnection
+            connection.readTimeout = 2000 // two second timeout
+            val reader = connection.inputStream
+            val deflater = ZipInputStream(reader)
+            val mapping = HashMap<String, Buffer>()
+            while (true) {
+                val entry = deflater.nextEntry ?: break
+                if (entry.isDirectory) continue
+                if (entry.name.startsWith("__MACOSX")) continue
+                val uri = entry.name
+                setStatusText("Deflating $uri")
+                Log.i(TAG, "Deflating zip entry $uri...")
+                val byteArray = deflater.readBytes()
+                Log.i(TAG, "Deflated ${byteArray.size} bytes")
+                val buffer = ByteBuffer.wrap(byteArray)
+                mapping[uri] = buffer
+                if (uri.endsWith(".gltf")) {
+                    gltfPath = uri
+                }
+            }
+            mapping
+        }
+
+        if (gltfPath == null) {
+            setStatusText("Could not find .gltf in the zip.")
+            return
+        }
+
+        setStatusText("Received all model data.")
+
+        val gltfBuffer = pathToBufferMapping[gltfPath]!!
+
+        // The gltf is often not at the root level (e.g. if a folder is zipped) so
+        // we need to extract its path in order to resolve the embedded uri strings.
+        var gltfPrefix = gltfPath!!.substringBeforeLast('/', "")
+        if (gltfPrefix.isNotEmpty()) {
+            gltfPrefix += "/"
         }
 
         withContext(Dispatchers.Main) {
             modelViewer.destroyModel()
-            modelViewer.loadModelGlb(buffer!!)
+            modelViewer.loadModelGltfAsync(gltfBuffer) { uri ->
+                val path = gltfPrefix + uri
+                Log.i(TAG, "glTF resource: uri = $uri, path = $path")
+                if (!pathToBufferMapping.contains(path)) {
+                    Log.e(TAG, "Could not find $path in the zip.")
+                }
+                pathToBufferMapping[path]!!
+            }
             modelViewer.transformToUnitCube()
         }
-
     }
 
     private fun createRenderables() {
