@@ -19,10 +19,8 @@ package com.google.android.filament.gltf
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.view.Choreographer
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.SurfaceView
+import android.view.*
+import android.widget.Toast
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
 import com.google.android.filament.utils.Utils
@@ -45,7 +43,9 @@ class MainActivity : Activity() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        surfaceView = SurfaceView(this).apply { setContentView(this) }
+        setContentView(R.layout.simple_layout)
+
+        surfaceView = findViewById(R.id.main_sv)
         choreographer = Choreographer.getInstance()
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
@@ -60,6 +60,9 @@ class MainActivity : Activity() {
 
         createRenderables()
         createIndirectLight()
+
+        val msg = "To load a new model, go to the above URL on your host machine."
+        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
 
         val dynamicResolutionOptions = modelViewer.view.dynamicResolutionOptions
         dynamicResolutionOptions.enabled = true
