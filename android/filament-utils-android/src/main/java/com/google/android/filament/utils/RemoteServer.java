@@ -21,10 +21,22 @@ import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/**
+ * Manages a tiny WebSocket server that can receive model data and viewer settings.
+ *
+ * Client apps can call acquireReceivedMessage to check for a new model and pop it off the small
+ * internal queue.
+ *
+ * TODO: Currently this can only receive model data. We would like to extend it to receive
+ * viewer settings and commands (e.g. "Start Automation Test").
+ */
 public class RemoteServer {
     private long mNativeObject;
 
-    public static class IncomingMessage {
+    /**
+    * Encapsulates a message sent from the web client.
+    */
+    public static class ReceivedMessage {
         public String label;
         public ByteBuffer buffer;
     }
@@ -34,16 +46,20 @@ public class RemoteServer {
         if (mNativeObject == 0) throw new IllegalStateException("Couldn't create RemoteServer");
     }
 
-    public @Nullable IncomingMessage acquireIncomingMessage() {
-        int length = nPeekIncomingBufferLength(mNativeObject);
+    public @Nullable String peekIncomingLabel() {
+        return nPeekIncomingLabel(mNativeObject);
+    }
+
+    public @Nullable ReceivedMessage acquireReceivedMessage() {
+        int length = nPeekReceivedBufferLength(mNativeObject);
         if (length == 0) {
             return null;
         }
-        IncomingMessage message = new IncomingMessage();
-        message.label = nPeekIncomingLabel(mNativeObject);
+        ReceivedMessage message = new ReceivedMessage();
+        message.label = nPeekReceivedLabel(mNativeObject);
         message.buffer = ByteBuffer.allocateDirect(length);
         message.buffer.order(ByteOrder.LITTLE_ENDIAN);
-        nAcquireIncomingMessage(mNativeObject, message.buffer, length);
+        nAcquireReceivedMessage(mNativeObject, message.buffer, length);
         return message;
     }
 
@@ -55,7 +71,8 @@ public class RemoteServer {
 
     private static native long nCreate(int port);
     private static native String nPeekIncomingLabel(long nativeObject);
-    private static native int nPeekIncomingBufferLength(long nativeObject);
-    private static native void nAcquireIncomingMessage(long nativeObject, ByteBuffer buffer, int length);
+    private static native String nPeekReceivedLabel(long nativeObject);
+    private static native int nPeekReceivedBufferLength(long nativeObject);
+    private static native void nAcquireReceivedMessage(long nativeObject, ByteBuffer buffer, int length);
     private static native void nDestroy(long nativeObject);
 }

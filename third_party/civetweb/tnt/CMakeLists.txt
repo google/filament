@@ -33,4 +33,4 @@ target_link_libraries(${TARGET} ${CMAKE_DL_LIBS})
 
 target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
-install(TARGETS ${TARGET} ARCHIVE DESTINATION third_party/${DIST_DIR})
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

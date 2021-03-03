@@ -30,12 +30,12 @@ namespace viewer {
 class WsHandler : public CivetWebSocketHandler {
    public:
     WsHandler(RemoteServer* server) : mServer(server) {}
-    ~WsHandler() { delete mIncomingMessage; }
+    ~WsHandler() { delete mReceivedMessage; }
     bool handleData(CivetServer* server, struct mg_connection*, int, char* , size_t) override;
    private:
     RemoteServer* mServer;
     std::vector<char> mChunk;
-    IncomingMessage* mIncomingMessage = nullptr;
+    ReceivedMessage* mReceivedMessage = nullptr;
 };
 
 RemoteServer::RemoteServer(int port) {
@@ -63,23 +63,31 @@ RemoteServer::RemoteServer(int port) {
 RemoteServer::~RemoteServer() {
     delete mCivetServer;
     delete mWsHandler;
-    for (auto msg : mIncomingMessages) {
-        releaseIncomingMessage(msg);
+    for (auto msg : mReceivedMessages) {
+        releaseReceivedMessage(msg);
     }
 }
 
-IncomingMessage const * RemoteServer::peekIncomingMessage() const {
-    std::lock_guard lock(mIncomingMessagesMutex);
+char const * RemoteServer::peekIncomingLabel() const {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    return mIncomingMessage ? mIncomingMessage->label : nullptr;
+}
+
+ReceivedMessage const * RemoteServer::peekReceivedMessage() const {
+    std::lock_guard lock(mReceivedMessagesMutex);
     const size_t oldest = mOldestMessageUid;
-    for (auto msg : mIncomingMessages) { if (msg && msg->messageUid == oldest) return msg; }
+    for (auto msg : mReceivedMessages) { if (msg && msg->messageUid == oldest) return msg; }
     return nullptr;
 }
 
-IncomingMessage const * RemoteServer::acquireIncomingMessage() {
-    std::lock_guard lock(mIncomingMessagesMutex);
+ReceivedMessage const * RemoteServer::acquireReceivedMessage() {
+    std::lock_guard lock(mReceivedMessagesMutex);
     const size_t oldest = mOldestMessageUid;
-    for (auto& msg : mIncomingMessages) {
+    for (auto& msg : mReceivedMessages) {
         if (msg && msg->messageUid == oldest) {
+            if (msg == mIncomingMessage) {
+                mIncomingMessage = nullptr;
+            }
             auto result = msg;
             msg = nullptr;
             ++mOldestMessageUid;
@@ -89,9 +97,14 @@ IncomingMessage const * RemoteServer::acquireIncomingMessage() {
     return nullptr;
 }
 
-void RemoteServer::enqueueIncomingMessage(IncomingMessage* message) {
-    std::lock_guard lock(mIncomingMessagesMutex);
-    for (auto& msg : mIncomingMessages) {
+void RemoteServer::setIncomingMessage(ReceivedMessage* message) {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    mIncomingMessage = message;
+}
+
+void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    for (auto& msg : mReceivedMessages) {
         if (!msg) {
             message->messageUid = mNextMessageUid++;
             msg = message;
@@ -101,7 +114,7 @@ void RemoteServer::enqueueIncomingMessage(IncomingMessage* message) {
     slog.e << "Discarding message, message queue overflow." << io::endl;
 }
 
-void RemoteServer::releaseIncomingMessage(IncomingMessage const* message) {
+void RemoteServer::releaseReceivedMessage(ReceivedMessage const* message) {
     if (message) {
         delete[] message->label;
         delete[] message->buffer;
@@ -127,24 +140,25 @@ bool WsHandler::handleData(CivetServer* server, struct mg_connection* conn, int 
     }
 
     // Part 1 of the message is the label.
-    if (mIncomingMessage == nullptr) {
-        mIncomingMessage = new IncomingMessage({});
-        mIncomingMessage->label = new char[mChunk.size() + 1]{};
-        memcpy(mIncomingMessage->label, mChunk.data(), mChunk.size());
+    if (mReceivedMessage == nullptr) {
+        mReceivedMessage = new ReceivedMessage({});
+        mReceivedMessage->label = new char[mChunk.size() + 1]{};
+        memcpy(mReceivedMessage->label, mChunk.data(), mChunk.size());
+        mServer->setIncomingMessage(mReceivedMessage);
         mChunk.clear();
         return true;
     }
 
     // Part 2 of the message is the buffer.
-    auto message = mIncomingMessage;
+    auto message = mReceivedMessage;
     message->bufferByteCount = mChunk.size();
     message->buffer = new char[message->bufferByteCount];
     memcpy(message->buffer, mChunk.data(), message->bufferByteCount);
     mChunk.clear();
 
     // We have all parts, so go ahead and enqueue the incoming message.
-    mServer->enqueueIncomingMessage(mIncomingMessage);
-    mIncomingMessage = nullptr;
+    mServer->enqueueReceivedMessage(mReceivedMessage);
+    mReceivedMessage = nullptr;
     return true;
 }
 

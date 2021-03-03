@@ -21,6 +21,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.widget.TextView
 import android.widget.Toast
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
@@ -48,15 +49,19 @@ class MainActivity : Activity() {
     private lateinit var choreographer: Choreographer
     private val frameScheduler = FrameCallback()
     private lateinit var modelViewer: ModelViewer
+    private lateinit var titlebarHint: TextView
     private val doubleTapListener = DoubleTapListener()
     private lateinit var doubleTapDetector: GestureDetector
     private var remoteServer: RemoteServer? = null
+    private var statusToast: Toast? = null
+    private var statusText: String? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.simple_layout)
 
+        titlebarHint = findViewById(R.id.user_hint)
         surfaceView = findViewById(R.id.main_sv)
         choreographer = Choreographer.getInstance()
 
@@ -73,8 +78,7 @@ class MainActivity : Activity() {
         createRenderables()
         createIndirectLight()
 
-        val msg = "To load a new model, go to the above URL on your host machine."
-        Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
+        setStatusText("To load a new model, go to the above URL on your host machine.")
 
         val dynamicResolutionOptions = modelViewer.view.dynamicResolutionOptions
         dynamicResolutionOptions.enabled = true
@@ -122,13 +126,25 @@ class MainActivity : Activity() {
         return ByteBuffer.wrap(bytes)
     }
 
-    private fun setStatusText(text: String) {
-        runOnUiThread {
-            Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
+    private fun clearStatusText() {
+        statusToast?.let {
+            it.cancel()
+            statusText = null
         }
     }
 
-    private suspend fun loadGlb(message: RemoteServer.IncomingMessage) {
+    private fun setStatusText(text: String) {
+        runOnUiThread {
+            if (statusToast == null || statusText != text) {
+                statusText = text
+                statusToast = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT)
+                statusToast!!.show()
+
+            }
+        }
+    }
+
+    private suspend fun loadGlb(message: RemoteServer.ReceivedMessage) {
         withContext(Dispatchers.Main) {
             modelViewer.destroyModel()
             modelViewer.loadModelGlb(message.buffer)
@@ -136,7 +152,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private suspend fun loadZip(message: RemoteServer.IncomingMessage) {
+    private suspend fun loadZip(message: RemoteServer.ReceivedMessage) {
         val zipfileBytes = ByteArray(message.buffer.remaining())
         message.buffer.get(zipfileBytes)
 
@@ -147,7 +163,12 @@ class MainActivity : Activity() {
             while (true) {
                 val entry = deflater.nextEntry ?: break
                 if (entry.isDirectory) continue
+
+                // This isn't strictly required, but as an optimization
+                // we ignore common junk that often pollutes ZIP files.
                 if (entry.name.startsWith("__MACOSX")) continue
+                if (entry.name.startsWith(".DS_Store")) continue
+
                 val uri = entry.name
                 val byteArray = deflater.readBytes()
                 Log.i(TAG, "Deflated ${byteArray.size} bytes from $uri")
@@ -161,11 +182,9 @@ class MainActivity : Activity() {
         }
 
         if (gltfPath == null) {
-            setStatusText( "Could not find .gltf in the zip.")
+            setStatusText("Could not find .gltf in the zip.")
             return
         }
-
-        setStatusText( "Received all model data.")
 
         val gltfBuffer = pathToBufferMapping[gltfPath]!!
 
@@ -219,9 +238,17 @@ class MainActivity : Activity() {
 
             modelViewer.render(frameTimeNanos)
 
-            val message = remoteServer?.acquireIncomingMessage()
+            val label = remoteServer?.peekIncomingLabel()
+            if (label != null) {
+                Log.i(TAG, "Downloading $label")
+                setStatusText("Downloading $label")
+            }
+
+            val message = remoteServer?.acquireReceivedMessage()
             if (message != null) {
-                Log.i("Filament", "Downloaded ${message.label} ${message.buffer.capacity()}")
+                Log.i(TAG, "Downloaded ${message.label} ${message.buffer.capacity()}")
+                clearStatusText()
+                titlebarHint.text = message.label
 
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
@@ -231,7 +258,7 @@ class MainActivity : Activity() {
                             loadGlb(message)
                         }
                     } catch (exc: IOException) {
-                        setStatusText( "URL fetch failed.")
+                        setStatusText("URL fetch failed.")
                         Log.e(TAG, "URL fetch failed", exc)
                     }
                 }
