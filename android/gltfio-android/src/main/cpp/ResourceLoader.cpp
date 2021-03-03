@@ -71,6 +71,13 @@ Java_com_google_android_filament_gltfio_ResourceLoader_nHasResourceData(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_ResourceLoader_nEvictResourceData(JNIEnv*, jclass,
+        jlong nativeLoader) {
+    ResourceLoader* loader = (ResourceLoader*) nativeLoader;
+    loader->evictResourceData();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nLoadResources(JNIEnv*, jclass,
         jlong nativeLoader, jlong nativeAsset) {
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;

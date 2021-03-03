@@ -102,6 +102,15 @@ public class ResourceLoader {
     }
 
     /**
+     * Frees memory by evicting the URI cache that was populated via addResourceData.
+     *
+     * This can be called only after a model is fully loaded or after loading has been cancelled.
+     */
+    public void evictResourceData() {
+        nEvictResourceData(mNativeObject);
+    }
+
+    /**
      * Iterates through all external buffers and images and creates corresponding Filament objects
      * (vertex buffers, textures, etc), which become owned by the asset.
      *
@@ -161,6 +170,7 @@ public class ResourceLoader {
     private static native void nDestroyResourceLoader(long nativeLoader);
     private static native void nAddResourceData(long nativeLoader, String url, Buffer buffer,
             int remaining);
+    private static native void nEvictResourceData(long nativeLoader);
     private static native boolean nHasResourceData(long nativeLoader, String url);
     private static native void nLoadResources(long nativeLoader, long nativeAsset);
     private static native boolean nAsyncBeginLoad(long nativeLoader, long nativeAsset);
