@@ -19,18 +19,29 @@ package com.google.android.filament.gltf
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.Toast
 import com.google.android.filament.utils.KtxLoader
 import com.google.android.filament.utils.ModelViewer
+import com.google.android.filament.utils.RemoteServer
 import com.google.android.filament.utils.Utils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.util.zip.ZipInputStream
 
 class MainActivity : Activity() {
 
     companion object {
         // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
+        private const val TAG = "gltf-viewer"
     }
 
     private lateinit var surfaceView: SurfaceView
@@ -39,6 +50,7 @@ class MainActivity : Activity() {
     private lateinit var modelViewer: ModelViewer
     private val doubleTapListener = DoubleTapListener()
     private lateinit var doubleTapDetector: GestureDetector
+    private var remoteServer: RemoteServer? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +87,8 @@ class MainActivity : Activity() {
         val bloomOptions = modelViewer.view.bloomOptions
         bloomOptions.enabled = true
         modelViewer.view.bloomOptions = bloomOptions
+
+        remoteServer = RemoteServer(8082)
     }
 
     private fun createRenderables() {
@@ -108,6 +122,73 @@ class MainActivity : Activity() {
         return ByteBuffer.wrap(bytes)
     }
 
+    private fun setStatusText(text: String) {
+        runOnUiThread {
+            Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun loadGlb(message: RemoteServer.IncomingMessage) {
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGlb(message.buffer)
+            modelViewer.transformToUnitCube()
+        }
+    }
+
+    private suspend fun loadZip(message: RemoteServer.IncomingMessage) {
+        val zipfileBytes = ByteArray(message.buffer.remaining())
+        message.buffer.get(zipfileBytes)
+
+        var gltfPath: String? = null
+        val pathToBufferMapping = withContext(Dispatchers.IO) {
+            val deflater = ZipInputStream(ByteArrayInputStream(zipfileBytes))
+            val mapping = HashMap<String, Buffer>()
+            while (true) {
+                val entry = deflater.nextEntry ?: break
+                if (entry.isDirectory) continue
+                if (entry.name.startsWith("__MACOSX")) continue
+                val uri = entry.name
+                val byteArray = deflater.readBytes()
+                Log.i(TAG, "Deflated ${byteArray.size} bytes from $uri")
+                val buffer = ByteBuffer.wrap(byteArray)
+                mapping[uri] = buffer
+                if (uri.endsWith(".gltf")) {
+                    gltfPath = uri
+                }
+            }
+            mapping
+        }
+
+        if (gltfPath == null) {
+            setStatusText( "Could not find .gltf in the zip.")
+            return
+        }
+
+        setStatusText( "Received all model data.")
+
+        val gltfBuffer = pathToBufferMapping[gltfPath]!!
+
+        // The gltf is often not at the root level (e.g. if a folder is zipped) so
+        // we need to extract its path in order to resolve the embedded uri strings.
+        var gltfPrefix = gltfPath!!.substringBeforeLast('/', "")
+        if (gltfPrefix.isNotEmpty()) {
+            gltfPrefix += "/"
+        }
+
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGltf(gltfBuffer) { uri ->
+                val path = gltfPrefix + uri
+                if (!pathToBufferMapping.contains(path)) {
+                    Log.e(TAG, "Could not find $path in the zip.")
+                }
+                pathToBufferMapping[path]!!
+            }
+            modelViewer.transformToUnitCube()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         choreographer.postFrameCallback(frameScheduler)
@@ -137,6 +218,25 @@ class MainActivity : Activity() {
             }
 
             modelViewer.render(frameTimeNanos)
+
+            val message = remoteServer?.acquireIncomingMessage()
+            if (message != null) {
+                Log.i("Filament", "Downloaded ${message.label} ${message.buffer.capacity()}")
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        if (message.label.endsWith(".zip")) {
+                            loadZip(message)
+                        } else {
+                            loadGlb(message)
+                        }
+                    } catch (exc: IOException) {
+                        setStatusText( "URL fetch failed.")
+                        Log.e(TAG, "URL fetch failed", exc)
+                    }
+                }
+
+            }
         }
     }
 

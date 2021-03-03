@@ -36,4 +36,5 @@ dependencies {
     implementation project(':filament-android')
     implementation project(':gltfio-android')
     implementation project(':filament-utils-android')
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3'
 }
