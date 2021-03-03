@@ -256,6 +256,12 @@ void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer)
         SYSTRACE_CONTEXT();
         SYSTRACE_ASYNC_BEGIN("addResourceData", 1);
     }
+    // NOTE: replacing an existing item in a robin map does not seem to behave as expected.
+    // To work around this, we explicitly erase the old element if it already exists.
+    auto iter = pImpl->mUriDataCache.find(uri);
+    if (iter != pImpl->mUriDataCache.end()) {
+        pImpl->mUriDataCache.erase(iter);
+    }
     pImpl->mUriDataCache.emplace(uri, std::move(buffer));
 }
 
