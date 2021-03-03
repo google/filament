@@ -39,21 +39,28 @@ Java_com_google_android_filament_utils_RemoteServer_nDestroy(JNIEnv*, jclass, jl
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_utils_RemoteServer_nPeekIncomingLabel(JNIEnv* env, jclass, jlong native) {
     RemoteServer* server = (RemoteServer*) native;
-    IncomingMessage const* msg = server->peekIncomingMessage();
+    char const* label = server->peekIncomingLabel();
+    return label ? env->NewStringUTF(label) : nullptr;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedLabel(JNIEnv* env, jclass, jlong native) {
+    RemoteServer* server = (RemoteServer*) native;
+    ReceivedMessage const* msg = server->peekReceivedMessage();
     return msg ? env->NewStringUTF(msg->label) : nullptr;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nPeekIncomingBufferLength(JNIEnv* env, jclass, jlong native) {
+Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedBufferLength(JNIEnv* env, jclass, jlong native) {
     RemoteServer* server = (RemoteServer*) native;
-    IncomingMessage const* msg = server->peekIncomingMessage();
+    ReceivedMessage const* msg = server->peekReceivedMessage();
     return msg ? msg->bufferByteCount : 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nAcquireIncomingMessage(JNIEnv* env, jclass, jlong native, jobject buffer, jint length) {
+Java_com_google_android_filament_utils_RemoteServer_nAcquireReceivedMessage(JNIEnv* env, jclass, jlong native, jobject buffer, jint length) {
     RemoteServer* server = (RemoteServer*) native;
-    IncomingMessage const* msg = server->acquireIncomingMessage();
+    ReceivedMessage const* msg = server->acquireReceivedMessage();
     if (msg == nullptr) {
         return;
     }
@@ -65,6 +72,6 @@ Java_com_google_android_filament_utils_RemoteServer_nAcquireIncomingMessage(JNIE
     }
 
     memcpy(address, msg->buffer, length);
-    server->releaseIncomingMessage(msg);
+    server->releaseReceivedMessage(msg);
 }
 

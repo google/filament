@@ -18,7 +18,7 @@ set_target_properties(viewer PROPERTIES IMPORTED_LOCATION
 
 add_library(civetweb STATIC IMPORTED)
 set_target_properties(civetweb PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/third_party/${ANDROID_ABI}/libcivetweb.a)
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libcivetweb.a)
 
 include_directories(${FILAMENT_DIR}/include
         ..
