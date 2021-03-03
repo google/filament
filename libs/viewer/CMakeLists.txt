@@ -10,6 +10,7 @@ set(PUBLIC_HDR_DIR include)
 set(PUBLIC_HDRS
         include/viewer/AutomationEngine.h
         include/viewer/AutomationSpec.h
+        include/viewer/RemoteServer.h
         include/viewer/Settings.h
         include/viewer/SimpleViewer.h
 )
@@ -18,6 +19,7 @@ set(SRCS
         src/jsonParseUtils.h
         src/AutomationEngine.cpp
         src/AutomationSpec.cpp
+        src/RemoteServer.cpp
         src/Settings.cpp
         src/SimpleViewer.cpp
 )
@@ -26,7 +28,7 @@ set(SRCS
 # Include and target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
-target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn)
+target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================

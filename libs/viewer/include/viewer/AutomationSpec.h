@@ -81,4 +81,4 @@ private:
 } // namespace viewer
 } // namespace filament
 
-#endif // VIEWER_AUTOMATION_H
+#endif // VIEWER_AUTOMATION_SPEC_H
