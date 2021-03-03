@@ -269,6 +269,11 @@ bool ResourceLoader::hasResourceData(const char* uri) const {
     return pImpl->mUriDataCache.find(uri) != pImpl->mUriDataCache.end();
 }
 
+void ResourceLoader::evictResourceData() {
+    // Note that this triggers BufferDescriptor callbacks.
+    pImpl->mUriDataCache.clear();
+}
+
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
     FFilamentAsset* fasset = upcast(asset);
     return loadResources(fasset, false);

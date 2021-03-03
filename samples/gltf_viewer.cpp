@@ -1017,6 +1017,7 @@ int main(int argc, char** argv) {
 
     filamentApp.setDropHandler([&] (std::string path) {
         app.resourceLoader->asyncCancelLoad();
+        app.resourceLoader->evictResourceData();
         app.viewer->removeAsset();
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);
