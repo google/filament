@@ -173,7 +173,7 @@ void SimpleViewer::applyAnimation(double currentTime) {
 }
 
 void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio,
-        float mouseX, float mouseY, bool mouseButton) {
+        float mouseX, float mouseY, bool mouseButton, float mouseWheelY) {
     if (mImGuiHelper == nullptr) {
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
@@ -185,11 +185,12 @@ void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, f
     }
 
     const auto size = guiView->getViewport();
-    mImGuiHelper->setDisplaySize(size.width, size.height, pixelRatio, pixelRatio);
+    mImGuiHelper->setDisplaySize(size.width, size.height, 1, 1);
 
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos.x = mouseX;
     io.MousePos.y = mouseY;
+    io.MouseWheel += mouseWheelY;
     io.MouseDown[0] = mouseButton;
     io.MouseDown[1] = false;
     io.MouseDown[2] = false;
@@ -394,7 +395,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
-    if (ImGui::CollapsingHeader("Fog")) {
+    if (ImGui::CollapsingHeader("Fog", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
         ImGui::Checkbox("Enable fog", &mSettings.view.fog.enabled);
         ImGui::SliderFloat("Start", &mSettings.view.fog.distance, 0.0f, 100.0f);

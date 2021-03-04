@@ -123,7 +123,7 @@ public:
      * internal ImGuiHelper instance.
      */
     void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio,
-            float mouseX, float mouseY, bool mouseButton);
+            float mouseX, float mouseY, bool mouseButton, float mouseWheelY);
 
     /**
      * Retrieves the current width of the ImGui "window" which we are using as a sidebar.
