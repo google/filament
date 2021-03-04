@@ -562,11 +562,10 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // create cameras
     utils::EntityManager& em = utils::EntityManager::get();
-    em.create(4, mCameraEntities);
+    em.create(3, mCameraEntities);
     mCameras[0] = mMainCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[0]);
     mCameras[1] = mDebugCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[1]);
     mCameras[2] = mOrthoCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[2]);
-    mCameras[3] = mUiCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[3]);
 
     // set exposure
     for (auto camera : mCameras) {
@@ -593,7 +592,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
-    mUiView->setCamera(mUiCamera);
     if (config.splitView) {
         // Depth view always uses the main camera
         mDepthView->setCamera(mMainCamera);
@@ -780,10 +778,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
     mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
-    mUiCamera->setProjection(Camera::Projection::ORTHO,
-            0.0, width / dpiScaleX,
-            height / dpiScaleY, 0.0,
-            0.0, 1.0);
 
     // We're in split view when there are more views than just the Main and UI views.
     if (mViews.size() > 2) {
