@@ -33,6 +33,10 @@
 
 #include <math/vec3.h>
 
+namespace filagui {
+    class ImGuiHelper;
+}
+
 namespace filament {
 namespace viewer {
 
@@ -107,6 +111,19 @@ public:
      * render ImGui controls with Filament.
      */
     void updateUserInterface();
+
+    /**
+     * Alternative to updateUserInterface that uses an internal instance of ImGuiHelper.
+     *
+     * This utility method is designed for clients that do not want to manage their own instance of
+     * ImGuiHelper (e.g., JavaScript clients).
+     *
+     * Behind the scenes this simply calls ImGuiHelper->render() and passes updateUserInterface into
+     * its callback. Note that the first call might be slower since it requires the creation of the
+     * internal ImGuiHelper instance.
+     */
+    void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio,
+            float mouseX, float mouseY, bool mouseButton);
 
     /**
      * Retrieves the current width of the ImGui "window" which we are using as a sidebar.
@@ -187,6 +204,9 @@ private:
     filament::Scene* const mScene;
     filament::View* const mView;
     const utils::Entity mSunlight;
+
+    // Lazily instantiated fields.
+    filagui::ImGuiHelper* mImGuiHelper = nullptr;
 
     // Properties that can be changed from the application.
     FilamentAsset* mAsset = nullptr;

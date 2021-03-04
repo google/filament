@@ -20,6 +20,10 @@
 #include <filament/TransformManager.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
+#include <filament/View.h>
+#include <filament/Viewport.h>
+
+#include <filagui/ImGuiHelper.h>
 
 #include <utils/EntityManager.h>
 
@@ -31,6 +35,8 @@
 
 #include <string>
 #include <vector>
+
+using namespace filagui;
 
 namespace filament {
 namespace viewer {
@@ -80,6 +86,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
 
 SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
+    delete mImGuiHelper;
 }
 
 void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
@@ -163,6 +170,33 @@ void SimpleViewer::applyAnimation(double currentTime) {
         mAnimator->applyAnimation(mCurrentAnimation - 1, currentTime - startTime);
     }
     mAnimator->updateBoneMatrices();
+}
+
+void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio,
+        float mouseX, float mouseY, bool mouseButton) {
+    if (mImGuiHelper == nullptr) {
+        mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
+
+        // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
+        // proggy font. Users need refresh their window when dragging between displas with different
+        // pixel ratios.
+        ImGui::GetIO().FontGlobalScale = pixelRatio;
+        ImGui::GetStyle().ScaleAllSizes(pixelRatio);
+    }
+
+    const auto size = guiView->getViewport();
+    mImGuiHelper->setDisplaySize(size.width, size.height, pixelRatio, pixelRatio);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.MousePos.x = mouseX;
+    io.MousePos.y = mouseY;
+    io.MouseDown[0] = mouseButton;
+    io.MouseDown[1] = false;
+    io.MouseDown[2] = false;
+
+    mImGuiHelper->render(timeStepInSeconds, [this](Engine*, View*) {
+        this->updateUserInterface();
+    });
 }
 
 void SimpleViewer::updateUserInterface() {
@@ -269,7 +303,7 @@ void SimpleViewer::updateUserInterface() {
 
     DebugRegistry& debug = mEngine->getDebugRegistry();
 
-    if (ImGui::CollapsingHeader("View")) {
+    if (ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO: do not commit
         ImGui::Indent();
 
         bool dither = mSettings.view.dithering == Dithering::TEMPORAL;

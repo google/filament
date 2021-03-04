@@ -57,6 +57,8 @@
 
 #include <geometry/SurfaceOrientation.h>
 
+#include <viewer/SimpleViewer.h>
+
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -90,6 +92,8 @@ using namespace filamesh;
 using namespace geometry;
 using namespace gltfio;
 using namespace image;
+
+using namespace filament::viewer;
 
 namespace em = emscripten;
 
@@ -1823,6 +1827,13 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("asyncGetLoadProgress", &ResourceLoader::asyncGetLoadProgress)
     .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
+
+class_<Settings>("Settings");
+
+class_<SimpleViewer>("SimpleViewer")
+    .constructor<Engine*, Scene*, View*, int>()
+    .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
+    .function("getSettings", &SimpleViewer::getSettings);
 
 } // EMSCRIPTEN_BINDINGS
 
