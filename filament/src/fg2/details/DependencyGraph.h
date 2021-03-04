@@ -86,20 +86,20 @@ public:
         virtual ~Node() noexcept = default;
 
         //! returns a unique id for this node
-        NodeID getId() const noexcept;
+        NodeID getId() const noexcept { return mId; }
 
         /** Prevents this node from being culled. Must be called before culling. */
         void makeTarget() noexcept;
 
         /** Returns true if this Node is a target */
-        bool isTarget() const noexcept;
+        bool isTarget() const noexcept { return mRefCount >= TARGET; }
 
         /**
          * Returns whether this node was culled.
          * This is only valid after DependencyGraph::cull() has been called.
          * @return true if the node has been culled, false otherwise.
          */
-        bool isCulled() const noexcept;
+        bool isCulled() const noexcept { return mRefCount == 0; }
 
         /**
          * return the reference count of this node. That is how many other nodes have links to us.

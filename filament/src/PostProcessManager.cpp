@@ -187,32 +187,45 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 
 #define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
 
+struct MaterialInfo {
+    utils::StaticString name;
+    uint8_t const* data;
+    int size;
+};
+
+static const MaterialInfo sMaterialList[] = {
+        { "sao",                   MATERIAL(SAO) },
+        { "mipmapDepth",           MATERIAL(MIPMAPDEPTH) },
+        { "vsmMipmap",             MATERIAL(VSMMIPMAP) },
+        { "bilateralBlur",         MATERIAL(BILATERALBLUR) },
+        { "separableGaussianBlur", MATERIAL(SEPARABLEGAUSSIANBLUR) },
+        { "bloomDownsample",       MATERIAL(BLOOMDOWNSAMPLE) },
+        { "bloomUpsample",         MATERIAL(BLOOMUPSAMPLE) },
+        { "blitLow",               MATERIAL(BLITLOW) },
+        { "blitMedium",            MATERIAL(BLITMEDIUM) },
+        { "blitHigh",              MATERIAL(BLITHIGH) },
+        { "colorGrading",          MATERIAL(COLORGRADING) },
+        { "colorGradingAsSubpass", MATERIAL(COLORGRADINGASSUBPASS) },
+        { "fxaa",                  MATERIAL(FXAA) },
+        { "taa",                   MATERIAL(TAA) },
+        { "dofDownsample",         MATERIAL(DOFDOWNSAMPLE) },
+        { "dofMipmap",             MATERIAL(DOFMIPMAP) },
+        { "dofTiles",              MATERIAL(DOFTILES) },
+        { "dofDilate",             MATERIAL(DOFDILATE) },
+        { "dof",                   MATERIAL(DOF) },
+        { "dofMedian",             MATERIAL(DOFMEDIAN) },
+        { "dofCombine",            MATERIAL(DOFCOMBINE) },
+};
+
 void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
     mDisableFeedbackLoops = !driver.areFeedbackLoopsSupported();
 
-    registerPostProcessMaterial("sao", MATERIAL(SAO));
-    registerPostProcessMaterial("mipmapDepth", MATERIAL(MIPMAPDEPTH));
-    registerPostProcessMaterial("vsmMipmap", MATERIAL(VSMMIPMAP));
-    registerPostProcessMaterial("bilateralBlur", MATERIAL(BILATERALBLUR));
-    registerPostProcessMaterial("separableGaussianBlur", MATERIAL(SEPARABLEGAUSSIANBLUR));
-    registerPostProcessMaterial("bloomDownsample", MATERIAL(BLOOMDOWNSAMPLE));
-    registerPostProcessMaterial("bloomUpsample", MATERIAL(BLOOMUPSAMPLE));
-    registerPostProcessMaterial("blitLow", MATERIAL(BLITLOW));
-    registerPostProcessMaterial("blitMedium", MATERIAL(BLITMEDIUM));
-    registerPostProcessMaterial("blitHigh", MATERIAL(BLITHIGH));
-    registerPostProcessMaterial("colorGrading", MATERIAL(COLORGRADING));
-    registerPostProcessMaterial("colorGradingAsSubpass", MATERIAL(COLORGRADINGASSUBPASS));
-    registerPostProcessMaterial("fxaa", MATERIAL(FXAA));
-    registerPostProcessMaterial("taa", MATERIAL(TAA));
-    registerPostProcessMaterial("dofDownsample", MATERIAL(DOFDOWNSAMPLE));
-    registerPostProcessMaterial("dofMipmap", MATERIAL(DOFMIPMAP));
-    registerPostProcessMaterial("dofTiles", MATERIAL(DOFTILES));
-    registerPostProcessMaterial("dofDilate", MATERIAL(DOFDILATE));
-    registerPostProcessMaterial("dof", MATERIAL(DOF));
-    registerPostProcessMaterial("dofMedian", MATERIAL(DOFMEDIAN));
-    registerPostProcessMaterial("dofCombine", MATERIAL(DOFCOMBINE));
+    #pragma nounroll
+    for (auto const& info : sMaterialList) {
+        registerPostProcessMaterial(info.name, info.data, info.size);
+    }
 
     // UBO storage size.
     // The effective kernel size is (kMaxPositiveKernelSize - 1) * 4 + 1.

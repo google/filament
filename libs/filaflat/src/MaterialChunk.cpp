@@ -31,6 +31,8 @@ MaterialChunk::MaterialChunk(ChunkContainer const& container)
         : mContainer(container) {
 }
 
+MaterialChunk::~MaterialChunk() noexcept = default;
+
 bool MaterialChunk::readIndex(filamat::ChunkType materialTag) {
 
     if (mBase != nullptr) {
