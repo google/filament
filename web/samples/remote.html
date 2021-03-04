@@ -116,7 +116,7 @@ class App {
 
         this.dropbox = document.getElementById("dropbox");
         this.status = document.getElementById("status");
-        this.canvas = document.getElementsByTagName('canvas')[0];
+        this.canvas = document.getElementsByTagName("canvas")[0];
 
         const engine = this.engine = Filament.Engine.create(this.canvas);
         const scene = this.scene = engine.createScene();
@@ -145,6 +145,8 @@ class App {
         this.mouseX = -1;
         this.mouseY = -1;
         this.mouseButton = false;
+        this.mouseButtonEvents = [];
+        this.mouseWheelY = 0;
 
         Object.seal(this);
 
@@ -154,8 +156,9 @@ class App {
             this.mouseX = e.offsetX * window.devicePixelRatio;
             this.mouseY = e.offsetY * window.devicePixelRatio;
         });
-        this.canvas.addEventListener("pointerup", e => this.mouseButton = false);
-        this.canvas.addEventListener("pointerdown", e => this.mouseButton = true);
+        this.canvas.addEventListener("pointerup", e => this.mouseButtonEvents.push(false));
+        this.canvas.addEventListener("pointerdown", e => this.mouseButtonEvents.push(true));
+        this.canvas.addEventListener("mousewheel", e => this.mouseWheelY = e.deltaY / 8);
 
         const resize = () => {
             const dpr = window.devicePixelRatio;
@@ -163,7 +166,7 @@ class App {
             const height = this.canvas.clientHeight * dpr;
             this.resize(width, height);
         };
-        window.addEventListener('resize', resize);
+        window.addEventListener("resize", resize);
         resize();
 
         const dropbox = this.dropbox;
@@ -257,8 +260,15 @@ class App {
     render() {
         const dt = 1.0 / 60.0;
 
+        // We only process only a single mouse button event here because we want ImGui to detect
+        // a touch event even when a down-up pair occurs between consecutive frames.
+        let mouseButton = this.mouseButton;
+        if (this.mouseButtonEvents.length > 0) {
+            this.mouseButton = this.mouseButtonEvents.shift();
+        }
         this.simpleViewer.renderUserInterface(dt, this.uiview, window.devicePixelRatio,
-                this.mouseX, this.mouseY, this.mouseButton);
+                this.mouseX, this.mouseY, this.mouseButton, this.mouseWheelY);
+        this.mouseWheelY = 0;
 
         this.renderer.beginFrame(this.swapChain);
         this.renderer.renderView(this.view);
