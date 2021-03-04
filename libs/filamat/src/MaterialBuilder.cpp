@@ -790,10 +790,12 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     for (const auto& s : glslEntries) {
         textDictionary.addText(s.shader);
     }
+#ifndef FILAMAT_LITE
     for (auto& s : spirvEntries) {
         std::vector<uint32_t> spirv = std::move(s.spirv);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
+#endif
     for (const auto& s : metalEntries) {
         textDictionary.addText(s.shader);
     }
