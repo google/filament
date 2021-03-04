@@ -41,7 +41,7 @@ set_target_properties(filament-js PROPERTIES
     LINK_DEPENDS "${EXTERN_POSTJS_SRC}"
     OUTPUT_NAME filament)
 
-target_link_libraries(filament-js PRIVATE filament math utils image filameshio gltfio_core stb)
+target_link_libraries(filament-js PRIVATE filament math utils image filameshio gltfio_core viewer)
 
 # Copy package.json (et al) into the output folder to allow "npm publish" to gather the
 # artifacts that it needs.

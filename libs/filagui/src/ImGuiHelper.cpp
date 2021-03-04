@@ -37,6 +37,9 @@ using namespace filament::math;
 using namespace filament;
 using namespace utils;
 
+using MinFilter = TextureSampler::MinFilter;
+using MagFilter = TextureSampler::MagFilter;
+
 namespace filagui {
 
 #include "generated/resources/filagui_resources.h"
@@ -55,7 +58,13 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     // tiny "pixel art" texture that is compiled into the library.
     if (!fontPath.isEmpty()) {
         io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
-        createAtlasTexture(engine);
+    }
+    createAtlasTexture(engine);
+
+    // For proggy, switch to NEAREST for pixel-perfect text.
+    if (fontPath.isEmpty()) {
+        TextureSampler sampler(MinFilter::NEAREST, MagFilter::NEAREST);
+        mMaterial->setDefaultParameter("albedo", mTexture, sampler);
     }
 
     view->setPostProcessingEnabled(false);
@@ -92,7 +101,7 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
             .build(*engine);
     mTexture->setImage(*engine, 0, std::move(pb));
 
-    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
     mMaterial->setDefaultParameter("albedo", mTexture, sampler);
 }
 
@@ -191,7 +200,7 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                         (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
                         (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
                 if (pcmd.TextureId) {
-                    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+                    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
                     materialInstance->setParameter("albedo", (Texture const*)pcmd.TextureId, sampler);
                 }
                 rbuilder
