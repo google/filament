@@ -18,6 +18,7 @@
 #define TNT_FILAMAT_SHADER_ENTRY_H
 
 #include <string>
+#include <vector>
 
 namespace filamat {
 
@@ -34,6 +35,9 @@ struct SpirvEntry {
     uint8_t variant;
     uint8_t stage;
     size_t dictionaryIndex;
+
+    // temporarily holds this entry's spirv until added to the dictionary
+    std::vector<uint32_t> spirv;
 };
 
 }  // namespace filamat
