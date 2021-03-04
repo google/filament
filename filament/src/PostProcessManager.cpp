@@ -350,7 +350,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                     mi->setParameter("level", uint32_t(level));
                     commitAndRender(out, material, driver);
                 }
-                driver.setMinMaxLevels(in, 0, levelCount);
+                driver.setMinMaxLevels(in, 0, levelCount - 1);
             });
 
     fg.getBlackboard().put("structure", depth);
