@@ -63,8 +63,9 @@ DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
     // TODO: we might need something more efficient
     EdgeContainer result;
     result.reserve(mEdges.size());
+    NodeID const nodeId = node->getId();
     for (auto* edge : mEdges) {
-        if (edge->to == node->getId()) {
+        if (edge->to == nodeId) {
             result.push_back(edge);
         }
     }
@@ -76,8 +77,9 @@ DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
     // TODO: we might need something more efficient
     EdgeContainer result;
     result.reserve(mEdges.size());
+    NodeID const nodeId = node->getId();
     for (auto* edge : mEdges) {
-        if (edge->from == node->getId()) {
+        if (edge->from == nodeId) {
             result.push_back(edge);
         }
     }
@@ -235,21 +237,9 @@ uint32_t DependencyGraph::Node::getRefCount() const noexcept {
     return (mRefCount & TARGET) ? 1u : mRefCount;
 }
 
-uint32_t DependencyGraph::Node::getId() const noexcept {
-    return mId;
-}
-
-bool DependencyGraph::Node::isCulled() const noexcept {
-    return mRefCount == 0;
-}
-
 void DependencyGraph::Node::makeTarget() noexcept {
     assert_invariant(mRefCount == 0 || mRefCount == TARGET);
     mRefCount = TARGET;
-}
-
-bool DependencyGraph::Node::isTarget() const noexcept {
-    return mRefCount >= TARGET;
 }
 
 char const* DependencyGraph::Node::getName() const noexcept {

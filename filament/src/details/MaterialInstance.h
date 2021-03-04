@@ -60,18 +60,6 @@ public:
         }
     }
 
-    template <typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, T value) noexcept;
-
-    template <typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, const T* value, size_t count) noexcept;
-
-    void setParameter(const char* name,
-            Texture const* texture, TextureSampler const& sampler) noexcept;
-
-    void setParameter(const char* name,
-            backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept;
-
     FMaterial const* getMaterial() const noexcept { return mMaterial; }
 
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
@@ -110,33 +98,47 @@ public:
 
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
-    void setMaskThreshold(float threshold) noexcept {
-        setParameter("_maskThreshold", math::saturate(threshold));
-    }
+    void setMaskThreshold(float threshold) noexcept;
 
-    void setSpecularAntiAliasingVariance(float variance) noexcept {
-        setParameter("_specularAntiAliasingVariance", math::saturate(variance));
-    }
+    void setSpecularAntiAliasingVariance(float variance) noexcept;
 
-    void setSpecularAntiAliasingThreshold(float threshold) noexcept {
-        setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
-    }
+    void setSpecularAntiAliasingThreshold(float threshold) noexcept;
 
     void setDoubleSided(bool doubleSided) noexcept;
 
-    void setCullingMode(CullingMode culling) noexcept;
+    void setCullingMode(CullingMode culling) noexcept { mCulling = culling; }
 
-    void setColorWrite(bool enable) noexcept;
+    void setColorWrite(bool enable) noexcept { mColorWrite = enable; }
 
-    void setDepthWrite(bool enable) noexcept;
+    void setDepthWrite(bool enable) noexcept { mDepthWrite = enable; }
 
     void setDepthCulling(bool enable) noexcept;
 
     const char* getName() const noexcept;
 
+    void setParameter(const char* name,
+            backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept;
+
+    using MaterialInstance::setParameter;
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
+
+    template<size_t Size>
+    void setParameterUntypedImpl(const char* name, const void* value) noexcept;
+
+    template<size_t Size>
+    void setParameterUntypedImpl(const char* name, const void* value, size_t count) noexcept;
+
+    template<typename T>
+    void setParameterImpl(const char* name, T const& value) noexcept;
+
+    template<typename T>
+    void setParameterImpl(const char* name, const T* value, size_t count) noexcept;
+
+    void setParameterImpl(const char* name,
+            Texture const* texture, TextureSampler const& sampler) noexcept;
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);

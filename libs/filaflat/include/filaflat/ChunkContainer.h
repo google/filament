@@ -35,7 +35,7 @@ public:
 
     ChunkContainer(void const* data, size_t size) : mData(data), mSize(size) {}
 
-    ~ChunkContainer() = default;
+    ~ChunkContainer() noexcept;
 
     // Must be called before trying to access any of the chunk. Fails and return false ONLY if
     // an incomplete chunk is found or if a chunk with bogus size is found.
@@ -66,11 +66,20 @@ public:
     }
 
     const uint8_t* getChunkEnd(Type type) const noexcept {
-        return mChunks.at(type).start + mChunks.at(type).size;
+        ChunkDesc const& chunkDesc = mChunks.at(type);
+        return chunkDesc.start + chunkDesc.size;
     }
 
-    bool hasChunk(Type type) const noexcept {
-        return mChunks.find(type) != mChunks.end();
+    bool hasChunk(Type type, ChunkDesc const** pChunkDesc = nullptr) const noexcept {
+        auto& chunks = mChunks;
+        auto pos = chunks.find(type);
+        if (pos != chunks.end()) {
+            if (pChunkDesc) {
+                *pChunkDesc = &pos.value();
+            }
+            return true;
+        }
+        return false;
     }
 
     void const* getData() const { return mData; }

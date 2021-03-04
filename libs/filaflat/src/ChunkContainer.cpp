@@ -20,6 +20,8 @@
 
 namespace filaflat {
 
+ChunkContainer::~ChunkContainer() noexcept = default;
+
 bool ChunkContainer::parseChunk(Unflattener& unflattener) {
     uint64_t type;
     if (!unflattener.read(&type)) {
