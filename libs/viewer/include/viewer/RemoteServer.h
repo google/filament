@@ -17,6 +17,8 @@
 #ifndef VIEWER_REMOTE_SERVER_H
 #define VIEWER_REMOTE_SERVER_H
 
+#include <viewer/Settings.h>
+
 #include <stddef.h>
 #include <mutex>
 
@@ -25,7 +27,8 @@ class CivetServer;
 namespace filament {
 namespace viewer {
 
-class WsHandler;
+class MessageSender;
+class MessageReceiver;
 
 /**
  * Encapsulates a message sent from the web client.
@@ -54,24 +57,27 @@ class RemoteServer {
 public:
     RemoteServer(int port = 8082);
     ~RemoteServer();
-    bool isValid() const { return mCivetServer; }
+    bool isValid() const { return mMessageSender; }
     char const* peekIncomingLabel() const;
     ReceivedMessage const* peekReceivedMessage() const;
     ReceivedMessage const* acquireReceivedMessage();
     void releaseReceivedMessage(ReceivedMessage const* message);
+    void sendMessage(const Settings& settings);
+    void sendMessage(const char* label, const char* buffer, size_t bufsize);
 
 private:
     void enqueueReceivedMessage(ReceivedMessage* message);
     void setIncomingMessage(ReceivedMessage* message);
-    CivetServer* mCivetServer = nullptr;
-    WsHandler* mWsHandler = nullptr;
+    MessageSender* mMessageSender = nullptr;
+    MessageReceiver* mMessageReceiver = nullptr;
     size_t mNextMessageUid = 0;
     size_t mOldestMessageUid = 0;
     static const size_t kMessageCapacity = 4;
     ReceivedMessage* mReceivedMessages[kMessageCapacity] = {};
     ReceivedMessage* mIncomingMessage = nullptr;
+    JsonSerializer mSerializer;
     mutable std::mutex mReceivedMessagesMutex;
-    friend class WsHandler;
+    friend class MessageReceiver;
 };
 
 } // namespace viewer

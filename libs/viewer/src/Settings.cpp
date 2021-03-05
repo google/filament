@@ -30,6 +30,19 @@ using namespace utils;
 namespace filament {
 namespace viewer {
 
+static std::string writeJson(const Settings& in);
+static std::string writeJson(const AmbientOcclusionOptions& in);
+static std::string writeJson(const BloomOptions& in);
+static std::string writeJson(const ColorGradingSettings& in);
+static std::string writeJson(const DepthOfFieldOptions& in);
+static std::string writeJson(const DynamicLightingSettings& in);
+static std::string writeJson(const FogOptions& in);
+static std::string writeJson(const MaterialSettings& in);
+static std::string writeJson(const RenderQuality& in);
+static std::string writeJson(const TemporalAntiAliasingOptions& in);
+static std::string writeJson(const ViewSettings& in);
+static std::string writeJson(const VignetteOptions& in);
+
 // Compares a JSON string token against a C string.
 int compare(jsmntok_t tok, const char* jsonChunk, const char* str) {
     size_t slen = strlen(str);
@@ -669,32 +682,6 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
     return i;
 }
 
-bool readJson(const char* jsonChunk, size_t size, Settings* out) {
-    jsmn_parser parser = { 0, 0, 0 };
-
-    int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
-    if (tokenCount <= 0) {
-        slog.e << "Badly formed JSON." << io::endl;
-        return false;
-    }
-
-    jsmntok_t* tokens = (jsmntok_t*) malloc(sizeof(jsmntok_t) * tokenCount);
-    assert(tokens);
-
-    jsmn_init(&parser);
-    tokenCount = jsmn_parse(&parser, jsonChunk, size, tokens, tokenCount);
-
-    if (tokenCount <= 0) {
-        free(tokens);
-        slog.e << "Badly formed JSON." << io::endl;
-        return false;
-    }
-
-    int i = parse(tokens, 0, jsonChunk, out);
-    free(tokens);
-    return i >= 0;
-}
-
 void applySettings(const ViewSettings& settings, View* dest) {
     dest->setSampleCount(settings.sampleCount);
     dest->setAntiAliasing(settings.antiAliasing);
@@ -1087,6 +1074,51 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
             midPoint == rhs.midPoint &&
             linkedCurves == rhs.linkedCurves &&
             scale == rhs.scale;
+}
+
+// TODO: This can be made faster by ditching ostringstream and using snprintf.
+// At the very least, we should stash the ostringstream here in the context object and re-use it.
+struct JsonSerializer::Context {
+    std::string buffer;
+};
+
+JsonSerializer::JsonSerializer() {
+    context = new JsonSerializer::Context();
+}
+
+JsonSerializer::~JsonSerializer() {
+    delete context;
+}
+
+const std::string& JsonSerializer::writeJson(const Settings& in) {
+    context->buffer = viewer::writeJson(in);
+    return context->buffer;
+}
+
+bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out) {
+    jsmn_parser parser = { 0, 0, 0 };
+
+    int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
+    if (tokenCount <= 0) {
+        slog.e << "Badly formed JSON." << io::endl;
+        return false;
+    }
+
+    jsmntok_t* tokens = (jsmntok_t*) malloc(sizeof(jsmntok_t) * tokenCount);
+    assert(tokens);
+
+    jsmn_init(&parser);
+    tokenCount = jsmn_parse(&parser, jsonChunk, size, tokens, tokenCount);
+
+    if (tokenCount <= 0) {
+        free(tokens);
+        slog.e << "Badly formed JSON." << io::endl;
+        return false;
+    }
+
+    int i = parse(tokens, 0, jsonChunk, out);
+    free(tokens);
+    return i >= 0;
 }
 
 } // namespace viewer

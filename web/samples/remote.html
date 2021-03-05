@@ -130,6 +130,8 @@ class App {
         this.renderer = engine.createRenderer();
         this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
         this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.serializer = new Filament.JsonSerializer();
+        this.previousSettingsJson = "";
 
         view.setScene(scene);
         view.setCamera(this.camera);
@@ -149,8 +151,6 @@ class App {
         this.mouseWheelY = 0;
 
         Object.seal(this);
-
-        const settings = this.simpleViewer.getSettings(); // TODO: do something with this
 
         this.canvas.addEventListener("pointermove", e => {
             this.mouseX = e.offsetX * window.devicePixelRatio;
@@ -266,8 +266,17 @@ class App {
         if (this.mouseButtonEvents.length > 0) {
             this.mouseButton = this.mouseButtonEvents.shift();
         }
+
         this.simpleViewer.renderUserInterface(dt, this.uiview, window.devicePixelRatio,
                 this.mouseX, this.mouseY, this.mouseButton, this.mouseWheelY);
+
+        const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
+
+        if (this.previousSettingsJson != settingsJson) {
+            console.info("Settings have changed.");
+            this.previousSettingsJson = settingsJson;
+        }
+
         this.mouseWheelY = 0;
 
         this.renderer.beginFrame(this.swapChain);
