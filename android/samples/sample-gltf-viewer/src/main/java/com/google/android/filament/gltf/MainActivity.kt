@@ -223,6 +223,28 @@ class MainActivity : Activity() {
         choreographer.removeFrameCallback(frameScheduler)
     }
 
+    fun loadModelData(message: RemoteServer.ReceivedMessage) {
+        Log.i(TAG, "Downloaded model ${message.label} (${message.buffer.capacity()} bytes)")
+        clearStatusText()
+        titlebarHint.text = message.label
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (message.label.endsWith(".zip")) {
+                    loadZip(message)
+                } else {
+                    loadGlb(message)
+                }
+            } catch (exc: IOException) {
+                setStatusText("URL fetch failed.")
+                Log.e(TAG, "URL fetch failed", exc)
+            }
+        }
+    }
+
+    fun loadSettings(message: RemoteServer.ReceivedMessage) {
+        Log.i(TAG, "Downloaded settings JSON (${message.buffer.capacity()} bytes)")
+    }
+
     inner class FrameCallback : Choreographer.FrameCallback {
         private val startTime = System.nanoTime()
         override fun doFrame(frameTimeNanos: Long) {
@@ -239,30 +261,18 @@ class MainActivity : Activity() {
             modelViewer.render(frameTimeNanos)
 
             val label = remoteServer?.peekIncomingLabel()
-            if (label != null) {
+            if (label != null && !label.endsWith(".json")) {
                 Log.i(TAG, "Downloading $label")
                 setStatusText("Downloading $label")
             }
 
             val message = remoteServer?.acquireReceivedMessage()
             if (message != null) {
-                Log.i(TAG, "Downloaded ${message.label} ${message.buffer.capacity()}")
-                clearStatusText()
-                titlebarHint.text = message.label
-
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        if (message.label.endsWith(".zip")) {
-                            loadZip(message)
-                        } else {
-                            loadGlb(message)
-                        }
-                    } catch (exc: IOException) {
-                        setStatusText("URL fetch failed.")
-                        Log.e(TAG, "URL fetch failed", exc)
-                    }
+                if (message.label.endsWith(".json")) {
+                    loadSettings(message)
+                } else {
+                    loadModelData(message)
                 }
-
             }
         }
     }

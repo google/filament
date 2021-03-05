@@ -170,6 +170,7 @@ class App {
         resize();
 
         const dropbox = this.dropbox;
+        const upload = this.uploadFile.bind(this);
 
         dropbox.addEventListener("dragover", dragEvent => {
             dropbox.classList.add("bad");
@@ -193,7 +194,7 @@ class App {
             if (!is_glb && !is_zip) return;
             if (is_zip) fileType = "zip";
             const files = event.dataTransfer.files;
-            ([...files]).forEach(this.uploadFile);
+            ([...files]).forEach(upload);
         }, false);
 
         this.startSocket();
@@ -201,10 +202,11 @@ class App {
     }
 
     uploadFile(file) {
-        if (websocket) {
+        const connection = this.websocket;
+        if (connection && connection.readyState == connection.OPEN) {
             console.info(`Uploading ${file.name}`);
-            this.websocket.send(file.name);
-            this.websocket.send(file);
+            connection.send(file.name);
+            connection.send(file);
         } else {
             this.pendingFile = file;
         }
@@ -273,7 +275,11 @@ class App {
         const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
 
         if (this.previousSettingsJson != settingsJson) {
-            console.info("Settings have changed.");
+            const connection = this.websocket;
+            if (connection && connection.readyState == connection.OPEN) {
+                connection.send("setttings.json");
+                connection.send(settingsJson);
+            }
             this.previousSettingsJson = settingsJson;
         }
 
