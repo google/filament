@@ -70,15 +70,15 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
-        .color(mSunlightColor)
-        .intensity(mSunlightIntensity)
-        .direction(normalize(mSunlightDirection))
+        .color(mSettings.lighting.sunlightColor)
+        .intensity(mSettings.lighting.sunlightIntensity)
+        .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
         .sunAngularRadius(1.9)
         .sunHaloSize(10.0)
         .sunHaloFalloff(80.0)
         .build(*engine, mSunlight);
-    if (mEnableSunlight) {
+    if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
     }
     view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
@@ -138,9 +138,9 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
         float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        mSunlightDirection = d;
-        mSunlightColor = c.rgb;
-        mSunlightIntensity = c[3] * ibl->getIntensity();
+        mSettings.lighting.sunlightDirection = d;
+        mSettings.lighting.sunlightColor = c.rgb;
+        mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
         updateIndirectLight();
     }
 }
@@ -148,8 +148,8 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
 void SimpleViewer::updateIndirectLight() {
     using namespace filament::math;
     if (mIndirectLight) {
-        mIndirectLight->setIntensity(mIblIntensity);
-        mIndirectLight->setRotation(mat3f::rotation(mIblRotation, float3{ 0, 1, 0 }));
+        mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
+        mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
     }
 }
 
@@ -178,8 +178,8 @@ void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, f
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
 
         // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
-        // proggy font. Users need refresh their window when dragging between displas with different
-        // pixel ratios.
+        // proggy font. Users need to refresh their window when dragging between displays with
+        // different pixel ratios.
         ImGui::GetIO().FontGlobalScale = pixelRatio;
         ImGui::GetStyle().ScaleAllSizes(pixelRatio);
     }
@@ -304,7 +304,7 @@ void SimpleViewer::updateUserInterface() {
 
     DebugRegistry& debug = mEngine->getDebugRegistry();
 
-    if (ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO: do not commit
+    if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
 
         bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
@@ -363,14 +363,15 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
+    auto& light = mSettings.lighting;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
-        ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
-        ImGui::SliderAngle("IBL rotation", &mIblRotation);
-        ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
-        ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
-        ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
-        ImGui::Checkbox("Enable shadows", &mEnableShadows);
+        ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
+        ImGui::SliderAngle("IBL rotation", &light.iblRotation);
+        ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0, 150000.0f);
+        ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+        ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
+        ImGui::Checkbox("Enable shadows", &light.enableShadows);
 
         bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
@@ -379,23 +380,26 @@ void SimpleViewer::updateUserInterface() {
         char label[32];
         snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
         ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+        light.shadowOptions.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
 
         int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
         snprintf(label, 32, "%d", 1 << vsmAnisotropy);
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
         mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
 
-        ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
+        int shadowCascades = light.shadowOptions.shadowCascades;
+        ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
         ImGui::Checkbox("Debug cascades",
                 debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
-        ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
-        ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 2", &mSplitPositions[2], 0.0f, 1.0f);
+        ImGui::Checkbox("Enable contact shadows", &light.shadowOptions.screenSpaceContactShadows);
+        ImGui::SliderFloat("Split pos 0", &light.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 1", &light.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 2", &light.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
         ImGui::Unindent();
+        light.shadowOptions.shadowCascades = shadowCascades;
     }
 
-    if (ImGui::CollapsingHeader("Fog", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Fog")) {
         ImGui::Indent();
         ImGui::Checkbox("Enable fog", &mSettings.view.fog.enabled);
         ImGui::SliderFloat("Start", &mSettings.view.fog.distance, 0.0f, 100.0f);
@@ -413,28 +417,21 @@ void SimpleViewer::updateUserInterface() {
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
 
-    if (mEnableSunlight) {
+    if (light.enableSunlight) {
         mScene->addEntity(mSunlight);
         auto sun = lm.getInstance(mSunlight);
-        lm.setIntensity(sun, mSunlightIntensity);
-        lm.setDirection(sun, normalize(mSunlightDirection));
-        lm.setColor(sun, mSunlightColor);
-        lm.setShadowCaster(sun, mEnableShadows);
-        auto options = lm.getShadowOptions(sun);
-        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
-        lm.setShadowOptions(sun, options);
+        lm.setIntensity(sun, light.sunlightIntensity);
+        lm.setDirection(sun, normalize(light.sunlightDirection));
+        lm.setColor(sun, light.sunlightColor);
+        lm.setShadowCaster(sun, light.enableShadows);
+        lm.setShadowOptions(sun, light.shadowOptions);
     } else {
         mScene->remove(mSunlight);
     }
 
-    lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
-        auto options = lm.getShadowOptions(ci);
-        options.screenSpaceContactShadows = mEnableContactShadows;
-        options.shadowCascades = mShadowCascades;
-        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
-        std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
-        lm.setShadowOptions(ci, options);
-        lm.setShadowCaster(ci, mEnableShadows);
+    lm.forEachComponent([this, &lm, &light](utils::Entity e, LightManager::Instance ci) {
+        lm.setShadowOptions(ci, light.shadowOptions);
+        lm.setShadowCaster(ci, light.enableShadows);
     });
 
     if (mAsset != nullptr) {

@@ -46,12 +46,9 @@ struct ReceivedMessage {
 /**
  * Manages a tiny WebSocket server that can receive model data and viewer settings.
  *
- * Client apps can call peekReceivedMessage to check for a new model, or acquireReceivedMessage
+ * Client apps can call peekReceivedMessage to check for new data, or acquireReceivedMessage
  * to pop it off the small internal queue. When they are done examining the message contents
  * they should call releaseReceivedMessage.
- *
- * TODO: Currently this can only receive model data. We would like to extend it to receive
- * viewer settings and commands (e.g. "Start Automation Test").
  */
 class RemoteServer {
 public:

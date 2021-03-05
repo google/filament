@@ -24,11 +24,8 @@ import java.nio.ByteOrder;
 /**
  * Manages a tiny WebSocket server that can receive model data and viewer settings.
  *
- * Client apps can call acquireReceivedMessage to check for a new model and pop it off the small
+ * Client apps can call acquireReceivedMessage to check for new data and pop it off the small
  * internal queue.
- *
- * TODO: Currently this can only receive model data. We would like to extend it to receive
- * viewer settings and commands (e.g. "Start Automation Test").
  */
 public class RemoteServer {
     private long mNativeObject;
