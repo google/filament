@@ -20,6 +20,8 @@
 
 #include "jsonParseUtils.h"
 
+#include <math/mat3.h>
+
 #include <assert.h>
 
 #include <sstream>
@@ -38,6 +40,7 @@ static std::string writeJson(const DepthOfFieldOptions& in);
 static std::string writeJson(const DynamicLightingSettings& in);
 static std::string writeJson(const FogOptions& in);
 static std::string writeJson(const MaterialSettings& in);
+static std::string writeJson(const LightSettings& in);
 static std::string writeJson(const RenderQuality& in);
 static std::string writeJson(const TemporalAntiAliasingOptions& in);
 static std::string writeJson(const ViewSettings& in);
@@ -660,6 +663,92 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Material
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        LightManager::ShadowOptions::Vsm* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "msaaSamples") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->msaaSamples);
+        } else {
+            slog.w << "Invalid shadow options VSM key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid shadow options VSM value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        LightManager::ShadowOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    math::float3 splitsVector;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
+        } else if (compare(tok, jsonChunk, "shadowCascades") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowCascades);
+        } else if (compare(tok, jsonChunk, "cascadeSplitPositions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &splitsVector);
+            out->cascadeSplitPositions[0] = splitsVector[0];
+            out->cascadeSplitPositions[1] = splitsVector[1];
+            out->cascadeSplitPositions[2] = splitsVector[2];
+        } else if (compare(tok, jsonChunk, "vsm") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->vsm);
+        } else {
+            slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enableShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enableShadows);
+        } else if (compare(tok, jsonChunk, "enableSunlight") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enableSunlight);
+        } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
+        } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightDirection);
+        } else if (compare(tok, jsonChunk, "sunlightColor") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightColor);
+        } else if (compare(tok, jsonChunk, "iblIntensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblIntensity);
+        } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
+        } else {
+            slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid light setting value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -670,6 +759,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
             i = parse(tokens, i + 1, jsonChunk, &out->view);
         } else if (compare(tok, jsonChunk, "material") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->material);
+        } else if (compare(tok, jsonChunk, "lighting") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lighting);
         } else {
             slog.w << "Invalid group key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -711,6 +802,27 @@ void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
     for (auto prop : settings.scalar) { apply(prop, dest); }
     for (auto prop : settings.float3) { apply(prop, dest); }
     for (auto prop : settings.float4) { apply(prop, dest); }
+}
+
+void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
+        LightManager* lm, Scene* scene) {
+    auto light = lm->getInstance(sunlight);
+    if (light) {
+        if (settings.enableSunlight) {
+            scene->addEntity(sunlight);
+        } else {
+            scene->remove(sunlight);
+        }
+        lm->setIntensity(light, settings.sunlightIntensity);
+        lm->setDirection(light, normalize(settings.sunlightDirection));
+        lm->setColor(light, settings.sunlightColor);
+        lm->setShadowCaster(light, settings.enableShadows);
+        lm->setShadowOptions(light, settings.shadowOptions);
+    }
+    if (ibl) {
+        ibl->setIntensity(settings.iblIntensity);
+        ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
+    }
 }
 
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
@@ -829,7 +941,8 @@ std::string writeJson(const Settings& in) {
     std::ostringstream oss;
     oss << "{\n"
         << "\"view\": " << writeJson(in.view) << ",\n"
-        << "\"material\": " << writeJson(in.material)
+        << "\"material\": " << writeJson(in.material) << ",\n"
+        << "\"lighting\": " << writeJson(in.lighting)
         << "}";
     return oss.str();
 }
@@ -938,6 +1051,21 @@ std::string writeJson(const FogOptions& in) {
     return oss.str();
 }
 
+std::string writeJson(const LightManager::ShadowOptions& in) {
+    std::ostringstream oss;
+    const float* splits = in.cascadeSplitPositions;
+    math::float3 splitsVector = { splits[0], splits[1], splits[2] };
+    oss << "{\n"
+        << "\"vsm\": {\n"
+        << "\"msaaSamples\": " << writeJson(in.vsm.msaaSamples) << "\n"
+        << "},\n"
+        << "\"screenSpaceContactShadows\": " << writeJson(in.screenSpaceContactShadows) << ",\n"
+        << "\"shadowCascades\": " << writeJson(in.shadowCascades) << ",\n"
+        << "\"cascadeSplitPositions\": " << writeJson(splitsVector) << "\n"
+        << "}";
+    return oss.str();
+}
+
 template <typename T>
 static void writeJson(MaterialProperty<T> prop, std::ostringstream& oss) {
     if (!prop.name.empty()) {
@@ -976,6 +1104,21 @@ std::string writeJson(const MaterialSettings& in) {
     replace("{\n}", "{}");
 
     return result;
+}
+
+std::string writeJson(const LightSettings& in) {
+    std::ostringstream oss;
+    oss << "{\n"
+        << "\"enableShadows\": " << writeJson(in.enableShadows) << ",\n"
+        << "\"enableSunlight\": " << writeJson(in.enableSunlight) << ",\n"
+        << "\"shadowOptions\": " << writeJson(in.shadowOptions) << ",\n"
+        << "\"sunlightIntensity\": " << writeJson(in.sunlightIntensity) << ",\n"
+        << "\"sunlightDirection\": " << writeJson(in.sunlightDirection) << ",\n"
+        << "\"sunlightColor\": " << writeJson(in.sunlightColor) << ",\n"
+        << "\"iblIntensity\": " << writeJson(in.iblIntensity) << ",\n"
+        << "\"iblRotation\": " << writeJson(in.iblRotation) << "\n"
+        << "}";
+    return oss.str();
 }
 
 std::string writeJson(const DepthOfFieldOptions& in) {

@@ -146,7 +146,7 @@ public:
      * Enables a built-in light source (useful for creating shadows).
      * Defaults to true.
      */
-    void enableSunlight(bool b) { mEnableSunlight = b; }
+    void enableSunlight(bool b) { mSettings.lighting.enableSunlight = b; }
 
     /**
      * Enables dithering on the view.
@@ -187,7 +187,7 @@ public:
      * See also filament::IndirectLight::setIntensity().
      * Defaults to 30000.0.
      */
-    void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
+    void setIBLIntensity(float brightness) { mSettings.lighting.iblIntensity = brightness; }
 
     /**
      * Gets a modifiable reference to stashed state.
@@ -217,18 +217,8 @@ private:
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1;
     bool mResetAnimation = true;
-    float mIblIntensity = 30000.0f;
-    float mIblRotation = 0.0f;
-    float mSunlightIntensity = 100000.0f; // <-- This value is overridden when loading an IBL.
-    filament::math::float3 mSunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
-    filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mEnableWireframe = false;
-    bool mEnableSunlight = true;
-    bool mEnableShadows = true;
-    int mShadowCascades = 1;
-    bool mEnableContactShadows = false;
     int mVsmMsaaSamplesLog2 = 1;
-    std::array<float, 3> mSplitPositions = {0.25f, 0.50f, 0.75f};
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;

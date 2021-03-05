@@ -21,20 +21,18 @@ import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.view.GestureDetector
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.filament.utils.KtxLoader
-import com.google.android.filament.utils.ModelViewer
-import com.google.android.filament.utils.RemoteServer
-import com.google.android.filament.utils.Utils
+import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.util.zip.ZipInputStream
 
 class MainActivity : Activity() {
@@ -55,6 +53,7 @@ class MainActivity : Activity() {
     private var remoteServer: RemoteServer? = null
     private var statusToast: Toast? = null
     private var statusText: String? = null
+    private val automation = AutomationEngine()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -228,21 +227,19 @@ class MainActivity : Activity() {
         clearStatusText()
         titlebarHint.text = message.label
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                if (message.label.endsWith(".zip")) {
-                    loadZip(message)
-                } else {
-                    loadGlb(message)
-                }
-            } catch (exc: IOException) {
-                setStatusText("URL fetch failed.")
-                Log.e(TAG, "URL fetch failed", exc)
+            if (message.label.endsWith(".zip")) {
+                loadZip(message)
+            } else {
+                loadGlb(message)
             }
         }
     }
 
     fun loadSettings(message: RemoteServer.ReceivedMessage) {
-        Log.i(TAG, "Downloaded settings JSON (${message.buffer.capacity()} bytes)")
+        val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
+        automation.applySettings(json, modelViewer.view, null,
+                modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
+                modelViewer.scene)
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {

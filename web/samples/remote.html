@@ -104,15 +104,13 @@ document.getElementById("copyButton").addEventListener("click", () => {
     dropbox.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
 })
 
-Filament.init([], () => { window.app = new App() });
+Filament.init([], () => window.app = new App() );
 
 class App {
     constructor(canvas) {
         this.websocket = null;
         this.pollForServer = null;
-        this.widgetsDb = [];
         this.pendingFile = null;
-        this.fileType = "glb";
 
         this.dropbox = document.getElementById("dropbox");
         this.status = document.getElementById("status");
@@ -123,12 +121,8 @@ class App {
         const view = this.view = engine.createView();
         const uiview = this.uiview = engine.createView();
 
-        const L = 189 / 255;
-        const kBackgroundColor = [L, L, L, 1];
-
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
-        this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
         this.camera = engine.createCamera(Filament.EntityManager.get().create());
         this.serializer = new Filament.JsonSerializer();
         this.previousSettingsJson = "";
@@ -138,8 +132,13 @@ class App {
         view.setPostProcessingEnabled(false);
 
         // For now, we initialize the "sidebar" such that it stretches across the entire viewport.
-        // In the future we might want to draw stuff in the central area.
+        // In the future we might want to draw stuff in the central 3D viewport.
         const kInitialSidebarWidth = this.canvas.clientWidth * window.devicePixelRatio;
+
+        // Clear the central 3D viewport to light gray, whicht is not visible by default.
+        const L = 189 / 255;
+        const kBackgroundColor = [L, L, L, 1];
+        this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
 
         this.render = this.render.bind(this);
         this.simpleViewer = new Filament.SimpleViewer(engine, scene, view, kInitialSidebarWidth);
@@ -192,7 +191,6 @@ class App {
             const is_glb = file.name.match(/\.(glb)$/i);
             const is_zip = file.name.match(/\.(zip)$/i);
             if (!is_glb && !is_zip) return;
-            if (is_zip) fileType = "zip";
             const files = event.dataTransfer.files;
             ([...files]).forEach(upload);
         }, false);
@@ -217,17 +215,14 @@ class App {
         this.status.style.backgroundColor = this.websocket ? "#45d48d" : "burlywood";
     }
 
-    resetWidgetsDb() {
-        this.widgetsDb = [];
-    }
-
     startSocket() {
         const ws = new WebSocket("ws://localhost:8082");
 
         ws.addEventListener("open", () => {
             clearTimeout(this.pollForServer);
-            this.resetWidgetsDb();
+            this.websocket = ws;
             this.updateDom();
+            this.previousSettingsJson = "";
             if (this.pendingFile) {
                 this.uploadFile(this.pendingFile);
                 this.pendingFile = null;
@@ -237,7 +232,6 @@ class App {
         ws.addEventListener("close", (e) => {
             this.websocket = null;
             this.pollForServer = setTimeout(() => this.startSocket(), 3000);
-            this.resetWidgetsDb();
             this.updateDom();
         });
 
@@ -252,30 +246,42 @@ class App {
                 return;
             }
             for (const command of commands) {
-                // TODO
+                // TODO: process incoming messages here.
+                // Currently we do not send messages from the app on the device to the web client.
             }
         });
-
-        this.websocket = ws;
     }
 
     render() {
-        const dt = 1.0 / 60.0;
+        const connection = this.websocket;
 
-        // We only process only a single mouse button event here because we want ImGui to detect
-        // a touch event even when a down-up pair occurs between consecutive frames.
+        // Process only a single mouse button event to ensure that ImGui detects a touch event
+        // even when a down-up pair occurs between consecutive frames.
         let mouseButton = this.mouseButton;
         if (this.mouseButtonEvents.length > 0) {
             this.mouseButton = this.mouseButtonEvents.shift();
         }
+        const mouseWheel = this.mouseWheelY;
+        this.mouseWheelY = 0;
 
-        this.simpleViewer.renderUserInterface(dt, this.uiview, window.devicePixelRatio,
-                this.mouseX, this.mouseY, this.mouseButton, this.mouseWheelY);
+        // If there's no connection, let Filament clear the canvas, but do not render the UI view.
+        if (!connection) {
+            this.renderer.beginFrame(this.swapChain);
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+            this.engine.execute();
+            window.requestAnimationFrame(this.render);
+            return;
+        }
 
+        // Draw the UI and potentially mutate the settings object.
+        const deltaTime = 1.0 / 60.0;
+        this.simpleViewer.renderUserInterface(deltaTime, this.uiview, window.devicePixelRatio,
+                this.mouseX, this.mouseY, this.mouseButton, mouseWheel);
+
+        // Check if the user has changed any settings.
         const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
-
         if (this.previousSettingsJson != settingsJson) {
-            const connection = this.websocket;
             if (connection && connection.readyState == connection.OPEN) {
                 connection.send("setttings.json");
                 connection.send(settingsJson);
@@ -283,8 +289,7 @@ class App {
             this.previousSettingsJson = settingsJson;
         }
 
-        this.mouseWheelY = 0;
-
+        // Use Filament to render the 3D viewport and the UI.
         this.renderer.beginFrame(this.swapChain);
         this.renderer.renderView(this.view);
         this.renderer.renderView(this.uiview);

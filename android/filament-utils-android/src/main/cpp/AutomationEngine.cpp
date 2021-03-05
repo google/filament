@@ -20,6 +20,7 @@
 
 using namespace filament;
 using namespace filament::viewer;
+using namespace utils;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nCreateAutomationEngine(JNIEnv* env, jclass,
@@ -33,7 +34,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nCreateAutomationEngine(
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nCreateDefaultAutomationEngine(JNIEnv* env,
         jclass klass) {
-    return (jlong) AutomationEngine::createDefaultTest();
+    return (jlong) AutomationEngine::createDefault();
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -84,6 +85,35 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
     }
     AutomationEngine* automation = (AutomationEngine*) nativeAutomation;
     automation->tick((View*) view, ptrMaterials, materialCount, (Renderer*) renderer, deltaTime);
+    if (longMaterials) {
+        env->ReleaseLongArrayElements(materials, longMaterials, 0);
+        delete[] ptrMaterials;
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* env, jclass klass,
+        jlong nativeAutomation, jstring json, jlong view, jlongArray materials, jlong nativeIbl,
+        jint lightEntity, jlong nativeLm, jlong scene) {
+    using MaterialPointer = MaterialInstance*;
+    jsize materialCount = 0;
+    jlong* longMaterials = nullptr;
+    MaterialPointer* ptrMaterials = nullptr;
+    if (materials) {
+        materialCount = env->GetArrayLength(materials);
+        ptrMaterials = new MaterialPointer[materialCount];
+        longMaterials = env->GetLongArrayElements(materials, nullptr);
+        for (jsize i = 0; i < materialCount; i++) {
+            ptrMaterials[i] = (MaterialPointer) longMaterials[i];
+        }
+    }
+    AutomationEngine* automation = (AutomationEngine*) nativeAutomation;
+    const char* nativeJson = env->GetStringUTFChars(json, 0);
+    size_t jsonLength = env->GetStringUTFLength(json);
+    automation->applySettings(nativeJson, jsonLength, (View*) view, ptrMaterials, materialCount,
+            (IndirectLight*) nativeIbl, (Entity&) lightEntity, (LightManager*) nativeLm,
+            (Scene*) scene);
+    env->ReleaseStringUTFChars(json, nativeJson);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);
         delete[] ptrMaterials;

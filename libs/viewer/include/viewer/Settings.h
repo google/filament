@@ -18,7 +18,10 @@
 #define VIEWER_SETTINGS_H
 
 #include <filament/ColorGrading.h>
+#include <filament/IndirectLight.h>
+#include <filament/LightManager.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Scene.h>
 #include <filament/View.h>
 
 #include <math/vec3.h>
@@ -37,6 +40,7 @@ struct DynamicLightingSettings;
 struct MaterialSettings;
 struct Settings;
 struct ViewSettings;
+struct LightSettings;
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
 using AntiAliasing = filament::View::AntiAliasing;
@@ -50,10 +54,13 @@ using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using ToneMapping = filament::ColorGrading::ToneMapping;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
+using LightManager = filament::LightManager;
 
 // These functions push all editable property values to their respective Filament objects.
 void applySettings(const ViewSettings& settings, View* dest);
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
+void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
+        LightManager* lm, Scene* scene);
 
 // Creates a new ColorGrading object based on the given settings.
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine);
@@ -139,9 +146,21 @@ struct MaterialSettings {
     MaterialProperty<math::float4> float4[MAX_COUNT];
 };
 
+struct LightSettings {
+    bool enableShadows = true;
+    bool enableSunlight = true;
+    LightManager::ShadowOptions shadowOptions;
+    float sunlightIntensity = 100000.0f;
+    math::float3 sunlightDirection = {0.6, -1.0, -0.8};;
+    math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
+    float iblIntensity = 30000.0f;
+    float iblRotation = 0.0f;
+};
+
 struct Settings {
     ViewSettings view;
     MaterialSettings material;
+    LightSettings lighting;
 };
 
 } // namespace viewer
