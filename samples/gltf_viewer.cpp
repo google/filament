@@ -252,7 +252,8 @@ static bool loadSettings(const char* filename, Settings* out) {
     if (!in.read(json.data(), contentSize)) {
         return false;
     }
-    return readJson(json.data(), contentSize, out);
+    JsonSerializer serializer;
+    return serializer.readJson(json.data(), contentSize, out);
 }
 
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {

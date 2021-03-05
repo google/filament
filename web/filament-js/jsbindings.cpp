@@ -1830,6 +1830,10 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
 class_<Settings>("Settings");
 
+class_<JsonSerializer>("JsonSerializer")
+    .constructor<>()
+    .function("writeJson", &JsonSerializer::writeJson);
+
 class_<SimpleViewer>("SimpleViewer")
     .constructor<Engine*, Scene*, View*, int>()
     .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())

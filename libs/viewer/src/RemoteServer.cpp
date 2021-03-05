@@ -27,10 +27,16 @@ using namespace utils;
 namespace filament {
 namespace viewer {
 
-class WsHandler : public CivetWebSocketHandler {
+class MessageSender : public CivetServer {
+public:
+    MessageSender(const char** options) : CivetServer(options) {}
+    void sendMessage(const char* label, const char* buffer, size_t bufsize);
+};
+
+class MessageReceiver : public CivetWebSocketHandler {
    public:
-    WsHandler(RemoteServer* server) : mServer(server) {}
-    ~WsHandler() { delete mReceivedMessage; }
+    MessageReceiver(RemoteServer* server) : mServer(server) {}
+    ~MessageReceiver() { delete mReceivedMessage; }
     bool handleData(CivetServer* server, struct mg_connection*, int, char* , size_t) override;
    private:
     RemoteServer* mServer;
@@ -47,22 +53,22 @@ RemoteServer::RemoteServer(int port) {
     };
     std::string portString = std::to_string(port);
     kServerOptions[1] = portString.c_str();
-    mCivetServer = new CivetServer(kServerOptions);
-    if (!mCivetServer->getContext()) {
+    mMessageSender = new MessageSender(kServerOptions);
+    if (!mMessageSender->getContext()) {
         slog.e << "Unable to start RemoteServer, see civetweb.txt for details." << io::endl;
-        delete mCivetServer;
-        mCivetServer = nullptr;
-        mWsHandler = nullptr;
+        delete mMessageSender;
+        mMessageSender = nullptr;
+        mMessageReceiver = nullptr;
         return;
     }
-    mWsHandler = new WsHandler(this);
-    mCivetServer->addWebSocketHandler("", mWsHandler);
+    mMessageReceiver = new MessageReceiver(this);
+    mMessageSender->addWebSocketHandler("", mMessageReceiver);
     slog.i << "RemoteServer listening at ws://localhost:" << port << io::endl;
 }
 
 RemoteServer::~RemoteServer() {
-    delete mCivetServer;
-    delete mWsHandler;
+    delete mMessageSender;
+    delete mMessageReceiver;
     for (auto msg : mReceivedMessages) {
         releaseReceivedMessage(msg);
     }
@@ -122,8 +128,17 @@ void RemoteServer::releaseReceivedMessage(ReceivedMessage const* message) {
     }
 }
 
+void RemoteServer::sendMessage(const Settings& settings) {
+    const auto& json = mSerializer.writeJson(settings);
+    mMessageSender->sendMessage("settings.json", json.c_str(), json.size() + 1);
+}
+
+void RemoteServer::sendMessage(const char* label, const char* buffer, size_t bufsize) {
+    mMessageSender->sendMessage(label, buffer, bufsize);
+}
+
 // NOTE: This is invoked off the main thread.
-bool WsHandler::handleData(CivetServer* server, struct mg_connection* conn, int bits,
+bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn, int bits,
                                   char* data, size_t size) {
     const bool final = bits & 0x80;
     const int opcode = bits & 0xf;
@@ -160,6 +175,13 @@ bool WsHandler::handleData(CivetServer* server, struct mg_connection* conn, int 
     mServer->enqueueReceivedMessage(mReceivedMessage);
     mReceivedMessage = nullptr;
     return true;
+}
+
+void MessageSender::sendMessage(const char* label, const char* buffer, size_t bufsize) {
+    for (auto iter : connections) {
+        mg_websocket_write(iter.first, 0x80, label, strlen(label) + 1);
+        mg_websocket_write(iter.first, 0x80, buffer, bufsize);
+    }
 }
 
 } // namespace viewer

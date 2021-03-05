@@ -122,7 +122,8 @@ void AutomationEngine::terminate() {
 }
 
 void AutomationEngine::exportSettings(const Settings& settings, const char* filename) {
-    std::string contents = writeJson(settings);
+    JsonSerializer serializer;
+    std::string contents = serializer.writeJson(settings);
     std::ofstream out(filename);
     if (!out) {
         gStatus = "Failed to export settings file.";
