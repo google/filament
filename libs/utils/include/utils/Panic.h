@@ -27,6 +27,10 @@
 #else
 #endif
 
+#ifndef FILAMENT_PRECONDITION_CHECKS
+#define FILAMENT_PRECONDITION_CHECKS    1
+#endif
+
 /**
  * @defgroup errors Handling Catastrophic Failures (Panics)
  *
@@ -123,11 +127,10 @@
  *
  *          ASSERT_PRECONDITION(condition, format, ...)
  *          ASSERT_POSTCONDITION(condition, format, ...)
- *          ASSERT_ARITHMETIC(condition, format, ...)
  *          ASSERT_DESTRUCTOR(condition, format, ...)
  *
  *
- * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION, ASSERT_ARITHMETIC
+ * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION
  * @see ASSERT_DESTRUCTOR
  *
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -319,8 +322,8 @@ public:
      * @param file the file where the above function in implemented
      * @param line the line in the above file where the error was detected
      * @param format printf style string describing the error
-     * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION, ASSERT_ARITHMETIC
-     * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
+     * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION
+     * @see PANIC_PRECONDITION, PANIC_POSTCONDITION
      * @see setMode()
      */
     static void panic(char const* function, char const* file, int line, const char* format, ...)
@@ -334,8 +337,8 @@ public:
      * @param file the file where the above function in implemented
      * @param line the line in the above file where the error was detected
      * @param s std::string describing the error
-     * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION, ASSERT_ARITHMETIC
-     * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
+     * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION
+     * @see PANIC_PRECONDITION, PANIC_POSTCONDITION
      * @see setMode()
      */
     static inline void panic(char const* function, char const* file, int line, const std::string& s)
@@ -406,19 +409,6 @@ class UTILS_PUBLIC PostconditionPanic : public TPanic<PostconditionPanic> {
     friend class TPanic<PostconditionPanic>;
 };
 
-/**
- * @ingroup errors
- *
- * ASSERT_ARITHMETIC uses this Panic to report an arithmetic (postcondition) failure.
- * @see ASSERT_ARITHMETIC
- */
-class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
-    // A common case of post-condition error
-    // e.g.: underflow, overflow, internal computations errors
-    using TPanic<ArithmeticPanic>::TPanic;
-    friend class TPanic<ArithmeticPanic>;
-};
-
 // -----------------------------------------------------------------------------------------------
 }  // namespace utils
 
@@ -445,14 +435,6 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
             PANIC_FILE(__FILE__), __LINE__, format, ##__VA_ARGS__)
 
 /**
- * PANIC_ARITHMETIC is a macro that reports a ArithmeticPanic
- * @param format printf-style string describing the error in more details
- */
-#define PANIC_ARITHMETIC(format, ...)                                                              \
-    ::utils::ArithmeticPanic::panic(__PRETTY_FUNCTION__,                                           \
-            PANIC_FILE(__FILE__), __LINE__, format, ##__VA_ARGS__)
-
-/**
  * PANIC_LOG is a macro that logs a Panic, and continues as usual.
  * @param format printf-style string describing the error in more details
  */
@@ -468,17 +450,21 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
  * @param cond a boolean expression
  * @param format printf-style string describing the error in more details
  */
+#if FILAMENT_PRECONDITION_CHECKS
 #define ASSERT_PRECONDITION(cond, format, ...)                                                     \
     (!UTILS_LIKELY(cond) ? PANIC_PRECONDITION(format, ##__VA_ARGS__) : (void)0)
 
 #if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
-#define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                           \
-    (!UTILS_LIKELY(cond) ? PANIC_PRECONDITION(format, ##__VA_ARGS__), false : true)
+#   define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                        \
+        (!UTILS_LIKELY(cond) ? PANIC_PRECONDITION(format, ##__VA_ARGS__), false : true)
 #else
-#define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                           \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG(format, ##__VA_ARGS__), false : true)
+    #define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)                                       \
+        (!UTILS_LIKELY(cond) ? PANIC_LOG(format, ##__VA_ARGS__), false : true)
 #endif
-
+#else
+#   define ASSERT_PRECONDITION(cond, format, ...)
+#   define ASSERT_PRECONDITION_NON_FATAL(cond, format, ...)     true
+#endif // FILAMENT_PRECONDITION_CHECKS
 
 /**
  * @ingroup errors
@@ -500,39 +486,11 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
     (!UTILS_LIKELY(cond) ? PANIC_POSTCONDITION(format, ##__VA_ARGS__) : (void)0)
 
 #if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
-#define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                          \
-    (!UTILS_LIKELY(cond) ? PANIC_POSTCONDITION(format, ##__VA_ARGS__), false : true)
+#   define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                       \
+        (!UTILS_LIKELY(cond) ? PANIC_POSTCONDITION(format, ##__VA_ARGS__), false : true)
 #else
-#define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                          \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG(format, ##__VA_ARGS__), false : true)
-#endif
-
-/**
- * @ingroup errors
- *
- * ASSERT_ARITHMETIC is a macro that checks the given condition and reports a ArithmeticPanic
- * if it evaluates to false.
- * @param cond a boolean expression
- * @param format printf-style string describing the error in more details
- *
- * Example:
- * @code
- *     unt32_t floatToUInt1616(float v) {
- *         v *= 65536;
- *         ASSERT_ARITHMETIC(v>=0 && v<65536, "overflow occurred");
- *         return uint32_t(v);
- *     }
- * @endcode
- */
-#define ASSERT_ARITHMETIC(cond, format, ...)                                                       \
-    (!(cond) ? PANIC_ARITHMETIC(format, ##__VA_ARGS__) : (void)0)
-
-#if defined(UTILS_EXCEPTIONS) || !defined(NDEBUG)
-#define ASSERT_ARITHMETIC_NON_FATAL(cond, format, ...)                                             \
-    (!UTILS_LIKELY(cond) ? PANIC_ARITHMETIC(format, ##__VA_ARGS__), false : true)
-#else
-#define ASSERT_ARITHMETIC_NON_FATAL(cond, format, ...)                                             \
-    (!UTILS_LIKELY(cond) ? PANIC_LOG(format, ##__VA_ARGS__), false : true)
+#   define ASSERT_POSTCONDITION_NON_FATAL(cond, format, ...)                                       \
+        (!UTILS_LIKELY(cond) ? PANIC_LOG(format, ##__VA_ARGS__), false : true)
 #endif
 
 /**

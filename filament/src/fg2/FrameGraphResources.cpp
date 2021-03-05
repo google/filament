@@ -37,15 +37,15 @@ VirtualResource& FrameGraphResources::getResource(FrameGraphHandle handle) const
     ASSERT_PRECONDITION(handle, "Uninitialized handle when using FrameGraphResources.");
 
     VirtualResource* const resource = mFrameGraph.getResource(handle);
+    assert_invariant(resource);
+    assert_invariant(resource->refcount);
 
-    auto& declaredHandles = mPassNode.mDeclaredHandles;
-    const bool hasReadOrWrite = declaredHandles.find(handle.index) != declaredHandles.cend();
-
+    UTILS_UNUSED auto& declaredHandles = mPassNode.mDeclaredHandles;
+    UTILS_UNUSED const bool hasReadOrWrite =
+            declaredHandles.find(handle.index) != declaredHandles.cend();
     ASSERT_PRECONDITION(hasReadOrWrite,
             "Pass \"%s\" didn't declare any access to resource \"%s\"",
             mPassNode.getName(), resource->name);
-
-    assert_invariant(resource->refcount);
 
     return *resource;
 }

@@ -168,6 +168,5 @@ void panicLog(char const* function, char const* file, int line, const char* form
 
 template class UTILS_PUBLIC TPanic<PreconditionPanic>;
 template class UTILS_PUBLIC TPanic<PostconditionPanic>;
-template class UTILS_PUBLIC TPanic<ArithmeticPanic>;
 
 } // namespace utils

@@ -285,7 +285,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
     ResourceNode* const node = getActiveResourceNode(handle);
 
     // Check preconditions
-    bool passAlreadyAWriter = node->hasWriteFrom(passNode);
+    UTILS_UNUSED bool passAlreadyAWriter = node->hasWriteFrom(passNode);
     if (!ASSERT_PRECONDITION_NON_FATAL(!passAlreadyAWriter,
             "Pass \"%s\" already writes to \"%s\"",
             passNode->getName(), node->getName())) {

@@ -77,10 +77,14 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
                 "Texture usage must contain DEPTH_ATTACHMENT")) {
             return nullptr;
         }
-        const uint32_t cWidth = FTexture::valueForLevel(color.mipLevel, cTexture->getWidth());
-        const uint32_t cHeight = FTexture::valueForLevel(color.mipLevel, cTexture->getHeight());
-        const uint32_t dWidth = FTexture::valueForLevel(depth.mipLevel, dTexture->getWidth());
-        const uint32_t dHeight = FTexture::valueForLevel(depth.mipLevel, dTexture->getHeight());
+        UTILS_UNUSED const uint32_t cWidth =
+                FTexture::valueForLevel(color.mipLevel, cTexture->getWidth());
+        UTILS_UNUSED const uint32_t cHeight =
+                FTexture::valueForLevel(color.mipLevel, cTexture->getHeight());
+        UTILS_UNUSED const uint32_t dWidth =
+                FTexture::valueForLevel(depth.mipLevel, dTexture->getWidth());
+        UTILS_UNUSED const uint32_t dHeight =
+                FTexture::valueForLevel(depth.mipLevel, dTexture->getHeight());
         if (!ASSERT_PRECONDITION_NON_FATAL(cWidth == dWidth && cHeight == dHeight,
                 "Attachment dimensions must match")) {
             return nullptr;

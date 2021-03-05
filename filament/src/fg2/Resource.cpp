@@ -96,9 +96,9 @@ ImportedRenderTarget::ImportedRenderTarget(char const* resourceName,
 
 UTILS_NOINLINE
 bool ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
-    constexpr auto ANY_ATTACHMENT = FrameGraphTexture::Usage::COLOR_ATTACHMENT |
-                                    FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
-                                    FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
+    UTILS_UNUSED constexpr auto ANY_ATTACHMENT = FrameGraphTexture::Usage::COLOR_ATTACHMENT |
+                                                 FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
+                                                 FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
 
     return ASSERT_PRECONDITION_NON_FATAL(none(u & ~ANY_ATTACHMENT),
             "Imported render target resource \"%s\" can only be used as an attachment (usage=%s)",
