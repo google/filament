@@ -28,6 +28,7 @@
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
 
+#include <map>
 #include <vector>
 
 namespace filament {
@@ -38,8 +39,9 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
-    NSRect mPreviousBounds = {};
-    void updateOpenGLContext(NSView *nsView, bool resetView);
+    std::map<NSView*, NSRect> mPreviousSwapChainBounds;
+    NSRect mPreviousBounds;
+    void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
 };
 
 PlatformCocoaGL::PlatformCocoaGL()
@@ -98,6 +100,7 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
     NSView* nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+
     // adding the pointer to the array retains the NSView
     pImpl->mHeadlessSwapChains.push_back(nsView);
     return (__bridge SwapChain*)nsView;
@@ -111,6 +114,10 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
         // removing the pointer from the array releases the NSView
         v.erase(it);
     }
+    auto it2 = pImpl->mPreviousSwapChainBounds.find(nsView);
+    if (it2 != pImpl->mPreviousSwapChainBounds.end()) {
+        pImpl->mPreviousSwapChainBounds.erase(it2);
+    }
 }
 
 void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
@@ -122,14 +129,27 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     NSRect currentBounds = [nsView convertRectToBacking:nsView.bounds];
 
     // Check if the view has been swapped out or resized.
+    // updateOpenGLContext() needs to call -clearDrawable if the view was
+    // resized, otherwise we do not want to call -clearDrawable, as in addition
+    // to disassociating the context from the view as the documentation says,
+    // it also does what its name implies and clears the drawable pixels.
+    // This is problematic with multiple windows, but still necessary if the
+    // window has resized.
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
-        pImpl->updateOpenGLContext(nsView, true);
+        bool needsClear = false;
+        auto rectIter = pImpl->mPreviousSwapChainBounds.find(nsView);
+        if (rectIter == pImpl->mPreviousSwapChainBounds.end() ||
+            !NSEqualSizes(currentBounds.size, rectIter->second.size)) {
+            needsClear = true;
+        }
+        pImpl->updateOpenGLContext(nsView, true, needsClear);
     } else if (!CGRectEqualToRect(currentBounds, pImpl->mPreviousBounds)) {
-        pImpl->updateOpenGLContext(nsView, false);
+        pImpl->updateOpenGLContext(nsView, true, true);
     }
 
     pImpl->mPreviousBounds = currentBounds;
+    pImpl->mPreviousSwapChainBounds[nsView] = currentBounds;
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
@@ -144,7 +164,8 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
     return true;
 }
 
-void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
+void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView,
+                                              bool clearView) {
     NSOpenGLContext* glContext = mGLContext;
 
     // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView" and
@@ -154,14 +175,18 @@ void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
     if (![NSThread isMainThread]) {
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
             if (resetView) {
-                [glContext clearDrawable];
+                if (clearView) {
+                    [glContext clearDrawable];
+                }
                 [glContext setView:nsView];
             }
             [glContext update];
         });
     } else {
         if (resetView) {
-            [glContext clearDrawable];
+            if (clearView) {
+                [glContext clearDrawable];
+            }
             [glContext setView:nsView];
         }
         [glContext update];
