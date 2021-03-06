@@ -20,11 +20,15 @@
 
 #include "details/Engine.h"
 
+#include <filament/Exposure.h>
+#include <filament/Camera.h>
+
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
-#include <filament/Exposure.h>
+
+#include <math/vec2.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -69,8 +73,13 @@ void FCamera::setLensProjection(double focalLength, double aspect, double near, 
  */
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, double far) noexcept {
-    mProjectionForCulling = p;
+    setCustomProjection(p, p, near, far);
+}
+
+void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
+        mat4 const& c, double near, double far) noexcept {
     mProjection = p;
+    mProjectionForCulling = c;
     mNear = (float)near;
     mFar = (float)far;
 }
@@ -156,8 +165,24 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     mFar = float(far);
 }
 
-void FCamera::setScaling(math::double4 const& scaling) noexcept {
-    mScaling = scaling;
+math::mat4 FCamera::getProjectionMatrix() const noexcept {
+    const mat4 m{ mat4::row_major_init{
+            mScaling.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScaling.y, 0.0, mShiftCS.y,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+    }};
+    return m * mProjection;
+}
+
+math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
+    const mat4 m{ mat4::row_major_init{
+            mScaling.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScaling.y, 0.0, mShiftCS.y,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+    }};
+    return m * mProjectionForCulling;
 }
 
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
@@ -296,8 +321,21 @@ void Camera::setCustomProjection(mat4 const& projection, double near, double far
     upcast(this)->setCustomProjection(projection, near, far);
 }
 
+void Camera::setCustomProjection(mat4 const& projection, mat4 const& projectionForCulling,
+        double near, double far) noexcept {
+    upcast(this)->setCustomProjection(projection, projectionForCulling, near, far);
+}
+
+void Camera::setScaling(math::double2 scaling) noexcept {
+    upcast(this)->setScaling(scaling);
+}
+
 void Camera::setScaling(math::double4 const& scaling) noexcept {
     upcast(this)->setScaling(scaling);
+}
+
+void Camera::setShift(math::double2 shift) noexcept {
+    upcast(this)->setShift(shift);
 }
 
 mat4 Camera::getProjectionMatrix() const noexcept {
@@ -308,8 +346,12 @@ mat4 Camera::getCullingProjectionMatrix() const noexcept {
     return upcast(this)->getCullingProjectionMatrix();
 }
 
-const math::double4& Camera::getScaling() const noexcept {
+math::double4 Camera::getScaling() const noexcept {
     return upcast(this)->getScaling();
+}
+
+math::double2 Camera::getShift() const noexcept {
+    return upcast(this)->getShift();
 }
 
 float Camera::getNear() const noexcept {

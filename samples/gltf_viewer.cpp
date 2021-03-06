@@ -936,7 +936,7 @@ int main(int argc, char** argv) {
         }
         const Viewport& vp = view->getViewport();
         double aspectRatio = (double) vp.width / vp.height;
-        camera.setScaling(double4 {1.0 / aspectRatio, 1.0, 1.0, 1.0});
+        camera.setScaling({1.0 / aspectRatio, 1.0 });
     };
 
     auto gui = [&app](Engine* engine, View* view) {
@@ -965,7 +965,7 @@ int main(int argc, char** argv) {
                 // camera to the viewport.
                 const Viewport& vp = view->getViewport();
                 double aspectRatio = (double) vp.width / vp.height;
-                c->setScaling(double4 {1.0 / aspectRatio, 1.0, 1.0, 1.0});
+                c->setScaling({1.0 / aspectRatio, 1.0});
             } else {
                 // gltfCamera is out of bounds. Reset camera selection to main camera.
                 app.currentCamera = 0;
