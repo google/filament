@@ -374,7 +374,7 @@ private:
 
 namespace details {
 // these are private, don't use
-void logAndPanic(
+void panicLog(
         char const* function, char const* file, int line, const char* format, ...) noexcept;
 }  // namespace details
 
@@ -457,7 +457,7 @@ class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
  * @param format printf-style string describing the error in more details
  */
 #define PANIC_LOG(format, ...)                                                                     \
-    ::utils::details::logAndPanic(__PRETTY_FUNCTION__,                                             \
+    ::utils::details::panicLog(__PRETTY_FUNCTION__,                                                \
             PANIC_FILE(__FILE__), __LINE__, format, ##__VA_ARGS__)
 
 /**

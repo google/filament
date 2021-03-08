@@ -24,6 +24,8 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <stack>
+
 #include <tsl/robin_set.h>
 
 namespace filament {
@@ -92,6 +94,8 @@ struct MetalContext {
     uint64_t signalId = 1;
 
     TimerQueryInterface* timerQueryImpl;
+
+    std::stack<const char*> groupMarkers;
 };
 
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);

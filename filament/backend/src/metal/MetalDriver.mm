@@ -138,6 +138,8 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->currentDrawSwapChain->releaseDrawable();
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
+
+    assert_invariant(mContext->groupMarkers.empty());
 }
 
 void MetalDriver::flush(int) {
@@ -759,6 +761,11 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
+    if (!mContext->groupMarkers.empty()) {
+        mContext->currentRenderPassEncoder.label =
+                [NSString stringWithCString:mContext->groupMarkers.top()
+                                   encoding:NSUTF8StringEncoding];
+    }
 
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
@@ -858,11 +865,12 @@ void MetalDriver::insertEventMarker(const char* string, size_t len) {
 }
 
 void MetalDriver::pushGroupMarker(const char* string, size_t len) {
-
+    mContext->groupMarkers.push(string);
 }
 
 void MetalDriver::popGroupMarker(int dummy) {
-
+    assert_invariant(!mContext->groupMarkers.empty());
+    mContext->groupMarkers.pop();
 }
 
 void MetalDriver::startCapture(int) {
