@@ -5,7 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.16
+
 ## v1.9.15
+
+filamat / matc: fix sporatic crash.
 
 ## v1.9.14
 
