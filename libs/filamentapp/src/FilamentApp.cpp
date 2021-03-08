@@ -768,9 +768,11 @@ void FilamentApp::Window::configureCamerasForWindow() {
     const double ratio = double(height) / double(width);
     const int sidebar = mFilamentApp->mSidebarWidth * dpiScaleX;
 
+    const bool splitview = mViews.size() > 2;
+
     // To trigger a floating-point exception, users could shrink the window to be smaller than
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = std::max(1, (int) width - sidebar);
+    const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
 
     double near = 0.1;
     double far = 100;
@@ -780,7 +782,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
 
     // We're in split view when there are more views than just the Main and UI views.
-    if (mViews.size() > 2) {
+    if (splitview) {
         uint32_t vpw = width / 2;
         uint32_t vph = height / 2;
         mMainView->setViewport ({            0,            0, vpw,         vph          });
