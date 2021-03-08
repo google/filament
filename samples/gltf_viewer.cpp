@@ -153,7 +153,9 @@ static void printUsage(char* name) {
         "           Use the scroll weel to adjust movement speed\n"
         "           W / S: forward / backward\n"
         "           A / D: left / right\n"
-        "           E / Q: up / down\n"
+        "           E / Q: up / down\n\n"
+        "   --split-view, -v\n"
+        "       Splits the window into 4 views\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -168,7 +170,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:e";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
@@ -179,7 +181,8 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
         { "recompute-aabb", no_argument,     nullptr, 'r' },
-        { "settings",       required_argument, nullptr, 't' },
+        { "settings",     required_argument, nullptr, 't' },
+        { "split-view",   no_argument,       nullptr, 'v' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -231,6 +234,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'b': {
                 app->batchFile = arg;
+                break;
+            }
+            case 'v': {
+                app->config.splitView = true;
                 break;
             }
         }
