@@ -33,6 +33,7 @@ class ShaderBuilder;
 class MaterialChunk {
 public:
     explicit MaterialChunk(ChunkContainer const& container);
+    ~MaterialChunk() noexcept;
 
     // call this once after container.parse() has been called
     bool readIndex(filamat::ChunkType materialTag);

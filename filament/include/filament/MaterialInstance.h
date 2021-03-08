@@ -40,13 +40,9 @@ public:
 
     template<typename T>
     using is_supported_parameter_t = typename std::enable_if<
-            std::is_same<bool, T>::value ||
             std::is_same<float, T>::value ||
             std::is_same<int32_t, T>::value ||
             std::is_same<uint32_t, T>::value ||
-            std::is_same<math::bool2, T>::value ||
-            std::is_same<math::bool3, T>::value ||
-            std::is_same<math::bool4, T>::value ||
             std::is_same<math::int2, T>::value ||
             std::is_same<math::int3, T>::value ||
             std::is_same<math::int4, T>::value ||
@@ -56,8 +52,13 @@ public:
             std::is_same<math::float2, T>::value ||
             std::is_same<math::float3, T>::value ||
             std::is_same<math::float4, T>::value ||
-            std::is_same<math::mat3f, T>::value ||
-            std::is_same<math::mat4f, T>::value
+            std::is_same<math::mat4f, T>::value ||
+            // these types are slower as they need a layout conversion
+            std::is_same<bool, T>::value ||
+            std::is_same<math::bool2, T>::value ||
+            std::is_same<math::bool3, T>::value ||
+            std::is_same<math::bool4, T>::value ||
+            std::is_same<math::mat3f, T>::value
     >::type;
 
     /**
@@ -78,7 +79,7 @@ public:
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, T value) noexcept;
+    void setParameter(const char* name, T const& value) noexcept;
 
     /**
      * Set a uniform array by name

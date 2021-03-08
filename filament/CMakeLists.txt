@@ -76,6 +76,7 @@ set(SRCS
         src/Stream.cpp
         src/SwapChain.cpp
         src/Texture.cpp
+        src/ToneMapping.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
