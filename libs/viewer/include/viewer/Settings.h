@@ -80,7 +80,7 @@ public:
     bool readJson(const char* jsonChunk, size_t size, Settings* out);
 
 private:
-    struct Context;
+    class Context;
     Context* context;
 };
 
