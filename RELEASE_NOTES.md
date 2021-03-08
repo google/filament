@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.15
 
+filamat / matc: fix sporatic crash.
+
 ## v1.9.14
 
 - Improve bloom/emissive with glTF files.
