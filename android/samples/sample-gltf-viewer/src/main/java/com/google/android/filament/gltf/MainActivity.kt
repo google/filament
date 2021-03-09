@@ -240,6 +240,7 @@ class MainActivity : Activity() {
         automation.applySettings(json, modelViewer.view, null,
                 modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
                 modelViewer.scene)
+        modelViewer.view.colorGrading = automation.getColorGrading((modelViewer.engine))
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {

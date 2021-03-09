@@ -120,6 +120,13 @@ Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* e
     }
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_utils_AutomationEngine_nGetColorGrading(JNIEnv*, jclass,
+        jlong nativeObject, jlong nativeEngine) {
+    AutomationEngine* automation = (AutomationEngine*) nativeObject;
+    return (jlong) automation->getColorGrading((Engine*) nativeEngine);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nSignalBatchMode(JNIEnv*, jclass, jlong native) {
     AutomationEngine* automation = (AutomationEngine*) native;

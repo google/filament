@@ -21,6 +21,8 @@
 
 namespace filament {
 
+class ColorGrading;
+class Engine;
 class LightManager;
 class MaterialInstance;
 class Renderer;
@@ -151,10 +153,21 @@ public:
      *
      * This method is an alternative to tick(). It allows clients to use the automation engine as a
      * remote control, as opposed to iterating through a predetermined test sequence.
+     *
+     * This updates the stashed Settings object, then pushes those settings to the given
+     * Filament objects. Clients can optionally call getColorGrading() after calling this method.
      */
     void applySettings(const char* json, size_t jsonLength, View* view,
             MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
             utils::Entity sunlight, LightManager* lm, Scene* scene);
+
+    /**
+     * Gets a color grading object that corresponds to the latest settings.
+     *
+     * This method either returns a cached instance, or it destroys the cached instance and creates
+     * a new one.
+     */
+    ColorGrading* getColorGrading(Engine* engine);
 
     /**
      * Signals that batch mode can begin. Call this after all meshes and textures finish loading.
@@ -202,6 +215,11 @@ private:
     AutomationSpec const * const mSpec;
     Settings * const mSettings;
     Options mOptions;
+
+    Engine* mColorGradingEngine = nullptr;
+    ColorGrading* mColorGrading = nullptr;
+    ColorGradingSettings mColorGradingSettings = {};
+
     size_t mCurrentTest;
     float mElapsedTime;
     int mElapsedFrames;

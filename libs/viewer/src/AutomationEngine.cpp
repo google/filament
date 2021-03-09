@@ -16,6 +16,7 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -101,6 +102,9 @@ AutomationEngine* AutomationEngine::createDefault() {
 }
 
 AutomationEngine::~AutomationEngine() {
+    if (mColorGrading) {
+        mColorGradingEngine->destroy(mColorGrading);
+    }
     if (mOwnsSettings) {
         delete mSpec;
         delete mSettings;
@@ -142,6 +146,18 @@ void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* 
         viewer::applySettings(mSettings->material, materials[i]);
     }
     viewer::applySettings(mSettings->lighting, ibl, sunlight, lm, scene);
+}
+
+ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
+    if (mSettings->view.colorGrading != mColorGradingSettings) {
+        mColorGradingSettings = mSettings->view.colorGrading;
+        if (mColorGrading) {
+            mColorGradingEngine->destroy(mColorGrading);
+        }
+        mColorGrading = createColorGrading(mColorGradingSettings, engine);
+        mColorGradingEngine = engine;
+    }
+    return mColorGrading;
 }
 
 void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
