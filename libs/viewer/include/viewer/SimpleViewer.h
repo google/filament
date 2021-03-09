@@ -222,6 +222,10 @@ private:
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
+
+    // Color grading UI state.
+    float mRangePlot[1024 * 3];
+    float mCurvePlot[1024 * 3];
 };
 
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);

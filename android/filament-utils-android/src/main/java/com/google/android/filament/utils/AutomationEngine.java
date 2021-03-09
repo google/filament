@@ -19,6 +19,8 @@ package com.google.android.filament.utils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.ColorGrading;
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.IndirectLight;
 import com.google.android.filament.LightManager;
@@ -50,6 +52,7 @@ import com.google.android.filament.Renderer;
  */
 public class AutomationEngine {
     private long mNativeObject;
+    private ColorGrading mColorGrading;
 
     /**
      * Allows users to toggle screenshots, change the sleep duration between tests, etc.
@@ -147,6 +150,9 @@ public class AutomationEngine {
      *
      * This method is an alternative to tick(). It allows clients to use the automation engine as a
      * remote control, as opposed to iterating through a predetermined test sequence.
+     *
+     * This updates the stashed Settings object, then pushes those settings to the given
+     * Filament objects. Clients can optionally call getColorGrading() after calling this method.
      */
     public void applySettings(@NonNull String settingsJson, @NonNull View view,
             @Nullable MaterialInstance[] materials, @Nullable IndirectLight ibl, @Entity int light,
@@ -164,6 +170,22 @@ public class AutomationEngine {
         long nativeScene = scene.getNativeObject();
         nApplySettings(mNativeObject, settingsJson, nativeView, nativeMaterialInstances,
                 nativeIbl, light, nativeLm, nativeScene);
+    }
+
+    /**
+     * Gets a color grading object that corresponds to the latest settings.
+     *
+     * This method either returns a cached instance, or it destroys the cached instance and creates
+     * a new one.
+     */
+    public ColorGrading getColorGrading(@NonNull Engine engine) {
+        // The native layer automatically destroys the old color grading instance,
+        // so there is no need to call Engine#destroyColorGrading here.
+        long nativeCg = nGetColorGrading(mNativeObject, engine.getNativeObject());
+        if (mColorGrading == null || mColorGrading.getNativeObject() != nativeCg) {
+            mColorGrading = new ColorGrading(nativeCg);
+        }
+        return mColorGrading;
     }
 
     /**
@@ -197,6 +219,7 @@ public class AutomationEngine {
             float deltaTime);
     private static native void nApplySettings(long nativeObject, String jsonSettings, long view,
             long[] materials, long ibl, int light, long lightManager, long scene);
+    private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
     private static native boolean nShouldClose(long nativeObject);
