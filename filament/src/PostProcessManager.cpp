@@ -827,18 +827,89 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         bokehAngle += f::PI_2 * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
     }
 
+    /*
+     * Circle-of-confusion
+     * -------------------
+     *
+     * (see https://en.wikipedia.org/wiki/Circle_of_confusion)
+     *
+     * Ap: aperture [m]
+     * f: focal length [m]
+     * S: focus distance [m]
+     * d: distance to the focal plane [m]
+     *
+     *            f      f     |      S  |
+     * coc(d) =  --- . ----- . | 1 - --- |      in meters (m)
+     *           Ap    S - f   |      d  |
+     *
+     *  This can be rewritten as:
+     *
+     *  coc(z) = Kc . Ks . (1 - S / d)          in pixels [px]
+     *
+     *                A.f
+     *          Kc = -----          with: A = f / Ap
+     *               S - f
+     *
+     *          Ks = height [px] / SensorSize [m]        pixel conversion
+     *
+     *
+     *  We also introduce a "cocScale" factor for artistic reasons (see code below).
+     *
+     *
+     *  Object distance computation (d)
+     *  -------------------------------
+     *
+     *  1/d is computed from the depth buffer value as:
+     *  (note: our z-buffer is encoded as reversed-z, so we use 1-z below)
+     *
+     *          screen-space -> clip-space -> view-space
+     *
+     *   v_s = { x, y, 1 - z, 1 }                 // screen space (reversed-z)
+     *   v_c = 2 * v_s - 1                        // clip space
+     *   v   = inverse(projection) * v_c          // view space
+     *   d   = v.z / v.w                          // view space depth
+     *   1/d = v.w / v.z
+     *
+     * Assuming a generic projection matrix of the form:
+     *
+     *    a 0 x 0
+     *    0 b y 0
+     *    0 0 A B
+     *    0 0 C 0
+     *
+     * It comes that:
+     *
+     *          -2C         C - A
+     *    1/d = --- . z  + -------
+     *           B            B
+     *
+     * note: Here the result doesn't depend on {x, y}. This wouldn't be the case with a
+     *       tilt-shift lens.
+     *
+     * Mathematica code:
+     *      p = {{a, 0, b, 0}, {0, c, d, 0}, {0, 0, m22, m32}, {0, 0, m23, 0}};
+     *      v = {x, y, (1 - z)*2 - 1, 1};
+     *      f = Inverse[p].v;
+     *      Simplify[f[[4]]/f[[3]]]
+     *
+     * Plugging this back into the expression of: coc(z) = Kc . Ks . (1 - S / d)
+     * We get that:  coc(z) = C0 * z + C1
+     * With: C0 = - Kc * Ks * S * 2 * C / B
+     *       C1 =   Kc * Ks * (1 - S * (C - A) / B)
+     *
+     * It's just a madd!
+     */
     const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
     auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
     const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
     const float Ks = ((float)desc.height) / FCamera::SENSOR_SIZE;
-    float2 cocParams{
-            // we use 1/zn instead of (zf - zn) / (zf * zn), because in reality we're using
-            // a projection with an infinite far plane
-            (dofOptions.cocScale * Ks * Kc) * focusDistance / cameraInfo.zn,
-            (dofOptions.cocScale * Ks * Kc) * (1.0f - focusDistance / cameraInfo.zn)
+    const float K  = dofOptions.cocScale * Ks * Kc;
+
+    auto const& p = cameraInfo.projection;
+    const float2 cocParams = {
+              -K * focusDistance * 2.0 * p[2][3] / p[3][2],
+               K * (1.0 - focusDistance * (p[2][3] - p[2][2]) / p[3][2])
     };
-    // handle reversed z
-    cocParams = float2{ -cocParams.x, cocParams.x + cocParams.y };
 
     Blackboard& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
