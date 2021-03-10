@@ -862,13 +862,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      *  1/d is computed from the depth buffer value as:
      *  (note: our z-buffer is encoded as reversed-z, so we use 1-z below)
      *
-     *          screen-space -> clip-space -> view-space
+     *          screen-space -> clip-space -> view-space -> distance (x-1)
      *
      *   v_s = { x, y, 1 - z, 1 }                 // screen space (reversed-z)
      *   v_c = 2 * v_s - 1                        // clip space
      *   v   = inverse(projection) * v_c          // view space
-     *   d   = v.z / v.w                          // view space depth
-     *   1/d = v.w / v.z
+     *   d   = -v.z / v.w                         // view space distance to camera
+     *   1/d = -v.w / v.z
      *
      * Assuming a generic projection matrix of the form:
      *
