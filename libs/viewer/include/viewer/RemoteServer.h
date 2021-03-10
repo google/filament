@@ -55,12 +55,30 @@ public:
     RemoteServer(int port = 8082);
     ~RemoteServer();
     bool isValid() const { return mMessageSender; }
+
+    /**
+     * Checks if a download is currently in progress and returns its label.
+     * Returns null if nothing is being downloaded.
+     */
     char const* peekIncomingLabel() const;
-    ReceivedMessage const* peekReceivedMessage() const;
+
+    /**
+     * Pops a message off the incoming queue or returns null if there are no unread messages.
+     *
+     * After examining its contents, users should free the message with releaseReceivedMessage.
+     */
     ReceivedMessage const* acquireReceivedMessage();
+
+    /**
+     * Frees the memory that holds the contents of a received message.
+     */
     void releaseReceivedMessage(ReceivedMessage const* message);
+
     void sendMessage(const Settings& settings);
     void sendMessage(const char* label, const char* buffer, size_t bufsize);
+
+    // For internal use (makes JNI simpler)
+    ReceivedMessage const* peekReceivedMessage() const;
 
 private:
     void enqueueReceivedMessage(ReceivedMessage* message);
@@ -68,7 +86,6 @@ private:
     MessageSender* mMessageSender = nullptr;
     MessageReceiver* mMessageReceiver = nullptr;
     size_t mNextMessageUid = 0;
-    size_t mOldestMessageUid = 0;
     static const size_t kMessageCapacity = 4;
     ReceivedMessage* mReceivedMessages[kMessageCapacity] = {};
     ReceivedMessage* mIncomingMessage = nullptr;
