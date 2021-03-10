@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- Metal / Vulkan: fix incorrect dominant light shadows rendering.
+
 ## v1.9.16
 
 ## v1.9.15
