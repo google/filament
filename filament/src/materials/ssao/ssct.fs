@@ -93,7 +93,9 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
         highp vec2 ssSamplePos = perpConeDir * ssSliceRadius + ssConeVector * t + ssStartPos;
 
         float level = clamp(floor(log2(ssSliceRadius)) - kSSCTLog2LodRate, 0.0, float(setup.maxLevel));
-        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, ssSamplePos * setup.resolution.zw, 0.0, setup.depthParams);
+
+        highp vec2 ss = ssSamplePos * setup.resolution.zw;
+        float vsSampleDepthLinear = -sampleDepthLinear(depthTexture, uvFromSs(ss), 0.0, setup.depthParams);
 
         // calculate depth range of cone slice
         float vsSliceRadius = vsEndRadius * t;

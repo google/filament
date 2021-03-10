@@ -153,8 +153,16 @@ fragment {
         return fract(m.z * fract(dot(w, m.xy)));
     }
 
-    highp vec3 computeViewSpacePositionFromDepth(highp vec2 uv, highp float linearDepth) {
-        return vec3((0.5 - uv) * materialParams.positionParams.xy * linearDepth, linearDepth);
+    highp vec2 getApiAgnosticFragCoords() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+        return vec2(gl_FragCoord.x, materialParams.resolution.y - gl_FragCoord.y);
+#else
+        return gl_FragCoord.xy;
+#endif
+    }
+
+    highp vec3 computeViewSpacePositionFromDepth(highp vec2 ss, highp float linearDepth) {
+        return vec3((0.5 - ss) * materialParams.positionParams.xy * linearDepth, linearDepth);
     }
 
     highp vec3 faceNormal(highp vec3 dpdx, highp vec3 dpdy) {
@@ -174,12 +182,13 @@ fragment {
     //       are essentially equivalent to textureGather (which we don't have on ES3.0),
     //       and this is executed just once.
     highp vec3 computeViewSpaceNormal(const highp vec3 position, const highp vec2 uv) {
-        highp vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
-        highp vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
-        highp vec3 px = computeViewSpacePositionFromDepth(uvdx,
-                sampleDepthLinear(materialParams_depth, uvdx, 0.0, materialParams.depthParams));
-        highp vec3 py = computeViewSpacePositionFromDepth(uvdy,
-                sampleDepthLinear(materialParams_depth, uvdy, 0.0, materialParams.depthParams));
+        highp vec2 ss = ssFromUv(uv);
+        highp vec2 ssdx = ss + vec2(materialParams.resolution.z, 0.0);
+        highp vec2 ssdy = ss + vec2(0.0, materialParams.resolution.w);
+        highp vec3 px = computeViewSpacePositionFromDepth(ssdx,
+                sampleDepthLinear(materialParams_depth, uvFromSs(ssdx), 0.0, materialParams.depthParams));
+        highp vec3 py = computeViewSpacePositionFromDepth(ssdy,
+                sampleDepthLinear(materialParams_depth, uvFromSs(ssdy), 0.0, materialParams.depthParams));
         highp vec3 dpdx = px - position;
         highp vec3 dpdy = py - position;
         return faceNormal(dpdx, dpdy);
@@ -216,15 +225,17 @@ fragment {
             const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
             const vec2 tapPosition, const float noise) {
 
+        highp vec2 ss = ssFromUv(uv);
+
         vec3 tap = tapLocationFast(i, tapPosition, noise);
 
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
-        vec2 uvSamplePos = uv + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
+        vec2 ssSamplePos = ss + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
 
         float level = clamp(floor(log2(ssRadius)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
-        highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvSamplePos, level, materialParams.depthParams);
-        highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth);
+        highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvFromSs(ssSamplePos), level, materialParams.depthParams);
+        highp vec3 p = computeViewSpacePositionFromDepth(ssSamplePos, occlusionDepth);
 
         // now we have the sample, compute AO
         vec3 v = p - origin;        // sample vector
@@ -246,7 +257,7 @@ fragment {
     }
 
     float scalableAmbientObscurance(highp vec2 uv, highp vec3 origin, vec3 normal) {
-        float noise = random(gl_FragCoord.xy);
+        float noise = random(getApiAgnosticFragCoords());
         highp vec2 tapPosition = startPosition(noise);
         highp mat2 angleStep = tapAngleStep();
 
@@ -265,7 +276,7 @@ fragment {
     float dominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal) {
         ConeTraceSetup cone;
 
-        cone.ssStartPos = uv * materialParams.resolution.xy;
+        cone.ssStartPos = ssFromUv(uv) * materialParams.resolution.xy;
         cone.vsStartPos = origin;
         cone.vsNormal = normal;
 
@@ -287,18 +298,23 @@ fragment {
 
         float occlusion = 0.0;
         for (float i = 1.0; i <= materialParams.ssctRayCount.x; i += 1.0) {
-            cone.jitterOffset.x = random(gl_FragCoord.xy * i) * 2.0 - 1.0;      // direction
-            cone.jitterOffset.y = random(gl_FragCoord.xy * i * vec2(3, 11));    // step
+            cone.jitterOffset.x = random(getApiAgnosticFragCoords() * i) * 2.0 - 1.0;      // direction
+            cone.jitterOffset.y = random(getApiAgnosticFragCoords() * i * vec2(3, 11));    // step
             occlusion += coneTraceOcclusion(cone, materialParams_depth);
         }
         return occlusion * materialParams.ssctRayCount.y;
     }
 
+    // For SAO calculations, we make use of two coordinate spaces:
+    //     UV-space: framebuffer/texture space, graphics API dependent.
+    //     screen-space: origin bottom left, normalized coordinates.
+    // Textures must always be sampled with UV coordinates.
+
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepthLinear(materialParams_depth, uv, 0.0, materialParams.depthParams);
-        highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
+        highp vec3 origin = computeViewSpacePositionFromDepth(ssFromUv(uv), depth);
         vec3 normal = computeViewSpaceNormal(origin, uv);
 
         float occlusion = 0.0;
@@ -316,7 +332,7 @@ fragment {
 
 #if defined(TARGET_MOBILE)
         // this line is needed to workaround what seems to be a bug on qualcomm hardware
-        aoVisibility += gl_FragCoord.x * MEDIUMP_FLT_MIN;
+        aoVisibility += getApiAgnosticFragCoords().x * MEDIUMP_FLT_MIN;
 #endif
 
         postProcess.color.rgb = vec3(aoVisibility, pack(origin.z));

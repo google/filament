@@ -13,5 +13,16 @@ highp float sampleDepthLinear(const sampler2D depthTexture, const vec2 uv, float
     return linearizeDepth(textureLod(depthTexture, uv, lod).r, depthParams);
 }
 
+highp vec2 ssFromUv(highp vec2 uv) {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    return vec2(uv.x, 1.0 - uv.y);
+#endif
+    return uv;
+}
+
+highp vec2 uvFromSs(highp vec2 ss) {
+    return ssFromUv(ss);
+}
+
 #endif // MATERIALS_SSAO_UTILS
 
