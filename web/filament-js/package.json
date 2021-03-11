@@ -18,6 +18,7 @@
     "filament.d.ts",
     "filament.js",
     "filament.wasm",
+    "filament-viewer.js",
     "README.md"
   ],
   "keywords": [
