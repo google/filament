@@ -34,7 +34,7 @@ namespace filament {
 
 using namespace backend;
 
-struct CocoaGLSwapChain {
+struct CocoaGLSwapChain : public Platform::SwapChain {
     NSView* view;
     NSRect previousBounds;
     NSRect previousWindowFrame;
@@ -103,7 +103,7 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
         pImpl->mCurrentSwapChain = nullptr;
     }
 
-    return (Platform::SwapChain*)swapChain;
+    return swapChain;
 }
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
@@ -117,11 +117,11 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t h
     swapChain->previousBounds = NSZeroRect;
     swapChain->previousWindowFrame = NSZeroRect;
 
-    return (Platform::SwapChain*)swapChain;
+    return swapChain;
 }
 
 void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
-    CocoaGLSwapChain* cocoaSwapChain = (CocoaGLSwapChain*)swapChain;
+    CocoaGLSwapChain* cocoaSwapChain = static_cast<CocoaGLSwapChain*>(swapChain);
     if (pImpl->mCurrentSwapChain == cocoaSwapChain) {
         pImpl->mCurrentSwapChain = nullptr;
     }
