@@ -51,6 +51,10 @@ public:
         return mAttachments[(int) attachment];
     }
 
+    backend::TargetBufferFlags getAttachmentMask() const noexcept {
+        return mAttachmentMask;
+    }
+
 private:
     friend class RenderTarget;
 
@@ -58,6 +62,7 @@ private:
 
     Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
     const HwHandle mHandle;
+    backend::TargetBufferFlags mAttachmentMask = {};
 };
 
 FILAMENT_UPCAST(RenderTarget)
