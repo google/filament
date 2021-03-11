@@ -5,11 +5,16 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens
+- engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering
+- engine: Fixed depth of field rendering with custom projection matrices
+- gltfio: `SimpleViewer` now exposes more rendering parameters, including `ColorGrading`
+
 ## v1.9.16
 
 ## v1.9.15
 
-filamat / matc: fix sporatic crash.
+- filamat/matc: fix sporadic crash.
 
 ## v1.9.14
 
