@@ -784,43 +784,43 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         const cgltf_primitive& prim = *params->prim;
         const uint8_t slot = params->slot;
         const int morphTargetIndex = params->morphTargetIndex;
+        const bool isMorphTarget = morphTargetIndex != kMorphTargetUnused;
 
-        // Declare vectors of normals and tangents, which we'll extract & convert from the source.
-        std::vector<float3> fp32Normals;
-        std::vector<float4> fp32Tangents;
-        std::vector<float3> fp32Positions;
-        std::vector<float2> fp32TexCoords;
-        std::vector<uint3> ui32Triangles;
+        // Declare storage for data that has been unpacked and converted from the source buffers.
+        // This data needs to be held until after the SurfaceOrientation helper consumes it.
+        std::vector<float3> unpackedNormals;
+        std::vector<float4> unpackedTangents;
+        std::vector<float3> unpackedPositions;
+        std::vector<float2> unpackedTexCoords;
+        std::vector<uint3> unpackedTriangles;
 
+        // Build a mapping from cgltf_attribute_type to cgltf_accessor. Also accumulate a count.
+        const int NUM_ATTRIBUTES = 8;
+        const cgltf_accessor* baseAccessors[NUM_ATTRIBUTES] = {};
+        const cgltf_accessor* morphTargetAccessors[NUM_ATTRIBUTES] = {};
         cgltf_size vertexCount = 0;
 
-        // Build a mapping from cgltf_attribute_type to cgltf_accessor*.
-        const int NUM_ATTRIBUTES = 8;
-        const cgltf_accessor* accessors[NUM_ATTRIBUTES] = {};
-
-        // Collect accessors for normals, tangents, etc.
-        if (morphTargetIndex == kMorphTargetUnused) {
-            for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
-                const cgltf_attribute& attr = prim.attributes[aindex];
-                if (attr.index == 0) {
-                    accessors[attr.type] = attr.data;
-                    vertexCount = attr.data->count;
-                }
+        // Collect accessors for normals, tangents, etc. Note that we skip over attributes with
+        // non-zero set indices likes TEXCOORD_1, TEXCOORD_2 to avoid overflowing the tiny arrays.
+        for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
+            const cgltf_attribute& attr = prim.attributes[aindex];
+            if (attr.index == 0) {
+                baseAccessors[attr.type] = attr.data;
+                vertexCount = attr.data->count;
             }
-        } else {
+        }
+        if (isMorphTarget) {
             const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
             for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
                 const cgltf_attribute& attr = morphTarget.attributes[aindex];
                 if (attr.index == 0) {
-                    accessors[attr.type] = attr.data;
-                    vertexCount = attr.data->count;
+                    assert(baseAccessors[attr.type] &&
+                            "Morph target data has no corresponding base vertex data.");
+                    morphTargetAccessors[attr.type] = attr.data;
                 }
             }
         }
         params->vertexCount = vertexCount;
-
-        // At a minimum we need normals to generate tangents.
-        auto normalsInfo = accessors[cgltf_attribute_type_normal];
         if (vertexCount == 0) {
             return;
         }
@@ -828,70 +828,86 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         geometry::SurfaceOrientation::Builder sob;
         sob.vertexCount(vertexCount);
 
+        // Allocate scratch space to store morph deltas.
+        std::vector<float3> deltas;
+        if (isMorphTarget) {
+            deltas.resize(vertexCount);
+        }
+
         // Convert normals into packed floats.
-        if (normalsInfo) {
-            assert(normalsInfo->count == vertexCount);
-            assert(normalsInfo->type == cgltf_type_vec3);
-            fp32Normals.resize(vertexCount);
-            cgltf_accessor_unpack_floats(normalsInfo, &fp32Normals[0].x, vertexCount * 3);
-            sob.normals(fp32Normals.data());
+        if (auto baseNormalsInfo = baseAccessors[cgltf_attribute_type_normal]; baseNormalsInfo) {
+            assert(baseNormalsInfo->count == vertexCount);
+            assert(baseNormalsInfo->type == cgltf_type_vec3);
+            unpackedNormals.resize(vertexCount);
+            cgltf_accessor_unpack_floats(baseNormalsInfo, &unpackedNormals[0].x, vertexCount * 3);
+            if (auto mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal]) {
+                cgltf_accessor_unpack_floats(mtNormalsInfo, &deltas[0].x, vertexCount * 3);
+                for (cgltf_size i = 0; i < vertexCount; i++) {
+                    unpackedNormals[i] += deltas[i];
+                }
+            }
+            sob.normals(unpackedNormals.data());
         }
 
         // Convert tangents into packed floats.
-        auto tangentsInfo = accessors[cgltf_attribute_type_tangent];
-        if (tangentsInfo) {
-            if (tangentsInfo->count != vertexCount || tangentsInfo->type != cgltf_type_vec4) {
-                slog.e << "Bad tangent count or type." << io::endl;
-                return;
+        if (auto baseTangentsInfo = baseAccessors[cgltf_attribute_type_tangent]; baseTangentsInfo) {
+            assert(baseTangentsInfo->count == vertexCount);
+            unpackedTangents.resize(vertexCount);
+            cgltf_accessor_unpack_floats(baseTangentsInfo, &unpackedTangents[0].x, vertexCount * 4);
+            if (auto mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent]) {
+                cgltf_accessor_unpack_floats(mtTangentsInfo, &deltas[0].x, vertexCount * 3);
+                for (cgltf_size i = 0; i < vertexCount; i++) {
+                    unpackedTangents[i].xyz += deltas[i];
+                }
             }
-            fp32Tangents.resize(vertexCount);
-            cgltf_accessor_unpack_floats(tangentsInfo, &fp32Tangents[0].x, vertexCount * 4);
-            sob.tangents(fp32Tangents.data());
+            sob.tangents(unpackedTangents.data());
         }
 
-        auto positionsInfo = accessors[cgltf_attribute_type_position];
-        if (positionsInfo) {
-            if (positionsInfo->count != vertexCount || positionsInfo->type != cgltf_type_vec3) {
-                slog.e << "Bad position count or type." << io::endl;
-                return;
+        if (auto basePosInfo = baseAccessors[cgltf_attribute_type_position]; basePosInfo) {
+            assert(basePosInfo->count == vertexCount && basePosInfo->type == cgltf_type_vec3);
+            unpackedPositions.resize(vertexCount);
+            cgltf_accessor_unpack_floats(basePosInfo, &unpackedPositions[0].x, vertexCount * 3);
+            sob.positions(unpackedPositions.data());
+            if (auto mtPositionsInfo = morphTargetAccessors[cgltf_attribute_type_position]) {
+                cgltf_accessor_unpack_floats(mtPositionsInfo, &deltas[0].x, vertexCount * 3);
+                for (cgltf_size i = 0; i < vertexCount; i++) {
+                    unpackedPositions[i] += deltas[i];
+                }
             }
-            fp32Positions.resize(vertexCount);
-            cgltf_accessor_unpack_floats(positionsInfo, &fp32Positions[0].x, vertexCount * 3);
-            sob.positions(fp32Positions.data());
         }
 
         if (prim.indices) {
             size_t triangleCount = prim.indices->count / 3;
-            ui32Triangles.resize(triangleCount);
+            unpackedTriangles.resize(triangleCount);
             cgltf_size j = 0;
-            for (auto& triangle : ui32Triangles) {
+            for (auto& triangle : unpackedTriangles) {
                 triangle.x = cgltf_accessor_read_index(prim.indices, j++);
                 triangle.y = cgltf_accessor_read_index(prim.indices, j++);
                 triangle.z = cgltf_accessor_read_index(prim.indices, j++);
             }
         } else {
             size_t triangleCount = vertexCount / 3;
-            ui32Triangles.resize(triangleCount);
+            unpackedTriangles.resize(triangleCount);
             cgltf_size j = 0;
-            for (auto& triangle : ui32Triangles) {
+            for (auto& triangle : unpackedTriangles) {
                 triangle.x = j++;
                 triangle.y = j++;
                 triangle.z = j++;
             }
         }
 
-        sob.triangleCount(ui32Triangles.size());
-        sob.triangles(ui32Triangles.data());
+        sob.triangleCount(unpackedTriangles.size());
+        sob.triangles(unpackedTriangles.data());
 
-        auto texcoordsInfo = accessors[cgltf_attribute_type_texcoord];
+        auto texcoordsInfo = baseAccessors[cgltf_attribute_type_texcoord];
         if (texcoordsInfo) {
             if (texcoordsInfo->count != vertexCount || texcoordsInfo->type != cgltf_type_vec2) {
                 slog.e << "Bad texture coordinate count or type." << io::endl;
                 return;
             }
-            fp32TexCoords.resize(vertexCount);
-            cgltf_accessor_unpack_floats(texcoordsInfo, &fp32TexCoords[0].x, vertexCount * 2);
-            sob.uvs(fp32TexCoords.data());
+            unpackedTexCoords.resize(vertexCount);
+            cgltf_accessor_unpack_floats(texcoordsInfo, &unpackedTexCoords[0].x, vertexCount * 2);
+            sob.uvs(unpackedTexCoords.data());
         }
 
         // Compute surface orientation quaternions.
