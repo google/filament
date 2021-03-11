@@ -314,6 +314,11 @@ value_array<filament::math::double2>("double2")
     .element(&filament::math::double2::x)
     .element(&filament::math::double2::y);
 
+value_array<filament::math::double3>("double3")
+    .element(&filament::math::double3::x)
+    .element(&filament::math::double3::y)
+    .element(&filament::math::double3::z);
+
 value_array<filament::math::double4>("double4")
     .element(&filament::math::double4::x)
     .element(&filament::math::double4::y)
