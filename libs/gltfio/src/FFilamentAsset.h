@@ -94,6 +94,7 @@ struct Primitive {
     filament::VertexBuffer* vertices = nullptr;
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
+    UvMap uvmap; // small mapping from each glTF UV set to either UV0 or UV1
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
@@ -195,7 +196,7 @@ struct FFilamentAsset : public FilamentAsset {
 
     void releaseSourceData() noexcept;
 
-    const void* getSourceAsset() noexcept {
+    const void* getSourceAsset() const noexcept {
         return mSourceAsset.get() ? mSourceAsset->hierarchy : nullptr;
     }
 

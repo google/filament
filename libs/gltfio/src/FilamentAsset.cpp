@@ -30,6 +30,8 @@ using namespace utils;
 namespace gltfio {
 
 FFilamentAsset::~FFilamentAsset() {
+    delete mAnimator;
+
     releaseSourceData();
 
     // The only things we need to free in the instances are their animators.
@@ -39,7 +41,6 @@ FFilamentAsset::~FFilamentAsset() {
         delete instance;
     }
 
-    delete mAnimator;
     delete mWireframe;
 
     mEngine->destroy(mRoot);

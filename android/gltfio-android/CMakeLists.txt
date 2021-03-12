@@ -44,6 +44,8 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/FilamentInstance.cpp
         ${GLTFIO_DIR}/src/GltfEnums.h
         ${GLTFIO_DIR}/src/MaterialProvider.cpp
+        ${GLTFIO_DIR}/src/MorphHelper.h
+        ${GLTFIO_DIR}/src/MorphHelper.cpp
         ${GLTFIO_DIR}/src/ResourceLoader.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/TangentsJob.cpp
