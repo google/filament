@@ -53,6 +53,7 @@ class MainActivity : Activity() {
     private var remoteServer: RemoteServer? = null
     private var statusToast: Toast? = null
     private var statusText: String? = null
+    private var latestDownload: String? = null
     private val automation = AutomationEngine()
 
     @SuppressLint("ClickableViewAccessibility")
@@ -258,15 +259,21 @@ class MainActivity : Activity() {
 
             modelViewer.render(frameTimeNanos)
 
-            val label = remoteServer?.peekIncomingLabel()
-            if (label != null && !label.endsWith(".json")) {
-                Log.i(TAG, "Downloading $label")
-                setStatusText("Downloading $label")
+            // Check if a new download is in progress. If so, let the user know with toast.
+            val currentDownload = remoteServer?.peekIncomingLabel()
+            if (RemoteServer.isBinary(currentDownload) && currentDownload != latestDownload) {
+                latestDownload = currentDownload
+                Log.i(TAG, "Downloading $currentDownload")
+                setStatusText("Downloading $currentDownload")
             }
 
+            // Check if a new message has been fully received from the client.
             val message = remoteServer?.acquireReceivedMessage()
             if (message != null) {
-                if (message.label.endsWith(".json")) {
+                if (message.label == latestDownload) {
+                    latestDownload = null
+                }
+                if (RemoteServer.isJson(message.label)) {
                     loadSettings(message)
                 } else {
                     loadModelData(message)
