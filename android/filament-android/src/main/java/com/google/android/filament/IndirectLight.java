@@ -428,6 +428,7 @@ public class IndirectLight {
     }
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 3)
     public float[] getDirectionEstimate(@Nullable @Size(min = 3) float[] direction) {
         direction = Asserts.assertFloat3(direction);
@@ -470,6 +471,7 @@ public class IndirectLight {
 
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 4)
     public float[] getColorEstimate(@Nullable @Size(min = 4) float[] colorIntensity, float x, float y, float z) {
         colorIntensity = Asserts.assertFloat4(colorIntensity);
