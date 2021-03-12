@@ -110,6 +110,8 @@ public:
 private:
     void update_gcc(size_t ignore) noexcept;
 
+    static utils::CString demangle(const char* mangled);
+
     static constexpr size_t NUM_FRAMES = 20;
 
     struct StackFrameInfo {
