@@ -21,8 +21,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 /**
  * <code>IndirectLight</code> is used to simulate environment lighting, a form of global illumination.
  *
