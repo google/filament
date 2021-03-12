@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering
 - engine: Fixed depth of field rendering with custom projection matrices
 - gltfio: `SimpleViewer` now exposes more rendering parameters, including `ColorGrading`
+- Metal/Vulkan: fix incorrect dominant light shadows rendering.
 
 ## v1.9.16
 
