@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.17
+
 - engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens
 - engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering
 - engine: Fixed depth of field rendering with custom projection matrices
@@ -12,6 +14,10 @@ A new header is inserted each time a *tag* is created.
 - Metal/Vulkan: fix incorrect dominant light shadows rendering.
 
 ## v1.9.16
+
+gltfio: Add ResourceLoader evict API.
+gltfio: Fix ResourceLoader cache bug.
+iOS: Disable exceptions to reduce binary size.
 
 ## v1.9.15
 
