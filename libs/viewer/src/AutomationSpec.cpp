@@ -20,13 +20,14 @@
 
 #include "jsonParseUtils.h"
 
-#include <assert.h>
+#include <utils/Log.h>
 
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <utils/Log.h>
+#include <assert.h>
+#include <string.h>
 
 using namespace utils;
 

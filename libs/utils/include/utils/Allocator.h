@@ -24,11 +24,11 @@
 #include <utils/SpinLock.h>
 
 #include <atomic>
+#include <cstddef>
 #include <mutex>
 #include <type_traits>
 
 #include <assert.h>
-#include <stddef.h>
 #include <stdlib.h>
 
 namespace utils {

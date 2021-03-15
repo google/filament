@@ -1666,7 +1666,7 @@ static float4 getVignetteParameters(View::VignetteOptions options, uint32_t widt
 
         // Radius of the rounded corners as a param to pow()
         float radius = roundness *
-                mix(1.0f + 4.0f * (1.0f - options.feather), 1.0f, std::sqrtf(oval));
+                mix(1.0f + 4.0f * (1.0f - options.feather), 1.0f, std::sqrt(oval));
 
         // Factor to transform oval into circle
         float aspect = mix(1.0f, float(width) / float(height), circle);

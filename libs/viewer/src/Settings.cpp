@@ -16,16 +16,17 @@
 
 #include <viewer/Settings.h>
 
-#include <utils/Log.h>
-
 #include "jsonParseUtils.h"
+
+#include <utils/Log.h>
 
 #include <math/mat3.h>
 
-#include <assert.h>
-
 #include <sstream>
 #include <string>
+
+#include <assert.h>
+#include <string.h>
 
 using namespace utils;
 

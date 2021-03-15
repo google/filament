@@ -16,12 +16,13 @@
 
 #include <utils/Allocator.h>
 
-#include <stdlib.h>
-#include <assert.h>
+#include <utils/Log.h>
 
 #include <algorithm>
 
-#include <utils/Log.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 
 namespace utils {
 

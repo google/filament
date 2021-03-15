@@ -16,15 +16,12 @@
 
 #include <filamentapp/IBL.h>
 
-#include <fstream>
-#include <iostream>
-#include <string>
-
 #include <filament/Engine.h>
+#include <filament/IndirectLight.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Texture.h>
 #include <filament/Skybox.h>
+#include <filament/Texture.h>
 
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
@@ -32,7 +29,12 @@
 #include <stb_image.h>
 
 #include <utils/Path.h>
-#include <filament/IndirectLight.h>
+
+#include <fstream>
+#include <iostream>
+#include <string>
+
+#include <string.h>
 
 using namespace filament;
 using namespace image;
