@@ -388,7 +388,7 @@ void LightManager::ShadowCascades::computeLogSplits(float splitPositions[3], uin
     cascades = max(cascades, (uint8_t) 4u);
     for (size_t c = 1; c < cascades; c++) {
         splitPositions[s++] =
-            (near * std::powf(far / near, (float) c / cascades) - near) / (far - near);
+            (near * std::pow(far / near, (float) c / cascades) - near) / (far - near);
     }
 }
 

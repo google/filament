@@ -25,6 +25,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <string.h>
+
 #include "gl_headers.h"
 
 namespace filament {
