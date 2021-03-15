@@ -101,6 +101,8 @@ struct ColorGradingSettings {
     math::float3 midPoint{1.0f};
     math::float3 scale{1.0f};
     bool linkedCurves = false;
+    bool operator!=(const ColorGradingSettings &rhs) const { return !(rhs == *this); }
+    bool operator==(const ColorGradingSettings &rhs) const;
 };
 
 struct DynamicLightingSettings {

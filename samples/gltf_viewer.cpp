@@ -987,9 +987,7 @@ int main(int argc, char** argv) {
 
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
         if (options.enabled) {
-            // An inefficient but simple way of detecting change is to serialize to JSON, then
-            // do a string comparison.
-            if (writeJson(options) != writeJson(app.lastColorGradingOptions)) {
+            if (options != app.lastColorGradingOptions) {
                 ColorGrading *colorGrading = createColorGrading(options, engine);
                 engine->destroy(app.colorGrading);
                 app.colorGrading = colorGrading;
@@ -1019,6 +1017,7 @@ int main(int argc, char** argv) {
 
     filamentApp.setDropHandler([&] (std::string path) {
         app.resourceLoader->asyncCancelLoad();
+        app.resourceLoader->evictResourceData();
         app.viewer->removeAsset();
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);

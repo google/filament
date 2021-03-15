@@ -16,10 +16,6 @@
 
 #include <viewer/AutomationEngine.h>
 
-#include <imageio/ImageEncoder.h>
-
-#include <image/ColorTransform.h>
-
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -32,7 +28,6 @@
 #include <fstream>
 #include <sstream>
 
-using namespace image;
 using namespace utils;
 
 namespace filament {
@@ -47,12 +42,12 @@ struct ScreenshotState {
     AutomationEngine* engine;
 };
 
-void exportScreenshot(View* view, Renderer* renderer, std::string filename,
+static void exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
     const size_t byteCount = vp.width * vp.height * 3;
 
-    // Create a buffer descriptor that writes the PNG after the data becomes ready on the CPU.
+    // Create a buffer descriptor that writes the PPM after the data becomes ready on the CPU.
     backend::PixelBufferDescriptor buffer(
         new uint8_t[byteCount], byteCount,
         backend::PixelBufferDescriptor::PixelDataFormat::RGB,
@@ -65,12 +60,10 @@ void exportScreenshot(View* view, Renderer* renderer, std::string filename,
                 return;
             }
             const Viewport& vp = state->view->getViewport();
-            LinearImage image(toLinear<uint8_t>(vp.width, vp.height, vp.width * 3,
-                    static_cast<uint8_t*>(buffer)));
             Path out(state->filename);
-            std::ofstream outputStream(out, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                    state->filename);
+            std::ofstream ppmStream(out);
+            ppmStream << "P6 " << vp.width << " " << vp.height << " " << 255 << std::endl;
+            ppmStream.write(static_cast<char*>(buffer), vp.width * vp.height * 3);
             delete[] static_cast<uint8_t*>(buffer);
             if (state->autoclose) {
                 state->engine->requestClose();
@@ -83,6 +76,35 @@ void exportScreenshot(View* view, Renderer* renderer, std::string filename,
     // Invoke readPixels asynchronously.
     renderer->readPixels((uint32_t) vp.left, (uint32_t) vp.bottom, vp.width, vp.height,
             std::move(buffer));
+}
+
+AutomationEngine* AutomationEngine::createFromJSON(const char* jsonSpec, size_t size) {
+    AutomationSpec* spec = AutomationSpec::generate(jsonSpec, size);
+    if (!spec) {
+        return nullptr;
+    }
+    Settings* settings = new Settings();
+    AutomationEngine* result = new AutomationEngine(spec, settings);
+    result->mOwnsSettings = true;
+    return result;
+}
+
+AutomationEngine* AutomationEngine::createDefaultTest() {
+    AutomationSpec* spec = AutomationSpec::generateDefaultTestCases();
+    if (!spec) {
+        return nullptr;
+    }
+    Settings* settings = new Settings();
+    AutomationEngine* result = new AutomationEngine(spec, settings);
+    result->mOwnsSettings = true;
+    return result;
+}
+
+AutomationEngine::~AutomationEngine() {
+    if (mOwnsSettings) {
+        delete mSpec;
+        delete mSettings;
+    }
 }
 
 void AutomationEngine::startRunning() {
@@ -157,7 +179,7 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
     }
 
     if (mOptions.exportScreenshots) {
-        exportScreenshot(view, renderer, prefix + ".png", isLastTest, this);
+        exportScreenshot(view, renderer, prefix + ".ppm", isLastTest, this);
     }
 
     if (isLastTest) {

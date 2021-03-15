@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Remote</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="../favicon.png" rel="icon" type="image/x-icon" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+<style>
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+.container {
+    font-family: "Open Sans";
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.status-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 32px;
+    background: burlywood;
+    border: solid 2px black;
+    border-bottom: none;
+    font-size: 12px;
+}
+
+canvas {
+    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 640px;
+    border: solid 2px black;
+}
+
+.dropbox-area {
+    flex-direction: column;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    max-width: 640px;
+    max-height: 160px;
+    background: rgb(189, 189, 189);
+    border: solid 2px black;
+    border-top: none;
+}
+
+.dropbox-area p { text-align: center; }
+.instructions-area p { margin: 4px; }
+.instructions-area { margin-bottom: 12px; }
+a { text-decoration: none; }
+a:visited { color: rgb(26, 65, 78); }
+.bad { background: lightcoral; }
+.good { background: #45d48d; }
+</style>
+</head>
+
+<body>
+<div class="container">
+<div id="status" class="status-area">Disconnected</div>
+<canvas id="webgl2-canvas"></canvas>
+<div id="dropbox" class="dropbox-area">
+    <div>
+        <p>Drop a <b>glb</b> or a <b>zip</b> file here.</p>
+    </div>
+</div>
+<div id="instructions" class="instructions-area">
+    <p><code>adb forward tcp:8082 tcp:8082</code></p>
+    <button id="copyButton">Copy adb command to clipboard</button>
+</div>
+</div>
+
+<script src="filament.js"></script>
+
+<script>
+"use strict";
+
+document.getElementById("copyButton").addEventListener("click", () => {
+    navigator.clipboard.writeText("adb forward tcp:8082 tcp:8082");
+});
+
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+    dropbox.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
+})
+
+Filament.init([], () => window.app = new App() );
+
+class App {
+    constructor(canvas) {
+        this.websocket = null;
+        this.pollForServer = null;
+        this.pendingFile = null;
+
+        this.dropbox = document.getElementById("dropbox");
+        this.status = document.getElementById("status");
+        this.canvas = document.getElementsByTagName("canvas")[0];
+
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const scene = this.scene = engine.createScene();
+        const view = this.view = engine.createView();
+        const uiview = this.uiview = engine.createView();
+
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.serializer = new Filament.JsonSerializer();
+        this.previousSettingsJson = "";
+
+        view.setScene(scene);
+        view.setCamera(this.camera);
+        view.setPostProcessingEnabled(false);
+
+        // For now, we initialize the "sidebar" such that it stretches across the entire viewport.
+        // In the future we might want to draw stuff in the central 3D viewport.
+        const kInitialSidebarWidth = this.canvas.clientWidth * window.devicePixelRatio;
+
+        // Clear the central 3D viewport to light gray, whicht is not visible by default.
+        const L = 189 / 255;
+        const kBackgroundColor = [L, L, L, 1];
+        this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
+
+        this.render = this.render.bind(this);
+        this.simpleViewer = new Filament.SimpleViewer(engine, scene, view, kInitialSidebarWidth);
+
+        this.mouseX = -1;
+        this.mouseY = -1;
+        this.mouseButton = false;
+        this.mouseButtonEvents = [];
+        this.mouseWheelY = 0;
+
+        Object.seal(this);
+
+        this.canvas.addEventListener("pointermove", e => {
+            this.mouseX = e.offsetX * window.devicePixelRatio;
+            this.mouseY = e.offsetY * window.devicePixelRatio;
+        });
+        this.canvas.addEventListener("pointerup", e => this.mouseButtonEvents.push(false));
+        this.canvas.addEventListener("pointerdown", e => this.mouseButtonEvents.push(true));
+        this.canvas.addEventListener("mousewheel", e => this.mouseWheelY = e.deltaY / 8);
+
+        const resize = () => {
+            const dpr = window.devicePixelRatio;
+            const width = this.canvas.clientWidth * dpr;
+            const height = this.canvas.clientHeight * dpr;
+            this.resize(width, height);
+        };
+        window.addEventListener("resize", resize);
+        resize();
+
+        const dropbox = this.dropbox;
+        const upload = this.uploadFile.bind(this);
+
+        dropbox.addEventListener("dragover", dragEvent => {
+            dropbox.classList.add("bad");
+            if (!event.dataTransfer) return;
+            if (event.dataTransfer.items[0].kind !== "file") return;
+            dropbox.classList.remove("bad");
+            dropbox.classList.add("good");
+        }, false);
+
+        dropbox.addEventListener("dragleave", () => {
+            dropbox.classList.remove("good", "bad");
+        }, false);
+
+        dropbox.addEventListener("drop", dragEvent => {
+            dropbox.classList.remove("good", "bad");
+            if (!event.dataTransfer) return;
+            if (event.dataTransfer.items[0].kind !== "file") return;
+            const file = event.dataTransfer.items[0].getAsFile();
+            const is_glb = file.name.match(/\.(glb)$/i);
+            const is_zip = file.name.match(/\.(zip)$/i);
+            if (!is_glb && !is_zip) return;
+            const files = event.dataTransfer.files;
+            ([...files]).forEach(upload);
+        }, false);
+
+        this.startSocket();
+        window.requestAnimationFrame(this.render);
+    }
+
+    uploadFile(file) {
+        const connection = this.websocket;
+        if (connection && connection.readyState == connection.OPEN) {
+            console.info(`Uploading ${file.name}`);
+            connection.send(file.name);
+            connection.send(file);
+        } else {
+            this.pendingFile = file;
+        }
+    }
+
+    updateDom() {
+        this.status.innerHTML = this.websocket ? "Connected" : "Disconnected";
+        this.status.style.backgroundColor = this.websocket ? "#45d48d" : "burlywood";
+    }
+
+    startSocket() {
+        const ws = new WebSocket("ws://localhost:8082");
+
+        ws.addEventListener("open", () => {
+            clearTimeout(this.pollForServer);
+            this.websocket = ws;
+            this.updateDom();
+            this.previousSettingsJson = "";
+            if (this.pendingFile) {
+                this.uploadFile(this.pendingFile);
+                this.pendingFile = null;
+            }
+        });
+
+        ws.addEventListener("close", (e) => {
+            this.websocket = null;
+            this.pollForServer = setTimeout(() => this.startSocket(), 3000);
+            this.updateDom();
+        });
+
+        ws.addEventListener("message", event => {
+            if (!event.data) return;
+            let commands = [];
+            try {
+                commands = JSON.parse(event.data);
+            }
+            catch (err) {
+                console.error(err, event.data);
+                return;
+            }
+            for (const command of commands) {
+                // TODO: process incoming messages here.
+                // Currently we do not send messages from the app on the device to the web client.
+            }
+        });
+    }
+
+    render() {
+        const connection = this.websocket;
+
+        // Process only a single mouse button event to ensure that ImGui detects a touch event
+        // even when a down-up pair occurs between consecutive frames.
+        let mouseButton = this.mouseButton;
+        if (this.mouseButtonEvents.length > 0) {
+            this.mouseButton = this.mouseButtonEvents.shift();
+        }
+        const mouseWheel = this.mouseWheelY;
+        this.mouseWheelY = 0;
+
+        // If there's no connection, let Filament clear the canvas, but do not render the UI view.
+        if (!connection) {
+            this.renderer.beginFrame(this.swapChain);
+            this.renderer.renderView(this.view);
+            this.renderer.endFrame();
+            this.engine.execute();
+            window.requestAnimationFrame(this.render);
+            return;
+        }
+
+        // Draw the UI and potentially mutate the settings object.
+        const deltaTime = 1.0 / 60.0;
+        this.simpleViewer.renderUserInterface(deltaTime, this.uiview, window.devicePixelRatio,
+                this.mouseX, this.mouseY, this.mouseButton, mouseWheel);
+
+        // Check if the user has changed any settings.
+        const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
+        if (this.previousSettingsJson != settingsJson) {
+            if (connection && connection.readyState == connection.OPEN) {
+                connection.send("setttings.json");
+                connection.send(settingsJson);
+            }
+            this.previousSettingsJson = settingsJson;
+        }
+
+        // Use Filament to render the 3D viewport and the UI.
+        this.renderer.beginFrame(this.swapChain);
+        this.renderer.renderView(this.view);
+        this.renderer.renderView(this.uiview);
+        this.renderer.endFrame();
+        this.engine.execute();
+        window.requestAnimationFrame(this.render);
+    }
+
+    resize(width, height) {
+        const Projection = Filament.Camera$Projection;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.view.setViewport([0, 0, width, height]);
+        this.uiview.setViewport([0, 0, width, height]);
+        this.camera.setProjection(Projection.ORTHO, 0, width, height, 0, 0, 1);
+    }
+}
+
+</script>
+</body>
+</html>

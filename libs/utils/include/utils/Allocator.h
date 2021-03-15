@@ -537,10 +537,10 @@ public:
     // construct an arena with a name and forward argument to its allocator
     template<typename ... ARGS>
     Arena(const char* name, size_t size, ARGS&& ... args)
-            : mArea(size),
+            : mArenaName(name),
+              mArea(size),
               mAllocator(mArea, std::forward<ARGS>(args) ... ),
-              mListener(name, mArea.data(), size),
-              mArenaName(name) {
+              mListener(name, mArea.data(), size) {
     }
 
     // allocate memory from arena with given size and alignment
@@ -647,11 +647,12 @@ public:
     }
 
 private:
+    char const* mArenaName = nullptr;
     HeapArea mArea; // We might want to make that a template parameter too eventually.
+    // note: we should use something like compressed_pair for the members below
     AllocatorPolicy mAllocator;
     LockingPolicy mLock;
     TrackingPolicy mListener;
-    char const* mArenaName = nullptr;
 };
 
 // ------------------------------------------------------------------------------------------------

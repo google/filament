@@ -361,10 +361,7 @@ template<typename D, typename ... ARGS>
 backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
     static_assert(sizeof(D) <= 208, "Handle<> too large");
     backend::Handle<D> h{ allocateHandle(sizeof(D)) };
-    registerHandleId(h.getId());
-
     D* addr = handle_cast<D *>(h);
-
     new(addr) D(std::forward<ARGS>(args)...);
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
     addr->typeId = typeid(D).name();
@@ -404,7 +401,6 @@ void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
 #endif
         p->~D();
         mHandleArena.free(const_cast<D*>(p), sizeof(D));
-        unregisterHandleId(handle.getId());
     }
 }
 

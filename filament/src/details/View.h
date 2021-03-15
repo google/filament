@@ -407,6 +407,14 @@ public:
         return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
     }
 
+    backend::TargetBufferFlags getRenderTargetAttachmentMask() const noexcept {
+        if (mRenderTarget == nullptr) {
+            return backend::TargetBufferFlags::NONE;
+        } else {
+            return mRenderTarget->getAttachmentMask();
+        }
+    }
+
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 

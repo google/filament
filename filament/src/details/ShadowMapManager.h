@@ -29,8 +29,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include "fg/FrameGraph.h"
-#include "fg/FrameGraphPassResources.h"
+#include "fg2/FrameGraph.h"
 
 #include <math/vec3.h>
 

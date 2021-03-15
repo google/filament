@@ -735,7 +735,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     glslEntry.stage = v.stage;
                     glslEntry.shader = shader;
 
-                    textDictionary.addText(glslEntry.shader);
                     glslEntries.push_back(glslEntry);
                 }
 
@@ -743,8 +742,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 if (targetApi == TargetApi::VULKAN) {
                     assert(!spirv.empty());
                     spirvEntry.stage = v.stage;
+                    spirvEntry.spirv = std::move(spirv);
 
-                    spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
                     spirvEntries.push_back(spirvEntry);
                 }
 
@@ -754,7 +753,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     metalEntry.stage = v.stage;
                     metalEntry.shader = msl;
 
-                    textDictionary.addText(metalEntry.shader);
                     metalEntries.push_back(metalEntry);
                 }
 #endif
@@ -776,6 +774,30 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
     if (cancelJobs.load()) {
         return false;
+    }
+
+    // Sort the variants.
+    auto compare = [](const auto& a, const auto& b) {
+        const uint32_t akey = a.shaderModel << 16 | a.variant << 8 | a.stage;
+        const uint32_t bkey = b.shaderModel << 16 | b.variant << 8 | b.stage;
+        return akey < bkey;
+    };
+    std::sort(glslEntries.begin(), glslEntries.end(), compare);
+    std::sort(spirvEntries.begin(), spirvEntries.end(), compare);
+    std::sort(metalEntries.begin(), metalEntries.end(), compare);
+
+    // Generate the dictionaries.
+    for (const auto& s : glslEntries) {
+        textDictionary.addText(s.shader);
+    }
+#ifndef FILAMAT_LITE
+    for (auto& s : spirvEntries) {
+        std::vector<uint32_t> spirv = std::move(s.spirv);
+        s.dictionaryIndex = spirvDictionary.addBlob(spirv);
+    }
+#endif
+    for (const auto& s : metalEntries) {
+        textDictionary.addText(s.shader);
     }
 
     // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)

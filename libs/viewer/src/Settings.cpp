@@ -1061,6 +1061,33 @@ std::string writeJson(const ViewSettings& in) {
     return oss.str();
 }
 
+bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
+    // If you had to fix the following codeline, then you likely also need to update the
+    // implementation of operator==.
+    static_assert(sizeof(ColorGradingSettings) == 200, "Please update Settings.cpp");
+    return enabled == rhs.enabled &&
+            quality == rhs.quality &&
+            toneMapping == rhs.toneMapping &&
+            temperature == rhs.temperature &&
+            tint == rhs.tint &&
+            outRed == rhs.outRed &&
+            outGreen == rhs.outGreen &&
+            outBlue == rhs.outBlue &&
+            shadows == rhs.shadows &&
+            midtones == rhs.midtones &&
+            highlights == rhs.highlights &&
+            ranges == rhs.ranges &&
+            contrast == rhs.contrast &&
+            vibrance == rhs.vibrance &&
+            saturation == rhs.saturation &&
+            slope == rhs.slope &&
+            offset == rhs.offset &&
+            power == rhs.power &&
+            gamma == rhs.gamma &&
+            midPoint == rhs.midPoint &&
+            linkedCurves == rhs.linkedCurves &&
+            scale == rhs.scale;
+}
 
 } // namespace viewer
 } // namespace filament

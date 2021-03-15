@@ -734,6 +734,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {
+    maxMiplevel = filament::math::min(int(maxMiplevel), int(this->levels - 1));
     mPrimaryViewRange.baseMipLevel = minMiplevel;
     mPrimaryViewRange.levelCount = maxMiplevel - minMiplevel + 1;
     getImageView(mPrimaryViewRange);
