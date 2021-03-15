@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.16
 
+gltfio: Add ResourceLoader evict API.
+gltfio: Fix ResourceLoader cache bug.
+iOS: Disable exceptions to reduce binary size.
+
 ## v1.9.15
 
 filamat / matc: fix sporatic crash.
