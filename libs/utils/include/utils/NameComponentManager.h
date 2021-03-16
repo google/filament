@@ -19,6 +19,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
