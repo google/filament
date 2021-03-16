@@ -285,11 +285,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     mDiscardedFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
-    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget(view);
+    Handle<HwRenderTarget> viewRenderTarget;
+    TargetBufferFlags attachmentMask;
+    getRenderTarget(view, attachmentMask, viewRenderTarget);
     FrameGraphId<FrameGraphTexture> fgViewRenderTarget = fg.import("viewRenderTarget",
             {
+                    .attachments = attachmentMask,
                     .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
                     .clearColor = clearColor,
+                    .samples = 0,
                     .clearFlags = clearFlags,
                     .discardStart = discardedFlags
             }, viewRenderTarget);
@@ -1087,9 +1091,14 @@ void FRenderer::readPixels(Handle<HwRenderTarget> renderTargetHandle,
     driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
 }
 
-Handle<HwRenderTarget> FRenderer::getRenderTarget(FView& view) const noexcept {
-    Handle<HwRenderTarget> viewRenderTarget = view.getRenderTargetHandle();
-    return viewRenderTarget ? viewRenderTarget : mRenderTarget;
+void FRenderer::getRenderTarget(FView const& view,
+        TargetBufferFlags& outAttachementMask, Handle<HwRenderTarget>& outTarget) const noexcept {
+    outTarget = view.getRenderTargetHandle();
+    outAttachementMask = view.getRenderTargetAttachmentMask();
+    if (!outTarget) {
+        outTarget = mRenderTarget;
+        outAttachementMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+    }
 }
 
 void FRenderer::initializeClearFlags() {

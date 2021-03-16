@@ -23,8 +23,6 @@ import androidx.annotation.Size;
 
 import static com.google.android.filament.Colors.LinearColor;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 /**
  * Skybox
  * <p>When added to a {@link Scene}, the <code>Skybox</code> fills all untouched pixels.</p>

@@ -119,6 +119,12 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
     mHandle(createHandle(engine, builder)) {
     mAttachments[COLOR] = builder.mImpl->mAttachments[COLOR];
     mAttachments[DEPTH] = builder.mImpl->mAttachments[DEPTH];
+    if (mAttachments[COLOR].texture) {
+        mAttachmentMask |= TargetBufferFlags::COLOR0;
+    }
+    if (mAttachments[DEPTH].texture) {
+        mAttachmentMask |= TargetBufferFlags::DEPTH;
+    }
 }
 
 void FRenderTarget::terminate(FEngine& engine) {

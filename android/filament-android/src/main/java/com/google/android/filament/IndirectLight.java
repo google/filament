@@ -21,8 +21,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 /**
  * <code>IndirectLight</code> is used to simulate environment lighting, a form of global illumination.
  *
@@ -430,6 +428,7 @@ public class IndirectLight {
     }
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 3)
     public float[] getDirectionEstimate(@Nullable @Size(min = 3) float[] direction) {
         direction = Asserts.assertFloat3(direction);
@@ -472,6 +471,7 @@ public class IndirectLight {
 
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 4)
     public float[] getColorEstimate(@Nullable @Size(min = 4) float[] colorIntensity, float x, float y, float z) {
         colorIntensity = Asserts.assertFloat4(colorIntensity);

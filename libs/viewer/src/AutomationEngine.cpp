@@ -16,6 +16,7 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -89,7 +90,7 @@ AutomationEngine* AutomationEngine::createFromJSON(const char* jsonSpec, size_t 
     return result;
 }
 
-AutomationEngine* AutomationEngine::createDefaultTest() {
+AutomationEngine* AutomationEngine::createDefault() {
     AutomationSpec* spec = AutomationSpec::generateDefaultTestCases();
     if (!spec) {
         return nullptr;
@@ -101,6 +102,9 @@ AutomationEngine* AutomationEngine::createDefaultTest() {
 }
 
 AutomationEngine::~AutomationEngine() {
+    if (mColorGrading) {
+        mColorGradingEngine->destroy(mColorGrading);
+    }
     if (mOwnsSettings) {
         delete mSpec;
         delete mSettings;
@@ -122,7 +126,8 @@ void AutomationEngine::terminate() {
 }
 
 void AutomationEngine::exportSettings(const Settings& settings, const char* filename) {
-    std::string contents = writeJson(settings);
+    JsonSerializer serializer;
+    std::string contents = serializer.writeJson(settings);
     std::ofstream out(filename);
     if (!out) {
         gStatus = "Failed to export settings file.";
@@ -131,15 +136,39 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
+void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* view,
+        MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
+        utils::Entity sunlight, LightManager* lm, Scene* scene) {
+    JsonSerializer serializer;
+    serializer.readJson(json, jsonLength, mSettings);
+    viewer::applySettings(mSettings->view, view);
+    for (size_t i = 0; i < materialCount; i++) {
+        viewer::applySettings(mSettings->material, materials[i]);
+    }
+    viewer::applySettings(mSettings->lighting, ibl, sunlight, lm, scene);
+}
+
+ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
+    if (mSettings->view.colorGrading != mColorGradingSettings) {
+        mColorGradingSettings = mSettings->view.colorGrading;
+        if (mColorGrading) {
+            mColorGradingEngine->destroy(mColorGrading);
+        }
+        mColorGrading = createColorGrading(mColorGradingSettings, engine);
+        mColorGradingEngine = engine;
+    }
+    return mColorGrading;
+}
+
 void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
         Renderer* renderer, float deltaTime) {
     const auto activateTest = [this, view, materials, materialCount]() {
         mElapsedTime = 0;
         mElapsedFrames = 0;
         mSpec->get(mCurrentTest, mSettings);
-        applySettings(mSettings->view, view);
+        viewer::applySettings(mSettings->view, view);
         for (size_t i = 0; i < materialCount; i++) {
-            applySettings(mSettings->material, materials[i]);
+            viewer::applySettings(mSettings->material, materials[i]);
         }
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;

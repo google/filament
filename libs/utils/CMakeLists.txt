@@ -89,6 +89,7 @@ target_link_libraries(${TARGET} PUBLIC tsl)
 
 if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC log)
+    target_link_libraries(${TARGET} PRIVATE dl)
 endif()
 
 if (WIN32)
@@ -100,6 +101,7 @@ if (LINUX)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
     target_link_libraries(${TARGET} PRIVATE Threads::Threads)
+    target_link_libraries(${TARGET} PRIVATE dl)
 endif()
 
 # ==================================================================================================

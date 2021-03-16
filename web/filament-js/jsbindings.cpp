@@ -57,6 +57,8 @@
 
 #include <geometry/SurfaceOrientation.h>
 
+#include <viewer/SimpleViewer.h>
+
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -90,6 +92,8 @@ using namespace filamesh;
 using namespace geometry;
 using namespace gltfio;
 using namespace image;
+
+using namespace filament::viewer;
 
 namespace em = emscripten;
 
@@ -305,6 +309,15 @@ value_array<filament::math::float4>("float4")
     .element(&filament::math::float4::y)
     .element(&filament::math::float4::z)
     .element(&filament::math::float4::w);
+
+value_array<filament::math::double2>("double2")
+    .element(&filament::math::double2::x)
+    .element(&filament::math::double2::y);
+
+value_array<filament::math::double3>("double3")
+    .element(&filament::math::double3::x)
+    .element(&filament::math::double3::y)
+    .element(&filament::math::double3::z);
 
 value_array<filament::math::double4>("double4")
     .element(&filament::math::double4::x)
@@ -697,7 +710,9 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
-    .function("setScaling", &Camera::setScaling)
+    .function("setScaling", EMBIND_LAMBDA(void, (Camera* self, math::double2 scaling), {
+        self->setScaling(scaling);
+    }), allow_raw_pointers())
 
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
@@ -1823,6 +1838,17 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("asyncGetLoadProgress", &ResourceLoader::asyncGetLoadProgress)
     .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
+
+class_<Settings>("Settings");
+
+class_<JsonSerializer>("JsonSerializer")
+    .constructor<>()
+    .function("writeJson", &JsonSerializer::writeJson);
+
+class_<SimpleViewer>("SimpleViewer")
+    .constructor<Engine*, Scene*, View*, int>()
+    .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
+    .function("getSettings", &SimpleViewer::getSettings);
 
 } // EMSCRIPTEN_BINDINGS
 

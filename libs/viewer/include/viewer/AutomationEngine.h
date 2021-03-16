@@ -21,6 +21,9 @@
 
 namespace filament {
 
+class ColorGrading;
+class Engine;
+class LightManager;
 class MaterialInstance;
 class Renderer;
 class View;
@@ -28,16 +31,16 @@ class View;
 namespace viewer {
 
 /**
- * The AutomationEngine iterates through settings permutations and pushes them to Filament,
- * optionally exporting screenshots along the way.
+ * The AutomationEngine makes it easy to push a bag of settings values to Filament.
+ * It can also be used to iterate through settings permutations for testing purposes.
  *
- * Upon construction, automation is given an immutable reference to an AutomationSpec. It is
- * always in one of two states: running or idle. The running state can be entered immediately
- * (startRunning) or by requesting batch mode (startBatchMode).
+ * When creating an automation engine for testing purposes, clients give it an immutable reference
+ * to an AutomationSpec. It is always in one of two states: running or idle. The running state can
+ * be entered immediately (startRunning) or by requesting batch mode (startBatchMode).
  *
- * Clients must call tick() after each frame is rendered, which gives automation an opportunity to
- * push settings to Filament, increment the current test index (if enough time has elapsed), and
- * request an asychronous screenshot.
+ * When executing a test, clients should call tick() after each frame is rendered, which gives
+ * automation an opportunity to push settings to Filament, increment the current test index (if
+ * enough time has elapsed), and request an asychronous screenshot.
  *
  * The time to sleep between tests is configurable and can be set to zero. Automation also waits a
  * specified minimum number of frames between tests.
@@ -111,29 +114,30 @@ public:
     static AutomationEngine* createFromJSON(const char* jsonSpec, size_t size);
 
     /**
-     * Creates an automation engine for the default test sequence.
+     * Creates an automation engine for the sole purpose of pushing settings, or for executing
+     * the default test sequence.
      *
      * To see how the default test sequence is generated, search for DEFAULT_AUTOMATION.
      */
-    static AutomationEngine* createDefaultTest();
-
-    ~AutomationEngine();
+    static AutomationEngine* createDefault();
 
     /**
-     * Activates automation. During the subsequent call to tick(), the first test is applied
-     * and automation enters the running state.
+     * Activates the automation test. During the subsequent call to tick(), the first test is
+     * applied and automation enters the running state.
      */
     void startRunning();
 
     /**
-     * Activates automation, but enters a paused state until the user calls signalBatchMode().
+     * Activates the automation test, but enters a paused state until the user calls
+     * signalBatchMode().
      */
     void startBatchMode();
 
     /**
-     * Notifies the automation engine that time has passed and a new frame has been rendered.
+     * Notifies the automation engine that time has passed, a new frame has been rendered.
      *
-     * This is when settings get applied, screenshots are (optionally) exported, etc.
+     * This is when settings get applied, screenshots are (optionally) exported, and the internal
+     * test counter is potentially incremented.
      *
      * @param view          The Filament View that automation pushes changes to.
      * @param materials     An optional set of of materials that can receive parameter tweaks.
@@ -143,6 +147,27 @@ public:
      */
     void tick(View* view, MaterialInstance* const* materials, size_t materialCount,
             Renderer* renderer, float deltaTime);
+
+    /**
+     * Mutates a set of client-owned Filament objects according to a JSON string.
+     *
+     * This method is an alternative to tick(). It allows clients to use the automation engine as a
+     * remote control, as opposed to iterating through a predetermined test sequence.
+     *
+     * This updates the stashed Settings object, then pushes those settings to the given
+     * Filament objects. Clients can optionally call getColorGrading() after calling this method.
+     */
+    void applySettings(const char* json, size_t jsonLength, View* view,
+            MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
+            utils::Entity sunlight, LightManager* lm, Scene* scene);
+
+    /**
+     * Gets a color grading object that corresponds to the latest settings.
+     *
+     * This method either returns a cached instance, or it destroys the cached instance and creates
+     * a new one.
+     */
+    ColorGrading* getColorGrading(Engine* engine);
 
     /**
      * Signals that batch mode can begin. Call this after all meshes and textures finish loading.
@@ -184,11 +209,17 @@ public:
     size_t testCount() const { return mSpec->size(); }
     bool isBatchModeEnabled() const { return mBatchModeEnabled; }
     const char* getStatusMessage() const;
+    ~AutomationEngine();
 
 private:
     AutomationSpec const * const mSpec;
     Settings * const mSettings;
     Options mOptions;
+
+    Engine* mColorGradingEngine = nullptr;
+    ColorGrading* mColorGrading = nullptr;
+    ColorGradingSettings mColorGradingSettings = {};
+
     size_t mCurrentTest;
     float mElapsedTime;
     int mElapsedFrames;

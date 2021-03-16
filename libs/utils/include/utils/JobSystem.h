@@ -256,7 +256,7 @@ public:
     void run(Job*& job, uint32_t flags = 0) noexcept;
     void run(Job*&& job, uint32_t flags = 0) noexcept { // allows run(createJob(...));
         Job* p = job;
-        run(p);
+        run(p, flags);
     }
 
     void signal() noexcept;

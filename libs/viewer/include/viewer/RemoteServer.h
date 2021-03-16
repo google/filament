@@ -17,6 +17,8 @@
 #ifndef VIEWER_REMOTE_SERVER_H
 #define VIEWER_REMOTE_SERVER_H
 
+#include <viewer/Settings.h>
+
 #include <stddef.h>
 #include <mutex>
 
@@ -25,7 +27,8 @@ class CivetServer;
 namespace filament {
 namespace viewer {
 
-class WsHandler;
+class MessageSender;
+class MessageReceiver;
 
 /**
  * Encapsulates a message sent from the web client.
@@ -43,35 +46,52 @@ struct ReceivedMessage {
 /**
  * Manages a tiny WebSocket server that can receive model data and viewer settings.
  *
- * Client apps can call peekReceivedMessage to check for a new model, or acquireReceivedMessage
+ * Client apps can call peekReceivedMessage to check for new data, or acquireReceivedMessage
  * to pop it off the small internal queue. When they are done examining the message contents
  * they should call releaseReceivedMessage.
- *
- * TODO: Currently this can only receive model data. We would like to extend it to receive
- * viewer settings and commands (e.g. "Start Automation Test").
  */
 class RemoteServer {
 public:
     RemoteServer(int port = 8082);
     ~RemoteServer();
-    bool isValid() const { return mCivetServer; }
+    bool isValid() const { return mMessageSender; }
+
+    /**
+     * Checks if a download is currently in progress and returns its label.
+     * Returns null if nothing is being downloaded.
+     */
     char const* peekIncomingLabel() const;
-    ReceivedMessage const* peekReceivedMessage() const;
+
+    /**
+     * Pops a message off the incoming queue or returns null if there are no unread messages.
+     *
+     * After examining its contents, users should free the message with releaseReceivedMessage.
+     */
     ReceivedMessage const* acquireReceivedMessage();
+
+    /**
+     * Frees the memory that holds the contents of a received message.
+     */
     void releaseReceivedMessage(ReceivedMessage const* message);
+
+    void sendMessage(const Settings& settings);
+    void sendMessage(const char* label, const char* buffer, size_t bufsize);
+
+    // For internal use (makes JNI simpler)
+    ReceivedMessage const* peekReceivedMessage() const;
 
 private:
     void enqueueReceivedMessage(ReceivedMessage* message);
     void setIncomingMessage(ReceivedMessage* message);
-    CivetServer* mCivetServer = nullptr;
-    WsHandler* mWsHandler = nullptr;
+    MessageSender* mMessageSender = nullptr;
+    MessageReceiver* mMessageReceiver = nullptr;
     size_t mNextMessageUid = 0;
-    size_t mOldestMessageUid = 0;
     static const size_t kMessageCapacity = 4;
     ReceivedMessage* mReceivedMessages[kMessageCapacity] = {};
     ReceivedMessage* mIncomingMessage = nullptr;
+    JsonSerializer mSerializer;
     mutable std::mutex mReceivedMessagesMutex;
-    friend class WsHandler;
+    friend class MessageReceiver;
 };
 
 } // namespace viewer

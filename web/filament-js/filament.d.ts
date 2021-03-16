@@ -42,6 +42,8 @@ export type BufferReference = string | ArrayBufferView;
 export type float2 = glm.vec2|number[];
 export type float3 = glm.vec3|number[];
 export type float4 = glm.vec4|number[];
+export type double2 = glm.vec2|number[];
+export type double3 = glm.vec3|number[];
 export type double4 = glm.vec4|number[];
 export type mat3 = glm.mat3|number[];
 export type mat4 = glm.mat4|number[];
@@ -398,7 +400,7 @@ export class Camera {
             near: number, far: number, fov: Camera$Fov): void;
     public setLensProjection(focalLength: number, aspect: number, near: number, far: number): void;
     public setCustomProjection(projection: mat4, near: number, far: number): void;
-    public setScaling(scale: double4): void;
+    public setScaling(scale: double2): void;
     public getProjectionMatrix(): mat4;
     public getCullingProjectionMatrix(): mat4;
     public getScaling(): double4;
