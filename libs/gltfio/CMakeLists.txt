@@ -30,6 +30,8 @@ set(SRCS
         src/GltfEnums.h
         src/MaterialProvider.cpp
         src/ResourceLoader.cpp
+        src/TangentsJob.h
+        src/TangentsJob.cpp
         src/UbershaderLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
