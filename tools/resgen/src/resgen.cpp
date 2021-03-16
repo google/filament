@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <utils/Path.h>
-
 #include <getopt/getopt.h>
 
 #include <algorithm>
@@ -25,11 +23,11 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <string.h>
 
 using namespace std;
-using namespace utils;
 
 static const char* g_jsonMagicString = "__RESGEN__";
 static const char* g_packageName = "resources";
@@ -96,7 +94,7 @@ static const char* ASM_TEMPLATE = R"ASM(
 )ASM";
 
 static void printUsage(const char* name) {
-    std::string execName(Path(name).getName());
+    std::string execName(std::filesystem::path(name).filename());
     const std::string from("RESGEN");
     std::string usage(USAGE);
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -179,9 +177,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    vector<Path> inputPaths;
+    vector<std::filesystem::path> inputPaths;
     for (int argIndex = optionIndex; argIndex < argc; ++argIndex) {
-        inputPaths.emplace_back(argv[argIndex]);
+        inputPaths.emplace_back(argv[argIndex]).lexically_normal();
     }
     if (g_embedJson) {
         inputPaths.push_back(g_jsonMagicString);
@@ -193,16 +191,16 @@ int main(int argc, char* argv[]) {
     transform(packagePrefix.begin(), packagePrefix.end(), packagePrefix.begin(), ::toupper);
     std::string package = packagePrefix + "PACKAGE";
 
-    const Path deployDir(g_deployDir);
-    if (!deployDir.exists()) {
-        deployDir.mkdirRecursive();
+    const std::filesystem::path deployDir(g_deployDir);
+    if (!exists(deployDir)) {
+        std::filesystem::create_directories(deployDir);
     }
 
-    const Path appleAsmPath(deployDir + (packageFile + ".apple.S"));
-    const Path asmPath(deployDir + (packageFile + ".S"));
-    const Path binPath(deployDir + (packageFile + ".bin"));
-    const Path headerPath(deployDir + (packageFile + ".h"));
-    const Path xxdPath(deployDir + (packageFile + ".c"));
+    const std::filesystem::path appleAsmPath(deployDir / (packageFile + ".apple.S"));
+    const std::filesystem::path asmPath(deployDir / (packageFile + ".S"));
+    const std::filesystem::path binPath(deployDir / (packageFile + ".bin"));
+    const std::filesystem::path headerPath(deployDir / (packageFile + ".h"));
+    const std::filesystem::path xxdPath(deployDir / (packageFile + ".c"));
 
     // In the assembly language templates, replace {RESOURCES} with packagePrefix and replace
     // {resources} with packageFile.
@@ -220,21 +218,21 @@ int main(int argc, char* argv[]) {
         asmstr.replace(pos, k2.length(), packageFile);
 
     // Open the Apple-friendly assembly language file.
-    ofstream appleAsmStream(appleAsmPath.getPath());
+    ofstream appleAsmStream(appleAsmPath);
     if (!appleAsmStream) {
         cerr << "Unable to open " << appleAsmPath << endl;
         exit(1);
     }
 
     // Open the non-Apple assembly language file.
-    ofstream asmStream(asmPath.getPath());
+    ofstream asmStream(asmPath);
     if (!asmStream) {
         cerr << "Unable to open " << asmPath << endl;
         exit(1);
     }
 
     // Open the bin file for writing.
-    ofstream binStream(binPath.getPath(), ios::binary);
+    ofstream binStream(binPath, ios::binary);
     if (!binStream) {
         cerr << "Unable to open " << binPath << endl;
         exit(1);
@@ -257,7 +255,7 @@ int main(int argc, char* argv[]) {
     // Open the generated C file for writing.
     ofstream xxdStream;
     if (g_generateC) {
-        xxdStream = ofstream(xxdPath.getPath());
+        xxdStream = ofstream(xxdPath);
         if (!xxdStream) {
             cerr << "Unable to open " << xxdPath << endl;
             exit(1);
@@ -271,7 +269,7 @@ int main(int argc, char* argv[]) {
     for (const auto& inPath : inputPaths) {
         vector<uint8_t> content;
         if (inPath != g_jsonMagicString) {
-            ifstream inStream(inPath.getPath(), ios::binary);
+            ifstream inStream(inPath, ios::binary);
             if (!inStream) {
                 cerr << "Unable to open " << inPath << endl;
                 exit(1);
@@ -295,7 +293,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Formulate the resource name and the prefixed resource name.
-        std::string rname = g_keepExtension ? inPath.getName() : inPath.getNameWithoutExtension();
+        std::string rname = g_keepExtension ? inPath.filename() : inPath.stem();
         replace(rname.begin(), rname.end(), '.', '_');
         transform(rname.begin(), rname.end(), rname.begin(), ::toupper);
         const std::string prname = packagePrefix + rname;
@@ -359,7 +357,7 @@ int main(int argc, char* argv[]) {
 
     // To optimize builds, avoid overwriting the header file if nothing has changed.
     bool headerIsDirty = true;
-    ifstream headerInStream(headerPath.getPath(), std::ifstream::ate);
+    ifstream headerInStream(headerPath, std::ifstream::ate);
     string headerContents = headerStream.str();
     if (headerInStream) {
         long fileSize = static_cast<long>(headerInStream.tellg());
@@ -372,7 +370,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (headerIsDirty) {
-        ofstream headerOutStream(headerPath.getPath());
+        ofstream headerOutStream(headerPath);
         if (!headerOutStream) {
             cerr << "Unable to open " << headerPath << endl;
             exit(1);
