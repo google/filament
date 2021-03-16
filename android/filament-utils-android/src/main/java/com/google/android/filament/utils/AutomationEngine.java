@@ -19,20 +19,28 @@ package com.google.android.filament.utils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.ColorGrading;
+import com.google.android.filament.Engine;
+import com.google.android.filament.Entity;
+import com.google.android.filament.IndirectLight;
+import com.google.android.filament.LightManager;
+import com.google.android.filament.Scene;
 import com.google.android.filament.View;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.Renderer;
 
 /**
- * The AutomationEngine iterates through settings permutations and pushes them to Filament.
+ * The AutomationEngine makes it easy to push a bag of settings values to Filament.
+ * It can also be used to iterate through settings permutations for testing purposes.
  *
- * Upon construction, automation is given a JSON string that tells it how to generate permutations
- * of settings. Automation is always in one of two states: running or idle. The running state can be
- * entered immediately (startRunning) or by requesting batch mode (startBatchMode).
+ * When creating an automation engine for testing purposes, clients give it a JSON string that
+ * tells it how to generate permutations of settings. Automation is always in one of two states:
+ * running or idle. The running state can be entered immediately (startRunning) or by requesting
+ * batch mode (startBatchMode).
  *
- * Clients must call tick() after each frame is rendered, which provides an opportunity to push
- * settings to Filament, increment the current test index (if enough time has elapsed), and request
- * an asychronous screenshot.
+ * When executing a test, clients should call tick() after each frame is rendered, which provides an
+ * opportunity to push settings to Filament, increment the current test index (if enough time has
+ * elapsed), and request an asychronous screenshot.
  *
  * The time to sleep between tests is configurable and can be set to zero. Automation also waits a
  * specified minimum number of frames between tests.
@@ -44,6 +52,7 @@ import com.google.android.filament.Renderer;
  */
 public class AutomationEngine {
     private long mNativeObject;
+    private ColorGrading mColorGrading;
 
     /**
      * Allows users to toggle screenshots, change the sleep duration between tests, etc.
@@ -81,7 +90,8 @@ public class AutomationEngine {
     }
 
     /**
-     * Creates an automation engine for the default test sequence.
+     * Creates an automation engine for the sole purpose of pushing settings, or for executing
+     * the default test sequence.
      *
      * To see how the default test sequence is generated, search for DEFAULT_AUTOMATION.
      */
@@ -99,20 +109,22 @@ public class AutomationEngine {
     }
 
     /**
-     * Activates automation. During the subsequent call to tick(), the first test is applied
-     * and automation enters the running state.
+     * Activates the automation test. During the subsequent call to tick(), the first test is
+     * applied and automation enters the running state.
      */
     public void startRunning() { nStartRunning(mNativeObject); }
 
     /**
-     * Activates automation, but enters a paused state until the user calls signalBatchMode().
+     * Activates the automation test, but enters a paused state until the user calls
+     * signalBatchMode().
      */
     public void startBatchMode() { nStartBatchMode(mNativeObject); }
 
     /**
      * Notifies the automation engine that time has passed and a new frame has been rendered.
      *
-     * This is when settings get applied, screenshots are (optionally) exported, etc.
+     * This is when settings get applied, screenshots are (optionally) exported, and the internal
+     * test counter is potentially incremented.
      *
      * @param view          The Filament View that automation pushes changes to.
      * @param materials     Optional set of of materials that can receive parameter tweaks.
@@ -131,6 +143,49 @@ public class AutomationEngine {
         long nativeView = view.getNativeObject();
         long nativeRenderer = renderer.getNativeObject();
         nTick(mNativeObject, nativeView, nativeMaterialInstances, nativeRenderer, deltaTime);
+    }
+
+    /**
+     * Mutates a set of client-owned Filament objects according to a JSON string.
+     *
+     * This method is an alternative to tick(). It allows clients to use the automation engine as a
+     * remote control, as opposed to iterating through a predetermined test sequence.
+     *
+     * This updates the stashed Settings object, then pushes those settings to the given
+     * Filament objects. Clients can optionally call getColorGrading() after calling this method.
+     */
+    public void applySettings(@NonNull String settingsJson, @NonNull View view,
+            @Nullable MaterialInstance[] materials, @Nullable IndirectLight ibl, @Entity int light,
+            @NonNull LightManager lm, @NonNull Scene scene) {
+        long[] nativeMaterialInstances = null;
+        if (materials != null) {
+            nativeMaterialInstances = new long[materials.length];
+            for (int i = 0; i < nativeMaterialInstances.length; i++) {
+                nativeMaterialInstances[i] = materials[i].getNativeObject();
+            }
+        }
+        long nativeView = view.getNativeObject();
+        long nativeIbl = ibl == null ? 0 : ibl.getNativeObject();
+        long nativeLm = lm.getNativeObject();
+        long nativeScene = scene.getNativeObject();
+        nApplySettings(mNativeObject, settingsJson, nativeView, nativeMaterialInstances,
+                nativeIbl, light, nativeLm, nativeScene);
+    }
+
+    /**
+     * Gets a color grading object that corresponds to the latest settings.
+     *
+     * This method either returns a cached instance, or it destroys the cached instance and creates
+     * a new one.
+     */
+    public ColorGrading getColorGrading(@NonNull Engine engine) {
+        // The native layer automatically destroys the old color grading instance,
+        // so there is no need to call Engine#destroyColorGrading here.
+        long nativeCg = nGetColorGrading(mNativeObject, engine.getNativeObject());
+        if (mColorGrading == null || mColorGrading.getNativeObject() != nativeCg) {
+            mColorGrading = nativeCg == 0 ? null : new ColorGrading(nativeCg);
+        }
+        return mColorGrading;
     }
 
     /**
@@ -156,10 +211,15 @@ public class AutomationEngine {
 
     private static native long nCreateAutomationEngine(String jsonSpec);
     private static native long nCreateDefaultAutomationEngine();
-    private static native void nSetOptions(long nativeObject, float sleepDuration, int minFrameCount, boolean verbose);
+    private static native void nSetOptions(long nativeObject, float sleepDuration,
+            int minFrameCount, boolean verbose);
     private static native void nStartRunning(long nativeObject);
     private static native void nStartBatchMode(long nativeObject);
-    private static native void nTick(long nativeObject, long view, long[] materials, long renderer, float deltaTime);
+    private static native void nTick(long nativeObject, long view, long[] materials, long renderer,
+            float deltaTime);
+    private static native void nApplySettings(long nativeObject, String jsonSettings, long view,
+            long[] materials, long ibl, int light, long lightManager, long scene);
+    private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
     private static native boolean nShouldClose(long nativeObject);

@@ -189,9 +189,8 @@ private:
         CameraManipulator* mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;
 
-        utils::Entity mCameraEntities[4];
-        filament::Camera* mCameras[4] = { nullptr };
-        filament::Camera* mUiCamera;
+        utils::Entity mCameraEntities[3];
+        filament::Camera* mCameras[3] = { nullptr };
         filament::Camera* mMainCamera;
         filament::Camera* mDebugCamera;
         filament::Camera* mOrthoCamera;

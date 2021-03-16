@@ -27,10 +27,16 @@ using namespace utils;
 namespace filament {
 namespace viewer {
 
-class WsHandler : public CivetWebSocketHandler {
+class MessageSender : public CivetServer {
+public:
+    MessageSender(const char** options) : CivetServer(options) {}
+    void sendMessage(const char* label, const char* buffer, size_t bufsize);
+};
+
+class MessageReceiver : public CivetWebSocketHandler {
    public:
-    WsHandler(RemoteServer* server) : mServer(server) {}
-    ~WsHandler() { delete mReceivedMessage; }
+    MessageReceiver(RemoteServer* server) : mServer(server) {}
+    ~MessageReceiver() { delete mReceivedMessage; }
     bool handleData(CivetServer* server, struct mg_connection*, int, char* , size_t) override;
    private:
     RemoteServer* mServer;
@@ -47,22 +53,22 @@ RemoteServer::RemoteServer(int port) {
     };
     std::string portString = std::to_string(port);
     kServerOptions[1] = portString.c_str();
-    mCivetServer = new CivetServer(kServerOptions);
-    if (!mCivetServer->getContext()) {
+    mMessageSender = new MessageSender(kServerOptions);
+    if (!mMessageSender->getContext()) {
         slog.e << "Unable to start RemoteServer, see civetweb.txt for details." << io::endl;
-        delete mCivetServer;
-        mCivetServer = nullptr;
-        mWsHandler = nullptr;
+        delete mMessageSender;
+        mMessageSender = nullptr;
+        mMessageReceiver = nullptr;
         return;
     }
-    mWsHandler = new WsHandler(this);
-    mCivetServer->addWebSocketHandler("", mWsHandler);
+    mMessageReceiver = new MessageReceiver(this);
+    mMessageSender->addWebSocketHandler("", mMessageReceiver);
     slog.i << "RemoteServer listening at ws://localhost:" << port << io::endl;
 }
 
 RemoteServer::~RemoteServer() {
-    delete mCivetServer;
-    delete mWsHandler;
+    delete mMessageSender;
+    delete mMessageReceiver;
     for (auto msg : mReceivedMessages) {
         releaseReceivedMessage(msg);
     }
@@ -75,26 +81,36 @@ char const * RemoteServer::peekIncomingLabel() const {
 
 ReceivedMessage const * RemoteServer::peekReceivedMessage() const {
     std::lock_guard lock(mReceivedMessagesMutex);
-    const size_t oldest = mOldestMessageUid;
-    for (auto msg : mReceivedMessages) { if (msg && msg->messageUid == oldest) return msg; }
-    return nullptr;
+
+    // Find the oldest message in the queue by looking for the lowest id.
+    // Note that this queue is not a ring buffer, it's just a tiny sparse array.
+    ReceivedMessage const* oldest = nullptr;
+    for (auto msg : mReceivedMessages) {
+        if (msg && (!oldest || msg->messageUid < oldest->messageUid)) oldest = msg;
+    }
+
+    return oldest;
 }
 
 ReceivedMessage const * RemoteServer::acquireReceivedMessage() {
     std::lock_guard lock(mReceivedMessagesMutex);
-    const size_t oldest = mOldestMessageUid;
+
+    // Find the oldest message in the queue by looking for the lowest id.
+    ReceivedMessage** oldest = nullptr;
     for (auto& msg : mReceivedMessages) {
-        if (msg && msg->messageUid == oldest) {
-            if (msg == mIncomingMessage) {
-                mIncomingMessage = nullptr;
-            }
-            auto result = msg;
-            msg = nullptr;
-            ++mOldestMessageUid;
-            return result;
-        }
+        if (msg && (!oldest || msg->messageUid < (*oldest)->messageUid)) oldest = &msg;
     }
-    return nullptr;
+    if (!oldest) return nullptr;
+
+    // If this message is the most recent download, then mark the download as completed.
+    ReceivedMessage const * result = *oldest;
+    if (result == mIncomingMessage) {
+        mIncomingMessage = nullptr;
+    }
+
+    // Replace the message slot with null and return the message to the caller.
+    *oldest = nullptr;
+    return result;
 }
 
 void RemoteServer::setIncomingMessage(ReceivedMessage* message) {
@@ -104,13 +120,31 @@ void RemoteServer::setIncomingMessage(ReceivedMessage* message) {
 
 void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
     std::lock_guard lock(mReceivedMessagesMutex);
-    for (auto& msg : mReceivedMessages) {
-        if (!msg) {
+
+    // Check if any unread messages have the same label as the incoming message. If so, it is safe
+    // to discard the old message and snarf its slot.
+    ReceivedMessage** empty_slot = nullptr;
+    for (auto& old_message : mReceivedMessages) {
+        if (old_message == nullptr) {
+            empty_slot = &old_message;
+            continue;
+        }
+        if (!strcmp(old_message->label, message->label)) {
+            releaseReceivedMessage(old_message);
             message->messageUid = mNextMessageUid++;
-            msg = message;
+            old_message = message;
             return;
         }
     }
+
+    // Otherwise use any empty slot in the queue.
+    if (empty_slot) {
+        message->messageUid = mNextMessageUid++;
+        *empty_slot = message;
+        return;
+    }
+
+    // If there are no empty slots, then discard the message. This basically never happens.
     slog.e << "Discarding message, message queue overflow." << io::endl;
 }
 
@@ -122,8 +156,17 @@ void RemoteServer::releaseReceivedMessage(ReceivedMessage const* message) {
     }
 }
 
+void RemoteServer::sendMessage(const Settings& settings) {
+    const auto& json = mSerializer.writeJson(settings);
+    mMessageSender->sendMessage("settings.json", json.c_str(), json.size() + 1);
+}
+
+void RemoteServer::sendMessage(const char* label, const char* buffer, size_t bufsize) {
+    mMessageSender->sendMessage(label, buffer, bufsize);
+}
+
 // NOTE: This is invoked off the main thread.
-bool WsHandler::handleData(CivetServer* server, struct mg_connection* conn, int bits,
+bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn, int bits,
                                   char* data, size_t size) {
     const bool final = bits & 0x80;
     const int opcode = bits & 0xf;
@@ -160,6 +203,13 @@ bool WsHandler::handleData(CivetServer* server, struct mg_connection* conn, int 
     mServer->enqueueReceivedMessage(mReceivedMessage);
     mReceivedMessage = nullptr;
     return true;
+}
+
+void MessageSender::sendMessage(const char* label, const char* buffer, size_t bufsize) {
+    for (auto iter : connections) {
+        mg_websocket_write(iter.first, 0x80, label, strlen(label) + 1);
+        mg_websocket_write(iter.first, 0x80, buffer, bufsize);
+    }
 }
 
 } // namespace viewer

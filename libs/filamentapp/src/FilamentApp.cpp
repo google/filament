@@ -562,11 +562,10 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // create cameras
     utils::EntityManager& em = utils::EntityManager::get();
-    em.create(4, mCameraEntities);
+    em.create(3, mCameraEntities);
     mCameras[0] = mMainCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[0]);
     mCameras[1] = mDebugCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[1]);
     mCameras[2] = mOrthoCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[2]);
-    mCameras[3] = mUiCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[3]);
 
     // set exposure
     for (auto camera : mCameras) {
@@ -593,7 +592,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
-    mUiView->setCamera(mUiCamera);
     if (config.splitView) {
         // Depth view always uses the main camera
         mDepthView->setCamera(mMainCamera);
@@ -770,9 +768,11 @@ void FilamentApp::Window::configureCamerasForWindow() {
     const double ratio = double(height) / double(width);
     const int sidebar = mFilamentApp->mSidebarWidth * dpiScaleX;
 
+    const bool splitview = mViews.size() > 2;
+
     // To trigger a floating-point exception, users could shrink the window to be smaller than
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = std::max(1, (int) width - sidebar);
+    const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
 
     double near = 0.1;
     double far = 100;
@@ -780,13 +780,9 @@ void FilamentApp::Window::configureCamerasForWindow() {
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
     mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
     mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
-    mUiCamera->setProjection(Camera::Projection::ORTHO,
-            0.0, width / dpiScaleX,
-            height / dpiScaleY, 0.0,
-            0.0, 1.0);
 
     // We're in split view when there are more views than just the Main and UI views.
-    if (mViews.size() > 2) {
+    if (splitview) {
         uint32_t vpw = width / 2;
         uint32_t vph = height / 2;
         mMainView->setViewport ({            0,            0, vpw,         vph          });

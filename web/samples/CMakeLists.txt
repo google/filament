@@ -193,6 +193,7 @@ set(HTML_FILES
     helmet.html
     morphing.html
     parquet.html
+    remote.html
     skinning.html
     suzanne.html
     triangle.html)
