@@ -107,9 +107,11 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
             TargetBufferInfo(upcast(color.texture)->getHwHandle(), color.mipLevel, color.face) :
             TargetBufferInfo(upcast(color.texture)->getHwHandle(), color.mipLevel, color.layer);
 
-    const TargetBufferInfo dinfo(
-            depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle(),
-            color.mipLevel, color.layer);
+    auto dtexture = depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle();
+    const TargetBufferInfo dinfo =
+            upcast(depth.texture)->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP ?
+            TargetBufferInfo(dtexture, depth.mipLevel, depth.face) :
+            TargetBufferInfo(dtexture, depth.mipLevel, depth.layer);
 
     const uint32_t width = FTexture::valueForLevel(color.mipLevel, color.texture->getWidth());
     const uint32_t height = FTexture::valueForLevel(color.mipLevel, color.texture->getHeight());
