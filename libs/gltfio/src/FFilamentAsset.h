@@ -46,6 +46,14 @@
 
 #include <vector>
 
+#ifdef NDEBUG
+#define GLTFIO_VERBOSE 0
+#define GLTFIO_WARN(msg)
+#else
+#define GLTFIO_VERBOSE 1
+#define GLTFIO_WARN(msg) slog.w << msg << io::endl
+#endif
+
 namespace utils {
     class NameComponentManager;
     class EntityManager;
