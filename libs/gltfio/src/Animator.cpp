@@ -18,6 +18,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
+#include "MorphHelper.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -44,9 +45,9 @@ using namespace utils;
 
 namespace gltfio {
 
-using TimeValues = std::map<float, size_t>;
-using SourceValues = std::vector<float>;
-using BoneVector = std::vector<filament::math::mat4f>;
+using TimeValues = map<float, size_t>;
+using SourceValues = vector<float>;
+using BoneVector = vector<filament::math::mat4f>;
 
 struct Sampler {
     TimeValues times;
@@ -56,7 +57,7 @@ struct Sampler {
 
 struct Channel {
     const Sampler* sourceData;
-    utils::Entity targetEntity;
+    Entity targetEntity;
     enum { TRANSLATION, ROTATION, SCALE, WEIGHTS } transformType;
 };
 
@@ -74,6 +75,11 @@ struct AnimatorImpl {
     FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
+    vector<float> weights;
+    MorphHelper* morpher;
+    void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
+    void prepareMorphing(const Channel& channel);
+    void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
 };
 
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
@@ -102,7 +108,7 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
             cgltf_accessor_unpack_floats(src.output, &dst.values[0], valuesAccessor->count * 4);
             break;
         default:
-            slog.e << "Unknown animation type." << io::endl;
+            GLTFIO_WARN("Unknown animation type.");
             return;
     }
 
@@ -134,7 +140,7 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
             dst.transformType = Channel::WEIGHTS;
             break;
         case cgltf_animation_path_type_invalid:
-            slog.e << "Unsupported channel path." << io::endl;
+            GLTFIO_WARN("Unsupported channel path.");
             break;
     }
 }
@@ -164,34 +170,6 @@ static bool validateAnimation(const cgltf_animation& anim) {
     return true;
 }
 
-static void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst) {
-    cgltf_animation_channel* srcChannels = srcAnim.channels;
-    cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
-    const Sampler* samplers = dst.samplers.data();
-    for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
-        const cgltf_animation_channel& srcChannel = srcChannels[j];
-        auto iter = nodeMap.find(srcChannel.target_node);
-        if (iter == nodeMap.end()) {
-            slog.w << "No scene root contains node ";
-            if (srcChannel.target_node->name) {
-                slog.w << "'" << srcChannel.target_node->name << "' ";
-            }
-            slog.w << "for animation ";
-            if (srcAnim.name) {
-                slog.w << "'" << srcAnim.name << "' ";
-            }
-            slog.w << "in channel " << j << io::endl;
-            continue;
-        }
-        utils::Entity targetEntity = iter.value();
-        Channel dstChannel;
-        dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
-        dstChannel.targetEntity = targetEntity;
-        setTransformType(srcChannel, dstChannel);
-        dst.channels.push_back(dstChannel);
-    }
-}
-
 Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     assert(asset->mResourcesLoaded && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
@@ -199,13 +177,14 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& anim = srcAnims[i];
         if (!validateAnimation(anim)) {
-            slog.e << "Disabling animation due to validation failure." << io::endl;
+            GLTFIO_WARN("Disabling animation due to validation failure.");
             return;
         }
     }
@@ -235,12 +214,12 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
 
         // Import each glTF channel into a custom data structure.
         if (instance) {
-            addChannels(instance->nodeMap, srcAnim, dstAnim);
+            mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
         } else if (!asset->isInstanced()) {
-            addChannels(asset->mNodeMap, srcAnim, dstAnim);
+            mImpl->addChannels(asset->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
-                addChannels(instance->nodeMap, srcAnim, dstAnim);
+                mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
             }
         }
     }
@@ -252,11 +231,12 @@ void Animator::addInstance(FFilamentInstance* instance) {
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
         Animation& dstAnim = mImpl->animations[i];
-        addChannels(instance->nodeMap, srcAnim, dstAnim);
+        mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
     }
 }
 
 Animator::~Animator() {
+    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -275,7 +255,6 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             continue;
         }
 
-        TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
         const TimeValues& times = sampler->times;
 
         // Find the first keyframe after the given time, or the keyframe that matches it exactly.
@@ -304,101 +283,11 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             }
         }
 
-        // Perform the interpolation. This is a simple but inefficient implementation; Filament
-        // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
-        // scale).
-        mat4f xform = transformManager->getTransform(node);
-        float3 scale;
-        quatf rotation;
-        float3 translation;
-        decomposeMatrix(xform, &translation, &rotation, &scale);
-
         if (sampler->interpolation == Sampler::STEP) {
             t = 0.0f;
         }
 
-        switch (channel.transformType) {
-
-            case Channel::SCALE: {
-                const float3* srcVec3 = (const float3*) sampler->values.data();
-                if (sampler->interpolation == Sampler::CUBIC) {
-                    float3 vert0 = srcVec3[prevIndex * 3 + 1];
-                    float3 tang0 = srcVec3[prevIndex * 3 + 2];
-                    float3 tang1 = srcVec3[nextIndex * 3];
-                    float3 vert1 = srcVec3[nextIndex * 3 + 1];
-                    scale = cubicSpline(vert0, tang0, vert1, tang1, t);
-                } else {
-                    scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
-                }
-                break;
-            }
-
-            case Channel::TRANSLATION: {
-                const float3* srcVec3 = (const float3*) sampler->values.data();
-                if (sampler->interpolation == Sampler::CUBIC) {
-                    float3 vert0 = srcVec3[prevIndex * 3 + 1];
-                    float3 tang0 = srcVec3[prevIndex * 3 + 2];
-                    float3 tang1 = srcVec3[nextIndex * 3];
-                    float3 vert1 = srcVec3[nextIndex * 3 + 1];
-                    translation = cubicSpline(vert0, tang0, vert1, tang1, t);
-                } else {
-                    translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
-                }
-                break;
-            }
-
-            case Channel::ROTATION: {
-                const quatf* srcQuat = (const quatf*) sampler->values.data();
-                if (sampler->interpolation == Sampler::CUBIC) {
-                    quatf vert0 = srcQuat[prevIndex * 3 + 1];
-                    quatf tang0 = srcQuat[prevIndex * 3 + 2];
-                    quatf tang1 = srcQuat[nextIndex * 3];
-                    quatf vert1 = srcQuat[nextIndex * 3 + 1];
-                    rotation = normalize(cubicSpline(vert0, tang0, vert1, tang1, t));
-                } else {
-                    rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
-                }
-                break;
-            }
-
-            case Channel::WEIGHTS: {
-                float4 weights(0, 0, 0, 0);
-                const float* const samplerValues = sampler->values.data();
-                assert(sampler->values.size() % times.size() == 0);
-                const int valuesPerKeyframe = sampler->values.size() / times.size();
-
-                if (sampler->interpolation == Sampler::CUBIC) {
-                    assert(valuesPerKeyframe % 3 == 0);
-                    const int numMorphTargets = valuesPerKeyframe / 3;
-                    const float* const inTangents = samplerValues;
-                    const float* const splineVerts = samplerValues + numMorphTargets;
-                    const float* const outTangents = samplerValues + numMorphTargets * 2;
-
-                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, numMorphTargets);
-                    for (int comp = 0; comp < numComponents; ++comp) {
-                        float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
-                        float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
-                        float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
-                        float vert1 = splineVerts[comp + nextIndex * valuesPerKeyframe];
-                        weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
-                    }
-                } else {
-                    const int numComponents = std::min((int) MAX_MORPH_TARGETS, valuesPerKeyframe);
-                    for (int comp = 0; comp < numComponents; ++comp) {
-                        float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
-                        float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
-                        weights[comp] = (1 - t) * previous + t * current;
-                    }
-                }
-
-                auto renderable = renderableManager->getInstance(channel.targetEntity);
-                renderableManager->setMorphWeights(renderable, weights);
-                continue;
-            }
-        }
-
-        xform = composeMatrix(translation, rotation, scale);
-        transformManager->setTransform(node, xform);
+        mImpl->applyAnimation(channel, t, prevIndex, nextIndex);
     }
 }
 
@@ -451,6 +340,155 @@ float Animator::getAnimationDuration(size_t animationIndex) const {
 
 const char* Animator::getAnimationName(size_t animationIndex) const {
     return mImpl->animations[animationIndex].name.c_str();
+}
+
+
+void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim,
+        Animation& dst) {
+    cgltf_animation_channel* srcChannels = srcAnim.channels;
+    cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+    const Sampler* samplers = dst.samplers.data();
+    for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
+        const cgltf_animation_channel& srcChannel = srcChannels[j];
+        auto iter = nodeMap.find(srcChannel.target_node);
+        if (UTILS_UNLIKELY(iter == nodeMap.end())) {
+            if (GLTFIO_VERBOSE) {
+                slog.w << "No scene root contains node ";
+                if (srcChannel.target_node->name) {
+                    slog.w << "'" << srcChannel.target_node->name << "' ";
+                }
+                slog.w << "for animation ";
+                if (srcAnim.name) {
+                    slog.w << "'" << srcAnim.name << "' ";
+                }
+                slog.w << "in channel " << j << io::endl;
+            }
+            continue;
+        }
+        Entity targetEntity = iter.value();
+        Channel dstChannel;
+        dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
+        dstChannel.targetEntity = targetEntity;
+        setTransformType(srcChannel, dstChannel);
+        dst.channels.push_back(dstChannel);
+        if (dstChannel.transformType == Channel::WEIGHTS) {
+            prepareMorphing(dstChannel);
+        }
+    }
+}
+
+// This function primes the cache in MorphHelper, which allows users to free their source data
+// after obtaining the Animator interface. We do this by sampling exactly half-way between key
+// frames. In practice this is sufficient, and MorphHelper degrades gracefully for corner cases.
+void AnimatorImpl::prepareMorphing(const Channel& channel) {
+    const Sampler* sampler = channel.sourceData;
+    const TimeValues& times = sampler->times;
+    auto iter = times.begin();
+    morpher->disableWrites(true);
+    for (size_t timeIndex = 0; timeIndex < times.size(); ++timeIndex, ++iter) {
+        auto next = iter;
+        ++next;
+        next = next == times.end() ? iter : next;
+        applyAnimation(channel, 0.5, iter->second, next->second);
+    }
+    morpher->disableWrites(false);
+}
+
+void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
+        size_t nextIndex) {
+    const Sampler* sampler = channel.sourceData;
+    const TimeValues& times = sampler->times;
+    TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
+
+    // Perform the interpolation. This is a simple but inefficient implementation; Filament
+    // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
+    // scale).
+    mat4f xform = transformManager->getTransform(node);
+    float3 scale;
+    quatf rotation;
+    float3 translation;
+    decomposeMatrix(xform, &translation, &rotation, &scale);
+
+    switch (channel.transformType) {
+
+        case Channel::SCALE: {
+            const float3* srcVec3 = (const float3*) sampler->values.data();
+            if (sampler->interpolation == Sampler::CUBIC) {
+                float3 vert0 = srcVec3[prevIndex * 3 + 1];
+                float3 tang0 = srcVec3[prevIndex * 3 + 2];
+                float3 tang1 = srcVec3[nextIndex * 3];
+                float3 vert1 = srcVec3[nextIndex * 3 + 1];
+                scale = cubicSpline(vert0, tang0, vert1, tang1, t);
+            } else {
+                scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+            }
+            break;
+        }
+
+        case Channel::TRANSLATION: {
+            const float3* srcVec3 = (const float3*) sampler->values.data();
+            if (sampler->interpolation == Sampler::CUBIC) {
+                float3 vert0 = srcVec3[prevIndex * 3 + 1];
+                float3 tang0 = srcVec3[prevIndex * 3 + 2];
+                float3 tang1 = srcVec3[nextIndex * 3];
+                float3 vert1 = srcVec3[nextIndex * 3 + 1];
+                translation = cubicSpline(vert0, tang0, vert1, tang1, t);
+            } else {
+                translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+            }
+            break;
+        }
+
+        case Channel::ROTATION: {
+            const quatf* srcQuat = (const quatf*) sampler->values.data();
+            if (sampler->interpolation == Sampler::CUBIC) {
+                quatf vert0 = srcQuat[prevIndex * 3 + 1];
+                quatf tang0 = srcQuat[prevIndex * 3 + 2];
+                quatf tang1 = srcQuat[nextIndex * 3];
+                quatf vert1 = srcQuat[nextIndex * 3 + 1];
+                rotation = normalize(cubicSpline(vert0, tang0, vert1, tang1, t));
+            } else {
+                rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
+            }
+            break;
+        }
+
+        case Channel::WEIGHTS: {
+            const float* const samplerValues = sampler->values.data();
+            assert(sampler->values.size() % times.size() == 0);
+            const int valuesPerKeyframe = sampler->values.size() / times.size();
+
+            if (sampler->interpolation == Sampler::CUBIC) {
+                assert(valuesPerKeyframe % 3 == 0);
+                const int numMorphTargets = valuesPerKeyframe / 3;
+                const float* const inTangents = samplerValues;
+                const float* const splineVerts = samplerValues + numMorphTargets;
+                const float* const outTangents = samplerValues + numMorphTargets * 2;
+
+                weights.resize(numMorphTargets);
+                for (int comp = 0; comp < numMorphTargets; ++comp) {
+                    float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
+                    float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
+                    float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
+                    float vert1 = splineVerts[comp + nextIndex * valuesPerKeyframe];
+                    weights[comp] = cubicSpline(vert0, tang0, vert1, tang1, t);
+                }
+            } else {
+                weights.resize(valuesPerKeyframe);
+                for (int comp = 0; comp < valuesPerKeyframe; ++comp) {
+                    float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
+                    float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
+                    weights[comp] = (1 - t) * previous + t * current;
+                }
+            }
+
+            morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
+            return;
+        }
+    }
+
+    xform = composeMatrix(translation, rotation, scale);
+    transformManager->setTransform(node, xform);
 }
 
 } // namespace gltfio

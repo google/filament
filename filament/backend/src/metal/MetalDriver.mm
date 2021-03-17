@@ -254,8 +254,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 "Color texture passed to render target has no texture allocation");
         colorTexture->updateLodRange(buffer.level);
         colorAttachments[i].texture = colorTexture->texture;
-        colorAttachments[i].level = color[0].level;
-        colorAttachments[i].layer = color[0].layer;
+        colorAttachments[i].level = color[i].level;
+        colorAttachments[i].layer = color[i].layer;
     }
 
     MetalRenderTarget::Attachment depthAttachment = { 0 };
