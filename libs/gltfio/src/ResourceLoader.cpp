@@ -241,6 +241,34 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     }
 }
 
+// Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
+// (implementation snarfed from meshoptimizer)
+static const uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+    if (strncmp(uri, "data:", 5) != 0) {
+        return nullptr;
+    }
+    const char* comma = strchr(uri, ',');
+    if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
+        const char* base64 = comma + 1;
+        const size_t base64Size = strlen(base64);
+        size_t size = base64Size - base64Size / 4;
+        if (base64Size >= 2) {
+            size -= base64[base64Size - 2] == '=';
+            size -= base64[base64Size - 1] == '=';
+        }
+        void* data = 0;
+        cgltf_options options = {};
+        cgltf_result result = cgltf_load_buffer_base64(&options, size, base64, &data);
+        if (result != cgltf_result_success) {
+            return nullptr;
+        }
+        *mimeType = std::string(uri + 5, comma - 7);
+        *psize = size;
+        return (const uint8_t*) data;
+    }
+    return nullptr;
+}
+
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new Impl(config)) { }
 
 ResourceLoader::~ResourceLoader() {
@@ -573,6 +601,15 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
 
     entry = (mUriTextureCache[uri] = std::make_unique<TextureCacheEntry>()).get();
     entry->srgb = tb.srgb;
+
+    // Check if this is a data URI. We don't care about the MIME type since stb can infer it.
+    std::string mimeType;
+    size_t dataUriSize;
+    const uint8_t* dataUriContent = parseDataUri(uri, &mimeType, &dataUriSize);
+    if (dataUriContent) {
+        BufferDescriptor buffer(dataUriContent, dataUriSize, FREE_CALLBACK);
+        mUriDataCache.emplace(uri, std::move(buffer));
+    }
 
     // Check the user-supplied resource cache for this URI, otherwise peek at the file.
     auto iter = mUriDataCache.find(uri);
