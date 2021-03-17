@@ -46,15 +46,17 @@ public:
     /**
      * Picks the 4 most influential weights and applies them to the target entity.
      */
-    void applyWeights(Entity targetEntity, float const* weights, size_t count);
+    void applyWeights(Entity targetEntity, float const* weights, size_t count) noexcept;
 
     /**
-     * Allows the caller to prime the MorphHelper cache without actually affecting any renderables.
+     * Disables or enables writes to renderables.
+     *
+     * This allows the MorphHelper cache to be primed without actually affecting any renderables.
      */
-    void enableWrites(bool enable) { mEnabled = enable; }
+    void disableWrites(bool disabled) noexcept { mWritesDisabled = disabled; }
 
 private:
-    struct GltfPrim {
+    struct GltfPrimitive {
         filament::VertexBuffer* vertices;
         filament::IndexBuffer* indices;
         filament::RenderableManager::PrimitiveType type;
@@ -62,7 +64,7 @@ private:
 
     struct Permutation {
         filament::math::ubyte4 primaryIndices;
-        std::vector<GltfPrim> primitives;
+        std::vector<GltfPrimitive> primitives;
         bool owner;
     };
 
@@ -76,11 +78,11 @@ private:
     filament::VertexBuffer* createVertexBuffer(const cgltf_primitive& prim, const UvMap& uvmap,
             filament::math::ubyte4 primaryIndices);
 
-    bool mEnabled = true;
     std::vector<float> mPartiallySortedWeights;
     tsl::robin_map<Entity, TableEntry> mMorphTable;
     const FFilamentAsset* mAsset;
     const FFilamentInstance* mInstance;
+    bool mWritesDisabled = false;
 };
 
 } // namespace gltfio

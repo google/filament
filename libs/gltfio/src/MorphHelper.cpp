@@ -26,7 +26,6 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
-static const auto kFreeCallback = [](void* mem, size_t, void*) { free(mem); };
 static constexpr uint8_t kUnused = 0xff;
 
 namespace gltfio {
@@ -64,15 +63,17 @@ MorphHelper::~MorphHelper() {
     }
 }
 
-void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count) {
+void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count) noexcept {
     auto renderableManager = &mAsset->mEngine->getRenderableManager();
     auto renderable = renderableManager->getInstance(entity);
 
     // If there are 4 or fewer targets, we can simply re-use the original VertexBuffer.
     if (count <= 4) {
-        if (mEnabled) {
-            float4 vec(0, 0, 0, 0);
-            for (size_t i = 0; i < count; i++) vec[i] = weights[i];
+        if (!mWritesDisabled) {
+            float4 vec{};
+            for (size_t i = 0; i < count; i++) {
+                vec[i] = weights[i];
+            }
             renderableManager->setMorphWeights(renderable, vec);
         }
         return;
@@ -121,12 +122,12 @@ void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count
     }
 
     // Leave early if we're priming the cache.
-    if (!mEnabled) return;
+    if (mWritesDisabled) return;
 
     // Swap out the vertex buffer on all affected renderables. Often this will be a no-op,
     // but this is a fairly efficient operation in Filament.
     for (size_t primIndex = 0; primIndex < permutation->primitives.size(); ++primIndex) {
-        const GltfPrim& prim = permutation->primitives[primIndex];
+        const GltfPrimitive& prim = permutation->primitives[primIndex];
         renderableManager->setGeometryAt(renderable, primIndex, prim.type, prim.vertices,
                prim.indices, 0, prim.indices->getIndexCount());
     }
@@ -134,7 +135,11 @@ void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count
     // Finally, set the 4-tuple uniform for the weight values by derefing the primary indices.
     // Note that we first create a "safe set" by replacing the unused sentinel with zero.
     ubyte4 safe = permutation->primaryIndices;
-    for (int i = 0; i < 4; i++) if (safe[i] == kUnused) safe[i] = 0;
+    for (int i = 0; i < 4; i++) {
+        if (safe[i] == kUnused) {
+            safe[i] = 0;
+        }
+    }
     float4 highest(weights[safe[0]], weights[safe[1]], weights[safe[2]], weights[safe[3]]);
     renderableManager->setMorphWeights(renderable, highest);
 }
@@ -162,7 +167,7 @@ void MorphHelper::addPermutation(Entity entity, ubyte4 primaryIndices) {
         VertexBuffer* const vertices = result.owner ?
                 createVertexBuffer(prim, gltfioPrim.uvmap, primaryIndices) :
                 gltfioPrim.vertices;
-        result.primitives.push_back({
+        result.primitives.emplace_back(GltfPrimitive {
             .vertices = vertices,
             .indices = gltfioPrim.indices,
             .type = prim_type,
@@ -204,7 +209,9 @@ VertexBuffer* MorphHelper::createVertexBuffer(const cgltf_primitive& prim, const
         const uint32_t size = computeBindingSize(accessor);
         uint8_t* clone = (uint8_t*) malloc(size);
         memcpy(clone, data, size);
-        return VertexBuffer::BufferDescriptor(clone, size, kFreeCallback);
+        return VertexBuffer::BufferDescriptor(clone, size, [](void* mem, size_t, void*) {
+            free(mem);
+        });
     };
 
     // This is used to populate unused attributes (e.g. UV1 or COLOR) in ubershader mode.
@@ -213,7 +220,9 @@ VertexBuffer* MorphHelper::createVertexBuffer(const cgltf_primitive& prim, const
         uint32_t size = sizeof(ubyte4) * vertexCount;
         uint32_t* dummyData = (uint32_t*) malloc(size);
         memset(dummyData, 0xff, size);
-        return VertexBuffer::BufferDescriptor(dummyData, size, kFreeCallback);
+        return VertexBuffer::BufferDescriptor(dummyData, size, [](void* mem, size_t, void*) {
+            free(mem);
+        });
     };
 
     // TODO: The tangents computation should be invoked by the job system, similar to what we
@@ -222,7 +231,10 @@ VertexBuffer* MorphHelper::createVertexBuffer(const cgltf_primitive& prim, const
         TangentsJob::Params params = {{ &prim, morphTarget }};
         TangentsJob::run(&params);
         uint32_t size = sizeof(short4) * params.out.vertexCount;
-        return VertexBuffer::BufferDescriptor(params.out.results, size, kFreeCallback);
+        short4* quats = params.out.results;
+        return VertexBuffer::BufferDescriptor(quats, size, [](void* mem, size_t, void*) {
+            free(mem);
+        });
     };
 
     // TODO: this magic number should be exposed by a static VertexBuffer method or constant.

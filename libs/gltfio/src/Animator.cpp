@@ -384,14 +384,14 @@ void AnimatorImpl::prepareMorphing(const Channel& channel) {
     const Sampler* sampler = channel.sourceData;
     const TimeValues& times = sampler->times;
     auto iter = times.begin();
-    morpher->enableWrites(false);
+    morpher->disableWrites(true);
     for (size_t timeIndex = 0; timeIndex < times.size(); ++timeIndex, ++iter) {
         auto next = iter;
         ++next;
         next = next == times.end() ? iter : next;
         applyAnimation(channel, 0.5, iter->second, next->second);
     }
-    morpher->enableWrites(true);
+    morpher->disableWrites(false);
 }
 
 void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
