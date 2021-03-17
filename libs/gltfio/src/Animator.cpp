@@ -18,6 +18,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
+#include "MorphHelper.h"
 #include "math.h"
 #include "upcast.h"
 
@@ -75,7 +76,9 @@ struct AnimatorImpl {
     RenderableManager* renderableManager;
     TransformManager* transformManager;
     vector<float> weights;
+    MorphHelper* morpher;
     void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
+    void prepareMorphing(const Channel& channel);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
 };
 
@@ -174,6 +177,7 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -232,6 +236,7 @@ void Animator::addInstance(FFilamentInstance* instance) {
 }
 
 Animator::~Animator() {
+    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -366,7 +371,27 @@ void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& sr
         dstChannel.targetEntity = targetEntity;
         setTransformType(srcChannel, dstChannel);
         dst.channels.push_back(dstChannel);
+        if (dstChannel.transformType == Channel::WEIGHTS) {
+            prepareMorphing(dstChannel);
+        }
     }
+}
+
+// This function primes the cache in MorphHelper, which allows users to free their source data
+// after obtaining the Animator interface. We do this by sampling exactly half-way between key
+// frames. In practice this is sufficient, and MorphHelper degrades gracefully for corner cases.
+void AnimatorImpl::prepareMorphing(const Channel& channel) {
+    const Sampler* sampler = channel.sourceData;
+    const TimeValues& times = sampler->times;
+    auto iter = times.begin();
+    morpher->disableWrites(true);
+    for (size_t timeIndex = 0; timeIndex < times.size(); ++timeIndex, ++iter) {
+        auto next = iter;
+        ++next;
+        next = next == times.end() ? iter : next;
+        applyAnimation(channel, 0.5, iter->second, next->second);
+    }
+    morpher->disableWrites(false);
 }
 
 void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
@@ -457,15 +482,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 }
             }
 
-            // TODO: For now we are picking the first four weights. It would be better to pick the
-            // four most influential weights, which allows for a much broader range of animation.
-            float4 vector(0, 0, 0, 0);
-            for (size_t i = 0, n = weights.size() >= 4 ? 4 : weights.size(); i < n; i++) {
-                vector[i] = weights[i];
-            }
-
-            auto renderable = renderableManager->getInstance(channel.targetEntity);
-            renderableManager->setMorphWeights(renderable, vector);
+            morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
             return;
         }
     }
