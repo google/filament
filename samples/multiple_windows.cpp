@@ -90,7 +90,7 @@ IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine);
 #ifdef __cplusplus
 extern "C"
 #endif
-int main(int argc, const char *argv[]) {
+int main(int argc, char *argv[]) {
     // ---- initialize ----
     ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
 
