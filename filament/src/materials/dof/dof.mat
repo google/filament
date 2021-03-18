@@ -446,14 +446,15 @@ void postProcess(inout PostProcessInputs postProcess) {
                 p = r * p;
             }
         }
+        float fgOpacity = cocToAlpha(kernelSize);
         foreground *= rcp(sampleCount(ringCountFast));
         //foreground.b += 0.1;
 #if POST_PROCESS_OPAQUE
         // kill the work performed above
         foreground.a = 1.0;
 #endif
-        postProcess.color = foreground;
-        postProcess.alpha = 1.0;
+        postProcess.color = foreground * fgOpacity;
+        postProcess.alpha = fgOpacity;
         return;
     }
 
