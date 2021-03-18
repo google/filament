@@ -246,9 +246,10 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
 
     if (first) { // (this test is always inlined)
         // The outmost ring always accumulate to 'curr'.
-        curr.c   += w * tap.s;
-        curr.coc += w * coc;
-        curr.cw  += w;
+        prev.c   += w * tap.s;
+        prev.coc += w * coc;
+        prev.cw  += w;
+        prev.o   += inPrevious;
     } else {
         float inCurrent = 1.0 - inPrevious;
         float currWeight = w * inCurrent;
@@ -257,12 +258,12 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
         curr.c   += currWeight * tap.s;
         curr.coc += currWeight * coc;
         curr.cw  += currWeight;
+        curr.o   += inPrevious;
 
         prev.c   += prevWeight * tap.s;
         prev.coc += prevWeight * coc;
         prev.cw  += prevWeight;
     }
-    curr.o += inPrevious;
 }
 
 void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2 pos,
@@ -299,7 +300,10 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
     float i = (ringCount - 1.0) - index;
 
     Bucket curr;
-    initBucket(curr);
+    if (!first) { // (this test is always inlined)
+        // curr is not used for the first ring
+        initBucket(curr);
+    }
 
     float count;
     float radius;
@@ -313,7 +317,11 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
         p = r * p;
     }
 
-    mergeRings(curr, prev, count);
+    if (!first) { // (this test is always inlined)
+        // mergeRings just ends-up copying curr to prev the first time, so we skip that
+        // entirely, and we fill prev directly.
+        mergeRings(curr, prev, count);
+    }
 }
 
 /*
