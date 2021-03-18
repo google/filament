@@ -109,10 +109,6 @@ float sampleCount(const float ringCount) {
 }
 
 float sampleWeight(const float coc, const float mip) {
-#if KERNEL_USE_MIPMAP
-    // with mipmapping this creates severe aliasing artifacts
-    return 1.0;
-#else
     // The contribution of sample is inversely proportional to *it's* area
     // (the larger area, the fainter it is).
     // In theory this factor should be 1 / pi * radius^2, however 1/pi is a constant, and
@@ -129,7 +125,6 @@ float sampleWeight(const float coc, const float mip) {
     float pixelRadiusSquared = pow(2.0, mip);
 #endif
     return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
-#endif
 }
 
 float intersection(const float border, const float absCoc, const float mip) {
