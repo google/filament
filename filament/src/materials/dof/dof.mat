@@ -76,12 +76,10 @@ fragment {
 #define DOF_DIAPHRAGM                   DOF_DIAPHRAGM_CIRCLE
 
 // # of sample w.r.t. ring count and density of 8
-// 3 rings : 25
-// 4 rings : 49
-// 5 rings : 81
-
-// don't change density
-#define RING_DENSITY        8
+//  3 rings :   25 ( 5^2 grid)
+//  4 rings :   49 ( 7^2 grid)
+//  5 rings :   81 ( 9^2 grid)
+// 17 rings : 1089 (33^2 grid) -- maximum needed for a CoC of 32
 
 #if defined(TARGET_MOBILE)
 #define RING_COUNT_GATHER   3
@@ -104,8 +102,8 @@ fragment {
 void dummy(){}
 
 float sampleCount(const float ringCount) {
-    const float ringDensity = float(RING_DENSITY);
-    return (ringDensity * ringCount * (ringCount - 1.0)) * 0.5 + 1.0;
+    float s = (ringCount * 2.0 - 1.0);
+    return s * s;
 }
 
 float sampleWeight(const float coc, const float mip) {
@@ -181,11 +179,15 @@ void initBucket(out Bucket ring) {
 
 void initRing(const float i, const float ringCount, const float kernelSize, const vec2 noise,
         out float offset, out float count, out mat2 r, out vec2 p) {
-    const float ringDensity = float(RING_DENSITY);
     float radius = (kernelSize / (ringCount - 0.5)) * i;
 
-    // this is never called with i == 0
-    count = ringDensity * i;
+    // We want to create a (2k+1)(2k+1) box, that is a n*n grid with n odd.
+    // Each "ring" is the outside layer of that box. So ring 0 obviously is the 1x1 box,
+    // ring 1 is the 3x3 box, which has 8 samples on its outside layer. This is where the 8 below
+    // comes from, then all subsequent rings, are built from ring 1.
+    // Each box is then "morphed" to a circle, itself morphed to the shape we want for the bokeh
+    // (see diaphragm()).
+    count = 8.0 * i;    // this is never called with i == 0
 
     float inc = 2.0 * PI / count;
     vec2 t = vec2(cos(inc), sin(inc));
