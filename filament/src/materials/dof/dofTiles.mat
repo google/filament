@@ -58,11 +58,11 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 b = vec4(s01.g, s11.g, s10.g, s00.g);
 #endif
 
-    // compute tile's max CoC
-    postProcess.color.r = max4(max(f, b));
-
     // compute tile's min CoC
-    postProcess.color.g = min4(min(f, b));
+    postProcess.color.r = min4(min(f, b));
+
+    // compute tile's max CoC
+    postProcess.color.g = max4(max(f, b));
 }
 
 }

@@ -62,12 +62,12 @@ float isBackground(const float coc) {
 
 bool isForegroundTile(const vec2 tiles) {
     // A foreground tile is one where the smallest CoC is negative
-    return tiles.g < 0.0;
+    return tiles.r < 0.0;
 }
 
 bool isBackgroundTile(const vec2 tiles) {
     // A background tile is one where the largest CoC is positive
-    return tiles.r > 0.0;
+    return tiles.g > 0.0;
 }
 
 bool isFastTile(const vec2 tiles) {
@@ -76,7 +76,7 @@ bool isFastTile(const vec2 tiles) {
     // We could cannot use the absolute value of the min/mac CoC -- which would categorize more
     // tiles as "fast" (e.g. when both the foreground and background have similar CoC), because
     // it doesn't tell us anything about objects that could be in between.
-    return (tiles.r - tiles.g) <= abs(tiles.r) * 0.05;
+    return (tiles.g - tiles.r) <= abs(tiles.g) * 0.05;
 }
 
 bool isTrivialTile(const vec2 tiles) {

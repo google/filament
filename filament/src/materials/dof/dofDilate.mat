@@ -48,8 +48,8 @@ vec2 dilate(inout vec2 center, const vec2 tap) {
     //    center.g = min(center.g, max(tap.g, maxDistance));
     //    center.r = max(center.r, max(tap.r, maxDistance));
 
-    center.g = min(center.g, tap.g);
-    center.r = max(center.r, tap.r);
+    center.r = min(center.r, tap.r);
+    center.g = max(center.g, tap.g);
     return center;
 }
 
