@@ -475,8 +475,9 @@ void postProcess(inout PostProcessInputs postProcess) {
 
 
     if (isForegroundTile(tiles)) {
-        // for a foreground tile, the kernel size is the largest CoC radius
-        float kernelSize = -tiles.g;
+        // Here we know that tiles.r < 0, by definition of a foreground tile.
+        // For a foreground tile, the kernel size is the largest CoC radius of the whole tile.
+        float kernelSize = -tiles.r;
         float mip = getMipLevel(ringCountGather, kernelSize);
         vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
         float c = 0.0;

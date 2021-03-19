@@ -105,8 +105,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
     float bgCoc = max2(max(w.xy, w.zw));
     vec4 bw = saturate(1.0 - (bgCoc - w)) * hdr;
-    float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
-    vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
+    vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * (1.0 / (bw.x + bw.y + bw.z + bw.w));
 
     // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
     // artifacts in the "in focus" area and allow us to skip more tiles trivially.
