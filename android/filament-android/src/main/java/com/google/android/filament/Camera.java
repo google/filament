@@ -364,6 +364,7 @@ public class Camera {
      * @deprecated use {@link #setScaling(double, double)}
      *
      */
+    @Deprecated
     public void setScaling(@NonNull @Size(min = 4) double[] inScaling) {
         Asserts.assertDouble4In(inScaling);
         setScaling(inScaling[0], inScaling[1]);
