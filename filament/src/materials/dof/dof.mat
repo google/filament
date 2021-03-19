@@ -120,7 +120,7 @@ float sampleWeight(const float coc, const float mip) {
 #if defined(TARGET_MOBILE)
     const float pixelRadiusSquared = 2.0;   // (sqrt(2) * 0.5 * 2.0)^2
 #else
-    float pixelRadiusSquared = pow(2.0, mip);
+    float pixelRadiusSquared = 2.0 * pow(2.0, mip);     // 2^(mip+1)
 #endif
     return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
 }
@@ -329,11 +329,10 @@ void accumulateForeground(inout vec4 foreground, inout float opacity, inout floa
         const highp vec2 pos, const float border, const float mip) {
     float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
     vec4 s = textureLod(materialParams_foreground, pos, mip);
-    float inLayer = isForeground(coc);
-    float o = cocToAlpha(coc) * inLayer;
+    float inLayer = isForeground(coc) * saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
     float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
     foreground += s * w;
-    opacity += o;
+    opacity += inLayer;
     i += w;
 }
 
@@ -358,12 +357,11 @@ void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inou
     float coc1 = textureLod(materialParams_cocFgBg, pos1, mip).r;
     vec4 s1 = textureLod(materialParams_foreground, pos1, mip);
     float coc = min(coc0, coc1);
-    float inLayer = isForeground(coc);
-    float o = cocToAlpha(coc) * inLayer * 2.0;  // we're accumulating 2 samples
+    float inLayer = isForeground(coc) * saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
     float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
     foreground += s0 * w;
     foreground += s1 * w;
-    opacity += o;
+    opacity += inLayer * 2.0;  // we're accumulating 2 samples
     i += w * 2.0;
 }
 
