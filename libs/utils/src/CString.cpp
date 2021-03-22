@@ -41,7 +41,7 @@ CString::CString(const char* cstr, size_t length) {
         mCStr = (value_type*)(p + 1);
         // we don't use memcpy here to avoid a call to libc, the generated code is pretty good.
         std::uninitialized_copy_n(cstr, length, mCStr);
-        mCStr[length + 1] = '\0';
+        mCStr[length] = '\0';
     }
 }
 
