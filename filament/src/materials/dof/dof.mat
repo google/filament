@@ -325,27 +325,34 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
  * Foreground accumulator
  */
 
-void accumulateForeground(inout vec4 foreground, inout float opacity, inout float i,
+float foregroundFadding(const float coc) {
+    return saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
+}
+
+void accumulateForeground(inout vec4 foreground, inout float opacity, inout float weight,
         const highp vec2 pos, const float border, const float mip) {
     float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
     vec4 s = textureLod(materialParams_foreground, pos, mip);
-    float inLayer = isForeground(coc) * saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
-    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
+
+    float inLayer = isForeground(coc) * foregroundFadding(coc);
+    float i = intersection(border, abs(coc), mip) * sampleWeight(coc, mip);
+    float w = i * inLayer;
+
     foreground += s * w;
-    opacity += inLayer;
-    i += w;
+    opacity    += inLayer;
+    weight     += w;
 }
 
-void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float i,
+void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float weight,
         const highp vec2 pos, const float border, const float mip) {
-    accumulateForeground(foreground, opacity, i, pos, border, mip);
+    accumulateForeground(foreground, opacity, weight, pos, border, mip);
 }
 
-void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float i,
+void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float weight,
         const highp vec2 center, const vec2 offset, const float border, const float mip) {
     // The code below is equivalent to:
-    //  accumulateForeground(foreground, opacity, i, diaphragm(center,  offset), border, mip);
-    //  accumulateForeground(foreground, opacity, i, diaphragm(center, -offset), border, mip);
+    //  accumulateForeground(foreground, opacity, weight, diaphragm(center,  offset), border, mip);
+    //  accumulateForeground(foreground, opacity, weight, diaphragm(center, -offset), border, mip);
     //  return;
     // but selects the min coc of opposite samples as a way to guess the color occluded by
     // the geometry.
@@ -353,16 +360,20 @@ void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inou
     vec2 pos0 = diaphragm(center, offset);
     float coc0 = textureLod(materialParams_cocFgBg, pos0, mip).r;
     vec4 s0 = textureLod(materialParams_foreground, pos0, mip);
+
     vec2 pos1 = diaphragm(center, -offset);
     float coc1 = textureLod(materialParams_cocFgBg, pos1, mip).r;
     vec4 s1 = textureLod(materialParams_foreground, pos1, mip);
+
     float coc = min(coc0, coc1);
-    float inLayer = isForeground(coc) * saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
-    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
+    float inLayer = isForeground(coc) * foregroundFadding(coc);
+    float i = intersection(border, abs(coc), mip) * sampleWeight(coc, mip);
+    float w = i * inLayer;
+
     foreground += s0 * w;
     foreground += s1 * w;
-    opacity += inLayer * 2.0;  // we're accumulating 2 samples
-    i += w * 2.0;
+    opacity    += inLayer * 2.0;  // we're accumulating 2 samples
+    weight     += w * 2.0;
 }
 
 float getMipLevel(const float ringCount, const float kernelSize) {
@@ -478,10 +489,10 @@ void postProcess(inout PostProcessInputs postProcess) {
         float kernelSize = -tiles.r;
         float mip = getMipLevel(ringCountGather, kernelSize);
         vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
-        float c = 0.0;
+        float weight = 0.0;
 
         // the center sample is handled separately, since it's by itself
-        accumulateForegroundCenter(foreground, fgOpacity, c, uvCenter, 0.0, mip);
+        accumulateForegroundCenter(foreground, fgOpacity, weight, uvCenter, 0.0, mip);
 
         for (float i = 1.0; i < ringCountGather; i += 1.0) {
 
@@ -493,17 +504,17 @@ void postProcess(inout PostProcessInputs postProcess) {
             initRing(i, ringCountGather, kernelSize, noise, radius, count, r, p);
 
             for (float j = 0.0; j < count; j += 2.0) {
-                accumulateForegroundMirror(foreground, fgOpacity, c,
+                accumulateForegroundMirror(foreground, fgOpacity, weight,
                         uvCenter, p * cocToTexelOffset, radius, mip);
                 p = r * p;
             }
         }
 
-        if (c < MEDIUMP_FLT_MIN) {
+        if (weight < MEDIUMP_FLT_MIN) {
             foreground *= 0.0;
             fgOpacity  *= 0.0;
         } else {
-            foreground *= rcp(c);
+            foreground *= rcp(weight);
             fgOpacity  *= rcp(sampleCount(ringCountGather));
         }
         //foreground.r += 0.1;
