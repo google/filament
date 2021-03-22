@@ -586,6 +586,8 @@ int main(int argc, char** argv) {
             if (ImGui::CollapsingHeader("Camera")) {
                 ViewSettings& settings = app.viewer->getSettings().view;
 
+                bool median = settings.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
+
                 ImGui::Indent();
                 ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
                 ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
@@ -594,6 +596,10 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("DoF", &settings.dof.enabled);
                 ImGui::SliderFloat("Focus distance", &settings.dof.focusDistance, 0.0f, 30.0f);
                 ImGui::SliderFloat("Blur scale", &settings.dof.cocScale, 0.1f, 10.0f);
+                ImGui::Checkbox("Median Filter", &median);
+                settings.dof.filter = median ?
+                        View::DepthOfFieldOptions::Filter::MEDIAN :
+                        View::DepthOfFieldOptions::Filter::NONE;
 
                 if (ImGui::CollapsingHeader("Vignette")) {
                     ImGui::Checkbox("Enabled##vignetteEnabled", &settings.vignette.enabled);

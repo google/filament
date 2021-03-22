@@ -136,6 +136,10 @@ enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
 
+enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
+    .value("NONE", View::DepthOfFieldOptions::Filter::NONE)
+    .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN);
+
 enum_<Camera::Fov>("Camera$Fov")
     .value("VERTICAL", Camera::Fov::VERTICAL)
     .value("HORIZONTAL", Camera::Fov::HORIZONTAL);

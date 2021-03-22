@@ -106,6 +106,7 @@ export interface View$DepthOfFieldOptions {
     cocScale?: number;
     maxApertureDiameter?: number;
     enabled?: boolean;
+    filter?: View$DepthOfFieldOptions$Filter;
 }
 
 export interface View$BloomOptions {
@@ -998,6 +999,11 @@ export enum View$QualityLevel {
 export enum View$AmbientOcclusion {
     NONE,
     SSAO,
+}
+
+export enum View$DepthOfFieldOptions$Filter {
+    NONE,
+    MEDIAN = 2,
 }
 
 export enum View$BloomOptions$BlendMode {

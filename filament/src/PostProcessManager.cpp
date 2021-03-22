@@ -1271,7 +1271,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     auto outForeground = ppDoFMedian->outForeground;
     auto outAlpha = ppDoFMedian->outAlpha;
-    if (/* DISABLES CODE */ (false)) { // TODO: make this a quality setting
+    if (dofOptions.filter == View::DepthOfFieldOptions::Filter::NONE) {
         outForeground = ppDoF->outForeground;
         outAlpha = ppDoF->outAlpha;
     }
