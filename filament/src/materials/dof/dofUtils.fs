@@ -37,6 +37,14 @@ float min4(const vec4 v) {
     return min2(min(v.xy, v.zw));
 }
 
+float rcp(const float x) {
+    return 1.0 / x;
+}
+
+float rcpOrZero(const float x) {
+    return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
+}
+
 float cocToAlpha(const float coc) {
     // CoC is positive for background field.
     // CoC is negative for the foreground field.
