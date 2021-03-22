@@ -46,7 +46,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
         uint cascade = getShadowCascade();
         uint layer = cascade;
 #if defined(HAS_VSM)
-        // TODO: VSM shadow multiplier
+        visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #else
         visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
 #endif

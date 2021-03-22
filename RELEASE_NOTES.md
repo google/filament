@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- engine: VSM shadows now support `shadowMultiplier`.
+
 ## v1.9.18
 
 ## v1.9.17
