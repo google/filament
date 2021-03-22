@@ -367,7 +367,8 @@ value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("focusDistance", &filament::View::DepthOfFieldOptions::focusDistance)
     .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
     .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
-    .field("enabled", &filament::View::DepthOfFieldOptions::enabled);
+    .field("enabled", &filament::View::DepthOfFieldOptions::enabled)
+    .field("filter", &filament::View::DepthOfFieldOptions::filter);
 
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)

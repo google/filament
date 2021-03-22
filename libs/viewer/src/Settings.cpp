@@ -452,6 +452,15 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptio
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions::Filter* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = DepthOfFieldOptions::Filter::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "MEDIAN")) { *out = DepthOfFieldOptions::Filter::MEDIAN; }
+    else {
+        slog.w << "Invalid DepthOfFieldOptions::Filter: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -466,6 +475,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
         } else if (0 == compare(tok, jsonChunk, "enabled")) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (0 == compare(tok, jsonChunk, "filter")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->filter);
         } else {
             slog.w << "Invalid dof options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -886,6 +897,14 @@ static std::ostream& operator<<(std::ostream& out, CGQL in) {
     return out << "\"INVALID\"";
 }
 
+static std::ostream& operator<<(std::ostream& out, DepthOfFieldOptions::Filter in) {
+    switch (in) {
+        case DepthOfFieldOptions::Filter::NONE: return out << "\"NONE\"";
+        case DepthOfFieldOptions::Filter::MEDIAN: return out << "\"MEDIAN\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
     switch (in) {
         case ToneMapping::LINEAR: return out << "\"LINEAR\"";
@@ -1083,6 +1102,7 @@ static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "\"filter\": " << (in.filter) << "\n"
         << "}";
 }
 

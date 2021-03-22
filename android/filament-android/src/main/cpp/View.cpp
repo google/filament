@@ -300,10 +300,15 @@ Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nat
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
-        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled) {
+        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled, jint filter) {
     View* view = (View*) nativeView;
+    View::DepthOfFieldOptions::Filter eFilter{};
+    if (filter == 1) {
+        // View::DepthOfFieldOptions::Filter::MEDIAN value is actually 2
+        eFilter = View::DepthOfFieldOptions::Filter::MEDIAN;
+    }
     view->setDepthOfFieldOptions({.focusDistance = focusDistance, .cocScale = cocScale,
-            .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled});
+            .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled, .filter = eFilter});
 }
 
 extern "C"
