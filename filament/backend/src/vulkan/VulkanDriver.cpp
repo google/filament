@@ -446,9 +446,9 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
-        BufferUsage usage) {
+        BufferUsage usage, bool bufferObjectsEnabled) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            mDisposer, bufferCount, attributeCount, elementCount, attributes);
+            mDisposer, bufferCount, attributeCount, elementCount, attributes, bufferObjectsEnabled);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -475,6 +475,22 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         auto indexBuffer = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
         mDisposer.removeReference(indexBuffer);
+    }
+}
+
+void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
+        uint32_t byteCount, BufferObjectBinding bindingType) {
+    // TODO: pass constructor args
+    auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh);
+    mDisposer.createDisposable(bufferObject, [this, boh] () {
+       destruct_handle<VulkanBufferObject>(mHandleMap, boh);
+    });
+}
+
+void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    if (boh) {
+       auto bufferObject = handle_cast<VulkanBufferObject>(mHandleMap, boh);
+       mDisposer.removeReference(bufferObject);
     }
 }
 
@@ -620,6 +636,10 @@ Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
 
 Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
     return alloc_handle<VulkanIndexBuffer, HwIndexBuffer>();
+}
+
+Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
+    return alloc_handle<VulkanBufferObject, HwBufferObject>();
 }
 
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
@@ -851,11 +871,23 @@ void VulkanDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
     scheduleDestroy(std::move(p));
 }
 
+void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+        Handle<HwBufferObject> boh) {
+    // TODO
+}
+
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
     ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
+}
+
+void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
+        uint32_t byteOffset) {
+    auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    bo.buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    scheduleDestroy(std::move(bd));
 }
 
 void VulkanDriver::update2DImage(Handle<HwTexture> th,
@@ -1765,6 +1797,7 @@ void VulkanDriver::debugCommand(const char* methodName) {
         "loadUniformBuffer",
         "updateVertexBuffer",
         "updateIndexBuffer",
+        "updateBufferObject",
         "update2DImage",
         "updateCubeImage",
     };

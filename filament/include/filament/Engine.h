@@ -28,6 +28,7 @@ class JobSystem;
 
 namespace filament {
 
+class BufferObject;
 class Camera;
 class ColorGrading;
 class DebugRegistry;
@@ -390,6 +391,7 @@ public:
      */
     Fence* createFence() noexcept;
 
+    bool destroy(const BufferObject* p);        //!< Destroys a BufferObject object.
     bool destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
     bool destroy(const Fence* p);               //!< Destroys a Fence object.
     bool destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.

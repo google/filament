@@ -24,6 +24,7 @@
 namespace filament {
 namespace backend {
 
+struct HwBufferObject;
 struct HwFence;
 struct HwIndexBuffer;
 struct HwProgram;
@@ -96,6 +97,7 @@ private:
 
 // Types used by the command stream
 // (we use this renaming because the macro-system doesn't deal well with "<" and ">")
+using BufferObjectHandle    = Handle<HwBufferObject>;
 using FenceHandle           = Handle<HwFence>;
 using IndexBufferHandle     = Handle<HwIndexBuffer>;
 using ProgramHandle         = Handle<HwProgram>;

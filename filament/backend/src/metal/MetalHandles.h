@@ -114,7 +114,7 @@ private:
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes);
+            uint32_t vertexCount, AttributeArray const& attributes, bool bufferObjectsEnabled);
     ~MetalVertexBuffer();
 
     std::vector<MetalBuffer*> buffers;
