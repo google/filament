@@ -56,6 +56,7 @@ set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 
 add_library(filament-jni SHARED
+    src/main/cpp/BufferObject.cpp
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
     src/main/cpp/ColorGrading.cpp

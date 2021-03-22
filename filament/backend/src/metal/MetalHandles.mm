@@ -267,8 +267,9 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes,
+            bool bufferObjectsEnabled)
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes, bufferObjectsEnabled) {
     buffers.reserve(bufferCount);
 
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {

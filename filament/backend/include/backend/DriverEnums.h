@@ -263,6 +263,11 @@ enum class ElementType : uint8_t {
     HALF4,
 };
 
+//! Buffer object binding type
+enum class BufferObjectBinding : uint8_t {
+    VERTEX,
+};
+
 //! Face culling Mode
 enum class CullingMode : uint8_t {
     NONE,               //!< No culling, front and back faces are visible

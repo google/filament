@@ -85,6 +85,9 @@ void NoopDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 void NoopDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
+void NoopDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+}
+
 void NoopDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
@@ -180,6 +183,15 @@ void NoopDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
+        uint32_t byteOffset) {
+    scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+        Handle<HwBufferObject> boh) {
 }
 
 void NoopDriver::update2DImage(Handle<HwTexture> th,

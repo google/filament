@@ -13,6 +13,7 @@ set(MATERIAL_DIR "${GENERATION_ROOT}/generated/material")
 
 set(PUBLIC_HDRS
         include/filament/Box.h
+        include/filament/BufferObject.h
         include/filament/Camera.h
         include/filament/Color.h
         include/filament/ColorGrading.h
@@ -44,6 +45,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Box.cpp
+        src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
@@ -112,6 +114,7 @@ set(PRIVATE_HDRS
         src/components/RenderableManager.h
         src/components/TransformManager.h
         src/details/Allocators.h
+        src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
         src/details/Culler.h

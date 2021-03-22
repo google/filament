@@ -168,12 +168,17 @@ DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
         backend::AttributeArray, attributes,
-        backend::BufferUsage, usage)
+        backend::BufferUsage, usage,
+        bool, bufferObjectsEnabled)
 
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
         uint32_t, indexCount,
         backend::BufferUsage, usage)
+
+DECL_DRIVER_API_R_N(backend::BufferObjectHandle, createBufferObject,
+        uint32_t, byteCount,
+        backend::BufferObjectBinding, bindingType)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         backend::SamplerType, target,
@@ -261,6 +266,7 @@ DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
 
 DECL_DRIVER_API_N(destroyVertexBuffer,    backend::VertexBufferHandle, vbh)
 DECL_DRIVER_API_N(destroyIndexBuffer,     backend::IndexBufferHandle, ibh)
+DECL_DRIVER_API_N(destroyBufferObject,    backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive, backend::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_N(destroyProgram,         backend::ProgramHandle, ph)
 DECL_DRIVER_API_N(destroySamplerGroup,    backend::SamplerGroupHandle, sbh)
@@ -311,8 +317,18 @@ DECL_DRIVER_API_N(updateVertexBuffer,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
+DECL_DRIVER_API_N(setVertexBufferObject,
+        backend::VertexBufferHandle, vbh,
+        size_t, index,
+        backend::BufferObjectHandle, bufferObject)
+
 DECL_DRIVER_API_N(updateIndexBuffer,
         backend::IndexBufferHandle, ibh,
+        backend::BufferDescriptor&&, data,
+        uint32_t, byteOffset)
+
+DECL_DRIVER_API_N(updateBufferObject,
+        backend::BufferObjectHandle, ibh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 

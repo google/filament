@@ -306,6 +306,18 @@ Filament.loadClassExtensions = function() {
         this._setVignetteOptions(options);
     };
 
+    /// BufferObject ::core class::
+
+    /// setBuffer ::method::
+    /// engine ::argument:: [Engine]
+    /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
+    /// byteOffset ::argument:: non-negative integer
+    Filament.BufferObject.prototype.setBuffer = function(engine, buffer, byteOffset = 0) {
+        buffer = getBufferDescriptor(buffer);
+        this._setBuffer(engine, buffer, byteOffset);
+        buffer.delete();
+    };
+
     /// VertexBuffer ::core class::
 
     /// setBufferAt ::method::

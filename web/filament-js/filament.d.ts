@@ -225,6 +225,7 @@ export class VertexBuffer$Builder {
     public bufferCount(count: number): VertexBuffer$Builder;
     public attribute(attrib: VertexAttribute, bufindex: number, atype: VertexBuffer$AttributeType,
             offset: number, stride: number): VertexBuffer$Builder;
+    public enableBufferObjects(enabled: boolean): VertexBuffer$Builder;
     public normalized(attrib: VertexAttribute): VertexBuffer$Builder;
     public normalizedIf(attrib: VertexAttribute, normalized: boolean): VertexBuffer$Builder;
     public build(engine: Engine): VertexBuffer;
@@ -234,6 +235,12 @@ export class IndexBuffer$Builder {
     public indexCount(count: number): IndexBuffer$Builder;
     public bufferType(type: IndexBuffer$IndexType): IndexBuffer$Builder;
     public build(engine: Engine): IndexBuffer;
+}
+
+export class BufferObject$Builder {
+    public size(byteCount: number): BufferObject$Builder;
+    public bindingType(type: BufferObject$BindingType): BufferObject$Builder;
+    public build(engine: Engine): BufferObject;
 }
 
 export class RenderableManager$Builder {
@@ -364,6 +371,12 @@ export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
     public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference,
             byteOffset?: number): void;
+    public setBufferObjectAt(engine: Engine, bufindex: number, bo: BufferObject): void;
+}
+
+export class BufferObject {
+    public static Builder(): BufferObject$Builder;
+    public setBuffer(engine: Engine, data: BufferReference, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
@@ -719,6 +732,10 @@ export enum IndexBuffer$IndexType {
     UINT,
 }
 
+export enum BufferObject$BindingType {
+    VERTEX_BINDING,
+}
+
 export enum LightManager$Type {
     SUN,
     DIRECTIONAL,
@@ -953,6 +970,10 @@ export enum VertexAttribute {
     MORPH_TANGENTS_1 = CUSTOM5,
     MORPH_TANGENTS_2 = CUSTOM6,
     MORPH_TANGENTS_3 = CUSTOM7,
+}
+
+export enum BufferObject$BindingType {
+    VERTEX,
 }
 
 export enum VertexBuffer$AttributeType {

@@ -83,7 +83,7 @@ struct VulkanSwapChain : public HwSwapChain {
 struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-            AttributeArray const& attributes);
+            AttributeArray const& attributes, bool bufferObjectsEnabled);
     std::vector<std::unique_ptr<VulkanBuffer>> buffers;
 };
 
@@ -94,6 +94,10 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
             buffer(new VulkanBuffer(context, stagePool, disposer, this,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
     const VkIndexType indexType;
+    const std::unique_ptr<VulkanBuffer> buffer;
+};
+
+struct VulkanBufferObject : public HwBufferObject {
     const std::unique_ptr<VulkanBuffer> buffer;
 };
 

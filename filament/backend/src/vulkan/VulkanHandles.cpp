@@ -403,8 +403,8 @@ bool VulkanRenderTarget::invalidate() {
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attributes) :
-        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes) {
+        uint32_t elementCount, AttributeArray const& attributes, bool boEnabled) :
+        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes, boEnabled) {
     buffers.reserve(bufferCount);
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
         uint32_t size = 0;

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/Color.h>
@@ -68,6 +69,9 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("MORPH_TANGENTS_1", MORPH_TANGENTS_1)
     .value("MORPH_TANGENTS_2", MORPH_TANGENTS_2)
     .value("MORPH_TANGENTS_3", MORPH_TANGENTS_3);
+
+enum_<BufferObject::BindingType>("BufferObject$BindingType")
+    .value("VERTEX_BINDING", BufferObject::BindingType::VERTEX);
 
 enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
     .value("BYTE", VertexBuffer::AttributeType::BYTE)

@@ -31,6 +31,7 @@ namespace filament {
 
 class FVertexBuffer;
 
+class BufferObject;
 class Engine;
 
 /**
@@ -85,6 +86,17 @@ public:
          * @return A reference to this Builder for chaining calls.
          */
         Builder& vertexCount(uint32_t vertexCount) noexcept;
+
+        /**
+         * Allows buffers to be swapped out and shared using BufferObject.
+         *
+         * If buffer objects mode is enabled, clients must call setBufferObjectAt rather than
+         * setBufferAt. This allows sharing of data between VertexBuffer objects, but it may
+         * slightly increase the memory footprint of Filament's internal bookkeeping.
+         *
+         * @param enabled If true, enables buffer object mode.  False by default.
+         */
+        Builder& enableBufferObjects(bool enabled = true) noexcept;
 
         /**
          * Sets up an attribute for this vertex buffer set.
@@ -154,6 +166,8 @@ public:
     /**
      * Asynchronously copy-initializes the specified buffer from the given buffer data.
      *
+     * Do not use this if you called enableBufferObjects() on the Builder.
+     *
      * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
      * @param bufferIndex Index of the buffer to initialize. Must be between 0
      *                    and Builder::bufferCount() - 1.
@@ -165,6 +179,18 @@ public:
      */
     void setBufferAt(Engine& engine, uint8_t bufferIndex, BufferDescriptor&& buffer,
             uint32_t byteOffset = 0);
+
+    /**
+     * Swaps in the given buffer object.
+     *
+     * To use this, you must first call enableBufferObjects() on the Builder.
+     *
+     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
+     * @param bufferIndex Index of the buffer to initialize. Must be between 0
+     *                    and Builder::bufferCount() - 1.
+     * @param bufferObject The handle to the GPU data that will be used in this buffer slot.
+     */
+    void setBufferObjectAt(Engine& engine, uint8_t bufferIndex, BufferObject const* bufferObject);
 
     /**
      * Specifies the quaternion type for the "populateTangentQuaternions" utility.

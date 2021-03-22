@@ -160,16 +160,21 @@ void MetalDriver::finish(int) {
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
-        BufferUsage usage) {
+        BufferUsage usage, bool bufferObjectsEnabled) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes);
+            attributeCount, vertexCount, attributes, bufferObjectsEnabled);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<MetalIndexBuffer>(mHandleMap, ibh, *mContext, elementSize, indexCount);
+}
+
+void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType) {
+    // TODO
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -321,6 +326,11 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
 }
 
+Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
+    // TODO
+    return {};
+}
+
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
@@ -396,6 +406,12 @@ void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         destruct_handle<MetalIndexBuffer>(mHandleMap, ibh);
+    }
+}
+
+void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    if (boh) {
+        // TODO
     }
 }
 
@@ -644,6 +660,16 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
+        uint32_t byteOffset) {
+    // TODO
+}
+
+void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+        Handle<HwBufferObject> boh) {
+    // TODO
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
