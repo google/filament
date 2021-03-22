@@ -125,6 +125,12 @@ material {
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
         postProcess.vertex.xy = postProcess.normalizedUV;
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+        // On metal/vulkan postProcess.normalizedUV has its origin at the left-top, but we need a
+        // uniform coordinate space for SAO. So, we flip the y coordinate so we have bottom-left UV
+        // coordinates across all backends.
+        postProcess.vertex.y = 1.0 - postProcess.vertex.y;
+#endif
     }
 }
 
@@ -151,6 +157,15 @@ fragment {
     float random(const highp vec2 w) {
         const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
         return fract(m.z * fract(dot(w, m.xy)));
+    }
+
+    // returns the frag coord in the GL convention with (0, 0) at the bottom-left
+    highp vec2 getFragCoord() {
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+        return vec2(gl_FragCoord.x, materialParams.resolution.y - gl_FragCoord.y);
+#else
+        return gl_FragCoord.xy;
+#endif
     }
 
     highp vec3 computeViewSpacePositionFromDepth(highp vec2 uv, highp float linearDepth) {
@@ -246,7 +261,7 @@ fragment {
     }
 
     float scalableAmbientObscurance(highp vec2 uv, highp vec3 origin, vec3 normal) {
-        float noise = random(gl_FragCoord.xy);
+        float noise = random(getFragCoord());
         highp vec2 tapPosition = startPosition(noise);
         highp mat2 angleStep = tapAngleStep();
 
@@ -287,8 +302,8 @@ fragment {
 
         float occlusion = 0.0;
         for (float i = 1.0; i <= materialParams.ssctRayCount.x; i += 1.0) {
-            cone.jitterOffset.x = random(gl_FragCoord.xy * i) * 2.0 - 1.0;      // direction
-            cone.jitterOffset.y = random(gl_FragCoord.xy * i * vec2(3, 11));    // step
+            cone.jitterOffset.x = random(getFragCoord() * i) * 2.0 - 1.0;      // direction
+            cone.jitterOffset.y = random(getFragCoord() * i * vec2(3, 11));    // step
             occlusion += coneTraceOcclusion(cone, materialParams_depth);
         }
         return occlusion * materialParams.ssctRayCount.y;

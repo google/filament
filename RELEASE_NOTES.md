@@ -5,6 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.17
+
+- engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens.
+- engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering.
+- engine: Fixed depth of field rendering with custom projection matrices.
+- engine: Fix a rare indefinite hang.
+- gltfio: `SimpleViewer` now exposes more rendering parameters, including `ColorGrading`.
+- gltfio: Fix tangents when morphing is enabled.
+- Metal/Vulkan: fix incorrect dominant light shadows rendering.
+- Fixe some issues with imported rendertargets.
+
 ## v1.9.16
 
 gltfio: Add ResourceLoader evict API.
@@ -13,7 +24,7 @@ iOS: Disable exceptions to reduce binary size.
 
 ## v1.9.15
 
-filamat / matc: fix sporatic crash.
+- filamat/matc: fix sporadic crash.
 
 ## v1.9.14
 

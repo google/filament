@@ -248,9 +248,9 @@ public class Camera {
     }
 
     /**
-     * Sets the projection matrix.
+     * Sets a custom projection matrix.
      *
-     * @param inMatrix      custom projection matrix.
+     * @param inProjection  custom projection matrix for rendering and culling
      *
      * @param near          distance in world units from the camera to the near plane.
      *                      The near plane's position in view space is z = -<code>near</code>.
@@ -266,10 +266,71 @@ public class Camera {
      *                      <code>far</code> != <code>near</code>
      *                              for {@link Projection#ORTHO}.
      */
-    public void setCustomProjection(@NonNull @Size(min = 16) double[] inMatrix,
+    public void setCustomProjection(@NonNull @Size(min = 16) double[] inProjection,
             double near, double far) {
-        Asserts.assertMat4dIn(inMatrix);
-        nSetCustomProjection(getNativeObject(), inMatrix, near, far);
+        Asserts.assertMat4dIn(inProjection);
+        nSetCustomProjection(getNativeObject(), inProjection, inProjection, near, far);
+    }
+
+    /**
+     * Sets a custom projection matrix.
+     *
+     * @param inProjection              custom projection matrix for rendering.
+     *
+     * @param inProjectionForCulling    custom projection matrix for culling.
+     *
+     * @param near          distance in world units from the camera to the near plane.
+     *                      The near plane's position in view space is z = -<code>near</code>.
+     *                      Precondition:
+     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *
+     * @param far           distance in world units from the camera to the far plane.
+     *                      The far plane's position in view space is z = -<code>far</code>.
+     *                      Precondition:
+     *                      <code>far</code> > <code>near</code>
+     *                              for {@link Projection#PERSPECTIVE} or
+     *                      <code>far</code> != <code>near</code>
+     *                              for {@link Projection#ORTHO}.
+     */
+    public void setCustomProjection(
+            @NonNull @Size(min = 16) double[] inProjection,
+            @NonNull @Size(min = 16) double[] inProjectionForCulling,
+            double near, double far) {
+        Asserts.assertMat4dIn(inProjection);
+        Asserts.assertMat4dIn(inProjectionForCulling);
+        nSetCustomProjection(getNativeObject(), inProjection, inProjectionForCulling, near, far);
+    }
+
+    /**
+     * Sets an additional matrix that scales the projection matrix.
+     *
+     * <p>This is useful to adjust the aspect ratio of the camera independent from its projection.
+     * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
+     * ratio:<br>
+     *
+     * <code>
+     *     double aspect = width / height;
+     *
+     *     // with Fov.HORIZONTAL passed to setProjection:
+     *     camera.setScaling(1.0, aspect);
+     *
+     *     // with Fov.VERTICAL passed to setProjection:
+     *     camera.setScaling(1.0 / aspect, 1.0);
+     * </code>
+     *
+     * By default, this is an identity matrix.
+     * </p>
+     *
+     * @param xscaling  horizontal scaling to be applied after the projection matrix.
+     * @param yscaling  vertical scaling to be applied after the projection matrix.
+     *
+     * @see Camera#setProjection
+     * @see Camera#setLensProjection
+     * @see Camera#setCustomProjection
+     */
+    public void setScaling(double xscaling, double yscaling) {
+        nSetScaling(getNativeObject(), xscaling, yscaling);
     }
 
     /**
@@ -299,10 +360,32 @@ public class Camera {
      * @see Camera#setProjection
      * @see Camera#setLensProjection
      * @see Camera#setCustomProjection
+     *
+     * @deprecated use {@link #setScaling(double, double)}
+     *
      */
     public void setScaling(@NonNull @Size(min = 4) double[] inScaling) {
         Asserts.assertDouble4In(inScaling);
-        nSetScaling(getNativeObject(), inScaling);
+        setScaling(inScaling[0], inScaling[1]);
+    }
+
+    /**
+     * Sets an additional matrix that shifts (translates) the projection matrix.
+     * <p>
+     * The shift parameters are specified in NDC coordinates, that is, if the translation must
+     * be specified in pixels, the xshift and yshift parameters be scaled by 1.0 / viewport.width
+     * and 1.0 / viewport.height respectively.
+     * </p>
+     *
+     * @param xshift    horizontal shift in NDC coordinates applied after the projection
+     * @param yshift    vertical shift in NDC coordinates applied after the projection
+     *
+     * @see Camera#setProjection
+     * @see Camera#setLensProjection
+     * @see Camera#setCustomProjection
+     */
+    public void setShift(double xshift, double yshift) {
+        nSetShift(getNativeObject(), xshift, yshift);
     }
 
     /**
@@ -581,8 +664,9 @@ public class Camera {
     private static native void nSetProjection(long nativeCamera, int projection, double left, double right, double bottom, double top, double near, double far);
     private static native void nSetProjectionFov(long nativeCamera, double fovInDegrees, double aspect, double near, double far, int fov);
     private static native void nSetLensProjection(long nativeCamera, double focalLength, double aspect, double near, double far);
-    private static native void nSetCustomProjection(long nativeCamera, double[] inMatrix, double near, double far);
-    private static native void nSetScaling(long nativeCamera, double[] inScaling);
+    private static native void nSetCustomProjection(long nativeCamera, double[] inProjection, double[] inProjectionForCulling, double near, double far);
+    private static native void nSetScaling(long nativeCamera, double x, double y);
+    private static native void nSetShift(long nativeCamera, double x, double y);
     private static native void nSetModelMatrix(long nativeCamera, float[] in);
     private static native void nLookAt(long nativeCamera, double eyeX, double eyeY, double eyeZ, double centerX, double centerY, double centerZ, double upX, double upY, double upZ);
     private static native float nGetNear(long nativeCamera);

@@ -21,6 +21,9 @@
 // when SYSTRACE_TAG_JOBSYSTEM is used, enables even heavier systraces
 #define HEAVY_SYSTRACE  0
 
+// enable for catching hangs waiting on a job to finish
+static constexpr bool DEBUG_FINISH_HANGS = false;
+
 #include <utils/JobSystem.h>
 
 #include <cmath>
@@ -208,18 +211,50 @@ inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
     return job->runningJobCount.load(std::memory_order_relaxed) <= 0;
 }
 
-void JobSystem::wait(std::unique_lock<Mutex>& lock) noexcept {
-    ++mWaiterCount;
-    mWaiterCondition.wait(lock);
-    --mWaiterCount;
+void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
+    if constexpr (!DEBUG_FINISH_HANGS) {
+        mWaiterCondition.wait(lock);
+    } else {
+        do {
+            // we use a pretty long timeout (4s) so we're very confident that the system is hung
+            // and nothing else is happening.
+            std::cv_status status = mWaiterCondition.wait_for(lock,
+                    std::chrono::milliseconds(4000));
+            if (status == std::cv_status::no_timeout) {
+                break;
+            }
+
+            // hang debugging...
+
+            // we check of we had active jobs or if the job we're waiting on had completed already.
+            // there is the possibility of a race condition, but our long timeout gives us some
+            // confidence that we're in an incorrect state.
+
+            auto id = getState().id;
+            auto activeJobs = mActiveJobs.load();
+
+            if (job) {
+                auto runningJobCount = job->runningJobCount.load();
+                ASSERT_POSTCONDITION(runningJobCount > 0,
+                        "JobSystem(%p, %d): waiting while job %p has completed and %d jobs are active!",
+                        this, id, job, activeJobs);
+            }
+
+            ASSERT_POSTCONDITION(activeJobs <= 0,
+                    "JobSystem(%p, %d): waiting while %d jobs are active!",
+                    this, id, activeJobs);
+
+        } while (true);
+    }
 }
 
 void JobSystem::wake() noexcept {
     Mutex& lock = mWaiterLock;
     lock.lock();
-    const uint32_t waiterCount = mWaiterCount;
+    // this empty critical section is needed -- it guarantees that notifiy_all() happens
+    // after the condition variables are set.
     lock.unlock();
-    mWaiterCondition.notify_n(waiterCount);
+    mWaiterCondition.notify_all();
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
@@ -279,6 +314,8 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     }
 
     if (job) {
+        assert(job->runningJobCount.load(std::memory_order_relaxed) >= 1);
+
         UTILS_UNUSED_IN_RELEASE
         uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
         assert(activeJobs); // whoops, we were already at 0
@@ -453,7 +490,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
 
             std::unique_lock<Mutex> lock(mWaiterLock);
             if (!hasJobCompleted(job) && !hasActiveJobs() && !exitRequested()) {
-                wait(lock);
+                wait(lock, job);
             }
         }
     } while (!hasJobCompleted(job) && !exitRequested());

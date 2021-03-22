@@ -256,7 +256,7 @@ public:
     void run(Job*& job, uint32_t flags = 0) noexcept;
     void run(Job*&& job, uint32_t flags = 0) noexcept { // allows run(createJob(...));
         Job* p = job;
-        run(p);
+        run(p, flags);
     }
 
     void signal() noexcept;
@@ -378,13 +378,12 @@ private:
         return !index ? nullptr : &mJobStorageBase[index - 1];
     }
 
-    void wait(std::unique_lock<Mutex>& lock) noexcept;
+    void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
     void wake() noexcept;
 
     // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
     utils::Condition mWaiterCondition;
-    uint32_t mWaiterCount = 0;
 
     std::atomic<uint32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;

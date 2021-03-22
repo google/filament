@@ -24,11 +24,8 @@ import java.nio.ByteOrder;
 /**
  * Manages a tiny WebSocket server that can receive model data and viewer settings.
  *
- * Client apps can call acquireReceivedMessage to check for a new model and pop it off the small
+ * Client apps can call acquireReceivedMessage to check for new data and pop it off the small
  * internal queue.
- *
- * TODO: Currently this can only receive model data. We would like to extend it to receive
- * viewer settings and commands (e.g. "Start Automation Test").
  */
 public class RemoteServer {
     private long mNativeObject;
@@ -46,10 +43,31 @@ public class RemoteServer {
         if (mNativeObject == 0) throw new IllegalStateException("Couldn't create RemoteServer");
     }
 
+    /**
+     * Checks if a download is currently in progress and returns its label.
+     * Returns null if nothing is being downloaded.
+     */
     public @Nullable String peekIncomingLabel() {
         return nPeekIncomingLabel(mNativeObject);
     }
 
+    /**
+     * Checks if a peeked message has JSON content.
+     */
+    public static boolean isJson(@Nullable String label) {
+        return label != null && label.endsWith(".json");
+    }
+
+    /**
+     * Checks if a peeked message has binary content.
+     */
+    public static boolean isBinary(@Nullable String label) {
+        return label != null && !label.endsWith(".json");
+    }
+
+    /**
+     * Pops a message off the incoming queue or returns null if there are no unread messages.
+     */
     public @Nullable ReceivedMessage acquireReceivedMessage() {
         int length = nPeekReceivedBufferLength(mNativeObject);
         if (length == 0) {

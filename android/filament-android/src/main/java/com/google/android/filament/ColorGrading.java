@@ -117,7 +117,8 @@ public class ColorGrading {
         DISPLAY_RANGE,
     }
 
-    ColorGrading(long colorGrading) {
+    // NOTE: This constructor is public only so that filament-utils can use it.
+    public ColorGrading(long colorGrading) {
         mNativeObject = colorGrading;
     }
 

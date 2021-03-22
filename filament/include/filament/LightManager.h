@@ -315,7 +315,7 @@ public:
          * @warning This API is still experimental and subject to change.
          * @see View::setShadowType
          */
-        struct {
+        struct Vsm {
             /**
              * The number of MSAA samples to use when rendering VSM shadow maps.
              * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
