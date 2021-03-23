@@ -196,6 +196,8 @@ public:
 
     void stopAnimation() { mCurrentAnimation = 0; }
 
+    int getCurrentCamera() const { return mCurrentCamera; }
+
 private:
     void updateIndirectLight();
 
@@ -222,6 +224,9 @@ private:
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;
+
+    // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
+    int mCurrentCamera = 0;
 
     // Color grading UI state.
     float mRangePlot[1024 * 3];
