@@ -33,6 +33,10 @@
 #include <string>
 
 namespace filament {
+
+class Skybox;
+class Renderer;
+
 namespace viewer {
 
 struct ColorGradingSettings;
@@ -41,6 +45,7 @@ struct MaterialSettings;
 struct Settings;
 struct ViewSettings;
 struct LightSettings;
+struct ViewerOptions;
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
 using AntiAliasing = filament::View::AntiAliasing;
@@ -61,6 +66,8 @@ void applySettings(const ViewSettings& settings, View* dest);
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
         LightManager* lm, Scene* scene);
+void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+        Renderer* renderer);
 
 // Creates a new ColorGrading object based on the given settings.
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine);
@@ -157,10 +164,22 @@ struct LightSettings {
     float iblRotation = 0.0f;
 };
 
+struct ViewerOptions {
+    float cameraAperture = 16.0f;
+    float cameraSpeed = 125.0f;
+    float cameraISO = 100.0f;
+    float groundShadowStrength = 0.75f;
+    bool groundPlaneEnabled = false;
+    bool skyboxEnabled = true;
+    sRGBColor backgroundColor = { 0.0f };
+    float cameraFocalLength = 28.0f;
+};
+
 struct Settings {
     ViewSettings view;
     MaterialSettings material;
     LightSettings lighting;
+    ViewerOptions viewer;
 };
 
 } // namespace viewer
