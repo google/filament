@@ -159,6 +159,7 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
+        src/materials/dof/dofCoc.mat
         src/materials/dof/dofDownsample.mat
         src/materials/dof/dofCombine.mat
         src/materials/dof/dofTiles.mat

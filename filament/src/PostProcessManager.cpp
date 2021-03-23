@@ -209,6 +209,7 @@ static const MaterialInfo sMaterialList[] = {
         { "fxaa",                  MATERIAL(FXAA) },
         { "taa",                   MATERIAL(TAA) },
         { "dofDownsample",         MATERIAL(DOFDOWNSAMPLE) },
+        { "dofCoc",                MATERIAL(DOFCOC) },
         { "dofMipmap",             MATERIAL(DOFMIPMAP) },
         { "dofTiles",              MATERIAL(DOFTILES) },
         { "dofDilate",             MATERIAL(DOFDILATE) },
@@ -915,12 +916,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     auto depth = blackboard.get<FrameGraphTexture>("depth");
     assert_invariant(depth);
 
-    // the downsampled target is multiple of 8, so we can have 4 clean mipmap levels
-    constexpr const uint32_t maxMipLevels = 4u;
+    /*
+     * dofResolution is used (at compile time for now) to chose between full- or quarter-resolution
+     * for the DoF calculations. Set to [1] for full resolution or [2] for quarter-resolution.
+     */
+    const uint32_t dofResolution = 2;
+
+    constexpr const uint32_t maxMipLevels = 4u; // mip levels at full-resolution
     constexpr const uint32_t maxMipLevelsMask = (1u << maxMipLevels) - 1u;
     auto const& colorDesc = fg.getDescriptor(input);
-    const uint32_t width  = ((colorDesc.width  + maxMipLevelsMask) & ~maxMipLevelsMask) / 2;
-    const uint32_t height = ((colorDesc.height + maxMipLevelsMask) & ~maxMipLevelsMask) / 2;
+    const uint32_t width  = ((colorDesc.width  + maxMipLevelsMask) & ~maxMipLevelsMask) / dofResolution;
+    const uint32_t height = ((colorDesc.height + maxMipLevelsMask) & ~maxMipLevelsMask) / dofResolution;
     const uint8_t maxLevelCount = FTexture::maxLevelCount(width, height);
     uint8_t mipmapCount = min(maxLevelCount, uint8_t(maxMipLevels));
 
@@ -956,7 +962,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 });
                 data.outForeground = builder.write(data.outForeground, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.outBackground = builder.write(data.outBackground, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.outCocFgBg    = builder.write(data.outCocFgBg, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                data.outCocFgBg    = builder.write(data.outCocFgBg,    FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass("DoF Target", { .attachments = {
                                 .color = { data.outForeground, data.outBackground, data.outCocFgBg }
                         }
@@ -966,12 +972,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto const& out = resources.getRenderPassInfo();
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
-                auto const& material = getPostProcessMaterial("dofDownsample");
+                auto const& material = (dofResolution == 1) ?
+                        getPostProcessMaterial("dofCoc") :
+                        getPostProcessMaterial("dofDownsample");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("depth", depth, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocParams", cocParams);
-                mi->setParameter("uvscale", float4{ width, height, 1.0f / colorDesc.width, 1.0f / colorDesc.height });
+                mi->setParameter("uvscale", float4{ width, height,
+                        1.0f / colorDesc.width, 1.0f / colorDesc.height });
                 commitAndRender(out, material, driver);
             });
 
@@ -984,7 +993,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> inOutForeground;
         FrameGraphId<FrameGraphTexture> inOutBackground;
         FrameGraphId<FrameGraphTexture> inOutCocFgBg;
-        uint32_t rp[3];
+        uint32_t rp[maxMipLevels];
     };
 
     assert_invariant(mipmapCount - 1 <= sizeof(PostProcessDofMipmap::rp) / sizeof(uint32_t));
@@ -997,8 +1006,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 for (size_t i = 0; i < mipmapCount - 1u; i++) {
                     // make sure inputs are always multiple of two (should be true by construction)
                     // (this is so that we can compute clean mip levels)
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1u) == 0);
-                    assert((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1u) == 0);
+                    assert_invariant((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).width ) & 0x1u) == 0);
+                    assert_invariant((FTexture::valueForLevel(uint8_t(i), fg.getDescriptor(data.inOutForeground).height) & 0x1u) == 0);
 
                     auto inOutForeground = builder.createSubresource(data.inOutForeground, "Forground mip",  { .level = uint8_t(i + 1) });
                     auto inOutBackground = builder.createSubresource(data.inOutBackground, "Background mip", { .level = uint8_t(i + 1) });
@@ -1006,7 +1015,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                     inOutForeground = builder.write(inOutForeground, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                     inOutBackground = builder.write(inOutBackground, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                    inOutCocFgBg    = builder.write(inOutCocFgBg, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    inOutCocFgBg    = builder.write(inOutCocFgBg,    FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
                     data.rp[i] = builder.declareRenderPass("DoF Target", { .attachments = {
                                 .color = { inOutForeground, inOutBackground, inOutCocFgBg  }
@@ -1033,7 +1042,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
                     mi->setParameter("mip", uint32_t(level));
-                    mi->setParameter("weightScale", 0.5f / float(1u<<level));
+                    mi->setParameter("weightScale", 0.5f / float(1u<<level));   // FIXME: halfres?
                     mi->commit(driver);
                     driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive);
@@ -1048,11 +1057,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     auto inTilesCocMaxMin = ppDoFDownsample->outCocFgBg;
 
-    // Match this with TILE_SIZE in dofDilate.mat
-    const size_t tileSize = 16; // size of the tile in full resolution pixel
-    const uint32_t tileBufferWidth  = ((colorDesc.width  + (tileSize - 1u)) & ~(tileSize - 1u)) / 4u;
-    const uint32_t tileBufferHeight = ((colorDesc.height + (tileSize - 1u)) & ~(tileSize - 1u)) / 4u;
-    const size_t tileReductionCount = std::log2(tileSize) - 1.0; // -1 because we start from half-resolution
+    // TODO: Should the tile size be in real pixels? i.e. always 16px instead of being dependant on
+    //       the DoF effect resolution?
+    // Size of a tile in full-resolution pixels -- must match TILE_SIZE in dofDilate.mat
+    const size_t tileSize = 16;
+    // round the width/height to 16 (tile size), divide by scale (1 or 2) for halfres
+    const uint32_t tileBufferWidth  = ((colorDesc.width  + (tileSize - 1u)) & ~(tileSize - 1u)) / dofResolution;
+    const uint32_t tileBufferHeight = ((colorDesc.height + (tileSize - 1u)) & ~(tileSize - 1u)) / dofResolution;
+    const size_t tileReductionCount = std::log2(tileSize / dofResolution);
 
     struct PostProcessDofTiling1 {
         FrameGraphId<FrameGraphTexture> inCocMaxMin;
@@ -1062,12 +1074,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     for (size_t i = 0; i < tileReductionCount; i++) {
         auto& ppDoFTiling = fg.addPass<PostProcessDofTiling1>("DoF Tiling",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    assert((tileBufferWidth  & 1u) == 0);
-                    assert((tileBufferHeight & 1u) == 0);
+                    assert_invariant(((tileBufferWidth  >> i) & 1u) == 0);
+                    assert_invariant(((tileBufferHeight >> i) & 1u) == 0);
                     data.inCocMaxMin = builder.sample(inTilesCocMaxMin);
                     data.outTilesCocMaxMin = builder.createTexture("dof tiles output", {
-                            .width  = tileBufferWidth  >> i,
-                            .height = tileBufferHeight >> i,
+                            .width  = tileBufferWidth  >> (i + 1u),
+                            .height = tileBufferHeight >> (i + 1u),
                             .format = TextureFormat::RG16F
                     });
                     data.outTilesCocMaxMin = builder.declareRenderPass(data.outTilesCocMaxMin);
@@ -1120,7 +1132,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         return ppDoFDilate->outTilesCocMaxMin;
     };
 
-    // Tiles of 16 pixels requires two dilate rounds to accommodate our max Coc of 32 pixels
+    // Tiles of 16 full-resolution pixels requires two dilate rounds to accommodate our max Coc of 32 pixels
+    // (note: when running at half-res, the tiles are 8 half-resolution pixels, and still need two
+    //  dilate rounds to accommodate the mac CoC pf 16 half-resolution pixels)
     auto dilated = dilate(inTilesCocMaxMin);
     dilated = dilate(dilated);
 
@@ -1148,13 +1162,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 // The DoF buffer (output) doesn't need to be a multiple of 8 because it's not
                 // mipmapped. We just need to adjust the uv properly.
                 data.outForeground = builder.createTexture("dof color output", {
-                        .width  = (colorDesc.width  + 1) / 2,
-                        .height = (colorDesc.height + 1) / 2,
+                        .width  = (colorDesc.width  + (dofResolution / 2u)) / dofResolution,
+                        .height = (colorDesc.height + (dofResolution / 2u)) / dofResolution,
                         .format = fg.getDescriptor(data.foreground).format
                 });
                 data.outAlpha = builder.createTexture("dof alpha output", {
-                        .width  = (colorDesc.width  + 1) / 2,
-                        .height = (colorDesc.height + 1) / 2,
+                        .width  = builder.getDescriptor(data.outForeground).width,
+                        .height = builder.getDescriptor(data.outForeground).height,
                         .format = TextureFormat::R8
                 });
                 data.outForeground  = builder.write(data.outForeground, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
@@ -1188,12 +1202,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("tiles", tilesCocMaxMin,
                         { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("cocToTexelOffset", 0.5f / float2{ inputDesc.width, inputDesc.height });
+                mi->setParameter("cocToTexelScale", (1.0f / dofResolution) / float2{ inputDesc.width, inputDesc.height });
+                mi->setParameter("cocToPixelScale", (1.0f / dofResolution));
                 mi->setParameter("uvscale", float4{
                     outputDesc.width  / float(inputDesc.width),
                     outputDesc.height / float(inputDesc.height),
-                    outputDesc.width  / (tileSize * 0.5f * tilesDesc.width),
-                    outputDesc.height / (tileSize * 0.5f * tilesDesc.height)
+                    outputDesc.width  / float(tileSize / dofResolution * tilesDesc.width),
+                    outputDesc.height / float(tileSize / dofResolution * tilesDesc.height)
                 });
                 mi->setParameter("bokehAngle",  bokehAngle);
                 commitAndRender(out, material, driver);
@@ -1243,8 +1258,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("alpha", inAlpha,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("tiles", tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("uvscale", float2{
-                        outputDesc.width  / (tileSize * 0.5f * tilesDesc.width),
-                        outputDesc.height / (tileSize * 0.5f * tilesDesc.height)
+                        outputDesc.width  / float(tileSize / dofResolution * tilesDesc.width),
+                        outputDesc.height / float(tileSize / dofResolution * tilesDesc.height)
                 });
                 commitAndRender(out, material, driver);
             });
@@ -1297,8 +1312,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("alpha", alpha, { .filterMag = SamplerMagFilter::NEAREST });
                 mi->setParameter("tiles", tilesCocMaxMin, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("uvscale", float4{
-                    colorDesc.width  / (dofDesc.width    *  2.0f),
-                    colorDesc.height / (dofDesc.height   *  2.0f),
+                    colorDesc.width  / (dofDesc.width    * float(dofResolution)),
+                    colorDesc.height / (dofDesc.height   * float(dofResolution)),
                     colorDesc.width  / (tilesDesc.width  * float(tileSize)),
                     colorDesc.height / (tilesDesc.height * float(tileSize))
                 });

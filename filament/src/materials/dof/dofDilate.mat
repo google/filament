@@ -27,7 +27,7 @@ fragment {
 
 void dummy(){}
 
-// Tiles of 16 pixels requires two dilate rounds to accomodate our max Coc of 32 pixels
+// Size of a tile in full-resolution pixels -- must match tileSize in PostProcessManager.cpp
 #define TILE_SIZE   16.0
 
 vec2 tap(const vec2 uv, const vec2 offset) {
@@ -35,7 +35,8 @@ vec2 tap(const vec2 uv, const vec2 offset) {
 }
 
 vec2 dilate(inout vec2 center, const vec2 tap) {
-    // 2.24 (sqrt(5) is the longest distance between 2 pixels of adjacent tiles).
+    // 2.24 tiles is the longest distance between 2 pixels of adjacent tiles.
+    // sqrt(2^2 + 1^2) = 2.24
     const float maxDistance = max(-MAX_COC_RADIUS, -2.24 * TILE_SIZE);
 
     // Tiles that can affect us need to transfer their CoC to us (for the foreground it's
