@@ -229,6 +229,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<utils::Entity> mCameraEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
+    std::vector<filament::BufferObject*> mBufferObjects;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
     std::vector<filament::Texture*> mTextures;
     filament::Aabb mBoundingBox;

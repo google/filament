@@ -61,6 +61,9 @@ FFilamentAsset::~FFilamentAsset() {
     for (auto vb : mVertexBuffers) {
         mEngine->destroy(vb);
     }
+    for (auto bo : mBufferObjects) {
+        mEngine->destroy(bo);
+    }
     for (auto ib : mIndexBuffers) {
         mEngine->destroy(ib);
     }
