@@ -495,9 +495,9 @@ void foregroundTile(inout vec4 foreground, inout float fgOpacity,
     }
 
     // Area of all samples in the kernel
-    float kernelArea = sampleCount(ringCountGather) * sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
-    float frontLayerOpacity = saturate(layer[0].weight * rcp(kernelArea));
-    float backLayerOpacity  = saturate(layer[1].weight * rcp(kernelArea));
+    float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
+    float frontLayerOpacity = saturate(layer[0].weight * rcp(kernelArea * sampleCount(ringCountGather)));
+    float backLayerOpacity  = saturate(layer[1].weight * rcp(kernelArea * sampleCount(ringCountGather)));
     vec4 front = layer[0].color * rcpOrZero(layer[0].weight) * frontLayerOpacity;
     vec4 back  = layer[1].color * rcpOrZero(layer[1].weight) * backLayerOpacity;
     foreground = front + back * (1.0 - frontLayerOpacity);
@@ -532,15 +532,12 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
 
     accumulateBackgroundCenter(prev, uvCenter, ringCountGather, kernelSize, noiseRadius, mip);
 
-    background = prev.c;
-    bgOpacity = cocToAlpha(prev.coc);
-#if defined(TARGET_MOBILE)
-    bgOpacity *= saturate((kernelSize - MAX_IN_FOCUS_COC) / (2.0 - MAX_IN_FOCUS_COC));
-#else
+    float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
+    bgOpacity = saturate(prev.cw * rcp(kernelArea));
+#if !defined(TARGET_MOBILE)
     bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
 #endif
-    background *= rcpOrZero(prev.cw);
-    background *= bgOpacity;
+    background = prev.c * (rcpOrZero(prev.cw) * bgOpacity);
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
@@ -565,7 +562,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec2 noise = vec2(0.0);
     float noiseRadius = 0.0;
 
-    #if KERNEL_USE_NOISE
+#if KERNEL_USE_NOISE
     // When using mipmaping the noise seems to hurt more than it helps
     // A good random generator is essential, this one is okay.
     vec2 fragCoords = gl_FragCoord.xy;
