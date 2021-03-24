@@ -865,7 +865,7 @@ void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
 }
 
 void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
-        VulkanIndexBuffer* indexBuffer, uint32_t enabledAttributes) {
+        VulkanIndexBuffer* indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
     const size_t nattrs = vertexBuffer->attributes.size();
@@ -882,9 +882,6 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
     memset(varray.attributes, 0, sizeof(varray.attributes));
     memset(varray.buffers, 0, sizeof(varray.buffers));
 
-    // Position should always be present.
-    assert_invariant(enabledAttributes & 1);
-
     // For each enabled attribute, append to each of the above lists. Note that a single VkBuffer
     // handle might be appended more than once, which is perfectly fine.
     uint32_t bufferIndex = 0;
@@ -894,7 +891,7 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 
         // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes.
         // We know that position exists (see earlier assert)
-        if (!(enabledAttributes & (1U << attribIndex))) {
+        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
 
             // HACK: Presently, Filament's vertex shaders declare all attributes as either vec4 or
             // uvec4 (the latter is for bone indices), and positions are always at least 32 bits per
@@ -903,11 +900,7 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
             const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
             vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
 
-            if (UTILS_LIKELY(enabledAttributes & 1)) {
-                attrib = vertexBuffer->attributes[0];
-            } else {
-                continue;
-            }
+            attrib = vertexBuffer->attributes[0];
         }
 
         buffers.push_back(vertexBuffer->buffers[attrib.buffer]->getGpuBuffer());

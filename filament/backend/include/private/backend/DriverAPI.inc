@@ -381,8 +381,7 @@ DECL_DRIVER_API_0(nextSubpass)
 DECL_DRIVER_API_N(setRenderPrimitiveBuffer,
         backend::RenderPrimitiveHandle, rph,
         backend::VertexBufferHandle, vbh,
-        backend::IndexBufferHandle, ibh,
-        uint32_t, enabledAttributes)
+        backend::IndexBufferHandle, ibh)
 
 DECL_DRIVER_API_N(setRenderPrimitiveRange,
         backend::RenderPrimitiveHandle, rph,

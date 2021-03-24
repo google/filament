@@ -59,8 +59,7 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
 
     mRenderPrimitive = mDriverApi.createRenderPrimitive(0);
 
-    mDriverApi.setRenderPrimitiveBuffer(mRenderPrimitive, mVertexBuffer, mIndexBuffer,
-            enabledAttributes.getValue());
+    mDriverApi.setRenderPrimitiveBuffer(mRenderPrimitive, mVertexBuffer, mIndexBuffer);
     mDriverApi.setRenderPrimitiveRange(mRenderPrimitive, PrimitiveType::TRIANGLES, 0, 0, 2, 3);
 }
 

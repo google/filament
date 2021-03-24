@@ -1164,11 +1164,10 @@ void VulkanDriver::nextSubpass(int) {
 }
 
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        uint32_t enabledAttributes) {
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
     primitive->setBuffers(handle_cast<VulkanVertexBuffer>(mHandleMap, vbh),
-            handle_cast<VulkanIndexBuffer>(mHandleMap, ibh), enabledAttributes);
+            handle_cast<VulkanIndexBuffer>(mHandleMap, ibh));
 }
 
 void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
