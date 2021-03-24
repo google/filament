@@ -313,6 +313,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     buffers.reserve(attributeCount);
     offsets.clear();
     offsets.reserve(attributeCount);
+    vertexDescription = {};
 
     // Each attribute gets its own vertex buffer.
 
