@@ -32,13 +32,33 @@ target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn c
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================
+# Generate AST (experimental)
+# ==================================================================================================
+
+set(filament_includes "-I$<JOIN:$<TARGET_PROPERTY:filament,INCLUDE_DIRECTORIES>,;-I>")
+set(viewer_includes "-I$<JOIN:$<TARGET_PROPERTY:viewer,INCLUDE_DIRECTORIES>,;-I>")
+
+add_custom_command(
+    OUTPUT SettingsAST.json
+    COMMAND clang
+        "-Xclang;-ast-dump=json;-fsyntax-only;-std=c++17"
+        ";${filament_includes};${viewer_includes}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Stub.cpp;>;SettingsAST.json"
+    COMMAND_EXPAND_LISTS
+    DEPENDS include/viewer/Settings.h
+    COMMENT "Dumping AST"
+)
+
+add_custom_target(SettingsAST DEPENDS SettingsAST.json)
+add_dependencies(${TARGET} SettingsAST)
+
+# ==================================================================================================
 # Compiler flags
 # ==================================================================================================
 if (MSVC)
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
 else()
     target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
-    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
 endif()
 
 # ==================================================================================================
