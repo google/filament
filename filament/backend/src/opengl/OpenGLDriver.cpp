@@ -2380,13 +2380,6 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
                 uint8_t bi = attribute.buffer;
                 gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
                 if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-
-                    // Emscripten regressed at the following PR so we work around it for now.
-                    // https://github.com/emscripten-core/emscripten/pull/11225
-                    #ifdef __EMSCRIPTEN__
-                    EM_ASM_INT({ GL.currArrayBuffer = GLctx.currentArrayBufferBinding; });
-                    #endif
-
                     glVertexAttribIPointer(GLuint(i),
                             getComponentCount(attribute.type),
                             getComponentType(attribute.type),
