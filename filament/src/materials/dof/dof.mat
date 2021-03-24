@@ -562,8 +562,10 @@ void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
     vec4 foreground = vec4(0.0);
     vec4 background = vec4(0.0);
+    vec2 noise = vec2(0.0);
+    float noiseRadius = 0.0;
 
-#if KERNEL_USE_NOISE
+    #if KERNEL_USE_NOISE
     // When using mipmaping the noise seems to hurt more than it helps
     // A good random generator is essential, this one is okay.
     vec2 fragCoords = gl_FragCoord.xy;
@@ -579,8 +581,8 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     if (isFastTile(tiles)) {
 #if KERNEL_USE_NOISE
-        float noiseRadius = randomUniformDiskRadius * rcp(ringCountFast - 0.5);
-        vec2 noise = noiseRadius * randomDisk;
+        noiseRadius = randomUniformDiskRadius * rcp(ringCountFast - 0.5);
+        noise = noiseRadius * randomDisk;
 #endif
         vec4 color;
         float alpha;
@@ -603,11 +605,8 @@ void postProcess(inout PostProcessInputs postProcess) {
     float fgOpacity = 0.0;
     float bgOpacity = 0.0;
 #if KERNEL_USE_NOISE
-    float noiseRadius = randomUniformDiskRadius * rcp(ringCountGather - 0.5);
-    vec2  noise = noiseRadius * randomDisk;
-#else
-    const float noiseRadius = 0.0;
-    const vec2 noise = vec2(0.0);
+    noiseRadius = randomUniformDiskRadius * rcp(ringCountGather - 0.5);
+    noise = noiseRadius * randomDisk;
 #endif
 
     if (isForegroundTile(tiles)) {
@@ -618,6 +617,18 @@ void postProcess(inout PostProcessInputs postProcess) {
     if (isBackgroundTile(tiles)) {
         backgroundTile(background, bgOpacity, uv, tiles, noise, noiseRadius);
         //background.g += 0.1;
+    }
+
+    // "hole filling correction for in-focus" described in "Life of a Bokeh", on slide 80.
+    // TODO: make this a quality setting
+    if (fgOpacity > 0.0 && fgOpacity < 1.0 && bgOpacity == 0.0) {
+        // this happens on very few pixels
+        float centerCoc = textureLod(materialParams_cocFgBg, uv, 0.0).r;
+        float correctedOpacity = max(fgOpacity, cocToAlpha(centerCoc));
+        float updateOpacity = correctedOpacity / fgOpacity;
+        foreground *= updateOpacity;
+        fgOpacity = correctedOpacity;
+        //foreground.rg += 0.1;
     }
 
 #if POST_PROCESS_OPAQUE
