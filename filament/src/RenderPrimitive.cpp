@@ -43,7 +43,7 @@ void FRenderPrimitive::init(backend::DriverApi& driver,
         auto const& ebh = vertexBuffer->getHwHandle();
         auto const& ibh = indexBuffer->getHwHandle();
 
-        driver.setRenderPrimitiveBuffer(mHandle, ebh, ibh, (uint32_t)enabledAttributes.getValue());
+        driver.setRenderPrimitiveBuffer(mHandle, ebh, ibh);
         driver.setRenderPrimitiveRange(mHandle, entry.type,
                 (uint32_t)entry.offset, (uint32_t)entry.minIndex, (uint32_t)entry.maxIndex,
                 (uint32_t)entry.count);
@@ -67,7 +67,7 @@ void FRenderPrimitive::set(FEngine& engine, RenderableManager::PrimitiveType typ
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    driver.setRenderPrimitiveBuffer(mHandle, ebh, ibh, (uint32_t)enabledAttributes.getValue());
+    driver.setRenderPrimitiveBuffer(mHandle, ebh, ibh);
     driver.setRenderPrimitiveRange(mHandle, type,
             (uint32_t)offset, (uint32_t)minIndex, (uint32_t)maxIndex, (uint32_t)count);
 

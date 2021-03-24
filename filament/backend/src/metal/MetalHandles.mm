@@ -303,7 +303,7 @@ MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwU
         buffer(context, size) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
-        indexBuffer, uint32_t enabledAttributes) {
+        indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
 
@@ -318,8 +318,9 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     uint32_t bufferIndex = 0;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
-        if (!(enabledAttributes & (1U << attributeIndex))) {
-            const uint8_t flags = vertexBuffer->attributes[attributeIndex].flags;
+        const auto& attribute = vertexBuffer->attributes[attributeIndex];
+        if (attribute.buffer != Attribute::BUFFER_UNUSED) {
+            const uint8_t flags = attribute.flags;
             const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
                     MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
 
@@ -336,7 +337,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
             };
             continue;
         }
-        const auto& attribute = vertexBuffer->attributes[attributeIndex];
 
         buffers.push_back(vertexBuffer->buffers[attribute.buffer]);
         offsets.push_back(attribute.offset);
