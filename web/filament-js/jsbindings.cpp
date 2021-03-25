@@ -757,6 +757,12 @@ class_<Camera>("Camera")
     .function("getAperture", &Camera::getAperture)
     .function("getShutterSpeed", &Camera::getShutterSpeed)
     .function("getSensitivity", &Camera::getSensitivity)
+    .function("setFocusDistance", &Camera::setFocusDistance)
+    .function("getFocusDistance", &Camera::getFocusDistance)
+    .function("getFocalLength", &Camera::getFocalLength)
+
+    .class_function("computeEffectiveFocalLength", &Camera::computeEffectiveFocalLength)
+    .class_function("computeEffectiveFov", &Camera::computeEffectiveFov)
 
     .class_function("inverseProjection",  (flatmat4 (*)(flatmat4)) [] (flatmat4 m) {
         return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };

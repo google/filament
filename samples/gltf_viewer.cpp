@@ -629,10 +629,17 @@ int main(int argc, char** argv) {
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app.scene.groundPlane);
         const auto& viewerOptions = app.viewer->getSettings().viewer;
+        const auto& dofOptions = app.viewer->getSettings().view.dof;
         rcm.setLayerMask(instance,
                 0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
 
-        FilamentApp::get().getCameraFocalLength() = viewerOptions.cameraFocalLength;
+        float fe = viewerOptions.cameraFocalLength;
+        if (dofOptions.enabled) {
+            fe = Camera::computeEffectiveFocalLength(fe / 1000.0,
+                    std::max(0.1f, dofOptions.focusDistance)) * 1000.0;
+        }
+
+        FilamentApp::get().getCameraFocalLength() = fe;
 
         const size_t cameraCount = app.asset->getCameraEntityCount();
         view->setCamera(app.mainCamera);
