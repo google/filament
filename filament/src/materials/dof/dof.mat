@@ -111,6 +111,10 @@ float sampleCount(const float ringCount) {
     return s * s;
 }
 
+float computeNeededRings(const float kernelSizeInPixel) {
+    return ceil(kernelSizeInPixel + 0.5);
+}
+
 float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
 #if KERNEL_USE_MIPMAP
     // note: the 0.5 is to convert from highres to our downslampled texture
@@ -428,12 +432,12 @@ void accumulateForegroundMirror(inout Layer layer[2], const vec2 tiles,
 
 void fastTile(inout vec4 color, inout float alpha,
         const highp vec2 uv, const vec2 tiles, const vec2 noise) {
-    const float ringCountFast = float(RING_COUNT_FAST);
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
 
     // The whole tile has mostly the same CoC
     float kernelSize = (abs(tiles.r) + abs(tiles.g)) * 0.5;
-    float cocToPixelScale = materialParams.cocToPixelScale;
+    float ringCountFast = min(float(RING_COUNT_FAST), computeNeededRings(kernelSize * cocToPixelScale));
     float mip = getMipLevel(ringCountFast, kernelSize * cocToPixelScale);
 
     vec2 uvCenter = uv + noise * kernelSize * cocToTexelScale;
@@ -459,13 +463,13 @@ void fastTile(inout vec4 color, inout float alpha,
 
 void foregroundTile(inout vec4 foreground, inout float fgOpacity,
         const highp vec2 uv, const vec2 tiles, const vec2 noise) {
-    const float ringCountGather = float(RING_COUNT_GATHER);
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
 
     // Here we know that tiles.r < 0, by definition of a foreground tile.
     // For a foreground tile, the kernel size is the largest CoC radius of the whole tile.
     float kernelSize = -tiles.r;
-    float cocToPixelScale = materialParams.cocToPixelScale;
+    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(kernelSize * cocToPixelScale));
     float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
     vec2 uvCenter = uv + noise * kernelSize * cocToTexelScale;
 
@@ -507,12 +511,14 @@ void foregroundTile(inout vec4 foreground, inout float fgOpacity,
 
 void backgroundTile(inout vec4 background, inout float bgOpacity,
         const highp vec2 uv, const vec2 tiles, const vec2 noise, const float noiseRadius) {
-    const float ringCountGather = float(RING_COUNT_GATHER);
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
+
+    // we select a ring cound per tile, to avoid divergence between pixels
+    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(tiles.g * cocToPixelScale));
 
     vec2 centerCoc  = textureLod(materialParams_cocFgBg, uv, 0.0).rg;
     float kernelSize = abs(centerCoc.g);
-    float cocToPixelScale = materialParams.cocToPixelScale;
     float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
     vec2 uvCenter = uv + noise * kernelSize * cocToTexelScale;
 
