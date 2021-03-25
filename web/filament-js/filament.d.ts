@@ -421,7 +421,12 @@ export class Camera {
     public getAperture(): number;
     public getShutterSpeed(): number;
     public getSensitivity(): number;
+    public getFocalLength(): number;
+    public getFocusDistance(): number;
+    public setFocusDistance(distance: number): void;
     public static inverseProjection(p: mat4): mat4;
+    public static computeEffectiveFocalLength(focalLength: number, focusDistance: number) : number;
+    public static computeEffectiveFov(fovInDegrees: number, focusDistance: number) : number;
 }
 
 export class ColorGrading$Builder {

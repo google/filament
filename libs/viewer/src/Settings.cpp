@@ -1174,7 +1174,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
         << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
         << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
-        << "\"cameraFocalLength\": " << (in.cameraFocalLength) << "\n"
+        << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
         << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << "\n"
         << "}";
 }
@@ -1184,7 +1184,7 @@ static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in
         << "\"focusDistance\": " << (in.focusDistance) << ",\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
-        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << "\n"
         << "}";
 }
