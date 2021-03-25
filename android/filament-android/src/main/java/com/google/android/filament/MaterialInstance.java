@@ -452,7 +452,7 @@ public class MaterialInstance {
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:colorWrite">
      * Rasterization: colorWrite</a>
      */
-    void setColorWrite(boolean enable) {
+    public void setColorWrite(boolean enable) {
         nSetColorWrite(getNativeObject(), enable);
     }
 
@@ -463,7 +463,7 @@ public class MaterialInstance {
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthWrite">
      * Rasterization: depthWrite</a>
      */
-    void setDepthWrite(boolean enable) {
+    public void setDepthWrite(boolean enable) {
         nSetDepthWrite(getNativeObject(), enable);
     }
 
@@ -474,7 +474,7 @@ public class MaterialInstance {
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:depthCulling">
      * Rasterization: depthCulling</a>
      */
-    void setDepthCulling(boolean enable) {
+    public void setDepthCulling(boolean enable) {
         nSetDepthCulling(getNativeObject(), enable);
     }
 
