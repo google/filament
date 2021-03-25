@@ -216,3 +216,17 @@ Java_com_google_android_filament_Camera_nGetSensitivity(JNIEnv*, jclass,
     Camera *camera = (Camera *) nativeCamera;
     return camera->getSensitivity();
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Camera_nSetFocusDistance(JNIEnv*, jclass,
+        jlong nativeCamera, jfloat focusDistance) {
+    Camera *camera = (Camera *) nativeCamera;
+    camera->setFocusDistance(focusDistance);
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_Camera_nGetFocusDistance(JNIEnv*, jclass,
+        jlong nativeCamera) {
+    Camera *camera = (Camera *) nativeCamera;
+    return camera->getFocusDistance();
+}

@@ -645,6 +645,22 @@ public class Camera {
     }
 
     /**
+     * Set the camera focus distance in world units
+     * @param distance Distance from the camera to the focus plane in world units. Must be
+     *                 positive and larger than the camera's near clipping plane.
+     */
+    public void setFocusDistance(float distance) {
+        nSetFocusDistance(getNativeObject(), distance);
+    }
+
+    /**
+     * @return Distance from the camera to the focus plane in world units
+     */
+    public float getFocusDistance() {
+        return nGetFocusDistance(getNativeObject());
+    }
+
+    /**
      * @return Sensitivity in ISO
      */
     public float getSensitivity() {
@@ -685,4 +701,6 @@ public class Camera {
     private static native float nGetAperture(long nativeCamera);
     private static native float nGetShutterSpeed(long nativeCamera);
     private static native float nGetSensitivity(long nativeCamera);
+    private static native void nSetFocusDistance(long nativeCamera, float distance);
+    private static native float nGetFocusDistance(long nativeCamera);
 }

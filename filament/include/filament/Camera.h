@@ -434,6 +434,16 @@ public:
     float getSensitivity() const noexcept;
 
     /**
+     * Sets the camera focus distance. This is used by the Depth-of-field PostProcessing effect.
+     * @param distance Distnace from the camera to the plane of focus in world units.
+     *                 Must be positive and larger than the near clipping plane.
+     */
+    void setFocusDistance(float distance) noexcept;
+
+    //! Returns the focus distance in world units
+    float getFocusDistance() const noexcept;
+
+    /**
      * Returns the inverse of a projection matrix.
      *
      * \param p the projection matrix to inverse

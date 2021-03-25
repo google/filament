@@ -436,7 +436,12 @@ public class View {
             MEDIAN
         }
 
-        /** focus distance in world units */
+        /**
+         * focus distance in world units
+         *
+         * @deprecated use {@link Camera#setFocusDistance(float)}
+         */
+        @Deprecated
         public float focusDistance = 10.0f;
 
         /**

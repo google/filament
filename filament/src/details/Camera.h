@@ -157,6 +157,14 @@ public:
         return mSensitivity;
     }
 
+    void setFocusDistance(float distance) noexcept {
+        mFocusDistance = distance;
+    }
+
+    float getFocusDistance() const noexcept {
+        return mFocusDistance;
+    }
+
     utils::Entity getEntity() const noexcept {
         return mEntity;
     }
@@ -179,12 +187,14 @@ private:
     float mAperture = 16.0f;
     float mShutterSpeed = 1.0f / 125.0f;
     float mSensitivity = 100.0f;
+    float mFocusDistance = 0.0f;
 };
 
 struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
+    CameraInfo(FCamera const& camera,
+            const math::mat4f& worldOriginCamera, float focusDistance) noexcept;
 
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling
@@ -193,8 +203,9 @@ struct CameraInfo {
     float zn{};                     // distance (positive) to the near plane
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure
-    float f{};                      // focal length (in m)
-    float A{};                      // f / aperture diameter (in m)
+    float f{};                      // focal length [m]
+    float A{};                      // f-number or f / aperture diameter [m]
+    float d{};                      // focus distance [m]
     math::float3 worldOffset{};     // world offset, API-level camera position
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }

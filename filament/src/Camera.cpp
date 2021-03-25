@@ -275,9 +275,13 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     ev100              = Exposure::ev100(camera);
     f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
     A                  = f / camera.getAperture();
+    d                  = std::max(zn, camera.getFocusDistance());
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept {
+CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera,
+        float focusDistance) noexcept {
+    // note: DepthOfFieldOptions is deprecated, but we continue to support it by passing it here
+    // and we're using it if the camera focus distance hasn't been set.
     const mat4f modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
@@ -288,6 +292,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     ev100              = Exposure::ev100(camera);
     f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
     A                  = f / camera.getAperture();
+    d                  = std::max(zn, camera.getFocusDistance() > 0.0f ? camera.getFocusDistance() : focusDistance);
     worldOffset        = camera.getPosition();
     worldOrigin        = worldOriginCamera;
 }
@@ -424,6 +429,14 @@ float Camera::getShutterSpeed() const noexcept {
 
 float Camera::getSensitivity() const noexcept {
     return upcast(this)->getSensitivity();
+}
+
+void Camera::setFocusDistance(float distance) noexcept {
+    upcast(this)->setFocusDistance(distance);
+}
+
+float Camera::getFocusDistance() const noexcept {
+    return upcast(this)->getFocusDistance();
 }
 
 } // namespace filament

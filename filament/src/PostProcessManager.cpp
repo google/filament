@@ -900,7 +900,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      *
      * It's just a madd!
      */
-    const float focusDistance = std::max(cameraInfo.zn, dofOptions.focusDistance);
+    const float focusDistance = cameraInfo.d;
     auto const& desc = fg.getDescriptor<FrameGraphTexture>(input);
     const float Kc = (cameraInfo.A * cameraInfo.f) / (focusDistance - cameraInfo.f);
     const float Ks = ((float)desc.height) / FCamera::SENSOR_SIZE;

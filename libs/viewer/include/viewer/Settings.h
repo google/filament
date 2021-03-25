@@ -173,6 +173,7 @@ struct ViewerOptions {
     bool skyboxEnabled = true;
     sRGBColor backgroundColor = { 0.0f };
     float cameraFocalLength = 28.0f;
+    float cameraFocusDistance = { 0.0f };
 };
 
 struct Settings {
