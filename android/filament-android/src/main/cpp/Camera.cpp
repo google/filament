@@ -230,3 +230,22 @@ Java_com_google_android_filament_Camera_nGetFocusDistance(JNIEnv*, jclass,
     Camera *camera = (Camera *) nativeCamera;
     return camera->getFocusDistance();
 }
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_Camera_nGetFocalLength(JNIEnv*, jclass,
+        jlong nativeCamera) {
+    Camera *camera = (Camera *) nativeCamera;
+    return camera->getFocalLength();
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_Camera_nComputeEffectiveFocalLength(JNIEnv*, jclass,
+        jdouble focalLength, jdouble focusDistance) {
+    return Camera::computeEffectiveFocalLength(focalLength, focusDistance);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_Camera_nComputeEffectiveFov(JNIEnv*, jclass,
+        jdouble fovInDegrees, jdouble focusDistance) {
+    return Camera::computeEffectiveFov(fovInDegrees, focusDistance);
+}

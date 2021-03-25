@@ -166,6 +166,12 @@ public:
         return mFocusDistance;
     }
 
+    double getFocalLength() const noexcept;
+
+    static double computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept;
+
+    static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
+
     utils::Entity getEntity() const noexcept {
         return mEntity;
     }

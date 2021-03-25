@@ -645,6 +645,13 @@ public class Camera {
     }
 
     /**
+     * @return focal length in meters [m]
+     */
+    public double getFocalLength() {
+        return nGetFocalLength(getNativeObject());
+    }
+
+    /**
      * Set the camera focus distance in world units
      * @param distance Distance from the camera to the focus plane in world units. Must be
      *                 positive and larger than the camera's near clipping plane.
@@ -665,6 +672,28 @@ public class Camera {
      */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());
+    }
+
+    /**
+     * Helper to compute the effective focal length taking into account the focus distance
+     *
+     * @param focalLength       focal length in any unit (e.g. [m] or [mm])
+     * @param focusDistance     focus distance in same unit as focalLength
+     * @return                  the effective focal length in same unit as focalLength
+     */
+    static double computeEffectiveFocalLength(double focalLength, double focusDistance) {
+        return nComputeEffectiveFocalLength(focalLength, focusDistance);
+    }
+
+    /**
+     * Helper to compute the effective field-of-view taking into account the focus distance
+     *
+     * @param fovInDegrees      full field of view in degrees
+     * @param focusDistance     focus distance in meters [m]
+     * @return                  effective full field of view in degrees
+     */
+    static double computeEffectiveFov(double fovInDegrees, double focusDistance) {
+        return nComputeEffectiveFov(fovInDegrees, focusDistance);
     }
 
     public long getNativeObject() {
@@ -703,4 +732,7 @@ public class Camera {
     private static native float nGetSensitivity(long nativeCamera);
     private static native void nSetFocusDistance(long nativeCamera, float distance);
     private static native float nGetFocusDistance(long nativeCamera);
+    private static native double nGetFocalLength(long nativeCamera);
+    private static native double nComputeEffectiveFocalLength(double focalLength, double focusDistance);
+    private static native double nComputeEffectiveFov(double fovInDegrees, double focusDistance);
 }

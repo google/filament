@@ -216,6 +216,22 @@ void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity)
     mSensitivity = clamp(sensitivity, MIN_SENSITIVITY, MAX_SENSITIVITY);
 }
 
+double FCamera::getFocalLength() const noexcept {
+    return (FCamera::SENSOR_SIZE * mProjection[1][1]) * 0.5;
+}
+
+double FCamera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
+    focusDistance = std::max(focalLength, focusDistance);
+    return (focusDistance * focalLength) / (focusDistance - focalLength);
+}
+
+double FCamera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
+    double f = 0.5 * FCamera::SENSOR_SIZE / std::tan(fovInDegrees * math::d::DEG_TO_RAD * 0.5);
+    focusDistance = std::max(f, focusDistance);
+    double fov = 2.0 * std::atan(FCamera::SENSOR_SIZE * (focusDistance - f) / (2.0 * focusDistance * f));
+    return fov * math::d::RAD_TO_DEG;
+}
+
 template<typename T>
 math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) noexcept {
     math::details::TMat44<T> r;
@@ -275,7 +291,7 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    f                  = camera.getFocalLength();
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
 }
@@ -292,7 +308,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    f                  = camera.getFocalLength();
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance() > 0.0f ? camera.getFocusDistance() : focusDistance);
     worldOffset        = camera.getPosition();
@@ -440,6 +456,18 @@ void Camera::setFocusDistance(float distance) noexcept {
 
 float Camera::getFocusDistance() const noexcept {
     return upcast(this)->getFocusDistance();
+}
+
+double Camera::getFocalLength() const noexcept {
+    return upcast(this)->getFocalLength();
+}
+
+double Camera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
+    return FCamera::computeEffectiveFocalLength(focalLength, focusDistance);
+}
+
+double Camera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
+    return FCamera::computeEffectiveFov(fovInDegrees, focusDistance);
 }
 
 } // namespace filament

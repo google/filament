@@ -434,6 +434,9 @@ public:
     //! returns this camera's sensitivity in ISO
     float getSensitivity() const noexcept;
 
+    //! returns the focal length in meters [m] for a 35mm camera
+    double getFocalLength() const noexcept;
+
     /**
      * Sets the camera focus distance. This is used by the Depth-of-field PostProcessing effect.
      * @param distance Distnace from the camera to the plane of focus in world units.
@@ -484,6 +487,24 @@ public:
      * @see inverseProjection(const math::mat4&)
      */
     static math::mat4f inverseProjection(const math::mat4f& p) noexcept;
+
+    /**
+     * Helper to compute the effective focal length taking into account the focus distance
+     *
+     * @param focalLength       focal length in any unit (e.g. [m] or [mm])
+     * @param focusDistance     focus distance in same unit as focalLength
+     * @return                  the effective focal length in same unit as focalLength
+     */
+    static double computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept;
+
+    /**
+     * Helper to compute the effective field-of-view taking into account the focus distance
+     *
+     * @param fovInDegrees      full field of view in degrees
+     * @param focusDistance     focus distance in meters [m]
+     * @return                  effective full field of view in degrees
+     */
+    static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
 };
 
 } // namespace filament
