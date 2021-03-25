@@ -51,11 +51,12 @@ public:
                        double near, double far) noexcept;
 
     // sets the projection matrix
-    void setProjection(double fov, double aspect, double near, double far,
+    void setProjection(double fovInDegrees, double aspect, double near, double far,
                        Fov direction = Fov::VERTICAL) noexcept;
 
     // sets the projection matrix
-    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
+    void setLensProjection(double focalLengthInMillimeters,
+            double aspect, double near, double far) noexcept;
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;

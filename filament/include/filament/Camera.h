@@ -191,12 +191,13 @@ public:
 
     /** Sets the projection matrix from the focal length.
      *
-     * @param focalLength lens's focal length in millimeters. \p focalLength > 0.
+     * @param focalLengthInMillimeters lens's focal length in millimeters. \p focalLength > 0.
      * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
      * @param near        distance in world units from the camera to the near plane. \p near > 0.
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
-    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
+    void setLensProjection(double focalLengthInMillimeters,
+            double aspect, double near, double far) noexcept;
 
     /** Sets a custom projection matrix.
      *

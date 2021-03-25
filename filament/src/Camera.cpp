@@ -47,11 +47,11 @@ FCamera::FCamera(FEngine& engine, Entity e)
           mEntity(e) {
 }
 
-void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double near, double far,
+void UTILS_NOINLINE FCamera::setProjection(double fovInDegrees, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
     double w;
     double h;
-    double s = std::tan(fov * (F_PI / 360.0)) * near;
+    double s = std::tan(fovInDegrees * math::d::DEG_TO_RAD / 2.0) * near;
     if (direction == Fov::VERTICAL) {
         w = s * aspect;
         h = s;
@@ -62,10 +62,12 @@ void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double nea
     FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
 }
 
-void FCamera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
+void FCamera::setLensProjection(double focalLengthInMillimeters,
+        double aspect, double near, double far) noexcept {
     // a 35mm camera has a 36x24mm wide frame size
-    double theta = 2.0 * std::atan(SENSOR_SIZE * 1000.0f / (2.0 * focalLength));
-    FCamera::setProjection(theta * math::d::RAD_TO_DEG, aspect, near, far, Fov::VERTICAL);
+    double h = (0.5 * near) * ((SENSOR_SIZE * 1000.0) / focalLengthInMillimeters);
+    double w = h * aspect;
+    FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
 }
 
 /*
@@ -313,13 +315,14 @@ void Camera::setProjection(Camera::Projection projection, double left, double ri
     upcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
 
-void Camera::setProjection(double fov, double aspect, double near, double far,
+void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
-    upcast(this)->setProjection(fov, aspect, near, far, direction);
+    upcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
 }
 
-void Camera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
-    upcast(this)->setLensProjection(focalLength, aspect, near, far);
+void Camera::setLensProjection(double focalLengthInMillimeters,
+        double aspect, double near, double far) noexcept {
+    upcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, double near, double far) noexcept {
