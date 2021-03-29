@@ -109,7 +109,7 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
 
     auto dtexture = depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle();
     const TargetBufferInfo dinfo =
-            upcast(depth.texture)->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP ?
+            depth.texture && upcast(depth.texture)->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP ?
             TargetBufferInfo(dtexture, depth.mipLevel, depth.face) :
             TargetBufferInfo(dtexture, depth.mipLevel, depth.layer);
 
