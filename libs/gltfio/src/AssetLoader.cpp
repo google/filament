@@ -515,6 +515,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
         const UvMap& uvmap, const char* name) {
+    outPrim->uvmap = uvmap;
+
     // Create a little lambda that appends to the asset's vertex buffer slots.
     auto slots = &mResult->mBufferSlots;
     auto addBufferSlot = [slots](BufferSlot entry) {
@@ -663,8 +665,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     cgltf_size targetsCount = inPrim->targets_count;
+
+    // There is no need to emit a warning if there are more than 4 targets. This is only the base
+    // VertexBuffer and more might be created by MorphHelper.
     if (targetsCount > MAX_MORPH_TARGETS) {
-        slog.w << "Too many morph targets in " << name << io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
 

@@ -24,6 +24,8 @@
 
 #include <sstream>
 
+#include <string.h>
+
 namespace filament {
 namespace matdbg {
 

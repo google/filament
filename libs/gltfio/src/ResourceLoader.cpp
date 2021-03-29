@@ -18,6 +18,7 @@
 #include <gltfio/Image.h>
 
 #include "FFilamentAsset.h"
+#include "TangentsJob.h"
 #include "upcast.h"
 
 #include <filament/Engine.h>
@@ -25,8 +26,6 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
-
-#include <geometry/SurfaceOrientation.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -240,6 +239,34 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
             mesh->getVertexAttributes(id, accessor);
         }
     }
+}
+
+// Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
+// (implementation snarfed from meshoptimizer)
+static const uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+    if (strncmp(uri, "data:", 5) != 0) {
+        return nullptr;
+    }
+    const char* comma = strchr(uri, ',');
+    if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
+        const char* base64 = comma + 1;
+        const size_t base64Size = strlen(base64);
+        size_t size = base64Size - base64Size / 4;
+        if (base64Size >= 2) {
+            size -= base64[base64Size - 2] == '=';
+            size -= base64[base64Size - 1] == '=';
+        }
+        void* data = 0;
+        cgltf_options options = {};
+        cgltf_result result = cgltf_load_buffer_base64(&options, size, base64, &data);
+        if (result != cgltf_result_success) {
+            return nullptr;
+        }
+        *mimeType = std::string(uri + 5, comma - 7);
+        *psize = size;
+        return (const uint8_t*) data;
+    }
+    return nullptr;
 }
 
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new Impl(config)) { }
@@ -575,6 +602,15 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
     entry = (mUriTextureCache[uri] = std::make_unique<TextureCacheEntry>()).get();
     entry->srgb = tb.srgb;
 
+    // Check if this is a data URI. We don't care about the MIME type since stb can infer it.
+    std::string mimeType;
+    size_t dataUriSize;
+    const uint8_t* dataUriContent = parseDataUri(uri, &mimeType, &dataUriSize);
+    if (dataUriContent) {
+        BufferDescriptor buffer(dataUriContent, dataUriSize, FREE_CALLBACK);
+        mUriDataCache.emplace(uri, std::move(buffer));
+    }
+
     // Check the user-supplied resource cache for this URI, otherwise peek at the file.
     auto iter = mUriDataCache.find(uri);
     if (iter != mUriDataCache.end()) {
@@ -767,156 +803,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
     const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
 
-    struct JobParams {
-        // Consumed by the job:
-        const cgltf_primitive* prim;
-        VertexBuffer* const vb;
-        const uint8_t slot;
-        const int morphTargetIndex;
-        // Produced by the job:
-        cgltf_size vertexCount;
-        short4* results;
-    };
-
-    constexpr int kMorphTargetUnused = -1;
-
-    auto computeQuats = [&](JobParams* params) {
-        const cgltf_primitive& prim = *params->prim;
-        const uint8_t slot = params->slot;
-        const int morphTargetIndex = params->morphTargetIndex;
-        const bool isMorphTarget = morphTargetIndex != kMorphTargetUnused;
-
-        // Declare storage for data that has been unpacked and converted from the source buffers.
-        // This data needs to be held until after the SurfaceOrientation helper consumes it.
-        std::vector<float3> unpackedNormals;
-        std::vector<float4> unpackedTangents;
-        std::vector<float3> unpackedPositions;
-        std::vector<float2> unpackedTexCoords;
-        std::vector<uint3> unpackedTriangles;
-
-        // Build a mapping from cgltf_attribute_type to cgltf_accessor. Also accumulate a count.
-        const int NUM_ATTRIBUTES = 8;
-        const cgltf_accessor* baseAccessors[NUM_ATTRIBUTES] = {};
-        const cgltf_accessor* morphTargetAccessors[NUM_ATTRIBUTES] = {};
-        cgltf_size vertexCount = 0;
-
-        // Collect accessors for normals, tangents, etc. Note that we skip over attributes with
-        // non-zero set indices likes TEXCOORD_1, TEXCOORD_2 to avoid overflowing the tiny arrays.
-        for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
-            const cgltf_attribute& attr = prim.attributes[aindex];
-            if (attr.index == 0) {
-                baseAccessors[attr.type] = attr.data;
-                vertexCount = attr.data->count;
-            }
-        }
-        if (isMorphTarget) {
-            const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
-            for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-                const cgltf_attribute& attr = morphTarget.attributes[aindex];
-                if (attr.index == 0) {
-                    assert(baseAccessors[attr.type] &&
-                            "Morph target data has no corresponding base vertex data.");
-                    morphTargetAccessors[attr.type] = attr.data;
-                }
-            }
-        }
-        params->vertexCount = vertexCount;
-        if (vertexCount == 0) {
-            return;
-        }
-
-        geometry::SurfaceOrientation::Builder sob;
-        sob.vertexCount(vertexCount);
-
-        // Allocate scratch space to store morph deltas.
-        std::vector<float3> deltas;
-        if (isMorphTarget) {
-            deltas.resize(vertexCount);
-        }
-
-        // Convert normals into packed floats.
-        if (auto baseNormalsInfo = baseAccessors[cgltf_attribute_type_normal]; baseNormalsInfo) {
-            assert(baseNormalsInfo->count == vertexCount);
-            assert(baseNormalsInfo->type == cgltf_type_vec3);
-            unpackedNormals.resize(vertexCount);
-            cgltf_accessor_unpack_floats(baseNormalsInfo, &unpackedNormals[0].x, vertexCount * 3);
-            if (auto mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal]) {
-                cgltf_accessor_unpack_floats(mtNormalsInfo, &deltas[0].x, vertexCount * 3);
-                for (cgltf_size i = 0; i < vertexCount; i++) {
-                    unpackedNormals[i] += deltas[i];
-                }
-            }
-            sob.normals(unpackedNormals.data());
-        }
-
-        // Convert tangents into packed floats.
-        if (auto baseTangentsInfo = baseAccessors[cgltf_attribute_type_tangent]; baseTangentsInfo) {
-            assert(baseTangentsInfo->count == vertexCount);
-            unpackedTangents.resize(vertexCount);
-            cgltf_accessor_unpack_floats(baseTangentsInfo, &unpackedTangents[0].x, vertexCount * 4);
-            if (auto mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent]) {
-                cgltf_accessor_unpack_floats(mtTangentsInfo, &deltas[0].x, vertexCount * 3);
-                for (cgltf_size i = 0; i < vertexCount; i++) {
-                    unpackedTangents[i].xyz += deltas[i];
-                }
-            }
-            sob.tangents(unpackedTangents.data());
-        }
-
-        if (auto basePosInfo = baseAccessors[cgltf_attribute_type_position]; basePosInfo) {
-            assert(basePosInfo->count == vertexCount && basePosInfo->type == cgltf_type_vec3);
-            unpackedPositions.resize(vertexCount);
-            cgltf_accessor_unpack_floats(basePosInfo, &unpackedPositions[0].x, vertexCount * 3);
-            sob.positions(unpackedPositions.data());
-            if (auto mtPositionsInfo = morphTargetAccessors[cgltf_attribute_type_position]) {
-                cgltf_accessor_unpack_floats(mtPositionsInfo, &deltas[0].x, vertexCount * 3);
-                for (cgltf_size i = 0; i < vertexCount; i++) {
-                    unpackedPositions[i] += deltas[i];
-                }
-            }
-        }
-
-        if (prim.indices) {
-            size_t triangleCount = prim.indices->count / 3;
-            unpackedTriangles.resize(triangleCount);
-            cgltf_size j = 0;
-            for (auto& triangle : unpackedTriangles) {
-                triangle.x = cgltf_accessor_read_index(prim.indices, j++);
-                triangle.y = cgltf_accessor_read_index(prim.indices, j++);
-                triangle.z = cgltf_accessor_read_index(prim.indices, j++);
-            }
-        } else {
-            size_t triangleCount = vertexCount / 3;
-            unpackedTriangles.resize(triangleCount);
-            cgltf_size j = 0;
-            for (auto& triangle : unpackedTriangles) {
-                triangle.x = j++;
-                triangle.y = j++;
-                triangle.z = j++;
-            }
-        }
-
-        sob.triangleCount(unpackedTriangles.size());
-        sob.triangles(unpackedTriangles.data());
-
-        auto texcoordsInfo = baseAccessors[cgltf_attribute_type_texcoord];
-        if (texcoordsInfo) {
-            if (texcoordsInfo->count != vertexCount || texcoordsInfo->type != cgltf_type_vec2) {
-                slog.e << "Bad texture coordinate count or type." << io::endl;
-                return;
-            }
-            unpackedTexCoords.resize(vertexCount);
-            cgltf_accessor_unpack_floats(texcoordsInfo, &unpackedTexCoords[0].x, vertexCount * 2);
-            sob.uvs(unpackedTexCoords.data());
-        }
-
-        // Compute surface orientation quaternions.
-        params->results = (short4*) malloc(sizeof(short4) * vertexCount);
-        geometry::SurfaceOrientation* helper = sob.build();
-        helper->getQuats(params->results, vertexCount);
-        delete helper;
-    };
-
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
     tsl::robin_map<VertexBuffer*, uint8_t> morphTangents[4];
@@ -932,18 +818,19 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     }
 
     // Create a job description for each primitive.
-    std::vector<JobParams> jobParams;
+    using Params = TangentsJob::Params;
+    std::vector<Params> jobParams;
     for (auto pair : asset->mPrimitives) {
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(JobParams { pair.first, vb, iter->second, kMorphTargetUnused });
+            jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
         }
         for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
             const auto& tangents = morphTangents[morphTarget];
             auto iter = tangents.find(vb);
             if (iter != tangents.end()) {
-                jobParams.emplace_back(JobParams { pair.first, vb, iter->second, morphTarget });
+                jobParams.emplace_back(Params {{ pair.first, morphTarget }, {vb, iter->second }});
             }
         }
     }
@@ -951,17 +838,17 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     // Kick off jobs for computing tangent frames.
     JobSystem* js = &mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
-    for (JobParams& params : jobParams) {
-        JobParams* pptr = &params;
-        js->run(jobs::createJob(*js, parent, [pptr, computeQuats] { computeQuats(pptr); }));
+    for (Params& params : jobParams) {
+        Params* pptr = &params;
+        js->run(jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }));
     }
     js->runAndWait(parent);
 
     // Finally, upload quaternions to the GPU from the main thread.
-    for (JobParams& params : jobParams) {
-        VertexBuffer::BufferDescriptor bd(params.results, params.vertexCount * sizeof(short4),
-                FREE_CALLBACK);
-        params.vb->setBufferAt(*mEngine, params.slot, std::move(bd));
+    for (Params& params : jobParams) {
+        VertexBuffer::BufferDescriptor bd(params.out.results,
+                params.out.vertexCount * sizeof(short4), FREE_CALLBACK);
+        params.context.vb->setBufferAt(*mEngine, params.context.slot, std::move(bd));
     }
 }
 

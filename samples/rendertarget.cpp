@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
                 .receiveShadows(true)
                 .castShadows(false)
                 .build(*engine, app.reflectedMonkey);
-        setReflectionMode(app, ReflectionMode::CAMERA);
+        setReflectionMode(app, app.mode);
 
         // Add light source to both scenes.
         // NOTE: this is slightly wrong when the reflection mode is RENDERABLES.
@@ -356,15 +356,18 @@ int main(int argc, char** argv) {
         const mat4f reflection = reflectionMatrix(planeEquation);
 
         // Apply the reflection matrix to either the renderable or the camera, depending on mode.
+        Camera const& camera = view->getCamera();
+        const auto model = camera.getModelMatrix();
+        const auto renderingProjection = camera.getProjectionMatrix();
+        const auto cullingProjection = camera.getCullingProjectionMatrix();
+        app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection, camera.getNear(), camera.getCullingFar());
         switch (app.mode) {
             case ReflectionMode::RENDERABLES:
                 tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
-                app.offscreenCamera->setModelMatrix(view->getCamera().getModelMatrix());
-                app.offscreenCamera->setCustomProjection(view->getCamera().getProjectionMatrix(), 0.1, 100.0);
+                app.offscreenCamera->setModelMatrix(model);
                 break;
             case  ReflectionMode::CAMERA:
-                app.offscreenCamera->setModelMatrix(reflection * view->getCamera().getModelMatrix());
-                app.offscreenCamera->setCustomProjection(view->getCamera().getProjectionMatrix(), 0.1, 100.0);
+                app.offscreenCamera->setModelMatrix(reflection * model);
                 break;
         }
     });

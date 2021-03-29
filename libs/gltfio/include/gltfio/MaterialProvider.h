@@ -22,6 +22,7 @@
 #include <filament/MaterialInstance.h>
 
 #include <array>
+#include <string>
 
 namespace gltfio {
 

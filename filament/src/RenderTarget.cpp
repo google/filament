@@ -28,7 +28,7 @@ namespace filament {
 using namespace backend;
 
 struct RenderTarget::BuilderDetails {
-    FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
+    FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT] = {};
 };
 
 using BuilderType = RenderTarget;
@@ -102,12 +102,16 @@ FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Build
     // note that post-processing includes FXAA by default.
     const uint8_t samples = 1;
 
-    const TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
-            color.mipLevel, color.face);
+    const TargetBufferInfo cinfo =
+            upcast(color.texture)->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP ?
+            TargetBufferInfo(upcast(color.texture)->getHwHandle(), color.mipLevel, color.face) :
+            TargetBufferInfo(upcast(color.texture)->getHwHandle(), color.mipLevel, color.layer);
 
-    const TargetBufferInfo dinfo(
-            depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle(),
-            color.mipLevel, color.face);
+    auto dtexture = depth.texture ? upcast(depth.texture)->getHwHandle() : TextureHandle();
+    const TargetBufferInfo dinfo =
+            depth.texture && upcast(depth.texture)->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP ?
+            TargetBufferInfo(dtexture, depth.mipLevel, depth.face) :
+            TargetBufferInfo(dtexture, depth.mipLevel, depth.layer);
 
     const uint32_t width = FTexture::valueForLevel(color.mipLevel, color.texture->getWidth());
     const uint32_t height = FTexture::valueForLevel(color.mipLevel, color.texture->getHeight());

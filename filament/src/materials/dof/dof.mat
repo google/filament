@@ -109,10 +109,6 @@ float sampleCount(const float ringCount) {
 }
 
 float sampleWeight(const float coc, const float mip) {
-#if KERNEL_USE_MIPMAP
-    // with mipmapping this creates severe aliasing artifacts
-    return 1.0;
-#else
     // The contribution of sample is inversely proportional to *it's* area
     // (the larger area, the fainter it is).
     // In theory this factor should be 1 / pi * radius^2, however 1/pi is a constant, and
@@ -129,7 +125,6 @@ float sampleWeight(const float coc, const float mip) {
     float pixelRadiusSquared = pow(2.0, mip);
 #endif
     return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
-#endif
 }
 
 float intersection(const float border, const float absCoc, const float mip) {
@@ -246,9 +241,10 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
 
     if (first) { // (this test is always inlined)
         // The outmost ring always accumulate to 'curr'.
-        curr.c   += w * tap.s;
-        curr.coc += w * coc;
-        curr.cw  += w;
+        prev.c   += w * tap.s;
+        prev.coc += w * coc;
+        prev.cw  += w;
+        prev.o   += inPrevious;
     } else {
         float inCurrent = 1.0 - inPrevious;
         float currWeight = w * inCurrent;
@@ -257,12 +253,12 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
         curr.c   += currWeight * tap.s;
         curr.coc += currWeight * coc;
         curr.cw  += currWeight;
+        curr.o   += inPrevious;
 
         prev.c   += prevWeight * tap.s;
         prev.coc += prevWeight * coc;
         prev.cw  += prevWeight;
     }
-    curr.o += inPrevious;
 }
 
 void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2 pos,
@@ -299,7 +295,10 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
     float i = (ringCount - 1.0) - index;
 
     Bucket curr;
-    initBucket(curr);
+    if (!first) { // (this test is always inlined)
+        // curr is not used for the first ring
+        initBucket(curr);
+    }
 
     float count;
     float radius;
@@ -313,7 +312,11 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
         p = r * p;
     }
 
-    mergeRings(curr, prev, count);
+    if (!first) { // (this test is always inlined)
+        // mergeRings just ends-up copying curr to prev the first time, so we skip that
+        // entirely, and we fill prev directly.
+        mergeRings(curr, prev, count);
+    }
 }
 
 /*
@@ -443,14 +446,15 @@ void postProcess(inout PostProcessInputs postProcess) {
                 p = r * p;
             }
         }
+        float fgOpacity = cocToAlpha(kernelSize);
         foreground *= rcp(sampleCount(ringCountFast));
         //foreground.b += 0.1;
 #if POST_PROCESS_OPAQUE
         // kill the work performed above
         foreground.a = 1.0;
 #endif
-        postProcess.color = foreground;
-        postProcess.alpha = 1.0;
+        postProcess.color = foreground * fgOpacity;
+        postProcess.alpha = fgOpacity;
         return;
     }
 

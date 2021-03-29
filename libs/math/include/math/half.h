@@ -17,9 +17,11 @@
 #ifndef TNT_MATH_HALF_H
 #define TNT_MATH_HALF_H
 
-#include <stdint.h>
 #include <limits>
 #include <type_traits>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #include <math/compiler.h>
 

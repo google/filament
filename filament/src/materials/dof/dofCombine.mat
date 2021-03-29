@@ -56,7 +56,8 @@ void postProcess(inout PostProcessInputs postProcess) {
     if (isTrivialTile(tiles)) {
         highp vec2 uv0 = variable_vertex.xy;
         color = textureLod(materialParams_color, uv0, 0.0);
-    } else if (isFastTile(tiles)) {
+    } else if (isFastTile(tiles) && (abs(tiles.r) >= MAX_IN_FOCUS_COC + 1.0)) {
+        // we can only handle fast tiles that don't have an alpha channel here
         highp vec2 uv1 = variable_vertex.xy * materialParams.uvscale.xy;
         color = textureLod(materialParams_dof, uv1, 0.0);
     } else {
