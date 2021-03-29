@@ -418,32 +418,77 @@ void SimpleViewer::applyAnimation(double currentTime) {
     mAnimator->updateBoneMatrices();
 }
 
-void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio,
-        float mouseX, float mouseY, bool mouseButton, float mouseWheelY) {
+void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
     if (mImGuiHelper == nullptr) {
         mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
+
+        auto& io = ImGui::GetIO();
+
+        // The following table uses normal ANSI codes, which is consistent with the keyCode that
+        // comes from a web "keydown" event.
+        io.KeyMap[ImGuiKey_Tab] = 9;
+        io.KeyMap[ImGuiKey_LeftArrow] = 37;
+        io.KeyMap[ImGuiKey_RightArrow] = 39;
+        io.KeyMap[ImGuiKey_UpArrow] = 38;
+        io.KeyMap[ImGuiKey_DownArrow] = 40;
+        io.KeyMap[ImGuiKey_Home] = 36;
+        io.KeyMap[ImGuiKey_End] = 35;
+        io.KeyMap[ImGuiKey_Delete] = 46;
+        io.KeyMap[ImGuiKey_Backspace] = 8;
+        io.KeyMap[ImGuiKey_Enter] = 13;
+        io.KeyMap[ImGuiKey_Escape] = 27;
+        io.KeyMap[ImGuiKey_A] = 65;
+        io.KeyMap[ImGuiKey_C] = 67;
+        io.KeyMap[ImGuiKey_V] = 86;
+        io.KeyMap[ImGuiKey_X] = 88;
+        io.KeyMap[ImGuiKey_Y] = 89;
+        io.KeyMap[ImGuiKey_Z] = 90;
 
         // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
         // proggy font. Users need to refresh their window when dragging between displays with
         // different pixel ratios.
-        ImGui::GetIO().FontGlobalScale = pixelRatio;
+        io.FontGlobalScale = pixelRatio;
         ImGui::GetStyle().ScaleAllSizes(pixelRatio);
     }
 
     const auto size = guiView->getViewport();
     mImGuiHelper->setDisplaySize(size.width, size.height, 1, 1);
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.MousePos.x = mouseX;
-    io.MousePos.y = mouseY;
-    io.MouseWheel += mouseWheelY;
-    io.MouseDown[0] = mouseButton;
-    io.MouseDown[1] = false;
-    io.MouseDown[2] = false;
-
     mImGuiHelper->render(timeStepInSeconds, [this](Engine*, View*) {
         this->updateUserInterface();
     });
+}
+
+void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
+        bool control) {
+    if (mImGuiHelper) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.MousePos.x = mouseX;
+        io.MousePos.y = mouseY;
+        io.MouseWheel += mouseWheelY;
+        io.MouseDown[0] = mouseButton != 0;
+        io.MouseDown[1] = false;
+        io.MouseDown[2] = false;
+        io.KeyCtrl = control;
+    }
+}
+
+void SimpleViewer::keyDownEvent(int keyCode) {
+    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
+        ImGui::GetIO().KeysDown[keyCode] = true;
+    }
+}
+
+void SimpleViewer::keyUpEvent(int keyCode) {
+    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
+        ImGui::GetIO().KeysDown[keyCode] = false;
+    }
+}
+
+void SimpleViewer::keyPressEvent(int charCode) {
+    if (mImGuiHelper) {
+        ImGui::GetIO().AddInputCharacter(charCode);
+    }
 }
 
 void SimpleViewer::updateUserInterface() {
