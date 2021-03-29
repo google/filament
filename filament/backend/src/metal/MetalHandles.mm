@@ -320,7 +320,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     uint32_t bufferIndex = 0;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         const auto& attribute = vertexBuffer->attributes[attributeIndex];
-        if (attribute.buffer != Attribute::BUFFER_UNUSED) {
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
             const uint8_t flags = attribute.flags;
             const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
                     MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
