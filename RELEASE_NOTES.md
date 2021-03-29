@@ -7,6 +7,14 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.18
 
+- engine: Fix a DoF bug that caused black dots around the fast tiles.
+- engine: Minor DoF optimizations.
+- engine: Fix blanking windows not being drawn into on macOS.
+- gltfio: Add support for data:// in image URI's.
+- gltfio: Add internal MorphHelper, enable up to 255 targets.
+- engine: Fix a hang in JobSystem.
+- samples: Fix rendertarget sample app.
+
 ## v1.9.17
 
 - engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens.
