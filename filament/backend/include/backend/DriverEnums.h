@@ -513,7 +513,7 @@ enum class TextureUsage : uint8_t {
 };
 
 //! Texture swizzle
-enum class TextureSwizzle {
+enum class TextureSwizzle : uint8_t {
     SUBSTITUTE_ZERO,
     SUBSTITUTE_ONE,
     CHANNEL_0,

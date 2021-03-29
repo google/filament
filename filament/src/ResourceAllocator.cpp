@@ -109,9 +109,10 @@ void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
 }
 
 backend::TextureHandle ResourceAllocator::createTexture(const char* name,
-        backend::SamplerType target, uint8_t levels,
-        backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-        uint32_t depth, backend::TextureUsage usage) noexcept {
+        backend::SamplerType target, uint8_t levels, backend::TextureFormat format, uint8_t samples,
+        uint32_t width, uint32_t height, uint32_t depth,
+        std::array<backend::TextureSwizzle, 4> swizzle,
+        backend::TextureUsage usage) noexcept {
 
     // Some WebGL implementations complain about an incomplete framebuffer when the attachment sizes
     // are heterogeneous. This merits further investigation.
@@ -133,7 +134,7 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
     TextureHandle handle;
     if (mEnabled) {
         auto& textureCache = mTextureCache;
-        const TextureKey key{ name, target, levels, format, samples, width, height, depth, usage };
+        const TextureKey key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
         auto it = textureCache.find(key);
         if (UTILS_LIKELY(it != textureCache.end())) {
             // we do, move the entry to the in-use list, and remove from the cache
@@ -142,8 +143,17 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
             textureCache.erase(it);
         } else {
             // we don't, allocate a new texture and populate the in-use list
-            handle = mBackend.createTexture(
-                    target, levels, format, samples, width, height, depth, usage);
+            using TS = backend::TextureSwizzle;
+            constexpr const auto defaultSwizzle = std::array<backend::TextureSwizzle, 4>{
+                TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
+            if (swizzle == defaultSwizzle) {
+                handle = mBackend.createTexture(
+                        target, levels, format, samples, width, height, depth, usage);
+            } else {
+                handle = mBackend.createTextureSwizzled(
+                        target, levels, format, samples, width, height, depth, usage,
+                        swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+            }
         }
         mInUseTextures.emplace(handle, key);
     } else {
