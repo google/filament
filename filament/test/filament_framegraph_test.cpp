@@ -51,7 +51,8 @@ public:
     backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
             uint8_t levels,
             backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-            uint32_t depth, backend::TextureUsage usage) noexcept override {
+            uint32_t depth, std::array<backend::TextureSwizzle, 4>,
+            backend::TextureUsage usage) noexcept override {
         return backend::TextureHandle(++handle);
     }
 
