@@ -1855,7 +1855,11 @@ class_<JsonSerializer>("JsonSerializer")
 class_<SimpleViewer>("SimpleViewer")
     .constructor<Engine*, Scene*, View*, int>()
     .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
-    .function("getSettings", &SimpleViewer::getSettings);
+    .function("getSettings", &SimpleViewer::getSettings)
+    .function("mouseEvent", &SimpleViewer::mouseEvent)
+    .function("keyDownEvent", &SimpleViewer::keyDownEvent)
+    .function("keyUpEvent", &SimpleViewer::keyUpEvent)
+    .function("keyPressEvent", &SimpleViewer::keyPressEvent);
 
 } // EMSCRIPTEN_BINDINGS
 
