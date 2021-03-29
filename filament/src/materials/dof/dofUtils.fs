@@ -46,6 +46,10 @@ float rcpOrZero(const float x) {
     return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
 }
 
+highp float rcpOrZeroHighp(const highp float x) {
+    return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
+}
+
 float cocToAlpha(const float coc) {
     // CoC is positive for background field.
     // CoC is negative for the foreground field.
