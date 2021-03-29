@@ -49,6 +49,16 @@ struct FrameGraphTexture {
         uint8_t samples = 0;    // 0=auto, 1=request not multisample, >1 only for NOT SAMPLEABLE
         backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
         backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
+        struct {
+            using TS = backend::TextureSwizzle;
+            union {
+                backend::TextureSwizzle channels[4] = {
+                        TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3 };
+                struct {
+                    backend::TextureSwizzle r, g, b, a;
+                };
+            };
+        } swizzle;
     };
 
     /** Describes a FrameGraphTexture sub-resource */
