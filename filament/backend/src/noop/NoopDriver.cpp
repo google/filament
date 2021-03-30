@@ -144,6 +144,10 @@ bool NoopDriver::isTextureFormatSupported(TextureFormat format) {
     return true;
 }
 
+bool NoopDriver::isTextureSwizzleSupported() {
+    return true;
+}
+
 bool NoopDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
     return true;
 }

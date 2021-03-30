@@ -795,6 +795,10 @@ bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     return info.optimalTilingFeatures != 0;
 }
 
+bool VulkanDriver::isTextureSwizzleSupported() {
+    return false;   // TODO: implement texture swizzling
+}
+
 bool VulkanDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
     switch (format) {
         case TextureFormat::DEPTH16:

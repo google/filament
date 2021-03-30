@@ -550,6 +550,10 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
            TextureReshaper::canReshapeTextureFormat(format);
 }
 
+bool MetalDriver::isTextureSwizzleSupported() {
+    return false;
+}
+
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     // Derived from the Metal 3.0 Feature Set Tables.
     // In order for a format to be mipmappable, it must be color-renderable and filterable.
