@@ -3,22 +3,17 @@ material {
     parameters : [
         {
            type : sampler2d,
-           name : foreground,
+           name : color,
            precision: medium
         },
         {
            type : sampler2d,
-           name : foregroundLinear,
+           name : colorLinear,
            precision: medium
         },
         {
            type : sampler2d,
-           name : background,
-           precision: medium
-        },
-        {
-           type : sampler2d,
-           name : cocFgBg,
+           name : coc,
            precision: medium
         },
         {
@@ -207,8 +202,9 @@ struct Bucket {
 precision mediump float;
 
 struct Sample {
-    vec4 s;                 // sample color
-    float coc;              // sample coc
+    vec4 s;         // sample color
+    float coc;      // sample coc
+    float inLayer;  // whether is sample is in the considered layer
 };
 
 void initBucket(out Bucket ring) {
@@ -268,7 +264,7 @@ void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
 
 void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
         const float radius, const float border, const float mip, const bool first) {
-    float inLayer = isBackground(tap.coc);
+    float inLayer = tap.inLayer;
     float coc = abs(tap.coc);
     float w = inLayer * intersection(radius, coc, mip) * sampleWeight(coc, mip);
 
@@ -303,8 +299,9 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
 void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2 pos,
         const float radius, const float border, const float mip, const bool first) {
     Sample tap;
-    tap.s = textureLod(materialParams_foreground, pos, mip);
-    tap.coc = textureLod(materialParams_cocFgBg, pos, mip).r;
+    tap.s = textureLod(materialParams_color, pos, mip);
+    tap.coc = textureLod(materialParams_coc, pos, mip).r;
+    tap.inLayer = isBackground(tap.coc);
     accumulate(curr, prev, tap, radius, border, mip, first);
 }
 
@@ -384,8 +381,8 @@ float foregroundFadding(const float coc) {
 
 void accumulateForeground(inout Layer layer[2], const vec2 tiles,
         const highp vec2 pos, const float border, const float mip) {
-    float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
-    vec4 s = textureLod(materialParams_foreground, pos, mip);
+    float coc = textureLod(materialParams_coc, pos, mip).r;
+    vec4 s = textureLod(materialParams_color, pos, mip);
 
     float inLayer = isForeground(coc) * foregroundFadding(coc);
     float i = intersection(border, abs(coc), mip) * sampleWeight(coc, mip);
@@ -414,12 +411,12 @@ void accumulateForegroundMirror(inout Layer layer[2], const vec2 tiles,
     // the geometry.
 
     highp vec2 pos0 = diaphragm(center, offset);
-    float coc0 = textureLod(materialParams_cocFgBg, pos0, mip).r;
-    vec4 s0 = textureLod(materialParams_foreground, pos0, mip);
+    float coc0 = textureLod(materialParams_coc, pos0, mip).r;
+    vec4 s0 = textureLod(materialParams_color, pos0, mip);
 
     highp vec2 pos1 = diaphragm(center, -offset);
-    float coc1 = textureLod(materialParams_cocFgBg, pos1, mip).r;
-    vec4 s1 = textureLod(materialParams_foreground, pos1, mip);
+    float coc1 = textureLod(materialParams_coc, pos1, mip).r;
+    vec4 s1 = textureLod(materialParams_color, pos1, mip);
 
     float coc = min(coc0, coc1);
     float inLayer = isForeground(coc) * foregroundFadding(coc);
@@ -457,7 +454,7 @@ void fastTile(inout vec4 color, inout float alpha,
 
     highp vec2 uvCenter = uv + noise * cocToTexelScale;
 
-    color = textureLod(materialParams_foregroundLinear, uvCenter, mip);
+    color = textureLod(materialParams_colorLinear, uvCenter, mip);
     for (float i = 1.0; i < ringCountFast; i += 1.0) {
         float radius;
         float count;
@@ -467,9 +464,9 @@ void fastTile(inout vec4 color, inout float alpha,
         // we must use this temporary in order to accomodate mediump precision
         vec4 t = vec4(0.0);
         for (float j = 0.0; j < count; j += 2.0) {
-            t += textureLod(materialParams_foregroundLinear,
+            t += textureLod(materialParams_colorLinear,
                     diaphragm(uvCenter,  p * cocToTexelScale), mip)
-               + textureLod(materialParams_foregroundLinear,
+               + textureLod(materialParams_colorLinear,
                     diaphragm(uvCenter, -p * cocToTexelScale), mip);
             p = r * p;
         }
@@ -542,7 +539,7 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
     // we select a ring cound per tile, to avoid divergence between pixels
     float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(tiles.g * cocToPixelScale));
 
-    float centerCoc  = textureLod(materialParams_cocFgBg, uv, 0.0).g;
+    float centerCoc  = textureLod(materialParams_coc, uv, 0.0).r;
     float kernelSize = abs(centerCoc);
     float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
     float noiseRadius = 0.0;
@@ -647,7 +644,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // TODO: make this a quality setting
     if (fgOpacity > 0.0 && fgOpacity < 1.0 && bgOpacity == 0.0) {
         // this happens on very few pixels
-        float centerCoc = textureLod(materialParams_cocFgBg, uv, 0.0).r;
+        float centerCoc = textureLod(materialParams_coc, uv, 0.0).r;
         float correctedOpacity = max(fgOpacity, cocToAlpha(centerCoc));
         float updateOpacity = correctedOpacity / fgOpacity;
         foreground *= updateOpacity;

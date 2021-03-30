@@ -96,3 +96,28 @@ bool isTrivialTile(const vec2 tiles) {
     float maxCocRadius = max(abs(tiles.r), abs(tiles.g));
     return maxCocRadius < MAX_IN_FOCUS_COC;
 }
+
+float downsampleCoC(const vec4 c) {
+    // We need to compute a suitable CoC to represent the 4 pixels that are downsampled.
+    // We pick the largest one in absolute value, which is not ambiguous if all pixels are
+    // either foreground or background. Otherwise, we basically pick the pixel that is most
+    // background or most foreground.
+    float t0 = abs(c[0]) > abs(c[1]) ? c[0] : c[1];
+    float t1 = abs(c[2]) > abs(c[3]) ? c[2] : c[3];
+    return abs(t0) > abs(t1) ? t0 : t1;
+}
+
+vec4 downsampleCocWeights(const vec4 c, const float outCoc, const float scale) {
+    // The bilateral weight is normally computed as saturate(1 - |outCoc - c|) which selects
+    // the sample with the outCoc weight (and does a little bit of cross-fade if other samples
+    // are close). However, this can also cause some aliasing with dithered objects, so by
+    // omitting the abs() we allow samples in the background to "leak" into the foreground, which
+    // is not completely different from the "mirror hole filling" of the DoF pass.
+    // See "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018.
+    // Here we expand a little on this idea and introduce an offset which allows to performs
+    // some amount of filtering (which really is needed when downsampling),
+    // while still preventing the foreground to leak into the background.
+    const float kBilateralWeightSlope  = 1.0;
+    const float kBilateralWeightOffset = 1.0;
+    return saturate(1.0 - (outCoc - c - kBilateralWeightOffset) * (kBilateralWeightSlope * scale));
+}

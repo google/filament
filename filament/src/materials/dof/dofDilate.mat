@@ -35,20 +35,8 @@ vec2 tap(const vec2 uv, const vec2 offset) {
 }
 
 vec2 dilate(inout vec2 center, const vec2 tap) {
-    // 2.24 tiles is the longest distance between 2 pixels of adjacent tiles.
-    // sqrt(2^2 + 1^2) = 2.24
-    const float maxDistance = max(-MAX_COC_RADIUS, -2.24 * TILE_SIZE);
-
     // Tiles that can affect us need to transfer their CoC to us (for the foreground it's
     // min(ourCoc, theirCoc) because CoC are negative (the min is the larger radius).
-
-    // TODO: However, if their CoC is very large, we can limit it by the distance to that
-    // tile, because we only need to reach *them*).
-    // The difficuty here is the this clamping depends on if we're negative or positive.
-    // e.g. for positive values
-    //    center.g = min(center.g, max(tap.g, maxDistance));
-    //    center.r = max(center.r, max(tap.r, maxDistance));
-
     center.r = min(center.r, tap.r);
     center.g = max(center.g, tap.g);
     return center;
