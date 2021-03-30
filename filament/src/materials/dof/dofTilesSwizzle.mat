@@ -1,5 +1,5 @@
 material {
-    name : dofTiles,
+    name : dofTilesSwizzle,
     parameters : [
         {
             type : sampler2d,
@@ -46,25 +46,21 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     ivec2 i = ivec2(uv * size - 0.5);
 
-    // note: the first time, the source texture is swizzled -- so .r and .g are the same channel
-    // if swizzling is not supported, we use dofTilesSwizzle instead.
 #if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
     vec4 mi = textureGather(materialParams_cocMinMax, uv, 0); // 01, 11, 10, 00
-    vec4 ma = textureGather(materialParams_cocMinMax, uv, 1); // 01, 11, 10, 00
 #else
-    vec2 s01 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 1)).rg;
-    vec2 s11 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 1)).rg;
-    vec2 s10 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 0)).rg;
-    vec2 s00 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 0)).rg;
-    vec4 mi = vec4(s01.r, s11.r, s10.r, s00.r);
-    vec4 ma = vec4(s01.g, s11.g, s10.g, s00.g);
+    vec4 mi;
+    mi[0] = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 1)).r;
+    mi[1] = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 1)).r;
+    mi[2] = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 0)).r;
+    mi[3] = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 0)).r;
 #endif
 
     // compute tile's min CoC
     postProcess.color.r = min4(mi);
 
     // compute tile's max CoC
-    postProcess.color.g = max4(ma);
+    postProcess.color.g = max4(mi);
 }
 
 }
