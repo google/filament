@@ -445,13 +445,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     });
 
     // resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
-    // if the depth is not use below.
+    // if the depth is not used below.
     auto& blackboard = fg.getBlackboard();
     auto depth = blackboard.get<FrameGraphTexture>("depth");
     depth = ppm.resolve(fg, "Resolved Depth Buffer", depth);
     blackboard.put("depth", depth);
 
-    // TODO: DoF should be applied here, before TAA -- but if we do this it'll result is a lot
+    // TODO: DoF should be applied here, before TAA -- but if we do this it'll result in a lot of
     //       fireflies due to the instability of the highlights. This can be fixed with a
     //       dedicated TAA pass for the DoF, as explained in
     //       "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
