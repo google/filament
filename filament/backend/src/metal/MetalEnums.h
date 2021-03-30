@@ -420,7 +420,7 @@ constexpr inline MTLCompareFunction getCompareFunction(SamplerCompareFunc compar
 }
 
 API_AVAILABLE(macos(10.15), ios(13.0))
-MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
+constexpr inline MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
     switch (swizzle) {
         case TextureSwizzle::SUBSTITUTE_ZERO:
             return MTLTextureSwizzleZero;
@@ -438,7 +438,7 @@ MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
 }
 
 API_AVAILABLE(macos(10.15), ios(13.0))
-MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
         TextureSwizzle a) {
     return MTLTextureSwizzleChannelsMake(getSwizzle(r), getSwizzle(g), getSwizzle(b),
             getSwizzle(a));
