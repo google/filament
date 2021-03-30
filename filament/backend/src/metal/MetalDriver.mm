@@ -551,7 +551,11 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    return false;
+    if (@available(macOS 10.15, iOS 13, *)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
