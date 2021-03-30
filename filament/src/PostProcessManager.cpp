@@ -212,6 +212,7 @@ static const MaterialInfo sMaterialList[] = {
         { "dofCoc",                MATERIAL(DOFCOC) },
         { "dofMipmap",             MATERIAL(DOFMIPMAP) },
         { "dofTiles",              MATERIAL(DOFTILES) },
+        { "dofTilesSwizzle",       MATERIAL(DOFTILESSWIZZLE) },
         { "dofDilate",             MATERIAL(DOFDILATE) },
         { "dof",                   MATERIAL(DOF) },
         { "dofMedian",             MATERIAL(DOFMEDIAN) },
@@ -1064,6 +1065,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> outTilesCocMinMax;
     };
 
+    const bool textureSwizzleSupported = Texture::isTextureSwizzleSupported(mEngine);
     for (size_t i = 0; i < tileReductionCount; i++) {
         auto& ppDoFTiling = fg.addPass<PostProcessDofTiling1>("DoF Tiling",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -1083,7 +1085,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto const& outputDesc = resources.getDescriptor(data.outTilesCocMinMax);
                     auto const& out = resources.getRenderPassInfo();
                     auto inCocMinMax = resources.getTexture(data.inCocMinMax);
-                    auto const& material = getPostProcessMaterial("dofTiles");
+                    auto const& material = (!textureSwizzleSupported && (i == 0)) ?
+                            getPostProcessMaterial("dofTilesSwizzle") :
+                            getPostProcessMaterial("dofTiles");
                     FMaterialInstance* const mi = material.getMaterialInstance();
                     mi->setParameter("cocMinMax", inCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
                     mi->setParameter("uvscale", float4{

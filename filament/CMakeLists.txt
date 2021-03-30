@@ -163,6 +163,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofDownsample.mat
         src/materials/dof/dofCombine.mat
         src/materials/dof/dofTiles.mat
+        src/materials/dof/dofTilesSwizzle.mat
         src/materials/dof/dofDilate.mat
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofMedian.mat
