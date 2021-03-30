@@ -847,6 +847,17 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         }
     }
 
+    // We can't use FramebufferTexture2DMultisampleEXT with GL_TEXTURE_2D_ARRAY.
+    if (!(target == GL_TEXTURE_2D ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_X ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_X ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_Y ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Y ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_Z ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Z)) {
+        attachmentTypeNotSupportedByMSRTT = true;
+    }
+
     if (rt->gl.samples <= 1 ||
         (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
@@ -900,6 +911,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                     GL_RENDERBUFFER, t->gl.id);
         }
+        CHECK_GL_ERROR(utils::slog.e)
     } else
 #endif
     if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
