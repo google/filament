@@ -1491,6 +1491,10 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     return getInternalFormat(format) != 0;
 }
 
+bool OpenGLDriver::isTextureSwizzleSupported() {
+    return true;
+}
+
 bool OpenGLDriver::isTextureFormatMipmappable(TextureFormat format) {
     // The OpenGL spec for GenerateMipmap stipulates that it returns INVALID_OPERATION unless
     // the sized internal format is both color-renderable and texture-filterable.

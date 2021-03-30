@@ -51,6 +51,13 @@ Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv*, jcla
             (Texture::InternalFormat) internalFormat);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Texture_nIsTextureSwizzleSupported(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine *engine = (Engine *) nativeEngine;
+    return (jboolean) Texture::isTextureSwizzleSupported(*engine);
+}
+
 // Texture::Builder...
 
 extern "C" JNIEXPORT jlong JNICALL
