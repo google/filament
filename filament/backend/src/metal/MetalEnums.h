@@ -419,6 +419,31 @@ constexpr inline MTLCompareFunction getCompareFunction(SamplerCompareFunc compar
     }
 }
 
+API_AVAILABLE(macos(10.15), ios(13.0))
+MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
+    switch (swizzle) {
+        case TextureSwizzle::SUBSTITUTE_ZERO:
+            return MTLTextureSwizzleZero;
+        case TextureSwizzle::SUBSTITUTE_ONE:
+            return MTLTextureSwizzleOne;
+        case TextureSwizzle::CHANNEL_0:
+            return MTLTextureSwizzleRed;
+        case TextureSwizzle::CHANNEL_1:
+            return MTLTextureSwizzleGreen;
+        case TextureSwizzle::CHANNEL_2:
+            return MTLTextureSwizzleBlue;
+        case TextureSwizzle::CHANNEL_3:
+            return MTLTextureSwizzleAlpha;
+    }
+}
+
+API_AVAILABLE(macos(10.15), ios(13.0))
+MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+        TextureSwizzle a) {
+    return MTLTextureSwizzleChannelsMake(getSwizzle(r), getSwizzle(g), getSwizzle(b),
+            getSwizzle(a));
+}
+
 } // namespace backend
 } // namespace filament
 
