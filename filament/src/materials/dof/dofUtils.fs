@@ -96,3 +96,23 @@ bool isTrivialTile(const vec2 tiles) {
     float maxCocRadius = max(abs(tiles.r), abs(tiles.g));
     return maxCocRadius < MAX_IN_FOCUS_COC;
 }
+
+float downsampleCoC(const vec4 c) {
+    // We need to compute a suitable CoC to represent the 4 pixels that are downsampled.
+    // We pick the min because this always selects the most foreground sample if there is one,
+    // because the foreground can leak on the background, but not the reverse.
+    return min4(c);
+}
+
+vec4 downsampleCocWeights(const vec4 c, const float outCoc, const float scale) {
+    // The bilateral weight is normally computed as saturate(1 - |outCoc - c|) which selects
+    // the sample with the outCoc weight (and does a little bit of cross-fade if other samples
+    // are close). However, this can also cause some aliasing with dithered objects, so by
+    // omitting the abs() we allow samples in the background to "leak" into the foreground, which
+    // is not completely different from the "mirror hole filling" of the DoF pass.
+    // See "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018.
+
+    // Note: With the implementation of downsampleCoC() above, this always resolves to 1.0;
+    // return saturate(1.0 - (outCoc - c) * scale);
+    return vec4(1.0);
+}
