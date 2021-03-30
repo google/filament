@@ -416,7 +416,8 @@ static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat form
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage) noexcept
+        TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+        TextureSwizzle a) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context), reshaper(format) {
 
@@ -467,6 +468,12 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         }
     };
 
+    auto setUpSwizzle = [r, g, b, a](MTLTextureDescriptor* descriptor) {
+        if (@available(macOS 10.15, iOS 13, *)) {
+            descriptor.swizzle = getSwizzleChannels(r, g, b, a);
+        }
+    };
+
     MTLTextureDescriptor* descriptor;
     switch (target) {
         case SamplerType::SAMPLER_2D:
@@ -481,6 +488,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.sampleCount = multisampled ? samples : 1;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
+            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
@@ -493,6 +501,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
+            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
@@ -506,6 +515,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
+            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;

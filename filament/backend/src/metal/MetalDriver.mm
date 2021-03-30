@@ -176,7 +176,8 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
-            width, height, depth, usage);
+            width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
+            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -184,8 +185,7 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         uint32_t depth, TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
-            width, height, depth, usage);
-    // TODO: implement texture swizzle
+            width, height, depth, usage, r, g, b, a);
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -551,7 +551,11 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    return false;
+    if (@available(macOS 10.15, iOS 13, *)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
