@@ -480,8 +480,8 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType) {
-    // TODO: pass constructor args
-    auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh);
+    auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh, mContext, mStagePool,
+            mDisposer, byteCount);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
        destruct_handle<VulkanBufferObject>(mHandleMap, boh);
     });
@@ -520,7 +520,7 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
-    // not support in this backend
+    // not supported in this backend
 }
 
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
@@ -873,7 +873,9 @@ void VulkanDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
         Handle<HwBufferObject> boh) {
-    // TODO
+    auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
+    auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    vb.buffers[index] = bo.buffer;
 }
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
@@ -1647,13 +1649,46 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     mContext.rasterState.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
 
-    VulkanBinder::ProgramBundle shaderHandles = program->bundle;
+    // Declare fixed-size arrays that get passed to the binder and to vkCmdBindVertexBuffers.
+    VulkanBinder::VertexArray varray = {};
+    VkBuffer buffers[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    VkDeviceSize offsets[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+
+    // For each attribute, append to each of the above lists.
+    const uint32_t bufferCount = prim.vertexBuffer->attributes.size();
+    for (uint32_t attribIndex = 0; attribIndex < bufferCount; attribIndex++) {
+        Attribute attrib = prim.vertexBuffer->attributes[attribIndex];
+        VkFormat vkformat = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED);
+
+        // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes. Filament's
+        // vertex shaders declare all attributes as either vec4 or uvec4 (the latter for bone
+        // indices), and positions are always at least 32 bits per element. Therefore we can assign
+        // a dummy type of either R8G8B8A8_UINT or R8G8B8A8_SNORM, depending on whether the shader
+        // expects to receive floats or ints.
+        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
+            const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
+            attrib = prim.vertexBuffer->attributes[0];
+        }
+
+        buffers[attribIndex] = prim.vertexBuffer->buffers[attrib.buffer]->getGpuBuffer();
+        offsets[attribIndex] = attrib.offset;
+        varray.attributes[attribIndex] = {
+            .location = attribIndex, // matches the GLSL layout specifier
+            .binding = attribIndex,  // matches the position within vkCmdBindVertexBuffers
+            .format = vkformat,
+        };
+        varray.buffers[attribIndex] = {
+            .binding = attribIndex,
+            .stride = attrib.stride,
+        };
+    }
 
     // Push state changes to the VulkanBinder instance. This is fast and does not make VK calls.
-    mBinder.bindProgramBundle(shaderHandles);
+    mBinder.bindProgramBundle(program->bundle);
     mBinder.bindRasterState(mContext.rasterState);
     mBinder.bindPrimitiveTopology(prim.primitiveTopology);
-    mBinder.bindVertexArray(prim.varray);
+    mBinder.bindVertexArray(varray);
 
     // Query the program for the mapping from (SamplerGroupBinding,Offset) to (SamplerBinding),
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
@@ -1744,8 +1779,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
-    vkCmdBindVertexBuffers(cmdbuffer, 0, (uint32_t) prim.buffers.size(),
-            prim.buffers.data(), prim.offsets.data());
+    vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
     vkCmdBindIndexBuffer(cmdbuffer, prim.indexBuffer->buffer->getGpuBuffer(), 0,
             prim.indexBuffer->indexType);
 
