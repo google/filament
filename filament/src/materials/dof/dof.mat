@@ -303,6 +303,9 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
 void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2 pos,
         const float radius, const float border, const float mip, const bool first) {
     Sample tap;
+    // FIXME: there are typos below. We should use materialParams_background and
+    //        materialParams_cocFgBg's green (background coc) channel.
+    //        however doing so, looks much worse and is much more unstable.
     tap.s = textureLod(materialParams_foreground, pos, mip);
     tap.coc = textureLod(materialParams_cocFgBg, pos, mip).r;
     accumulate(curr, prev, tap, radius, border, mip, first);
