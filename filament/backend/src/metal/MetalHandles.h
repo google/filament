@@ -183,6 +183,12 @@ struct MetalTexture : public HwTexture {
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
+
+    // If non-nil, a swizzled texture view to use instead of "texture".
+    // Filament swizzling only affects texture reads, so this should not be used when the texture is
+    // bound as a render target attachment.
+    id<MTLTexture> textureView = nil;
+
     uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
     uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).

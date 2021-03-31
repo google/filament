@@ -551,7 +551,6 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    return false; // FIXME: reenable once textures used as attachments are supported
     if (@available(macOS 10.15, iOS 13, *)) {
         return true;
     } else {
@@ -1220,7 +1219,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             return;
         }
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
-        texturesToBind[binding] = metalTexture->texture;
+        texturesToBind[binding] = metalTexture->textureView ? metalTexture->textureView
+                                                            : metalTexture->texture;
 
         if (metalTexture->externalImage.isValid()) {
             texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();

@@ -468,12 +468,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         }
     };
 
-    auto setUpSwizzle = [r, g, b, a](MTLTextureDescriptor* descriptor) {
-        if (@available(macOS 10.15, iOS 13, *)) {
-            descriptor.swizzle = getSwizzleChannels(r, g, b, a);
-        }
-    };
-
     MTLTextureDescriptor* descriptor;
     switch (target) {
         case SamplerType::SAMPLER_2D:
@@ -488,7 +482,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.sampleCount = multisampled ? samples : 1;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
-            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
@@ -501,7 +494,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
-            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
@@ -515,7 +507,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.mipmapLevelCount = levels;
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
-            setUpSwizzle(descriptor);
             texture = [context.device newTextureWithDescriptor:descriptor];
             ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
             break;
@@ -524,6 +515,30 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             // texture allocations.
             texture = nil;
             break;
+    }
+
+    // If swizzling is set, set up a swizzled texture view that we'll use when sampling this texture.
+    const bool isDefaultSwizzle =
+            r == TextureSwizzle::CHANNEL_0 &&
+            g == TextureSwizzle::CHANNEL_1 &&
+            b == TextureSwizzle::CHANNEL_2 &&
+            a == TextureSwizzle::CHANNEL_3;
+    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
+    // TODO: implement swizzling for external textures.
+    if (!isDefaultSwizzle && texture) {
+        if (@available(macOS 10.15, iOS 13, *)) {
+            NSUInteger slices = texture.arrayLength;
+            if (texture.textureType == MTLTextureTypeCube ||
+                texture.textureType == MTLTextureTypeCubeArray) {
+                slices *= 6;
+            }
+            textureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
+                                                     textureType:texture.textureType
+                                                          levels:NSMakeRange(0,
+                                                                  texture.mipmapLevelCount)
+                                                          slices:NSMakeRange(0, slices)
+                                                         swizzle:getSwizzleChannels(r, g, b, a)];
+        }
     }
 }
 
