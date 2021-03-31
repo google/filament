@@ -84,7 +84,7 @@ struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes, bool bufferObjectsEnabled);
-    std::vector<std::unique_ptr<VulkanBuffer>> buffers;
+    std::vector<std::shared_ptr<VulkanBuffer>> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
@@ -92,13 +92,17 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
             uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
             indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
             buffer(new VulkanBuffer(context, stagePool, disposer, this,
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
+                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
     const VkIndexType indexType;
     const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
-    const std::unique_ptr<VulkanBuffer> buffer;
+    VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+            uint32_t byteCount) :
+            buffer(new VulkanBuffer(context, stagePool, disposer, this,
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, byteCount)) {}
+    const std::shared_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
@@ -186,12 +190,6 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive {
     VulkanVertexBuffer* vertexBuffer = nullptr;
     VulkanIndexBuffer* indexBuffer = nullptr;
     VkPrimitiveTopology primitiveTopology;
-    // The "varray" field describes the structure of the vertex and gets passed to VulkanBinder,
-    // which in turn passes it to vkCreateGraphicsPipelines. The "buffers" and "offsets" vectors are
-    // passed to vkCmdBindVertexBuffers at draw call time.
-    VulkanBinder::VertexArray varray;
-    std::vector<VkBuffer> buffers;
-    std::vector<VkDeviceSize> offsets;
 };
 
 struct VulkanFence : public HwFence {
