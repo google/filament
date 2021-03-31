@@ -1155,6 +1155,7 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
     }
 
     mResult->mTextureSlots.push_back({
+        .texture = srcTexture,
         .materialInstance = materialInstance,
         .materialParameter = parameterName,
         .sampler = dstSampler,
