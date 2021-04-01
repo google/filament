@@ -532,12 +532,13 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
                 texture.textureType == MTLTextureTypeCubeArray) {
                 slices *= 6;
             }
-            textureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
-                                                     textureType:texture.textureType
-                                                          levels:NSMakeRange(0,
-                                                                  texture.mipmapLevelCount)
-                                                          slices:NSMakeRange(0, slices)
-                                                         swizzle:getSwizzleChannels(r, g, b, a)];
+            NSUInteger mips = texture.mipmapLevelCount;
+            MTLTextureSwizzleChannels swizzle = getSwizzleChannels(r, g, b, a);
+            swizzledTextureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
+                                                             textureType:texture.textureType
+                                                                  levels:NSMakeRange(0, mips)
+                                                                  slices:NSMakeRange(0, slices)
+                                                                 swizzle:swizzle];
         }
     }
 }

@@ -1219,8 +1219,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             return;
         }
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
-        texturesToBind[binding] = metalTexture->textureView ? metalTexture->textureView
-                                                            : metalTexture->texture;
+        texturesToBind[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
+                                                                    : metalTexture->texture;
 
         if (metalTexture->externalImage.isValid()) {
             texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();
