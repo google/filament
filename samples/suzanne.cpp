@@ -35,7 +35,13 @@
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
 
+#include <getopt/getopt.h>
+
+#include <utils/Path.h>
+
 #include <stb_image.h>
+
+#include <iostream>
 
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
@@ -58,6 +64,57 @@ struct App {
 
 static const char* IBL_FOLDER = "default_env";
 
+static void printUsage(char* name) {
+    std::string exec_name(utils::Path(name).getName());
+    std::string usage(
+            "SHOWCASE renders a Suzanne model with S3TC textures.\n"
+            "Usage:\n"
+            "    SHOWCASE [options]\n"
+            "Options:\n"
+            "   --help, -h\n"
+            "       Prints this message\n\n"
+            "   --api, -a\n"
+            "       Specify the backend API: opengl (default), vulkan, or metal\n"
+    );
+    const std::string from("SHOWCASE");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
+
+static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
+    static constexpr const char* OPTSTR = "ha:";
+    static const struct option OPTIONS[] = {
+            { "help",         no_argument,       nullptr, 'h' },
+            { "api",          required_argument, nullptr, 'a' },
+            { nullptr, 0, nullptr, 0 }
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    config->backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    config->backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    config->backend = Engine::Backend::METAL;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+        }
+    }
+    return optind;
+}
+
 static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
     unsigned char* data = stbi_load_from_memory(normals, nbytes, &w, &h, &n, 3);
@@ -79,6 +136,8 @@ int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
     config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+
+    handleCommandLineArguments(argc, argv, &config);
 
     App app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
