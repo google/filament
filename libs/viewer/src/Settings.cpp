@@ -71,6 +71,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t*
     return i + 1;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint32_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
@@ -481,6 +487,18 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (0 == compare(tok, jsonChunk, "filter")) {
             i = parse(tokens, i + 1, jsonChunk, &out->filter);
+        } else if (0 == compare(tok, jsonChunk, "nativeResolution")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->nativeResolution);
+        } else if (0 == compare(tok, jsonChunk, "foregroundRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->foregroundRingCount);
+        } else if (0 == compare(tok, jsonChunk, "backgroundRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->backgroundRingCount);
+        } else if (0 == compare(tok, jsonChunk, "fastGatherRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->fastGatherRingCount);
+        } else if (0 == compare(tok, jsonChunk, "maxForegroundCOC")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxForegroundCOC);
+        } else if (0 == compare(tok, jsonChunk, "maxBackgroundCOC")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxBackgroundCOC);
         } else {
             slog.w << "Invalid dof options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1185,7 +1203,13 @@ static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
-        << "\"filter\": " << (in.filter) << "\n"
+        << "\"filter\": " << (in.filter) << ",\n"
+        << "\"nativeResolution\": " << (in.nativeResolution) << ",\n"
+        << "\"foregroundRingCount\": " << (in.foregroundRingCount) << ",\n"
+        << "\"backgroundRingCount\": " << (in.backgroundRingCount) << ",\n"
+        << "\"fastGatherRingCount\": " << (in.fastGatherRingCount) << ",\n"
+        << "\"maxForegroundCOC\": " << (in.maxForegroundCOC) << ",\n"
+        << "\"maxBackgroundCOC\": " << (in.maxBackgroundCOC) << "\n"
         << "}";
 }
 

@@ -368,7 +368,13 @@ value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
     .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
     .field("enabled", &filament::View::DepthOfFieldOptions::enabled)
-    .field("filter", &filament::View::DepthOfFieldOptions::filter);
+    .field("filter", &filament::View::DepthOfFieldOptions::filter)
+    .field("nativeResolution", &filament::View::DepthOfFieldOptions::nativeResolution)
+    .field("foregroundRingCount", &filament::View::DepthOfFieldOptions::foregroundRingCount)
+    .field("backgroundRingCount", &filament::View::DepthOfFieldOptions::backgroundRingCount)
+    .field("fastGatherRingCount", &filament::View::DepthOfFieldOptions::fastGatherRingCount)
+    .field("maxForegroundCOC", &filament::View::DepthOfFieldOptions::maxForegroundCOC)
+    .field("maxBackgroundCOC", &filament::View::DepthOfFieldOptions::maxBackgroundCOC);
 
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)

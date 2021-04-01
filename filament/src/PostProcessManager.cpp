@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
+#ifdef FILAMENT_TARGET_MOBILE
+#   define DOF_DEFAULT_RING_COUNT 3
+#   define DOF_DEFAULT_MAX_COC    24
+#else
+#   define DOF_DEFAULT_RING_COUNT 5
+#   define DOF_DEFAULT_MAX_COC    32
+#endif
+
 #include "PostProcessManager.h"
 
 #include "details/Engine.h"
@@ -921,7 +929,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      * dofResolution is used (at compile time for now) to chose between full- or quarter-resolution
      * for the DoF calculations. Set to [1] for full resolution or [2] for quarter-resolution.
      */
-    const uint32_t dofResolution = 2;
+    const uint32_t dofResolution = dofOptions.nativeResolution ? 1u : 2u;
 
     constexpr const uint32_t maxMipLevels = 4u; // mip levels at full-resolution
     constexpr const uint32_t maxMipLevelsMask = (1u << maxMipLevels) - 1u;
@@ -979,6 +987,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("depth", depth, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocParams", cocParams);
+                mi->setParameter("cocClamp", float2{
+                    -(dofOptions.maxForegroundCOC ? dofOptions.maxForegroundCOC : DOF_DEFAULT_MAX_COC),
+                      dofOptions.maxBackgroundCOC ? dofOptions.maxBackgroundCOC : DOF_DEFAULT_MAX_COC});
                 mi->setParameter("uvscale", float4{ width, height,
                         1.0f / colorDesc.width, 1.0f / colorDesc.height });
                 commitAndRender(out, material, driver);
@@ -1201,6 +1212,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     outputDesc.height / float(inputDesc.height),
                     outputDesc.width  / float(tileSize / dofResolution * tilesDesc.width),
                     outputDesc.height / float(tileSize / dofResolution * tilesDesc.height)
+                });
+                mi->setParameter("ringCounts", float4{
+                    dofOptions.foregroundRingCount ? dofOptions.foregroundRingCount : DOF_DEFAULT_RING_COUNT,
+                    dofOptions.backgroundRingCount ? dofOptions.backgroundRingCount : DOF_DEFAULT_RING_COUNT,
+                    dofOptions.fastGatherRingCount ? dofOptions.fastGatherRingCount : DOF_DEFAULT_RING_COUNT,
+                    0.0 // unused for now
                 });
                 mi->setParameter("bokehAngle",  bokehAngle);
                 commitAndRender(out, material, driver);

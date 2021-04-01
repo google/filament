@@ -32,13 +32,18 @@ material {
            precision: medium
         },
         {
+            type : float,
+            name : bokehAngle,
+        },
+        {
            type : float4,
            name : uvscale,
            precision: high
         },
         {
-           type : float,
-           name : bokehAngle,
+           type : float4,
+           name : ringCounts,
+           precision: medium
         }
     ],
     outputs : [
@@ -75,20 +80,6 @@ fragment {
 #define DOF_DIAPHRAGM_STRAIGHT_BLADES   1
 #define DOF_DIAPHRAGM                   DOF_DIAPHRAGM_CIRCLE
 
-// # of sample w.r.t. ring count and density of 8
-//  3 rings :   25 ( 5^2 grid)
-//  4 rings :   49 ( 7^2 grid)
-//  5 rings :   81 ( 9^2 grid)
-// 17 rings : 1089 (33^2 grid) -- maximum needed for a CoC of 32
-
-#if defined(TARGET_MOBILE)
-#define RING_COUNT_GATHER   3
-#define RING_COUNT_FAST     3
-#else
-#define RING_COUNT_GATHER   4
-#define RING_COUNT_FAST     4
-#endif
-
 // Enabled by default. Mipmaped taps look a lot better, but do cause some
 // aliasing issues which force us to set all sample weights to 1.0
 // This is here mostly for debugging.
@@ -105,6 +96,22 @@ struct NoiseState {
     float randomUniformDiskRadius;
     vec2  randomDisk;
 };
+
+// # of sample w.r.t. ring count and density of 8
+//  3 rings :   25 ( 5^2 grid)
+//  4 rings :   49 ( 7^2 grid)
+//  5 rings :   81 ( 9^2 grid)
+// 17 rings : 1089 (33^2 grid) -- maximum needed for a CoC of 32
+
+float ringCountForeground() {
+    return materialParams.ringCounts[0];
+}
+float ringCountBackground() {
+    return materialParams.ringCounts[1];
+}
+float ringCountFast() {
+    return materialParams.ringCounts[2];
+}
 
 float sampleCount(const float ringCount) {
     float s = (ringCount * 2.0 - 1.0);
@@ -469,7 +476,7 @@ void fastTile(inout vec4 color, inout float alpha,
 
     // The whole tile has mostly the same CoC
     float kernelSize = (abs(tiles.r) + abs(tiles.g)) * 0.5;
-    float ringCountFast = min(float(RING_COUNT_FAST), computeNeededRings(kernelSize * cocToPixelScale));
+    float ringCountFast = min(ringCountFast(), computeNeededRings(kernelSize * cocToPixelScale));
     float mip = getMipLevel(ringCountFast, kernelSize * cocToPixelScale);
     vec2 noise = vec2(0.0);
 
@@ -510,7 +517,7 @@ void foregroundTile(inout vec4 foreground, inout float fgOpacity,
     // Here we know that tiles.r < 0, by definition of a foreground tile.
     // For a foreground tile, the kernel size is the largest CoC radius of the whole tile.
     float kernelSize = -tiles.r;
-    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(kernelSize * cocToPixelScale));
+    float ringCountGather = min(ringCountForeground(), computeNeededRings(kernelSize * cocToPixelScale));
     float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
     vec2 noise = vec2(0.0);
 
@@ -563,7 +570,7 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
     float cocToPixelScale = materialParams.cocToPixelScale;
 
     // we select a ring cound per tile, to avoid divergence between pixels
-    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(tiles.g * cocToPixelScale));
+    float ringCountGather = min(ringCountBackground(), computeNeededRings(tiles.g * cocToPixelScale));
 
     float centerCoc  = textureLod(materialParams_coc, uv, 0.0).r;
     float kernelSize = abs(centerCoc);
@@ -582,16 +589,9 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
     initBucket(prev);
 
     accumulateRing(prev, 0.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, true);
-
-    // the optimizer is not able to remove this loop when it has only one iteration
-#if RING_COUNT_GATHER == 3
-    accumulateRing(prev, 1.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, false);
-#else
     for (float i = 1.0; i < ringCountGather - 1.0 ; i += 1.0) {
         accumulateRing(prev, i, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, false);
     }
-#endif
-
     accumulateBackgroundCenter(prev, uvCenter, ringCountGather, kernelSize, noiseRadius, mip);
 
     float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);

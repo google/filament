@@ -16,6 +16,10 @@ material {
             name : cocParams
         },
         {
+            type : float2,
+            name : cocClamp
+        },
+        {
             type : float4,
             name : uvscale,
             precision: high
@@ -91,7 +95,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec4 outColor = (s01 * w[0] + s11 * w[1] + s10 * w[2] + s00 * w[3]) * rcp(dot(vec4(1.0), w));
 
     // Clamp to maximum allowable CoC radius.
-    outCoc = clamp(outCoc, -MAX_COC_RADIUS, MAX_COC_RADIUS);
+    outCoc = clamp(outCoc, materialParams.cocClamp[0], materialParams.cocClamp[1]);
 
     // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
     // artifacts in the "in focus" area and allow us to skip more tiles trivially.

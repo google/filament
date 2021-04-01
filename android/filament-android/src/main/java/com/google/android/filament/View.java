@@ -266,7 +266,7 @@ public class View {
 
     /**
      * Options for Temporal Anti-aliasing (TAA)
-     * @see View#setTemporalAntiAliasingOptions()
+     * @see View#setTemporalAntiAliasingOptions
      */
     public static class TemporalAntiAliasingOptions {
         /** reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother) */
@@ -465,6 +465,55 @@ public class View {
         /** filter to use for filling gaps in the kernel */
         @NonNull
         public Filter filter = Filter.MEDIAN;
+
+        /** perform DoF processing at native resolution */
+        public boolean nativeResolution = false;
+
+        /**
+         * <p>Number of of rings used by the foreground kernel. The number of rings affects quality
+         * and performance. The actual number of sample per pixel is defined
+         * as (ringCount * 2 - 1)^2. Here are a few commonly used values:</p>
+         *       3 rings :   25 ( 5x 5 grid)
+         *       4 rings :   49 ( 7x 7 grid)
+         *       5 rings :   81 ( 9x 9 grid)
+         *      17 rings : 1089 (33x33 grid)
+         *
+         * <p>With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.</p>
+         *
+         * <p>Usually all three settings below are set to the same value, however, it is often
+         * acceptable to use a lower ring count for the "fast tiles", which improves performance.
+         * Fast tiles are regions of the screen where every pixels have a similar
+         * circle-of-confusion radius.</p>
+         *
+         * <p>A value of 0 means default, which is 5 on desktop and 3 on mobile.</p>
+         */
+        public int foregroundRingCount = 0;
+
+        /**
+         * Number of of rings used by the background kernel. The number of rings affects quality
+         * and performance.
+         * @see #foregroundRingCount
+         */
+        public int backgroundRingCount = 0;
+
+        /**
+         * Number of of rings used by the fast gather kernel. The number of rings affects quality
+         * and performance.
+         * @see #foregroundRingCount
+         */
+        public int fastGatherRingCount = 0;
+
+        /**
+         * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        public int maxForegroundCOC = 0;
+
+        /**
+         * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        public int maxBackgroundCOC = 0;
     };
 
     /**
@@ -1393,7 +1442,10 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale, options.maxApertureDiameter, options.enabled, options.filter.ordinal());
+        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale,
+                options.maxApertureDiameter, options.enabled, options.filter.ordinal(),
+                options.nativeResolution, options.foregroundRingCount, options.backgroundRingCount,
+                options.fastGatherRingCount, options.maxForegroundCOC, options.maxBackgroundCOC);
     }
 
     /**
@@ -1452,7 +1504,8 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter);
+    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
+            boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
     private static native boolean nIsShadowingEnabled(long nativeView);
