@@ -300,7 +300,9 @@ Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nat
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
-        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled, jint filter) {
+        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled, jint filter,
+        jboolean nativeResolution, jint foregroundRingCount, jint backgroundRingCount, jint fastGatherRingCount,
+        jint maxForegroundCOC, jint maxBackgroundCOC) {
     View* view = (View*) nativeView;
     View::DepthOfFieldOptions::Filter eFilter{};
     if (filter == 1) {
@@ -308,7 +310,14 @@ Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
         eFilter = View::DepthOfFieldOptions::Filter::MEDIAN;
     }
     view->setDepthOfFieldOptions({.focusDistance = focusDistance, .cocScale = cocScale,
-            .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled, .filter = eFilter});
+            .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled, .filter = eFilter,
+            .nativeResolution = (bool)nativeResolution,
+            .foregroundRingCount = (uint8_t)foregroundRingCount,
+            .backgroundRingCount = (uint8_t)backgroundRingCount,
+            .fastGatherRingCount = (uint8_t)fastGatherRingCount,
+            .maxForegroundCOC = (uint8_t)maxForegroundCOC,
+            .maxBackgroundCOC = (uint8_t)maxBackgroundCOC,
+    });
 }
 
 extern "C"

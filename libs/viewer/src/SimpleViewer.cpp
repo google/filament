@@ -729,7 +729,11 @@ void SimpleViewer::updateUserInterface() {
                     16.0f, 90.0f);
         }
 
-        bool median = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
+        bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
+        int dofRingCount = mSettings.view.dof.fastGatherRingCount;
+        int dofMaxCoC = mSettings.view.dof.maxForegroundCOC;
+        if (!dofRingCount) dofRingCount = 5;
+        if (!dofMaxCoC) dofMaxCoC = 32;
 
         ImGui::SliderFloat("Aperture", &mSettings.viewer.cameraAperture, 1.0f, 32.0f);
         ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
@@ -737,10 +741,19 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("DoF", &mSettings.view.dof.enabled);
         ImGui::SliderFloat("Focus distance", &mSettings.view.dof.focusDistance, 0.0f, 30.0f);
         ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
-        ImGui::Checkbox("Median Filter", &median);
-        mSettings.view.dof.filter = median ?
-                View::DepthOfFieldOptions::Filter::MEDIAN :
-                View::DepthOfFieldOptions::Filter::NONE;
+        ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
+        ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
+        ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
+        ImGui::Checkbox("Median Filter", &dofMedian);
+
+        mSettings.view.dof.filter = dofMedian ?
+                                    View::DepthOfFieldOptions::Filter::MEDIAN :
+                                    View::DepthOfFieldOptions::Filter::NONE;
+        mSettings.view.dof.backgroundRingCount = dofRingCount;
+        mSettings.view.dof.foregroundRingCount = dofRingCount;
+        mSettings.view.dof.fastGatherRingCount = dofRingCount;
+        mSettings.view.dof.maxForegroundCOC = dofMaxCoC;
+        mSettings.view.dof.maxBackgroundCOC = dofMaxCoC;
 
         if (ImGui::CollapsingHeader("Vignette")) {
             ImGui::Checkbox("Enabled##vignetteEnabled", &mSettings.view.vignette.enabled);

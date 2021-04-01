@@ -191,6 +191,11 @@ list(APPEND SRCS ${RESGEN_SOURCE})
 # Configuration
 # ==================================================================================================
 
+# whether we're building for mobile -- this can affect some default quality settings
+if (IS_MOBILE_TARGET)
+    add_definitions(-DFILAMENT_TARGET_MOBILE=1)
+endif()
+
 # Size of the DFG lookup table
 if (NOT DFG_LUT_SIZE)
     if (IS_MOBILE_TARGET)
