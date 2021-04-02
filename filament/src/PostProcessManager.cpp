@@ -817,10 +817,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        const View::DepthOfFieldOptions& dofOptions,
-        bool translucent,
-        const CameraInfo& cameraInfo) noexcept {
+        FrameGraphId<FrameGraphTexture> input, const View::DepthOfFieldOptions& dofOptions,
+        bool translucent, const CameraInfo& cameraInfo, float2 scale) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -1205,7 +1203,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("tiles", tilesCocMinMax,
                         { .filterMin = SamplerMinFilter::NEAREST });
-                mi->setParameter("cocToTexelScale", (1.0f / dofResolution) / float2{ inputDesc.width, inputDesc.height });
+
+                // The bokeh height is always correct regardless of the dynamic resolution scaling.
+                // (because the CoC is calculated w.r.t. the height), so we only need to adjust
+                // the width.
+                const float aspectRatio = scale.x / scale.y;
+                mi->setParameter("cocToTexelScale", float2{
+                        aspectRatio / (inputDesc.width  * dofResolution),
+                                1.0 / (inputDesc.height * dofResolution)
+                });
+
                 mi->setParameter("cocToPixelScale", (1.0f / dofResolution));
                 mi->setParameter("uvscale", float4{
                     outputDesc.width  / float(inputDesc.width),

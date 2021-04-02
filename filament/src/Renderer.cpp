@@ -466,7 +466,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (hasPostProcess) {
         if (dofOptions.enabled) {
-            input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo);
+            input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
         }
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {

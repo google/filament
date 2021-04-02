@@ -79,11 +79,9 @@ public:
             size_t kernelWidth, float sigmaRatio = 6.0f) noexcept;
 
     // Depth-of-field
-    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            const View::DepthOfFieldOptions& dofOptions,
-            bool translucent,
-            const CameraInfo& cameraInfo) noexcept;
+    FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
+            const View::DepthOfFieldOptions& dofOptions, bool translucent,
+            const CameraInfo& cameraInfo, math::float2 scale) noexcept;
 
     // Color grading, tone mapping, etc.
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
