@@ -112,12 +112,24 @@ private:
     void* frameCompletedUserData = nullptr;
 };
 
+class MetalBufferObject : public HwBufferObject {
+public:
+    MetalBufferObject(MetalContext& context, uint32_t byteCount);
+
+    void updateBuffer(void* data, size_t size, uint32_t byteOffset);
+    const std::shared_ptr<MetalBuffer>& getBuffer() const { return buffer; }
+
+private:
+    uint32_t byteCount;
+    std::shared_ptr<MetalBuffer> buffer = nullptr;
+
+};
+
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t vertexCount, AttributeArray const& attributes, bool bufferObjectsEnabled);
-    ~MetalVertexBuffer();
 
-    std::vector<MetalBuffer*> buffers;
+    std::vector<std::shared_ptr<MetalBuffer>> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
@@ -142,9 +154,6 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
 
     // This struct is used to create the pipeline description to describe vertex assembly.
     VertexDescription vertexDescription = {};
-
-    std::vector<MetalBuffer*> buffers;
-    std::vector<NSUInteger> offsets;
 };
 
 struct MetalProgram : public HwProgram {

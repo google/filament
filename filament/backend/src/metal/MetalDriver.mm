@@ -174,7 +174,7 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType) {
-    // TODO
+    construct_handle<MetalBufferObject>(mHandleMap, boh, *mContext, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -327,8 +327,7 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
-    // TODO
-    return {};
+    return alloc_handle<MetalBufferObject, HwBufferObject>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
@@ -411,7 +410,7 @@ void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
-        // TODO
+        destruct_handle<MetalBufferObject>(mHandleMap, boh);
     }
 }
 
@@ -668,12 +667,18 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
-    // TODO
+    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    bo->updateBuffer(data.buffer, data.size, byteOffset);
+    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
         Handle<HwBufferObject> boh) {
-    // TODO
+    auto* vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
+    auto* bufferObject = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    assert_invariant(index < vertexBuffer->buffers.size());
+    assert_invariant(bufferObject->getBuffer());
+    vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
@@ -1289,9 +1294,28 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                      withRange:samplerRange];
 
     // Bind the vertex buffers.
+
+    MetalBuffer* buffers[MAX_VERTEX_ATTRIBUTE_COUNT];
+    size_t vertexBufferOffsets[MAX_VERTEX_ATTRIBUTE_COUNT];
+    size_t bufferIndex = 0;
+
+    auto vb = primitive->vertexBuffer;
+    for (uint32_t attributeIndex = 0; attributeIndex < vb->attributes.size(); attributeIndex++) {
+        const auto& attribute = vb->attributes[attributeIndex];
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            continue;
+        }
+
+        assert_invariant(vb->buffers[attribute.buffer]);
+        buffers[bufferIndex] = vb->buffers[attribute.buffer].get();
+        vertexBufferOffsets[bufferIndex] = attribute.offset;
+        bufferIndex++;
+    }
+
+    const auto bufferCount = bufferIndex;
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            VERTEX_BUFFER_START, MetalBuffer::Stage::VERTEX, primitive->buffers.data(),
-            primitive->offsets.data(), primitive->buffers.size());
+            VERTEX_BUFFER_START, MetalBuffer::Stage::VERTEX, buffers,
+            vertexBufferOffsets, bufferCount);
 
     // Bind the zero buffer, used for missing vertex attributes.
     static const char bytes[16] = { 0 };
