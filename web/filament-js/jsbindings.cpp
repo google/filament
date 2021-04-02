@@ -472,16 +472,27 @@ register_vector<const MaterialInstance*>("MaterialInstanceVector");
 class_<Engine>("Engine")
     .class_function("_create", (Engine* (*)()) [] {
         EM_ASM_INT({
-            const handle = GL.registerContext(Filament.glContext, Filament.glOptions);
+            const options = window.filament_glOptions;
+            const context = window.filament_glContext;
+            const handle = GL.registerContext(context, options);
+            window.filament_contextHandle = handle;
             GL.makeContextCurrent(handle);
         });
         return Engine::create();
     }, allow_raw_pointers())
+
+    .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
+        EM_ASM_INT({
+            const handle = window.filament_contextHandle;
+            GL.makeContextCurrent(handle);
+        });
+        engine->execute();
+    }), allow_raw_pointers())
+
     /// destroy ::static method:: Destroys an engine instance and cleans up resources.
     /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
             (Engine* engine) { Engine::destroy(&engine); }, allow_raw_pointers())
-    .function("execute", &Engine::execute)
 
     /// getTransformManager ::method::
     /// ::retval:: an instance of [TransformManager]

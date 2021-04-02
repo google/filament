@@ -73,16 +73,35 @@ Filament.loadClassExtensions = function() {
 
         // Create the WebGL 2.0 context.
         const ctx = canvas.getContext("webgl2", options);
-        Filament.glOptions = options;
-        Filament.glContext = ctx;
 
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
         ctx.getExtension('WEBGL_compressed_texture_astc');
         ctx.getExtension('WEBGL_compressed_texture_etc');
 
+        // These transient globals are used temporarily during Engine construction.
+        window.filament_glOptions = options;
+        window.filament_glContext = ctx;
+
         // Register the GL context with emscripten and create the Engine.
-        return Filament.Engine._create();
+        const engine = Filament.Engine._create();
+
+        // Annotate the engine with the GL context to support multiple canvases.
+        engine.context = window.filament_glContext;
+        engine.handle = window.filament_contextHandle;
+
+        // Ensure that we do not pollute the global namespace.
+        delete window.filament_glOptions;
+        delete window.filament_glContext;
+        delete window.filament_contextHandle;
+
+        return engine;
+    };
+
+    Filament.Engine.prototype.execute = function() {
+        window.filament_contextHandle = this.handle;
+        this._execute();
+        delete window.filament_contextHandle;
     };
 
     /// createMaterial ::method::
