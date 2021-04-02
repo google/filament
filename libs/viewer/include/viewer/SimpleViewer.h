@@ -31,6 +31,7 @@
 
 #include <utils/Entity.h>
 
+#include <math/mat4.h>
 #include <math/vec3.h>
 
 namespace filagui {
@@ -243,7 +244,7 @@ private:
     float mCurvePlot[1024 * 3];
 };
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
+filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset);
 
 } // namespace viewer
 } // namespace filament

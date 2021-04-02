@@ -42,7 +42,7 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
+filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
     using namespace filament::math;
     auto minpt = bounds.min;
     auto maxpt = bounds.max;
@@ -51,7 +51,7 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
     maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
     float scaleFactor = 2.0f / maxExtent;
     float3 center = (minpt + maxpt) / 2.0f;
-    center.z += 4.0f / scaleFactor;
+    center.z += zoffset / scaleFactor;
     return mat4f::scaling(float3(scaleFactor)) * mat4f::translation(-center);
 }
 
@@ -348,7 +348,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
         if (scale) {
             auto& tcm = mEngine->getTransformManager();
             auto root = tcm.getInstance(mAsset->getRoot());
-            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
+            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox(), 4);
             tcm.setTransform(root, transform);
         }
 

@@ -1903,6 +1903,14 @@ class_<SimpleViewer>("SimpleViewer")
     .function("keyUpEvent", &SimpleViewer::keyUpEvent)
     .function("keyPressEvent", &SimpleViewer::keyPressEvent);
 
+function("fitIntoUnitCube", EMBIND_LAMBDA(flatmat4, (Aabb box, float zoffset), {
+    return flatmat4 { fitIntoUnitCube(box, zoffset) };
+}));
+
+function("multiplyMatrices", EMBIND_LAMBDA(flatmat4, (flatmat4 a, flatmat4 b), {
+    return flatmat4 { a.m * b.m };
+}));
+
 } // EMSCRIPTEN_BINDINGS
 
 #pragma clang diagnostic pop
