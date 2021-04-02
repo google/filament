@@ -127,7 +127,7 @@ struct VulkanSamplerGroup : public HwSamplerGroup {
 struct VulkanTexture : public HwTexture {
     VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage usage, VulkanStagePool& stagePool);
+            TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
     ~VulkanTexture();
     void update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
             int miplevel);
@@ -172,7 +172,8 @@ private:
             uint32_t width, uint32_t height, uint32_t depth,
             FaceOffsets const* faceOffsets, uint32_t miplevel);
 
-    VkFormat mVkFormat;
+    const VkFormat mVkFormat;
+    const VkComponentMapping mSwizzle;
     VkImageViewType mViewType;
     VkImage mTextureImage = VK_NULL_HANDLE;
     VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;

@@ -479,14 +479,14 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, VulkanStagePool& stagePool) :
+        TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle) :
         HwTexture(target, levels, samples, w, h, depth, tformat, usage),
-        mVkFormat(backend::getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
 
-    // Vulkan does not support 24-bit depth, use the official fallback format.
-    if (tformat == TextureFormat::DEPTH24) {
-        mVkFormat = mContext.finalDepthFormat;
-    }
+        // Vulkan does not support 24-bit depth, use the official fallback format.
+        mVkFormat(tformat == TextureFormat::DEPTH24 ? context.finalDepthFormat :
+                backend::getVkFormat(tformat)),
+
+        mSwizzle(swizzle), mContext(context), mStagePool(stagePool) {
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
@@ -752,7 +752,7 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
         .image = mTextureImage,
         .viewType = mViewType,
         .format = mVkFormat,
-        .components = {},
+        .components = mSwizzle,
         .subresourceRange = range
     };
     VkImageView imageView;
