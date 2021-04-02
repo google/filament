@@ -261,7 +261,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 
     Aabb aabb = app.asset->getBoundingBox();
     if (!app.actualSize) {
-        mat4f transform = fitIntoUnitCube(aabb);
+        mat4f transform = fitIntoUnitCube(aabb, 4);
         aabb = aabb.transform(transform);
     }
 
