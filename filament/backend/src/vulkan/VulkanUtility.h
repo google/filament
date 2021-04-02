@@ -33,6 +33,7 @@ VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
+VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
 
 } // namespace filament
 } // namespace backend

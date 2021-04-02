@@ -508,12 +508,13 @@ void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targ
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    TextureSwizzle swizzleArray[] = {r, g, b, a};
+    const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
     auto vktexture = construct_handle<VulkanTexture>(mHandleMap, th, mContext, target, levels,
-            format, samples, w, h, depth, usage, mStagePool);
+            format, samples, w, h, depth, usage, mStagePool, swizzleMap);
     mDisposer.createDisposable(vktexture, [this, th] () {
         destruct_handle<VulkanTexture>(mHandleMap, th);
     });
-    // TODO: implement texture swizzling
 }
 
 void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
@@ -816,7 +817,7 @@ bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isTextureSwizzleSupported() {
-    return false;   // TODO: implement texture swizzling
+    return true;
 }
 
 bool VulkanDriver::isTextureFormatMipmappable(backend::TextureFormat format) {

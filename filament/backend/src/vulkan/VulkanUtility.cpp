@@ -380,6 +380,33 @@ PixelDataType getComponentType(VkFormat format) {
     return {};
 }
 
+VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
+    VkComponentMapping map;
+    VkComponentSwizzle* dst = &map.r;
+    for (int i = 0; i < 4; ++i, ++dst) {
+        switch (swizzle[i]) {
+            case TextureSwizzle::SUBSTITUTE_ZERO: *dst = VK_COMPONENT_SWIZZLE_ZERO; break;
+            case TextureSwizzle::SUBSTITUTE_ONE: *dst = VK_COMPONENT_SWIZZLE_ONE; break;
+            // NOTE: In some cases, IDENTITY is equivalent to one of the other enums, in which
+            // case we choose IDENTITY under the premise that it could be more efficient, or
+            // allow for more state sharing. In practice this probably has no impact.
+            case TextureSwizzle::CHANNEL_0:
+                *dst = i == 0 ? VK_COMPONENT_SWIZZLE_IDENTITY : VK_COMPONENT_SWIZZLE_R;
+                break;
+            case TextureSwizzle::CHANNEL_1:
+                *dst = i == 1 ? VK_COMPONENT_SWIZZLE_IDENTITY : VK_COMPONENT_SWIZZLE_G;
+                break;
+            case TextureSwizzle::CHANNEL_2:
+                *dst = i == 2 ? VK_COMPONENT_SWIZZLE_IDENTITY : VK_COMPONENT_SWIZZLE_B;
+                break;
+            case TextureSwizzle::CHANNEL_3:
+                *dst = i == 3 ? VK_COMPONENT_SWIZZLE_IDENTITY : VK_COMPONENT_SWIZZLE_A;
+                break;
+        }
+    }
+    return map;
+}
+
 } // namespace filament
 } // namespace backend
 
