@@ -22,6 +22,8 @@
 #include <utils/CString.h>
 #include <utils/debug.h>
 
+#include <backend/Handle.h>
+
 #include "GLUtils.h"
 
 #include <set>
@@ -35,11 +37,23 @@ public:
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;
 
+    // TODO: the footprint of this structure can be reduced. We need only 1 bit for index type, 16
+    // bits for vertexAttribArray. We can also use fewer bits for vertexBufferVersion, although
+    // this will require a corollary update in OpenGLDriver::setVertexBufferObject().
     struct RenderPrimitive {
         GLuint vao = 0;
         GLenum indicesType = GL_UNSIGNED_INT;
         GLuint elementArray = 0;
         utils::bitset32 vertexAttribArray;
+
+        // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
+        // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
+        // immutable.
+        backend::Handle<backend::HwVertexBuffer> vertexBufferWithObjects = {};
+
+        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
+        // then the VAO needs to be updated.
+        uint8_t vertexBufferVersion = 0;
     } gl;
 
     OpenGLContext() noexcept;

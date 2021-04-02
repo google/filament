@@ -34,6 +34,7 @@
 
 #include <filameshio/MeshReader.h>
 
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
@@ -117,6 +118,7 @@ namespace emscripten {
     namespace internal {
         BIND(Animator)
         BIND(AssetLoader)
+        BIND(BufferObject)
         BIND(Camera)
         BIND(ColorGrading)
         BIND(Engine)
@@ -204,6 +206,7 @@ using SkyBuilder = Skybox::Builder;
 using SurfaceBuilder = SurfaceOrientation::Builder;
 using TexBuilder = Texture::Builder;
 using VertexBuilder = VertexBuffer::Builder;
+using BufferBuilder = BufferObject::Builder;
 
 // We avoid directly exposing backend::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -1162,6 +1165,25 @@ class_<LightManager>("LightManager")
 class_<LightManager::Instance>("LightManager$Instance");
     /// delete ::method:: Frees an instance obtained via `getInstance`
 
+class_<BufferBuilder>("BufferObject$Builder")
+   .function("_build", EMBIND_LAMBDA(BufferObject*, (BufferBuilder* builder, Engine* engine), {
+       return builder->build(*engine);
+   }), allow_raw_pointers())
+   .BUILDER_FUNCTION("bindingType", BufferBuilder, (BufferBuilder* builder,
+           BufferObject::BindingType bt), {
+       return &builder->bindingType(bt); })
+   .BUILDER_FUNCTION("size", BufferBuilder, (BufferBuilder* builder, int byteCount), {
+       return &builder->size(byteCount); });
+
+/// BufferObject ::core class:: Represents a single GPU buffer.
+class_<BufferObject>("BufferObject")
+   .class_function("Builder", (BufferBuilder (*)()) [] { return BufferBuilder(); })
+   .function("getByteCount", &BufferObject::getByteCount)
+   .function("_setBuffer", EMBIND_LAMBDA(void, (BufferObject* self,
+           Engine* engine, BufferDescriptor bd, uint32_t byteOffset), {
+       self->setBuffer(*engine, std::move(*bd.bd), byteOffset);
+   }), allow_raw_pointers());
+
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("_build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
         return builder->build(*engine);
@@ -1175,6 +1197,8 @@ class_<VertexBuilder>("VertexBuffer$Builder")
         return &builder->attribute(attr, bufferIndex, attrType, byteOffset, byteStride); })
     .BUILDER_FUNCTION("vertexCount", VertexBuilder, (VertexBuilder* builder, int count), {
         return &builder->vertexCount(count); })
+    .BUILDER_FUNCTION("enableBufferObjects", VertexBuilder, (VertexBuilder* builder, bool enable), {
+        return &builder->enableBufferObjects(enable); })
     .BUILDER_FUNCTION("normalized", VertexBuilder, (VertexBuilder* builder,
             VertexAttribute attrib), {
         return &builder->normalized(attrib); })
@@ -1187,6 +1211,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
 /// VertexBuffer ::core class:: Bundle of buffers and associated vertex attributes.
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
+    .function("setBufferObjectAt", &VertexBuffer::setBufferObjectAt, allow_raw_pointers())
     .function("_setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
             Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd, uint32_t byteOffset), {
         self->setBufferAt(*engine, bufferIndex, std::move(*vbd.bd), byteOffset);

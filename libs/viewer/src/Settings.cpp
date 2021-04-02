@@ -1205,9 +1205,9 @@ static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << ",\n"
         << "\"nativeResolution\": " << (in.nativeResolution) << ",\n"
-        << "\"foregroundRingCount\": " << (in.foregroundRingCount) << ",\n"
-        << "\"backgroundRingCount\": " << (in.backgroundRingCount) << ",\n"
-        << "\"fastGatherRingCount\": " << (in.fastGatherRingCount) << ",\n"
+        << "\"foregroundRingCount\": " << int(in.foregroundRingCount) << ",\n"
+        << "\"backgroundRingCount\": " << int(in.backgroundRingCount) << ",\n"
+        << "\"fastGatherRingCount\": " << int(in.fastGatherRingCount) << ",\n"
         << "\"maxForegroundCOC\": " << (in.maxForegroundCOC) << ",\n"
         << "\"maxBackgroundCOC\": " << (in.maxBackgroundCOC) << "\n"
         << "}";
@@ -1330,7 +1330,6 @@ bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out)
 
     int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
     if (tokenCount <= 0) {
-        slog.e << "Badly formed JSON." << io::endl;
         return false;
     }
 
@@ -1342,7 +1341,6 @@ bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out)
 
     if (tokenCount <= 0) {
         free(tokens);
-        slog.e << "Badly formed JSON." << io::endl;
         return false;
     }
 

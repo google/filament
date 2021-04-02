@@ -26,6 +26,7 @@
 #include "components/RenderableManager.h"
 
 #include "details/Allocators.h"
+#include "details/BufferObject.h"
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
@@ -223,6 +224,7 @@ public:
     template <typename T>
     T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
 
+    FBufferObject* createBufferObject(const BufferObject::Builder& builder) noexcept;
     FVertexBuffer* createVertexBuffer(const VertexBuffer::Builder& builder) noexcept;
     FIndexBuffer* createIndexBuffer(const IndexBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
@@ -250,6 +252,7 @@ public:
     void destroyCameraComponent(utils::Entity entity) noexcept;
 
 
+    bool destroy(const FBufferObject* p);
     bool destroy(const FVertexBuffer* p);
     bool destroy(const FFence* p);
     bool destroy(const FIndexBuffer* p);
@@ -340,6 +343,7 @@ private:
     FCameraManager mCameraManager;
     ResourceAllocator* mResourceAllocator = nullptr;
 
+    ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };
     ResourceList<FView> mViews{ "View" };
     ResourceList<FScene> mScenes{ "Scene" };

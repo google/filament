@@ -32,6 +32,7 @@
 
 namespace filament {
 
+class FBufferObject;
 class FEngine;
 
 class FVertexBuffer : public VertexBuffer {
@@ -53,6 +54,9 @@ public:
     void setBufferAt(FEngine& engine, uint8_t bufferIndex,
             backend::BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
+    void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
+            FBufferObject const * bufferObject);
+
 private:
     friend class VertexBuffer;
 
@@ -65,6 +69,7 @@ private:
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
+    bool mBufferObjectsEnabled = false;
 };
 
 FILAMENT_UPCAST(VertexBuffer)
