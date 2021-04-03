@@ -141,6 +141,18 @@ import androidx.annotation.Size;
     }
 
     /**
+     * Gets the actual parent of an entity defined by {@link #setParent(int, int)}.
+     *
+     * @param i the {@link EntityInstance} of the transform component to get the parent from or
+     *          {@Link EntityInstance.NULL} if no parent was defined.
+     * @see #getInstance
+     */
+    @EntityInstance
+    public int getParent(@EntityInstance int i) {
+        return nGetParent(mNativeObject, i);
+    }
+
+    /**
      * Sets a local transform of a transform component.
      * <p>This operation can be slow if the hierarchy of transform is too deep, and this
      * will be particularly bad when updating a lot of transforms. In that case,
@@ -241,6 +253,7 @@ import androidx.annotation.Size;
     private static native int nCreateArray(long mNativeObject, int entity, int parent, float[] localTransform);
     private static native void nDestroy(long nativeTransformManager, int entity);
     private static native void nSetParent(long nativeTransformManager, int i, int newParent);
+    private static native int nGetParent(long nativeTransformManager, int i);
     private static native void nSetTransform(long nativeTransformManager, int i, float[] localTransform);
     private static native void nGetTransform(long nativeTransformManager, int i, float[] outLocalTransform);
     private static native void nGetWorldTransform(long nativeTransformManager, int i, float[] outWorldTransform);
