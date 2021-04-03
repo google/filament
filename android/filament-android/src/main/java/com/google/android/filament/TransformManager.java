@@ -147,7 +147,7 @@ import androidx.annotation.Size;
      *          {@Link EntityInstance.NULL} if no parent was defined.
      * @see #getInstance
      */
-    @EntityInstance
+    @Entity
     public int getParent(@EntityInstance int i) {
         return nGetParent(mNativeObject, i);
     }
