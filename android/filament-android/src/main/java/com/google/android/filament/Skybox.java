@@ -23,8 +23,6 @@ import androidx.annotation.Size;
 
 import static com.google.android.filament.Colors.LinearColor;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 /**
  * Skybox
  * <p>When added to a {@link Scene}, the <code>Skybox</code> fills all untouched pixels.</p>
@@ -121,7 +119,7 @@ public class Skybox {
          * its place.</p>
          *
          * @param envIntensity  Scale factor applied to the skybox texel values such that
-         *                      the result is in cd/m<sup>2</sup> (lux) units (default = 30000)
+         *                      the result is in <i>lux</i>, or <i>lumen/m^2</i> (default = 30000)
          *
          * @return This Builder, for chaining calls.
          *
@@ -237,7 +235,7 @@ public class Skybox {
     }
 
     /**
-     * Returns the <code>Skybox</code>'s intensity in cd/m<sup>2</sup>.
+     * Returns the <code>Skybox</code>'s intensity in <i>lux</i>, or <i>lumen/m^2</i>.
      */
     public float getIntensity() { return nGetIntensity(getNativeObject()); }
 

@@ -21,7 +21,7 @@
 
 #include <imgui.h>
 
-#include <filamat/MaterialBuilder.h>
+#include <filament/Camera.h>
 #include <filament/Fence.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -37,6 +37,9 @@
 using namespace filament::math;
 using namespace filament;
 using namespace utils;
+
+using MinFilter = TextureSampler::MinFilter;
+using MagFilter = TextureSampler::MagFilter;
 
 namespace filagui {
 
@@ -56,8 +59,20 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     // tiny "pixel art" texture that is compiled into the library.
     if (!fontPath.isEmpty()) {
         io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
-        createAtlasTexture(engine);
     }
+    createAtlasTexture(engine);
+
+    // For proggy, switch to NEAREST for pixel-perfect text.
+    if (fontPath.isEmpty()) {
+        TextureSampler sampler(MinFilter::NEAREST, MagFilter::NEAREST);
+        mMaterial->setDefaultParameter("albedo", mTexture, sampler);
+    }
+
+    utils::EntityManager& em = utils::EntityManager::get();
+    mCameraEntity = em.create();
+    mCamera = mEngine->createCamera(mCameraEntity);
+
+    view->setCamera(mCamera);
 
     view->setPostProcessingEnabled(false);
     view->setBlendMode(View::BlendMode::TRANSLUCENT);
@@ -66,7 +81,6 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     // Attach a scene for our one and only Renderable.
     view->setScene(mScene);
 
-    EntityManager& em = utils::EntityManager::get();
     mRenderable = em.create();
     mScene->addEntity(mRenderable);
 
@@ -93,13 +107,15 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
             .build(*engine);
     mTexture->setImage(*engine, 0, std::move(pb));
 
-    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
     mMaterial->setDefaultParameter("albedo", mTexture, sampler);
 }
 
 ImGuiHelper::~ImGuiHelper() {
     mEngine->destroy(mScene);
     mEngine->destroy(mRenderable);
+    mEngine->destroyCameraComponent(mCameraEntity);
+
     for (auto& mi : mMaterialInstances) {
         mEngine->destroy(mi);
     }
@@ -111,6 +127,11 @@ ImGuiHelper::~ImGuiHelper() {
     for (auto& ib : mIndexBuffers) {
         mEngine->destroy(ib);
     }
+
+    EntityManager& em = utils::EntityManager::get();
+    em.destroy(mRenderable);
+    em.destroy(mCameraEntity);
+
     ImGui::DestroyContext(mImGuiContext);
     mImGuiContext = nullptr;
 }
@@ -120,6 +141,10 @@ void ImGuiHelper::setDisplaySize(int width, int height, float scaleX, float scal
     io.DisplaySize = ImVec2(width, height);
     io.DisplayFramebufferScale.x = scaleX;
     io.DisplayFramebufferScale.y = scaleY;
+    mCamera->setProjection(Camera::Projection::ORTHO,
+            0.0, double(width),
+            double(height), 0.0,
+            0.0, 1.0);
 }
 
 void ImGuiHelper::render(float timeStepInSeconds, Callback imguiCommands) {
@@ -192,7 +217,7 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                         (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
                         (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
                 if (pcmd.TextureId) {
-                    TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
+                    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
                     materialInstance->setParameter("albedo", (Texture const*)pcmd.TextureId, sampler);
                 }
                 rbuilder

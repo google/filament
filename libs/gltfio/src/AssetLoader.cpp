@@ -514,6 +514,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
         const UvMap& uvmap, const char* name) {
+    outPrim->uvmap = uvmap;
+
     // Create a little lambda that appends to the asset's vertex buffer slots.
     auto slots = &mResult->mBufferSlots;
     auto addBufferSlot = [slots](BufferSlot entry) {
@@ -662,8 +664,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     cgltf_size targetsCount = inPrim->targets_count;
+
+    // There is no need to emit a warning if there are more than 4 targets. This is only the base
+    // VertexBuffer and more might be created by MorphHelper.
     if (targetsCount > MAX_MORPH_TARGETS) {
-        slog.w << "Too many morph targets in " << name << io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
 
@@ -837,7 +841,7 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
 
         // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
-        filamentCamera->setScaling(double4 {1.0 / aspect, 1.0, 1.0, 1.0});
+        filamentCamera->setScaling({1.0 / aspect, 1.0 });
     } else if (camera->type == cgltf_camera_type_orthographic) {
         auto& projection = camera->data.orthographic;
 

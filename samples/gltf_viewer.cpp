@@ -83,16 +83,6 @@ struct App {
 
     bool actualSize = false;
 
-    struct ViewOptions {
-        float cameraAperture = 16.0f;
-        float cameraSpeed = 125.0f;
-        float cameraISO = 100.0f;
-        float groundShadowStrength = 0.75f;
-        bool groundPlaneEnabled = false;
-        bool skyboxEnabled = true;
-        sRGBColor backgroundColor = { 0.0f };
-    } viewOptions;
-
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -104,12 +94,6 @@ struct App {
     ColorGradingSettings lastColorGradingOptions = { 0 };
 
     ColorGrading* colorGrading = nullptr;
-
-    float rangePlot[1024 * 3];
-    float curvePlot[1024 * 3];
-
-    // 0 is the default "free camera". Additional cameras come from the gltf file.
-    int currentCamera = 0;
 
     std::string messageBoxText;
     std::string settingsFile;
@@ -153,7 +137,9 @@ static void printUsage(char* name) {
         "           Use the scroll weel to adjust movement speed\n"
         "           W / S: forward / backward\n"
         "           A / D: left / right\n"
-        "           E / Q: up / down\n"
+        "           E / Q: up / down\n\n"
+        "   --split-view, -v\n"
+        "       Splits the window into 4 views\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -168,7 +154,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:e";
+    static constexpr const char* OPTSTR = "ha:i:usc:rt:b:ev";
     static const struct option OPTIONS[] = {
         { "help",         no_argument,       nullptr, 'h' },
         { "api",          required_argument, nullptr, 'a' },
@@ -179,7 +165,8 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "actual-size",  no_argument,       nullptr, 's' },
         { "camera",       required_argument, nullptr, 'c' },
         { "recompute-aabb", no_argument,     nullptr, 'r' },
-        { "settings",       required_argument, nullptr, 't' },
+        { "settings",     required_argument, nullptr, 't' },
+        { "split-view",   no_argument,       nullptr, 'v' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -233,6 +220,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->batchFile = arg;
                 break;
             }
+            case 'v': {
+                app->config.splitView = true;
+                break;
+            }
         }
     }
     if (app->config.headless && app->batchFile.empty()) {
@@ -252,7 +243,8 @@ static bool loadSettings(const char* filename, Settings* out) {
     if (!in.read(json.data(), contentSize)) {
         return false;
     }
-    return readJson(json.data(), contentSize, out);
+    JsonSerializer serializer;
+    return serializer.readJson(json.data(), contentSize, out);
 }
 
 static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
@@ -260,7 +252,8 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     Material* shadowMaterial = Material::Builder()
             .package(GLTF_VIEWER_GROUNDSHADOW_DATA, GLTF_VIEWER_GROUNDSHADOW_SIZE)
             .build(*engine);
-    shadowMaterial->setDefaultParameter("strength", app.viewOptions.groundShadowStrength);
+    auto& viewerOptions = app.viewer->getSettings().viewer;
+    shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
 
     const static uint32_t indices[] = {
             0, 1, 2, 2, 3, 0
@@ -344,253 +337,12 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
-static void computeRangePlot(App& app, float* rangePlot) {
-    float4& ranges = app.viewer->getSettings().view.colorGrading.ranges;
-    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
-    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
-
-    for (size_t i = 0; i < 1024; i++) {
-        float x = i / 1024.0f;
-        float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
-        float h = smoothstep(ranges.z, ranges.w, x);
-        rangePlot[i]        = s;
-        rangePlot[1024 + i] = 1.0f - s - h;
-        rangePlot[2048 + i] = h;
-    }
-}
-
-static void rangePlotSeriesStart(int series) {
-    switch (series) {
-        case 0:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.4f, 0.25f, 1.0f));
-            break;
-        case 1:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.8f, 0.25f, 1.0f));
-            break;
-        case 2:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 1.0f));
-            break;
-    }
-}
-
-static void rangePlotSeriesEnd(int series) {
-    if (series < 3) {
-        ImGui::PopStyleColor();
-    }
-}
-
-static float getRangePlotValue(int series, void* data, int index) {
-    return ((float*) data)[series * 1024 + index];
-}
-
-inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
-    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
-    float3 dark = pow(v, shadowGamma) * d;
-    float3 light = highlightScale * (v - midPoint) + midPoint;
-    return float3{
-            v.r <= midPoint.r ? dark.r : light.r,
-            v.g <= midPoint.g ? dark.g : light.g,
-            v.b <= midPoint.b ? dark.b : light.b,
-    };
-}
-
-static void computeCurvePlot(App& app, float* curvePlot) {
-    const auto& colorGradingOptions = app.viewer->getSettings().view.colorGrading;
-    for (size_t i = 0; i < 1024; i++) {
-        float3 x{i / 1024.0f * 2.0f};
-        float3 y = curves(x,
-                colorGradingOptions.gamma,
-                colorGradingOptions.midPoint,
-                colorGradingOptions.scale);
-        curvePlot[i]        = y.r;
-        curvePlot[1024 + i] = y.g;
-        curvePlot[2048 + i] = y.b;
-    }
-}
-
-static void tooltipFloat(float value) {
-    if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("%.2f", value);
-    }
-}
-
-static void pushSliderColors(float hue) {
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4) ImColor::HSV(hue, 0.5f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(hue, 0.6f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(hue, 0.7f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(hue, 0.9f, 0.9f));
-}
-
-static void popSliderColors() { ImGui::PopStyleColor(4); }
-
-static void colorGradingUI(App& app) {
-    const static ImVec2 verticalSliderSize(18.0f, 160.0f);
-    const static ImVec2 plotLinesSize(260.0f, 160.0f);
-    const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
-
-    if (ImGui::CollapsingHeader("Color grading")) {
-        ColorGradingSettings& colorGrading = app.viewer->getSettings().view.colorGrading;
-
-        ImGui::Indent();
-        ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
-
-        int quality = (int) colorGrading.quality;
-        ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
-        colorGrading.quality = (decltype(colorGrading.quality)) quality;
-
-        int toneMapping = (int) colorGrading.toneMapping;
-        ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
-        colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
-
-        if (ImGui::CollapsingHeader("White balance")) {
-            int temperature = colorGrading.temperature * 100.0f;
-            int tint = colorGrading.tint * 100.0f;
-            ImGui::SliderInt("Temperature", &temperature, -100, 100);
-            ImGui::SliderInt("Tint", &tint, -100, 100);
-            colorGrading.temperature = temperature / 100.0f;
-            colorGrading.tint = tint / 100.0f;
-        }
-
-        if (ImGui::CollapsingHeader("Channel mixer")) {
-            pushSliderColors(0.0f / 7.0f);
-            ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outRed.r);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outRed.g", verticalSliderSize, &colorGrading.outRed.g, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outRed.g);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outRed.b", verticalSliderSize, &colorGrading.outRed.b, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outRed.b);
-            ImGui::SameLine(0.0f, 18.0f);
-            popSliderColors();
-
-            pushSliderColors(2.0f / 7.0f);
-            ImGui::VSliderFloat("##outGreen.r", verticalSliderSize, &colorGrading.outGreen.r, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outGreen.r);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outGreen.g", verticalSliderSize, &colorGrading.outGreen.g, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outGreen.g);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outGreen.b", verticalSliderSize, &colorGrading.outGreen.b, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outGreen.b);
-            ImGui::SameLine(0.0f, 18.0f);
-            popSliderColors();
-
-            pushSliderColors(4.0f / 7.0f);
-            ImGui::VSliderFloat("##outBlue.r", verticalSliderSize, &colorGrading.outBlue.r, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outBlue.r);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outBlue.g", verticalSliderSize, &colorGrading.outBlue.g, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outBlue.g);
-            ImGui::SameLine();
-            ImGui::VSliderFloat("##outBlue.b", verticalSliderSize, &colorGrading.outBlue.b, -2.0f, 2.0f, "");
-            tooltipFloat(colorGrading.outBlue.b);
-            popSliderColors();
-        }
-        if (ImGui::CollapsingHeader("Tonal ranges")) {
-            ImGui::ColorEdit3("Shadows", &colorGrading.shadows.x);
-            ImGui::SliderFloat("Weight##shadowsWeight", &colorGrading.shadows.w, -2.0f, 2.0f);
-            ImGui::ColorEdit3("Mid-tones", &colorGrading.midtones.x);
-            ImGui::SliderFloat("Weight##midTonesWeight", &colorGrading.midtones.w, -2.0f, 2.0f);
-            ImGui::ColorEdit3("Highlights", &colorGrading.highlights.x);
-            ImGui::SliderFloat("Weight##highlightsWeight", &colorGrading.highlights.w, -2.0f, 2.0f);
-            ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
-            computeRangePlot(app, app.rangePlot);
-            ImGuiExt::PlotLinesSeries("", 3,
-                    rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
-                    app.rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
-        }
-        if (ImGui::CollapsingHeader("Color decision list")) {
-            ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
-            ImGui::SliderFloat3("Offset", &colorGrading.offset.x, -0.5f, 0.5f);
-            ImGui::SliderFloat3("Power", &colorGrading.power.x, 0.0f, 2.0f);
-        }
-        if (ImGui::CollapsingHeader("Adjustments")) {
-            ImGui::SliderFloat("Contrast", &colorGrading.contrast, 0.0f, 2.0f);
-            ImGui::SliderFloat("Vibrance", &colorGrading.vibrance, 0.0f, 2.0f);
-            ImGui::SliderFloat("Saturation", &colorGrading.saturation, 0.0f, 2.0f);
-        }
-        if (ImGui::CollapsingHeader("Curves")) {
-            ImGui::Checkbox("Linked curves", &colorGrading.linkedCurves);
-
-            computeCurvePlot(app, app.curvePlot);
-
-            if (!colorGrading.linkedCurves) {
-                pushSliderColors(0.0f / 7.0f);
-                ImGui::VSliderFloat("##curveGamma.r", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.gamma.r);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
-                tooltipFloat(colorGrading.midPoint.r);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.scale.r);
-                ImGui::SameLine(0.0f, 18.0f);
-                popSliderColors();
-
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
-                ImGui::PlotLines("", app.curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
-                ImGui::PopStyleColor();
-
-                pushSliderColors(2.0f / 7.0f);
-                ImGui::VSliderFloat("##curveGamma.g", verticalSliderSize, &colorGrading.gamma.g, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.gamma.g);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
-                tooltipFloat(colorGrading.midPoint.g);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.scale.g);
-                ImGui::SameLine(0.0f, 18.0f);
-                popSliderColors();
-
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
-                ImGui::PlotLines("", app.curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
-                ImGui::PopStyleColor();
-
-                pushSliderColors(4.0f / 7.0f);
-                ImGui::VSliderFloat("##curveGamma.b", verticalSliderSize, &colorGrading.gamma.b, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.gamma.b);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveMid.b", verticalSliderSize, &colorGrading.midPoint.b, 0.0f, 2.0f, "");
-                tooltipFloat(colorGrading.midPoint.b);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveScale.b", verticalSliderSize, &colorGrading.scale.b, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.scale.b);
-                ImGui::SameLine(0.0f, 18.0f);
-                popSliderColors();
-
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
-                ImGui::PlotLines("", app.curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
-                ImGui::PopStyleColor();
-            } else {
-                ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.gamma.r);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveMid", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
-                tooltipFloat(colorGrading.midPoint.r);
-                ImGui::SameLine();
-                ImGui::VSliderFloat("##curveScale", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
-                tooltipFloat(colorGrading.scale.r);
-                ImGui::SameLine(0.0f, 18.0f);
-
-                colorGrading.gamma = float3{colorGrading.gamma.r};
-                colorGrading.midPoint = float3{colorGrading.midPoint.r};
-                colorGrading.scale = float3{colorGrading.scale.r};
-
-                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
-                ImGui::PlotLines("", app.curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
-                ImGui::PopStyleColor();
-            }
-        }
-        ImGui::Unindent();
-    }
-}
-
 static LinearColor inverseTonemapSRGB(sRGBColor x) {
     return (x * -0.155) / (x - 1.019);
 }
+
+static float sGlobalScale = 1.0f;
+static float sGlobalScaleAnamorphism = 0.0f;
 
 int main(int argc, char** argv) {
     App app;
@@ -811,67 +563,6 @@ int main(int argc, char** argv) {
                 ImGui::Unindent();
             }
 
-            if (ImGui::CollapsingHeader("Scene")) {
-                ImGui::Indent();
-                ImGui::Checkbox("Show skybox", &app.viewOptions.skyboxEnabled);
-                ImGui::ColorEdit3("Background color", &app.viewOptions.backgroundColor.r);
-                ImGui::Checkbox("Ground shadow", &app.viewOptions.groundPlaneEnabled);
-                ImGui::Indent();
-                ImGui::SliderFloat("Strength", &app.viewOptions.groundShadowStrength, 0.0f, 1.0f);
-                ImGui::Unindent();
-                ImGui::Unindent();
-            }
-
-            if (ImGui::CollapsingHeader("Camera")) {
-                ViewSettings& settings = app.viewer->getSettings().view;
-
-                ImGui::Indent();
-                ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
-                ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
-                ImGui::SliderFloat("Speed (1/s)", &app.viewOptions.cameraSpeed, 1000.0f, 1.0f);
-                ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
-                ImGui::Checkbox("DoF", &settings.dof.enabled);
-                ImGui::SliderFloat("Focus distance", &settings.dof.focusDistance, 0.0f, 30.0f);
-                ImGui::SliderFloat("Blur scale", &settings.dof.cocScale, 0.1f, 10.0f);
-
-                if (ImGui::CollapsingHeader("Vignette")) {
-                    ImGui::Checkbox("Enabled##vignetteEnabled", &settings.vignette.enabled);
-                    ImGui::SliderFloat("Mid point", &settings.vignette.midPoint, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Roundness", &settings.vignette.roundness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Feather", &settings.vignette.feather, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("Color##vignetteColor", &settings.vignette.color.r);
-                }
-
-                const utils::Entity* cameras = app.asset->getCameraEntities();
-                const size_t cameraCount = app.asset->getCameraEntityCount();
-
-                std::vector<std::string> names;
-                names.reserve(cameraCount + 1);
-                names.push_back("Free camera");
-                int c = 0;
-                for (size_t i = 0; i < cameraCount; i++) {
-                    const char* n = app.asset->getName(cameras[i]);
-                    if (n) {
-                        names.emplace_back(n);
-                    } else {
-                        char buf[32];
-                        sprintf(buf, "Unnamed camera %d", c++);
-                        names.emplace_back(buf);
-                    }
-                }
-
-                std::vector<const char*> cstrings;
-                cstrings.reserve(names.size());
-                for (size_t i = 0; i < names.size(); i++) {
-                    cstrings.push_back(names[i].c_str());
-                }
-
-                ImGui::ListBox("Cameras", &app.currentCamera, cstrings.data(), cstrings.size());
-                ImGui::Unindent();
-            }
-
-            colorGradingUI(app);
-
             if (ImGui::CollapsingHeader("Debug")) {
                 if (ImGui::Button("Capture frame")) {
                     auto& debug = engine->getDebugRegistry();
@@ -879,6 +570,8 @@ int main(int argc, char** argv) {
                         debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
+                ImGui::SliderFloat("scale", &sGlobalScale, 0.25f, 1.0f);
+                ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -928,7 +621,7 @@ int main(int argc, char** argv) {
         }
         const Viewport& vp = view->getViewport();
         double aspectRatio = (double) vp.width / vp.height;
-        camera.setScaling(double4 {1.0 / aspectRatio, 1.0, 1.0, 1.0});
+        camera.setScaling({1.0 / aspectRatio, 1.0 });
     };
 
     auto gui = [&app](Engine* engine, View* view) {
@@ -940,56 +633,48 @@ int main(int argc, char** argv) {
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app.scene.groundPlane);
+        const auto& viewerOptions = app.viewer->getSettings().viewer;
+        const auto& dofOptions = app.viewer->getSettings().view.dof;
         rcm.setLayerMask(instance,
-                0xff, app.viewOptions.groundPlaneEnabled ? 0xff : 0x00);
+                0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
+
+        float fe = viewerOptions.cameraFocalLength;
+        if (dofOptions.enabled) {
+            fe = Camera::computeEffectiveFocalLength(fe / 1000.0,
+                    std::max(0.1f, dofOptions.focusDistance)) * 1000.0;
+        }
+
+        FilamentApp::get().getCameraFocalLength() = fe;
 
         const size_t cameraCount = app.asset->getCameraEntityCount();
         view->setCamera(app.mainCamera);
-        if (app.currentCamera > 0) {
-            const int gltfCamera = app.currentCamera - 1;
-            if (gltfCamera < cameraCount) {
-                const utils::Entity* cameras = app.asset->getCameraEntities();
-                Camera* c = engine->getCameraComponent(cameras[gltfCamera]);
-                assert(c);
-                view->setCamera(c);
 
-                // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
-                // camera to the viewport.
-                const Viewport& vp = view->getViewport();
-                double aspectRatio = (double) vp.width / vp.height;
-                c->setScaling(double4 {1.0 / aspectRatio, 1.0, 1.0, 1.0});
-            } else {
-                // gltfCamera is out of bounds. Reset camera selection to main camera.
-                app.currentCamera = 0;
-            }
+        const int currentCamera = app.viewer->getCurrentCamera();
+        if (currentCamera > 0 && currentCamera <= cameraCount) {
+            const utils::Entity* cameras = app.asset->getCameraEntities();
+            Camera* camera = engine->getCameraComponent(cameras[currentCamera - 1]);
+            assert_invariant(camera);
+            view->setCamera(camera);
+
+            // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
+            // camera to the viewport.
+            const Viewport& vp = view->getViewport();
+            double aspectRatio = (double) vp.width / vp.height;
+            camera->setScaling({1.0 / aspectRatio, 1.0});
         }
-
-        Camera& camera = view->getCamera();
-        camera.setExposure(
-                app.viewOptions.cameraAperture,
-                1.0f / app.viewOptions.cameraSpeed,
-                app.viewOptions.cameraISO);
 
         app.scene.groundMaterial->setDefaultParameter(
-                "strength", app.viewOptions.groundShadowStrength);
+                "strength", viewerOptions.groundShadowStrength);
 
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) {
-            ibl->getSkybox()->setLayerMask(0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
-        }
+        // This applies clear options, the skybox mask, and some camera settings.
+        Camera& camera = view->getCamera();
+        Skybox* skybox = scene->getSkybox();
+        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
-        // we have to clear because the side-bar doesn't have a background, we cannot use
-        // a skybox on the ui scene, because the ui view is always full screen.
-        renderer->setClearOptions({
-                .clearColor = { inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f },
-                .clear = true
-        });
-
+        // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
         if (options.enabled) {
-            // An inefficient but simple way of detecting change is to serialize to JSON, then
-            // do a string comparison.
-            if (writeJson(options) != writeJson(app.lastColorGradingOptions)) {
+            if (options != app.lastColorGradingOptions) {
                 ColorGrading *colorGrading = createColorGrading(options, engine);
                 engine->destroy(app.colorGrading);
                 app.colorGrading = colorGrading;
@@ -999,6 +684,22 @@ int main(int argc, char** argv) {
         } else {
             view->setColorGrading(nullptr);
         }
+
+        view->setDynamicResolutionOptions({
+                .minScale = {
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
+                },
+                .maxScale = {
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
+                },
+                .enabled = sGlobalScale != 1.0f,
+        });
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
@@ -1019,6 +720,7 @@ int main(int argc, char** argv) {
 
     filamentApp.setDropHandler([&] (std::string path) {
         app.resourceLoader->asyncCancelLoad();
+        app.resourceLoader->evictResourceData();
         app.viewer->removeAsset();
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);

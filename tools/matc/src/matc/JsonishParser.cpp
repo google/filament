@@ -20,6 +20,8 @@
 
 #include <iostream>
 
+#include <string.h>
+
 namespace matc {
 
 static std::string resolveEscapes(const std::string&& s) {

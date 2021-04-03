@@ -148,24 +148,43 @@ static const char* JSON_TEST_AUTOMATION = R"TXT([{
 }])TXT";
 
 TEST_F(ViewSettingsTest, JsonTestDefaults) {
+    JsonSerializer serializer;
     Settings settings1 = {0};
-    ASSERT_TRUE(readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
+    ASSERT_TRUE(serializer.readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
 
     ASSERT_TRUE(settings1.view.bloom.threshold);
 
     Settings settings2;
-    ASSERT_TRUE(readJson("{}", strlen("{}"), &settings2));
-    ASSERT_FALSE(readJson("{ badly_formed }", strlen("{ badly_formed }"), &settings2));
+    ASSERT_TRUE(serializer.readJson("{}", strlen("{}"), &settings2));
+    ASSERT_FALSE(serializer.readJson("{ badly_formed }", strlen("{ badly_formed }"), &settings2));
 
     Settings settings3;
-    ASSERT_EQ(writeJson(settings2), writeJson(settings3));
+    ASSERT_EQ(serializer.writeJson(settings2), serializer.writeJson(settings3));
+}
+
+TEST_F(ViewSettingsTest, JsonTestSerialization) {
+    auto canParse = [](bool parseResult, std::string json) {
+        if (parseResult) {
+            return testing::AssertionSuccess() << "Settings can be serialized.";
+        } else {
+            return testing::AssertionFailure() << "JSON has errors:\n" << json.c_str() << std::endl;
+        }
+    };
+
+    JsonSerializer serializer;
+    Settings outSettings = {};
+    std::string jsonstr = serializer.writeJson(outSettings);
+    Settings inSettings = {};
+    bool result = serializer.readJson(jsonstr.c_str(), jsonstr.size(), &inSettings);
+    ASSERT_TRUE(canParse(result, jsonstr));
 }
 
 TEST_F(ViewSettingsTest, JsonTestMaterial) {
+    JsonSerializer serializer;
     Settings settings = {0};
     std::string js = "{" + std::string(JSON_TEST_MATERIAL) + "}";
-    ASSERT_TRUE(readJson(js.c_str(), js.size(), &settings));
-    std::string serialized = writeJson(settings);
+    ASSERT_TRUE(serializer.readJson(js.c_str(), js.size(), &settings));
+    std::string serialized = serializer.writeJson(settings);
     ASSERT_PRED_FORMAT2(testing::IsSubstring, "\"baz\": [1, 2, 3]", serialized);
 }
 

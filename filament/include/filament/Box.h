@@ -67,7 +67,7 @@ public:
      * Initializes the 3D box from its min / max coordinates on each axis
      * @param min lowest coordinates corner of the box
      * @param max largest coordinates corner of the box
-     * @return
+     * @return This bounding box
      */
     Box& set(const math::float3& min, const math::float3& max) noexcept {
         // float3 ctor needed for visual studio

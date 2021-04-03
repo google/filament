@@ -16,19 +16,28 @@
 
 #include <viewer/Settings.h>
 
-#include <utils/Log.h>
-
 #include "jsonParseUtils.h"
 
-#include <assert.h>
+#include <filament/Camera.h>
+#include <filament/Renderer.h>
+#include <filament/Skybox.h>
+
+#include <utils/Log.h>
+
+#include <math/mat3.h>
 
 #include <sstream>
 #include <string>
+
+#include <assert.h>
+#include <string.h>
 
 using namespace utils;
 
 namespace filament {
 namespace viewer {
+
+static const char* to_string(bool b) { return b ? "true" : "false"; }
 
 // Compares a JSON string token against a C string.
 int compare(jsmntok_t tok, const char* jsonChunk, const char* str) {
@@ -57,6 +66,12 @@ int parse(jsmntok_t const* tokens, int i) {
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
     return i + 1;
@@ -447,6 +462,15 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptio
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions::Filter* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = DepthOfFieldOptions::Filter::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "MEDIAN")) { *out = DepthOfFieldOptions::Filter::MEDIAN; }
+    else {
+        slog.w << "Invalid DepthOfFieldOptions::Filter: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -461,6 +485,20 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
         } else if (0 == compare(tok, jsonChunk, "enabled")) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (0 == compare(tok, jsonChunk, "filter")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->filter);
+        } else if (0 == compare(tok, jsonChunk, "nativeResolution")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->nativeResolution);
+        } else if (0 == compare(tok, jsonChunk, "foregroundRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->foregroundRingCount);
+        } else if (0 == compare(tok, jsonChunk, "backgroundRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->backgroundRingCount);
+        } else if (0 == compare(tok, jsonChunk, "fastGatherRingCount")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->fastGatherRingCount);
+        } else if (0 == compare(tok, jsonChunk, "maxForegroundCOC")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxForegroundCOC);
+        } else if (0 == compare(tok, jsonChunk, "maxBackgroundCOC")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxBackgroundCOC);
         } else {
             slog.w << "Invalid dof options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -647,6 +685,128 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Material
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        LightManager::ShadowOptions::Vsm* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "msaaSamples") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->msaaSamples);
+        } else {
+            slog.w << "Invalid shadow options VSM key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid shadow options VSM value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        LightManager::ShadowOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    math::float3 splitsVector;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
+        } else if (compare(tok, jsonChunk, "shadowCascades") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowCascades);
+        } else if (compare(tok, jsonChunk, "cascadeSplitPositions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &splitsVector);
+            out->cascadeSplitPositions[0] = splitsVector[0];
+            out->cascadeSplitPositions[1] = splitsVector[1];
+            out->cascadeSplitPositions[2] = splitsVector[2];
+        } else if (compare(tok, jsonChunk, "vsm") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->vsm);
+        } else {
+            slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enableShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enableShadows);
+        } else if (compare(tok, jsonChunk, "enableSunlight") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enableSunlight);
+        } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
+        } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightDirection);
+        } else if (compare(tok, jsonChunk, "sunlightColor") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightColor);
+        } else if (compare(tok, jsonChunk, "iblIntensity") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblIntensity);
+        } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
+        } else {
+            slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid light setting value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "cameraAperture") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cameraAperture);
+        } else if (compare(tok, jsonChunk, "cameraSpeed") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraSpeed);
+        } else if (compare(tok, jsonChunk, "cameraISO") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraISO);
+        } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
+        } else if (compare(tok, jsonChunk, "groundPlaneEnabled") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->groundPlaneEnabled);
+        } else if (compare(tok, jsonChunk, "skyboxEnabled") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->skyboxEnabled);
+        } else if (compare(tok, jsonChunk, "backgroundColor") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->backgroundColor);
+        } else if (compare(tok, jsonChunk, "cameraFocalLength") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocalLength);
+        } else if (compare(tok, jsonChunk, "cameraFocusDistance") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocusDistance);
+         } else {
+            slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid viewer options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -657,6 +817,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
             i = parse(tokens, i + 1, jsonChunk, &out->view);
         } else if (compare(tok, jsonChunk, "material") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->material);
+        } else if (compare(tok, jsonChunk, "lighting") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lighting);
+        } else if (compare(tok, jsonChunk, "viewer") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->viewer);
         } else {
             slog.w << "Invalid group key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -667,32 +831,6 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
         }
     }
     return i;
-}
-
-bool readJson(const char* jsonChunk, size_t size, Settings* out) {
-    jsmn_parser parser = { 0, 0, 0 };
-
-    int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
-    if (tokenCount <= 0) {
-        slog.e << "Badly formed JSON." << io::endl;
-        return false;
-    }
-
-    jsmntok_t* tokens = (jsmntok_t*) malloc(sizeof(jsmntok_t) * tokenCount);
-    assert(tokens);
-
-    jsmn_init(&parser);
-    tokenCount = jsmn_parse(&parser, jsonChunk, size, tokens, tokenCount);
-
-    if (tokenCount <= 0) {
-        free(tokens);
-        slog.e << "Badly formed JSON." << io::endl;
-        return false;
-    }
-
-    int i = parse(tokens, 0, jsonChunk, out);
-    free(tokens);
-    return i >= 0;
 }
 
 void applySettings(const ViewSettings& settings, View* dest) {
@@ -726,6 +864,54 @@ void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
     for (auto prop : settings.float4) { apply(prop, dest); }
 }
 
+void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
+        LightManager* lm, Scene* scene) {
+    auto light = lm->getInstance(sunlight);
+    if (light) {
+        if (settings.enableSunlight) {
+            scene->addEntity(sunlight);
+        } else {
+            scene->remove(sunlight);
+        }
+        lm->setIntensity(light, settings.sunlightIntensity);
+        lm->setDirection(light, normalize(settings.sunlightDirection));
+        lm->setColor(light, settings.sunlightColor);
+        lm->setShadowCaster(light, settings.enableShadows);
+        lm->setShadowOptions(light, settings.shadowOptions);
+    }
+    if (ibl) {
+        ibl->setIntensity(settings.iblIntensity);
+        ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
+    }
+}
+
+static LinearColor inverseTonemapSRGB(sRGBColor x) {
+    return (x * -0.155) / (x - 1.019);
+}
+
+void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+        Renderer* renderer) {
+    if (renderer) {
+        // we have to clear because the side-bar doesn't have a background, we cannot use
+        // a skybox on the ui scene, because the ui view is always full screen.
+        renderer->setClearOptions({
+                .clearColor = { inverseTonemapSRGB(settings.backgroundColor), 1.0f },
+                .clear = true
+        });
+    }
+    if (skybox) {
+        skybox->setLayerMask(0xff, settings.skyboxEnabled ? 0xff : 0x00);
+    }
+    if (camera) {
+        camera->setExposure(
+                settings.cameraAperture,
+                1.0f / settings.cameraSpeed,
+                settings.cameraISO);
+
+        camera->setFocusDistance(settings.cameraFocusDistance);
+    }
+}
+
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
     return ColorGrading::Builder()
         .quality(settings.quality)
@@ -746,79 +932,80 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
         .build(*engine);
 }
 
-static std::string writeJson(bool v) { return v ? "true" : "false"; }
-static std::string writeJson(float v) { return std::to_string(v); }
-static std::string writeJson(int v) {  return std::to_string(v); }
-static std::string writeJson(uint32_t v) { return std::to_string(v); }
-static std::string writeJson(uint8_t v) {  return std::to_string((int)v); }
-
-static const char* writeJson(AntiAliasing in) {
+static std::ostream& operator<<(std::ostream& out, AntiAliasing in) {
     switch (in) {
-        case AntiAliasing::NONE: return "\"NONE\"";
-        case AntiAliasing::FXAA: return "\"FXAA\"";
+        case AntiAliasing::NONE: return out << "\"NONE\"";
+        case AntiAliasing::FXAA: return out << "\"FXAA\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(Dithering in) {
+static std::ostream& operator<<(std::ostream& out, Dithering in) {
     switch (in) {
-        case Dithering::NONE: return "\"NONE\"";
-        case Dithering::TEMPORAL: return "\"TEMPORAL\"";
+        case Dithering::NONE: return out << "\"NONE\"";
+        case Dithering::TEMPORAL: return out << "\"TEMPORAL\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(ShadowType in) {
+static std::ostream& operator<<(std::ostream& out, ShadowType in) {
     switch (in) {
-        case ShadowType::PCF: return "\"PCF\"";
-        case ShadowType::VSM: return "\"VSM\"";
+        case ShadowType::PCF: return out << "\"PCF\"";
+        case ShadowType::VSM: return out << "\"VSM\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(BlendMode in) {
+static std::ostream& operator<<(std::ostream& out, BlendMode in) {
     switch (in) {
-        case BlendMode::ADD: return "\"ADD\"";
-        case BlendMode::INTERPOLATE: return "\"INTERPOLATE\"";
+        case BlendMode::ADD: return out << "\"ADD\"";
+        case BlendMode::INTERPOLATE: return out << "\"INTERPOLATE\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(VQL in) {
+static std::ostream& operator<<(std::ostream& out, VQL in) {
     switch (in) {
-        case VQL::LOW: return "\"LOW\"";
-        case VQL::MEDIUM: return "\"MEDIUM\"";
-        case VQL::HIGH: return "\"HIGH\"";
-        case VQL::ULTRA: return "\"ULTRA\"";
+        case VQL::LOW: return out << "\"LOW\"";
+        case VQL::MEDIUM: return out << "\"MEDIUM\"";
+        case VQL::HIGH: return out << "\"HIGH\"";
+        case VQL::ULTRA: return out << "\"ULTRA\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(CGQL in) {
+static std::ostream& operator<<(std::ostream& out, CGQL in) {
     switch (in) {
-        case CGQL::LOW: return "\"LOW\"";
-        case CGQL::MEDIUM: return "\"MEDIUM\"";
-        case CGQL::HIGH: return "\"HIGH\"";
-        case CGQL::ULTRA: return "\"ULTRA\"";
+        case CGQL::LOW: return out << "\"LOW\"";
+        case CGQL::MEDIUM: return out << "\"MEDIUM\"";
+        case CGQL::HIGH: return out << "\"HIGH\"";
+        case CGQL::ULTRA: return out << "\"ULTRA\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static const char* writeJson(ToneMapping in) {
+static std::ostream& operator<<(std::ostream& out, DepthOfFieldOptions::Filter in) {
     switch (in) {
-        case ToneMapping::LINEAR: return "\"LINEAR\"";
-        case ToneMapping::ACES_LEGACY: return "\"ACES_LEGACY\"";
-        case ToneMapping::ACES: return "\"ACES\"";
-        case ToneMapping::FILMIC: return "\"FILMIC\"";
-        case ToneMapping::UCHIMURA: return "\"UCHIMURA\"";
-        case ToneMapping::REINHARD: return "\"REINHARD\"";
-        case ToneMapping::DISPLAY_RANGE: return "\"DISPLAY_RANGE\"";
+        case DepthOfFieldOptions::Filter::NONE: return out << "\"NONE\"";
+        case DepthOfFieldOptions::Filter::MEDIAN: return out << "\"MEDIAN\"";
     }
-    return "\"INVALID\"";
+    return out << "\"INVALID\"";
 }
 
-static std::string writeJson(const float* v, int count) {
-    std::ostringstream oss;
+static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
+    switch (in) {
+        case ToneMapping::LINEAR: return out << "\"LINEAR\"";
+        case ToneMapping::ACES_LEGACY: return out << "\"ACES_LEGACY\"";
+        case ToneMapping::ACES: return out << "\"ACES\"";
+        case ToneMapping::FILMIC: return out << "\"FILMIC\"";
+        case ToneMapping::UCHIMURA: return out << "\"UCHIMURA\"";
+        case ToneMapping::REINHARD: return out << "\"REINHARD\"";
+        case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+static std::ostream& writeJson(std::ostream& oss, const float* v, int count) {
     oss << "[";
     for (int i = 0; i < count; i++) {
         oss << v[i];
@@ -827,138 +1014,130 @@ static std::string writeJson(const float* v, int count) {
         }
     }
     oss << "]";
-    return oss.str();
+    return oss;
 }
 
-static std::string writeJson(math::float3 v) {
-    return writeJson(&v.x, 3);
+static std::ostream& operator<<(std::ostream& out, math::float3 v) {
+    return writeJson(out, &v.x, 3);
 }
 
-static std::string writeJson(math::float4 v) {
-    return writeJson(&v.x, 4);
+static std::ostream& operator<<(std::ostream& out, math::float4 v) {
+    return writeJson(out, &v.x, 4);
 }
 
-std::string writeJson(const Settings& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"view\": " << writeJson(in.view) << ",\n"
-        << "\"material\": " << writeJson(in.material)
+static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& in) {
+    return out << "{\n"
+        << "\"filterWidth\": " << (in.filterWidth) << ",\n"
+        << "\"feedback\": " << (in.feedback) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const TemporalAntiAliasingOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"filterWidth\": " << writeJson(in.filterWidth) << ",\n"
-        << "\"feedback\": " << writeJson(in.feedback) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << "\n"
+static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"quality\": " << (in.quality) << ",\n"
+        << "\"toneMapping\": " << (in.toneMapping) << ",\n"
+        << "\"temperature\": " << (in.temperature) << ",\n"
+        << "\"tint\": " << (in.tint) << ",\n"
+        << "\"outRed\": " << (in.outRed) << ",\n"
+        << "\"outGreen\": " << (in.outGreen) << ",\n"
+        << "\"outBlue\": " << (in.outBlue) << ",\n"
+        << "\"shadows\": " << (in.shadows) << ",\n"
+        << "\"midtones\": " << (in.midtones) << ",\n"
+        << "\"highlights\": " << (in.highlights) << ",\n"
+        << "\"ranges\": " << (in.ranges) << ",\n"
+        << "\"contrast\": " << (in.contrast) << ",\n"
+        << "\"vibrance\": " << (in.vibrance) << ",\n"
+        << "\"saturation\": " << (in.saturation) << ",\n"
+        << "\"slope\": " << (in.slope) << ",\n"
+        << "\"offset\": " << (in.offset) << ",\n"
+        << "\"power\": " << (in.power) << ",\n"
+        << "\"gamma\": " << (in.gamma) << ",\n"
+        << "\"midPoint\": " << (in.midPoint) << ",\n"
+        << "\"scale\": " << (in.scale) << ",\n"
+        << "\"linkedCurves\": " << to_string(in.linkedCurves) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const ColorGradingSettings& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"enabled\": " << writeJson(in.enabled) << ",\n"
-        << "\"quality\": " << writeJson(in.quality) << ",\n"
-        << "\"toneMapping\": " << writeJson(in.toneMapping) << ",\n"
-        << "\"temperature\": " << writeJson(in.temperature) << ",\n"
-        << "\"tint\": " << writeJson(in.tint) << ",\n"
-        << "\"outRed\": " << writeJson(in.outRed) << ",\n"
-        << "\"outGreen\": " << writeJson(in.outGreen) << ",\n"
-        << "\"outBlue\": " << writeJson(in.outBlue) << ",\n"
-        << "\"shadows\": " << writeJson(in.shadows) << ",\n"
-        << "\"midtones\": " << writeJson(in.midtones) << ",\n"
-        << "\"highlights\": " << writeJson(in.highlights) << ",\n"
-        << "\"ranges\": " << writeJson(in.ranges) << ",\n"
-        << "\"contrast\": " << writeJson(in.contrast) << ",\n"
-        << "\"vibrance\": " << writeJson(in.vibrance) << ",\n"
-        << "\"saturation\": " << writeJson(in.saturation) << ",\n"
-        << "\"slope\": " << writeJson(in.slope) << ",\n"
-        << "\"offset\": " << writeJson(in.offset) << ",\n"
-        << "\"power\": " << writeJson(in.power) << ",\n"
-        << "\"gamma\": " << writeJson(in.gamma) << ",\n"
-        << "\"midPoint\": " << writeJson(in.midPoint) << ",\n"
-        << "\"scale\": " << writeJson(in.scale) << ",\n"
-        << "\"linkedCurves\": " << writeJson(in.linkedCurves) << "\n"
+static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Ssct& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"lightConeRad\": " << (in.lightConeRad) << ",\n"
+        << "\"shadowDistance\": " << (in.shadowDistance) << ",\n"
+        << "\"contactDistanceMax\": " << (in.contactDistanceMax) << ",\n"
+        << "\"intensity\": " << (in.intensity) << ",\n"
+        << "\"lightDirection\": " << (in.lightDirection) << ",\n"
+        << "\"depthBias\": " << (in.depthBias) << ",\n"
+        << "\"depthSlopeBias\": " << (in.depthSlopeBias) << ",\n"
+        << "\"sampleCount\": " << int(in.sampleCount) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const AmbientOcclusionOptions::Ssct& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"enabled\": " << writeJson(in.enabled) << ",\n"
-        << "\"lightConeRad\": " << writeJson(in.lightConeRad) << ",\n"
-        << "\"shadowDistance\": " << writeJson(in.shadowDistance) << ",\n"
-        << "\"contactDistanceMax\": " << writeJson(in.contactDistanceMax) << ",\n"
-        << "\"intensity\": " << writeJson(in.intensity) << ",\n"
-        << "\"lightDirection\": " << writeJson(in.lightDirection) << ",\n"
-        << "\"depthBias\": " << writeJson(in.depthBias) << ",\n"
-        << "\"depthSlopeBias\": " << writeJson(in.depthSlopeBias) << ",\n"
-        << "\"sampleCount\": " << writeJson(in.sampleCount) << "\n"
+static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
+    return out << "{\n"
+        << "\"radius\": " << (in.radius) << ",\n"
+        << "\"power\": " << (in.power) << ",\n"
+        << "\"bias\": " << (in.bias) << ",\n"
+        << "\"resolution\": " << (in.resolution) << ",\n"
+        << "\"intensity\": " << (in.intensity) << ",\n"
+        << "\"quality\": " << (in.quality) << ",\n"
+        << "\"upsampling\": " << (in.upsampling) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"minHorizonAngleRad\": " << (in.minHorizonAngleRad) << ",\n"
+        << "\"ssct\": " << (in.ssct) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const AmbientOcclusionOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"radius\": " << writeJson(in.radius) << ",\n"
-        << "\"power\": " << writeJson(in.power) << ",\n"
-        << "\"bias\": " << writeJson(in.bias) << ",\n"
-        << "\"resolution\": " << writeJson(in.resolution) << ",\n"
-        << "\"intensity\": " << writeJson(in.intensity) << ",\n"
-        << "\"quality\": " << writeJson(in.quality) << ",\n"
-        << "\"upsampling\": " << writeJson(in.upsampling) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << ",\n"
-        << "\"minHorizonAngleRad\": " << writeJson(in.minHorizonAngleRad) << ",\n"
-        << "\"ssct\": " << writeJson(in.ssct) << "\n"
+static std::ostream& operator<<(std::ostream& out, const BloomOptions& in) {
+    return out << "{\n"
+        << "\"strength\": " << (in.strength) << ",\n"
+        << "\"resolution\": " << (in.resolution) << ",\n"
+        << "\"anamorphism\": " << (in.anamorphism) << ",\n"
+        << "\"levels\": " << int(in.levels) << ",\n"
+        << "\"blendMode\": " << (in.blendMode) << ",\n"
+        << "\"threshold\": " << to_string(in.threshold) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"highlight\": " << (in.highlight) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const BloomOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"strength\": " << writeJson(in.strength) << ",\n"
-        << "\"resolution\": " << writeJson(in.resolution) << ",\n"
-        << "\"anamorphism\": " << writeJson(in.anamorphism) << ",\n"
-        << "\"levels\": " << writeJson(in.levels) << ",\n"
-        << "\"blendMode\": " << writeJson(in.blendMode) << ",\n"
-        << "\"threshold\": " << writeJson(in.threshold) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << ",\n"
-        << "\"highlight\": " << writeJson(in.highlight) << "\n"
+static std::ostream& operator<<(std::ostream& out, const FogOptions& in) {
+    return out << "{\n"
+        << "\"distance\": " << (in.distance) << ",\n"
+        << "\"maximumOpacity\": " << (in.maximumOpacity) << ",\n"
+        << "\"height\": " << (in.height) << ",\n"
+        << "\"heightFalloff\": " << (in.heightFalloff) << ",\n"
+        << "\"color\": " << (in.color) << ",\n"
+        << "\"density\": " << (in.density) << ",\n"
+        << "\"inScatteringStart\": " << (in.inScatteringStart) << ",\n"
+        << "\"inScatteringSize\": " << (in.inScatteringSize) << ",\n"
+        << "\"fogColorFromIbl\": " << (in.fogColorFromIbl) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const FogOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"distance\": " << writeJson(in.distance) << ",\n"
-        << "\"maximumOpacity\": " << writeJson(in.maximumOpacity) << ",\n"
-        << "\"height\": " << writeJson(in.height) << ",\n"
-        << "\"heightFalloff\": " << writeJson(in.heightFalloff) << ",\n"
-        << "\"color\": " << writeJson(in.color) << ",\n"
-        << "\"density\": " << writeJson(in.density) << ",\n"
-        << "\"inScatteringStart\": " << writeJson(in.inScatteringStart) << ",\n"
-        << "\"inScatteringSize\": " << writeJson(in.inScatteringSize) << ",\n"
-        << "\"fogColorFromIbl\": " << writeJson(in.fogColorFromIbl) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << "\n"
+static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOptions& in) {
+    const float* splits = in.cascadeSplitPositions;
+    math::float3 splitsVector = { splits[0], splits[1], splits[2] };
+    return out << "{\n"
+        << "\"vsm\": {\n"
+        << "\"msaaSamples\": " << int(in.vsm.msaaSamples) << "\n"
+        << "},\n"
+        << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
+        << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
+        << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"
         << "}";
-    return oss.str();
 }
 
 template <typename T>
-static void writeJson(MaterialProperty<T> prop, std::ostringstream& oss) {
+void writeJson(MaterialProperty<T> prop, std::ostream& oss) {
     if (!prop.name.empty()) {
-        oss << "\"" << prop.name << "\": " << writeJson(prop.value) << ",\n";
+        oss << "\"" << prop.name << "\": " << prop.value << ",\n";
     }
 }
 
-std::string writeJson(const MaterialSettings& in) {
+static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     std::ostringstream oss;
     oss << "{\n";
     oss << "\"scalar\": {\n";
@@ -988,79 +1167,187 @@ std::string writeJson(const MaterialSettings& in) {
     replace(",\n}", "\n}");
     replace("{\n}", "{}");
 
-    return result;
+    return out << result;
 }
 
-std::string writeJson(const DepthOfFieldOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"focusDistance\": " << writeJson(in.focusDistance) << ",\n"
-        << "\"cocScale\": " << writeJson(in.cocScale) << ",\n"
-        << "\"maxApertureDiameter\": " << writeJson(in.maxApertureDiameter) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << "\n"
+static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
+    return out << "{\n"
+        << "\"enableShadows\": " << to_string(in.enableShadows) << ",\n"
+        << "\"enableSunlight\": " << to_string(in.enableSunlight) << ",\n"
+        << "\"shadowOptions\": " << (in.shadowOptions) << ",\n"
+        << "\"sunlightIntensity\": " << (in.sunlightIntensity) << ",\n"
+        << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
+        << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
+        << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
+        << "\"iblRotation\": " << (in.iblRotation) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const VignetteOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"midPoint\": " << writeJson(in.midPoint) << ",\n"
-        << "\"roundness\": " << writeJson(in.roundness) << ",\n"
-        << "\"feather\": " << writeJson(in.feather) << ",\n"
-        << "\"color\": " << writeJson(in.color) << ",\n"
-        << "\"enabled\": " << writeJson(in.enabled) << "\n"
+static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
+    return out << "{\n"
+        << "\"cameraAperture\": " << (in.cameraAperture) << ",\n"
+        << "\"cameraSpeed\": " << (in.cameraSpeed) << ",\n"
+        << "\"cameraISO\": " << (in.cameraISO) << ",\n"
+        << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
+        << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
+        << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
+        << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
+        << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
+        << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const RenderQuality& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"hdrColorBuffer\": " << writeJson(in.hdrColorBuffer) << "\n"
+static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
+    return out << "{\n"
+        << "\"focusDistance\": " << (in.focusDistance) << ",\n"
+        << "\"cocScale\": " << (in.cocScale) << ",\n"
+        << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"filter\": " << (in.filter) << ",\n"
+        << "\"nativeResolution\": " << (in.nativeResolution) << ",\n"
+        << "\"foregroundRingCount\": " << int(in.foregroundRingCount) << ",\n"
+        << "\"backgroundRingCount\": " << int(in.backgroundRingCount) << ",\n"
+        << "\"fastGatherRingCount\": " << int(in.fastGatherRingCount) << ",\n"
+        << "\"maxForegroundCOC\": " << (in.maxForegroundCOC) << ",\n"
+        << "\"maxBackgroundCOC\": " << (in.maxBackgroundCOC) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const DynamicLightingSettings& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"zLightNear\": " << writeJson(in.zLightNear) << ",\n"
-        << "\"zLightFar\": " << writeJson(in.zLightFar) << "\n"
+static std::ostream& operator<<(std::ostream& out, const VignetteOptions& in) {
+    return out << "{\n"
+        << "\"midPoint\": " << (in.midPoint) << ",\n"
+        << "\"roundness\": " << (in.roundness) << ",\n"
+        << "\"feather\": " << (in.feather) << ",\n"
+        << "\"color\": " << (in.color) << ",\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const VsmShadowOptions& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"anisotropy\": " << writeJson(in.anisotropy) << "\n"
+static std::ostream& operator<<(std::ostream& out, const RenderQuality& in) {
+    return out << "{\n"
+        << "\"hdrColorBuffer\": " << (in.hdrColorBuffer) << "\n"
         << "}";
-    return oss.str();
 }
 
-std::string writeJson(const ViewSettings& in) {
-    std::ostringstream oss;
-    oss << "{\n"
-        << "\"sampleCount\": " << writeJson(in.sampleCount) << ",\n"
-        << "\"antiAliasing\": " << writeJson(in.antiAliasing) << ",\n"
-        << "\"taa\": " << writeJson(in.taa) << ",\n"
-        << "\"colorGrading\": " << writeJson(in.colorGrading) << ",\n"
-        << "\"ssao\": " << writeJson(in.ssao) << ",\n"
-        << "\"bloom\": " << writeJson(in.bloom) << ",\n"
-        << "\"fog\": " << writeJson(in.fog) << ",\n"
-        << "\"dof\": " << writeJson(in.dof) << ",\n"
-        << "\"vignette\": " << writeJson(in.vignette) << ",\n"
-        << "\"dithering\": " << writeJson(in.dithering) << ",\n"
-        << "\"renderQuality\": " << writeJson(in.renderQuality) << ",\n"
-        << "\"dynamicLighting\": " << writeJson(in.dynamicLighting) << ",\n"
-        << "\"shadowType\": " << writeJson(in.shadowType) << ",\n"
-        << "\"vsmShadowOptions\": " << writeJson(in.vsmShadowOptions) << ",\n"
-        << "\"postProcessingEnabled\": " << writeJson(in.postProcessingEnabled) << "\n"
+static std::ostream& operator<<(std::ostream& out, const DynamicLightingSettings& in) {
+    return out << "{\n"
+        << "\"zLightNear\": " << (in.zLightNear) << ",\n"
+        << "\"zLightFar\": " << (in.zLightFar) << "\n"
         << "}";
-    return oss.str();
 }
 
+static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
+    return out << "{\n"
+        << "\"anisotropy\": " << int(in.anisotropy) << "\n"
+        << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
+    return out << "{\n"
+        << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
+        << "\"antiAliasing\": " << in.antiAliasing << ",\n"
+        << "\"taa\": " << in.taa << ",\n"
+        << "\"colorGrading\": " << (in.colorGrading) << ",\n"
+        << "\"ssao\": " << (in.ssao) << ",\n"
+        << "\"bloom\": " << (in.bloom) << ",\n"
+        << "\"fog\": " << (in.fog) << ",\n"
+        << "\"dof\": " << (in.dof) << ",\n"
+        << "\"vignette\": " << (in.vignette) << ",\n"
+        << "\"dithering\": " << (in.dithering) << ",\n"
+        << "\"renderQuality\": " << (in.renderQuality) << ",\n"
+        << "\"dynamicLighting\": " << (in.dynamicLighting) << ",\n"
+        << "\"shadowType\": " << (in.shadowType) << ",\n"
+        << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
+        << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
+        << "}";
+}
+
+static std::ostream& operator<<(std::ostream& out, const Settings& in) {
+    return out << "{\n"
+        << "\"view\": " << (in.view) << ",\n"
+        << "\"material\": " << (in.material) << ",\n"
+        << "\"lighting\": " << (in.lighting) << ",\n"
+        << "\"viewer\": " << (in.viewer)
+        << "}";
+}
+
+bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
+    // If you had to fix the following codeline, then you likely also need to update the
+    // implementation of operator==.
+    static_assert(sizeof(ColorGradingSettings) == 200, "Please update Settings.cpp");
+    return enabled == rhs.enabled &&
+            quality == rhs.quality &&
+            toneMapping == rhs.toneMapping &&
+            temperature == rhs.temperature &&
+            tint == rhs.tint &&
+            outRed == rhs.outRed &&
+            outGreen == rhs.outGreen &&
+            outBlue == rhs.outBlue &&
+            shadows == rhs.shadows &&
+            midtones == rhs.midtones &&
+            highlights == rhs.highlights &&
+            ranges == rhs.ranges &&
+            contrast == rhs.contrast &&
+            vibrance == rhs.vibrance &&
+            saturation == rhs.saturation &&
+            slope == rhs.slope &&
+            offset == rhs.offset &&
+            power == rhs.power &&
+            gamma == rhs.gamma &&
+            midPoint == rhs.midPoint &&
+            linkedCurves == rhs.linkedCurves &&
+            scale == rhs.scale;
+}
+
+class JsonSerializer::Context {
+  public:
+    const std::string& writeJson(const Settings& in) {
+        mStringStream.str("");
+        mStringStream.clear();
+        mStringStream << in;
+        mResultBuffer = mStringStream.str();
+        return mResultBuffer;
+    }
+  private:
+    std::ostringstream mStringStream;
+    std::string mResultBuffer;
+};
+
+JsonSerializer::JsonSerializer() {
+    context = new JsonSerializer::Context();
+}
+
+JsonSerializer::~JsonSerializer() {
+    delete context;
+}
+
+const std::string& JsonSerializer::writeJson(const Settings& in) {
+    return context->writeJson(in);
+}
+
+bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out) {
+    jsmn_parser parser = { 0, 0, 0 };
+
+    int tokenCount = jsmn_parse(&parser, jsonChunk, size, nullptr, 0);
+    if (tokenCount <= 0) {
+        return false;
+    }
+
+    jsmntok_t* tokens = (jsmntok_t*) malloc(sizeof(jsmntok_t) * tokenCount);
+    assert(tokens);
+
+    jsmn_init(&parser);
+    tokenCount = jsmn_parse(&parser, jsonChunk, size, tokens, tokenCount);
+
+    if (tokenCount <= 0) {
+        free(tokens);
+        return false;
+    }
+
+    int i = parse(tokens, 0, jsonChunk, out);
+    free(tokens);
+    return i >= 0;
+}
 
 } // namespace viewer
 } // namespace filament

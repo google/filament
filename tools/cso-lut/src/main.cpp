@@ -70,7 +70,7 @@ static void printUsage(const char* name) {
             "           DDS: 8, 16 (default), 32\n\n"
     );
 
-    const std::string from("ROUGHNESSPREFILTER");
+    const std::string from("CSO-LUT");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), execName);
     }
@@ -166,9 +166,9 @@ constexpr float PI_F = 3.141592653589793238f;
 
 static UTILS_UNUSED float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
-    float r1 = std::acosf(cosCap1);
-    float r2 = std::acosf(cosCap2);
-    float d  = std::acosf(cosDistance);
+    float r1 = std::acos(cosCap1);
+    float r2 = std::acos(cosCap2);
+    float d  = std::acos(cosDistance);
 
     if (min(r1, r2) <= max(r1, r2) - d) {
         return 2.0f * PI_F * (1.0f - max(cosCap1, cosCap2));
@@ -186,19 +186,19 @@ static UTILS_UNUSED float sphericalCapsIntersection(float cosCap1, float cosCap2
 static float conesIntersection(float cosTheta1, float cosTheta2, float cosAlpha) {
     // Mazonka 2012, "Solid Angle of Conical Surfaces, Polyhedral Cones, and
     // Intersecting Spherical Caps"
-    const float sinAlpha = std::sqrtf(1.0f - sq(cosAlpha));
+    const float sinAlpha = std::sqrt(1.0f - sq(cosAlpha));
 
     auto omega = [cosAlpha, sinAlpha](float cosTheta1, float cosTheta2) {
-        float sinTheta1 = std::sqrtf(1.0f - sq(cosTheta1));
+        float sinTheta1 = std::sqrt(1.0f - sq(cosTheta1));
 
         float ty = cosTheta2 - cosAlpha * cosTheta1;
         float tx = sinAlpha * cosTheta1;
 
         float cosPhi = clamp((ty * cosTheta1) / (tx * sinTheta1), -1.0f, 1.0f);
-        float cosBeta = clamp(ty / (sinTheta1 * std::sqrtf(sq(tx) + sq(ty))), -1.0f, 1.0f);
+        float cosBeta = clamp(ty / (sinTheta1 * std::sqrt(sq(tx) + sq(ty))), -1.0f, 1.0f);
 
-        float phi = std::acosf(cosPhi);
-        float beta = std::acosf(cosBeta);
+        float phi = std::acos(cosPhi);
+        float beta = std::acos(cosBeta);
 
         return 2.0f * (beta - phi * cosTheta1);
     };
@@ -216,8 +216,8 @@ static float conesIntersection(float cosTheta1, float cosTheta2, float cosAlpha)
 
     if (std::abs(1.0f - cosTheta1) < 1e-6f || std::abs(1.0f - cosTheta2) < 1e-6f) {
         auto corrected = [cosAlpha](float omega1, float cosTheta1, float cosTheta2) {
-            float gamma = std::acosf(cosAlpha) - std::acosf(cosTheta2);
-            float theta1 = std::acosf(cosTheta1);
+            float gamma = std::acos(cosAlpha) - std::acos(cosTheta2);
+            float theta1 = std::acos(cosTheta1);
             if (gamma > theta1) {
                 return 0.0f;
             } else if (gamma < -theta1) {
@@ -232,7 +232,7 @@ static float conesIntersection(float cosTheta1, float cosTheta2, float cosAlpha)
     }
 
     if (std::abs(cosTheta1) < 1e-6f && std::abs(cosTheta2) < 1e-6f) {
-        return 2.0f * (PI_F - std::acosf(cosAlpha));
+        return 2.0f * (PI_F - std::acos(cosAlpha));
     }
 
     if (std::abs(cosTheta1) < 1e-6f) {
@@ -252,11 +252,11 @@ static void generateSampleRays(float cosAngle, float3* samples, size_t sampleCou
         float r2 = rand() / float(RAND_MAX);
 
         float cosTheta = r1 * (1.0f - cosAngle) + cosAngle;
-        float sinTheta = std::sqrtf(1.0f - sq(cosTheta));
+        float sinTheta = std::sqrt(1.0f - sq(cosTheta));
 
         float phi = 2.0f * PI_F * r2 - 1.0f;
-        float cosPhi = std::cosf(phi);
-        float sinPhi = std::sinf(phi);
+        float cosPhi = std::cos(phi);
+        float sinPhi = std::sin(phi);
 
         samples[i] = float3{ sinTheta * cosPhi, sinTheta * sinPhi, cosTheta };
     }
@@ -265,7 +265,7 @@ static void generateSampleRays(float cosAngle, float3* samples, size_t sampleCou
 static float groundTruthVisibility(float cosTheta, float cosAlpha,
         float3* samples, size_t sampleCount) {
 
-    float sinAlpha = std::sqrtf(1.0f - sq(cosAlpha));
+    float sinAlpha = std::sqrt(1.0f - sq(cosAlpha));
     float3 occluderDirection{ sinAlpha, 0.0f, cosAlpha };
 
     size_t hits = 0;

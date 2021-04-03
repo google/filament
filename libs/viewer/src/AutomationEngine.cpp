@@ -16,10 +16,7 @@
 
 #include <viewer/AutomationEngine.h>
 
-#include <imageio/ImageEncoder.h>
-
-#include <image/ColorTransform.h>
-
+#include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -32,7 +29,6 @@
 #include <fstream>
 #include <sstream>
 
-using namespace image;
 using namespace utils;
 
 namespace filament {
@@ -47,12 +43,12 @@ struct ScreenshotState {
     AutomationEngine* engine;
 };
 
-void exportScreenshot(View* view, Renderer* renderer, std::string filename,
+static void exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
     const size_t byteCount = vp.width * vp.height * 3;
 
-    // Create a buffer descriptor that writes the PNG after the data becomes ready on the CPU.
+    // Create a buffer descriptor that writes the PPM after the data becomes ready on the CPU.
     backend::PixelBufferDescriptor buffer(
         new uint8_t[byteCount], byteCount,
         backend::PixelBufferDescriptor::PixelDataFormat::RGB,
@@ -65,12 +61,10 @@ void exportScreenshot(View* view, Renderer* renderer, std::string filename,
                 return;
             }
             const Viewport& vp = state->view->getViewport();
-            LinearImage image(toLinear<uint8_t>(vp.width, vp.height, vp.width * 3,
-                    static_cast<uint8_t*>(buffer)));
             Path out(state->filename);
-            std::ofstream outputStream(out, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                    state->filename);
+            std::ofstream ppmStream(out);
+            ppmStream << "P6 " << vp.width << " " << vp.height << " " << 255 << std::endl;
+            ppmStream.write(static_cast<char*>(buffer), vp.width * vp.height * 3);
             delete[] static_cast<uint8_t*>(buffer);
             if (state->autoclose) {
                 state->engine->requestClose();
@@ -83,6 +77,38 @@ void exportScreenshot(View* view, Renderer* renderer, std::string filename,
     // Invoke readPixels asynchronously.
     renderer->readPixels((uint32_t) vp.left, (uint32_t) vp.bottom, vp.width, vp.height,
             std::move(buffer));
+}
+
+AutomationEngine* AutomationEngine::createFromJSON(const char* jsonSpec, size_t size) {
+    AutomationSpec* spec = AutomationSpec::generate(jsonSpec, size);
+    if (!spec) {
+        return nullptr;
+    }
+    Settings* settings = new Settings();
+    AutomationEngine* result = new AutomationEngine(spec, settings);
+    result->mOwnsSettings = true;
+    return result;
+}
+
+AutomationEngine* AutomationEngine::createDefault() {
+    AutomationSpec* spec = AutomationSpec::generateDefaultTestCases();
+    if (!spec) {
+        return nullptr;
+    }
+    Settings* settings = new Settings();
+    AutomationEngine* result = new AutomationEngine(spec, settings);
+    result->mOwnsSettings = true;
+    return result;
+}
+
+AutomationEngine::~AutomationEngine() {
+    if (mColorGrading) {
+        mColorGradingEngine->destroy(mColorGrading);
+    }
+    if (mOwnsSettings) {
+        delete mSpec;
+        delete mSettings;
+    }
 }
 
 void AutomationEngine::startRunning() {
@@ -100,7 +126,8 @@ void AutomationEngine::terminate() {
 }
 
 void AutomationEngine::exportSettings(const Settings& settings, const char* filename) {
-    std::string contents = writeJson(settings);
+    JsonSerializer serializer;
+    std::string contents = serializer.writeJson(settings);
     std::ofstream out(filename);
     if (!out) {
         gStatus = "Failed to export settings file.";
@@ -109,15 +136,46 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
+void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* view,
+        MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
+        utils::Entity sunlight, LightManager* lm, Scene* scene, Renderer* renderer) {
+    JsonSerializer serializer;
+    if (!serializer.readJson(json, jsonLength, mSettings)) {
+        std::string jsonWithTerminator(json, json + jsonLength);
+        slog.e << "Badly formed JSON:\n" << jsonWithTerminator.c_str() << io::endl;
+        return;
+    }
+    viewer::applySettings(mSettings->view, view);
+    for (size_t i = 0; i < materialCount; i++) {
+        viewer::applySettings(mSettings->material, materials[i]);
+    }
+    viewer::applySettings(mSettings->lighting, ibl, sunlight, lm, scene);
+    Camera* camera = &view->getCamera();
+    Skybox* skybox = scene->getSkybox();
+    viewer::applySettings(mSettings->viewer, camera, skybox, renderer);
+}
+
+ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
+    if (mSettings->view.colorGrading != mColorGradingSettings) {
+        mColorGradingSettings = mSettings->view.colorGrading;
+        if (mColorGrading) {
+            mColorGradingEngine->destroy(mColorGrading);
+        }
+        mColorGrading = createColorGrading(mColorGradingSettings, engine);
+        mColorGradingEngine = engine;
+    }
+    return mColorGrading;
+}
+
 void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
         Renderer* renderer, float deltaTime) {
     const auto activateTest = [this, view, materials, materialCount]() {
         mElapsedTime = 0;
         mElapsedFrames = 0;
         mSpec->get(mCurrentTest, mSettings);
-        applySettings(mSettings->view, view);
+        viewer::applySettings(mSettings->view, view);
         for (size_t i = 0; i < materialCount; i++) {
-            applySettings(mSettings->material, materials[i]);
+            viewer::applySettings(mSettings->material, materials[i]);
         }
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;
@@ -157,7 +215,7 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
     }
 
     if (mOptions.exportScreenshots) {
-        exportScreenshot(view, renderer, prefix + ".png", isLastTest, this);
+        exportScreenshot(view, renderer, prefix + ".ppm", isLastTest, this);
     }
 
     if (isLastTest) {

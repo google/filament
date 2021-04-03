@@ -85,10 +85,14 @@ public:
      * factors are set to 1.0.
      *
      * enabled:   enable or disables dynamic resolution on a View
+     *
      * homogeneousScaling: by default the system scales the major axis first. Set this to true
      *                     to force homogeneous scaling.
+     *
      * minScale:  the minimum scale in X and Y this View should use
+     *
      * maxScale:  the maximum scale in X and Y this View should use
+     *
      * quality:   upscaling quality.
      *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
      *
@@ -112,24 +116,32 @@ public:
      * Options to control the bloom effect
      *
      * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     *
      * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
      *              maximum is 12. This value together with resolution influences the spread of the
      *              blur effect. This value can be silently reduced to accommodate the original
      *              image size.
+     *
      * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
      *              the maximum is lower of the original resolution and 4096. This parameter is
      *              silently clamped to the minimum and maximum.
      *              It is highly recommended that this value be smaller than the target resolution
      *              after dynamic resolution is applied (horizontally and vertically).
+     *
      * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     *
      * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
      *              image (true).
+     *
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     *
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
      *              useful for artistic reasons and is usually needed when a dirt texture is used.
+     *
      * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
      *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
      *              enabled for the dirt effect to work properly.
+     *
      * dirtStrength: Strength of the dirt texture.
      */
     struct BloomOptions {
@@ -175,10 +187,52 @@ public:
      * @see Camera
      */
     struct DepthOfFieldOptions {
-        float focusDistance = 10.0f;        //!< focus distance in world units
+        enum class Filter : uint8_t {
+            NONE = 0,
+            MEDIAN = 2
+        };
+        float focusDistance = 10.0f;        //!< @deprecated use Camera::setFocusDistance() instead
         float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
+        Filter filter = Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel
+        bool nativeResolution = false;      //!< perform DoF processing at native resolution
+        /**
+         * Number of of rings used by the gather kernels. The number of rings affects quality
+         * and performance. The actual number of sample per pixel is defined
+         * as (ringCount * 2 - 1)^2. Here are a few commonly used values:
+         *       3 rings :   25 ( 5x 5 grid)
+         *       4 rings :   49 ( 7x 7 grid)
+         *       5 rings :   81 ( 9x 9 grid)
+         *      17 rings : 1089 (33x33 grid)
+         *
+         * With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.
+         *
+         * Usually all three settings below are set to the same value, however, it is often
+         * acceptable to use a lower ring count for the "fast tiles", which improves performance.
+         * Fast tiles are regions of the screen where every pixels have a similar
+         * circle-of-confusion radius.
+         *
+         * A value of 0 means default, which is 5 on desktop and 3 on mobile.
+         *
+         * @{
+         */
+        uint8_t foregroundRingCount = 0; //!< number of kernel rings for foreground tiles
+        uint8_t backgroundRingCount = 0; //!< number of kernel rings for background tiles
+        uint8_t fastGatherRingCount = 0; //!< number of kernel rings for fast tiles
+        /** @}*/
+
+        /**
+         * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        uint16_t maxForegroundCOC = 0;
+
+        /**
+         * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        uint16_t maxBackgroundCOC = 0;
     };
 
     /**
@@ -417,11 +471,11 @@ public:
      */
     void setBlendMode(BlendMode blendMode) noexcept;
 
-     /**
-      *
-      * @return blending mode set by setBlendMode
-      * @see setBlendMode
-      */
+    /**
+     *
+     * @return blending mode set by setBlendMode
+     * @see setBlendMode
+     */
     BlendMode getBlendMode() const noexcept;
 
     /**

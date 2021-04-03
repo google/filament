@@ -104,7 +104,7 @@ endif()
 # ==================================================================================================
 
 if (FILAMENT_SUPPORTS_METAL)
-    list(APPEND SRCS
+    set(METAL_SRCS
             src/metal/MetalBlitter.mm
             src/metal/MetalBuffer.mm
             src/metal/MetalBufferPool.mm
@@ -117,6 +117,18 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalTimerQuery.mm
             src/metal/PlatformMetal.mm
     )
+
+    list(APPEND SRCS ${METAL_SRCS})
+
+    if (IOS)
+        # Objective-C++ sources need an additional compiler flag on iOS to disable exceptions.
+        set_property(SOURCE
+            ${METAL_SRCS}
+            src/opengl/PlatformCocoaTouchGL.mm
+            src/opengl/CocoaTouchExternalImage.mm
+            src/opengl/PlatformCocoaGL.mm
+            PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
+    endif()
 endif()
 
 # ==================================================================================================
@@ -143,6 +155,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
+            src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp

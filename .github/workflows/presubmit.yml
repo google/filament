@@ -1,6 +1,12 @@
 name: Presubmit
 
-on: [pull_request]
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 
 jobs:
   build-desktop:
@@ -9,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        os: [macos-latest, ubuntu-18.04]
 
     steps:
       - uses: actions/checkout@v2.0.0

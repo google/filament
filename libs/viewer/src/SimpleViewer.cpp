@@ -20,6 +20,10 @@
 #include <filament/TransformManager.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
+#include <filament/View.h>
+#include <filament/Viewport.h>
+
+#include <filagui/ImGuiHelper.h>
 
 #include <utils/EntityManager.h>
 
@@ -31,6 +35,9 @@
 
 #include <string>
 #include <vector>
+
+using namespace filagui;
+using namespace filament::math;
 
 namespace filament {
 namespace viewer {
@@ -46,6 +53,250 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
     float3 center = (minpt + maxpt) / 2.0f;
     center.z += 4.0f / scaleFactor;
     return mat4f::scaling(float3(scaleFactor)) * mat4f::translation(-center);
+}
+
+static void computeRangePlot(Settings& settings, float* rangePlot) {
+    float4& ranges = settings.view.colorGrading.ranges;
+    ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
+    ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
+
+    for (size_t i = 0; i < 1024; i++) {
+        float x = i / 1024.0f;
+        float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
+        float h = smoothstep(ranges.z, ranges.w, x);
+        rangePlot[i]        = s;
+        rangePlot[1024 + i] = 1.0f - s - h;
+        rangePlot[2048 + i] = h;
+    }
+}
+
+static void rangePlotSeriesStart(int series) {
+    switch (series) {
+        case 0:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.4f, 0.25f, 1.0f));
+            break;
+        case 1:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.8f, 0.25f, 1.0f));
+            break;
+        case 2:
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 1.0f));
+            break;
+    }
+}
+
+static void rangePlotSeriesEnd(int series) {
+    if (series < 3) {
+        ImGui::PopStyleColor();
+    }
+}
+
+static float getRangePlotValue(int series, void* data, int index) {
+    return ((float*) data)[series * 1024 + index];
+}
+
+inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
+    float3 d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
+    float3 dark = pow(v, shadowGamma) * d;
+    float3 light = highlightScale * (v - midPoint) + midPoint;
+    return float3{
+            v.r <= midPoint.r ? dark.r : light.r,
+            v.g <= midPoint.g ? dark.g : light.g,
+            v.b <= midPoint.b ? dark.b : light.b,
+    };
+}
+
+static void computeCurvePlot(Settings& settings, float* curvePlot) {
+    const auto& colorGradingOptions = settings.view.colorGrading;
+    for (size_t i = 0; i < 1024; i++) {
+        float3 x{i / 1024.0f * 2.0f};
+        float3 y = curves(x,
+                colorGradingOptions.gamma,
+                colorGradingOptions.midPoint,
+                colorGradingOptions.scale);
+        curvePlot[i]        = y.r;
+        curvePlot[1024 + i] = y.g;
+        curvePlot[2048 + i] = y.b;
+    }
+}
+
+static void tooltipFloat(float value) {
+    if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%.2f", value);
+    }
+}
+
+static void pushSliderColors(float hue) {
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4) ImColor::HSV(hue, 0.5f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(hue, 0.6f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(hue, 0.7f, 0.5f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(hue, 0.9f, 0.9f));
+}
+
+static void popSliderColors() { ImGui::PopStyleColor(4); }
+
+static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlot) {
+    const static ImVec2 verticalSliderSize(18.0f, 160.0f);
+    const static ImVec2 plotLinesSize(260.0f, 160.0f);
+    const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
+
+    if (ImGui::CollapsingHeader("Color grading")) {
+        ColorGradingSettings& colorGrading = settings.view.colorGrading;
+
+        ImGui::Indent();
+        ImGui::Checkbox("Enabled##colorGrading", &colorGrading.enabled);
+
+        int quality = (int) colorGrading.quality;
+        ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
+        colorGrading.quality = (decltype(colorGrading.quality)) quality;
+
+        int toneMapping = (int) colorGrading.toneMapping;
+        ImGui::Combo("Tone-mapping", &toneMapping,
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+        colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+
+        if (ImGui::CollapsingHeader("White balance")) {
+            int temperature = colorGrading.temperature * 100.0f;
+            int tint = colorGrading.tint * 100.0f;
+            ImGui::SliderInt("Temperature", &temperature, -100, 100);
+            ImGui::SliderInt("Tint", &tint, -100, 100);
+            colorGrading.temperature = temperature / 100.0f;
+            colorGrading.tint = tint / 100.0f;
+        }
+
+        if (ImGui::CollapsingHeader("Channel mixer")) {
+            pushSliderColors(0.0f / 7.0f);
+            ImGui::VSliderFloat("##outRed.r", verticalSliderSize, &colorGrading.outRed.r, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outRed.r);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outRed.g", verticalSliderSize, &colorGrading.outRed.g, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outRed.g);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outRed.b", verticalSliderSize, &colorGrading.outRed.b, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outRed.b);
+            ImGui::SameLine(0.0f, 18.0f);
+            popSliderColors();
+
+            pushSliderColors(2.0f / 7.0f);
+            ImGui::VSliderFloat("##outGreen.r", verticalSliderSize, &colorGrading.outGreen.r, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outGreen.r);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outGreen.g", verticalSliderSize, &colorGrading.outGreen.g, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outGreen.g);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outGreen.b", verticalSliderSize, &colorGrading.outGreen.b, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outGreen.b);
+            ImGui::SameLine(0.0f, 18.0f);
+            popSliderColors();
+
+            pushSliderColors(4.0f / 7.0f);
+            ImGui::VSliderFloat("##outBlue.r", verticalSliderSize, &colorGrading.outBlue.r, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outBlue.r);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outBlue.g", verticalSliderSize, &colorGrading.outBlue.g, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outBlue.g);
+            ImGui::SameLine();
+            ImGui::VSliderFloat("##outBlue.b", verticalSliderSize, &colorGrading.outBlue.b, -2.0f, 2.0f, "");
+            tooltipFloat(colorGrading.outBlue.b);
+            popSliderColors();
+        }
+        if (ImGui::CollapsingHeader("Tonal ranges")) {
+            ImGui::ColorEdit3("Shadows", &colorGrading.shadows.x);
+            ImGui::SliderFloat("Weight##shadowsWeight", &colorGrading.shadows.w, -2.0f, 2.0f);
+            ImGui::ColorEdit3("Mid-tones", &colorGrading.midtones.x);
+            ImGui::SliderFloat("Weight##midTonesWeight", &colorGrading.midtones.w, -2.0f, 2.0f);
+            ImGui::ColorEdit3("Highlights", &colorGrading.highlights.x);
+            ImGui::SliderFloat("Weight##highlightsWeight", &colorGrading.highlights.w, -2.0f, 2.0f);
+            ImGui::SliderFloat4("Ranges", &colorGrading.ranges.x, 0.0f, 1.0f);
+            computeRangePlot(settings, rangePlot);
+            ImGuiExt::PlotLinesSeries("", 3,
+                    rangePlotSeriesStart, getRangePlotValue, rangePlotSeriesEnd,
+                    rangePlot, 1024, 0, "", 0.0f, 1.0f, plotLinesWideSize);
+        }
+        if (ImGui::CollapsingHeader("Color decision list")) {
+            ImGui::SliderFloat3("Slope", &colorGrading.slope.x, 0.0f, 2.0f);
+            ImGui::SliderFloat3("Offset", &colorGrading.offset.x, -0.5f, 0.5f);
+            ImGui::SliderFloat3("Power", &colorGrading.power.x, 0.0f, 2.0f);
+        }
+        if (ImGui::CollapsingHeader("Adjustments")) {
+            ImGui::SliderFloat("Contrast", &colorGrading.contrast, 0.0f, 2.0f);
+            ImGui::SliderFloat("Vibrance", &colorGrading.vibrance, 0.0f, 2.0f);
+            ImGui::SliderFloat("Saturation", &colorGrading.saturation, 0.0f, 2.0f);
+        }
+        if (ImGui::CollapsingHeader("Curves")) {
+            ImGui::Checkbox("Linked curves", &colorGrading.linkedCurves);
+
+            computeCurvePlot(settings, curvePlot);
+
+            if (!colorGrading.linkedCurves) {
+                pushSliderColors(0.0f / 7.0f);
+                ImGui::VSliderFloat("##curveGamma.r", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.gamma.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveMid.r", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                tooltipFloat(colorGrading.midPoint.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveScale.r", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.scale.r);
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
+                ImGui::PlotLines("", curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PopStyleColor();
+
+                pushSliderColors(2.0f / 7.0f);
+                ImGui::VSliderFloat("##curveGamma.g", verticalSliderSize, &colorGrading.gamma.g, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.gamma.g);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveMid.g", verticalSliderSize, &colorGrading.midPoint.g, 0.0f, 2.0f, "");
+                tooltipFloat(colorGrading.midPoint.g);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveScale.g", verticalSliderSize, &colorGrading.scale.g, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.scale.g);
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
+                ImGui::PlotLines("", curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PopStyleColor();
+
+                pushSliderColors(4.0f / 7.0f);
+                ImGui::VSliderFloat("##curveGamma.b", verticalSliderSize, &colorGrading.gamma.b, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.gamma.b);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveMid.b", verticalSliderSize, &colorGrading.midPoint.b, 0.0f, 2.0f, "");
+                tooltipFloat(colorGrading.midPoint.b);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveScale.b", verticalSliderSize, &colorGrading.scale.b, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.scale.b);
+                ImGui::SameLine(0.0f, 18.0f);
+                popSliderColors();
+
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
+                ImGui::PlotLines("", curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PopStyleColor();
+            } else {
+                ImGui::VSliderFloat("##curveGamma", verticalSliderSize, &colorGrading.gamma.r, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.gamma.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveMid", verticalSliderSize, &colorGrading.midPoint.r, 0.0f, 2.0f, "");
+                tooltipFloat(colorGrading.midPoint.r);
+                ImGui::SameLine();
+                ImGui::VSliderFloat("##curveScale", verticalSliderSize, &colorGrading.scale.r, 0.0f, 4.0f, "");
+                tooltipFloat(colorGrading.scale.r);
+                ImGui::SameLine(0.0f, 18.0f);
+
+                colorGrading.gamma = float3{colorGrading.gamma.r};
+                colorGrading.midPoint = float3{colorGrading.midPoint.r};
+                colorGrading.scale = float3{colorGrading.scale.r};
+
+                ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
+                ImGui::PlotLines("", curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
+                ImGui::PopStyleColor();
+            }
+        }
+        ImGui::Unindent();
+    }
 }
 
 SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
@@ -64,15 +315,15 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
-        .color(mSunlightColor)
-        .intensity(mSunlightIntensity)
-        .direction(normalize(mSunlightDirection))
+        .color(mSettings.lighting.sunlightColor)
+        .intensity(mSettings.lighting.sunlightIntensity)
+        .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
         .sunAngularRadius(1.9)
         .sunHaloSize(10.0)
         .sunHaloFalloff(80.0)
         .build(*engine, mSunlight);
-    if (mEnableSunlight) {
+    if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
     }
     view->setAmbientOcclusionOptions({ .upsampling = View::QualityLevel::HIGH });
@@ -80,6 +331,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
 
 SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
+    delete mImGuiHelper;
 }
 
 void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
@@ -87,6 +339,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
+        mCurrentCamera = 0;
         if (!asset) {
             mAnimator = nullptr;
             return;
@@ -131,9 +384,9 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
         float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        mSunlightDirection = d;
-        mSunlightColor = c.rgb;
-        mSunlightIntensity = c[3] * ibl->getIntensity();
+        mSettings.lighting.sunlightDirection = d;
+        mSettings.lighting.sunlightColor = c.rgb;
+        mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
         updateIndirectLight();
     }
 }
@@ -141,8 +394,8 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
 void SimpleViewer::updateIndirectLight() {
     using namespace filament::math;
     if (mIndirectLight) {
-        mIndirectLight->setIntensity(mIblIntensity);
-        mIndirectLight->setRotation(mat3f::rotation(mIblRotation, float3{ 0, 1, 0 }));
+        mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
+        mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
     }
 }
 
@@ -163,6 +416,79 @@ void SimpleViewer::applyAnimation(double currentTime) {
         mAnimator->applyAnimation(mCurrentAnimation - 1, currentTime - startTime);
     }
     mAnimator->updateBoneMatrices();
+}
+
+void SimpleViewer::renderUserInterface(float timeStepInSeconds, View* guiView, float pixelRatio) {
+    if (mImGuiHelper == nullptr) {
+        mImGuiHelper = new ImGuiHelper(mEngine, guiView, "");
+
+        auto& io = ImGui::GetIO();
+
+        // The following table uses normal ANSI codes, which is consistent with the keyCode that
+        // comes from a web "keydown" event.
+        io.KeyMap[ImGuiKey_Tab] = 9;
+        io.KeyMap[ImGuiKey_LeftArrow] = 37;
+        io.KeyMap[ImGuiKey_RightArrow] = 39;
+        io.KeyMap[ImGuiKey_UpArrow] = 38;
+        io.KeyMap[ImGuiKey_DownArrow] = 40;
+        io.KeyMap[ImGuiKey_Home] = 36;
+        io.KeyMap[ImGuiKey_End] = 35;
+        io.KeyMap[ImGuiKey_Delete] = 46;
+        io.KeyMap[ImGuiKey_Backspace] = 8;
+        io.KeyMap[ImGuiKey_Enter] = 13;
+        io.KeyMap[ImGuiKey_Escape] = 27;
+        io.KeyMap[ImGuiKey_A] = 65;
+        io.KeyMap[ImGuiKey_C] = 67;
+        io.KeyMap[ImGuiKey_V] = 86;
+        io.KeyMap[ImGuiKey_X] = 88;
+        io.KeyMap[ImGuiKey_Y] = 89;
+        io.KeyMap[ImGuiKey_Z] = 90;
+
+        // TODO: this is not the best way to handle high DPI in ImGui, but it is fine when using the
+        // proggy font. Users need to refresh their window when dragging between displays with
+        // different pixel ratios.
+        io.FontGlobalScale = pixelRatio;
+        ImGui::GetStyle().ScaleAllSizes(pixelRatio);
+    }
+
+    const auto size = guiView->getViewport();
+    mImGuiHelper->setDisplaySize(size.width, size.height, 1, 1);
+
+    mImGuiHelper->render(timeStepInSeconds, [this](Engine*, View*) {
+        this->updateUserInterface();
+    });
+}
+
+void SimpleViewer::mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY,
+        bool control) {
+    if (mImGuiHelper) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.MousePos.x = mouseX;
+        io.MousePos.y = mouseY;
+        io.MouseWheel += mouseWheelY;
+        io.MouseDown[0] = mouseButton != 0;
+        io.MouseDown[1] = false;
+        io.MouseDown[2] = false;
+        io.KeyCtrl = control;
+    }
+}
+
+void SimpleViewer::keyDownEvent(int keyCode) {
+    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
+        ImGui::GetIO().KeysDown[keyCode] = true;
+    }
+}
+
+void SimpleViewer::keyUpEvent(int keyCode) {
+    if (mImGuiHelper && keyCode < IM_ARRAYSIZE(ImGui::GetIO().KeysDown)) {
+        ImGui::GetIO().KeysDown[keyCode] = false;
+    }
+}
+
+void SimpleViewer::keyPressEvent(int charCode) {
+    if (mImGuiHelper) {
+        ImGui::GetIO().AddInputCharacter(charCode);
+    }
 }
 
 void SimpleViewer::updateUserInterface() {
@@ -328,14 +654,15 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
+    auto& light = mSettings.lighting;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
-        ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
-        ImGui::SliderAngle("IBL rotation", &mIblRotation);
-        ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
-        ImGuiExt::DirectionWidget("Sun direction", mSunlightDirection.v);
-        ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
-        ImGui::Checkbox("Enable shadows", &mEnableShadows);
+        ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
+        ImGui::SliderAngle("IBL rotation", &light.iblRotation);
+        ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0, 150000.0f);
+        ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+        ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
+        ImGui::Checkbox("Enable shadows", &light.enableShadows);
 
         bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
@@ -344,20 +671,23 @@ void SimpleViewer::updateUserInterface() {
         char label[32];
         snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
         ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+        light.shadowOptions.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
 
         int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
         snprintf(label, 32, "%d", 1 << vsmAnisotropy);
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
         mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
 
-        ImGui::SliderInt("Cascades", &mShadowCascades, 1, 4);
+        int shadowCascades = light.shadowOptions.shadowCascades;
+        ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
         ImGui::Checkbox("Debug cascades",
                 debug.getPropertyAddress<bool>("d.shadowmap.visualize_cascades"));
-        ImGui::Checkbox("Enable contact shadows", &mEnableContactShadows);
-        ImGui::SliderFloat("Split pos 0", &mSplitPositions[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 1", &mSplitPositions[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("Split pos 2", &mSplitPositions[2], 0.0f, 1.0f);
+        ImGui::Checkbox("Enable contact shadows", &light.shadowOptions.screenSpaceContactShadows);
+        ImGui::SliderFloat("Split pos 0", &light.shadowOptions.cascadeSplitPositions[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 1", &light.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Split pos 2", &light.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
         ImGui::Unindent();
+        light.shadowOptions.shadowCascades = shadowCascades;
     }
 
     if (ImGui::CollapsingHeader("Fog")) {
@@ -374,32 +704,118 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
+    if (ImGui::CollapsingHeader("Scene")) {
+        ImGui::Indent();
+        ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
+        ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
+
+        // We do not yet support ground shadow in remote mode (i.e. when mAsset is null)
+        if (mAsset) {
+            ImGui::Checkbox("Ground shadow", &mSettings.viewer.groundPlaneEnabled);
+            ImGui::Indent();
+            ImGui::SliderFloat("Strength", &mSettings.viewer.groundShadowStrength, 0.0f, 1.0f);
+            ImGui::Unindent();
+        }
+
+        ImGui::Unindent();
+    }
+
+    if (ImGui::CollapsingHeader("Camera")) {
+        ImGui::Indent();
+
+        // We do not yet support focal length in remote mode (i.e. when mAsset is null)
+        if (mAsset) {
+            ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
+                    16.0f, 90.0f);
+        }
+
+        bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
+        int dofRingCount = mSettings.view.dof.fastGatherRingCount;
+        int dofMaxCoC = mSettings.view.dof.maxForegroundCOC;
+        if (!dofRingCount) dofRingCount = 5;
+        if (!dofMaxCoC) dofMaxCoC = 32;
+
+        ImGui::SliderFloat("Aperture", &mSettings.viewer.cameraAperture, 1.0f, 32.0f);
+        ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
+        ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
+        ImGui::Checkbox("DoF", &mSettings.view.dof.enabled);
+        ImGui::SliderFloat("Focus distance", &mSettings.view.dof.focusDistance, 0.0f, 30.0f);
+        ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
+        ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
+        ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
+        ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
+        ImGui::Checkbox("Median Filter", &dofMedian);
+
+        mSettings.view.dof.filter = dofMedian ?
+                                    View::DepthOfFieldOptions::Filter::MEDIAN :
+                                    View::DepthOfFieldOptions::Filter::NONE;
+        mSettings.view.dof.backgroundRingCount = dofRingCount;
+        mSettings.view.dof.foregroundRingCount = dofRingCount;
+        mSettings.view.dof.fastGatherRingCount = dofRingCount;
+        mSettings.view.dof.maxForegroundCOC = dofMaxCoC;
+        mSettings.view.dof.maxBackgroundCOC = dofMaxCoC;
+
+        if (ImGui::CollapsingHeader("Vignette")) {
+            ImGui::Checkbox("Enabled##vignetteEnabled", &mSettings.view.vignette.enabled);
+            ImGui::SliderFloat("Mid point", &mSettings.view.vignette.midPoint, 0.0f, 1.0f);
+            ImGui::SliderFloat("Roundness", &mSettings.view.vignette.roundness, 0.0f, 1.0f);
+            ImGui::SliderFloat("Feather", &mSettings.view.vignette.feather, 0.0f, 1.0f);
+            ImGui::ColorEdit3("Color##vignetteColor", &mSettings.view.vignette.color.r);
+        }
+
+        if (mAsset != nullptr) {
+
+            const utils::Entity* cameras = mAsset->getCameraEntities();
+            const size_t cameraCount = mAsset->getCameraEntityCount();
+
+            std::vector<std::string> names;
+            names.reserve(cameraCount + 1);
+            names.push_back("Free camera");
+            int c = 0;
+            for (size_t i = 0; i < cameraCount; i++) {
+                const char* n = mAsset->getName(cameras[i]);
+                if (n) {
+                    names.emplace_back(n);
+                } else {
+                    char buf[32];
+                    sprintf(buf, "Unnamed camera %d", c++);
+                    names.emplace_back(buf);
+                }
+            }
+
+            std::vector<const char*> cstrings;
+            cstrings.reserve(names.size());
+            for (size_t i = 0; i < names.size(); i++) {
+                cstrings.push_back(names[i].c_str());
+            }
+
+            ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
+        }
+
+        ImGui::Unindent();
+    }
+
+    colorGradingUI(mSettings, mRangePlot, mCurvePlot);
+
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
 
-    if (mEnableSunlight) {
+    if (light.enableSunlight) {
         mScene->addEntity(mSunlight);
         auto sun = lm.getInstance(mSunlight);
-        lm.setIntensity(sun, mSunlightIntensity);
-        lm.setDirection(sun, normalize(mSunlightDirection));
-        lm.setColor(sun, mSunlightColor);
-        lm.setShadowCaster(sun, mEnableShadows);
-        auto options = lm.getShadowOptions(sun);
-        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
-        lm.setShadowOptions(sun, options);
+        lm.setIntensity(sun, light.sunlightIntensity);
+        lm.setDirection(sun, normalize(light.sunlightDirection));
+        lm.setColor(sun, light.sunlightColor);
+        lm.setShadowCaster(sun, light.enableShadows);
+        lm.setShadowOptions(sun, light.shadowOptions);
     } else {
         mScene->remove(mSunlight);
     }
 
-    lm.forEachComponent([this, &lm](utils::Entity e, LightManager::Instance ci) {
-        auto options = lm.getShadowOptions(ci);
-        options.screenSpaceContactShadows = mEnableContactShadows;
-        options.shadowCascades = mShadowCascades;
-        options.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
-        std::copy_n(mSplitPositions.begin(), 3, options.cascadeSplitPositions);
-        lm.setShadowOptions(ci, options);
-        lm.setShadowCaster(ci, mEnableShadows);
+    lm.forEachComponent([this, &lm, &light](utils::Entity e, LightManager::Instance ci) {
+        lm.setShadowOptions(ci, light.shadowOptions);
+        lm.setShadowCaster(ci, light.enableShadows);
     });
 
     if (mAsset != nullptr) {

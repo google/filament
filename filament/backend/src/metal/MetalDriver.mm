@@ -138,6 +138,8 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->currentDrawSwapChain->releaseDrawable();
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
+
+    assert_invariant(mContext->groupMarkers.empty());
 }
 
 void MetalDriver::flush(int) {
@@ -158,10 +160,10 @@ void MetalDriver::finish(int) {
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
-        BufferUsage usage) {
+        BufferUsage usage, bool bufferObjectsEnabled) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes);
+            attributeCount, vertexCount, attributes, bufferObjectsEnabled);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
@@ -170,11 +172,17 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
     construct_handle<MetalIndexBuffer>(mHandleMap, ibh, *mContext, elementSize, indexCount);
 }
 
+void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType) {
+    // TODO
+}
+
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
-            width, height, depth, usage);
+            width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
+            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -182,8 +190,7 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         uint32_t depth, TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
-            width, height, depth, usage);
-    // TODO: implement texture swizzle
+            width, height, depth, usage, r, g, b, a);
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -252,8 +259,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 "Color texture passed to render target has no texture allocation");
         colorTexture->updateLodRange(buffer.level);
         colorAttachments[i].texture = colorTexture->texture;
-        colorAttachments[i].level = color[0].level;
-        colorAttachments[i].layer = color[0].layer;
+        colorAttachments[i].level = color[i].level;
+        colorAttachments[i].layer = color[i].layer;
     }
 
     MetalRenderTarget::Attachment depthAttachment = { 0 };
@@ -317,6 +324,11 @@ Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
 
 Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
+}
+
+Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
+    // TODO
+    return {};
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
@@ -394,6 +406,12 @@ void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         destruct_handle<MetalIndexBuffer>(mHandleMap, ibh);
+    }
+}
+
+void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    if (boh) {
+        // TODO
     }
 }
 
@@ -548,6 +566,14 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
            TextureReshaper::canReshapeTextureFormat(format);
 }
 
+bool MetalDriver::isTextureSwizzleSupported() {
+    if (@available(macOS 10.15, iOS 13, *)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     // Derived from the Metal 3.0 Feature Set Tables.
     // In order for a format to be mipmappable, it must be color-renderable and filterable.
@@ -638,6 +664,16 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
+        uint32_t byteOffset) {
+    // TODO
+}
+
+void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+        Handle<HwBufferObject> boh) {
+    // TODO
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
@@ -759,6 +795,11 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
+    if (!mContext->groupMarkers.empty()) {
+        mContext->currentRenderPassEncoder.label =
+                [NSString stringWithCString:mContext->groupMarkers.top()
+                                   encoding:NSUTF8StringEncoding];
+    }
 
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
@@ -795,11 +836,11 @@ void MetalDriver::endRenderPass(int dummy) {
 }
 
 void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh, uint32_t enabledAttributes) {
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
-    primitive->setBuffers(vertexBuffer, indexBuffer, enabledAttributes);
+    primitive->setBuffers(vertexBuffer, indexBuffer);
 }
 
 void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
@@ -858,11 +899,12 @@ void MetalDriver::insertEventMarker(const char* string, size_t len) {
 }
 
 void MetalDriver::pushGroupMarker(const char* string, size_t len) {
-
+    mContext->groupMarkers.push(string);
 }
 
 void MetalDriver::popGroupMarker(int dummy) {
-
+    assert_invariant(!mContext->groupMarkers.empty());
+    mContext->groupMarkers.pop();
 }
 
 void MetalDriver::startCapture(int) {
@@ -1203,7 +1245,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             return;
         }
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
-        texturesToBind[binding] = metalTexture->texture;
+        texturesToBind[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
+                                                                    : metalTexture->texture;
 
         if (metalTexture->externalImage.isValid()) {
             texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();

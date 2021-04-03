@@ -112,7 +112,7 @@ public:
          *
          *
          * @param envIntensity  Scale factor applied to the skybox texel values such that
-         *                      the result is in cd/m^2 (lux) units (default = 30000)
+         *                      the result is in lux, or lumen/m^2 (default = 30000)
          *
          * @return This Builder, for chaining calls.
          *
@@ -167,7 +167,7 @@ public:
     uint8_t getLayerMask() const noexcept;
 
     /**
-     * Returns the skybox's intensity in cd/m^2.
+     * Returns the skybox's intensity in lux, or lumen/m^2.
      */
     float getIntensity() const noexcept;
 

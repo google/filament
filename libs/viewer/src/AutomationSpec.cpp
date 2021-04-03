@@ -20,13 +20,14 @@
 
 #include "jsonParseUtils.h"
 
-#include <assert.h>
+#include <utils/Log.h>
 
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <utils/Log.h>
+#include <assert.h>
+#include <string.h>
 
 using namespace utils;
 
@@ -37,6 +38,7 @@ static const bool VERBOSE = false;
 namespace filament {
 namespace viewer {
 
+// The default spec generates 65 test cases.
 static const char* DEFAULT_AUTOMATION = R"TXT([
     {
         "name": "ppoff",
@@ -103,7 +105,8 @@ static int parseBaseSettings(jsmntok_t const* tokens, int i, const char* jsonChu
         }
 
         // Now that we have a complete JSON string, apply this property change.
-        readJson(json.c_str(), json.size(), out);
+        JsonSerializer serializer;
+        serializer.readJson(json.c_str(), json.size(), out);
     }
     return i;
 }
@@ -194,6 +197,7 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
     }
 
     size_t caseIndex = 0;
+    JsonSerializer serializer;
     while (true) {
         if (VERBOSE) {
             slog.i << "  Generating test case " << caseIndex << io::endl;
@@ -227,7 +231,7 @@ static int parseAutomationSpec(jsmntok_t const* tokens, int i, const char* jsonC
             if (VERBOSE) {
                 slog.i << "    Applying " << jsonString.c_str() << io::endl;
             }
-            if (!readJson(jsonString.c_str(), jsonString.size(), &testCase)) {
+            if (!serializer.readJson(jsonString.c_str(), jsonString.size(), &testCase)) {
                 return -1;
             }
         }

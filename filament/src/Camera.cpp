@@ -20,11 +20,15 @@
 
 #include "details/Engine.h"
 
+#include <filament/Exposure.h>
+#include <filament/Camera.h>
+
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
-#include <filament/Exposure.h>
+
+#include <math/vec2.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -43,11 +47,11 @@ FCamera::FCamera(FEngine& engine, Entity e)
           mEntity(e) {
 }
 
-void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double near, double far,
+void UTILS_NOINLINE FCamera::setProjection(double fovInDegrees, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
     double w;
     double h;
-    double s = std::tan(fov * (F_PI / 360.0)) * near;
+    double s = std::tan(fovInDegrees * math::d::DEG_TO_RAD / 2.0) * near;
     if (direction == Fov::VERTICAL) {
         w = s * aspect;
         h = s;
@@ -58,10 +62,12 @@ void UTILS_NOINLINE FCamera::setProjection(double fov, double aspect, double nea
     FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
 }
 
-void FCamera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
+void FCamera::setLensProjection(double focalLengthInMillimeters,
+        double aspect, double near, double far) noexcept {
     // a 35mm camera has a 36x24mm wide frame size
-    double theta = 2.0 * std::atan(SENSOR_SIZE * 1000.0f / (2.0 * focalLength));
-    FCamera::setProjection(theta * math::d::RAD_TO_DEG, aspect, near, far, Fov::VERTICAL);
+    double h = (0.5 * near) * ((SENSOR_SIZE * 1000.0) / focalLengthInMillimeters);
+    double w = h * aspect;
+    FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
 }
 
 /*
@@ -69,8 +75,13 @@ void FCamera::setLensProjection(double focalLength, double aspect, double near, 
  */
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, double far) noexcept {
-    mProjectionForCulling = p;
+    setCustomProjection(p, p, near, far);
+}
+
+void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
+        mat4 const& c, double near, double far) noexcept {
     mProjection = p;
+    mProjectionForCulling = c;
     mNear = (float)near;
     mFar = (float)far;
 }
@@ -156,8 +167,24 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     mFar = float(far);
 }
 
-void FCamera::setScaling(math::double4 const& scaling) noexcept {
-    mScaling = scaling;
+math::mat4 FCamera::getProjectionMatrix() const noexcept {
+    const mat4 m{ mat4::row_major_init{
+            mScaling.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScaling.y, 0.0, mShiftCS.y,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+    }};
+    return m * mProjection;
+}
+
+math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
+    const mat4 m{ mat4::row_major_init{
+            mScaling.x, 0.0, 0.0, mShiftCS.x,
+            0.0, mScaling.y, 0.0, mShiftCS.y,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+    }};
+    return m * mProjectionForCulling;
 }
 
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
@@ -187,6 +214,22 @@ void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity)
     mAperture = clamp(aperture, MIN_APERTURE, MAX_APERTURE);
     mShutterSpeed = clamp(shutterSpeed, MIN_SHUTTER_SPEED, MAX_SHUTTER_SPEED);
     mSensitivity = clamp(sensitivity, MIN_SENSITIVITY, MAX_SENSITIVITY);
+}
+
+double FCamera::getFocalLength() const noexcept {
+    return (FCamera::SENSOR_SIZE * mProjection[1][1]) * 0.5;
+}
+
+double FCamera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
+    focusDistance = std::max(focalLength, focusDistance);
+    return (focusDistance * focalLength) / (focusDistance - focalLength);
+}
+
+double FCamera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
+    double f = 0.5 * FCamera::SENSOR_SIZE / std::tan(fovInDegrees * math::d::DEG_TO_RAD * 0.5);
+    focusDistance = std::max(f, focusDistance);
+    double fov = 2.0 * std::atan(FCamera::SENSOR_SIZE * (focusDistance - f) / (2.0 * focusDistance * f));
+    return fov * math::d::RAD_TO_DEG;
 }
 
 template<typename T>
@@ -248,11 +291,15 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    f                  = camera.getFocalLength();
     A                  = f / camera.getAperture();
+    d                  = std::max(zn, camera.getFocusDistance());
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept {
+CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera,
+        float focusDistance) noexcept {
+    // note: DepthOfFieldOptions is deprecated, but we continue to support it by passing it here
+    // and we're using it if the camera focus distance hasn't been set.
     const mat4f modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
@@ -261,8 +308,9 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
-    f                  = (FCamera::SENSOR_SIZE * (float)projection[1][1]) * 0.5f;
+    f                  = camera.getFocalLength();
     A                  = f / camera.getAperture();
+    d                  = std::max(zn, camera.getFocusDistance() > 0.0f ? camera.getFocusDistance() : focusDistance);
     worldOffset        = camera.getPosition();
     worldOrigin        = worldOriginCamera;
 }
@@ -283,21 +331,35 @@ void Camera::setProjection(Camera::Projection projection, double left, double ri
     upcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
 
-void Camera::setProjection(double fov, double aspect, double near, double far,
+void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
         Camera::Fov direction) noexcept {
-    upcast(this)->setProjection(fov, aspect, near, far, direction);
+    upcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
 }
 
-void Camera::setLensProjection(double focalLength, double aspect, double near, double far) noexcept {
-    upcast(this)->setLensProjection(focalLength, aspect, near, far);
+void Camera::setLensProjection(double focalLengthInMillimeters,
+        double aspect, double near, double far) noexcept {
+    upcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, double near, double far) noexcept {
     upcast(this)->setCustomProjection(projection, near, far);
 }
 
+void Camera::setCustomProjection(mat4 const& projection, mat4 const& projectionForCulling,
+        double near, double far) noexcept {
+    upcast(this)->setCustomProjection(projection, projectionForCulling, near, far);
+}
+
+void Camera::setScaling(math::double2 scaling) noexcept {
+    upcast(this)->setScaling(scaling);
+}
+
 void Camera::setScaling(math::double4 const& scaling) noexcept {
     upcast(this)->setScaling(scaling);
+}
+
+void Camera::setShift(math::double2 shift) noexcept {
+    upcast(this)->setShift(shift);
 }
 
 mat4 Camera::getProjectionMatrix() const noexcept {
@@ -308,8 +370,12 @@ mat4 Camera::getCullingProjectionMatrix() const noexcept {
     return upcast(this)->getCullingProjectionMatrix();
 }
 
-const math::double4& Camera::getScaling() const noexcept {
+math::double4 Camera::getScaling() const noexcept {
     return upcast(this)->getScaling();
+}
+
+math::double2 Camera::getShift() const noexcept {
+    return upcast(this)->getShift();
 }
 
 float Camera::getNear() const noexcept {
@@ -382,6 +448,26 @@ float Camera::getShutterSpeed() const noexcept {
 
 float Camera::getSensitivity() const noexcept {
     return upcast(this)->getSensitivity();
+}
+
+void Camera::setFocusDistance(float distance) noexcept {
+    upcast(this)->setFocusDistance(distance);
+}
+
+float Camera::getFocusDistance() const noexcept {
+    return upcast(this)->getFocusDistance();
+}
+
+double Camera::getFocalLength() const noexcept {
+    return upcast(this)->getFocalLength();
+}
+
+double Camera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
+    return FCamera::computeEffectiveFocalLength(focalLength, focusDistance);
+}
+
+double Camera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
+    return FCamera::computeEffectiveFov(fovInDegrees, focusDistance);
 }
 
 } // namespace filament

@@ -34,12 +34,17 @@ namespace filament {
 
 using namespace backend;
 
+struct CocoaGLSwapChain : public Platform::SwapChain {
+    NSView* view;
+    NSRect previousBounds;
+    NSRect previousWindowFrame;
+};
+
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
-    NSView* mCurrentView = nullptr;
+    CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
-    NSRect mPreviousBounds = {};
-    void updateOpenGLContext(NSView *nsView, bool resetView);
+    void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
 };
 
 PlatformCocoaGL::PlatformCocoaGL()
@@ -86,50 +91,90 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
     flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     NSView* nsView = (__bridge NSView*)nativewindow;
 
+    CocoaGLSwapChain* swapChain = new CocoaGLSwapChain();
+    swapChain->view = nsView;
+    swapChain->previousBounds = NSZeroRect;
+    swapChain->previousWindowFrame = NSZeroRect;
+
     // If the SwapChain is being recreated (e.g. if the underlying surface has been resized),
     // then we need to force an update to occur in the subsequent makeCurrent, which can be done by
     // simply resetting the current view. In multi-window situations, this happens automatically.
-    if (pImpl->mCurrentView == nsView) {
-        pImpl->mCurrentView = nullptr;
+    if (pImpl->mCurrentSwapChain && pImpl->mCurrentSwapChain->view == nsView) {
+        pImpl->mCurrentSwapChain = nullptr;
     }
 
-    return (SwapChain*) nativewindow;
+    return swapChain;
 }
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
     NSView* nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+
     // adding the pointer to the array retains the NSView
     pImpl->mHeadlessSwapChains.push_back(nsView);
-    return (__bridge SwapChain*)nsView;
+
+    CocoaGLSwapChain* swapChain = new CocoaGLSwapChain();
+    swapChain->view = nsView;
+    swapChain->previousBounds = NSZeroRect;
+    swapChain->previousWindowFrame = NSZeroRect;
+
+    return swapChain;
 }
 
 void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    CocoaGLSwapChain* cocoaSwapChain = static_cast<CocoaGLSwapChain*>(swapChain);
+    if (pImpl->mCurrentSwapChain == cocoaSwapChain) {
+        pImpl->mCurrentSwapChain = nullptr;
+    }
+
     auto& v = pImpl->mHeadlessSwapChains;
-    NSView* nsView = (__bridge NSView*)swapChain;
-    auto it = std::find(v.begin(), v.end(), nsView);
+    auto it = std::find(v.begin(), v.end(), cocoaSwapChain->view);
     if (it != v.end()) {
         // removing the pointer from the array releases the NSView
         v.erase(it);
     }
+    delete cocoaSwapChain;
 }
 
 void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         Platform::SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
-    NSView *nsView = (__bridge NSView*) drawSwapChain;
-
-    NSRect currentBounds = [nsView convertRectToBacking:nsView.bounds];
+    CocoaGLSwapChain* swapChain = (CocoaGLSwapChain*)drawSwapChain;
+    NSRect currentBounds = [swapChain->view convertRectToBacking:swapChain->view.bounds];
+    NSRect currentWindowFrame = swapChain->view.window.frame;
 
     // Check if the view has been swapped out or resized.
-    if (pImpl->mCurrentView != nsView) {
-        pImpl->mCurrentView = nsView;
-        pImpl->updateOpenGLContext(nsView, true);
-    } else if (!CGRectEqualToRect(currentBounds, pImpl->mPreviousBounds)) {
-        pImpl->updateOpenGLContext(nsView, false);
+    // updateOpenGLContext() needs to call -clearDrawable if the view was
+    // resized, otherwise we do not want to call -clearDrawable, as in addition
+    // to disassociating the context from the view as the documentation says,
+    // it also does what its name implies and clears the drawable pixels.
+    // This is problematic with multiple windows, but still necessary if the
+    // window has resized.
+    if (pImpl->mCurrentSwapChain != swapChain) {
+        pImpl->mCurrentSwapChain = swapChain;
+        if (!NSEqualRects(currentBounds, swapChain->previousBounds)) {
+            // A window is being resized or moved, but the last draw was a
+            // different window (for example, it updates on a timer):
+            // just call -setView first, otherwise -clearDrawable would clear
+            // the other window. But if we do this the first time that the swap
+            // chain has been created then resizing will show a black image.
+            if (!NSIsEmptyRect(swapChain->previousBounds)) {
+                pImpl->updateOpenGLContext(swapChain->view, true, false);
+            }
+            // Now call -clearDrawable, otherwise we get garbage during if we
+            // are resizing.
+            pImpl->updateOpenGLContext(swapChain->view, true, true);
+        } else {
+            // We are drawing another window: only call -setView.
+            pImpl->updateOpenGLContext(swapChain->view, true, false);
+        }
+    } else if (!NSEqualRects(currentWindowFrame, swapChain->previousWindowFrame)) {
+        // Same window has moved or resized: need to clear and set view.
+        pImpl->updateOpenGLContext(swapChain->view, true, true);
     }
 
-    pImpl->mPreviousBounds = currentBounds;
+    swapChain->previousBounds = currentBounds;
+    swapChain->previousWindowFrame = currentWindowFrame;
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
@@ -144,7 +189,8 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
     return true;
 }
 
-void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
+void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView,
+                                              bool clearView) {
     NSOpenGLContext* glContext = mGLContext;
 
     // NOTE: This is not documented well (if at all) but NSOpenGLContext requires "setView" and
@@ -154,14 +200,18 @@ void PlatformCocoaGLImpl::updateOpenGLContext(NSView *nsView, bool resetView) {
     if (![NSThread isMainThread]) {
         dispatch_sync(dispatch_get_main_queue(), ^(void) {
             if (resetView) {
-                [glContext clearDrawable];
+                if (clearView) {
+                    [glContext clearDrawable];
+                }
                 [glContext setView:nsView];
             }
             [glContext update];
         });
     } else {
         if (resetView) {
-            [glContext clearDrawable];
+            if (clearView) {
+                [glContext clearDrawable];
+            }
             [glContext setView:nsView];
         }
         [glContext update];

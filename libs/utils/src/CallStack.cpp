@@ -30,6 +30,13 @@
 #define HAS_EXECINFO 0
 #endif
 
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#include <dlfcn.h>
+#define HAS_DLADDR 1
+#else
+#define HAS_DLADDR 0
+#endif
+
 #if !defined(NDEBUG) && !defined(WIN32)
 #include <cxxabi.h>
 #endif
@@ -101,7 +108,7 @@ bool CallStack::operator<(const CallStack& rhs) const {
 
 // ------------------------------------------------------------------------------------------------
 
-utils::CString CallStack::demangleTypeName(const char* mangled) {
+utils::CString CallStack::demangle(const char* mangled) {
 #if !defined(NDEBUG) && !defined(WIN32)
     size_t len;
     int status;
@@ -115,20 +122,40 @@ utils::CString CallStack::demangleTypeName(const char* mangled) {
     return CString(mangled);
 }
 
+
+utils::CString CallStack::demangleTypeName(const char* mangled) {
+    return demangle(mangled);
+}
+
 // ------------------------------------------------------------------------------------------------
 
 io::ostream& operator<<(io::ostream& stream, const CallStack& callstack) {
 #if HAS_EXECINFO
     size_t size = callstack.getFrameCount();
+    char buf[1024];
     for (size_t i = 0; i < size; i++) {
-        intptr_t pc = callstack[i];
-        std::unique_ptr<char*, FreeDeleter> symbols(::backtrace_symbols((void* const*)&pc, 1));
-        char const* const symbol = symbols.get()[0];
-        stream << "#" << i << " " << symbol;
-        if (i < size - 1) {
-            stream << io::endl;
+        Dl_info info;
+        void* pc = (void*)callstack[i];
+#if HAS_DLADDR
+        if (::dladdr(pc, &info)) {
+            char const* exe = strrchr(info.dli_fname, '/');
+            snprintf(buf, sizeof(buf), "#%u\t%-31s %*p %s + %zd\n",
+                    unsigned(i),
+                    exe ? exe + 1 : info.dli_fname,
+                    int(2 + sizeof(void*)*2),
+                    pc,
+                    CallStack::demangle(info.dli_sname).c_str(),
+                    (char *)callstack[i] - (char *)info.dli_saddr);
+            stream << buf;
+        } else
+#endif
+        {
+            char** symbols = ::backtrace_symbols(&pc, 1);
+            stream << "#" << i << "\t" << symbols[0] << "\n";
+            free(symbols);
         }
     }
+    stream << io::endl;
 #endif
     return stream;
 }

@@ -34,6 +34,7 @@
 
 #include <filameshio/MeshReader.h>
 
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
@@ -56,6 +57,8 @@
 #include <filament/Viewport.h>
 
 #include <geometry/SurfaceOrientation.h>
+
+#include <viewer/SimpleViewer.h>
 
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
@@ -91,6 +94,8 @@ using namespace geometry;
 using namespace gltfio;
 using namespace image;
 
+using namespace filament::viewer;
+
 namespace em = emscripten;
 
 #if __has_feature(cxx_rtti)
@@ -113,6 +118,7 @@ namespace emscripten {
     namespace internal {
         BIND(Animator)
         BIND(AssetLoader)
+        BIND(BufferObject)
         BIND(Camera)
         BIND(ColorGrading)
         BIND(Engine)
@@ -200,6 +206,7 @@ using SkyBuilder = Skybox::Builder;
 using SurfaceBuilder = SurfaceOrientation::Builder;
 using TexBuilder = Texture::Builder;
 using VertexBuilder = VertexBuffer::Builder;
+using BufferBuilder = BufferObject::Builder;
 
 // We avoid directly exposing backend::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -306,6 +313,15 @@ value_array<filament::math::float4>("float4")
     .element(&filament::math::float4::z)
     .element(&filament::math::float4::w);
 
+value_array<filament::math::double2>("double2")
+    .element(&filament::math::double2::x)
+    .element(&filament::math::double2::y);
+
+value_array<filament::math::double3>("double3")
+    .element(&filament::math::double3::x)
+    .element(&filament::math::double3::y)
+    .element(&filament::math::double3::z);
+
 value_array<filament::math::double4>("double4")
     .element(&filament::math::double4::x)
     .element(&filament::math::double4::y)
@@ -354,7 +370,14 @@ value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("focusDistance", &filament::View::DepthOfFieldOptions::focusDistance)
     .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
     .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
-    .field("enabled", &filament::View::DepthOfFieldOptions::enabled);
+    .field("enabled", &filament::View::DepthOfFieldOptions::enabled)
+    .field("filter", &filament::View::DepthOfFieldOptions::filter)
+    .field("nativeResolution", &filament::View::DepthOfFieldOptions::nativeResolution)
+    .field("foregroundRingCount", &filament::View::DepthOfFieldOptions::foregroundRingCount)
+    .field("backgroundRingCount", &filament::View::DepthOfFieldOptions::backgroundRingCount)
+    .field("fastGatherRingCount", &filament::View::DepthOfFieldOptions::fastGatherRingCount)
+    .field("maxForegroundCOC", &filament::View::DepthOfFieldOptions::maxForegroundCOC)
+    .field("maxBackgroundCOC", &filament::View::DepthOfFieldOptions::maxBackgroundCOC);
 
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
@@ -449,16 +472,27 @@ register_vector<const MaterialInstance*>("MaterialInstanceVector");
 class_<Engine>("Engine")
     .class_function("_create", (Engine* (*)()) [] {
         EM_ASM_INT({
-            const handle = GL.registerContext(Filament.glContext, Filament.glOptions);
+            const options = window.filament_glOptions;
+            const context = window.filament_glContext;
+            const handle = GL.registerContext(context, options);
+            window.filament_contextHandle = handle;
             GL.makeContextCurrent(handle);
         });
         return Engine::create();
     }, allow_raw_pointers())
+
+    .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
+        EM_ASM_INT({
+            const handle = window.filament_contextHandle;
+            GL.makeContextCurrent(handle);
+        });
+        engine->execute();
+    }), allow_raw_pointers())
+
     /// destroy ::static method:: Destroys an engine instance and cleans up resources.
     /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
             (Engine* engine) { Engine::destroy(&engine); }, allow_raw_pointers())
-    .function("execute", &Engine::execute)
 
     /// getTransformManager ::method::
     /// ::retval:: an instance of [TransformManager]
@@ -697,7 +731,9 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
-    .function("setScaling", &Camera::setScaling)
+    .function("setScaling", EMBIND_LAMBDA(void, (Camera* self, math::double2 scaling), {
+        self->setScaling(scaling);
+    }), allow_raw_pointers())
 
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
@@ -741,6 +777,12 @@ class_<Camera>("Camera")
     .function("getAperture", &Camera::getAperture)
     .function("getShutterSpeed", &Camera::getShutterSpeed)
     .function("getSensitivity", &Camera::getSensitivity)
+    .function("setFocusDistance", &Camera::setFocusDistance)
+    .function("getFocusDistance", &Camera::getFocusDistance)
+    .function("getFocalLength", &Camera::getFocalLength)
+
+    .class_function("computeEffectiveFocalLength", &Camera::computeEffectiveFocalLength)
+    .class_function("computeEffectiveFov", &Camera::computeEffectiveFov)
 
     .class_function("inverseProjection",  (flatmat4 (*)(flatmat4)) [] (flatmat4 m) {
         return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };
@@ -1134,6 +1176,25 @@ class_<LightManager>("LightManager")
 class_<LightManager::Instance>("LightManager$Instance");
     /// delete ::method:: Frees an instance obtained via `getInstance`
 
+class_<BufferBuilder>("BufferObject$Builder")
+   .function("_build", EMBIND_LAMBDA(BufferObject*, (BufferBuilder* builder, Engine* engine), {
+       return builder->build(*engine);
+   }), allow_raw_pointers())
+   .BUILDER_FUNCTION("bindingType", BufferBuilder, (BufferBuilder* builder,
+           BufferObject::BindingType bt), {
+       return &builder->bindingType(bt); })
+   .BUILDER_FUNCTION("size", BufferBuilder, (BufferBuilder* builder, int byteCount), {
+       return &builder->size(byteCount); });
+
+/// BufferObject ::core class:: Represents a single GPU buffer.
+class_<BufferObject>("BufferObject")
+   .class_function("Builder", (BufferBuilder (*)()) [] { return BufferBuilder(); })
+   .function("getByteCount", &BufferObject::getByteCount)
+   .function("_setBuffer", EMBIND_LAMBDA(void, (BufferObject* self,
+           Engine* engine, BufferDescriptor bd, uint32_t byteOffset), {
+       self->setBuffer(*engine, std::move(*bd.bd), byteOffset);
+   }), allow_raw_pointers());
+
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("_build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
         return builder->build(*engine);
@@ -1147,6 +1208,8 @@ class_<VertexBuilder>("VertexBuffer$Builder")
         return &builder->attribute(attr, bufferIndex, attrType, byteOffset, byteStride); })
     .BUILDER_FUNCTION("vertexCount", VertexBuilder, (VertexBuilder* builder, int count), {
         return &builder->vertexCount(count); })
+    .BUILDER_FUNCTION("enableBufferObjects", VertexBuilder, (VertexBuilder* builder, bool enable), {
+        return &builder->enableBufferObjects(enable); })
     .BUILDER_FUNCTION("normalized", VertexBuilder, (VertexBuilder* builder,
             VertexAttribute attrib), {
         return &builder->normalized(attrib); })
@@ -1159,6 +1222,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
 /// VertexBuffer ::core class:: Bundle of buffers and associated vertex attributes.
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
+    .function("setBufferObjectAt", &VertexBuffer::setBufferObjectAt, allow_raw_pointers())
     .function("_setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
             Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd, uint32_t byteOffset), {
         self->setBufferAt(*engine, bufferIndex, std::move(*vbd.bd), byteOffset);
@@ -1823,6 +1887,21 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("asyncGetLoadProgress", &ResourceLoader::asyncGetLoadProgress)
     .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
+
+class_<Settings>("Settings");
+
+class_<JsonSerializer>("JsonSerializer")
+    .constructor<>()
+    .function("writeJson", &JsonSerializer::writeJson);
+
+class_<SimpleViewer>("SimpleViewer")
+    .constructor<Engine*, Scene*, View*, int>()
+    .function("renderUserInterface", &SimpleViewer::renderUserInterface, allow_raw_pointers())
+    .function("getSettings", &SimpleViewer::getSettings)
+    .function("mouseEvent", &SimpleViewer::mouseEvent)
+    .function("keyDownEvent", &SimpleViewer::keyDownEvent)
+    .function("keyUpEvent", &SimpleViewer::keyUpEvent)
+    .function("keyPressEvent", &SimpleViewer::keyPressEvent);
 
 } // EMSCRIPTEN_BINDINGS
 

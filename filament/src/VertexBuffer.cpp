@@ -16,6 +16,7 @@
 
 #include "details/VertexBuffer.h"
 
+#include "details/BufferObject.h"
 #include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
@@ -36,6 +37,7 @@ struct VertexBuffer::BuilderDetails {
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
+    bool mBufferObjectsEnabled = false;
 };
 
 using BuilderType = VertexBuffer;
@@ -48,6 +50,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 
 VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(uint32_t vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
+    return *this;
+}
+
+VertexBuffer::Builder& VertexBuffer::Builder::enableBufferObjects(bool enabled) noexcept {
+    mImpl->mBufferObjectsEnabled = enabled;
     return *this;
 }
 
@@ -140,7 +147,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
 // ------------------------------------------------------------------------------------------------
 
 FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
-        : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount) {
+        : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount),
+          mBufferObjectsEnabled(builder->mBufferObjectsEnabled) {
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
 
     mDeclaredAttributes = builder->mDeclaredAttributes;
@@ -174,7 +182,8 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createVertexBuffer(
-            mBufferCount, attributeCount, mVertexCount, attributeArray, backend::BufferUsage::STATIC);
+            mBufferCount, attributeCount, mVertexCount, attributeArray,
+            backend::BufferUsage::STATIC, mBufferObjectsEnabled);
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
@@ -188,12 +197,25 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
+    ASSERT_PRECONDITION(!mBufferObjectsEnabled, "Please use setBufferObjectAt()");
     if (bufferIndex < mBufferCount) {
         engine.getDriverApi().updateVertexBuffer(mHandle,
                 bufferIndex, std::move(buffer), byteOffset);
     } else {
-        ASSERT_PRECONDITION_NON_FATAL(bufferIndex < mBufferCount,
-                "bufferIndex must be < bufferCount");
+        ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
+    }
+}
+
+void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
+        FBufferObject const * bufferObject) {
+    ASSERT_PRECONDITION(mBufferObjectsEnabled, "Please use setBufferAt()");
+    ASSERT_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX,
+            "Binding type must be VERTEX.");
+    if (bufferIndex < mBufferCount) {
+        auto hwBufferObject = bufferObject->getHwHandle();
+        engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
+    } else {
+        ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
     }
 }
 
@@ -208,6 +230,11 @@ size_t VertexBuffer::getVertexCount() const noexcept {
 void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
     upcast(this)->setBufferAt(upcast(engine), bufferIndex, std::move(buffer), byteOffset);
+}
+
+void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
+        BufferObject const* bufferObject) {
+    upcast(this)->setBufferObjectAt(upcast(engine), bufferIndex, upcast(bufferObject));
 }
 
 void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {

@@ -19,33 +19,50 @@ package com.google.android.filament.gltf
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.view.Choreographer
+import android.util.Log
+import android.view.*
 import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.SurfaceView
-import com.google.android.filament.utils.KtxLoader
-import com.google.android.filament.utils.ModelViewer
-import com.google.android.filament.utils.Utils
+import android.widget.TextView
+import android.widget.Toast
+import com.google.android.filament.utils.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import java.util.zip.ZipInputStream
 
 class MainActivity : Activity() {
 
     companion object {
         // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init { Utils.init() }
+        private const val TAG = "gltf-viewer"
     }
 
     private lateinit var surfaceView: SurfaceView
     private lateinit var choreographer: Choreographer
     private val frameScheduler = FrameCallback()
     private lateinit var modelViewer: ModelViewer
+    private lateinit var titlebarHint: TextView
     private val doubleTapListener = DoubleTapListener()
     private lateinit var doubleTapDetector: GestureDetector
+    private var remoteServer: RemoteServer? = null
+    private var statusToast: Toast? = null
+    private var statusText: String? = null
+    private var latestDownload: String? = null
+    private val automation = AutomationEngine()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        surfaceView = SurfaceView(this).apply { setContentView(this) }
+        setContentView(R.layout.simple_layout)
+
+        titlebarHint = findViewById(R.id.user_hint)
+        surfaceView = findViewById(R.id.main_sv)
         choreographer = Choreographer.getInstance()
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
@@ -61,6 +78,8 @@ class MainActivity : Activity() {
         createRenderables()
         createIndirectLight()
 
+        setStatusText("To load a new model, go to the above URL on your host machine.")
+
         val dynamicResolutionOptions = modelViewer.view.dynamicResolutionOptions
         dynamicResolutionOptions.enabled = true
         modelViewer.view.dynamicResolutionOptions = dynamicResolutionOptions
@@ -72,6 +91,8 @@ class MainActivity : Activity() {
         val bloomOptions = modelViewer.view.bloomOptions
         bloomOptions.enabled = true
         modelViewer.view.bloomOptions = bloomOptions
+
+        remoteServer = RemoteServer(8082)
     }
 
     private fun createRenderables() {
@@ -105,6 +126,88 @@ class MainActivity : Activity() {
         return ByteBuffer.wrap(bytes)
     }
 
+    private fun clearStatusText() {
+        statusToast?.let {
+            it.cancel()
+            statusText = null
+        }
+    }
+
+    private fun setStatusText(text: String) {
+        runOnUiThread {
+            if (statusToast == null || statusText != text) {
+                statusText = text
+                statusToast = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT)
+                statusToast!!.show()
+
+            }
+        }
+    }
+
+    private suspend fun loadGlb(message: RemoteServer.ReceivedMessage) {
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGlb(message.buffer)
+            modelViewer.transformToUnitCube()
+        }
+    }
+
+    private suspend fun loadZip(message: RemoteServer.ReceivedMessage) {
+        val zipfileBytes = ByteArray(message.buffer.remaining())
+        message.buffer.get(zipfileBytes)
+
+        var gltfPath: String? = null
+        val pathToBufferMapping = withContext(Dispatchers.IO) {
+            val deflater = ZipInputStream(ByteArrayInputStream(zipfileBytes))
+            val mapping = HashMap<String, Buffer>()
+            while (true) {
+                val entry = deflater.nextEntry ?: break
+                if (entry.isDirectory) continue
+
+                // This isn't strictly required, but as an optimization
+                // we ignore common junk that often pollutes ZIP files.
+                if (entry.name.startsWith("__MACOSX")) continue
+                if (entry.name.startsWith(".DS_Store")) continue
+
+                val uri = entry.name
+                val byteArray = deflater.readBytes()
+                Log.i(TAG, "Deflated ${byteArray.size} bytes from $uri")
+                val buffer = ByteBuffer.wrap(byteArray)
+                mapping[uri] = buffer
+                if (uri.endsWith(".gltf")) {
+                    gltfPath = uri
+                }
+            }
+            mapping
+        }
+
+        if (gltfPath == null) {
+            setStatusText("Could not find .gltf in the zip.")
+            return
+        }
+
+        val gltfBuffer = pathToBufferMapping[gltfPath]!!
+
+        // The gltf is often not at the root level (e.g. if a folder is zipped) so
+        // we need to extract its path in order to resolve the embedded uri strings.
+        var gltfPrefix = gltfPath!!.substringBeforeLast('/', "")
+        if (gltfPrefix.isNotEmpty()) {
+            gltfPrefix += "/"
+        }
+
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+            modelViewer.loadModelGltf(gltfBuffer) { uri ->
+                val path = gltfPrefix + uri
+                if (!pathToBufferMapping.contains(path)) {
+                    Log.e(TAG, "Could not find $path in the zip.")
+                }
+                pathToBufferMapping[path]!!
+            }
+            modelViewer.transformToUnitCube()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         choreographer.postFrameCallback(frameScheduler)
@@ -118,6 +221,27 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         choreographer.removeFrameCallback(frameScheduler)
+    }
+
+    fun loadModelData(message: RemoteServer.ReceivedMessage) {
+        Log.i(TAG, "Downloaded model ${message.label} (${message.buffer.capacity()} bytes)")
+        clearStatusText()
+        titlebarHint.text = message.label
+        CoroutineScope(Dispatchers.IO).launch {
+            if (message.label.endsWith(".zip")) {
+                loadZip(message)
+            } else {
+                loadGlb(message)
+            }
+        }
+    }
+
+    fun loadSettings(message: RemoteServer.ReceivedMessage) {
+        val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
+        automation.applySettings(json, modelViewer.view, null,
+                modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
+                modelViewer.scene, modelViewer.renderer)
+        modelViewer.view.colorGrading = automation.getColorGrading((modelViewer.engine))
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {
@@ -134,6 +258,27 @@ class MainActivity : Activity() {
             }
 
             modelViewer.render(frameTimeNanos)
+
+            // Check if a new download is in progress. If so, let the user know with toast.
+            val currentDownload = remoteServer?.peekIncomingLabel()
+            if (RemoteServer.isBinary(currentDownload) && currentDownload != latestDownload) {
+                latestDownload = currentDownload
+                Log.i(TAG, "Downloading $currentDownload")
+                setStatusText("Downloading $currentDownload")
+            }
+
+            // Check if a new message has been fully received from the client.
+            val message = remoteServer?.acquireReceivedMessage()
+            if (message != null) {
+                if (message.label == latestDownload) {
+                    latestDownload = null
+                }
+                if (RemoteServer.isJson(message.label)) {
+                    loadSettings(message)
+                } else {
+                    loadModelData(message)
+                }
+            }
         }
     }
 

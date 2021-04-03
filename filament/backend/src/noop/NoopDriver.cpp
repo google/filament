@@ -85,6 +85,9 @@ void NoopDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 void NoopDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
+void NoopDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+}
+
 void NoopDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
@@ -144,6 +147,10 @@ bool NoopDriver::isTextureFormatSupported(TextureFormat format) {
     return true;
 }
 
+bool NoopDriver::isTextureSwizzleSupported() {
+    return true;
+}
+
 bool NoopDriver::isTextureFormatMipmappable(backend::TextureFormat format) {
     return true;
 }
@@ -176,6 +183,15 @@ void NoopDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
+        uint32_t byteOffset) {
+    scheduleDestroy(std::move(p));
+}
+
+void NoopDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+        Handle<HwBufferObject> boh) {
 }
 
 void NoopDriver::update2DImage(Handle<HwTexture> th,
@@ -246,8 +262,7 @@ void NoopDriver::nextSubpass(int) {
 }
 
 void NoopDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        uint32_t enabledAttributes) {
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
 }
 
 void NoopDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,

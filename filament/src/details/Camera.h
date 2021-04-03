@@ -51,31 +51,35 @@ public:
                        double near, double far) noexcept;
 
     // sets the projection matrix
-    void setProjection(double fov, double aspect, double near, double far,
+    void setProjection(double fovInDegrees, double aspect, double near, double far,
                        Fov direction = Fov::VERTICAL) noexcept;
 
     // sets the projection matrix
-    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
+    void setLensProjection(double focalLengthInMillimeters,
+            double aspect, double near, double far) noexcept;
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
+    void setCustomProjection(math::mat4 const& projection,
+            math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
-    void setScaling(math::double4 const& scaling) noexcept;
+    void setScaling(math::double4 const& scaling) noexcept { mScaling = scaling.xy; }
+
+    void setScaling(math::double2 scaling) noexcept { mScaling = scaling; }
+
+    math::double4 getScaling() const noexcept { return math::double4{ mScaling, 1.0, 1.0 }; }
+
+    void setShift(math::double2 shift) noexcept { mShiftCS = shift * 2.0; }
+
+    const math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
 
     // returns the projection matrix
-    math::mat4 getProjectionMatrix() const noexcept {
-        return math::mat4(mScaling) * mProjection;
-    }
+    math::mat4 getProjectionMatrix() const noexcept;
 
-    math::mat4 getCullingProjectionMatrix() const noexcept {
-        return math::mat4(mScaling) * mProjectionForCulling;
-    }
-
-    const math::double4& getScaling() const noexcept {
-        return mScaling;
-    }
+    math::mat4 getCullingProjectionMatrix() const noexcept;
 
     float getNear() const noexcept { return mNear; }
+
     float getCullingFar() const noexcept { return mFar; }
 
     // sets the camera's view matrix (must be a rigid transform)
@@ -154,6 +158,20 @@ public:
         return mSensitivity;
     }
 
+    void setFocusDistance(float distance) noexcept {
+        mFocusDistance = distance;
+    }
+
+    float getFocusDistance() const noexcept {
+        return mFocusDistance;
+    }
+
+    double getFocalLength() const noexcept;
+
+    static double computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept;
+
+    static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
+
     utils::Entity getEntity() const noexcept {
         return mEntity;
     }
@@ -165,9 +183,10 @@ private:
     FEngine& mEngine;
     utils::Entity mEntity;
 
-    math::mat4 mProjection;            // projection matrix (infinite far)
-    math::mat4 mProjectionForCulling;  // projection matrix (with far plane)
-    math::double4 mScaling = {1.0f};   // additional scaling applied to projection
+    math::mat4 mProjection;                // projection matrix (infinite far)
+    math::mat4 mProjectionForCulling;      // projection matrix (with far plane)
+    math::double2 mScaling = { 1.0f };  // additional scaling applied to projection
+    math::double2 mShiftCS = { 0.0f };  // additional translation applied to projection
 
     float mNear{};
     float mFar{};
@@ -175,12 +194,14 @@ private:
     float mAperture = 16.0f;
     float mShutterSpeed = 1.0f / 125.0f;
     float mSensitivity = 100.0f;
+    float mFocusDistance = 0.0f;
 };
 
 struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
+    CameraInfo(FCamera const& camera,
+            const math::mat4f& worldOriginCamera, float focusDistance) noexcept;
 
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling
@@ -189,8 +210,9 @@ struct CameraInfo {
     float zn{};                     // distance (positive) to the near plane
     float zf{};                     // distance (positive) to the far plane
     float ev100{};                  // exposure
-    float f{};                      // focal length (in m)
-    float A{};                      // f / aperture diameter (in m)
+    float f{};                      // focal length [m]
+    float A{};                      // f-number or f / aperture diameter [m]
+    float d{};                      // focus distance [m]
     math::float3 worldOffset{};     // world offset, API-level camera position
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }

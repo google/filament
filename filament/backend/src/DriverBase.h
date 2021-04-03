@@ -29,6 +29,7 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <array>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -54,17 +55,21 @@ struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount{};               //   4
     uint8_t bufferCount{};                //   1
     uint8_t attributeCount{};             //   1
-    uint8_t padding[2]{};                 //   2 -> total struct is 136 bytes
+    bool bufferObjectsEnabled{};          //   1
+    uint8_t bufferObjectsVersion{};       //   1 -> total struct is 136 bytes
 
     HwVertexBuffer() noexcept = default;
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-            AttributeArray const& attributes) noexcept
+            AttributeArray const& attributes, bool bufferObjectsEnabled) noexcept
             : attributes(attributes),
               vertexCount(elementCount),
               bufferCount(bufferCount),
-              attributeCount(attributeCount) {
+              attributeCount(attributeCount),
+              bufferObjectsEnabled(bufferObjectsEnabled) {
     }
 };
+
+struct HwBufferObject : public HwBase {};
 
 struct HwIndexBuffer : public HwBase {
     uint32_t count{};

@@ -21,8 +21,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
-import com.google.android.filament.proguard.UsedByReflection;
-
 /**
  * <code>IndirectLight</code> is used to simulate environment lighting, a form of global illumination.
  *
@@ -288,7 +286,7 @@ public class IndirectLight {
          * range can be adjusted with this method.</p>
          *
          * @param envIntensity  Scale factor applied to the environment and irradiance such that
-         *                      the result is in cd/m^2 (lux) units (default = 30000)
+         *                      the result is in <i>lux</i>, or <i>lumen/m^2</i> (default = 30000)
          *
          * @return This Builder, for chaining calls.
          */
@@ -354,14 +352,14 @@ public class IndirectLight {
      * range can be adjusted with this method.</p>
      *
      * @param intensity  Scale factor applied to the environment and irradiance such that
-     *                   the result is in cd/m^2 units (default = 30000)
+     *                   the result is in <i>lux</i>, or <i>lumen/m^2</i> (default = 30000)
      */
     public void setIntensity(float intensity) {
         nSetIntensity(getNativeObject(), intensity);
     }
 
     /**
-     * Returns the environment's intensity in cd/m<sup>2</sup>.
+     * Returns the environment's intensity in <i>lux</i>, or <i>lumen/m^2</i>.
      */
     public float getIntensity() {
         return nGetIntensity(getNativeObject());
@@ -430,6 +428,7 @@ public class IndirectLight {
     }
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 3)
     public float[] getDirectionEstimate(@Nullable @Size(min = 3) float[] direction) {
         direction = Asserts.assertFloat3(direction);
@@ -472,6 +471,7 @@ public class IndirectLight {
 
 
     /** @deprecated */
+    @Deprecated
     @NonNull @Size(min = 4)
     public float[] getColorEstimate(@Nullable @Size(min = 4) float[] colorIntensity, float x, float y, float z) {
         colorIntensity = Asserts.assertFloat4(colorIntensity);

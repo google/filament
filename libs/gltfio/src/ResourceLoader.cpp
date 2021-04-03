@@ -18,6 +18,7 @@
 #include <gltfio/Image.h>
 
 #include "FFilamentAsset.h"
+#include "TangentsJob.h"
 #include "upcast.h"
 
 #include <filament/Engine.h>
@@ -25,8 +26,6 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
-
-#include <geometry/SurfaceOrientation.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -242,6 +241,34 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     }
 }
 
+// Parses a data URI and returns a blob that gets malloc'd in cgltf, which the caller must free.
+// (implementation snarfed from meshoptimizer)
+static const uint8_t* parseDataUri(const char* uri, std::string* mimeType, size_t* psize) {
+    if (strncmp(uri, "data:", 5) != 0) {
+        return nullptr;
+    }
+    const char* comma = strchr(uri, ',');
+    if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
+        const char* base64 = comma + 1;
+        const size_t base64Size = strlen(base64);
+        size_t size = base64Size - base64Size / 4;
+        if (base64Size >= 2) {
+            size -= base64[base64Size - 2] == '=';
+            size -= base64[base64Size - 1] == '=';
+        }
+        void* data = 0;
+        cgltf_options options = {};
+        cgltf_result result = cgltf_load_buffer_base64(&options, size, base64, &data);
+        if (result != cgltf_result_success) {
+            return nullptr;
+        }
+        *mimeType = std::string(uri + 5, comma - 7);
+        *psize = size;
+        return (const uint8_t*) data;
+    }
+    return nullptr;
+}
+
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new Impl(config)) { }
 
 ResourceLoader::~ResourceLoader() {
@@ -256,11 +283,22 @@ void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer)
         SYSTRACE_CONTEXT();
         SYSTRACE_ASYNC_BEGIN("addResourceData", 1);
     }
+    // NOTE: replacing an existing item in a robin map does not seem to behave as expected.
+    // To work around this, we explicitly erase the old element if it already exists.
+    auto iter = pImpl->mUriDataCache.find(uri);
+    if (iter != pImpl->mUriDataCache.end()) {
+        pImpl->mUriDataCache.erase(iter);
+    }
     pImpl->mUriDataCache.emplace(uri, std::move(buffer));
 }
 
 bool ResourceLoader::hasResourceData(const char* uri) const {
     return pImpl->mUriDataCache.find(uri) != pImpl->mUriDataCache.end();
+}
+
+void ResourceLoader::evictResourceData() {
+    // Note that this triggers BufferDescriptor callbacks.
+    pImpl->mUriDataCache.clear();
 }
 
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
@@ -564,6 +602,15 @@ void ResourceLoader::Impl::addTextureCacheEntry(const TextureSlot& tb) {
     entry = (mUriTextureCache[uri] = std::make_unique<TextureCacheEntry>()).get();
     entry->srgb = tb.srgb;
 
+    // Check if this is a data URI. We don't care about the MIME type since stb can infer it.
+    std::string mimeType;
+    size_t dataUriSize;
+    const uint8_t* dataUriContent = parseDataUri(uri, &mimeType, &dataUriSize);
+    if (dataUriContent) {
+        BufferDescriptor buffer(dataUriContent, dataUriSize, FREE_CALLBACK);
+        mUriDataCache.emplace(uri, std::move(buffer));
+    }
+
     // Check the user-supplied resource cache for this URI, otherwise peek at the file.
     auto iter = mUriDataCache.find(uri);
     if (iter != mUriDataCache.end()) {
@@ -756,140 +803,6 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
     const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
 
-    struct JobParams {
-        // Consumed by the job:
-        const cgltf_primitive* prim;
-        VertexBuffer* const vb;
-        const uint8_t slot;
-        const int morphTargetIndex;
-        // Produced by the job:
-        cgltf_size vertexCount;
-        short4* results;
-    };
-
-    constexpr int kMorphTargetUnused = -1;
-
-    auto computeQuats = [&](JobParams* params) {
-        const cgltf_primitive& prim = *params->prim;
-        const uint8_t slot = params->slot;
-        const int morphTargetIndex = params->morphTargetIndex;
-
-        // Declare vectors of normals and tangents, which we'll extract & convert from the source.
-        std::vector<float3> fp32Normals;
-        std::vector<float4> fp32Tangents;
-        std::vector<float3> fp32Positions;
-        std::vector<float2> fp32TexCoords;
-        std::vector<uint3> ui32Triangles;
-
-        cgltf_size vertexCount = 0;
-
-        // Build a mapping from cgltf_attribute_type to cgltf_accessor*.
-        const int NUM_ATTRIBUTES = 8;
-        const cgltf_accessor* accessors[NUM_ATTRIBUTES] = {};
-
-        // Collect accessors for normals, tangents, etc.
-        if (morphTargetIndex == kMorphTargetUnused) {
-            for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
-                const cgltf_attribute& attr = prim.attributes[aindex];
-                if (attr.index == 0) {
-                    accessors[attr.type] = attr.data;
-                    vertexCount = attr.data->count;
-                }
-            }
-        } else {
-            const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
-            for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-                const cgltf_attribute& attr = morphTarget.attributes[aindex];
-                if (attr.index == 0) {
-                    accessors[attr.type] = attr.data;
-                    vertexCount = attr.data->count;
-                }
-            }
-        }
-        params->vertexCount = vertexCount;
-
-        // At a minimum we need normals to generate tangents.
-        auto normalsInfo = accessors[cgltf_attribute_type_normal];
-        if (vertexCount == 0) {
-            return;
-        }
-
-        geometry::SurfaceOrientation::Builder sob;
-        sob.vertexCount(vertexCount);
-
-        // Convert normals into packed floats.
-        if (normalsInfo) {
-            assert(normalsInfo->count == vertexCount);
-            assert(normalsInfo->type == cgltf_type_vec3);
-            fp32Normals.resize(vertexCount);
-            cgltf_accessor_unpack_floats(normalsInfo, &fp32Normals[0].x, vertexCount * 3);
-            sob.normals(fp32Normals.data());
-        }
-
-        // Convert tangents into packed floats.
-        auto tangentsInfo = accessors[cgltf_attribute_type_tangent];
-        if (tangentsInfo) {
-            if (tangentsInfo->count != vertexCount || tangentsInfo->type != cgltf_type_vec4) {
-                slog.e << "Bad tangent count or type." << io::endl;
-                return;
-            }
-            fp32Tangents.resize(vertexCount);
-            cgltf_accessor_unpack_floats(tangentsInfo, &fp32Tangents[0].x, vertexCount * 4);
-            sob.tangents(fp32Tangents.data());
-        }
-
-        auto positionsInfo = accessors[cgltf_attribute_type_position];
-        if (positionsInfo) {
-            if (positionsInfo->count != vertexCount || positionsInfo->type != cgltf_type_vec3) {
-                slog.e << "Bad position count or type." << io::endl;
-                return;
-            }
-            fp32Positions.resize(vertexCount);
-            cgltf_accessor_unpack_floats(positionsInfo, &fp32Positions[0].x, vertexCount * 3);
-            sob.positions(fp32Positions.data());
-        }
-
-        if (prim.indices) {
-            size_t triangleCount = prim.indices->count / 3;
-            ui32Triangles.resize(triangleCount);
-            cgltf_size j = 0;
-            for (auto& triangle : ui32Triangles) {
-                triangle.x = cgltf_accessor_read_index(prim.indices, j++);
-                triangle.y = cgltf_accessor_read_index(prim.indices, j++);
-                triangle.z = cgltf_accessor_read_index(prim.indices, j++);
-            }
-        } else {
-            size_t triangleCount = vertexCount / 3;
-            ui32Triangles.resize(triangleCount);
-            cgltf_size j = 0;
-            for (auto& triangle : ui32Triangles) {
-                triangle.x = j++;
-                triangle.y = j++;
-                triangle.z = j++;
-            }
-        }
-
-        sob.triangleCount(ui32Triangles.size());
-        sob.triangles(ui32Triangles.data());
-
-        auto texcoordsInfo = accessors[cgltf_attribute_type_texcoord];
-        if (texcoordsInfo) {
-            if (texcoordsInfo->count != vertexCount || texcoordsInfo->type != cgltf_type_vec2) {
-                slog.e << "Bad texture coordinate count or type." << io::endl;
-                return;
-            }
-            fp32TexCoords.resize(vertexCount);
-            cgltf_accessor_unpack_floats(texcoordsInfo, &fp32TexCoords[0].x, vertexCount * 2);
-            sob.uvs(fp32TexCoords.data());
-        }
-
-        // Compute surface orientation quaternions.
-        params->results = (short4*) malloc(sizeof(short4) * vertexCount);
-        geometry::SurfaceOrientation* helper = sob.build();
-        helper->getQuats(params->results, vertexCount);
-        delete helper;
-    };
-
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
     tsl::robin_map<VertexBuffer*, uint8_t> morphTangents[4];
@@ -905,18 +818,19 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     }
 
     // Create a job description for each primitive.
-    std::vector<JobParams> jobParams;
+    using Params = TangentsJob::Params;
+    std::vector<Params> jobParams;
     for (auto pair : asset->mPrimitives) {
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(JobParams { pair.first, vb, iter->second, kMorphTargetUnused });
+            jobParams.emplace_back(Params {{ pair.first }, {vb, iter->second }});
         }
         for (int morphTarget = 0; morphTarget < 4; morphTarget++) {
             const auto& tangents = morphTangents[morphTarget];
             auto iter = tangents.find(vb);
             if (iter != tangents.end()) {
-                jobParams.emplace_back(JobParams { pair.first, vb, iter->second, morphTarget });
+                jobParams.emplace_back(Params {{ pair.first, morphTarget }, {vb, iter->second }});
             }
         }
     }
@@ -924,17 +838,17 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     // Kick off jobs for computing tangent frames.
     JobSystem* js = &mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
-    for (JobParams& params : jobParams) {
-        JobParams* pptr = &params;
-        js->run(jobs::createJob(*js, parent, [pptr, computeQuats] { computeQuats(pptr); }));
+    for (Params& params : jobParams) {
+        Params* pptr = &params;
+        js->run(jobs::createJob(*js, parent, [pptr] { TangentsJob::run(pptr); }));
     }
     js->runAndWait(parent);
 
     // Finally, upload quaternions to the GPU from the main thread.
-    for (JobParams& params : jobParams) {
-        VertexBuffer::BufferDescriptor bd(params.results, params.vertexCount * sizeof(short4),
-                FREE_CALLBACK);
-        params.vb->setBufferAt(*mEngine, params.slot, std::move(bd));
+    for (Params& params : jobParams) {
+        VertexBuffer::BufferDescriptor bd(params.out.results,
+                params.out.vertexCount * sizeof(short4), FREE_CALLBACK);
+        params.context.vb->setBufferAt(*mEngine, params.context.slot, std::move(bd));
     }
 }
 
