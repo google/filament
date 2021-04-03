@@ -141,10 +141,11 @@ import androidx.annotation.Size;
     }
 
     /**
-     * Gets the actual parent of an entity defined by {@link #setParent(int, int)}.
+     * Returns the actual parent entity of an {@link EntityInstance} originally defined
+     * by {@link #setParent(int, int)}.
      *
-     * @param i the {@link EntityInstance} of the transform component to get the parent from or
-     *          {@Link EntityInstance.NULL} if no parent was defined.
+     * @param i the {@link EntityInstance} of the transform component to get the parent from.
+     * @return the parent {@link Entity}.
      * @see #getInstance
      */
     @Entity
