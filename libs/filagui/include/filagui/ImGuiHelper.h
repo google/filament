@@ -47,10 +47,11 @@ public:
     using Callback = std::function<void(filament::Engine*, filament::View*)>;
 
     // The constructor creates its own Scene and places it in the given View.
-    ImGuiHelper(filament::Engine* engine, filament::View* view, const utils::Path& fontPath);
+    ImGuiHelper(filament::Engine* engine, filament::View* view, const utils::Path& fontPath,
+            ImGuiContext* imGuiContext = nullptr);
     ~ImGuiHelper();
 
-    // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
+     // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
     void setDisplaySize(int width, int height, float scaleX = 1.0f, float scaleY = 1.0f);
 
     // High-level utility method that takes a callback for creating all ImGui windows and widgets.
