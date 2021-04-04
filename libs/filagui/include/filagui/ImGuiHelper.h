@@ -51,7 +51,7 @@ public:
             ImGuiContext* imGuiContext = nullptr);
     ~ImGuiHelper();
 
-    // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
+     // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
     void setDisplaySize(int width, int height, float scaleX = 1.0f, float scaleY = 1.0f);
 
     // High-level utility method that takes a callback for creating all ImGui windows and widgets.
