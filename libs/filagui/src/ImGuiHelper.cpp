@@ -45,9 +45,10 @@ namespace filagui {
 
 #include "generated/resources/filagui_resources.h"
 
-ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath) :
-        mEngine(engine), mView(view), mScene(engine->createScene()),
-        mImGuiContext(ImGui::CreateContext()) {
+ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath, 
+        ImGuiContext *imGuiContext) 
+        : mEngine(engine), mView(view), mScene(engine->createScene()),
+        mImGuiContext(imGuiContext ? imGuiContext : ImGui::CreateContext()) {
     ImGuiIO& io = ImGui::GetIO();
 
     // Create a simple alpha-blended 2D blitting material.
@@ -63,7 +64,7 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     createAtlasTexture(engine);
 
     // For proggy, switch to NEAREST for pixel-perfect text.
-    if (fontPath.isEmpty()) {
+    if (fontPath.isEmpty() && !imGuiContext) {
         TextureSampler sampler(MinFilter::NEAREST, MagFilter::NEAREST);
         mMaterial->setDefaultParameter("albedo", mTexture, sampler);
     }
