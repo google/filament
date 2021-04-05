@@ -224,9 +224,9 @@ float prefilteredImportanceSampling(float ipdf, float iblRoughnessOneLevel) {
     // Prefiltering doesn't work with anisotropy
     const float numSamples = float(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const float invNumSamples = 1.0 / float(numSamples);
-    const float dim = float(textureSize(light_iblSpecular, 0).x);
-    const float omegaP = (4.0 * PI) / (6.0 * dim * dim);
-    const float invOmegaP = 1.0 / omegaP;
+          float dim = float(textureSize(light_iblSpecular, 0).x);
+          float omegaP = (4.0 * PI) / (6.0 * dim * dim);
+          float invOmegaP = 1.0 / omegaP;
     const float K = 4.0;
     float omegaS = invNumSamples * ipdf;
     float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, iblRoughnessOneLevel);
@@ -304,7 +304,9 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     p.perceptualRoughness = pixel.clearCoatPerceptualRoughness;
     p.f0 = vec3(0.04);
     p.roughness = perceptualRoughnessToRoughness(p.perceptualRoughness);
+#if defined(MATERIAL_HAS_ANISOTROPY)
     p.anisotropy = 0.0;
+#endif
 
     vec3 clearCoatLobe = isEvaluateIBL(p, clearCoatNormal, shading_view, clearCoatNoV);
     Fr += clearCoatLobe * (specularAO * pixel.clearCoat);
