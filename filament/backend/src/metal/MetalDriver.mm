@@ -55,7 +55,29 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         mPlatform(*platform),
         mContext(new MetalContext) {
     mContext->driver = this;
-    mContext->device = MTLCreateSystemDefaultDevice();
+
+#if !defined(IOS)
+    const bool forceIntegrated =
+            NSProcessInfo.processInfo.environment[@"FILAMENT_FORCE_INTEGRATED_GPU"] != nil;
+    if (forceIntegrated) {
+        // Find the first low power device, which is likely the integrated GPU.
+        NSArray<id<MTLDevice>>* const devices = MTLCopyAllDevices();
+        for (id<MTLDevice> device in devices) {
+            if (device.isLowPower) {
+                mContext->device = device;
+                break;
+            }
+        }
+    } else
+#endif
+    {
+        mContext->device = MTLCreateSystemDefaultDevice();
+    }
+
+    utils::slog.i << "Selected physical device '"
+                  << [mContext->device.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
+                  << utils::io::endl;
+
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
     mContext->pipelineStateCache.setDevice(mContext->device);
