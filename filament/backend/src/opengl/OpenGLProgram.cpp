@@ -59,15 +59,15 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             auto shader = shadersSource[i];
             GLint const length = (GLint)shader.size();
 
-#ifndef NDEBUG
-            // If usages of the Google-style line directive are present, remove them, as some
-            // drivers don't allow the quotation marks.
-            if (requestsGoogleLineDirectivesExtension((const char*) shader.data(), length)) {
-                auto temp = shader;
-                removeGoogleLineDirectives((char*) temp.data(), length);    // length is unaffected
-                shader = std::move(temp);
+            if (!gl->getContext().ext.GOOGLE_cpp_style_line_directive) {
+                // If usages of the Google-style line directive are present, remove them, as some
+                // drivers don't allow the quotation marks.
+                if (requestsGoogleLineDirectivesExtension((const char*)shader.data(), length)) {
+                    auto temp = shader;
+                    removeGoogleLineDirectives((char*)temp.data(), length); // length is unaffected
+                    shader = std::move(temp);
+                }
             }
-#endif
 
             const char * const source = (const char*)shader.data();
 

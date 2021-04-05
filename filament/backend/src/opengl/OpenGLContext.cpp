@@ -237,6 +237,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
     ext.EXT_clip_control = hasExtension(exts, "GL_EXT_clip_control");
+    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -256,6 +257,7 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
     ext.EXT_clip_control = hasExtension(exts, "GL_ARB_clip_control") || (major == 4 && minor >= 5);
+    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
