@@ -2358,8 +2358,7 @@ GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
 }
 
 void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        uint32_t enabledAttributes) {
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -2376,30 +2375,23 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
         rp->maxVertexCount = eb->vertexCount;
         for (size_t i = 0, n = eb->attributes.size(); i < n; i++) {
-            if (enabledAttributes & (1U << i)) {
-                uint8_t bi = eb->attributes[i].buffer;
-                assert_invariant(bi != 0xFF);
+            const auto& attribute = eb->attributes[i];
+            if (attribute.buffer != Attribute::BUFFER_UNUSED) {
+                uint8_t bi = attribute.buffer;
                 gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
-                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
-
-                    // Emscripten regressed at the following PR so we work around it for now.
-                    // https://github.com/emscripten-core/emscripten/pull/11225
-                    #ifdef __EMSCRIPTEN__
-                    EM_ASM_INT({ GL.currArrayBuffer = GLctx.currentArrayBufferBinding; });
-                    #endif
-
+                if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                     glVertexAttribIPointer(GLuint(i),
-                            getComponentCount(eb->attributes[i].type),
-                            getComponentType(eb->attributes[i].type),
-                            eb->attributes[i].stride,
-                            (void*) uintptr_t(eb->attributes[i].offset));
+                            getComponentCount(attribute.type),
+                            getComponentType(attribute.type),
+                            attribute.stride,
+                            (void*) uintptr_t(attribute.offset));
                 } else {
                     glVertexAttribPointer(GLuint(i),
-                            getComponentCount(eb->attributes[i].type),
-                            getComponentType(eb->attributes[i].type),
-                            getNormalization(eb->attributes[i].flags & Attribute::FLAG_NORMALIZED),
-                            eb->attributes[i].stride,
-                            (void*) uintptr_t(eb->attributes[i].offset));
+                            getComponentCount(attribute.type),
+                            getComponentType(attribute.type),
+                            getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
+                            attribute.stride,
+                            (void*) uintptr_t(attribute.offset));
                 }
 
                 gl.enableVertexAttribArray(GLuint(i));
@@ -2407,7 +2399,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
 
                 // In some OpenGL implementations, we must supply a properly-typed placeholder for
                 // every integer input that is declared in the vertex shader.
-                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                     glVertexAttribI4ui(GLuint(i), 0, 0, 0, 0);
                 } else {
                     glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);

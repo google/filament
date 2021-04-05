@@ -178,8 +178,7 @@ private:
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
     explicit VulkanRenderPrimitive(VulkanContext& context) {}
     void setPrimitiveType(backend::PrimitiveType pt);
-    void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer,
-            uint32_t enabledAttributes);
+    void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer);
     VulkanVertexBuffer* vertexBuffer = nullptr;
     VulkanIndexBuffer* indexBuffer = nullptr;
     VkPrimitiveTopology primitiveTopology;

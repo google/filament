@@ -133,8 +133,7 @@ struct MetalUniformBuffer : public HwUniformBuffer {
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
-    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer,
-            uint32_t enabledAttributes);
+    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
     // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
 

@@ -85,10 +85,14 @@ public:
      * factors are set to 1.0.
      *
      * enabled:   enable or disables dynamic resolution on a View
+     *
      * homogeneousScaling: by default the system scales the major axis first. Set this to true
      *                     to force homogeneous scaling.
+     *
      * minScale:  the minimum scale in X and Y this View should use
+     *
      * maxScale:  the maximum scale in X and Y this View should use
+     *
      * quality:   upscaling quality.
      *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
      *
@@ -112,24 +116,32 @@ public:
      * Options to control the bloom effect
      *
      * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     *
      * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
      *              maximum is 12. This value together with resolution influences the spread of the
      *              blur effect. This value can be silently reduced to accommodate the original
      *              image size.
+     *
      * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
      *              the maximum is lower of the original resolution and 4096. This parameter is
      *              silently clamped to the minimum and maximum.
      *              It is highly recommended that this value be smaller than the target resolution
      *              after dynamic resolution is applied (horizontally and vertically).
+     *
      * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     *
      * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
      *              image (true).
+     *
      * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     *
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
      *              useful for artistic reasons and is usually needed when a dirt texture is used.
+     *
      * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
      *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
      *              enabled for the dirt effect to work properly.
+     *
      * dirtStrength: Strength of the dirt texture.
      */
     struct BloomOptions {
@@ -175,10 +187,15 @@ public:
      * @see Camera
      */
     struct DepthOfFieldOptions {
-        float focusDistance = 10.0f;        //!< focus distance in world units
+        enum class Filter : uint8_t {
+            NONE = 0,
+            MEDIAN = 2
+        };
+        float focusDistance = 10.0f;        //!< @deprecated use Camera::setFocusDistance() instead
         float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
+        Filter filter = Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel
     };
 
     /**

@@ -5,6 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.19
+
+- engine: Fix Metal bug when setGeometryAt is called multiple times.
+- engine: Improvements to DoF.
+- engine: Fix RenderTarget NPE when depth is not present.
+- engine: Improvements to Camera APIs. Move focus distance from DofOptions to Camera.
+- engine: VSM shadows now support `shadowMultiplier`.
+- java: Expose severla MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
+  should have been public.
+- java: fix bug with Texture::setImage buffer size calculation.
+
 ## v1.9.18
 
 - engine: Fix a DoF bug that caused black dots around the fast tiles.

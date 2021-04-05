@@ -94,7 +94,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* env, jclass klass,
         jlong nativeAutomation, jstring json, jlong view, jlongArray materials, jlong nativeIbl,
-        jint lightEntity, jlong nativeLm, jlong scene) {
+        jint lightEntity, jlong nativeLm, jlong scene, jlong renderer) {
     using MaterialPointer = MaterialInstance*;
     jsize materialCount = 0;
     jlong* longMaterials = nullptr;
@@ -112,7 +112,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* e
     size_t jsonLength = env->GetStringUTFLength(json);
     automation->applySettings(nativeJson, jsonLength, (View*) view, ptrMaterials, materialCount,
             (IndirectLight*) nativeIbl, (Entity&) lightEntity, (LightManager*) nativeLm,
-            (Scene*) scene);
+            (Scene*) scene, (Renderer*) renderer);
     env->ReleaseStringUTFChars(json, nativeJson);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);

@@ -246,8 +246,7 @@ void NoopDriver::nextSubpass(int) {
 }
 
 void NoopDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        uint32_t enabledAttributes) {
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
 }
 
 void NoopDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,

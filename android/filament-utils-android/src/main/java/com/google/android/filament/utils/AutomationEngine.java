@@ -156,7 +156,7 @@ public class AutomationEngine {
      */
     public void applySettings(@NonNull String settingsJson, @NonNull View view,
             @Nullable MaterialInstance[] materials, @Nullable IndirectLight ibl, @Entity int light,
-            @NonNull LightManager lm, @NonNull Scene scene) {
+            @NonNull LightManager lm, @NonNull Scene scene, @NonNull Renderer renderer) {
         long[] nativeMaterialInstances = null;
         if (materials != null) {
             nativeMaterialInstances = new long[materials.length];
@@ -168,8 +168,9 @@ public class AutomationEngine {
         long nativeIbl = ibl == null ? 0 : ibl.getNativeObject();
         long nativeLm = lm.getNativeObject();
         long nativeScene = scene.getNativeObject();
+        long nativeRenderer = renderer.getNativeObject();
         nApplySettings(mNativeObject, settingsJson, nativeView, nativeMaterialInstances,
-                nativeIbl, light, nativeLm, nativeScene);
+                nativeIbl, light, nativeLm, nativeScene, nativeRenderer);
     }
 
     /**
@@ -218,7 +219,7 @@ public class AutomationEngine {
     private static native void nTick(long nativeObject, long view, long[] materials, long renderer,
             float deltaTime);
     private static native void nApplySettings(long nativeObject, String jsonSettings, long view,
-            long[] materials, long ibl, int light, long lightManager, long scene);
+            long[] materials, long ibl, int light, long lightManager, long scene, long renderer);
     private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);

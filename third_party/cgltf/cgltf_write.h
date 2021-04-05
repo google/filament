@@ -1,7 +1,7 @@
 /**
  * cgltf_write - a single-file glTF 2.0 writer written in C99.
  *
- * Version: 1.9
+ * Version: 1.10
  *
  * Website: https://github.com/jkuhlmann/cgltf
  *
@@ -498,6 +498,7 @@ static void cgltf_write_mesh(cgltf_write_context* context, const cgltf_mesh* mes
 static void cgltf_write_buffer_view(cgltf_write_context* context, const cgltf_buffer_view* view)
 {
 	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "name", view->name);
 	CGLTF_WRITE_IDXPROP("buffer", view->buffer, context->data->buffers);
 	cgltf_write_intprop(context, "byteLength", (int)view->size, -1);
 	cgltf_write_intprop(context, "byteOffset", (int)view->offset, 0);
@@ -511,6 +512,7 @@ static void cgltf_write_buffer_view(cgltf_write_context* context, const cgltf_bu
 static void cgltf_write_buffer(cgltf_write_context* context, const cgltf_buffer* buffer)
 {
 	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "name", buffer->name);
 	cgltf_write_strprop(context, "uri", buffer->uri);
 	cgltf_write_intprop(context, "byteLength", (int)buffer->size, -1);
 	cgltf_write_extras(context, &buffer->extras);
@@ -814,6 +816,7 @@ static void cgltf_write_animation(cgltf_write_context* context, const cgltf_anim
 static void cgltf_write_sampler(cgltf_write_context* context, const cgltf_sampler* sampler)
 {
 	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "name", sampler->name);
 	cgltf_write_intprop(context, "magFilter", sampler->mag_filter, 0);
 	cgltf_write_intprop(context, "minFilter", sampler->min_filter, 0);
 	cgltf_write_intprop(context, "wrapS", sampler->wrap_s, 10497);
@@ -885,6 +888,7 @@ static void cgltf_write_scene(cgltf_write_context* context, const cgltf_scene* s
 static void cgltf_write_accessor(cgltf_write_context* context, const cgltf_accessor* accessor)
 {
 	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "name", accessor->name);
 	CGLTF_WRITE_IDXPROP("bufferView", accessor->buffer_view, context->data->buffer_views);
 	cgltf_write_intprop(context, "componentType", cgltf_int_from_component_type(accessor->component_type), 0);
 	cgltf_write_strprop(context, "type", cgltf_str_from_type(accessor->type));
@@ -944,9 +948,17 @@ static void cgltf_write_camera(cgltf_write_context* context, const cgltf_camera*
 	else if (camera->type == cgltf_camera_type_perspective)
 	{
 		cgltf_write_line(context, "\"perspective\": {");
-		cgltf_write_floatprop(context, "aspectRatio", camera->data.perspective.aspect_ratio, -1.0f);
+
+		if (camera->data.perspective.has_aspect_ratio) {
+			cgltf_write_floatprop(context, "aspectRatio", camera->data.perspective.aspect_ratio, -1.0f);
+		}
+
 		cgltf_write_floatprop(context, "yfov", camera->data.perspective.yfov, -1.0f);
-		cgltf_write_floatprop(context, "zfar", camera->data.perspective.zfar, -1.0f);
+
+		if (camera->data.perspective.has_zfar) {
+			cgltf_write_floatprop(context, "zfar", camera->data.perspective.zfar, -1.0f);
+		}
+
 		cgltf_write_floatprop(context, "znear", camera->data.perspective.znear, -1.0f);
 		cgltf_write_extras(context, &camera->data.perspective.extras);
 		cgltf_write_line(context, "}");

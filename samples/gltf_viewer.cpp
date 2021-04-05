@@ -83,16 +83,6 @@ struct App {
 
     bool actualSize = false;
 
-    struct ViewOptions {
-        float cameraAperture = 16.0f;
-        float cameraSpeed = 125.0f;
-        float cameraISO = 100.0f;
-        float groundShadowStrength = 0.75f;
-        bool groundPlaneEnabled = false;
-        bool skyboxEnabled = true;
-        sRGBColor backgroundColor = { 0.0f };
-    } viewOptions;
-
     struct Scene {
         Entity groundPlane;
         VertexBuffer* groundVertexBuffer;
@@ -104,9 +94,6 @@ struct App {
     ColorGradingSettings lastColorGradingOptions = { 0 };
 
     ColorGrading* colorGrading = nullptr;
-
-    // 0 is the default "free camera". Additional cameras come from the gltf file.
-    int currentCamera = 0;
 
     std::string messageBoxText;
     std::string settingsFile;
@@ -265,7 +252,8 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     Material* shadowMaterial = Material::Builder()
             .package(GLTF_VIEWER_GROUNDSHADOW_DATA, GLTF_VIEWER_GROUNDSHADOW_SIZE)
             .build(*engine);
-    shadowMaterial->setDefaultParameter("strength", app.viewOptions.groundShadowStrength);
+    auto& viewerOptions = app.viewer->getSettings().viewer;
+    shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
 
     const static uint32_t indices[] = {
             0, 1, 2, 2, 3, 0
@@ -572,65 +560,6 @@ int main(int argc, char** argv) {
                 ImGui::Unindent();
             }
 
-            if (ImGui::CollapsingHeader("Scene")) {
-                ImGui::Indent();
-                ImGui::Checkbox("Show skybox", &app.viewOptions.skyboxEnabled);
-                ImGui::ColorEdit3("Background color", &app.viewOptions.backgroundColor.r);
-                ImGui::Checkbox("Ground shadow", &app.viewOptions.groundPlaneEnabled);
-                ImGui::Indent();
-                ImGui::SliderFloat("Strength", &app.viewOptions.groundShadowStrength, 0.0f, 1.0f);
-                ImGui::Unindent();
-                ImGui::Unindent();
-            }
-
-            if (ImGui::CollapsingHeader("Camera")) {
-                ViewSettings& settings = app.viewer->getSettings().view;
-
-                ImGui::Indent();
-                ImGui::SliderFloat("Focal length (mm)", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
-                ImGui::SliderFloat("Aperture", &app.viewOptions.cameraAperture, 1.0f, 32.0f);
-                ImGui::SliderFloat("Speed (1/s)", &app.viewOptions.cameraSpeed, 1000.0f, 1.0f);
-                ImGui::SliderFloat("ISO", &app.viewOptions.cameraISO, 25.0f, 6400.0f);
-                ImGui::Checkbox("DoF", &settings.dof.enabled);
-                ImGui::SliderFloat("Focus distance", &settings.dof.focusDistance, 0.0f, 30.0f);
-                ImGui::SliderFloat("Blur scale", &settings.dof.cocScale, 0.1f, 10.0f);
-
-                if (ImGui::CollapsingHeader("Vignette")) {
-                    ImGui::Checkbox("Enabled##vignetteEnabled", &settings.vignette.enabled);
-                    ImGui::SliderFloat("Mid point", &settings.vignette.midPoint, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Roundness", &settings.vignette.roundness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("Feather", &settings.vignette.feather, 0.0f, 1.0f);
-                    ImGui::ColorEdit3("Color##vignetteColor", &settings.vignette.color.r);
-                }
-
-                const utils::Entity* cameras = app.asset->getCameraEntities();
-                const size_t cameraCount = app.asset->getCameraEntityCount();
-
-                std::vector<std::string> names;
-                names.reserve(cameraCount + 1);
-                names.push_back("Free camera");
-                int c = 0;
-                for (size_t i = 0; i < cameraCount; i++) {
-                    const char* n = app.asset->getName(cameras[i]);
-                    if (n) {
-                        names.emplace_back(n);
-                    } else {
-                        char buf[32];
-                        sprintf(buf, "Unnamed camera %d", c++);
-                        names.emplace_back(buf);
-                    }
-                }
-
-                std::vector<const char*> cstrings;
-                cstrings.reserve(names.size());
-                for (size_t i = 0; i < names.size(); i++) {
-                    cstrings.push_back(names[i].c_str());
-                }
-
-                ImGui::ListBox("Cameras", &app.currentCamera, cstrings.data(), cstrings.size());
-                ImGui::Unindent();
-            }
-
             if (ImGui::CollapsingHeader("Debug")) {
                 if (ImGui::Button("Capture frame")) {
                     auto& debug = engine->getDebugRegistry();
@@ -699,51 +628,45 @@ int main(int argc, char** argv) {
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app.scene.groundPlane);
+        const auto& viewerOptions = app.viewer->getSettings().viewer;
+        const auto& dofOptions = app.viewer->getSettings().view.dof;
         rcm.setLayerMask(instance,
-                0xff, app.viewOptions.groundPlaneEnabled ? 0xff : 0x00);
+                0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
+
+        float fe = viewerOptions.cameraFocalLength;
+        if (dofOptions.enabled) {
+            fe = Camera::computeEffectiveFocalLength(fe / 1000.0,
+                    std::max(0.1f, dofOptions.focusDistance)) * 1000.0;
+        }
+
+        FilamentApp::get().getCameraFocalLength() = fe;
 
         const size_t cameraCount = app.asset->getCameraEntityCount();
         view->setCamera(app.mainCamera);
-        if (app.currentCamera > 0) {
-            const int gltfCamera = app.currentCamera - 1;
-            if (gltfCamera < cameraCount) {
-                const utils::Entity* cameras = app.asset->getCameraEntities();
-                Camera* c = engine->getCameraComponent(cameras[gltfCamera]);
-                assert(c);
-                view->setCamera(c);
 
-                // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
-                // camera to the viewport.
-                const Viewport& vp = view->getViewport();
-                double aspectRatio = (double) vp.width / vp.height;
-                c->setScaling({1.0 / aspectRatio, 1.0});
-            } else {
-                // gltfCamera is out of bounds. Reset camera selection to main camera.
-                app.currentCamera = 0;
-            }
+        const int currentCamera = app.viewer->getCurrentCamera();
+        if (currentCamera > 0 && currentCamera <= cameraCount) {
+            const utils::Entity* cameras = app.asset->getCameraEntities();
+            Camera* camera = engine->getCameraComponent(cameras[currentCamera - 1]);
+            assert_invariant(camera);
+            view->setCamera(camera);
+
+            // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
+            // camera to the viewport.
+            const Viewport& vp = view->getViewport();
+            double aspectRatio = (double) vp.width / vp.height;
+            camera->setScaling({1.0 / aspectRatio, 1.0});
         }
-
-        Camera& camera = view->getCamera();
-        camera.setExposure(
-                app.viewOptions.cameraAperture,
-                1.0f / app.viewOptions.cameraSpeed,
-                app.viewOptions.cameraISO);
 
         app.scene.groundMaterial->setDefaultParameter(
-                "strength", app.viewOptions.groundShadowStrength);
+                "strength", viewerOptions.groundShadowStrength);
 
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) {
-            ibl->getSkybox()->setLayerMask(0xff, app.viewOptions.skyboxEnabled ? 0xff : 0x00);
-        }
+        // This applies clear options, the skybox mask, and some camera settings.
+        Camera& camera = view->getCamera();
+        Skybox* skybox = scene->getSkybox();
+        applySettings(app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
-        // we have to clear because the side-bar doesn't have a background, we cannot use
-        // a skybox on the ui scene, because the ui view is always full screen.
-        renderer->setClearOptions({
-                .clearColor = { inverseTonemapSRGB(app.viewOptions.backgroundColor), 1.0f },
-                .clear = true
-        });
-
+        // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
         if (options.enabled) {
             if (options != app.lastColorGradingOptions) {

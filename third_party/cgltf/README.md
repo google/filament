@@ -40,7 +40,7 @@ if (result == cgltf_result_success)
 ```
 
 Note that cgltf does not load the contents of extra files such as buffers or images into memory by default. You'll need to read these files yourself using URIs from `data.buffers[]` or `data.images[]` respectively.
-For buffer data, you can alternatively call `cgltf_load_buffers`, which will use `FILE*` APIs to open and read buffer files.
+For buffer data, you can alternatively call `cgltf_load_buffers`, which will use `FILE*` APIs to open and read buffer files. This automatically decodes base64 data URIs in buffers. For data URIs in images, you will need to use `cgltf_load_buffer_base64`.
 
 **For more in-depth documentation and a description of the public interface refer to the top of the `cgltf.h` file.**
 
@@ -82,8 +82,6 @@ if (written != size)
 ```
 
 Note that cgltf does not write the contents of extra files such as buffers or images. You'll need to write this data yourself.
-
-Writing does not yet support "extras" data.
 
 **For more in-depth documentation and a description of the public interface refer to the top of the `cgltf_write.h` file.**
 

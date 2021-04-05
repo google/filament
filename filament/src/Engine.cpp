@@ -218,8 +218,7 @@ void FEngine::init() {
 
     mFullScreenTriangleRph = driverApi.createRenderPrimitive();
     driverApi.setRenderPrimitiveBuffer(mFullScreenTriangleRph,
-            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle(),
-            mFullScreenTriangleVb->getDeclaredAttributes().getValue());
+            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle());
     driverApi.setRenderPrimitiveRange(mFullScreenTriangleRph, PrimitiveType::TRIANGLES,
             0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
 

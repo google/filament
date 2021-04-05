@@ -431,7 +431,17 @@ public class View {
      */
     public static class DepthOfFieldOptions {
 
-        /** focus distance in world units */
+        public enum Filter {
+            NONE,
+            MEDIAN
+        }
+
+        /**
+         * focus distance in world units
+         *
+         * @deprecated use {@link Camera#setFocusDistance(float)}
+         */
+        @Deprecated
         public float focusDistance = 10.0f;
 
         /**
@@ -451,6 +461,10 @@ public class View {
 
         /** enable or disable Depth of field effect */
         public boolean enabled = false;
+
+        /** filter to use for filling gaps in the kernel */
+        @NonNull
+        public Filter filter = Filter.MEDIAN;
     };
 
     /**
@@ -1379,7 +1393,7 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale, options.maxApertureDiameter, options.enabled);
+        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale, options.maxApertureDiameter, options.enabled, options.filter.ordinal());
     }
 
     /**
@@ -1438,7 +1452,7 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled);
+    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
     private static native boolean nIsShadowingEnabled(long nativeView);

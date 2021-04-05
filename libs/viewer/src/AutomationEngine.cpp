@@ -138,7 +138,7 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
 
 void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* view,
         MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
-        utils::Entity sunlight, LightManager* lm, Scene* scene) {
+        utils::Entity sunlight, LightManager* lm, Scene* scene, Renderer* renderer) {
     JsonSerializer serializer;
     serializer.readJson(json, jsonLength, mSettings);
     viewer::applySettings(mSettings->view, view);
@@ -146,6 +146,9 @@ void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* 
         viewer::applySettings(mSettings->material, materials[i]);
     }
     viewer::applySettings(mSettings->lighting, ibl, sunlight, lm, scene);
+    Camera* camera = &view->getCamera();
+    Skybox* skybox = scene->getSkybox();
+    viewer::applySettings(mSettings->viewer, camera, skybox, renderer);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {

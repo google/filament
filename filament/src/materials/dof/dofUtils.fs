@@ -6,6 +6,7 @@
 // Below this value we transition to the in-focus image. This value is chosen as a compromise
 // between allowing slight out-of-focus and reducing sampling artifacts around blurry objects
 // on sharp background. Based on experiments, it should be between 1.0 and 2.0.
+// This value is in high-resolution pixels.
 #define MAX_IN_FOCUS_COC    1.0
 
 // The maximum circle-of-confusion radius we allow in high-resolution pixels.
@@ -13,7 +14,7 @@
 // too large, the rings start to appear; but worse, the median pass will start erasing pixels
 // if the gaps between rings becomes too large. This is also limited by the dilate pass.
 // With a minimum ring count of 3 and 4 mip levels, 48 seems to be the maximum allowable.
-// Currently out dilate pass is set-up for 32 max.
+// Currently our dilate pass is set-up for 32 max.
 #define MAX_COC_RADIUS      32.0
 
 float random(const highp vec2 w) {
@@ -35,6 +36,18 @@ float max4(const vec4 v) {
 
 float min4(const vec4 v) {
     return min2(min(v.xy, v.zw));
+}
+
+float rcp(const float x) {
+    return 1.0 / x;
+}
+
+float rcpOrZero(const float x) {
+    return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
+}
+
+highp float rcpOrZeroHighp(const highp float x) {
+    return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
 }
 
 float cocToAlpha(const float coc) {
@@ -62,12 +75,12 @@ float isBackground(const float coc) {
 
 bool isForegroundTile(const vec2 tiles) {
     // A foreground tile is one where the smallest CoC is negative
-    return tiles.g < 0.0;
+    return tiles.r < 0.0;
 }
 
 bool isBackgroundTile(const vec2 tiles) {
     // A background tile is one where the largest CoC is positive
-    return tiles.r > 0.0;
+    return tiles.g > 0.0;
 }
 
 bool isFastTile(const vec2 tiles) {
@@ -76,7 +89,7 @@ bool isFastTile(const vec2 tiles) {
     // We could cannot use the absolute value of the min/mac CoC -- which would categorize more
     // tiles as "fast" (e.g. when both the foreground and background have similar CoC), because
     // it doesn't tell us anything about objects that could be in between.
-    return (tiles.r - tiles.g) <= abs(tiles.r) * 0.05;
+    return (tiles.g - tiles.r) <= abs(tiles.g) * 0.05;
 }
 
 bool isTrivialTile(const vec2 tiles) {

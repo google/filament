@@ -18,6 +18,10 @@
 
 #include "jsonParseUtils.h"
 
+#include <filament/Camera.h>
+#include <filament/Renderer.h>
+#include <filament/Skybox.h>
+
 #include <utils/Log.h>
 
 #include <math/mat3.h>
@@ -452,6 +456,15 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptio
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions::Filter* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = DepthOfFieldOptions::Filter::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "MEDIAN")) { *out = DepthOfFieldOptions::Filter::MEDIAN; }
+    else {
+        slog.w << "Invalid DepthOfFieldOptions::Filter: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -466,6 +479,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
         } else if (0 == compare(tok, jsonChunk, "enabled")) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (0 == compare(tok, jsonChunk, "filter")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->filter);
         } else {
             slog.w << "Invalid dof options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -738,6 +753,42 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "cameraAperture") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cameraAperture);
+        } else if (compare(tok, jsonChunk, "cameraSpeed") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraSpeed);
+        } else if (compare(tok, jsonChunk, "cameraISO") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraISO);
+        } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
+        } else if (compare(tok, jsonChunk, "groundPlaneEnabled") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->groundPlaneEnabled);
+        } else if (compare(tok, jsonChunk, "skyboxEnabled") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->skyboxEnabled);
+        } else if (compare(tok, jsonChunk, "backgroundColor") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->backgroundColor);
+        } else if (compare(tok, jsonChunk, "cameraFocalLength") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocalLength);
+        } else if (compare(tok, jsonChunk, "cameraFocusDistance") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraFocusDistance);
+         } else {
+            slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid viewer options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -750,6 +801,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
             i = parse(tokens, i + 1, jsonChunk, &out->material);
         } else if (compare(tok, jsonChunk, "lighting") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->lighting);
+        } else if (compare(tok, jsonChunk, "viewer") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->viewer);
         } else {
             slog.w << "Invalid group key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -811,6 +864,33 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
     if (ibl) {
         ibl->setIntensity(settings.iblIntensity);
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
+    }
+}
+
+static LinearColor inverseTonemapSRGB(sRGBColor x) {
+    return (x * -0.155) / (x - 1.019);
+}
+
+void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+        Renderer* renderer) {
+    if (renderer) {
+        // we have to clear because the side-bar doesn't have a background, we cannot use
+        // a skybox on the ui scene, because the ui view is always full screen.
+        renderer->setClearOptions({
+                .clearColor = { inverseTonemapSRGB(settings.backgroundColor), 1.0f },
+                .clear = true
+        });
+    }
+    if (skybox) {
+        skybox->setLayerMask(0xff, settings.skyboxEnabled ? 0xff : 0x00);
+    }
+    if (camera) {
+        camera->setExposure(
+                settings.cameraAperture,
+                1.0f / settings.cameraSpeed,
+                settings.cameraISO);
+
+        camera->setFocusDistance(settings.cameraFocusDistance);
     }
 }
 
@@ -882,6 +962,14 @@ static std::ostream& operator<<(std::ostream& out, CGQL in) {
         case CGQL::MEDIUM: return out << "\"MEDIUM\"";
         case CGQL::HIGH: return out << "\"HIGH\"";
         case CGQL::ULTRA: return out << "\"ULTRA\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+static std::ostream& operator<<(std::ostream& out, DepthOfFieldOptions::Filter in) {
+    switch (in) {
+        case DepthOfFieldOptions::Filter::NONE: return out << "\"NONE\"";
+        case DepthOfFieldOptions::Filter::MEDIAN: return out << "\"MEDIAN\"";
     }
     return out << "\"INVALID\"";
 }
@@ -1077,12 +1165,27 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
+    return out << "{\n"
+        << "\"cameraAperture\": " << (in.cameraAperture) << ",\n"
+        << "\"cameraSpeed\": " << (in.cameraSpeed) << ",\n"
+        << "\"cameraISO\": " << (in.cameraISO) << ",\n"
+        << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
+        << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
+        << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
+        << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
+        << "\"cameraFocalLength\": " << (in.cameraFocalLength) << ",\n"
+        << "\"cameraFocusDistance\": " << (in.cameraFocusDistance) << "\n"
+        << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
     return out << "{\n"
         << "\"focusDistance\": " << (in.focusDistance) << ",\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
-        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"filter\": " << (in.filter) << "\n"
         << "}";
 }
 
@@ -1139,7 +1242,8 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
     return out << "{\n"
         << "\"view\": " << (in.view) << ",\n"
         << "\"material\": " << (in.material) << ",\n"
-        << "\"lighting\": " << (in.lighting)
+        << "\"lighting\": " << (in.lighting) << ",\n"
+        << "\"viewer\": " << (in.viewer)
         << "}";
 }
 

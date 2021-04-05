@@ -73,8 +73,8 @@ static void convertFaces(cgltf_accessor* target, const draco::Mesh* mesh) {
     const cgltf_size size = mesh->num_faces() * 3 * sizeof(T);
     cgltf_buffer_view* view = target->buffer_view;
     cgltf_buffer* buffer = view->buffer;
-    *buffer = { size, nullptr, malloc(size) };
-    *view = { buffer, 0, size, 0, cgltf_buffer_view_type_indices };
+    *buffer = { nullptr, size, nullptr, malloc(size) };
+    *view = { nullptr, buffer, 0, size, 0, cgltf_buffer_view_type_indices };
     T* dest = (T*) buffer->data;
     for (uint32_t id = 0, n = mesh->num_faces(); id < n; ++id) {
         draco::Mesh::Face face = mesh->face(draco::FaceIndex(id));
@@ -94,8 +94,8 @@ static void convertAttribs(cgltf_accessor* target, const draco::PointAttribute* 
     const uint32_t size = target->stride * n;
     cgltf_buffer_view* view = target->buffer_view;
     cgltf_buffer* buffer = view->buffer;
-    *buffer = { size, nullptr, malloc(size) };
-    *view = { buffer, 0, size, 0, cgltf_buffer_view_type_vertices };
+    *buffer = { nullptr, size, nullptr, malloc(size) };
+    *view = { nullptr, buffer, 0, size, 0, cgltf_buffer_view_type_vertices };
     T* dest = (T*) buffer->data;
     for (draco::PointIndex i(0); i < n; ++i, dest += ncomps) {
         attr->ConvertValue(attr->mapped_index(i), ncomps, dest);

@@ -28,8 +28,13 @@ material {
         },
         {
            type : float2,
-           name : cocToTexelOffset,
+           name : cocToTexelScale,
            precision: high
+        },
+        {
+           type : float,
+           name : cocToPixelScale,
+           precision: medium
         },
         {
            type : float4,
@@ -76,12 +81,10 @@ fragment {
 #define DOF_DIAPHRAGM                   DOF_DIAPHRAGM_CIRCLE
 
 // # of sample w.r.t. ring count and density of 8
-// 3 rings : 25
-// 4 rings : 49
-// 5 rings : 81
-
-// don't change density
-#define RING_DENSITY        8
+//  3 rings :   25 ( 5^2 grid)
+//  4 rings :   49 ( 7^2 grid)
+//  5 rings :   81 ( 9^2 grid)
+// 17 rings : 1089 (33^2 grid) -- maximum needed for a CoC of 32
 
 #if defined(TARGET_MOBILE)
 #define RING_COUNT_GATHER   3
@@ -103,13 +106,45 @@ fragment {
 
 void dummy(){}
 
+struct NoiseState {
+    float randomUniformDiskRadius;
+    vec2  randomDisk;
+};
+
 float sampleCount(const float ringCount) {
-    const float ringDensity = float(RING_DENSITY);
-    return (ringDensity * ringCount * (ringCount - 1.0)) * 0.5 + 1.0;
+    float s = (ringCount * 2.0 - 1.0);
+    return s * s;
+}
+
+float computeNeededRings(const float kernelSizeInPixel) {
+    return ceil(kernelSizeInPixel + 0.5);
+}
+
+float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
+#if KERNEL_USE_MIPMAP
+    // note: the 0.5 is to convert from highres to our downslampled texture
+    float ringDistanceInTexels = kernelSizeInPixels * rcp(ringCount - 0.5);
+    float mip = log2(ringDistanceInTexels);
+
+    // We should round-up to avoid too large gaps in the kernel. Small gaps are filled by the
+    // median pass. With round() below + noise, most gaps are handled by the median pass,
+    // and the quality is much better overall.
+
+#if defined(TARGET_MOBILE)
+    // on mobile, the mip level is not used in computations in the shader,
+    // so we just let the texture unit pick the the "nearest" mipmap level.
+#else
+    mip = max(0.0, floor(mip + 0.5));
+#endif
+
+    return mip;
+#else
+    return 0.0;
+#endif
 }
 
 float sampleWeight(const float coc, const float mip) {
-    // The contribution of sample is inversely proportional to *it's* area
+    // The contribution of sample is inversely proportional to *its* area
     // (the larger area, the fainter it is).
     // In theory this factor should be 1 / pi * radius^2, however 1/pi is a constant, and
     // because we divide by the total weight eventually, it can be ommited, in fact, any
@@ -122,7 +157,7 @@ float sampleWeight(const float coc, const float mip) {
 #if defined(TARGET_MOBILE)
     const float pixelRadiusSquared = 2.0;   // (sqrt(2) * 0.5 * 2.0)^2
 #else
-    float pixelRadiusSquared = pow(2.0, mip);
+    float pixelRadiusSquared = 2.0 * pow(2.0, mip);     // 2^(mip+1)
 #endif
     return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
 }
@@ -134,10 +169,6 @@ float intersection(const float border, const float absCoc, const float mip) {
 #else
     return saturate((absCoc - border) * pow(0.5, mip) + 0.5);
 #endif
-}
-
-float rcp(const float x) {
-    return 1.0 / x;
 }
 
 highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
@@ -156,9 +187,15 @@ highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
 }
 
 /*
+ * Background (CoC > 0) field
+ *
  * We use a lot of techniques described in:
  * "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
  */
+
+// Qualcomm drivers don't seem to support precision qualifiers on member of a structure,
+// they are simply ignored.
+precision highp float;
 
 struct Bucket {
     vec4 c;     // accumulated, weighted color
@@ -166,6 +203,8 @@ struct Bucket {
     float o;    // # of miss for the ring
     float coc;  // accumulated, weighted coc
 };
+
+precision mediump float;
 
 struct Sample {
     vec4 s;                 // sample color
@@ -181,11 +220,15 @@ void initBucket(out Bucket ring) {
 
 void initRing(const float i, const float ringCount, const float kernelSize, const vec2 noise,
         out float offset, out float count, out mat2 r, out vec2 p) {
-    const float ringDensity = float(RING_DENSITY);
     float radius = (kernelSize / (ringCount - 0.5)) * i;
 
-    // this is never called with i == 0
-    count = ringDensity * i;
+    // We want to create a (2k+1)(2k+1) box, that is a n*n grid with n odd.
+    // Each "ring" is the outside layer of that box. So ring 0 obviously is the 1x1 box,
+    // ring 1 is the 3x3 box, which has 8 samples on its outside layer. This is where the 8 below
+    // comes from, then all subsequent rings, are built from ring 1.
+    // Each box is then "morphed" to a circle, itself morphed to the shape we want for the bokeh
+    // (see diaphragm()).
+    count = 8.0 * i;    // this is never called with i == 0
 
     float inc = 2.0 * PI / count;
     vec2 t = vec2(cos(inc), sin(inc));
@@ -195,12 +238,8 @@ void initRing(const float i, const float ringCount, const float kernelSize, cons
     p = radius * vec2(cos(firstSamplePosition), sin(firstSamplePosition));
 
     // it might be okay to do this only for the center sample (i.e.: offset = radius instead)
-    offset = length(p + noise * kernelSize);
+    offset = length(p + noise);
 }
-
-/*
- * Backgorund accumulator
- */
 
 void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
     if (curr.cw >= MEDIUMP_FLT_MIN) {
@@ -231,7 +270,7 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
         const float radius, const float border, const float mip, const bool first) {
     float inLayer = isBackground(tap.coc);
     float coc = abs(tap.coc);
-    float w = intersection(radius, coc, mip) * sampleWeight(coc, mip) * inLayer;
+    float w = inLayer * intersection(radius, coc, mip) * sampleWeight(coc, mip);
 
     // Samples that have a CoC larger than the ring radius belong to the previous ring.
     // Samples that have a CoC similar to the ring radius belong to the current ring.
@@ -272,24 +311,25 @@ void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2
 void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
         const highp vec2 center, const vec2 offset,
         const float radius, const float border, const float mip, const bool first) {
-    accumulateBackground(curr, prev, diaphragm(center,   offset), radius, border, mip, first);
-    accumulateBackground(curr, prev, diaphragm(center,  -offset), radius, border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center,  offset), radius, border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center, -offset), radius, border, mip, first);
 }
 
 void accumulateBackgroundCenter(inout Bucket prev,
-        const highp vec2 pos, const float ringCount, const float kernelSize, const float noiseRadius, const float mip) {
+        const highp vec2 pos, const float ringCount,
+        const float kernelSize, const float noiseRadius, const float mip) {
     Bucket curr;
     initBucket(curr);
     float border = (kernelSize / (ringCount - 0.5)) * 0.5;
     // the ring radius is zero here, but the intersection radius is not when we add noise, this
     // seems to make a visible difference on edges
-    float radius = noiseRadius * kernelSize;
-    accumulateBackground(curr, prev, pos, radius, border, mip, false);
+    accumulateBackground(curr, prev, pos, noiseRadius, border, mip, false);
     mergeRings(curr, prev, 1.0);
 }
 
-void accumulateRing(inout Bucket prev, const float index, const float ringCount, const float kernelSize, const vec2 noise,
-        const highp vec2 uvCenter, const highp vec2 cocToTexelOffset, const float mip, const bool first) {
+void accumulateRing(inout Bucket prev, const float index, const float ringCount,
+        const float kernelSize, const vec2 noise, const highp vec2 uvCenter,
+        const highp vec2 cocToTexelScale, const float mip, const bool first) {
 
     // we accumulate the larger rings first
     float i = (ringCount - 1.0) - index;
@@ -308,7 +348,7 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
 
     float border = (kernelSize / (ringCount - 0.5)) * (i + 0.5);
     for (float j = 0.0; j < count; j += 2.0) {
-        accumulateBackgroundMirror(curr, prev, uvCenter, p * cocToTexelOffset, radius, border, mip, first);
+        accumulateBackgroundMirror(curr, prev, uvCenter, p * cocToTexelScale, radius, border, mip, first);
         p = r * p;
     }
 
@@ -320,77 +360,226 @@ void accumulateRing(inout Bucket prev, const float index, const float ringCount,
 }
 
 /*
- * Foreground accumulator
+ * Foreground (CoC < 0) field
+ *
+ * Here implement the 2-layer accumultaion technique described in
+ * "Next Generation Post Processing in Call of Duty Advanced Warfare" by J. Jimenez
+ * TODO: Adapt Unreal's ring binning for the foreground field
  */
 
-void accumulateForeground(inout vec4 foreground, inout float opacity, inout float i,
+struct Layer {
+    vec4 color;
+    float weight;
+};
+
+float computeLayer(float coc, vec2 tiles) {
+    const float invTransitionSize = 1.0 / 2.0;
+    const float frontLayerCocSize = 2.0;
+    return 	saturate((coc - tiles.r - frontLayerCocSize) * invTransitionSize);
+}
+
+float foregroundFadding(const float coc) {
+    return saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
+}
+
+void accumulateForeground(inout Layer layer[2], const vec2 tiles,
         const highp vec2 pos, const float border, const float mip) {
     float coc = textureLod(materialParams_cocFgBg, pos, mip).r;
     vec4 s = textureLod(materialParams_foreground, pos, mip);
-    float inLayer = isForeground(coc);
-    float o = cocToAlpha(coc) * inLayer;
-    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
-    foreground += s * w;
-    opacity += o;
-    i += w;
+
+    float inLayer = isForeground(coc) * foregroundFadding(coc);
+    float i = intersection(border, abs(coc), mip) * sampleWeight(coc, mip);
+    float w = i * inLayer;
+
+    float inBackWeight  = w * computeLayer(coc, tiles);
+    float inFrontWeight = w - inBackWeight;
+    layer[0].color  += inFrontWeight * s;
+    layer[0].weight += inFrontWeight;
+    layer[1].color  += inBackWeight * s;
+    layer[1].weight += inBackWeight;
 }
 
-void accumulateForegroundCenter(inout vec4 foreground, inout float opacity, inout float i,
+void accumulateForegroundCenter(inout Layer layer[2], const vec2 tiles,
         const highp vec2 pos, const float border, const float mip) {
-    accumulateForeground(foreground, opacity, i, pos, border, mip);
+    accumulateForeground(layer, tiles, pos, border, mip);
 }
 
-void accumulateForegroundMirror(inout vec4 foreground, inout float opacity, inout float i,
+void accumulateForegroundMirror(inout Layer layer[2], const vec2 tiles,
         const highp vec2 center, const vec2 offset, const float border, const float mip) {
     // The code below is equivalent to:
-    //  accumulateForeground(foreground, opacity, i, diaphragm(center,  offset), border, mip);
-    //  accumulateForeground(foreground, opacity, i, diaphragm(center, -offset), border, mip);
+    //  accumulateForeground(layer, tiles, diaphragm(center,  offset), border, mip);
+    //  accumulateForeground(layer, tiles, diaphragm(center, -offset), border, mip);
     //  return;
     // but selects the min coc of opposite samples as a way to guess the color occluded by
     // the geometry.
 
-    vec2 pos0 = diaphragm(center, offset);
+    highp vec2 pos0 = diaphragm(center, offset);
     float coc0 = textureLod(materialParams_cocFgBg, pos0, mip).r;
     vec4 s0 = textureLod(materialParams_foreground, pos0, mip);
-    vec2 pos1 = diaphragm(center, -offset);
+
+    highp vec2 pos1 = diaphragm(center, -offset);
     float coc1 = textureLod(materialParams_cocFgBg, pos1, mip).r;
     vec4 s1 = textureLod(materialParams_foreground, pos1, mip);
+
     float coc = min(coc0, coc1);
-    float inLayer = isForeground(coc);
-    float o = cocToAlpha(coc) * inLayer * 2.0;  // we're accumulating 2 samples
-    float w = intersection(border, abs(coc), mip) * sampleWeight(coc, mip) * inLayer;
-    foreground += s0 * w;
-    foreground += s1 * w;
-    opacity += o;
-    i += w * 2.0;
+    float inLayer = isForeground(coc) * foregroundFadding(coc);
+    float i = intersection(border, abs(coc), mip) * sampleWeight(coc, mip);
+    float w = i * inLayer;
+
+    // for better results in mediump it's better to add s0 amd s1 first
+    float inBackWeight  = w * computeLayer(coc, tiles);
+    float inFrontWeight = w - inBackWeight;
+    layer[1].color  += inBackWeight  * (s0 + s1);
+    layer[1].weight += inBackWeight  * 2.0;
+    layer[0].color  += inFrontWeight * (s0 + s1);
+    layer[0].weight += inFrontWeight * 2.0;
 }
 
-float getMipLevel(const float ringCount, const float kernelSize) {
-#if KERNEL_USE_MIPMAP
-    // note: the 0.5 is to convert from highres to our downslampled texture
-    float ringDistanceInTexels = 0.5 * kernelSize * rcp(ringCount - 0.5);
-    float mip = log2(ringDistanceInTexels);
+/*
+ * Tile type processing
+ */
 
-    // We should round-up to avoid too large gaps in the kernel. Small gaps are filled by the
-    // median pass. With round() below + noise, most gaps are handled by the median pass,
-    // and the quality is much better overall.
+void fastTile(inout vec4 color, inout float alpha,
+        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+    highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
 
-#if defined(TARGET_MOBILE)
-    // on mobile, the mip level is not used in computations in the shader,
-    // so we just let the texture unit pick the the "nearest" mipmap level.
-#else
-    mip = max(0.0, floor(mip + 0.5));
+    // The whole tile has mostly the same CoC
+    float kernelSize = (abs(tiles.r) + abs(tiles.g)) * 0.5;
+    float ringCountFast = min(float(RING_COUNT_FAST), computeNeededRings(kernelSize * cocToPixelScale));
+    float mip = getMipLevel(ringCountFast, kernelSize * cocToPixelScale);
+    vec2 noise = vec2(0.0);
+
+#if KERNEL_USE_NOISE
+    noise = noiseState.randomDisk *
+            (kernelSize * noiseState.randomUniformDiskRadius * rcp(ringCountFast - 0.5));
 #endif
 
-    return mip;
-#else
-    return 0.0;
+    highp vec2 uvCenter = uv + noise * cocToTexelScale;
+
+    color = textureLod(materialParams_foregroundLinear, uvCenter, mip);
+    for (float i = 1.0; i < ringCountFast; i += 1.0) {
+        float radius;
+        float count;
+        vec2 p;
+        mat2 r;
+        initRing(i, ringCountFast, kernelSize, noise, radius, count, r, p);
+        // we must use this temporary in order to accomodate mediump precision
+        vec4 t = vec4(0.0);
+        for (float j = 0.0; j < count; j += 2.0) {
+            t += textureLod(materialParams_foregroundLinear,
+                    diaphragm(uvCenter,  p * cocToTexelScale), mip)
+               + textureLod(materialParams_foregroundLinear,
+                    diaphragm(uvCenter, -p * cocToTexelScale), mip);
+            p = r * p;
+        }
+        color += t;
+    }
+    alpha = cocToAlpha(kernelSize);
+    color *= rcp(sampleCount(ringCountFast));
+}
+
+void foregroundTile(inout vec4 foreground, inout float fgOpacity,
+        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+    highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
+
+    // Here we know that tiles.r < 0, by definition of a foreground tile.
+    // For a foreground tile, the kernel size is the largest CoC radius of the whole tile.
+    float kernelSize = -tiles.r;
+    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(kernelSize * cocToPixelScale));
+    float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
+    vec2 noise = vec2(0.0);
+
+#if KERNEL_USE_NOISE
+    noise = (noiseState.randomDisk) *
+            (kernelSize * noiseState.randomUniformDiskRadius * rcp(ringCountGather - 0.5));
 #endif
+
+    highp vec2 uvCenter = uv + noise * cocToTexelScale;
+
+    Layer layer[2];
+    layer[0].color = vec4(0.0);
+    layer[0].weight = 0.0;
+    layer[1].color = vec4(0.0);
+    layer[1].weight = 0.0;
+
+    // the center sample is handled separately, since it's by itself
+    accumulateForegroundCenter(layer, tiles, uvCenter, 0.0, mip);
+
+    for (float i = 1.0; i < ringCountGather; i += 1.0) {
+
+        float radius;
+        float count;
+        vec2 p;
+        mat2 r;
+
+        initRing(i, ringCountGather, kernelSize, noise, radius, count, r, p);
+
+        for (float j = 0.0; j < count; j += 2.0) {
+            accumulateForegroundMirror(layer, tiles,
+            uvCenter, p * cocToTexelScale, radius, mip);
+            p = r * p;
+        }
+    }
+
+    // Area of all samples in the kernel
+    float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
+    float frontLayerOpacity = saturate(layer[0].weight * rcp(kernelArea * sampleCount(ringCountGather)));
+    float backLayerOpacity  = saturate(layer[1].weight * rcp(kernelArea * sampleCount(ringCountGather)));
+    vec4 front = layer[0].color * rcpOrZero(layer[0].weight) * frontLayerOpacity;
+    vec4 back  = layer[1].color * rcpOrZero(layer[1].weight) * backLayerOpacity;
+    foreground = front + back * (1.0 - frontLayerOpacity);
+    fgOpacity = 1.0 - (1.0 - frontLayerOpacity) * (1.0 - backLayerOpacity);
+    // foreground here is already premultiplied by fgOpacity!
+}
+
+void backgroundTile(inout vec4 background, inout float bgOpacity,
+        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+    highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
+    float cocToPixelScale = materialParams.cocToPixelScale;
+
+    // we select a ring cound per tile, to avoid divergence between pixels
+    float ringCountGather = min(float(RING_COUNT_GATHER), computeNeededRings(tiles.g * cocToPixelScale));
+
+    float centerCoc  = textureLod(materialParams_cocFgBg, uv, 0.0).g;
+    float kernelSize = abs(centerCoc);
+    float mip = getMipLevel(ringCountGather, kernelSize * cocToPixelScale);
+    float noiseRadius = 0.0;
+    vec2 noise = vec2(0.0);
+
+#if KERNEL_USE_NOISE
+    noiseRadius = kernelSize * noiseState.randomUniformDiskRadius * rcp(ringCountGather - 0.5);
+    noise = noiseState.randomDisk * noiseRadius;
+#endif
+
+    highp vec2 uvCenter = uv + noise * cocToTexelScale;
+
+    Bucket prev;
+    initBucket(prev);
+
+    accumulateRing(prev, 0.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, true);
+
+    // the optimizer is not able to remove this loop when it has only one iteration
+#if RING_COUNT_GATHER == 3
+    accumulateRing(prev, 1.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, false);
+#else
+    for (float i = 1.0; i < ringCountGather - 1.0 ; i += 1.0) {
+        accumulateRing(prev, i, ringCountGather, kernelSize, noise, uvCenter, cocToTexelScale, mip, false);
+    }
+#endif
+
+    accumulateBackgroundCenter(prev, uvCenter, ringCountGather, kernelSize, noiseRadius, mip);
+
+    float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
+    bgOpacity = saturate(prev.cw * rcp(kernelArea));
+#if !defined(TARGET_MOBILE)
+    bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
+#endif
+    background = prev.c * (rcpOrZeroHighp(prev.cw) * bgOpacity);
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
-    const float ringCountGather = float(RING_COUNT_GATHER);
-    const float ringCountFast   = float(RING_COUNT_FAST);
     vec2 tiles = textureLod(materialParams_tiles, variable_vertex.zw, 0.0).rg;
 
     /*
@@ -398,63 +587,42 @@ void postProcess(inout PostProcessInputs postProcess) {
      */
 
     if (isTrivialTile(tiles)) {
+        // The whole tile is is focus
         postProcess.color = vec4(0.0);
         postProcess.alpha = 0.0;
         return;
     }
 
+    highp vec2 uv = variable_vertex.xy;
     vec4 foreground = vec4(0.0);
     vec4 background = vec4(0.0);
-
-    // we use the full resolution pixel size because that's the unit the CoC is in
-    highp vec2 uv = variable_vertex.xy;
-    highp vec2 cocToTexelOffset = materialParams.cocToTexelOffset;
+    NoiseState noiseState;
 
 #if KERNEL_USE_NOISE
-    // When using mipmaping the noise seems to hurt more than it helps
     // A good random generator is essential, this one is okay.
-    float randomAngle = random(gl_FragCoord.xy) * (2.0 * PI);
-    float random01 = random(gl_FragCoord.xy * vec2(5099.0, 3499.0)); // large primes seem to work ok
-    float randomUniformDiskRadius = 0.5 * sqrt(random01);
-    vec2  randomDisk = vec2(cos(randomAngle), sin(randomAngle));
-#else
-    const vec2 noise = vec2(0.0);
+    vec2 fragCoords = gl_FragCoord.xy;
+    float randomAngle = random(fragCoords) * (2.0 * PI);
+    float random01 = random(fragCoords * vec2(5099.0, 3499.0)); // large primes seem to work ok
+    noiseState.randomUniformDiskRadius = 0.5 * sqrt(random01);
+    noiseState.randomDisk = vec2(cos(randomAngle), sin(randomAngle));
 #endif
+
+    /*
+     * Fast tiles have the same CoC everywhere
+     */
 
     if (isFastTile(tiles)) {
-        float kernelSize = (abs(tiles.r) + abs(tiles.g)) * 0.5;
-        float mip = getMipLevel(ringCountFast, kernelSize);
+        vec4 color;
+        float alpha;
+        fastTile(color, alpha, uv, tiles, noiseState);
+        //color.b += 0.1;
 
-#if KERNEL_USE_NOISE
-        float noiseRadius = randomUniformDiskRadius * rcp(ringCountFast - 0.5);
-        vec2  noise = noiseRadius * randomDisk;
-#endif
-        vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
-
-        foreground = textureLod(materialParams_foregroundLinear, uvCenter, mip);
-        for (float i = 1.0; i < ringCountFast; i += 1.0) {
-            float radius;
-            float count;
-            vec2 p;
-            mat2 r;
-            initRing(i, ringCountFast, kernelSize, noise, radius, count, r, p);
-            for (float j = 0.0; j < count; j += 2.0) {
-                foreground += textureLod(materialParams_foregroundLinear,
-                        diaphragm(uvCenter,  p * cocToTexelOffset), mip);
-                foreground += textureLod(materialParams_foregroundLinear,
-                        diaphragm(uvCenter, -p * cocToTexelOffset), mip);
-                p = r * p;
-            }
-        }
-        float fgOpacity = cocToAlpha(kernelSize);
-        foreground *= rcp(sampleCount(ringCountFast));
-        //foreground.b += 0.1;
 #if POST_PROCESS_OPAQUE
         // kill the work performed above
-        foreground.a = 1.0;
+        color.a = 1.0;
 #endif
-        postProcess.color = foreground * fgOpacity;
-        postProcess.alpha = fgOpacity;
+        postProcess.color = color * alpha;
+        postProcess.alpha = alpha;
         return;
     }
 
@@ -464,87 +632,27 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     float fgOpacity = 0.0;
     float bgOpacity = 0.0;
-#if KERNEL_USE_NOISE
-    float noiseRadius = randomUniformDiskRadius * rcp(ringCountGather - 0.5);
-    vec2  noise = noiseRadius * randomDisk;
-#else
-    const float noiseRadius = 0.0;
-#endif
-
 
     if (isForegroundTile(tiles)) {
-        // for a foreground tile, the kernel size is the largest CoC radius
-        float kernelSize = -tiles.g;
-        float mip = getMipLevel(ringCountGather, kernelSize);
-        vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
-        float c = 0.0;
-
-        // the center sample is handled separately, since it's by itself
-        accumulateForegroundCenter(foreground, fgOpacity, c, uvCenter, 0.0, mip);
-
-        for (float i = 1.0; i < ringCountGather; i += 1.0) {
-
-            float radius;
-            float count;
-            vec2 p;
-            mat2 r;
-
-            initRing(i, ringCountGather, kernelSize, noise, radius, count, r, p);
-
-            for (float j = 0.0; j < count; j += 2.0) {
-                accumulateForegroundMirror(foreground, fgOpacity, c,
-                        uvCenter, p * cocToTexelOffset, radius, mip);
-                p = r * p;
-            }
-        }
-
-        if (c < MEDIUMP_FLT_MIN) {
-            foreground *= 0.0;
-            fgOpacity  *= 0.0;
-        } else {
-            foreground *= rcp(c);
-            fgOpacity  *= rcp(sampleCount(ringCountGather));
-        }
+        foregroundTile(foreground, fgOpacity, uv, tiles, noiseState);
         //foreground.r += 0.1;
     }
 
-
     if (isBackgroundTile(tiles)) {
-        vec2 centerCoc  = textureLod(materialParams_cocFgBg, uv, 0.0).rg;
-        float kernelSize = abs(centerCoc.g);
-        float mip = getMipLevel(ringCountGather, kernelSize);
-        vec2 uvCenter = uv + noise * kernelSize * cocToTexelOffset;
-
-        Bucket prev;
-        initBucket(prev);
-
-        accumulateRing(prev, 0.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelOffset, mip, true);
-
-        // the optimizer is not able to remove this loop when it has only one iteration
-#if RING_COUNT_GATHER == 3
-        accumulateRing(prev, 1.0, ringCountGather, kernelSize, noise, uvCenter, cocToTexelOffset, mip, false);
-#else
-        for (float i = 1.0; i < ringCountGather - 1.0 ; i += 1.0) {
-            accumulateRing(prev, i, ringCountGather, kernelSize, noise, uvCenter, cocToTexelOffset, mip, false);
-        }
-#endif
-
-        accumulateBackgroundCenter(prev, uvCenter, ringCountGather, kernelSize, noiseRadius, mip);
-
-        background = prev.c;
-        bgOpacity = cocToAlpha(prev.coc);
-#if defined(TARGET_MOBILE)
-        bgOpacity *= saturate((kernelSize - MAX_IN_FOCUS_COC) / (2.0 - MAX_IN_FOCUS_COC));
-#else
-        bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
-#endif
-
-        if (prev.cw < MEDIUMP_FLT_MIN) {
-            background *= 0.0;
-        } else {
-            background *= rcp(prev.cw);
-        }
+        backgroundTile(background, bgOpacity, uv, tiles, noiseState);
         //background.g += 0.1;
+    }
+
+    // "hole filling correction for in-focus" described in "Life of a Bokeh", on slide 80.
+    // TODO: make this a quality setting
+    if (fgOpacity > 0.0 && fgOpacity < 1.0 && bgOpacity == 0.0) {
+        // this happens on very few pixels
+        float centerCoc = textureLod(materialParams_cocFgBg, uv, 0.0).r;
+        float correctedOpacity = max(fgOpacity, cocToAlpha(centerCoc));
+        float updateOpacity = correctedOpacity / fgOpacity;
+        foreground *= updateOpacity;
+        fgOpacity = correctedOpacity;
+        //foreground.rg += 0.1;
     }
 
 #if POST_PROCESS_OPAQUE
@@ -556,9 +664,6 @@ void postProcess(inout PostProcessInputs postProcess) {
     // composite the foreground and background layers together.
     // the downside of doing this is that we couldn't use a different upscaler for each
     // layer, but this is a lot less costly
-
-    foreground *= fgOpacity;
-    background *= bgOpacity;
     postProcess.color = foreground + (1.0 - fgOpacity) * background;
     postProcess.alpha = fgOpacity  + (1.0 - fgOpacity) * bgOpacity;
 }
