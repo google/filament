@@ -29,7 +29,6 @@ import java.nio.Buffer
 
 private const val kNearPlane = 0.5
 private const val kFarPlane = 10000.0
-private const val kFovDegrees = 45.0
 private const val kAperture = 16f
 private const val kShutterSpeed = 1f / 125f
 private const val kSensitivity = 100f
@@ -72,6 +71,12 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     var normalizeSkinningWeights = true
     var recomputeBoundingBoxes = false
+
+    var cameraFocalLength = 28f
+        set(value) {
+            field = value
+            updateCameraProjection()
+        }
 
     val scene: Scene
     val view: View
@@ -323,6 +328,13 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         }
     }
 
+    private fun updateCameraProjection() {
+        val width = view.viewport.width
+        val height = view.viewport.height
+        val aspect = width.toDouble() / height.toDouble()
+        camera.setLensProjection(cameraFocalLength.toDouble(), aspect, kNearPlane, kFarPlane)
+    }
+
     inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
@@ -342,9 +354,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
         override fun onResized(width: Int, height: Int) {
             view.viewport = Viewport(0, 0, width, height)
-            val aspect = width.toDouble() / height.toDouble()
-            camera.setProjection(kFovDegrees, aspect, kNearPlane, kFarPlane, Camera.Fov.VERTICAL)
             cameraManipulator.setViewport(width, height)
+            updateCameraProjection()
         }
     }
 

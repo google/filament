@@ -170,6 +170,13 @@ public:
     ColorGrading* getColorGrading(Engine* engine);
 
     /**
+     * Gets the current viewer options.
+     *
+     * NOTE: Focal length here might be different from the user-specified value, due to DoF options.
+     */
+    ViewerOptions getViewerOptions() const;
+
+    /**
      * Signals that batch mode can begin. Call this after all meshes and textures finish loading.
      */
     void signalBatchMode() { mBatchModeAllowed = true; }
