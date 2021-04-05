@@ -144,6 +144,7 @@ public:
         bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
         bool EXT_clip_control = false;
+        bool GOOGLE_cpp_style_line_directive = false;
     } ext;
 
     struct {
