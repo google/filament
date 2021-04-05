@@ -5,13 +5,30 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.19
+
+- engine: VSM shadows now support `shadowMultiplier`.
+
+## v1.9.18
+
+- engine: Fix a DoF bug that caused black dots around the fast tiles.
+- engine: Minor DoF optimizations.
+- engine: Fix blanking windows not being drawn into on macOS.
+- gltfio: Add support for data:// in image URI's.
+- gltfio: Add internal MorphHelper, enable up to 255 targets.
+- engine: Fix a hang in JobSystem.
+- samples: Fix rendertarget sample app.
+
 ## v1.9.17
 
-- engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens
-- engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering
-- engine: Fixed depth of field rendering with custom projection matrices
-- gltfio: `SimpleViewer` now exposes more rendering parameters, including `ColorGrading`
+- engine: New shift parameter on `Camera` to translate the viewport and emulate a tilt/shift lens.
+- engine: `Camera::setCustomProjection()` now allows to set a different projection for culling and rendering.
+- engine: Fixed depth of field rendering with custom projection matrices.
+- engine: Fix a rare indefinite hang.
+- gltfio: `SimpleViewer` now exposes more rendering parameters, including `ColorGrading`.
+- gltfio: Fix tangents when morphing is enabled.
 - Metal/Vulkan: fix incorrect dominant light shadows rendering.
+- Fixe some issues with imported rendertargets.
 
 ## v1.9.16
 

@@ -24,10 +24,15 @@ namespace filament {
 
 void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator, const char* name,
         FrameGraphTexture::Descriptor const& descriptor, FrameGraphTexture::Usage usage) noexcept {
+    std::array<backend::TextureSwizzle, 4> swizzle = {
+            descriptor.swizzle.r,
+            descriptor.swizzle.g,
+            descriptor.swizzle.b,
+            descriptor.swizzle.a };
     handle = resourceAllocator.createTexture(name,
             descriptor.type, descriptor.levels, descriptor.format, descriptor.samples,
             descriptor.width, descriptor.height, descriptor.depth,
-            usage);
+            swizzle, usage);
 }
 
 void FrameGraphTexture::destroy(ResourceAllocatorInterface& resourceAllocator) noexcept {

@@ -20,6 +20,7 @@
 #include "ResourceAllocator.h"
 
 #include "backend/DriverEnums.h"
+#include "details/BufferObject.h"
 #include "details/DFG.h"
 #include "details/VertexBuffer.h"
 #include "details/Fence.h"
@@ -218,8 +219,7 @@ void FEngine::init() {
 
     mFullScreenTriangleRph = driverApi.createRenderPrimitive();
     driverApi.setRenderPrimitiveBuffer(mFullScreenTriangleRph,
-            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle(),
-            mFullScreenTriangleVb->getDeclaredAttributes().getValue());
+            mFullScreenTriangleVb->getHwHandle(), mFullScreenTriangleIb->getHwHandle());
     driverApi.setRenderPrimitiveRange(mFullScreenTriangleRph, PrimitiveType::TRIANGLES,
             0, 0, 2, (uint32_t)mFullScreenTriangleIb->getIndexCount());
 
@@ -319,6 +319,7 @@ void FEngine::shutdown() {
     // this must be done after Skyboxes and before materials
     destroy(mSkyboxMaterial);
 
+    cleanupResourceList(mBufferObjects);
     cleanupResourceList(mIndexBuffers);
     cleanupResourceList(mVertexBuffers);
     cleanupResourceList(mTextures);
@@ -547,6 +548,10 @@ inline T* FEngine::create(ResourceList<T>& list, typename T::Builder const& buil
     return p;
 }
 
+FBufferObject* FEngine::createBufferObject(const BufferObject::Builder& builder) noexcept {
+    return create(mBufferObjects, builder);
+}
+
 FVertexBuffer* FEngine::createVertexBuffer(const VertexBuffer::Builder& builder) noexcept {
     return create(mVertexBuffers, builder);
 }
@@ -724,6 +729,10 @@ bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
 }
 
 // -----------------------------------------------------------------------------------------------
+
+bool FEngine::destroy(const FBufferObject* p) {
+    return terminateAndDestroy(p, mBufferObjects);
+}
 
 bool FEngine::destroy(const FVertexBuffer* p) {
     return terminateAndDestroy(p, mVertexBuffers);
@@ -924,6 +933,10 @@ SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept 
 
 SwapChain* Engine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     return upcast(this)->createSwapChain(width, height, flags);
+}
+
+bool Engine::destroy(const BufferObject* p) {
+    return upcast(this)->destroy(upcast(p));
 }
 
 bool Engine::destroy(const VertexBuffer* p) {

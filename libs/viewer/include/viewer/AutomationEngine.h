@@ -159,7 +159,7 @@ public:
      */
     void applySettings(const char* json, size_t jsonLength, View* view,
             MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
-            utils::Entity sunlight, LightManager* lm, Scene* scene);
+            utils::Entity sunlight, LightManager* lm, Scene* scene, Renderer* renderer);
 
     /**
      * Gets a color grading object that corresponds to the latest settings.

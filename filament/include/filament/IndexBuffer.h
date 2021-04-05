@@ -84,7 +84,7 @@ public:
 
         /**
          * Creates the IndexBuffer object and returns a pointer to it. After creation, the index
-         * buffer is uninitialized. Use IndexBuffer::setBuffer() to initialized the IndexBuffer.
+         * buffer is uninitialized. Use IndexBuffer::setBuffer() to initialize the IndexBuffer.
          *
          * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
          *

@@ -76,6 +76,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     val scene: Scene
     val view: View
     val camera: Camera
+    val renderer: Renderer
     @Entity val light: Int
 
     private val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
@@ -87,7 +88,6 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     private var fetchResourcesJob: Job? = null
 
-    private val renderer: Renderer
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
     private var resourceLoader: ResourceLoader

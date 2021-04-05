@@ -191,12 +191,13 @@ public:
 
     /** Sets the projection matrix from the focal length.
      *
-     * @param focalLength lens's focal length in millimeters. \p focalLength > 0.
+     * @param focalLengthInMillimeters lens's focal length in millimeters. \p focalLength > 0.
      * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
      * @param near        distance in world units from the camera to the near plane. \p near > 0.
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
-    void setLensProjection(double focalLength, double aspect, double near, double far) noexcept;
+    void setLensProjection(double focalLengthInMillimeters,
+            double aspect, double near, double far) noexcept;
 
     /** Sets a custom projection matrix.
      *
@@ -433,6 +434,19 @@ public:
     //! returns this camera's sensitivity in ISO
     float getSensitivity() const noexcept;
 
+    //! returns the focal length in meters [m] for a 35mm camera
+    double getFocalLength() const noexcept;
+
+    /**
+     * Sets the camera focus distance. This is used by the Depth-of-field PostProcessing effect.
+     * @param distance Distnace from the camera to the plane of focus in world units.
+     *                 Must be positive and larger than the near clipping plane.
+     */
+    void setFocusDistance(float distance) noexcept;
+
+    //! Returns the focus distance in world units
+    float getFocusDistance() const noexcept;
+
     /**
      * Returns the inverse of a projection matrix.
      *
@@ -473,6 +487,24 @@ public:
      * @see inverseProjection(const math::mat4&)
      */
     static math::mat4f inverseProjection(const math::mat4f& p) noexcept;
+
+    /**
+     * Helper to compute the effective focal length taking into account the focus distance
+     *
+     * @param focalLength       focal length in any unit (e.g. [m] or [mm])
+     * @param focusDistance     focus distance in same unit as focalLength
+     * @return                  the effective focal length in same unit as focalLength
+     */
+    static double computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept;
+
+    /**
+     * Helper to compute the effective field-of-view taking into account the focus distance
+     *
+     * @param fovInDegrees      full field of view in degrees
+     * @param focusDistance     focus distance in meters [m]
+     * @return                  effective full field of view in degrees
+     */
+    static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
 };
 
 } // namespace filament

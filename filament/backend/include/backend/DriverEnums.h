@@ -263,6 +263,11 @@ enum class ElementType : uint8_t {
     HALF4,
 };
 
+//! Buffer object binding type
+enum class BufferObjectBinding : uint8_t {
+    VERTEX,
+};
+
 //! Face culling Mode
 enum class CullingMode : uint8_t {
     NONE,               //!< No culling, front and back faces are visible
@@ -513,7 +518,7 @@ enum class TextureUsage : uint8_t {
 };
 
 //! Texture swizzle
-enum class TextureSwizzle {
+enum class TextureSwizzle : uint8_t {
     SUBSTITUTE_ZERO,
     SUBSTITUTE_ONE,
     CHANNEL_0,
@@ -724,9 +729,10 @@ struct Attribute {
     static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
     //! attribute is an integer
     static constexpr uint8_t FLAG_INTEGER_TARGET = 0x2;
+    static constexpr uint8_t BUFFER_UNUSED = 0xFF;
     uint32_t offset = 0;                    //!< attribute offset in bytes
     uint8_t stride = 0;                     //!< attribute stride in bytes
-    uint8_t buffer = 0xFF;                  //!< attribute buffer index
+    uint8_t buffer = BUFFER_UNUSED;         //!< attribute buffer index
     ElementType type = ElementType::BYTE;   //!< attribute element type
     uint8_t flags = 0x0;                    //!< attribute flags
 };

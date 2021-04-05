@@ -86,6 +86,9 @@ public:
     // synchronous call to the backend. returns whether a backend supports a particular format.
     static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
 
+    // synchronous call to the backend. returns whether a backend supports texture swizzling.
+    static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
+
     // storage needed on the CPU side for texture data uploads
     static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
             size_t stride, size_t height, size_t alignment) noexcept;

@@ -106,6 +106,7 @@ export interface View$DepthOfFieldOptions {
     cocScale?: number;
     maxApertureDiameter?: number;
     enabled?: boolean;
+    filter?: View$DepthOfFieldOptions$Filter;
 }
 
 export interface View$BloomOptions {
@@ -141,6 +142,9 @@ export interface View$VignetteOptions {
     color?: float3;
     enabled?: boolean;
 }
+
+export function fitIntoUnitCube(box: Aabb): mat4;
+export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
 // Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 export class driver$PixelBufferDescriptor {
@@ -224,6 +228,7 @@ export class VertexBuffer$Builder {
     public bufferCount(count: number): VertexBuffer$Builder;
     public attribute(attrib: VertexAttribute, bufindex: number, atype: VertexBuffer$AttributeType,
             offset: number, stride: number): VertexBuffer$Builder;
+    public enableBufferObjects(enabled: boolean): VertexBuffer$Builder;
     public normalized(attrib: VertexAttribute): VertexBuffer$Builder;
     public normalizedIf(attrib: VertexAttribute, normalized: boolean): VertexBuffer$Builder;
     public build(engine: Engine): VertexBuffer;
@@ -233,6 +238,12 @@ export class IndexBuffer$Builder {
     public indexCount(count: number): IndexBuffer$Builder;
     public bufferType(type: IndexBuffer$IndexType): IndexBuffer$Builder;
     public build(engine: Engine): IndexBuffer;
+}
+
+export class BufferObject$Builder {
+    public size(byteCount: number): BufferObject$Builder;
+    public bindingType(type: BufferObject$BindingType): BufferObject$Builder;
+    public build(engine: Engine): BufferObject;
 }
 
 export class RenderableManager$Builder {
@@ -363,6 +374,12 @@ export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
     public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference,
             byteOffset?: number): void;
+    public setBufferObjectAt(engine: Engine, bufindex: number, bo: BufferObject): void;
+}
+
+export class BufferObject {
+    public static Builder(): BufferObject$Builder;
+    public setBuffer(engine: Engine, data: BufferReference, byteOffset?: number): void;
 }
 
 export class IndexBuffer {
@@ -420,7 +437,12 @@ export class Camera {
     public getAperture(): number;
     public getShutterSpeed(): number;
     public getSensitivity(): number;
+    public getFocalLength(): number;
+    public getFocusDistance(): number;
+    public setFocusDistance(distance: number): void;
     public static inverseProjection(p: mat4): mat4;
+    public static computeEffectiveFocalLength(focalLength: number, focusDistance: number) : number;
+    public static computeEffectiveFov(fovInDegrees: number, focusDistance: number) : number;
 }
 
 export class ColorGrading$Builder {
@@ -713,6 +735,10 @@ export enum IndexBuffer$IndexType {
     UINT,
 }
 
+export enum BufferObject$BindingType {
+    VERTEX_BINDING,
+}
+
 export enum LightManager$Type {
     SUN,
     DIRECTIONAL,
@@ -949,6 +975,10 @@ export enum VertexAttribute {
     MORPH_TANGENTS_3 = CUSTOM7,
 }
 
+export enum BufferObject$BindingType {
+    VERTEX,
+}
+
 export enum VertexBuffer$AttributeType {
     BYTE,
     BYTE2,
@@ -998,6 +1028,11 @@ export enum View$QualityLevel {
 export enum View$AmbientOcclusion {
     NONE,
     SSAO,
+}
+
+export enum View$DepthOfFieldOptions$Filter {
+    NONE,
+    MEDIAN = 2,
 }
 
 export enum View$BloomOptions$BlendMode {

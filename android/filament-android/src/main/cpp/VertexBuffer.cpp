@@ -51,6 +51,13 @@ Java_com_google_android_filament_VertexBuffer_nBuilderVertexCount(JNIEnv *env, j
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_VertexBuffer_nBuilderEnableBufferObjects(JNIEnv *env, jclass type,
+        jlong nativeBuilder, jboolean enabled) {
+    VertexBuffer::Builder* builder = (VertexBuffer::Builder *) nativeBuilder;
+    builder->enableBufferObjects(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_VertexBuffer_nBuilderBufferCount(JNIEnv *env, jclass type,
         jlong nativeBuilder, jint bufferCount) {
     VertexBuffer::Builder* builder = (VertexBuffer::Builder *) nativeBuilder;
@@ -113,6 +120,15 @@ Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass t
             (uint32_t) destOffsetInBytes);
 
     return 0;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_VertexBuffer_nSetBufferObjectAt(JNIEnv *env, jclass type,
+        jlong nativeVertexBuffer, jlong nativeEngine, jint bufferIndex, jlong nativeBufferObject) {
+    VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
+    Engine *engine = (Engine *) nativeEngine;
+    BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
+    vertexBuffer->setBufferObjectAt(*engine, (uint8_t) bufferIndex, bufferObject);
 }
 
 extern "C" [[deprecated]] JNIEXPORT void JNICALL

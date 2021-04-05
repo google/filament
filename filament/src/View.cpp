@@ -397,7 +397,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
     // the viewing camera), we can set worldOriginScene to identity when mViewingCamera
     // is set
-    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
+    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene, mDepthOfFieldOptions.focusDistance);
 
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),

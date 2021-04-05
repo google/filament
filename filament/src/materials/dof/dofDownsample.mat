@@ -16,6 +16,10 @@ material {
             name : cocParams
         },
         {
+            type : float2,
+            name : cocClamp
+        },
+        {
             type : float4,
             name : uvscale,
             precision: high
@@ -31,14 +35,9 @@ material {
             type : float4
         },
         {
-            name : background,
+            name : coc,
             target : color,
-            type : float4
-        },
-        {
-            name : cocFgBg,
-            target : color,
-            type : float2
+            type : float
         }
     ],
     domain : postprocess,
@@ -73,64 +72,45 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     vec4 hdr;
     // fireflies/flickering filtering
-    hdr.x = 1.0 / (1.0 + max3(s00.rgb));
-    hdr.y = 1.0 / (1.0 + max3(s11.rgb));
-    hdr.z = 1.0 / (1.0 + max3(s10.rgb));
-    hdr.w = 1.0 / (1.0 + max3(s00.rgb));
+    hdr[0] = 1.0 / (1.0 + max3(s01.rgb));
+    hdr[1] = 1.0 / (1.0 + max3(s11.rgb));
+    hdr[2] = 1.0 / (1.0 + max3(s10.rgb));
+    hdr[3] = 1.0 / (1.0 + max3(s00.rgb));
 
     vec4 d;
 #if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
     d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
 #else
-    d.x = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
-    d.y = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
-    d.z = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
-    d.w = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
+    d[0] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
+    d[1] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
+    d[2] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
+    d[3] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
 #endif
 
     // Get the CoC radius of each four samples to downsample.
     // We multiply by 0.5 to convert from diameter to radius.
-    vec4 w = getCOC(d, materialParams.cocParams) * 0.5;
+    vec4 c = getCOC(d, materialParams.cocParams) * 0.5;
+    float outCoc = downsampleCoC(c);
+    vec4 w = downsampleCocWeights(c, outCoc, 1.0) * hdr;
+    vec4 outColor = (s01 * w[0] + s11 * w[1] + s10 * w[2] + s00 * w[3]) * rcp(dot(vec4(1.0), w));
 
-    // We calculates the downsampled CoC to be conservative, that is if any
-    // of the 4 texels are foreground or background, then the whole new texel is too.
-    float fgCoc = min2(min(w.xy, w.zw));
-
-    // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
-    // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
-    // leak into the foreground layer, to avoid aliasing artifacts.
-    vec4 foreground = (s01 * hdr.x + s11 * hdr.y + s10 * hdr.z + s00 * hdr.w) * (1.0 / (hdr.x + hdr.y + hdr.z + hdr.w));
-
-    // the background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)), but the
-    // abs() is not needed since bgCoc - w is guaranteed to be >= 0.
-    float bgCoc = max2(max(w.xy, w.zw));
-    vec4 bw = saturate(1.0 - (bgCoc - w)) * hdr;
-    float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
-    vec4 background = (s01 * bw.x + s11 * bw.y + s10 * bw.z + s00 * bw.w) * bgScale;
+    // Clamp to maximum allowable CoC radius.
+    outCoc = clamp(outCoc, materialParams.cocClamp[0], materialParams.cocClamp[1]);
 
     // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
     // artifacts in the "in focus" area and allow us to skip more tiles trivially.
-    if (abs(fgCoc) < MAX_IN_FOCUS_COC) {
-        fgCoc = 0.0;
+    if (abs(outCoc) < MAX_IN_FOCUS_COC) {
+        outCoc = 0.0;
     }
-    if (abs(bgCoc) < MAX_IN_FOCUS_COC){
-        bgCoc = 0.0;
-    }
-
-    // Clamp to maximum allowable CoC radius.
-    fgCoc = clamp(fgCoc, -MAX_COC_RADIUS, MAX_COC_RADIUS);
-    bgCoc = clamp(bgCoc, -MAX_COC_RADIUS, MAX_COC_RADIUS);
 
 #if POST_PROCESS_OPAQUE
     // kill the work performed above
-    foreground.a = 1.0;
-    background.a = 1.0;
+    outColor.a = 1.0;
 #endif
 
     // Output to MRTs
-    postProcess.color       = foreground;
-    postProcess.background  = background;
-    postProcess.cocFgBg     = vec2(fgCoc, bgCoc);
+    postProcess.color = outColor;
+    postProcess.coc   = outCoc;
 }
 
 }

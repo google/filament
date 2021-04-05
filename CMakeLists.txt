@@ -400,6 +400,13 @@ else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
 endif()
 
+# Only optimize materials in Release mode (so error message lines match the source code)
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" OFF)
+else()
+    option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" ON)
+endif()
+
 # ==================================================================================================
 # Material compilation flags
 # ==================================================================================================
@@ -423,8 +430,7 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
-# Only optimize materials in Release mode (so error message lines match the source code)
-if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+if (FILAMENT_DISABLE_MATOPT)
     set(MATC_OPT_FLAGS -g)
 endif()
 

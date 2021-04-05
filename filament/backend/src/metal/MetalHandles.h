@@ -114,7 +114,7 @@ private:
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes);
+            uint32_t vertexCount, AttributeArray const& attributes, bool bufferObjectsEnabled);
     ~MetalVertexBuffer();
 
     std::vector<MetalBuffer*> buffers;
@@ -133,8 +133,7 @@ struct MetalUniformBuffer : public HwUniformBuffer {
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
-    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer,
-            uint32_t enabledAttributes);
+    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
     // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
 
@@ -159,7 +158,8 @@ struct MetalProgram : public HwProgram {
 
 struct MetalTexture : public HwTexture {
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
-            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage)
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a)
             noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
@@ -183,6 +183,12 @@ struct MetalTexture : public HwTexture {
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
+
+    // If non-nil, a swizzled texture view to use instead of "texture".
+    // Filament swizzling only affects texture reads, so this should not be used when the texture is
+    // bound as a render target attachment.
+    id<MTLTexture> swizzledTextureView = nil;
+
     uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
     uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).

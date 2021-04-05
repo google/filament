@@ -40,6 +40,7 @@ set(COMMON_DIR ${ANDROID_DIR}/common)
 include_directories(${JNI_INCLUDE_DIRS} ${ANDROID_DIR})
 
 set(JNI_SOURCE_FILES
+        ${FILAMENT_DIR}/src/main/cpp/BufferObject.cpp
         ${FILAMENT_DIR}/src/main/cpp/Camera.cpp
         ${FILAMENT_DIR}/src/main/cpp/Colors.cpp
         ${FILAMENT_DIR}/src/main/cpp/ColorGrading.cpp
@@ -116,6 +117,7 @@ get_filename_component(FILAMENT_JAVA_DIR ${FILAMENT_JAVA_DIR} ABSOLUTE)
 set(JAVA_SOURCE_FILES
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Asserts.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Box.java
+        ${FILAMENT_JAVA_DIR}/com/google/android/filament/BufferObject.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Camera.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Colors.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/ColorGrading.java

@@ -267,8 +267,9 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes,
+            bool bufferObjectsEnabled)
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes, bufferObjectsEnabled) {
     buffers.reserve(bufferCount);
 
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
@@ -303,7 +304,7 @@ MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwU
         buffer(context, size) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
-        indexBuffer, uint32_t enabledAttributes) {
+        indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
 
@@ -313,13 +314,15 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     buffers.reserve(attributeCount);
     offsets.clear();
     offsets.reserve(attributeCount);
+    vertexDescription = {};
 
     // Each attribute gets its own vertex buffer.
 
     uint32_t bufferIndex = 0;
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
-        if (!(enabledAttributes & (1U << attributeIndex))) {
-            const uint8_t flags = vertexBuffer->attributes[attributeIndex].flags;
+        const auto& attribute = vertexBuffer->attributes[attributeIndex];
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            const uint8_t flags = attribute.flags;
             const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
                     MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
 
@@ -336,7 +339,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
             };
             continue;
         }
-        const auto& attribute = vertexBuffer->attributes[attributeIndex];
 
         buffers.push_back(vertexBuffer->buffers[attribute.buffer]);
         offsets.push_back(attribute.offset);
@@ -415,7 +417,8 @@ static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat form
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage) noexcept
+        TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+        TextureSwizzle a) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context), reshaper(format) {
 
@@ -513,6 +516,31 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             // texture allocations.
             texture = nil;
             break;
+    }
+
+    // If swizzling is set, set up a swizzled texture view that we'll use when sampling this texture.
+    const bool isDefaultSwizzle =
+            r == TextureSwizzle::CHANNEL_0 &&
+            g == TextureSwizzle::CHANNEL_1 &&
+            b == TextureSwizzle::CHANNEL_2 &&
+            a == TextureSwizzle::CHANNEL_3;
+    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
+    // TODO: implement swizzling for external textures.
+    if (!isDefaultSwizzle && texture) {
+        if (@available(macOS 10.15, iOS 13, *)) {
+            NSUInteger slices = texture.arrayLength;
+            if (texture.textureType == MTLTextureTypeCube ||
+                texture.textureType == MTLTextureTypeCubeArray) {
+                slices *= 6;
+            }
+            NSUInteger mips = texture.mipmapLevelCount;
+            MTLTextureSwizzleChannels swizzle = getSwizzleChannels(r, g, b, a);
+            swizzledTextureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
+                                                             textureType:texture.textureType
+                                                                  levels:NSMakeRange(0, mips)
+                                                                  slices:NSMakeRange(0, slices)
+                                                                 swizzle:swizzle];
+        }
     }
 }
 

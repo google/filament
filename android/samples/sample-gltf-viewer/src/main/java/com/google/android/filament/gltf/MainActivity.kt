@@ -240,7 +240,7 @@ class MainActivity : Activity() {
         val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
         automation.applySettings(json, modelViewer.view, null,
                 modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
-                modelViewer.scene)
+                modelViewer.scene, modelViewer.renderer)
         modelViewer.view.colorGrading = automation.getColorGrading((modelViewer.engine))
     }
 

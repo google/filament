@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
+option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
@@ -55,6 +56,7 @@ set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 
 add_library(filament-jni SHARED
+    src/main/cpp/BufferObject.cpp
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
     src/main/cpp/ColorGrading.cpp

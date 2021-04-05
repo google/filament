@@ -3,17 +3,12 @@ material {
     parameters : [
         {
             type : sampler2d,
-            name : foreground,
+            name : color,
             precision: medium
         },
         {
             type : sampler2d,
-            name : background,
-            precision: medium
-        },
-        {
-            type : sampler2d,
-            name : cocFgBg,
+            name : coc,
             precision: medium
         },
         {
@@ -35,14 +30,9 @@ material {
             type : float4
         },
         {
-            name : background,
+            name : coc,
             target : color,
-            type : float4
-        },
-        {
-            name : cocFgBg,
-            target : color,
-            type : float2
+            type : float
         }
     ],
     domain : postprocess,
@@ -63,7 +53,7 @@ fragment {
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_foreground, materialParams.mip));
+    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_color, materialParams.mip));
     highp vec2 uv = variable_vertex.xy - pixelSize.xy * 0.5;
 
     // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
@@ -72,60 +62,30 @@ void postProcess(inout PostProcessInputs postProcess) {
     float weightScale = materialParams.weightScale;
     float mip = float(materialParams.mip);
 
-    // fetch the 4 corresponding CoC
-    vec4 d0, d1;
-    d0.xy = textureLodOffset(materialParams_cocFgBg, uv, mip, ivec2(0, 1)).rg;
-    d0.zw = textureLodOffset(materialParams_cocFgBg, uv, mip, ivec2(1, 1)).rg;
-    d1.xy = textureLodOffset(materialParams_cocFgBg, uv, mip, ivec2(1, 0)).rg;
-    d1.zw = textureLodOffset(materialParams_cocFgBg, uv, mip, ivec2(0, 0)).rg;
-    vec4 fw = vec4(d0.xz, d1.xz);
-    vec4 bw = vec4(d0.yw, d1.yw);
+    vec4 s01 = textureLodOffset(materialParams_color, uv, mip, ivec2(0, 1));
+    vec4 s11 = textureLodOffset(materialParams_color, uv, mip, ivec2(1, 1));
+    vec4 s10 = textureLodOffset(materialParams_color, uv, mip, ivec2(1, 0));
+    vec4 s00 = textureLodOffset(materialParams_color, uv, mip, ivec2(0, 0));
 
-    /*
-     * foreground
-     */
+    // fetch the 4 corresponding CoC (textureGather with LOD doesn't exist)
+    vec4 c;
+    c[0] = textureLodOffset(materialParams_coc, uv, mip, ivec2(0, 1)).r;
+    c[1] = textureLodOffset(materialParams_coc, uv, mip, ivec2(1, 1)).r;
+    c[2] = textureLodOffset(materialParams_coc, uv, mip, ivec2(1, 0)).r;
+    c[3] = textureLodOffset(materialParams_coc, uv, mip, ivec2(0, 0)).r;
 
-    vec4 fg01 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(0, 1));
-    vec4 fg11 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(1, 1));
-    vec4 fg10 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(1, 0));
-    vec4 fg00 = textureLodOffset(materialParams_foreground, uv, mip, ivec2(0, 0));
-
-    // We calculates the downsampled CoC to be conservative, that is if any
-    // of the 4 texels are foreground or background, then the whole new texel is too.
-    float fgCoc = min4(fw);
-
-    // The forground bilateral weight is calculated as saturate(1.0 - (fgCoc - w)), which always
-    // yields 1.0. Note the "missing" abs(), this is because we want to let the background layer
-    // leak into the foreground layer, to avoid aliasing artifacts.
-    vec4 foreground = (fg01 + fg11 + fg10 + fg00) * 0.25;
-
-    /*
-     * background
-     */
-
-    vec4 bg01 = textureLodOffset(materialParams_background, uv, mip, ivec2(0, 1));
-    vec4 bg11 = textureLodOffset(materialParams_background, uv, mip, ivec2(1, 1));
-    vec4 bg10 = textureLodOffset(materialParams_background, uv, mip, ivec2(1, 0));
-    vec4 bg00 = textureLodOffset(materialParams_background, uv, mip, ivec2(0, 0));
-
-    float bgCoc = max4(bw);
-
-    // The background bilateral weight is calculated as saturate(1.0 - abs(bgCoc - w)),
-    // but the abs() is not needed since bgCoc - w is guaranteed to be >= 0.
-    bw = saturate(1.0 - (bgCoc - bw) * weightScale);
-    float bgScale = 1.0 / (bw.x + bw.y + bw.z + bw.w);
-    vec4 background = (bg01 * bw.x + bg11 * bw.y + bg10 * bw.z + bg00 * bw.w) * bgScale;
+    float outCoc = downsampleCoC(c);
+    vec4 w = downsampleCocWeights(c, outCoc, weightScale);
+    vec4 outColor = (s01 * w[0] + s11 * w[1] + s10 * w[2] + s00 * w[3]) * rcp(dot(vec4(1.0), w));
 
 #if POST_PROCESS_OPAQUE
     // kill the work performed above
-    foreground.a = 1.0;
-    background.a = 1.0;
+    outColor.a = 1.0;
 #endif
 
     // Output to MRTs
-    postProcess.color       = foreground;
-    postProcess.background  = background;
-    postProcess.cocFgBg     = vec2(fgCoc, bgCoc);
+    postProcess.color = outColor;
+    postProcess.coc   = outCoc;
 }
 
 }

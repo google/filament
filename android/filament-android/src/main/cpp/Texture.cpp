@@ -34,12 +34,13 @@
 using namespace filament;
 using namespace backend;
 
-static size_t getTextureDataSize(const Texture *texture, size_t level,
-        Texture::Format format, Texture::Type type, size_t stride, size_t alignment) {
+static size_t getTextureDataSize(const Texture *texture,
+        size_t level, Texture::Format format, Texture::Type type,
+        size_t stride, size_t height, size_t alignment) {
     // Zero stride implies tight row-to-row packing.
-    stride = stride == 0 ? texture->getWidth(level) : std::max(size_t(1), stride >> level);
-    return Texture::computeTextureDataSize(format, type,
-            stride, texture->getHeight(level), alignment);
+    stride = stride == 0 ? texture->getWidth(level)  : std::max(size_t(1), stride >> level);
+    height = height == 0 ? texture->getHeight(level) : std::max(size_t(1), height >> level);
+    return Texture::computeTextureDataSize(format, type, stride, height, alignment);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -48,6 +49,13 @@ Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv*, jcla
     Engine *engine = (Engine *) nativeEngine;
     return (jboolean) Texture::isTextureFormatSupported(*engine,
             (Texture::InternalFormat) internalFormat);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Texture_nIsTextureSwizzleSupported(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine *engine = (Engine *) nativeEngine;
+    return (jboolean) Texture::isTextureSwizzleSupported(*engine);
 }
 
 // Texture::Builder...
@@ -175,14 +183,14 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong nativeTexture,
         jlong nativeEngine, jint level, jint xoffset, jint yoffset, jint width, jint height,
         jobject storage,  jint remaining,
-        jint left, jint bottom, jint type, jint alignment,
+        jint left, jint top, jint type, jint alignment,
         jint stride, jint format,
         jobject handler, jobject runnable) {
     Texture* texture = (Texture*) nativeTexture;
     Engine* engine = (Engine*) nativeEngine;
 
     size_t sizeInBytes = getTextureDataSize(texture, (size_t) level, (Texture::Format) format,
-            (Texture::Type) type, (size_t) stride, (size_t) alignment);
+            (Texture::Type) type, (size_t) stride, (size_t) height, (size_t) alignment);
 
     AutoBuffer nioBuffer(env, storage, 0);
     if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
@@ -194,7 +202,7 @@ Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong na
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
             (uint32_t) stride, &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
@@ -239,14 +247,14 @@ Java_com_google_android_filament_Texture_nSetImage3D(JNIEnv* env, jclass, jlong 
         jint xoffset, jint yoffset, jint zoffset,
         jint width, jint height, jint depth,
         jobject storage,  jint remaining,
-        jint left, jint bottom, jint type, jint alignment,
+        jint left, jint top, jint type, jint alignment,
         jint stride, jint format,
         jobject handler, jobject runnable) {
     Texture* texture = (Texture*) nativeTexture;
     Engine* engine = (Engine*) nativeEngine;
 
     size_t sizeInBytes = getTextureDataSize(texture, (size_t) level, (Texture::Format) format,
-            (Texture::Type) type, (size_t) stride, (size_t) alignment);
+            (Texture::Type) type, (size_t) stride, (size_t) height, (size_t) alignment) * depth;
 
     AutoBuffer nioBuffer(env, storage, 0);
     if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
@@ -258,7 +266,7 @@ Java_com_google_android_filament_Texture_nSetImage3D(JNIEnv* env, jclass, jlong 
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
             (uint32_t) stride, &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level,
@@ -306,7 +314,7 @@ Java_com_google_android_filament_Texture_nSetImage3DCompressed(JNIEnv *env, jcla
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
         jlong nativeTexture, jlong nativeEngine, jint level, jobject storage, jint remaining,
-        jint left, jint bottom, jint type, jint alignment, jint stride, jint format,
+        jint left, jint top, jint type, jint alignment, jint stride, jint format,
         jintArray faceOffsetsInBytes_,
         jobject handler, jobject runnable) {
     Texture *texture = (Texture *) nativeTexture;
@@ -318,7 +326,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
     env->ReleaseIntArrayElements(faceOffsetsInBytes_, faceOffsetsInBytes, JNI_ABORT);
 
     size_t sizeInBytes = 6 * getTextureDataSize(texture, (size_t) level, (Texture::Format) format,
-            (Texture::Type) type, (size_t) stride, (size_t) alignment);
+            (Texture::Type) type, (size_t) stride, 0, (size_t) alignment);
 
     AutoBuffer nioBuffer(env, storage, 0);
     if (sizeInBytes > (size_t(remaining) << nioBuffer.getShift())) {
@@ -330,7 +338,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
             (uint32_t) stride, &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
@@ -341,7 +349,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env, jclass,
         jlong nativeTexture, jlong nativeEngine, jint level, jobject storage, jint remaining,
-        jint left, jint bottom, jint type, jint alignment,
+        jint left, jint top, jint type, jint alignment,
         jint compressedSizeInBytes, jint compressedFormat, jintArray faceOffsetsInBytes_,
         jobject handler, jobject runnable) {
 

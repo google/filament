@@ -70,7 +70,7 @@ static void printUsage(const char* name) {
             "           DDS: 8, 16 (default), 32\n\n"
     );
 
-    const std::string from("ROUGHNESSPREFILTER");
+    const std::string from("CSO-LUT");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), execName);
     }

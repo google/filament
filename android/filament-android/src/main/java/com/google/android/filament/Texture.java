@@ -563,6 +563,17 @@ public class Texture {
     }
 
     /**
+     * Checks whether texture swizzling is supported in this {@link Engine}.
+     * This depends on the selected backend.
+     *
+     * @param engine {@link Engine}
+     * @return <code>true</code> if texture swizzling.
+     */
+    public static boolean isTextureSwizzleSupported(@NonNull Engine engine) {
+        return nIsTextureSwizzleSupported(engine.getNativeObject());
+    }
+
+    /**
      * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
      */
     public static class Builder {
@@ -1137,6 +1148,7 @@ public class Texture {
     }
 
     private static native boolean nIsTextureFormatSupported(long nativeEngine, int internalFormat);
+    private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
@@ -1160,35 +1172,35 @@ public class Texture {
 
     private static native int nSetImage(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height,
-            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            Buffer storage, int remaining, int left, int top, int type, int alignment,
             int stride, int format,
             Object handler, Runnable callback);
 
     private static native int nSetImageCompressed(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height,
-            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            Buffer storage, int remaining, int left, int top, int type, int alignment,
             int compressedSizeInBytes, int compressedFormat,
             Object handler, Runnable callback);
 
     private static native int nSetImage3D(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth,
-            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            Buffer storage, int remaining, int left, int top, int type, int alignment,
             int stride, int format,
             Object handler, Runnable callback);
 
     private static native int nSetImage3DCompressed(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth,
-            Buffer storage, int remaining, int left, int bottom, int type, int alignment,
+            Buffer storage, int remaining, int left, int top, int type, int alignment,
             int compressedSizeInBytes, int compressedFormat,
             Object handler, Runnable callback);
 
     private static native int nSetImageCubemap(long nativeTexture, long nativeEngine,
-            int level, Buffer storage, int remaining, int left, int bottom, int type,
+            int level, Buffer storage, int remaining, int left, int top, int type,
             int alignment, int stride, int format,
             int[] faceOffsetsInBytes, Object handler, Runnable callback);
 
     private static native int nSetImageCubemapCompressed(long nativeTexture, long nativeEngine,
-            int level, Buffer storage, int remaining, int left, int bottom, int type,
+            int level, Buffer storage, int remaining, int left, int top, int type,
             int alignment, int compressedSizeInBytes, int compressedFormat,
             int[] faceOffsetsInBytes, Object handler, Runnable callback);
 

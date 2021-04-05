@@ -162,6 +162,23 @@ TEST_F(ViewSettingsTest, JsonTestDefaults) {
     ASSERT_EQ(serializer.writeJson(settings2), serializer.writeJson(settings3));
 }
 
+TEST_F(ViewSettingsTest, JsonTestSerialization) {
+    auto canParse = [](bool parseResult, std::string json) {
+        if (parseResult) {
+            return testing::AssertionSuccess() << "Settings can be serialized.";
+        } else {
+            return testing::AssertionFailure() << "JSON has errors:\n" << json.c_str() << std::endl;
+        }
+    };
+
+    JsonSerializer serializer;
+    Settings outSettings = {};
+    std::string jsonstr = serializer.writeJson(outSettings);
+    Settings inSettings = {};
+    bool result = serializer.readJson(jsonstr.c_str(), jsonstr.size(), &inSettings);
+    ASSERT_TRUE(canParse(result, jsonstr));
+}
+
 TEST_F(ViewSettingsTest, JsonTestMaterial) {
     JsonSerializer serializer;
     Settings settings = {0};
