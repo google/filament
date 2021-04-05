@@ -16,6 +16,7 @@
 
 #include <viewer/AutomationEngine.h>
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
@@ -165,6 +166,18 @@ ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
         mColorGradingEngine = engine;
     }
     return mColorGrading;
+}
+
+ViewerOptions AutomationEngine::getViewerOptions() const {
+    ViewerOptions options = mSettings->viewer;
+    const auto dofOptions = mSettings->view.dof;
+    if (dofOptions.enabled) {
+        options.cameraFocalLength = Camera::computeEffectiveFocalLength(
+                options.cameraFocalLength / 1000.0,
+                std::max(0.1f, options.cameraFocusDistance)) * 1000.0;
+
+    }
+    return mSettings->viewer;
 }
 
 void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
