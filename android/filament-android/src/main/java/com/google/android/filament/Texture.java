@@ -531,6 +531,9 @@ public class Texture {
                     // Special case, format must be RGB and uses 4 bytes
                     bpp = 4;
                     break;
+                case USHORT_565:
+                    bpp = 2;
+                    break;
             }
 
             int bpr = bpp * stride;
