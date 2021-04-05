@@ -21,6 +21,7 @@
 #include "TangentsJob.h"
 #include "upcast.h"
 
+#include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/MaterialInstance.h>
@@ -431,8 +432,11 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
-            VertexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
-            slot.vertexBuffer->setBufferAt(engine, slot.bufferIndex, std::move(bd));
+            BufferObject* bo = BufferObject::Builder().size(size).build(engine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(engine, BufferDescriptor(data, size,
+                    uploadCallback, uploadUserdata(asset)));
+            slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
         }
         assert(slot.indexBuffer);
@@ -846,9 +850,12 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Finally, upload quaternions to the GPU from the main thread.
     for (Params& params : jobParams) {
-        VertexBuffer::BufferDescriptor bd(params.out.results,
-                params.out.vertexCount * sizeof(short4), FREE_CALLBACK);
-        params.context.vb->setBufferAt(*mEngine, params.context.slot, std::move(bd));
+        BufferObject* bo = BufferObject::Builder()
+                .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
+        asset->mBufferObjects.push_back(bo);
+        bo->setBuffer(*mEngine, BufferDescriptor(
+                params.out.results, bo->getByteCount(), FREE_CALLBACK));
+        params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
     }
 }
 
@@ -868,8 +875,10 @@ void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
         cgltf_size numBytes = sizeof(float) * numFloats;
         float* generated = (float*) malloc(numBytes);
         cgltf_accessor_unpack_floats(accessor, generated, numFloats);
-        VertexBuffer::BufferDescriptor bd(generated, numBytes, FREE_CALLBACK);
-        slot.vertexBuffer->setBufferAt(*pImpl->mEngine, slot.bufferIndex, std::move(bd));
+        BufferObject* bo = BufferObject::Builder().size(numBytes).build(*asset->mEngine);
+        asset->mBufferObjects.push_back(bo);
+        bo->setBuffer(*pImpl->mEngine, BufferDescriptor(generated, numBytes, FREE_CALLBACK));
+        slot.vertexBuffer->setBufferObjectAt(*pImpl->mEngine, slot.bufferIndex, bo);
     }
 }
 

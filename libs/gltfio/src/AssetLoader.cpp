@@ -22,6 +22,7 @@
 #include "GltfEnums.h"
 
 #include <filament/Box.h>
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -560,6 +561,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     mResult->mIndexBuffers.push_back(indices);
 
     VertexBuffer::Builder vbb;
+    vbb.enableBufferObjects();
 
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
@@ -777,10 +779,13 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     if (needsDummyData) {
         uint32_t size = sizeof(ubyte4) * vertexCount;
+        BufferObject* bufferObject = BufferObject::Builder().size(size).build(*mEngine);
+        mResult->mBufferObjects.push_back(bufferObject);
         uint32_t* dummyData = (uint32_t*) malloc(size);
         memset(dummyData, 0xff, size);
         VertexBuffer::BufferDescriptor bd(dummyData, size, FREE_CALLBACK);
-        vertices->setBufferAt(*mEngine, slot, std::move(bd));
+        bufferObject->setBuffer(*mEngine, std::move(bd));
+        vertices->setBufferObjectAt(*mEngine, slot, bufferObject);
     }
 
     return true;
