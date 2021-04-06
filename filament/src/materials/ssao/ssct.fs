@@ -34,7 +34,7 @@ struct ConeTraceSetup {
     uint sampleCount;
 };
 
-highp float getWFromProjectionMatrix(const mat4 p, const vec3 v) {
+highp float getWFromProjectionMatrix(const highp mat4 p, const vec3 v) {
     // this essentially returns (p * vec4(v, 1.0)).w, but we make some assumptions
     // this assumes a perspective projection
     return -v.z;
@@ -42,14 +42,14 @@ highp float getWFromProjectionMatrix(const mat4 p, const vec3 v) {
     //return p[2][3] * v.z + p[3][3];
 }
 
-highp float getViewSpaceZFromW(const mat4 p, const float w) {
+highp float getViewSpaceZFromW(const highp mat4 p, const float w) {
     // this assumes a perspective projection
     return -w;
     // this assumes a perspective or ortho projection
-    return (w - p[3][3]) / p[2][3];
+    //return (w - p[3][3]) / p[2][3];
 }
 
-float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) {
+float coneTraceOcclusion(in ConeTraceSetup setup, const highp sampler2D depthTexture) {
     // skip fragments that are back-facing trace direction
     // (avoid overshadowing of translucent surfaces)
     float NoL = dot(setup.vsNormal, setup.vsConeDirection);
@@ -71,7 +71,7 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const sampler2D depthTexture) 
 
     // cone trace direction in screen-space
     float ssConeLength = length(ssEndPos - ssStartPos);     // do the math in highp
-    vec2 ssConeVector = ssEndPos - ssStartPos;
+    highp vec2 ssConeVector = ssEndPos - ssStartPos;
 
     // direction perpendicular to cone trace direction
     vec2 perpConeDir = normalize(vec2(ssConeVector.y, -ssConeVector.x));

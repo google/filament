@@ -39,7 +39,8 @@ vertex {
 }
 
 fragment {
-    float unpack(vec2 depth) {
+    highp float unpack(highp vec2 depth) {
+        // depth here only has 8-bits of precision, but the unpacked depth is highp
         // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
         return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
     }
@@ -49,7 +50,7 @@ fragment {
         return fract(m.z * fract(dot(w, m.xy)));
     }
 
-    float bilateralWeight(in float depth, in float sampleDepth) {
+    float bilateralWeight(in highp float depth, in highp float sampleDepth) {
         float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
         return max(0.0, 1.0 - diff * diff);
     }
