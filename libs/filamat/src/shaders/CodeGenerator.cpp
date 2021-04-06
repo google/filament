@@ -232,7 +232,7 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
     out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
-    out << "LAYOUT_LOCATION(" << index << ") out " << typeString <<
+    out << "layout(location=" << index << ") out " << typeString <<
         " output_" << name.c_str() << ";\n";
 
     return out;
