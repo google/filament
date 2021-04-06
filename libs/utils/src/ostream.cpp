@@ -196,7 +196,7 @@ ostream& ostream::operator<<(long double value) noexcept {
 }
 
 ostream& ostream::operator<<(bool value) noexcept {
-    return operator<<((int)value);
+    return operator<<(value ? "true" : "false");
 }
 
 ostream& ostream::operator<<(const char* string) noexcept {
