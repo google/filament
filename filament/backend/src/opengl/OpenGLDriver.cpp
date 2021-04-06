@@ -1074,10 +1074,16 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         uint32_t height, uint8_t samples) const noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     if (samples > 1) {
-        // We don't support "implicit" (i.e. EXT_multisampled_render_to_texture) renderbuffer
-        // (in practice this means that a texture must be marked 'SAMPLEABLE' if 'implicit'
-        // resolves are desired.
-        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+#ifdef GL_EXT_multisampled_render_to_texture
+        auto& gl = mContext;
+        if (gl.ext.EXT_multisampled_render_to_texture ||
+            gl.ext.EXT_multisampled_render_to_texture2) {
+            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
+        } else
+#endif
+        {
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+        }
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
