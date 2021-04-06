@@ -999,7 +999,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
 
         // Clear the resolve bit for this particular attachment. Note that other attachment(s)
-        // might be sampleable, so this does not necessarily prevent the resolve from occuring.
+        // might be sampleable, so this does not necessarily prevent the resolve from occurring.
         resolveFlags = TargetBufferFlags::NONE;
 
     } else {
