@@ -127,9 +127,9 @@ public:
 
     // supported extensions detected at runtime
     struct {
-        bool texture_compression_s3tc = false;
-        bool texture_compression_etc2 = false;
-        bool texture_filter_anisotropic = false;
+        bool WEBGL_texture_compression_s3tc = false;
+        bool EXT_texture_compression_etc2 = false;
+        bool EXT_texture_filter_anisotropic = false;
         bool QCOM_tiled_rendering = false;
         bool OES_EGL_image_external_essl3 = false;
         bool EXT_debug_marker = false;
