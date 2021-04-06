@@ -889,11 +889,11 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
             return;
         }
         uint8_t* bytes = (uint8_t*) data->buffer_view->buffer->data;
-        float4* floats = (float4*) (bytes + data->offset + data->buffer_view->offset);
-        for (cgltf_size i = 0; i < data->count; ++i) {
-            float4 weights = floats[i];
-            float sum = weights.x + weights.y + weights.z + weights.w;
-            floats[i] = weights / sum;
+        bytes += data->offset + data->buffer_view->offset;
+        for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
+            float4* weights = (float4*) bytes;
+            const float sum = weights->x + weights->y + weights->z + weights->w;
+            *weights /= sum;
         }
     };
     const cgltf_data* gltf = asset->mSourceAsset->hierarchy;
