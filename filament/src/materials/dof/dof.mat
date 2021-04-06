@@ -195,15 +195,16 @@ highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
  * "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
  */
 
-// Qualcomm drivers don't seem to support precision qualifiers on member of a structure,
-// they are simply ignored.
+// Adreno drivers don't seem to support precision qualifiers on member of a structure,
+// they are simply ignored. On the other hand, Mali drivers don't seem to honor the precision
+// qualifier around a struct -- so we need to do both.
 precision highp float;
 
 struct Bucket {
-    vec4 c;     // accumulated, weighted color
-    float cw;   // accumulated weight
-    float o;    // # of miss for the ring
-    float coc;  // accumulated, weighted coc
+    highp vec4 c;     // accumulated, weighted color
+    highp float cw;   // accumulated weight
+    float o;          // # of miss for the ring
+    float coc;        // accumulated, weighted coc
 };
 
 precision mediump float;
@@ -623,7 +624,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
 #if KERNEL_USE_NOISE
     // A good random generator is essential, this one is okay.
-    vec2 fragCoords = gl_FragCoord.xy;
+    highp vec2 fragCoords = gl_FragCoord.xy;
     float randomAngle = random(fragCoords) * (2.0 * PI);
     float random01 = random(fragCoords * vec2(5099.0, 3499.0)); // large primes seem to work ok
     noiseState.randomUniformDiskRadius = 0.5 * sqrt(random01);

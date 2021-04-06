@@ -242,7 +242,7 @@ fragment {
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth);
 
         // now we have the sample, compute AO
-        vec3 v = p - origin;        // sample vector
+        highp vec3 v = p - origin;  // sample vector
         float vv = dot(v, v);       // squared distance
         float vn = dot(v, normal);  // distance * cos(v, normal)
 

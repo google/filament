@@ -281,11 +281,11 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     // tolerance
     float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt * 0.5;
 
-    // dithter the ray with interleaved grandient noise
+    // dither the ray with interleaved gradient noise
     const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
     float dither = fract(m.z * fract(dot(gl_FragCoord.xy, m.xy))) - 0.5;
 
-    // normalized postion on the ray (0 to 1)
+    // normalized position on the ray (0 to 1)
     float t = dt * dither + dt;
 
     highp vec3 ray;
