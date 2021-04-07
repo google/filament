@@ -125,16 +125,6 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext;
 }
 
-#define METAL_DEBUG_COMMANDS 0
-#if !defined(NDEBUG)
-void MetalDriver::debugCommand(const char *methodName) {
-#if METAL_DEBUG_COMMANDS
-    utils::slog.d << methodName << utils::io::endl;
-#endif
-}
-#endif
-
-
 void MetalDriver::tick(int) {
 }
 

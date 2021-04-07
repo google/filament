@@ -243,7 +243,6 @@ private:
 
 #include "private/backend/DriverAPI.inc"
 
-
     // Memory management...
 
     class HandleAllocator {

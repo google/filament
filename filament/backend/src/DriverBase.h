@@ -196,6 +196,9 @@ protected:
 
     void scheduleRelease(AcquiredImage&& image) noexcept;
 
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+    void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+
 private:
     std::mutex mPurgeLock;
     std::vector<BufferDescriptor> mBufferToPurge;

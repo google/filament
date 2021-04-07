@@ -1819,8 +1819,9 @@ void VulkanDriver::refreshSwapChain() {
     mFramebufferCache.reset();
 }
 
+void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
+    DriverBase::debugCommandBegin(cmds, synchronous, methodName);
 #ifndef NDEBUG
-void VulkanDriver::debugCommand(const char* methodName) {
     static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
         "loadUniformBuffer",
         "updateBufferObject",
@@ -1842,8 +1843,8 @@ void VulkanDriver::debugCommand(const char* methodName) {
         utils::slog.e << command.c_str() << " issued inside a render pass." << utils::io::endl;
         utils::debug_trap();
     }
-}
 #endif
+}
 
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;

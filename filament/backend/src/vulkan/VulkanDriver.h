@@ -49,9 +49,7 @@ public:
 
 private:
 
-#ifndef NDEBUG
-    void debugCommand(const char* methodName) override;
-#endif
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
     inline VulkanDriver(backend::VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
