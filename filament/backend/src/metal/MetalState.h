@@ -44,11 +44,11 @@ static constexpr uint32_t VERTEX_BUFFER_START = Program::UNIFORM_BINDING_COUNT;
 
 // The "zero" buffer is a small buffer for missing attributes that resides in the vertex slot
 // immediately following any user-provided vertex buffers.
-static constexpr uint32_t ZERO_VERTEX_BUFFER = MAX_VERTEX_ATTRIBUTE_COUNT;
+static constexpr uint32_t ZERO_VERTEX_BUFFER = backend::MAX_VERTEX_BUFFER_COUNT;
 
-// The total number of vertex buffers "slots" that the Metal backend can bind.
+// The total number of vertex buffer "slots" that the Metal backend can bind.
 // + 1 to account for the zero buffer.
-static constexpr uint32_t VERTEX_BUFFER_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT + 1;
+static constexpr uint32_t VERTEX_BUFFER_COUNT = backend::MAX_VERTEX_BUFFER_COUNT + 1;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
