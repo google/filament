@@ -337,8 +337,10 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->depthBias);
         } else if (compare(tok, jsonChunk, "depthSlopeBias") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->depthSlopeBias);
-        } else if (compare(tok, jsonChunk, "sampleCount") == 0){
+        } else if (compare(tok, jsonChunk, "sampleCount") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sampleCount);
+        } else if (compare(tok, jsonChunk, "rayCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->rayCount);
         } else {
             slog.w << "Invalid SSCT key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -370,6 +372,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->intensity);
         } else if (compare(tok, jsonChunk, "quality") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
+        } else if (compare(tok, jsonChunk, "lowPassFilter") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lowPassFilter);
         } else if (compare(tok, jsonChunk, "upsampling") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->upsampling);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
@@ -1070,7 +1074,8 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"lightDirection\": " << (in.lightDirection) << ",\n"
         << "\"depthBias\": " << (in.depthBias) << ",\n"
         << "\"depthSlopeBias\": " << (in.depthSlopeBias) << ",\n"
-        << "\"sampleCount\": " << int(in.sampleCount) << "\n"
+        << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
+        << "\"rayCount\": " << int(in.rayCount) << "\n"
         << "}";
 }
 
@@ -1082,6 +1087,7 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"resolution\": " << (in.resolution) << ",\n"
         << "\"intensity\": " << (in.intensity) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
+        << "\"lowPassFilter\": " << (in.lowPassFilter) << ",\n"
         << "\"upsampling\": " << (in.upsampling) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"minHorizonAngleRad\": " << (in.minHorizonAngleRad) << ",\n"
