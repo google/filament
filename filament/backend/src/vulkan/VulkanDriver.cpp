@@ -446,9 +446,9 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
-        BufferUsage usage, bool bufferObjectsEnabled) {
+        BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            mDisposer, bufferCount, attributeCount, elementCount, attributes, bufferObjectsEnabled);
+            mDisposer, bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -865,18 +865,11 @@ math::float2 VulkanDriver::getClipSpaceParams() {
     return math::float2{ -0.5f, 0.5f };
 }
 
-void VulkanDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
-        BufferDescriptor&& p, uint32_t byteOffset) {
-    auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
-    vb.buffers[index]->loadFromCpu(p.buffer, byteOffset, p.size);
-    scheduleDestroy(std::move(p));
-}
-
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
-    vb.buffers[index] = bo.buffer;
+    vb.buffers[index] = bo.buffer.get();
 }
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
@@ -1830,9 +1823,8 @@ void VulkanDriver::refreshSwapChain() {
 void VulkanDriver::debugCommand(const char* methodName) {
     static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
         "loadUniformBuffer",
-        "updateVertexBuffer",
-        "updateIndexBuffer",
         "updateBufferObject",
+        "updateIndexBuffer",
         "update2DImage",
         "updateCubeImage",
     };

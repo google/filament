@@ -70,6 +70,8 @@ public:
     };
 
     struct GLBufferObject : public backend::HwBufferObject {
+        using HwBufferObject::HwBufferObject;
+        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
         struct {
             GLuint id = 0;
         } gl;

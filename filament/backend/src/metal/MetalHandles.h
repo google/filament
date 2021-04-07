@@ -117,19 +117,18 @@ public:
     MetalBufferObject(MetalContext& context, uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
-    const std::shared_ptr<MetalBuffer>& getBuffer() const { return buffer; }
+    MetalBuffer* getBuffer() const { return buffer.get(); }
 
 private:
-    uint32_t byteCount;
-    std::shared_ptr<MetalBuffer> buffer = nullptr;
+    std::unique_ptr<MetalBuffer> buffer = nullptr;
 
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes, bool bufferObjectsEnabled);
+            uint32_t vertexCount, AttributeArray const& attributes);
 
-    std::vector<std::shared_ptr<MetalBuffer>> buffers;
+    std::vector<MetalBuffer*> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {

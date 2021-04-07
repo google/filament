@@ -47,10 +47,13 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
     AttributeBitset enabledAttributes;
     enabledAttributes.set(VertexAttribute::POSITION);
 
+    const size_t size = sizeof(math::float2) * 3;
+    mBufferObject = mDriverApi.createBufferObject(size, BufferObjectBinding::VERTEX);
     mVertexBuffer = mDriverApi.createVertexBuffer(1, 1, mVertexCount, attributes,
-            BufferUsage::STATIC, false);
-    BufferDescriptor vertexBufferDesc(gVertices, sizeof(filament::math::float2) * 3, nullptr);
-    mDriverApi.updateVertexBuffer(mVertexBuffer, 0, std::move(vertexBufferDesc), 0);
+            BufferUsage::STATIC);
+    mDriverApi.setVertexBufferObject(mVertexBuffer, 0, mBufferObject);
+    BufferDescriptor vertexBufferDesc(gVertices, size, nullptr);
+    mDriverApi.updateBufferObject(mBufferObject, std::move(vertexBufferDesc), 0);
 
     mIndexBuffer = mDriverApi.createIndexBuffer(ElementType::SHORT, mIndexCount,
             BufferUsage::STATIC);
@@ -72,7 +75,7 @@ void TrianglePrimitive::updateVertices(const filament::math::float2 vertices[3])
             [] (void* buffer, size_t size, void* user) {
         free(buffer);
     });
-    mDriverApi.updateVertexBuffer(mVertexBuffer, 0, std::move(vBuffer), 0);
+    mDriverApi.updateBufferObject(mBufferObject, std::move(vBuffer), 0);
 }
 
 void TrianglePrimitive::updateIndices(const short indices[3]) noexcept {
@@ -88,6 +91,7 @@ void TrianglePrimitive::updateIndices(const short indices[3]) noexcept {
 }
 
 TrianglePrimitive::~TrianglePrimitive() {
+    mDriverApi.destroyBufferObject(mBufferObject);
     mDriverApi.destroyVertexBuffer(mVertexBuffer);
     mDriverApi.destroyIndexBuffer(mIndexBuffer);
     mDriverApi.destroyRenderPrimitive(mRenderPrimitive);

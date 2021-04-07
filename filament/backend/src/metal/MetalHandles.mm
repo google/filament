@@ -267,7 +267,7 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
 }
 
 MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
-        : byteCount(byteCount), buffer(std::make_shared<MetalBuffer>(context, byteCount)) {}
+        : HwBufferObject(byteCount), buffer(std::make_unique<MetalBuffer>(context, byteCount)) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     assert_invariant(byteOffset + size <= byteCount);
@@ -275,34 +275,9 @@ void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffse
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes,
-            bool bufferObjectsEnabled)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes, bufferObjectsEnabled) {
-    buffers.reserve(bufferCount);
-
-    if (bufferObjectsEnabled) {
-        // If BufferObjects are used, we don't need to make any allocations. Simply reserve enough
-        // "slots" for future calls to setVertexBufferObject.
-        buffers.resize(bufferCount);
-        return;
-    }
-
-    for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
-        // Calculate buffer size.
-        uint32_t size = 0;
-        for (auto const& item : attributes) {
-            if (item.buffer == bufferIndex) {
-                uint32_t end = item.offset + vertexCount * item.stride;
-                size = std::max(size, end);
-            }
-        }
-
-        std::shared_ptr<MetalBuffer> buffer = nullptr;
-        if (size > 0) {
-            buffer = std::make_shared<MetalBuffer>(context, size);
-        }
-        buffers.push_back(buffer);
-    }
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
+    buffers.resize(bufferCount);
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount)

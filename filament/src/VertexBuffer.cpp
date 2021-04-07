@@ -121,8 +121,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount > 0, "bufferCount cannot be 0")) {
         return nullptr;
     }
-    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_VERTEX_ATTRIBUTE_COUNT,
-            "bufferCount cannot be more than %d", MAX_VERTEX_ATTRIBUTE_COUNT)) {
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT,
+            "bufferCount cannot be more than %d", MAX_VERTEX_BUFFER_COUNT)) {
         return nullptr;
     }
 
@@ -162,16 +162,25 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     static_assert(sizeof(Attribute) == sizeof(AttributeData),
             "Attribute and Builder::Attribute must match");
 
+    size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
+
     auto const& declaredAttributes = mDeclaredAttributes;
     auto const& attributes = mAttributes;
     #pragma nounroll
     for (size_t i = 0, n = attributeArray.size(); i < n; ++i) {
         if (declaredAttributes[i]) {
-            attributeArray[i].offset = attributes[i].offset;
-            attributeArray[i].stride = attributes[i].stride;
-            attributeArray[i].buffer = attributes[i].buffer;
+            const uint32_t offset = attributes[i].offset;
+            const uint8_t stride = attributes[i].stride;
+            const uint8_t slot = attributes[i].buffer;
+
+            attributeArray[i].offset = offset;
+            attributeArray[i].stride = stride;
+            attributeArray[i].buffer = slot;
             attributeArray[i].type   = attributes[i].type;
             attributeArray[i].flags  = attributes[i].flags;
+
+            const size_t end = offset + mVertexCount * stride;
+            bufferSizes[slot] = math::max(bufferSizes[slot], end);
         }
     }
 
@@ -181,13 +190,32 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     attributeArray[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
+
     mHandle = driver.createVertexBuffer(
             mBufferCount, attributeCount, mVertexCount, attributeArray,
-            backend::BufferUsage::STATIC, mBufferObjectsEnabled);
+            backend::BufferUsage::STATIC);
+
+    // If buffer objects are not enabled at the API level, then we create them internally.
+    if (!mBufferObjectsEnabled) {
+        #pragma nounroll
+        for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
+            if (bufferSizes[i] > 0) {
+                BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
+                        backend::BufferObjectBinding::VERTEX);
+                driver.setVertexBufferObject(mHandle, i, bo);
+                mBufferObjects[i] = bo;
+            }
+        }
+    }
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
+    if (!mBufferObjectsEnabled) {
+        for (BufferObjectHandle bo : mBufferObjects) {
+            driver.destroyBufferObject(bo);
+        }
+    }
     driver.destroyVertexBuffer(mHandle);
 }
 
@@ -199,8 +227,9 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
     ASSERT_PRECONDITION(!mBufferObjectsEnabled, "Please use setBufferObjectAt()");
     if (bufferIndex < mBufferCount) {
-        engine.getDriverApi().updateVertexBuffer(mHandle,
-                bufferIndex, std::move(buffer), byteOffset);
+        assert_invariant(mBufferObjects[bufferIndex]);
+        engine.getDriverApi().updateBufferObject(mBufferObjects[bufferIndex],
+               std::move(buffer), byteOffset);
     } else {
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
     }
