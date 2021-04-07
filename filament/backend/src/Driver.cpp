@@ -28,6 +28,8 @@
 #include <backend/BufferDescriptor.h>
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/Systrace.h>
+
 using namespace utils;
 
 namespace filament {
@@ -64,6 +66,40 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 void DriverBase::scheduleRelease(AcquiredImage&& image) noexcept {
     std::lock_guard<std::mutex> lock(mPurgeLock);
     mImagesToPurge.push_back(std::move(image));
+}
+
+void DriverBase::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
+    if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_LOG)) {
+            utils::slog.d << methodName << utils::io::endl;
+        }
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
+            SYSTRACE_CONTEXT();
+            SYSTRACE_NAME_BEGIN(methodName);
+
+            if (!synchronous) {
+                cmds->queueCommand([=]() {
+                    SYSTRACE_CONTEXT();
+                    SYSTRACE_NAME_BEGIN(methodName);
+                });
+            }
+        }
+    }
+}
+
+void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
+    if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
+        if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
+            if (!synchronous) {
+                cmds->queueCommand([]() {
+                    SYSTRACE_CONTEXT();
+                    SYSTRACE_NAME_END();
+                });
+            }
+            SYSTRACE_CONTEXT();
+            SYSTRACE_NAME_END();
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------

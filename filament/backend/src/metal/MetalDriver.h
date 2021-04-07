@@ -55,10 +55,6 @@ private:
 
     MetalContext* mContext;
 
-#ifndef NDEBUG
-    void debugCommand(const char* methodName) override;
-#endif
-
     ShaderModel getShaderModel() const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.

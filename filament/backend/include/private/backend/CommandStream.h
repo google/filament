@@ -213,37 +213,64 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-#if defined(NDEBUG)
-    #define DEBUG_COMMAND(methodName, ...)
-#else
+#if !defined(NDEBUG) || (FILAMENT_DEBUG_COMMANDS >= FILAMENT_DEBUG_COMMANDS_ENABLE)
     // For now, simply pass the method name down as a string and throw away the parameters.
     // This is good enough for certain debugging needs and we can improve this later.
-    #define DEBUG_COMMAND(methodName, ...) mDriver->debugCommand(#methodName)
+    #define DEBUG_COMMAND_BEGIN(methodName, sync, ...) mDriver->debugCommandBegin(this, sync, #methodName)
+    #define DEBUG_COMMAND_END(methodName, sync) mDriver->debugCommandEnd(this, sync, #methodName)
+#else
+    #define DEBUG_COMMAND_BEGIN(methodName, sync, ...)
+    #define DEBUG_COMMAND_END(methodName, sync)
 #endif
 
 class CommandStream {
+    // Dispatcher could be a value (instead of pointer), which saves a load when writing commands
+    // at the expense of a larger CommandStream object (about ~400 bytes)
+    Dispatcher* mDispatcher = nullptr;
+    Driver* mDriver = nullptr;
+    CircularBuffer* UTILS_RESTRICT mCurrentBuffer = nullptr;
+
+#ifndef NDEBUG
+    // just for debugging...
+    std::thread::id mThreadId{};
+#endif
+
+    bool mUsePerformanceCounter = false;
+
+    template<typename T>
+    struct AutoExecute {
+        T closure;
+        inline AutoExecute(T&& closure) : closure(std::forward<T>(closure)) {}
+        inline ~AutoExecute() { closure(); }
+    };
+
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
     inline void methodName(paramsDecl) {                                                        \
-        DEBUG_COMMAND(methodName, params);                                                      \
+        DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher->methodName##_, APPLY(std::move, params));                       \
+        DEBUG_COMMAND_END(methodName, false);                                                   \
     }
 
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                    \
     inline RetType methodName(paramsDecl) {                                                     \
-        DEBUG_COMMAND(methodName, params);                                                      \
+        DEBUG_COMMAND_BEGIN(methodName, true, params);                                          \
+        AutoExecute callOnExit([=](){                                                           \
+            DEBUG_COMMAND_END(methodName, true);                                                \
+        });                                                                                     \
         return apply(&Driver::methodName, *mDriver, std::forward_as_tuple(params));             \
     }
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
     inline RetType methodName(paramsDecl) {                                                     \
-        DEBUG_COMMAND(methodName, params);                                                      \
+        DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         RetType result = mDriver->methodName##S();                                              \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher->methodName##_, RetType(result), APPLY(std::move, params));      \
+        DEBUG_COMMAND_END(methodName, false);                                                   \
         return result;                                                                          \
     }
 
@@ -286,19 +313,6 @@ public:
             size_t count = 1, size_t alignment = alignof(PodType)) noexcept;
 
 private:
-    // Dispatcher could be a value (instead of pointer), which saves a load when writing commands
-    // at the expense of a larger CommandStream object (about ~400 bytes)
-    Dispatcher* mDispatcher = nullptr;
-    Driver* mDriver = nullptr;
-    CircularBuffer* UTILS_RESTRICT mCurrentBuffer = nullptr;
-
-#ifndef NDEBUG
-    // just for debugging...
-    std::thread::id mThreadId;
-#endif
-
-    bool mUsePerformanceCounter = false;
-
     inline void* allocateCommand(size_t size) {
         assert_invariant(mThreadId == std::this_thread::get_id());
         return mCurrentBuffer->allocate(size);

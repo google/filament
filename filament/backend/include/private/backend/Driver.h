@@ -37,12 +37,25 @@
 
 #include <stdint.h>
 
+// Command debugging off. debugging virtuals are not called.
+// This is automatically enabled in DEBUG builds.
+#define FILAMENT_DEBUG_COMMANDS_NONE         0x0
+// Command debugging enabled. No logging by default.
+#define FILAMENT_DEBUG_COMMANDS_ENABLE       0x1
+// Command debugging enabled. Every command logged to slog.d
+#define FILAMENT_DEBUG_COMMANDS_LOG          0x2
+// Command debugging enabled. Every command logged to systrace
+#define FILAMENT_DEBUG_COMMANDS_SYSTRACE     0x4
+
+#define FILAMENT_DEBUG_COMMANDS              FILAMENT_DEBUG_COMMANDS_NONE
+
 namespace filament {
 namespace backend {
 
 template<typename T>
 class ConcreteDispatcher;
 class Dispatcher;
+class CommandStream;
 
 class Driver {
 public:
@@ -64,9 +77,9 @@ public:
     // the default implementation simply calls fn
     virtual void execute(std::function<void(void)> fn) noexcept;
 
-#ifndef NDEBUG
-    virtual void debugCommand(const char* methodName) {}
-#endif
+    // This is called on debug build, or when enabled manually on the backend thread side.
+    virtual void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept = 0;
+    virtual void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept = 0;
 
     /*
      * Asynchronous calls here only to provide a type to CommandStream. They must be non-virtual
