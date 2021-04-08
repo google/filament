@@ -57,17 +57,21 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     if (strstr(renderer, "Adreno")) {
-        bugs.dont_use_timer_query = true;   // verified
+        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the
+        // GPU time.
+        bugs.dont_use_timer_query = true;
     } else if (strstr(renderer, "Mali")) {
-        bugs.dont_use_timer_query = true;   // not verified
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
             bugs.disable_glFlush = true;
             bugs.disable_shared_context_draws = true;
             bugs.texture_external_needs_rebind = true;
+            // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+            bugs.dont_use_timer_query = true;
         }
         if (strstr(renderer, "Mali-G")) {
             bugs.disable_texture_filter_anisotropic = true;
+            // note: We have verified that timer queries work well at least on some Mali-G.
         }
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
