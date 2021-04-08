@@ -502,7 +502,10 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             a == TextureSwizzle::CHANNEL_3;
     // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
     // TODO: implement swizzling for external textures.
-    if (!isDefaultSwizzle && texture) {
+    if (!isDefaultSwizzle && texture && context.supportsTextureSwizzling) {
+        // Even though we've already checked context.supportsTextureSwizzling, we still need to
+        // guard these calls with @availability, otherwise the API usage will generate compiler
+        // warnings.
         if (@available(macOS 10.15, iOS 13, *)) {
             NSUInteger slices = texture.arrayLength;
             if (texture.textureType == MTLTextureTypeCube ||

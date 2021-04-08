@@ -78,6 +78,19 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
                   << [mContext->device.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
                   << utils::io::endl;
 
+    // In order to support texture swizzling, the GPU needs to support it and the system be running
+    // macOS 10.15+ / iOS 13+.
+    mContext->supportsTextureSwizzling = false;
+    if (@available(macOS 10.15, iOS 13, *)) {
+#if defined(IOS)
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
+#else
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
+#endif
+    }
+
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -588,11 +601,7 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    if (@available(macOS 10.15, iOS 13, *)) {
-        return true;
-    } else {
-        return false;
-    }
+    return mContext->supportsTextureSwizzling;
 }
 
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
