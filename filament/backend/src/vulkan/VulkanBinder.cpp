@@ -114,7 +114,9 @@ bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptorSets[3],
     allocInfo.descriptorSetCount = 3;
     allocInfo.pSetLayouts = mDescriptorSetLayouts;
     VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
-    ASSERT_POSTCONDITION(!err, "Unable to allocate descriptor set.");
+    ASSERT_POSTCONDITION(err != VK_ERROR_FRAGMENTED_POOL,
+            "Descriptor set allocation has failed due to fragmentation of pool memory.");
+    ASSERT_POSTCONDITION(err == VK_SUCCESS, "Unable to allocate descriptor set.");
     *pipelineLayout = mPipelineLayout;
 
     // Here we construct a DescriptorBundle in place, then stash its pointer to allow fast
