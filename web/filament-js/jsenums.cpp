@@ -24,6 +24,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/RenderTarget.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
@@ -381,6 +382,20 @@ enum_<backend::SamplerMinFilter>("MinFilter")
     .value("LINEAR_MIPMAP_NEAREST", backend::SamplerMinFilter::LINEAR_MIPMAP_NEAREST)
     .value("NEAREST_MIPMAP_LINEAR", backend::SamplerMinFilter::NEAREST_MIPMAP_LINEAR)
     .value("LINEAR_MIPMAP_LINEAR", backend::SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
+
+enum_<TextureSampler::CompareMode>("CompareMode")
+    .value("NONE", TextureSampler::CompareMode::NONE)
+    .value("COMPARE_TO_TEXTURE", TextureSampler::CompareMode::COMPARE_TO_TEXTURE);
+
+enum_<TextureSampler::CompareFunc>("CompareFunc")
+    .value("LESS_EQUAL", TextureSampler::CompareFunc::LE)
+    .value("GREATER_EQUAL", TextureSampler::CompareFunc::GE)
+    .value("LESS", TextureSampler::CompareFunc::L)
+    .value("GREATER", TextureSampler::CompareFunc::G)
+    .value("EQUAL", TextureSampler::CompareFunc::E)
+    .value("NOT_EQUAL", TextureSampler::CompareFunc::NE)
+    .value("ALWAYS", TextureSampler::CompareFunc::A)
+    .value("NEVER", TextureSampler::CompareFunc::N);
 
 enum_<backend::SamplerMagFilter>("MagFilter")
     .value("NEAREST", backend::SamplerMagFilter::NEAREST)

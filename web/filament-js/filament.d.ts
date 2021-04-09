@@ -197,6 +197,8 @@ export class TransformManager$Instance {
 
 export class TextureSampler {
     constructor(minfilter: MinFilter, magfilter: MagFilter, wrapmode: WrapMode);
+    public setAnisotropy(value: number): void;
+    public setCompareMode(mode: CompareMode, func: CompareFunc): void;
 }
 
 export class MaterialInstance {
@@ -759,6 +761,22 @@ export enum MinFilter {
     LINEAR_MIPMAP_NEAREST,
     NEAREST_MIPMAP_LINEAR,
     LINEAR_MIPMAP_LINEAR,
+}
+
+export enum CompareMode {
+    NONE,
+    COMPARE_TO_TEXTURE,
+}
+
+export enum CompareFunc {
+    LESS_EQUAL,
+    GREATER_EQUAL,
+    LESS,
+    GREATER,
+    EQUAL,
+    NOT_EQUAL,
+    ALWAYS,
+    NEVER,
 }
 
 export enum CullingMode {
