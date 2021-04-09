@@ -211,6 +211,10 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
 
+void OpenGLDriver::bindSampler(GLuint unit, backend::SamplerParams params) noexcept {
+    mContext.bindSampler(unit, getSampler(params));
+}
+
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
     mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.targetIndex);
@@ -2813,12 +2817,13 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
 
-// TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
-#if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
+#if defined(GL_EXT_texture_filter_anisotropic)
     auto& gl = mContext;
-    if (gl.ext.EXT_texture_filter_anisotropic && !gl.bugs.disable_texture_filter_anisotropic) {
+    if (gl.ext.EXT_texture_filter_anisotropic &&
+            !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
         GLfloat anisotropy = float(1u << params.anisotropyLog2);
-        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(gl.gets.maxAnisotropy, anisotropy));
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                std::min(gl.gets.maxAnisotropy, anisotropy));
     }
 #endif
     CHECK_GL_ERROR(utils::slog.e)

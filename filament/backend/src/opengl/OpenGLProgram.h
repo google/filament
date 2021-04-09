@@ -95,7 +95,7 @@ private:
     // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
     std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 16 bytes
 
-    void updateSamplers(OpenGLDriver* gl) noexcept;
+    void updateSamplers(OpenGLDriver* gld) noexcept;
 };
 
 

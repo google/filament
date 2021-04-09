@@ -195,11 +195,14 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     }
 }
 
-void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
+void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
     // cache a few member variable locally, outside of the loop
-    auto const& UTILS_RESTRICT samplerBindings = gl->getSamplerBindings();
+    OpenGLContext& glc = gld->getContext();
+    const bool anisotropyWorkaround = glc.ext.EXT_texture_filter_anisotropic &&
+                                      glc.bugs.texture_filter_anisotropic_broken_on_sampler;
+    auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
     auto const& UTILS_RESTRICT indicesRun = mIndicesRuns;
     auto const& UTILS_RESTRICT blockInfos = mBlockInfos;
 
@@ -222,17 +225,27 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
                 continue;
             }
 
-            const GLTexture* const UTILS_RESTRICT t = gl->handle_cast<const GLTexture*>(th);
+            const GLTexture* const UTILS_RESTRICT t = gld->handle_cast<const GLTexture*>(th);
             if (UTILS_UNLIKELY(t->gl.fence)) {
                 glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
                 glDeleteSync(t->gl.fence);
                 t->gl.fence = nullptr;
             }
 
-            gl->bindTexture(tmu, t);
+            gld->bindTexture(tmu, t);
+            gld->bindSampler(tmu, samplers[index].s);
 
-            GLuint sampler = gl->getSampler(samplers[index].s);
-            gl->getContext().bindSampler(tmu, sampler);
+#if defined(GL_EXT_texture_filter_anisotropic)
+            if (UTILS_UNLIKELY(anisotropyWorkaround)) {
+                // Driver claims to support anisotropic filtering, but it fails when set on
+                // the sampler, we have to set it on the texture instead.
+                // The texture is already bound here.
+                SamplerParams params = samplers[index].s;
+                GLfloat anisotropy = float(1u << params.anisotropyLog2);
+                glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        std::min(glc.gets.maxAnisotropy, anisotropy));
+            }
+#endif
         }
     }
     CHECK_GL_ERROR(utils::slog.e)

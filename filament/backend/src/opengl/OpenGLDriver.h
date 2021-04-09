@@ -357,6 +357,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
+           void bindSampler(GLuint unit, backend::SamplerParams params) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };

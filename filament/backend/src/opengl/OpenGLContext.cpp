@@ -70,7 +70,6 @@ OpenGLContext::OpenGLContext() noexcept {
             bugs.dont_use_timer_query = true;
         }
         if (strstr(renderer, "Mali-G")) {
-            bugs.disable_texture_filter_anisotropic = true;
             // note: We have verified that timer queries work well at least on some Mali-G.
         }
     } else if (strstr(renderer, "Intel")) {
@@ -83,9 +82,9 @@ OpenGLContext::OpenGLContext() noexcept {
         bugs.disable_invalidate_framebuffer = true;
     }
 
+#if defined(__EMSCRIPTEN__)
     // Chrome does not support feedback loops in WebGL 2.0. See also:
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
-#if defined(__EMSCRIPTEN__)
     bugs.disable_feedback_loops = true;
 #endif
 
@@ -147,8 +146,22 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
 #ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.EXT_texture_filter_anisotropic && !bugs.disable_texture_filter_anisotropic) {
+    if (ext.EXT_texture_filter_anisotropic) {
+        // make sure we don't have any error flag
+        while (glGetError() != GL_NO_ERROR) { }
+
+        // query max anisotropy
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.maxAnisotropy);
+
+        // check that we can actually set the anysotropy on the sampler
+        GLuint s;
+        glGenSamplers(1, &s);
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, gets.maxAnisotropy);
+        if (glGetError() != GL_NO_ERROR) {
+            // some drivers only allow to set the anisotropy on the texture itself
+            bugs.texture_filter_anisotropic_broken_on_sampler = true;
+        }
+        glDeleteSamplers(1, &s);
     }
 #endif
 
