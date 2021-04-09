@@ -82,6 +82,8 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
+    out << "precision lowp sampler2DArray;\n";
+    out << "precision lowp sampler3D;\n";
 
     out << SHADERS_COMMON_TYPES_FS_DATA;
 
