@@ -169,7 +169,7 @@ public:
 
         // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
-        bool disable_texture_filter_anisotropic = false;
+        bool texture_filter_anisotropic_broken_on_sampler = false;
 
         // Some drivers have issues when reading from a mip while writing to a different mip.
         // In the OpenGL ES 3.0 specification this is covered in section 4.4.3,
