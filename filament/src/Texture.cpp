@@ -443,6 +443,10 @@ bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat format) 
     return engine.getDriverApi().isTextureFormatSupported(format);
 }
 
+bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {
+    return engine.getDriverApi().isTextureSwizzleSupported();
+}
+
 size_t FTexture::computeTextureDataSize(Texture::Format format, Texture::Type type,
         size_t stride, size_t height, size_t alignment) noexcept {
     return PixelBufferDescriptor::computeDataSize(format, type, stride, height, alignment);
@@ -1088,6 +1092,10 @@ void Texture::generateMipmaps(Engine& engine) const noexcept {
 
 bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept {
     return FTexture::isTextureFormatSupported(upcast(engine), format);
+}
+
+bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
+    return FTexture::isTextureSwizzleSupported(upcast(engine));
 }
 
 size_t Texture::computeTextureDataSize(Texture::Format format, Texture::Type type, size_t stride,

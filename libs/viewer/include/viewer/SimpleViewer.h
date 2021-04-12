@@ -31,6 +31,7 @@
 
 #include <utils/Entity.h>
 
+#include <math/mat4.h>
 #include <math/vec3.h>
 
 namespace filagui {
@@ -122,8 +123,18 @@ public:
      * its callback. Note that the first call might be slower since it requires the creation of the
      * internal ImGuiHelper instance.
      */
-    void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio,
-            float mouseX, float mouseY, bool mouseButton, float mouseWheelY);
+    void renderUserInterface(float timeStepInSeconds, filament::View* guiView, float pixelRatio);
+
+    /**
+     * Event-passing methods, useful only when SimpleViewer manages its own instance of ImGuiHelper.
+     * The key codes used in these methods are just normal ASCII/ANSI codes.
+     * @{
+     */
+    void mouseEvent(float mouseX, float mouseY, bool mouseButton, float mouseWheelY, bool control);
+    void keyDownEvent(int keyCode);
+    void keyUpEvent(int keyCode);
+    void keyPressEvent(int charCode);
+    /** @}*/
 
     /**
      * Retrieves the current width of the ImGui "window" which we are using as a sidebar.
@@ -233,7 +244,7 @@ private:
     float mCurvePlot[1024 * 3];
 };
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
+filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset);
 
 } // namespace viewer
 } // namespace filament

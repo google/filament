@@ -69,6 +69,12 @@ public:
         backend::BufferUsage usage = {};
     };
 
+    struct GLBufferObject : public backend::HwBufferObject {
+        struct {
+            GLuint id = 0;
+        } gl;
+    };
+
     struct GLVertexBuffer : public backend::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
@@ -314,6 +320,8 @@ private:
     GetProcAddressType getProcAddress = nullptr;
 
     /* Misc... */
+
+    void updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb);
 
     void framebufferTexture(backend::TargetBufferInfo const& binfo,
             GLRenderTarget const* rt, GLenum attachment) noexcept;

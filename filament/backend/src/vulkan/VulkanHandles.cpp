@@ -403,18 +403,18 @@ bool VulkanRenderTarget::invalidate() {
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attributes) :
-        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes) {
+        uint32_t elementCount, AttributeArray const& attributes, bool boEnabled) :
+        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes, boEnabled) {
     buffers.reserve(bufferCount);
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
         uint32_t size = 0;
         for (auto const& item : attributes) {
             if (item.buffer == bufferIndex) {
-              uint32_t end = item.offset + elementCount * item.stride;
+                uint32_t end = item.offset + elementCount * item.stride;
                 size = std::max(size, end);
             }
         }
-        buffers.emplace_back(new VulkanBuffer(context, stagePool, disposer, this,
+        buffers.push_back(std::make_shared<VulkanBuffer>(context, stagePool, disposer, this,
                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, size));
     }
 }
@@ -479,14 +479,14 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, VulkanStagePool& stagePool) :
+        TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle) :
         HwTexture(target, levels, samples, w, h, depth, tformat, usage),
-        mVkFormat(backend::getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
 
-    // Vulkan does not support 24-bit depth, use the official fallback format.
-    if (tformat == TextureFormat::DEPTH24) {
-        mVkFormat = mContext.finalDepthFormat;
-    }
+        // Vulkan does not support 24-bit depth, use the official fallback format.
+        mVkFormat(tformat == TextureFormat::DEPTH24 ? context.finalDepthFormat :
+                backend::getVkFormat(tformat)),
+
+        mSwizzle(swizzle), mContext(context), mStagePool(stagePool) {
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
@@ -752,7 +752,7 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
         .image = mTextureImage,
         .viewType = mViewType,
         .format = mVkFormat,
-        .components = {},
+        .components = mSwizzle,
         .subresourceRange = range
     };
     VkImageView imageView;
@@ -868,56 +868,6 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         VulkanIndexBuffer* indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
-    const size_t nattrs = vertexBuffer->attributes.size();
-
-    // These vectors are passed to vkCmdBindVertexBuffers at every draw call. This binds the
-    // VkBuffer objects, but does not describe the structure of a vertex.
-    buffers.clear();
-    buffers.reserve(nattrs);
-    offsets.clear();
-    offsets.reserve(nattrs);
-
-    // The following fixed-size arrays are consumed by VulkanBinder. They describe the vertex
-    // structure, but do not specify the actual buffer objects to bind.
-    memset(varray.attributes, 0, sizeof(varray.attributes));
-    memset(varray.buffers, 0, sizeof(varray.buffers));
-
-    // For each enabled attribute, append to each of the above lists. Note that a single VkBuffer
-    // handle might be appended more than once, which is perfectly fine.
-    uint32_t bufferIndex = 0;
-    for (uint32_t attribIndex = 0; attribIndex < nattrs; attribIndex++) {
-        Attribute attrib = vertexBuffer->attributes[attribIndex];
-        VkFormat vkformat = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED);
-
-        // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes.
-        // We know that position exists (see earlier assert)
-        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
-
-            // HACK: Presently, Filament's vertex shaders declare all attributes as either vec4 or
-            // uvec4 (the latter is for bone indices), and positions are always at least 32 bits per
-            // element. Therefore we can assign a dummy type of either R8G8B8A8_UINT or
-            // R8G8B8A8_SNORM, depending on whether the shader expects to receive floats or ints.
-            const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
-            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
-
-            attrib = vertexBuffer->attributes[0];
-        }
-
-        buffers.push_back(vertexBuffer->buffers[attrib.buffer]->getGpuBuffer());
-        offsets.push_back(attrib.offset);
-        varray.attributes[bufferIndex] = {
-            .location = attribIndex, // matches the GLSL layout specifier
-            .binding = bufferIndex,  // matches the position within vkCmdBindVertexBuffers
-            .format = vkformat,
-            .offset = 0
-        };
-        varray.buffers[bufferIndex] = {
-            .binding = bufferIndex,
-            .stride = attrib.stride,
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-        };
-        bufferIndex++;
-    }
 }
 
 VulkanTimerQuery::VulkanTimerQuery(VulkanContext& context) : mContext(context) {

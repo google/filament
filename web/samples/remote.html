@@ -135,7 +135,7 @@ class App {
         // In the future we might want to draw stuff in the central 3D viewport.
         const kInitialSidebarWidth = this.canvas.clientWidth * window.devicePixelRatio;
 
-        // Clear the central 3D viewport to light gray, whicht is not visible by default.
+        // Clear the central 3D viewport to light gray, which is not visible by default.
         const L = 189 / 255;
         const kBackgroundColor = [L, L, L, 1];
         this.renderer.setClearOptions({clearColor: kBackgroundColor, clear: true});
@@ -145,7 +145,7 @@ class App {
 
         this.mouseX = -1;
         this.mouseY = -1;
-        this.mouseButton = false;
+        this.mouseButton = null;
         this.mouseButtonEvents = [];
         this.mouseWheelY = 0;
 
@@ -155,9 +155,16 @@ class App {
             this.mouseX = e.offsetX * window.devicePixelRatio;
             this.mouseY = e.offsetY * window.devicePixelRatio;
         });
-        this.canvas.addEventListener("pointerup", e => this.mouseButtonEvents.push(false));
-        this.canvas.addEventListener("pointerdown", e => this.mouseButtonEvents.push(true));
+
+        this.canvas.addEventListener("pointerup", e => this.mouseButtonEvents.push(null));
+        this.canvas.addEventListener("pointerdown", e => this.mouseButtonEvents.push(e));
         this.canvas.addEventListener("mousewheel", e => this.mouseWheelY = e.deltaY / 8);
+
+        this.canvas.addEventListener("contextmenu", event => event.preventDefault());
+
+        document.addEventListener("keydown", e => this.simpleViewer.keyDownEvent(e.keyCode));
+        document.addEventListener("keyup", e => this.simpleViewer.keyUpEvent(e.keyCode));
+        document.addEventListener("keypress", e => this.simpleViewer.keyPressEvent(e.charCode));
 
         const resize = () => {
             const dpr = window.devicePixelRatio;
@@ -263,6 +270,8 @@ class App {
         }
         const mouseWheel = this.mouseWheelY;
         this.mouseWheelY = 0;
+        this.simpleViewer.mouseEvent(this.mouseX, this.mouseY, !!this.mouseButton,
+                mouseWheel, this.mouseButton && this.mouseButton.ctrlKey);
 
         // If there's no connection, let Filament clear the canvas, but do not render the UI view.
         if (!connection) {
@@ -276,8 +285,7 @@ class App {
 
         // Draw the UI and potentially mutate the settings object.
         const deltaTime = 1.0 / 60.0;
-        this.simpleViewer.renderUserInterface(deltaTime, this.uiview, window.devicePixelRatio,
-                this.mouseX, this.mouseY, this.mouseButton, mouseWheel);
+        this.simpleViewer.renderUserInterface(deltaTime, this.uiview, window.devicePixelRatio);
 
         // Check if the user has changed any settings.
         const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();

@@ -266,10 +266,26 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
+MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
+        : byteCount(byteCount), buffer(std::make_shared<MetalBuffer>(context, byteCount)) {}
+
+void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
+    assert_invariant(byteOffset + size <= byteCount);
+    buffer->copyIntoBuffer(data, size);
+}
+
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes,
+            bool bufferObjectsEnabled)
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes, bufferObjectsEnabled) {
     buffers.reserve(bufferCount);
+
+    if (bufferObjectsEnabled) {
+        // If BufferObjects are used, we don't need to make any allocations. Simply reserve enough
+        // "slots" for future calls to setVertexBufferObject.
+        buffers.resize(bufferCount);
+        return;
+    }
 
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
         // Calculate buffer size.
@@ -281,19 +297,12 @@ MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             }
         }
 
-        MetalBuffer* buffer = nullptr;
+        std::shared_ptr<MetalBuffer> buffer = nullptr;
         if (size > 0) {
-            buffer = new MetalBuffer(context, size);
+            buffer = std::make_shared<MetalBuffer>(context, size);
         }
         buffers.push_back(buffer);
     }
-}
-
-MetalVertexBuffer::~MetalVertexBuffer() {
-    for (auto* b : buffers) {
-        delete b;
-    }
-    buffers.clear();
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount)
@@ -309,10 +318,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     const size_t attributeCount = vertexBuffer->attributes.size();
 
-    buffers.clear();
-    buffers.reserve(attributeCount);
-    offsets.clear();
-    offsets.reserve(attributeCount);
     vertexDescription = {};
 
     // Each attribute gets its own vertex buffer.
@@ -338,9 +343,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
             };
             continue;
         }
-
-        buffers.push_back(vertexBuffer->buffers[attribute.buffer]);
-        offsets.push_back(attribute.offset);
 
         vertexDescription.attributes[attributeIndex] = {
                 .format = getMetalFormat(attribute.type,
@@ -416,7 +418,8 @@ static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat form
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage) noexcept
+        TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+        TextureSwizzle a) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context), reshaper(format) {
 
@@ -514,6 +517,31 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             // texture allocations.
             texture = nil;
             break;
+    }
+
+    // If swizzling is set, set up a swizzled texture view that we'll use when sampling this texture.
+    const bool isDefaultSwizzle =
+            r == TextureSwizzle::CHANNEL_0 &&
+            g == TextureSwizzle::CHANNEL_1 &&
+            b == TextureSwizzle::CHANNEL_2 &&
+            a == TextureSwizzle::CHANNEL_3;
+    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
+    // TODO: implement swizzling for external textures.
+    if (!isDefaultSwizzle && texture) {
+        if (@available(macOS 10.15, iOS 13, *)) {
+            NSUInteger slices = texture.arrayLength;
+            if (texture.textureType == MTLTextureTypeCube ||
+                texture.textureType == MTLTextureTypeCubeArray) {
+                slices *= 6;
+            }
+            NSUInteger mips = texture.mipmapLevelCount;
+            MTLTextureSwizzleChannels swizzle = getSwizzleChannels(r, g, b, a);
+            swizzledTextureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
+                                                             textureType:texture.textureType
+                                                                  levels:NSMakeRange(0, mips)
+                                                                  slices:NSMakeRange(0, slices)
+                                                                 swizzle:swizzle];
+        }
     }
 }
 

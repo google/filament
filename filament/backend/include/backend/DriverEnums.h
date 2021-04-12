@@ -263,6 +263,11 @@ enum class ElementType : uint8_t {
     HALF4,
 };
 
+//! Buffer object binding type
+enum class BufferObjectBinding : uint8_t {
+    VERTEX,
+};
+
 //! Face culling Mode
 enum class CullingMode : uint8_t {
     NONE,               //!< No culling, front and back faces are visible
@@ -513,7 +518,7 @@ enum class TextureUsage : uint8_t {
 };
 
 //! Texture swizzle
-enum class TextureSwizzle {
+enum class TextureSwizzle : uint8_t {
     SUBSTITUTE_ZERO,
     SUBSTITUTE_ONE,
     CHANNEL_0,

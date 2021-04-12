@@ -58,9 +58,9 @@ float evaluateSSAO() {
         depths.z = unpack(vec2(dg.z, db.z));
         depths.w = unpack(vec2(dg.w, db.w));
         depths *= -frameUniforms.cameraFar;
-        mat4 m = getViewFromWorldMatrix();
-        float d = dot(vec3(m[0].z, m[1].z, m[2].z), shading_position) + m[3].z;
-        vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
+        highp mat4 m = getViewFromWorldMatrix();
+        highp float d = dot(vec3(m[0].z, m[1].z, m[2].z), shading_position) + m[3].z;
+        highp vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
         return dot(ao, w) * (1.0 / (w.x + w.y + w.z + w.w));
     } else {

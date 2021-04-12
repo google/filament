@@ -17,6 +17,8 @@ function print_help {
     echo "        Generate .tgz build archives, implies -i."
     echo "    -c"
     echo "        Clean build directories."
+    echo "    -d"
+    echo "        Enable matdbg and disable material optimization."
     echo "    -f"
     echo "        Always invoke CMake before incremental builds."
     echo "    -i"
@@ -80,6 +82,27 @@ function print_help {
     echo ""
  }
 
+function print_matdbg_help {
+    echo "matdbg is enabled in the build, but some extra steps are needed."
+    echo ""
+    echo "FOR DESKTOP BUILDS:"
+    echo ""
+    echo "Please set the port environment variable before launching. e.g., on macOS do:"
+    echo "   export FILAMENT_MATDBG_PORT=8080"
+    echo ""
+    echo "FOR ANDROID BUILDS:"
+    echo ""
+    echo "1) The most reliable way to enable matdbg is to bypass Gradle and"
+    echo "   directly modify the appropriate two lines in the following file:"
+    echo "       ./android/filament-android/CMakeLists.txt"
+    echo ""
+    echo "2) The port number is hardcoded to 8081 so you will need to do:"
+    echo "       adb forward tcp:8081 tcp:8081"
+    echo ""
+    echo "3) Be sure to enable INTERNET permission in your app's manifest file."
+    echo ""
+}
+
 # Requirements
 CMAKE_MAJOR=3
 CMAKE_MINOR=10
@@ -121,6 +144,8 @@ VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
 SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
+
+MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
@@ -174,6 +199,7 @@ function build_desktop_target {
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
             ${SWIFTSHADER_OPTION} \
+            ${MATDBG_OPTION} \
             ${deployment_target} \
             ${architectures} \
             ../..
@@ -298,6 +324,7 @@ function build_android_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
+            ${MATDBG_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
             ../..
     fi
@@ -484,6 +511,7 @@ function build_ios_target {
             -DPLATFORM_NAME="${platform}" \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
+            ${MATDBG_OPTION} \
             ../..
     fi
 
@@ -654,7 +682,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:uvslwt" opt; do
+while getopts ":hacfijmp:q:uvslwtd" opt; do
     case ${opt} in
         h)
             print_help
@@ -666,6 +694,10 @@ while getopts ":hacfijmp:q:uvslwt" opt; do
             ;;
         c)
             ISSUE_CLEAN=true
+            ;;
+        d)
+            PRINT_MATDBG_HELP=true
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
@@ -824,4 +856,8 @@ fi
 
 if [[ "${RUN_TESTS}" == "true" ]]; then
     run_tests
+fi
+
+if [[ "${PRINT_MATDBG_HELP}" == "true" ]]; then
+    print_matdbg_help
 fi

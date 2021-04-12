@@ -171,6 +171,21 @@ public class VertexBuffer {
         }
 
         /**
+         * Allows buffers to be swapped out and shared using BufferObject.
+         *
+         * If buffer objects mode is enabled, clients must call setBufferObjectAt rather than
+         * setBufferAt. This allows sharing of data between VertexBuffer objects, but it may
+         * slightly increase the memory footprint of Filament's internal bookkeeping.
+         *
+         * @param enabled If true, enables buffer object mode.  False by default.
+         */
+        @NonNull
+        public Builder enableBufferObjects(boolean enabled) {
+            nBuilderEnableBufferObjects(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
          * Defines how many buffers will be created in this vertex buffer set. These buffers are
          * later referenced by index from 0 to <code>bufferCount</code> - 1.
          *
@@ -397,6 +412,23 @@ public class VertexBuffer {
             throw new BufferOverflowException();
         }
     }
+
+    /**
+     * Swaps in the given buffer object.
+     *
+     * To use this, you must first call enableBufferObjects() on the Builder.
+     *
+     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
+     * @param bufferIndex Index of the buffer to initialize. Must be between 0
+     *                    and Builder::bufferCount() - 1.
+     * @param bufferObject The handle to the GPU data that will be used in this buffer slot.
+     */
+    public void setBufferObjectAt(@NonNull Engine engine, int bufferIndex,
+            @NonNull BufferObject bufferObject) {
+        nSetBufferObjectAt(getNativeObject(), engine.getNativeObject(), bufferIndex,
+                bufferObject.getNativeObject());
+    }
+
     /**
      * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
      * produces quaternions that can be passed into a TANGENTS buffer.
@@ -443,6 +475,7 @@ public class VertexBuffer {
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native void nBuilderVertexCount(long nativeBuilder, int vertexCount);
+    private static native void nBuilderEnableBufferObjects(long nativeBuilder, boolean enabled);
     private static native void nBuilderBufferCount(long nativeBuilder, int bufferCount);
     private static native void nBuilderAttribute(long nativeBuilder, int attribute,
             int bufferIndex, int attributeType, int byteOffset, int byteStride);
@@ -454,6 +487,9 @@ public class VertexBuffer {
     private static native int nSetBufferAt(long nativeVertexBuffer, long nativeEngine,
             int bufferIndex, Buffer buffer, int remaining, int destOffsetInBytes, int count,
             Object handler, Runnable callback);
+
+    private static native void nSetBufferObjectAt(long nativeVertexBuffer, long nativeEngine,
+            int bufferIndex, long nativeBufferObject);
 
     private static native void nPopulateTangentQuaternions(int quatType, int quatCount,
             Buffer outBuffer, int outRemaining, int outStride, Buffer normals, int normalsRemaining,

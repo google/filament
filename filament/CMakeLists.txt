@@ -13,6 +13,7 @@ set(MATERIAL_DIR "${GENERATION_ROOT}/generated/material")
 
 set(PUBLIC_HDRS
         include/filament/Box.h
+        include/filament/BufferObject.h
         include/filament/Camera.h
         include/filament/Color.h
         include/filament/ColorGrading.h
@@ -44,6 +45,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Box.cpp
+        src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
@@ -112,6 +114,7 @@ set(PRIVATE_HDRS
         src/components/RenderableManager.h
         src/components/TransformManager.h
         src/details/Allocators.h
+        src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
         src/details/Culler.h
@@ -163,6 +166,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofDownsample.mat
         src/materials/dof/dofCombine.mat
         src/materials/dof/dofTiles.mat
+        src/materials/dof/dofTilesSwizzle.mat
         src/materials/dof/dofDilate.mat
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofMedian.mat
@@ -189,6 +193,11 @@ list(APPEND SRCS ${RESGEN_SOURCE})
 # ==================================================================================================
 # Configuration
 # ==================================================================================================
+
+# whether we're building for mobile -- this can affect some default quality settings
+if (IS_MOBILE_TARGET)
+    add_definitions(-DFILAMENT_TARGET_MOBILE=1)
+endif()
 
 # Size of the DFG lookup table
 if (NOT DFG_LUT_SIZE)

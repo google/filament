@@ -261,7 +261,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 
     Aabb aabb = app.asset->getBoundingBox();
     if (!app.actualSize) {
-        mat4f transform = fitIntoUnitCube(aabb);
+        mat4f transform = fitIntoUnitCube(aabb, 4);
         aabb = aabb.transform(transform);
     }
 
@@ -340,6 +340,9 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 static LinearColor inverseTonemapSRGB(sRGBColor x) {
     return (x * -0.155) / (x - 1.019);
 }
+
+static float sGlobalScale = 1.0f;
+static float sGlobalScaleAnamorphism = 0.0f;
 
 int main(int argc, char** argv) {
     App app;
@@ -567,6 +570,8 @@ int main(int argc, char** argv) {
                         debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
+                ImGui::SliderFloat("scale", &sGlobalScale, 0.25f, 1.0f);
+                ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -679,6 +684,22 @@ int main(int argc, char** argv) {
         } else {
             view->setColorGrading(nullptr);
         }
+
+        view->setDynamicResolutionOptions({
+                .minScale = {
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
+                },
+                .maxScale = {
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
+                        lerp(sGlobalScale, 1.0f,
+                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
+                },
+                .enabled = sGlobalScale != 1.0f,
+        });
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {

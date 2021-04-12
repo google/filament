@@ -563,6 +563,17 @@ public class Texture {
     }
 
     /**
+     * Checks whether texture swizzling is supported in this {@link Engine}.
+     * This depends on the selected backend.
+     *
+     * @param engine {@link Engine}
+     * @return <code>true</code> if texture swizzling.
+     */
+    public static boolean isTextureSwizzleSupported(@NonNull Engine engine) {
+        return nIsTextureSwizzleSupported(engine.getNativeObject());
+    }
+
+    /**
      * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
      */
     public static class Builder {
@@ -1137,6 +1148,7 @@ public class Texture {
     }
 
     private static native boolean nIsTextureFormatSupported(long nativeEngine, int internalFormat);
+    private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);

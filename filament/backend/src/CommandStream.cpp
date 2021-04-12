@@ -606,6 +606,13 @@ io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     return out;
 }
 
+io::ostream& operator<<(io::ostream& out, BufferObjectBinding wrap) {
+    switch (wrap) {
+        CASE(BufferObjectBinding, VERTEX)
+    }
+    return out;
+}
+
 #undef CASE
 
 #endif // !NDEBUG

@@ -412,6 +412,10 @@ Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferS() noexcept {
     return initHandle<GLIndexBuffer>();
 }
 
+Handle<HwBufferObject> OpenGLDriver::createBufferObjectS() noexcept {
+    return initHandle<GLBufferObject>();
+}
+
 Handle<HwRenderPrimitive> OpenGLDriver::createRenderPrimitiveS() noexcept {
     return initHandle<GLRenderPrimitive>();
 }
@@ -478,12 +482,13 @@ void OpenGLDriver::createVertexBufferR(
         uint8_t attributeCount,
         uint32_t elementCount,
         AttributeArray attributes,
-        BufferUsage usage) {
+        BufferUsage usage,
+        bool bufferObjectsEnabled) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
     GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
-            bufferCount, attributeCount, elementCount, attributes);
+            bufferCount, attributeCount, elementCount, attributes, bufferObjectsEnabled);
 
     GLsizei n = GLsizei(vb->bufferCount);
 
@@ -521,6 +526,24 @@ void OpenGLDriver::createIndexBufferR(
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createBufferObjectR(
+        Handle<HwBufferObject> boh,
+        uint32_t byteCount,
+        BufferObjectBinding bindingType) {
+    DEBUG_MARKER()
+
+    auto& gl = mContext;
+    GLBufferObject* bo = construct<GLBufferObject>(boh);
+    glGenBuffers(1, &bo->gl.id);
+    gl.bindVertexArray(nullptr);
+
+    assert_invariant(bindingType == BufferObjectBinding::VERTEX);
+
+    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
+    glBufferData(GL_ARRAY_BUFFER, byteCount, nullptr, GL_STATIC_DRAW);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -757,6 +780,57 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
+
+    auto& gl = mContext;
+
+    // NOTE: this is called from draw() and must be as efficient as possible.
+
+    // The VAO for the given render primitive must already be bound.
+    #ifndef NDEBUG
+    GLint vaoBinding;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
+    assert_invariant(vaoBinding == (GLint) rp->gl.vao);
+    #endif
+
+    rp->gl.vertexBufferVersion = vb->bufferObjectsVersion;
+    rp->maxVertexCount = vb->vertexCount;
+    for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
+        const auto& attribute = vb->attributes[i];
+        if (attribute.buffer != Attribute::BUFFER_UNUSED) {
+            uint8_t bi = attribute.buffer;
+            gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
+            if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
+                glVertexAttribIPointer(GLuint(i),
+                        getComponentCount(attribute.type),
+                        getComponentType(attribute.type),
+                        attribute.stride,
+                        (void*) uintptr_t(attribute.offset));
+            } else {
+                glVertexAttribPointer(GLuint(i),
+                        getComponentCount(attribute.type),
+                        getComponentType(attribute.type),
+                        getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
+                        attribute.stride,
+                        (void*) uintptr_t(attribute.offset));
+            }
+
+            gl.enableVertexAttribArray(GLuint(i));
+        } else {
+
+            // In some OpenGL implementations, we must supply a properly-typed placeholder for
+            // every integer input that is declared in the vertex shader.
+            if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
+                glVertexAttribI4ui(GLuint(i), 0, 0, 0, 0);
+            } else {
+                glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);
+            }
+
+            gl.disableVertexAttribArray(GLuint(i));
+        }
+    }
+}
+
 void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         GLRenderTarget const* rt, GLenum attachment) noexcept {
 
@@ -847,6 +921,17 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         }
     }
 
+    // We can't use FramebufferTexture2DMultisampleEXT with GL_TEXTURE_2D_ARRAY.
+    if (!(target == GL_TEXTURE_2D ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_X ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_X ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_Y ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Y ||
+          target == GL_TEXTURE_CUBE_MAP_POSITIVE_Z ||
+          target == GL_TEXTURE_CUBE_MAP_NEGATIVE_Z)) {
+        attachmentTypeNotSupportedByMSRTT = true;
+    }
+
     if (rt->gl.samples <= 1 ||
         (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
@@ -900,6 +985,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                     GL_RENDERBUFFER, t->gl.id);
         }
+        CHECK_GL_ERROR(utils::slog.e)
     } else
 #endif
     if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
@@ -1211,6 +1297,17 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     }
 }
 
+void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+    DEBUG_MARKER()
+
+    if (boh) {
+        auto& gl = mContext;
+        GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
+        gl.deleteBuffers(1, &bo->gl.id, GL_ARRAY_BUFFER);
+        destruct(boh, bo);
+    }
+}
+
 void OpenGLDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     DEBUG_MARKER()
 
@@ -1479,6 +1576,10 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     return getInternalFormat(format) != 0;
 }
 
+bool OpenGLDriver::isTextureSwizzleSupported() {
+    return true;
+}
+
 bool OpenGLDriver::isTextureFormatMipmappable(TextureFormat format) {
     // The OpenGL spec for GenerateMipmap stipulates that it returns INVALID_OPERATION unless
     // the sized internal format is both color-renderable and texture-filterable.
@@ -1617,11 +1718,35 @@ void OpenGLDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh,
 
     auto& gl = mContext;
     GLVertexBuffer* eb = handle_cast<GLVertexBuffer *>(vbh);
+    assert_invariant(!eb->bufferObjectsEnabled && "Please use setVertexBufferObject() instead.");
 
     gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[index]);
     glBufferSubData(GL_ARRAY_BUFFER, byteOffset, p.size, p.buffer);
 
     scheduleDestroy(std::move(p));
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
+        size_t index, Handle<HwBufferObject> boh) {
+   DEBUG_MARKER()
+
+    GLVertexBuffer* vb = handle_cast<GLVertexBuffer *>(vbh);
+    assert_invariant(vb->bufferObjectsEnabled && "Please use updateVertexBuffer() instead.");
+
+    GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
+
+    // If the specified VBO handle is different from what's already in the slot, then update the
+    // slot and bump the cyclical version number. Dependent VAOs use the version number to detect
+    // when they should be updated.
+    if (vb->gl.buffers[index] != bo->gl.id) {
+        vb->gl.buffers[index] = bo->gl.id;
+        static constexpr uint32_t kMaxVersion =
+                std::numeric_limits<decltype(vb->bufferObjectsVersion)>::max();
+        const uint32_t version = vb->bufferObjectsVersion;
+        vb->bufferObjectsVersion = (version + 1) % kMaxVersion;
+    }
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -1639,6 +1764,22 @@ void OpenGLDriver::updateIndexBuffer(
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, byteOffset, p.size, p.buffer);
 
     scheduleDestroy(std::move(p));
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::updateBufferObject(
+        Handle<HwBufferObject> boh, BufferDescriptor&& bd, uint32_t byteOffset) {
+    DEBUG_MARKER()
+
+    auto& gl = mContext;
+    GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
+
+    gl.bindVertexArray(nullptr);
+    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
+    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, bd.size, bd.buffer);
+
+    scheduleDestroy(std::move(bd));
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2373,41 +2514,13 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         CHECK_GL_ERROR(utils::slog.e)
 
         rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
-        rp->maxVertexCount = eb->vertexCount;
-        for (size_t i = 0, n = eb->attributes.size(); i < n; i++) {
-            const auto& attribute = eb->attributes[i];
-            if (attribute.buffer != Attribute::BUFFER_UNUSED) {
-                uint8_t bi = attribute.buffer;
-                gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
-                if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-                    glVertexAttribIPointer(GLuint(i),
-                            getComponentCount(attribute.type),
-                            getComponentType(attribute.type),
-                            attribute.stride,
-                            (void*) uintptr_t(attribute.offset));
-                } else {
-                    glVertexAttribPointer(GLuint(i),
-                            getComponentCount(attribute.type),
-                            getComponentType(attribute.type),
-                            getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
-                            attribute.stride,
-                            (void*) uintptr_t(attribute.offset));
-                }
 
-                gl.enableVertexAttribArray(GLuint(i));
-            } else {
+        rp->gl.vertexBufferWithObjects = eb->bufferObjectsEnabled ? vbh :
+                backend::Handle<backend::HwVertexBuffer> {};
 
-                // In some OpenGL implementations, we must supply a properly-typed placeholder for
-                // every integer input that is declared in the vertex shader.
-                if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-                    glVertexAttribI4ui(GLuint(i), 0, 0, 0, 0);
-                } else {
-                    glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);
-                }
+        // update the VBO bindings in the VAO
+        updateVertexArrayObject(rp, eb);
 
-                gl.disableVertexAttribArray(GLuint(i));
-            }
-        }
         // this records the index buffer into the currently bound VAO
         gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
 
@@ -3104,8 +3217,18 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     useProgram(p);
 
-    const GLRenderPrimitive* rp = handle_cast<const GLRenderPrimitive *>(rph);
+    GLRenderPrimitive* rp = handle_cast<GLRenderPrimitive *>(rph);
+
     gl.bindVertexArray(&rp->gl);
+
+    // If necessary, mutate the bindings in the VAO.
+    VertexBufferHandle vbwo = rp->gl.vertexBufferWithObjects;
+    if (UTILS_UNLIKELY(vbwo)) {
+        const GLVertexBuffer* vb = handle_cast<GLVertexBuffer*>(vbwo);
+        if (rp->gl.vertexBufferVersion != vb->bufferObjectsVersion) {
+            updateVertexArrayObject(rp, vb);
+        }
+    }
 
     setRasterState(state.rasterState);
 

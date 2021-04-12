@@ -112,12 +112,24 @@ private:
     void* frameCompletedUserData = nullptr;
 };
 
+class MetalBufferObject : public HwBufferObject {
+public:
+    MetalBufferObject(MetalContext& context, uint32_t byteCount);
+
+    void updateBuffer(void* data, size_t size, uint32_t byteOffset);
+    const std::shared_ptr<MetalBuffer>& getBuffer() const { return buffer; }
+
+private:
+    uint32_t byteCount;
+    std::shared_ptr<MetalBuffer> buffer = nullptr;
+
+};
+
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes);
-    ~MetalVertexBuffer();
+            uint32_t vertexCount, AttributeArray const& attributes, bool bufferObjectsEnabled);
 
-    std::vector<MetalBuffer*> buffers;
+    std::vector<std::shared_ptr<MetalBuffer>> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
@@ -142,9 +154,6 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
 
     // This struct is used to create the pipeline description to describe vertex assembly.
     VertexDescription vertexDescription = {};
-
-    std::vector<MetalBuffer*> buffers;
-    std::vector<NSUInteger> offsets;
 };
 
 struct MetalProgram : public HwProgram {
@@ -158,7 +167,8 @@ struct MetalProgram : public HwProgram {
 
 struct MetalTexture : public HwTexture {
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
-            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage)
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a)
             noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
@@ -182,6 +192,12 @@ struct MetalTexture : public HwTexture {
     MetalContext& context;
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
+
+    // If non-nil, a swizzled texture view to use instead of "texture".
+    // Filament swizzling only affects texture reads, so this should not be used when the texture is
+    // bound as a render target attachment.
+    id<MTLTexture> swizzledTextureView = nil;
+
     uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
     uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
     uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).

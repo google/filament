@@ -79,7 +79,11 @@ public:
     using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
     using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
 
+    /** @return whether a backend supports a particular format. */
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
+
+    /** @return whether a backend supports texture swizzling. */
+    static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 
     static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
@@ -177,11 +181,14 @@ public:
         /**
          * Specifies how a texture's channels map to color components
          *
+         * Texture Swizzle is only supported is isTextureSwizzleSupported() returns true.
+         *
          * @param r  texture channel for red component
          * @param g  texture channel for green component
          * @param b  texture channel for blue component
          * @param a  texture channel for alpha component
          * @return This Builder, for chaining calls.
+         * @see Texture::isTextureSwizzleSupported()
          */
         Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
