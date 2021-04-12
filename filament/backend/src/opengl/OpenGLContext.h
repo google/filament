@@ -114,11 +114,13 @@ public:
 
     // glGet*() values
     struct {
-        GLint max_renderbuffer_size = 0;
-        GLint max_uniform_block_size = 0;
-        GLint uniform_buffer_offset_alignment = 256;
-        GLfloat maxAnisotropy = 0.0f;
-    } gets;
+        GLfloat max_anisotropy;
+        GLint max_draw_buffers;
+        GLint max_renderbuffer_size;
+        GLint max_samples;
+        GLint max_uniform_block_size;
+        GLint uniform_buffer_offset_alignment;
+    } gets = {};
 
     // features supported by this version of GL or GLES
     struct {

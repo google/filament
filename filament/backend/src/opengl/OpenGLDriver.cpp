@@ -641,6 +641,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     DEBUG_MARKER()
 
     auto& gl = mContext;
+    samples = std::min(samples, uint8_t(gl.gets.max_samples));
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
@@ -1162,6 +1163,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
      *  (width, height) for each attachment. Contents of attachments outside this area are
      *  undefined after execution of a rendering command.
      */
+
+    samples = std::min(samples, uint8_t(mContext.gets.max_samples));
 
     rt->gl.samples = samples;
     rt->targets = targets;
@@ -2823,7 +2826,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
             !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
         GLfloat anisotropy = float(1u << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                std::min(gl.gets.maxAnisotropy, anisotropy));
+                std::min(gl.gets.max_anisotropy, anisotropy));
     }
 #endif
     CHECK_GL_ERROR(utils::slog.e)

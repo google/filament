@@ -44,18 +44,38 @@ OpenGLContext::OpenGLContext() noexcept {
     GLint minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
-    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
 
-#if 0
-    // this is useful for development, but too verbose even for debug builds
-    slog.i
-        << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << io::endl
-        << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << io::endl
-        << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << io::endl;
-#endif
+    // Figure out if we have the extension we need
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    ExtentionSet exts;
+    for (GLint i = 0; i < n; i++) {
+        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+        exts.insert(StaticString::make(extension, strlen(extension)));
+        if (DEBUG_PRINT_EXTENSIONS) {
+            slog.d << extension << io::endl;
+        }
+    }
+    ShaderModel shaderModel = ShaderModel::UNKNOWN;
+    if (GLES30_HEADERS) {
+        if (major == 3 && minor >= 0) {
+            shaderModel = ShaderModel::GL_ES_30;
+        }
+        if (major == 3 && minor >= 1) {
+            features.multisample_texture = true;
+        }
+        initExtensionsGLES(major, minor, exts);
+    } else if (GL41_HEADERS) {
+        if (major == 4 && minor >= 1) {
+            shaderModel = ShaderModel::GL_CORE_41;
+        }
+        initExtensionsGL(major, minor, exts);
+        features.multisample_texture = true;
+    };
+    assert_invariant(shaderModel != ShaderModel::UNKNOWN);
+    mShaderModel = shaderModel;
 
+    // Figure out which driver bugs we need to workaround
     if (strstr(renderer, "Adreno")) {
         // On Adreno (As of 3/20) timer query seem to return the CPU time, not the
         // GPU time.
@@ -81,43 +101,35 @@ OpenGLContext::OpenGLContext() noexcept {
     } else if (strstr(renderer, "Mozilla")) {
         bugs.disable_invalidate_framebuffer = true;
     }
-
 #if defined(__EMSCRIPTEN__)
     // Chrome does not support feedback loops in WebGL 2.0. See also:
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
     bugs.disable_feedback_loops = true;
 #endif
 
-    // Figure out if we have the extension we need
-    GLint n = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    ExtentionSet exts;
-    for (GLint i = 0; i < n; i++) {
-        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        exts.insert(StaticString::make(extension, strlen(extension)));
-        if (DEBUG_PRINT_EXTENSIONS) {
-            slog.d << extension << io::endl;
-        }
+    // now we can query getter and features
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+    glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
+#ifdef GL_EXT_texture_filter_anisotropic
+    if (ext.EXT_texture_filter_anisotropic) {
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
     }
+#endif
 
-    ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES30_HEADERS) {
-        if (major == 3 && minor >= 0) {
-            shaderModel = ShaderModel::GL_ES_30;
-        }
-        if (major == 3 && minor >= 1) {
-            features.multisample_texture = true;
-        }
-        initExtensionsGLES(major, minor, exts);
-    } else if (GL41_HEADERS) {
-        if (major == 4 && minor >= 1) {
-            shaderModel = ShaderModel::GL_CORE_41;
-        }
-        initExtensionsGL(major, minor, exts);
-        features.multisample_texture = true;
-    };
-    assert_invariant(shaderModel != ShaderModel::UNKNOWN);
-    mShaderModel = shaderModel;
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    slog.i
+            << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
+            << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << '\n'
+            << "GL_MAX_SAMPLES = " << gets.max_samples << '\n'
+            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy << '\n'
+            << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << '\n'
+            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << '\n'
+            << io::endl;
+#endif
 
     /*
      * Set our default state
@@ -150,13 +162,10 @@ OpenGLContext::OpenGLContext() noexcept {
         // make sure we don't have any error flag
         while (glGetError() != GL_NO_ERROR) { }
 
-        // query max anisotropy
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.maxAnisotropy);
-
-        // check that we can actually set the anysotropy on the sampler
+        // check that we can actually set the anisotropy on the sampler
         GLuint s;
         glGenSamplers(1, &s);
-        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, gets.maxAnisotropy);
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, gets.max_anisotropy);
         if (glGetError() != GL_NO_ERROR) {
             // some drivers only allow to set the anisotropy on the texture itself
             bugs.texture_filter_anisotropic_broken_on_sampler = true;

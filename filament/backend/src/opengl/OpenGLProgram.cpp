@@ -243,7 +243,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 SamplerParams params = samplers[index].s;
                 GLfloat anisotropy = float(1u << params.anisotropyLog2);
                 glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                        std::min(glc.gets.maxAnisotropy, anisotropy));
+                        std::min(glc.gets.max_anisotropy, anisotropy));
             }
 #endif
         }
