@@ -267,9 +267,14 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     private fun populateScene(asset: FilamentAsset) {
+        val rcm = engine.renderableManager
         var count = 0
         val popRenderables = {count = asset.popRenderables(readyRenderables); count != 0}
         while (popRenderables()) {
+            for (i in 0..count-1) {
+                val ri = rcm.getInstance(readyRenderables[i])
+                rcm.setScreenSpaceContactShadows(ri, true)
+            }
             scene.addEntities(readyRenderables.take(count).toIntArray())
         }
         scene.addEntities(asset.lightEntities)
