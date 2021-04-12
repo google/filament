@@ -5,7 +5,21 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.21
+
 ## v1.9.20
+
+Android: Fix VSM.
+engine: Introduce BufferObject API.
+engine: Add new isTextureSwizzleSupported API on Texture.
+engine: Add support to Metal and Vulkan backends for texture swizzling.
+engine: Add new DoF settings (native/half res, gather kernel ring counts, CoC radius clamp).
+engine: DoF quality and performance improvements.
+engine: Fix high-quality upsampling issue with SSAO.
+Java: Expose `TransformManager.getParent(int)`.
+samples: Add Metal and Vulkan backend support to Suzanne sample.
+WebGL: expose fitIntoUnitCube to JS.
+WebGL: support for multiple <canvas> elements.
 
 ## v1.9.19
 
