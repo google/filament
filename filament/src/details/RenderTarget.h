@@ -57,11 +57,8 @@ public:
 
 private:
     friend class RenderTarget;
-
-    static HwHandle createHandle(FEngine& engine, const Builder& builder);
-
     Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
-    const HwHandle mHandle;
+    HwHandle mHandle{};
     backend::TargetBufferFlags mAttachmentMask = {};
 };
 

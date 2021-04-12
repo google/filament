@@ -60,7 +60,11 @@ private:
     TargetBufferInfo mInfos[TARGET_COUNT];
 
 public:
-    TargetBufferInfo operator[](size_t i) const noexcept {
+    TargetBufferInfo const& operator[](size_t i) const noexcept {
+        return mInfos[i];
+    }
+
+    TargetBufferInfo& operator[](size_t i) noexcept {
         return mInfos[i];
     }
 
