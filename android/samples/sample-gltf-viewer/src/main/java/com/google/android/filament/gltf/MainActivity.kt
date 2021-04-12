@@ -163,13 +163,13 @@ class MainActivity : Activity() {
 
         // Large zip files should first be written to a file to prevent OOM.
         // It is also crucial that we null out the message "buffer" field.
-        val zipStream = {
+        val (zipStream, zipFile) = {
             val file = File.createTempFile("incoming", "zip", this.cacheDir);
             val raf = RandomAccessFile(file, "rw")
             raf.getChannel().write(message.buffer);
             message.buffer = null
             raf.seek(0)
-            FileInputStream(file)
+            Pair(FileInputStream(file), file)
         }()
 
         // Deflate each resource using the IO dispatcher, one by one.
@@ -204,6 +204,8 @@ class MainActivity : Activity() {
             }
             mapping
         }
+
+        zipFile.delete()
 
         if (gltfPath == null) {
             setStatusText("Could not find .gltf in the zip.")
