@@ -163,14 +163,14 @@ class MainActivity : Activity() {
 
         // Large zip files should first be written to a file to prevent OOM.
         // It is also crucial that we null out the message "buffer" field.
-        val (zipStream, zipFile) = {
-            val file = File.createTempFile("incoming", "zip", this.cacheDir);
+        val (zipStream, zipFile) = withContext(Dispatchers.IO) {
+            val file = File.createTempFile("incoming", "zip", cacheDir)
             val raf = RandomAccessFile(file, "rw")
             raf.getChannel().write(message.buffer);
             message.buffer = null
             raf.seek(0)
             Pair(FileInputStream(file), file)
-        }()
+        }
 
         // Deflate each resource using the IO dispatcher, one by one.
         var gltfPath: String? = null
@@ -198,7 +198,7 @@ class MainActivity : Activity() {
                 Log.i(TAG, "Deflated ${byteArray!!.size} bytes from $uri")
                 val buffer = ByteBuffer.wrap(byteArray)
                 mapping[uri] = buffer
-                if (uri.endsWith(".gltf")) {
+                if (uri.endsWith(".gltf") || uri.endsWith(".glb")) {
                     gltfPath = uri
                 }
             }
@@ -208,7 +208,7 @@ class MainActivity : Activity() {
         zipFile.delete()
 
         if (gltfPath == null) {
-            setStatusText("Could not find .gltf in the zip.")
+            setStatusText("Could not find .gltf or .glb in the zip.")
             return
         }
 
@@ -227,12 +227,17 @@ class MainActivity : Activity() {
         }
 
         withContext(Dispatchers.Main) {
-            modelViewer.loadModelGltf(gltfBuffer) { uri ->
-                val path = gltfPrefix + uri
-                if (!pathToBufferMapping.contains(path)) {
-                    Log.e(TAG, "Could not find $path in the zip.")
+            if (gltfPath!!.endsWith(".glb")) {
+                modelViewer.loadModelGlb(gltfBuffer)
+            } else {
+                modelViewer.loadModelGltf(gltfBuffer) { uri ->
+                    val path = gltfPrefix + uri
+                    if (!pathToBufferMapping.contains(path)) {
+                        Log.e(TAG, "Could not find $path in the zip.")
+                        setStatusText("Zip is missing $path")
+                    }
+                    pathToBufferMapping[path]
                 }
-                pathToBufferMapping[path]!!
             }
             modelViewer.transformToUnitCube()
         }
