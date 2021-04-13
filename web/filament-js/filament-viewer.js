@@ -49,7 +49,6 @@ class FilamentTasks {
 // ----------------
 // None of the following features are implemented. They would be easy to add.
 // - Replace gltumble and Trackball with camutils Manipulator (i.e. enable scroll-to-zoom)
-// - Use decorator-style properties
 // - Write a documentation page (might be neat if the doc page has instances of the actual viewer)
 // - Fix the import at the top of the file to support webpack / rollup / esbuild
 // - Expose more animation properties (e.g. enable / disable, selected index)
@@ -57,18 +56,24 @@ class FilamentTasks {
 // - Expose more IBL properties
 // - Expose directional light properties
 // - Optional turntable animation
-// - Allow clients to programatically change properties
 //
 class FilamentViewer extends LitElement {
     constructor() {
         super();
-        this.filamentTasks = new FilamentTasks();
-        this.canvasId = "filament-viewer-canvas";
-        this.src = null;          // Path to glTF file. (required)
+
+        // LitElement properties:
+        this.src = null;          // Path to glTF file.
         this.alt = null;          // Alternate canvas content.
         this.ibl = null;          // Path to image based light ktx.
         this.sky = null;          // Path to skybox ktx.
+        this.enableDrop = null;   // Enables drag and drop.
         this.intensity = 30000;   // Intensity of the image based light.
+
+        // Private properties:
+        this.filamentTasks = new FilamentTasks();
+        this.canvasId = "filament-viewer-canvas";
+        this.overlayId = "filament-viewer-overlay";
+        this.srcBlob = null;
     }
 
     static get properties() {
@@ -77,6 +82,7 @@ class FilamentViewer extends LitElement {
             alt: { type: String },
             ibl: { type: String },
             sky: { type: String },
+            enableDrop: { type: Boolean },
             intensity: { type: Number },
         }
     }
@@ -92,12 +98,21 @@ class FilamentViewer extends LitElement {
             return;
         }
         this.filamentTasks.add(this._startFilament.bind(this));
+
+        const overlay = this.shadowRoot.getElementById(this.overlayId);
+        ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+            overlay.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
+        });
+        if (this.enableDrop) {
+            overlay.addEventListener("drop", this._dropHandler.bind(this), false);
+        }
     }
 
     updated(props) {
         if (props.has("src")) this.filamentTasks.add(this._loadAsset.bind(this));
         if (props.has("ibl")) this.filamentTasks.add(this._loadIbl.bind(this));
         if (props.has("sky")) this.filamentTasks.add(this._loadSky.bind(this));
+        if (props.has("enableDrop")) this._updateOverlay();
         if (props.has("intensity") && this.indirectLight) {
             this.indirectLight.setIntensity(this.intensity);
         }
@@ -110,22 +125,61 @@ class FilamentViewer extends LitElement {
                 width: 300px;
                 height: 300px;
                 border: solid 1px black;
+                position: relative;
             }
             canvas {
                 background: #D9D9D9; /* This is consistent with the default clear color. */
+            }
+            canvas, .overlay {
                 width: 100%;
                 height: 100%;
+                position: absolute;
+            }
+            .overlay {
+                text-align: center;
+                padding: 10px;
             }`;
     }
 
     render() {
-        return html`<canvas part="canvas" alt="${this.alt}" id="${this.canvasId}"></canvas>`;
+        return html`
+            <canvas part="canvas" alt="${this.alt}" id="${this.canvasId}"></canvas>
+            <div class="overlay" part="overlay" id="${this.overlayId}"></div>
+        `;
+    }
+
+    _dropHandler(dragEvent) {
+        if (!dragEvent.dataTransfer) return;
+        this.srcBlob = null;
+        this.srcBlobResources = {};
+        for (const file of dragEvent.dataTransfer.files) {
+            if (file.name.endsWith(".glb") || file.name.endsWith(".gltf")) {
+                this.srcBlob = file;
+            } else {
+                this.srcBlobResources[file.name] = file;
+            }
+        }
+        if (this.srcBlob) {
+            this._loadAsset();
+        } else {
+            console.error("Please include a glTF file.");
+        }
+    };
+
+    _updateOverlay() {
+        const overlay = this.shadowRoot.getElementById(this.overlayId);
+        if (!this.enableDrop || this.asset) {
+            overlay.innerHTML = "";
+        } else {
+            overlay.innerHTML = "Drop glb or fileset here.";
+        }
     }
 
     _startFilament() {
         const LightType = Filament.LightManager$Type;
 
         const canvas = this.shadowRoot.getElementById(this.canvasId);
+        const overlay = this.shadowRoot.getElementById(this.overlayId);
 
         this.engine = Filament.Engine.create(canvas);
         this.scene = this.engine.createScene();
@@ -143,7 +197,7 @@ class FilamentViewer extends LitElement {
 
         // If gltumble has been loaded, use it.
         if (window.Trackball) {
-            this.trackball = new Trackball(canvas, { startSpin: 0.0 });
+            this.trackball = new Trackball(overlay, { startSpin: 0.0 });
         }
 
         // This color is consistent with the default CSS background color.
@@ -218,10 +272,88 @@ class FilamentViewer extends LitElement {
     }
 
     _loadAsset() {
+        const zoffset = 4;
+
         if (this.asset) {
-            console.info("FilamentViewer does not allow the model to be changed.");
+            this.scene.removeEntities(this.asset.getEntities());
+            this.animator = null;
+            this.asset = null;
+        }
+
+        // If we have neither a URL nor a dropped file, leave early.
+        if (!this.src && !this.srcBlob) {
+            this._updateOverlay();
             return;
         }
+
+        // Dropping a glb file is simple because there are no external resources.
+        if (this.srcBlob && this.srcBlob.name.endsWith(".glb")) {
+            this.srcBlob.arrayBuffer().then(buffer => {
+                this.asset = this.loader.createAssetFromBinary(new Uint8Array(buffer));
+                const aabb = this.asset.getBoundingBox();
+                this.assetRoot = this.asset.getRoot();
+                this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
+                this.asset.loadResources();
+                this.animator = this.asset.getAnimator();
+                this.animationStartTime = Date.now();
+                this._updateOverlay();
+            });
+            return;
+        }
+
+        // Dropping a fileset requires pushing each resource to ResourceLoader.
+        if (this.srcBlob && this.srcBlob.name.endsWith(".gltf")) {
+
+            const config = {
+                normalizeSkinningWeights: true,
+                recomputeBoundingBoxes: false,
+                asyncInterval: 30
+            };
+
+            const doneAddingResources = resourceLoader => {
+                this.srcBlobResources = {};
+                resourceLoader.asyncBeginLoad(this.asset);
+                const timer = setInterval(() => {
+                    resourceLoader.asyncUpdateLoad();
+                    const progress = resourceLoader.asyncGetLoadProgress();
+                    if (progress >= 1) {
+                        clearInterval(timer);
+                        resourceLoader.delete();
+                        this.animator = this.asset.getAnimator();
+                        this.animationStartTime = Date.now();
+                    }
+                }, config.asyncInterval);
+            };
+
+            this.srcBlob.arrayBuffer().then(buffer => {
+                this.asset = this.loader.createAssetFromJson(new Uint8Array(buffer));
+                const aabb = this.asset.getBoundingBox();
+                this.assetRoot = this.asset.getRoot();
+                this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
+
+                const resourceLoader = new Filament.gltfio$ResourceLoader(this.engine,
+                    config.normalizeSkinningWeights,
+                    config.recomputeBoundingBoxes);
+
+                let remaining = Object.keys(this.srcBlobResources).length;
+                for (const name in this.srcBlobResources) {
+                    this.srcBlobResources[name].arrayBuffer().then(buffer => {
+                        const desc = getBufferDescriptor(new Uint8Array(buffer));
+                        resourceLoader.addResourceData(name, getBufferDescriptor(desc));
+                        if (--remaining === 0) {
+                            doneAddingResources(resourceLoader);
+                        }
+                    });
+                }
+
+                this._updateOverlay();
+            });
+
+            return;
+        }
+
+        // If we reach this point, we are loading from a src URL rather than drag-and-drop.
+
         fetch(this.src).then(response => {
             return response.arrayBuffer();
         }).then(arrayBuffer => {
@@ -231,8 +363,10 @@ class FilamentViewer extends LitElement {
             } else {
                 this.asset = this.loader.createAssetFromJson(modelData);
             }
+
+            const aabb = this.asset.getBoundingBox();
             this.assetRoot = this.asset.getRoot();
-            this.unitCubeTransform = Filament.fitIntoUnitCube(this.asset.getBoundingBox(), 4);
+            this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
 
             const basePath = '' + new URL(this.src, document.location);
 
@@ -240,6 +374,8 @@ class FilamentViewer extends LitElement {
                 this.animator = this.asset.getAnimator();
                 this.animationStartTime = Date.now();
             }, null, basePath);
+
+            this._updateOverlay();
         });
     }
 
