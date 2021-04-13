@@ -403,8 +403,8 @@ bool VulkanRenderTarget::invalidate() {
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attributes) :
-        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes),
+        uint32_t elementCount, AttributeArray const& attribs) :
+        HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
         buffers(bufferCount) {}
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
@@ -467,8 +467,8 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle) :
-        HwTexture(target, levels, samples, w, h, depth, tformat, usage),
+        TextureUsage tusage, VulkanStagePool& stagePool, VkComponentMapping swizzle) :
+        HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
 
         // Vulkan does not support 24-bit depth, use the official fallback format.
         mVkFormat(tformat == TextureFormat::DEPTH24 ? context.finalDepthFormat :
