@@ -214,7 +214,6 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 
     mHasShadowing = false;
     mNeedsShadowMap = false;
-
     if (!mShadowingEnabled) {
         return;
     }
@@ -270,25 +269,40 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     UniformBuffer& u = mPerViewUb;
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
-
-    scene->prepareDynamicLights(camera, arena, mLightUbh);
-
-    // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     auto const& lightData = scene->getLightData();
 
-    // trace the number of visible lights
+    /*
+     * Dynamic lights
+     */
+
+    mHasDynamicLighting = scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
+    if (mHasDynamicLighting) {
+        scene->prepareDynamicLights(camera, arena, mLightUbh);
+        Froxelizer& froxelizer = mFroxelizer;
+        if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
+            froxelizer.updateUniforms(u); // update our uniform buffer if needed
+        }
+    }
+
+    // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     SYSTRACE_VALUE32("visibleLights", lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT);
 
-    // Exposure
-    const float ev100 = camera.ev100;
-    const float exposure = Exposure::exposure(ev100);
+    /*
+     * Exposure
+     */
+
+    const float exposure = Exposure::exposure(camera.ev100);
     u.setUniform(offsetof(PerViewUib, exposure), exposure);
-    u.setUniform(offsetof(PerViewUib, ev100), ev100);
+    u.setUniform(offsetof(PerViewUib, ev100), camera.ev100);
+
+    /*
+     * Indirect light (IBL)
+     */
 
     // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
     // associated with the skybox.
     FIndirectLight const* ibl = scene->getIndirectLight();
-    float intensity{};
+    float intensity;
     if (UTILS_LIKELY(ibl)) {
         intensity = ibl->getIntensity();
     } else {
@@ -313,7 +327,10 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
     }});
 
-    // Directional light (always at index 0)
+    /*
+     * Directional light (always at index 0)
+     */
+
     auto& lcm = engine.getLightManager();
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     mHasDirectionalLight = directionalLight.isValid();
@@ -344,15 +361,6 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         // Disable the sun if there's no directional light
         float4 sun{ 0.0f, 0.0f, 0.0f, -1.0f };
         u.setUniform(offsetof(PerViewUib, sun), sun);
-    }
-
-    // Dynamic lighting
-    mHasDynamicLighting = scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
-    if (mHasDynamicLighting) {
-        Froxelizer& froxelizer = mFroxelizer;
-        if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
-            froxelizer.updateUniforms(u); // update our uniform buffer if needed
-        }
     }
 }
 
@@ -413,11 +421,14 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Light culling: runs in parallel with Renderable culling (below)
      */
 
-    auto *prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-            [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
-                FView::prepareVisibleLights(
-                        engine.getLightManager(), js, frustum, scene->getLightData());
-            }));
+    JobSystem::Job* prepareVisibleLightsJob = nullptr;
+    if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
+        prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
+                [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
+                    FView::prepareVisibleLights(
+                            engine.getLightManager(), js, frustum, scene->getLightData());
+                }));
+    }
 
     Range merged;
     FScene::RenderableSoa& renderableData = scene->getRenderableData();
@@ -441,7 +452,9 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
          */
 
         // prepareShadowing relies on prepareVisibleLights().
-        js.waitAndRelease(prepareVisibleLightsJob);
+        if (prepareVisibleLightsJob) {
+            js.waitAndRelease(prepareVisibleLightsJob);
+        }
         prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
         /*
@@ -693,11 +706,8 @@ void FView::cleanupRenderPasses() const noexcept {
 
 void FView::froxelize(FEngine& engine) const noexcept {
     SYSTRACE_CALL();
-
-    if (mHasDynamicLighting) {
-        // froxelize lights
-        mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
-    }
+    assert_invariant(mHasDynamicLighting);
+    mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
 }
 
 void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
@@ -758,6 +768,7 @@ void FView::cullRenderables(JobSystem& js,
 void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
         Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
+    assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();

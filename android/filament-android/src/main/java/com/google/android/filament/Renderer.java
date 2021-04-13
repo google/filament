@@ -315,7 +315,7 @@ public class Renderer {
      * <li>Color pass</li>
      * <li>Post-processing pass</li>
      * </ul>
-     *
+     * <p>
      * A typical render loop looks like this:
      *
      * <pre>
@@ -331,29 +331,56 @@ public class Renderer {
      * </pre>
      *
      * <ul>
-     *<li><code>render()</code> must be called <b>after</b> {@link #beginFrame} and <b>before</b>
-     *{@link #endFrame}.</li>
+     * <li><code>render()</code> must be called <b>after</b> {@link #beginFrame} and <b>before</b>
+     * {@link #endFrame}.</li>
      *
-     *<li><code>render()</code> must be called from the {@link Engine}'s main thread
-     *(or external synchronization must be provided). In particular, calls to <code>render()</code>
-     *on different <code>Renderer</code> instances <b>must</b> be synchronized.</li>
+     * <li><code>render()</code> must be called from the {@link Engine}'s main thread
+     * (or external synchronization must be provided). In particular, calls to <code>render()</code>
+     * on different <code>Renderer</code> instances <b>must</b> be synchronized.</li>
      *
-     *<li><code>render()</code> performs potentially heavy computations and cannot be multi-threaded.
-     *However, internally, it is highly multi-threaded to both improve performance and mitigate
-     *the call's latency.</li>
+     * <li><code>render()</code> performs potentially heavy computations and cannot be multi-threaded.
+     * However, internally, it is highly multi-threaded to both improve performance and mitigate
+     * the call's latency.</li>
      *
-     *<li><code>render()</code> is typically called once per frame (but not necessarily).</li>
+     * <li><code>render()</code> is typically called once per frame (but not necessarily).</li>
      * </ul>
      *
      * @param view the {@link View} to render
-     *
      * @see #beginFrame
      * @see #endFrame
      * @see View
-     *
      */
     public void render(@NonNull View view) {
         nRender(getNativeObject(), view.getNativeObject());
+    }
+
+    /**
+     * Renders a standalone {@link View} into its associated <code>RenderTarget</code>.
+     *
+     * <p>
+     * This call is mostly equivalent to calling {@link #render(View)} inside a
+     * {@link #beginFrame} / {@link #endFrame} block, but incurs less overhead. It can be used
+     * as a poor man's compute API. 
+     * </p>
+     *
+     * <ul>
+     * <li><code>renderStandaloneView()</code> must be called <b>outside</b> of
+     * {@link #beginFrame} / {@link #endFrame}.</li>
+     *
+     * <li><code>renderStandaloneView()</code> must be called from the {@link Engine}'s main thread
+     * (or external synchronization must be provided). In particular, calls to
+     * <code>renderStandaloneView()</code> on different <code>Renderer</code> instances <b>must</b>
+     * be synchronized.</li>
+     *
+     * <li><code>renderStandaloneView()</code> performs potentially heavy computations and cannot be
+     * multi-threaded. However, internally, it is highly multi-threaded to both improve performance
+     * and mitigate the call's latency.</li>
+     *
+     * @param view the {@link View} to render. This View must have an associated {@link RenderTarget}
+     * @see View
+     */
+    public void renderStandaloneView(@NonNull View view) {
+        nRenderStandaloneView(getNativeObject(), view.getNativeObject());
     }
 
     /**
@@ -635,6 +662,7 @@ public class Renderer {
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain, long frameTimeNanos);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
+    private static native void nRenderStandaloneView(long nativeRenderer, long nativeView);
     private static native void nCopyFrame(long nativeRenderer, long nativeDstSwapChain,
             int dstLeft, int dstBottom, int dstWidth, int dstHeight,
             int srcLeft, int srcBottom, int srcWidth, int srcHeight,
