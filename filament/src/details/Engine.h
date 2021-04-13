@@ -60,6 +60,7 @@
 namespace filament {
 namespace matdbg {
 class DebugServer;
+using MaterialKey = uint32_t;
 } // namespace matdbg
 } // namespace filament
 #endif

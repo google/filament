@@ -421,7 +421,7 @@ public:
     }
 
     // Notify the JavaScript client that a new material package has been loaded.
-    void notify(const DebugServer::MaterialRecord& material) {
+    void addMaterial(const DebugServer::MaterialRecord& material) {
         if (mConnection) {
             char matid[9] = {};
             sprintf(matid, "%8.8x", material.key);
@@ -480,11 +480,12 @@ DebugServer::~DebugServer() {
     delete mServer;
 }
 
-void DebugServer::addMaterial(const CString& name, const void* data, size_t size, void* userdata) {
+MaterialKey
+DebugServer::addMaterial(const CString& name, const void* data, size_t size, void* userdata) {
     filaflat::ChunkContainer* container = new filaflat::ChunkContainer(data, size);
     if (!container->parse()) {
         slog.e << "DebugServer: unable to parse material package: " << name.c_str() << io::endl;
-        return;
+        return {};
     }
 
     const uint32_t seed = 42;
@@ -498,7 +499,12 @@ void DebugServer::addMaterial(const CString& name, const void* data, size_t size
 
     MaterialRecord info = {userdata, package, size, name, key};
     mMaterialRecords.insert({key, info});
-    mWebSocketHandler->notify(info);
+    mWebSocketHandler->addMaterial(info);
+    return key;
+}
+
+void DebugServer::removeMaterial(MaterialKey key) {
+    mMaterialRecords.erase(key);
 }
 
 const DebugServer::MaterialRecord* DebugServer::getRecord(const MaterialKey& key) const {
