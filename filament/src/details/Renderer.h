@@ -74,24 +74,28 @@ public:
     math::float4 getShaderUserTime() const { return mShaderUserTime; }
 
     // do all the work here!
-    void render(FView const* view);
     void renderJob(ArenaScope& arena, FView& view);
-
-    void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
-            Viewport const& srcViewport, CopyFrameFlag flags);
 
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
             backend::FrameScheduledCallback callback, void* user);
-    void endFrame();
 
-    void resetUserTime();
+    void render(FView const* view);
 
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
+    void copyFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
+            Viewport const& srcViewport, CopyFrameFlag flags);
+
+    void endFrame();
+
+    void renderStandaloneView(FView const* view);
+
     void readPixels(FRenderTarget* renderTarget,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
+
+    void resetUserTime();
 
     // Clean-up everything, this is typically called when the client calls Engine::destroyRenderer()
     void terminate(FEngine& engine);
@@ -133,6 +137,8 @@ private:
     void readPixels(backend::Handle<backend::HwRenderTarget> renderTargetHandle,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
+
+    void renderInternal(FView const* view);
 
     struct ColorPassConfig {
         Viewport vp;

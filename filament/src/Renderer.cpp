@@ -155,6 +155,31 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
+void FRenderer::renderStandaloneView(FView const* view) {
+    SYSTRACE_CALL();
+
+    using namespace std::chrono;
+
+    ASSERT_PRECONDITION(view->getRenderTarget(),
+            "View \"%s\" must have a RenderTarget associated", view->getName());
+
+    if (UTILS_LIKELY(view->getScene())) {
+        mPreviousRenderTargets.clear();
+        mFrameId++;
+
+        // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
+        FEngine& engine = getEngine();
+        engine.prepare();
+
+        FEngine::DriverApi& driver = engine.getDriverApi();
+        driver.beginFrame(steady_clock::now().time_since_epoch().count(), mFrameId);
+
+        renderInternal(view);
+
+        driver.endFrame(mFrameId);
+    }
+}
+
 void FRenderer::render(FView const* view) {
     SYSTRACE_CALL();
 
@@ -166,24 +191,28 @@ void FRenderer::render(FView const* view) {
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
-        // per-renderpass data
-        ArenaScope rootArena(mPerRenderPassArena);
-
-        FEngine& engine = mEngine;
-        JobSystem& js = engine.getJobSystem();
-
-        // create a root job so no other job can escape
-        auto *rootJob = js.setRootJob(js.createJob());
-
-        // execute the render pass
-        renderJob(rootArena, const_cast<FView&>(*view));
-
-        // make sure to flush the command buffer
-        engine.flush();
-
-        // and wait for all jobs to finish as a safety (this should be a no-op)
-        js.runAndWait(rootJob);
+        renderInternal(view);
     }
+}
+
+void FRenderer::renderInternal(FView const* view) {
+    // per-renderpass data
+    ArenaScope rootArena(mPerRenderPassArena);
+
+    FEngine& engine = mEngine;
+    JobSystem& js = engine.getJobSystem();
+
+    // create a root job so no other job can escape
+    auto *rootJob = js.setRootJob(js.createJob());
+
+    // execute the render pass
+    renderJob(rootArena, const_cast<FView&>(*view));
+
+    // make sure to flush the command buffer
+    engine.flush();
+
+    // and wait for all jobs to finish as a safety (this should be a no-op)
+    js.runAndWait(rootJob);
 }
 
 void FRenderer::renderJob(ArenaScope& arena, FView& view) {
@@ -236,8 +265,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
     // start froxelization immediately, it has no dependencies
-    JobSystem::Job* jobFroxelize = js.runAndRetain(js.createJob(nullptr,
-            [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+    JobSystem::Job* jobFroxelize = nullptr;
+    if (view.hasDynamicLighting()) {
+        jobFroxelize = js.runAndRetain(js.createJob(nullptr,
+                [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+    }
 
     /*
      * Allocate command buffer
@@ -305,7 +337,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool blending = !hasCustomRenderTarget && blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
-    const bool needsAlphaChannel = mSwapChain->isTransparent() || blendModeTranslucent;
+    const bool needsAlphaChannel = (mSwapChain ? mSwapChain->isTransparent() : false) || blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     const ColorPassConfig config{
@@ -866,7 +898,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameScheduledCallback callback, void* user) {
+        FrameScheduledCallback callback, void* user) {
     assert_invariant(swapChain);
 
     SYSTRACE_CALL();
@@ -922,7 +954,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = getEngine();
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        if (callback) {
+        if (UTILS_UNLIKELY(callback)) {
+            // this is here just to handle the deprecated version of beginFrame()
             driver.setFrameScheduledCallback(swapChain->getHwHandle(), callback, user);
         }
         driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
@@ -1125,12 +1158,14 @@ void Renderer::render(View const* view) {
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, nullptr, nullptr);
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano,
+            nullptr, nullptr);
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
         backend::FrameScheduledCallback callback, void* user) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano,
+            callback, user);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
@@ -1172,6 +1207,10 @@ void Renderer::setFrameRateOptions(FrameRateOptions const& options) noexcept {
 
 void Renderer::setClearOptions(const ClearOptions& options) {
     upcast(this)->setClearOptions(options);
+}
+
+void Renderer::renderStandaloneView(View const* view) {
+    upcast(this)->renderStandaloneView(upcast(view));
 }
 
 } // namespace filament

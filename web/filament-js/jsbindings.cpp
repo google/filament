@@ -627,6 +627,7 @@ class_<SwapChain>("SwapChain");
 /// See also the [Engine] methods `createRenderer` and `destroyRenderer`.
 class_<Renderer>("Renderer")
     .function("renderView", &Renderer::render, allow_raw_pointers())
+    .function("renderStandaloneView", &Renderer::renderStandaloneView, allow_raw_pointers())
     /// render ::method:: requests rendering for a single frame on the given [View]
     /// swapChain ::argument:: the [SwapChain] corresponding to the canvas
     /// view ::argument:: the [View] corresponding to the canvas
