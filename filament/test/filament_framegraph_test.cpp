@@ -210,7 +210,7 @@ TEST_F(FrameGraphTest, ReadRead) {
                 builder.sideEffect();
             },
             [=](FrameGraphResources const& resources, auto const& data, backend::DriverApi& driver) {
-                EXPECT_EQ(resources.template getUsage(data.input), FrameGraphTexture::Usage::SAMPLEABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                EXPECT_EQ(resources.getUsage(data.input), FrameGraphTexture::Usage::SAMPLEABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             });
 
     EXPECT_TRUE(fg.isAcyclic());
@@ -234,7 +234,7 @@ TEST_F(FrameGraphTest, WriteWrite) {
                 EXPECT_EQ(data.output1, data.output2);
             },
             [=](FrameGraphResources const& resources, auto const& data, backend::DriverApi& driver) {
-                EXPECT_EQ(resources.template getUsage(data.output2), FrameGraphTexture::Usage::UPLOADABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                EXPECT_EQ(resources.getUsage(data.output2), FrameGraphTexture::Usage::UPLOADABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             });
 
     fg.present(pass->output2);
