@@ -124,18 +124,7 @@ Material* Material::Builder::build(Engine& engine) {
 
     mImpl->mMaterialParser = materialParser;
 
-    Material* result = upcast(engine).createMaterial(*this);
-
-#if FILAMENT_ENABLE_MATDBG
-    matdbg::DebugServer* server = upcast(engine).debug.server;
-    if (server) {
-        CString name;
-        materialParser->getName(&name);
-        server->addMaterial(name, mImpl->mPayload, mImpl->mSize, result);
-    }
-#endif
-
-    return result;
+    return upcast(engine).createMaterial(*this);
 }
 
 static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceBlock const& sib,
@@ -173,6 +162,15 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     UTILS_UNUSED_IN_RELEASE bool uibOK = parser->getUIB(&mUniformInterfaceBlock);
     assert_invariant(uibOK);
+
+#if FILAMENT_ENABLE_MATDBG
+    // Register the material with matdbg.
+    matdbg::DebugServer* server = upcast(engine).debug.server;
+    if (UTILS_UNLIKELY(server)) {
+        auto details = builder.mImpl;
+        mDebuggerId = server->addMaterial(mName, details->mPayload, details->mSize, this);
+    }
+#endif
 
     // Older materials will not have a subpass chunk; this should not be an error.
     if (!parser->getSubpasses(&mSubpassInfo)) {
@@ -317,6 +315,15 @@ FMaterial::~FMaterial() noexcept {
 }
 
 void FMaterial::terminate(FEngine& engine) {
+
+#if FILAMENT_ENABLE_MATDBG
+    // Unregister the material with matdbg.
+    matdbg::DebugServer* server = upcast(mEngine).debug.server;
+    if (UTILS_UNLIKELY(server)) {
+        server->removeMaterial(mDebuggerId);
+    }
+#endif
+
     destroyPrograms(engine);
     mDefaultInstance.terminate(engine);
 }
