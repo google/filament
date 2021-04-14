@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release (main branch)
 
 - engine: Add new `Renderer::renderStandaloneView()` API.
+- libs: New `iblprefilter` library to compute IBL pre-integration on the GPU using filament.
 
 ## v1.9.22
 
