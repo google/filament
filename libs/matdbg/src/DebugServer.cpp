@@ -424,7 +424,7 @@ public:
     void addMaterial(const DebugServer::MaterialRecord& material) {
         if (mConnection) {
             char matid[9] = {};
-            sprintf(matid, "%8.8x", material.key);
+            snprintf(matid, sizeof(matid), "%8.8x", material.key);
             mg_websocket_write(mConnection, MG_WEBSOCKET_OPCODE_TEXT, matid, 8);
         }
     }

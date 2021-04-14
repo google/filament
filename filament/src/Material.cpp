@@ -311,6 +311,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 }
 
 FMaterial::~FMaterial() noexcept {
+    delete mMaterialParser;
+}
+
+void FMaterial::terminate(FEngine& engine) {
 
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.
@@ -320,10 +324,6 @@ FMaterial::~FMaterial() noexcept {
     }
 #endif
 
-    delete mMaterialParser;
-}
-
-void FMaterial::terminate(FEngine& engine) {
     destroyPrograms(engine);
     mDefaultInstance.terminate(engine);
 }
