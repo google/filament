@@ -375,7 +375,7 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/2.0.12.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/2.0.17.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 python ./emsdk.py install latest
 python ./emsdk.py activate latest
