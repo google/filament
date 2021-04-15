@@ -171,7 +171,7 @@ class FilamentViewer extends LitElement {
         if (!this.enableDrop || this.asset) {
             overlay.innerHTML = "";
         } else {
-            overlay.innerHTML = "Drop glb or fileset here.";
+            overlay.innerHTML = "Drop glb or file set here.";
         }
     }
 
