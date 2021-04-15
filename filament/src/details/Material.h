@@ -195,7 +195,10 @@ private:
     UniformInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
     SamplerBindingMap mSamplerBindings;
+
+#if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
+#endif
 
     utils::CString mName;
     FEngine& mEngine;
