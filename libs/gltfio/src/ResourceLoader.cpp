@@ -200,25 +200,30 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     };
 
     // Go through every primitive and check if it has a Draco mesh.
-    for (auto pair : asset->mPrimitives) {
+    for (auto& pair : asset->mPrimitives) {
         const cgltf_primitive* prim = pair.first;
-        VertexBuffer* vb = pair.second;
         if (!prim->has_draco_mesh_compression) {
             continue;
         }
 
         const cgltf_draco_mesh_compression& draco = prim->draco_mesh_compression;
 
+        // If an error occurs, we can simply set the primitive's associated VertexBuffer to null.
+        // This does not cause a leak because it is a weak reference.
+        auto& vertexBuffer = pair.second;
+
         // Check if we have already decoded this mesh.
         DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
         if (!mesh) {
-            slog.w << "Cannot decompress mesh, Draco decoding error." << io::endl;
+            slog.e << "Cannot decompress mesh, Draco decoding error." << io::endl;
+            vertexBuffer = nullptr;
             continue;
         }
 
         // Copy over the decompressed data, converting the data type if necessary.
-        if (prim->indices) {
-            mesh->getFaceIndices(prim->indices);
+        if (prim->indices && !mesh->getFaceIndices(prim->indices)) {
+            vertexBuffer = nullptr;
+            continue;
         }
 
         // Go through each attribute in the decompressed mesh.
@@ -237,7 +242,10 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
             }
 
             // Copy over the decompressed data, converting the data type if necessary.
-            mesh->getVertexAttributes(id, accessor);
+            if (!mesh->getVertexAttributes(id, accessor)) {
+                vertexBuffer = nullptr;
+                break;
+            }
         }
     }
 }
