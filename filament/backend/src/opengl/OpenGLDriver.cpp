@@ -939,7 +939,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
     // The following 4 techniques are different mechanisms to provide storage to the FBO.
     // We'll use the first technique that is sufficient.
-    // nonMSAA:         MSAA was not requested, or we're rendering to an MSAA texture which
+    // nonMSAA:         MSAA was not requested, or we're rendering to an MS texture which
     //                  doesn't require any special setup here
     // useMSRTT:        use the EXT_multisampled_render_to_texture extension
     // renderDirect:    texture is not sampleable, render directly into a renderbuffer
