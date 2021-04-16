@@ -961,7 +961,10 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
     // There's a bug with certain drivers preventing us from emulating
     // EXT_multisampled_render_to_texture, so we'll simply fall back to non-MSAA rendering.
-    const bool disableMultisampling = gl.bugs.disable_sidecar_blit && emulateMSRTT;
+    const bool disableMultisampling =
+            gl.bugs.disable_sidecar_blit &&
+            emulateMSRTT &&
+            target == GL_TEXTURE_2D_ARRAY;
 
     if (nonMSAA || disableMultisampling) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
