@@ -180,6 +180,10 @@ public:
 
         // Some drivers don't implement timer queries correctly
         bool dont_use_timer_query = false;
+
+        // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
+        // This technique is used for VSM with MSAA turned on.
+        bool disable_sidecar_blit = false;
     } bugs;
 
     // state getters -- as needed.
