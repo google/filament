@@ -188,14 +188,14 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
 // ------------------------------------------------------------------------------------------------
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context, Config config)
-    : mContext(context), mConfig(config) {
+    : mContext(context) {
     SYSTRACE_CALL();
     using namespace backend;
 
     Engine& engine = mContext.mEngine;
 
-    mSampleCount = std::min(mConfig.sampleCount, uint16_t(2048));
-    mLevelCount = std::max(mConfig.levelCount, uint8_t(1u));
+    mSampleCount = std::min(config.sampleCount, uint16_t(2048));
+    mLevelCount = std::max(config.levelCount, uint8_t(1u));
 
     // { L.x, L.y, L.z, lod }
     mKernelTexture = Texture::Builder()
@@ -242,6 +242,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
             weight += NoL; // note: L.z == NoL
             p[i] = { L, l };
         }
+        utils::slog.d << +lod << ": " << weight << utils::io::endl;
 
         assert_invariant(lod < mLevelCount);
         mKernelWeightArray[lod] = weight;
@@ -274,29 +275,25 @@ IBLPrefilterContext::SpecularFilter& IBLPrefilterContext::SpecularFilter::operat
     using std::swap;
     if (this != & rhs) {
         swap(mKernelTexture, rhs.mKernelTexture);
+        swap(mKernelWeightArray, rhs.mKernelWeightArray);
         mSampleCount = rhs.mSampleCount;
-        mConfig = rhs.mConfig;
+        mLevelCount = rhs.mLevelCount;
     }
     return *this;
 }
 
-Texture* IBLPrefilterContext::SpecularFilter::createReflectionsTexture(
-        ReflectionsOptions options) {
+Texture* IBLPrefilterContext::SpecularFilter::createReflectionsTexture() {
     Engine& engine = mContext.mEngine;
 
-    const uint8_t maxLevels = uint8_t(std::log2(options.size)) + 1u;
-    const uint8_t levels = std::min(maxLevels, mConfig.levelCount);
+    const uint8_t levels = mLevelCount;
 
-    ASSERT_PRECONDITION(mConfig.levelCount <= maxLevels,
-            "Requested texture size of %u is too small to accommodate %u mipmap levels",
-            +options.size, +mConfig.levelCount);
-
-    const uint32_t dim = 1u << (maxLevels - 1u);
+    // default texture is 256 or larger to accommodate the level count requested
+    const uint32_t dim = std::max(256u, 1u << (levels - 1u));
 
     Texture* const outCubemap = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
-            .format(options.format)
-            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE | options.usage)
+            .format(Texture::InternalFormat::R11F_G11F_B10F)
+            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
             .width(dim).height(dim).levels(levels)
             .build(engine);
 
@@ -324,12 +321,12 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
             "outReflectionsTexture must be a cubemap!");
 
     if (outReflectionsTexture == nullptr) {
-        outReflectionsTexture = createReflectionsTexture({});
+        outReflectionsTexture = createReflectionsTexture();
     }
 
-    ASSERT_PRECONDITION(mConfig.levelCount <= outReflectionsTexture->getLevels(),
+    ASSERT_PRECONDITION(mLevelCount <= outReflectionsTexture->getLevels(),
             "outReflectionsTexture has %u levels but %u are requested.",
-            +outReflectionsTexture->getLevels(), +mConfig.levelCount);
+            +outReflectionsTexture->getLevels(), +mLevelCount);
 
     const TextureCubemapFace faces[2][3] = {
             { TextureCubemapFace::POSITIVE_X, TextureCubemapFace::POSITIVE_Y, TextureCubemapFace::POSITIVE_Z },
@@ -340,7 +337,7 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
     Texture* const kernel = mKernelTexture;
-    MaterialInstance* const mi = mContext.mMaterial->createInstance("IBLPrefilterContext::Filter");
+    MaterialInstance* const mi = mContext.mMaterial->getDefaultInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     rcm.setMaterialInstanceAt(
@@ -404,8 +401,6 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         dim >>= 1;
     }
-
-    engine.destroy(mi);
 
 //    {
 //        SYSTRACE_NAME("flushAndWait");
