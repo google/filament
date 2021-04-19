@@ -149,7 +149,12 @@ public:
          * Generates a prefiltered cubemap.
          * @param options                   Options for this environment
          * @param environmentCubemap        Environment cubemap (input). Can't be null.
-         * @param outReflectionsTexture     Output prefiltered texture or if null it is created.
+         *                                  This cubemap must be SAMPLEABLE.
+         * @param outReflectionsTexture     Output prefiltered texture or, if null, it is
+         *                                  automatically created. outReflectionsTexture must
+         *                                  be a cubemap, it must have at least COLOR_ATTACHMENT and
+         *                                  SAMPLEABLE usages and at least the same number of levels
+         *                                  than requested by Config.
          * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(Options options,
@@ -157,7 +162,7 @@ public:
                 filament::Texture* outReflectionsTexture = nullptr);
 
         /**
-         * Generates a prefiltered cubemap with the default options
+         * Generates a prefiltered cubemap with the default options.
          * @param environmentCubemap
          * @param outReflectionsTexture
          * @return
