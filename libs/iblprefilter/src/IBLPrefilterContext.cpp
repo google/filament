@@ -189,20 +189,69 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context, Config config)
     : mContext(context), mConfig(config) {
+    SYSTRACE_CALL();
+    using namespace backend;
 
     Engine& engine = mContext.mEngine;
 
     mSampleCount = std::min(mConfig.sampleCount, uint16_t(2048));
+    mLevelCount = std::max(mConfig.levelCount, uint8_t(1u));
 
     // { L.x, L.y, L.z, lod }
     mWeights = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(Texture::InternalFormat::RGBA16F)
             .usage(Texture::Usage::UPLOADABLE | Texture::Usage::SAMPLEABLE)
-            .width(1)
+            .width(mLevelCount)
             .height(mSampleCount)
             .build(engine);
 
+    mWeightSum = new float[mLevelCount];
+
+    const uint32_t sampleCount = mSampleCount;
+    const size_t levels = mLevelCount;
+
+    // TODO: do this with a shader
+
+    for (uint32_t lod = 0 ; lod < levels; lod++) {
+        SYSTRACE_NAME("computeFilterLOD");
+        const float perceptualRoughness = lodToPerceptualRoughness(saturate(lod / (levels - 1.0f)));
+        const float roughness = perceptualRoughness * perceptualRoughness;
+
+        uint32_t effectiveSampleCount = sampleCount;
+        if (lod == 0) {
+            effectiveSampleCount = 1;
+        }
+
+        // compute the coefficients
+        half4* const p = (half4*)engine.streamAlloc(effectiveSampleCount * sizeof(half4));
+
+        float weight = 0.0f;
+        for (size_t i = 0; i < effectiveSampleCount; i++) {
+            const float2 u = hammersley(uint32_t(i), 1.0f / float(effectiveSampleCount));
+            const float3 H = hemisphereImportanceSampleDggx(u, roughness);
+            const float NoH = H.z;
+            const float NoH2 = H.z * H.z;
+            const float NoL = saturate(2 * NoH2 - 1);
+            const float3 L(2 * NoH * H.x, 2 * NoH * H.y, NoL);
+
+            const float pdf = DistributionGGX(NoH, roughness) / 4;
+            const float invOmegaS = effectiveSampleCount * pdf;
+            const float l = 1.0f - log4(invOmegaS);
+
+            weight += NoL; // note: L.z == NoL
+            p[i] = { L, l };
+        }
+
+        assert_invariant(lod < mLevelCount);
+        mWeightSum[lod] = weight;
+
+        // upload the coefficients
+        mWeights->setImage(engine, 0,
+                lod, 0, 1, effectiveSampleCount, {
+                p, effectiveSampleCount * sizeof(half4),
+                PixelDataFormat::RGBA, PixelDataType::HALF});
+    }
 }
 
 UTILS_NOINLINE
@@ -213,6 +262,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
 IBLPrefilterContext::SpecularFilter::~SpecularFilter() noexcept {
     Engine& engine = mContext.mEngine;
     engine.destroy(mWeights);
+    delete [] mWeightSum;
 }
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexcept
@@ -235,8 +285,13 @@ Texture* IBLPrefilterContext::SpecularFilter::createReflectionsTexture(
     Engine& engine = mContext.mEngine;
 
     const uint8_t maxLevels = uint8_t(std::log2(options.size)) + 1u;
-    const uint32_t dim = 1u << (maxLevels - 1u);
     const uint8_t levels = std::min(maxLevels, mConfig.levelCount);
+
+    ASSERT_PRECONDITION(mConfig.levelCount <= maxLevels,
+            "Requested texture size of %u is too small to accommodate %u mipmap levels",
+            +options.size, +mConfig.levelCount);
+
+    const uint32_t dim = 1u << (maxLevels - 1u);
 
     Texture* const outCubemap = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
@@ -268,6 +323,14 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     ASSERT_PRECONDITION(environmentCubemap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP,
             "outReflectionsTexture must be a cubemap!");
 
+    if (outReflectionsTexture == nullptr) {
+        outReflectionsTexture = createReflectionsTexture({});
+    }
+
+    ASSERT_PRECONDITION(mConfig.levelCount <= outReflectionsTexture->getLevels(),
+            "outReflectionsTexture has %u levels but %u are requested.",
+            +outReflectionsTexture->getLevels(), +mConfig.levelCount);
+
     const TextureCubemapFace faces[2][3] = {
             { TextureCubemapFace::POSITIVE_X, TextureCubemapFace::POSITIVE_Y, TextureCubemapFace::POSITIVE_Z },
             { TextureCubemapFace::NEGATIVE_X, TextureCubemapFace::NEGATIVE_Y, TextureCubemapFace::NEGATIVE_Z }
@@ -282,10 +345,6 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     RenderableManager& rcm = engine.getRenderableManager();
     rcm.setMaterialInstanceAt(
             rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
-
-    if (outReflectionsTexture == nullptr) {
-        outReflectionsTexture = createReflectionsTexture({});
-    }
 
     const uint8_t inputLevels = environmentCubemap->getLevels();
     const uint32_t sampleCount = mSampleCount;
@@ -314,45 +373,15 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
 
     for (size_t lod = 0; lod < levels; lod++) {
-        SYSTRACE_NAME("computeFilterLOD");
+        SYSTRACE_NAME("executeFilterLOD");
+
         const float omegaP = (4.0f * f::PI) / float(6 * dim * dim);
-        const float perceptualRoughness = lodToPerceptualRoughness(saturate(lod / (levels - 1.0f)));
-        const float roughness = perceptualRoughness * perceptualRoughness;
-
-        uint32_t effectiveSampleCount = sampleCount;
-        if (lod == 0) {
-            effectiveSampleCount = 1;
-        }
-
-        // compute the coefficients
-        half4* const p = (half4*)engine.streamAlloc(effectiveSampleCount * sizeof(half4));
-
-        float weight = 0.0f;
-        for (size_t i = 0; i < effectiveSampleCount; i++) {
-            const float2 u = hammersley(uint32_t(i), 1.0f / float(effectiveSampleCount));
-            const float3 H = hemisphereImportanceSampleDggx(u, roughness);
-            const float NoH = H.z;
-            const float NoH2 = H.z * H.z;
-            const float NoL = saturate(2 * NoH2 - 1);
-            const float3 L(2 * NoH * H.x, 2 * NoH * H.y, NoL);
-
-            const float pdf = DistributionGGX(NoH, roughness) / 4;
-            const float invOmegaS = effectiveSampleCount * pdf;
-            const float l = 1.0f - log4(invOmegaS) - log4(omegaP);
-            const float mipLevel = roughness == 0.0f ? 0.0f : clamp(l, 0.0f, inputLevels - 1.0f);
-
-            weight += NoL; // note: L.z == NoL
-            p[i] = { L, mipLevel };
-        }
-
-        // upload the coefficients
-        weights->setImage(engine, 0, {
-                p, effectiveSampleCount * sizeof(half4),
-                PixelDataFormat::RGBA, PixelDataType::HALF });
 
         mi->setParameter("kernel", weights, TextureSampler{ SamplerMagFilter::NEAREST });
-        mi->setParameter("sampleCount", effectiveSampleCount);
-        mi->setParameter("invWeightSum", 1.0f / weight);
+        mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
+        mi->setParameter("attachmentLevel", uint32_t(lod));
+        mi->setParameter("invWeightSum", 1.0f / mWeightSum[lod]);
+        mi->setParameter("log4OmegaP", log4(omegaP));
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
                .mipLevel(RenderTarget::AttachmentPoint::COLOR1, lod)

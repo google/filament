@@ -93,8 +93,8 @@ public:
          * Filter configuration.
          */
         struct Config {
-            uint16_t sampleCount = 1024;    //!< filter sample count
-            uint8_t levelCount = 5;         //!< number of roughness levels
+            uint16_t sampleCount = 1024u;   //!< filter sample count
+            uint8_t levelCount = 5u;        //!< number of roughness levels
             Kernel kernel = Kernel::D_GGX;  //!< filter kernel
         };
 
@@ -175,7 +175,9 @@ public:
         IBLPrefilterContext& mContext;
         Config mConfig{};
         filament::Texture* mWeights = nullptr;
-        uint32_t mSampleCount = 0;
+        float* mWeightSum = nullptr;
+        uint32_t mSampleCount = 0u;
+        uint8_t mLevelCount = 1u;
     };
 
 private:
