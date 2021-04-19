@@ -23,7 +23,7 @@ material {
         },
         {
             type : float,
-            name : invWeightSum,
+            name : invKernelWeight,
             precision: high
         },
         {
@@ -146,10 +146,10 @@ void postProcess(inout PostProcessInputs postProcess) {
         Lz += sampleEnvironment(materialParams_environment, Rz * entry.xyz, l) * entry.z;
     }
 
-    highp float invWeightSum = materialParams.invWeightSum;
-    Lx *= invWeightSum;
-    Ly *= invWeightSum;
-    Lz *= invWeightSum;
+    highp float invKernelWeight = materialParams.invKernelWeight;
+    Lx *= invKernelWeight;
+    Ly *= invKernelWeight;
+    Lz *= invKernelWeight;
 
     postProcess.outx = vec4(Lx, 1.0);
     postProcess.outy = vec4(Ly, 1.0);
