@@ -174,8 +174,8 @@ public:
         friend class Instance;
         IBLPrefilterContext& mContext;
         Config mConfig{};
-        filament::Texture* mWeights = nullptr;
-        float* mWeightSum = nullptr;
+        filament::Texture* mKernelTexture = nullptr;
+        float* mKernelWeightArray = nullptr;
         uint32_t mSampleCount = 0u;
         uint8_t mLevelCount = 1u;
     };

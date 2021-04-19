@@ -198,7 +198,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     mLevelCount = std::max(mConfig.levelCount, uint8_t(1u));
 
     // { L.x, L.y, L.z, lod }
-    mWeights = Texture::Builder()
+    mKernelTexture = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(Texture::InternalFormat::RGBA16F)
             .usage(Texture::Usage::UPLOADABLE | Texture::Usage::SAMPLEABLE)
@@ -206,7 +206,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
             .height(mSampleCount)
             .build(engine);
 
-    mWeightSum = new float[mLevelCount];
+    mKernelWeightArray = new float[mLevelCount];
 
     const uint32_t sampleCount = mSampleCount;
     const size_t levels = mLevelCount;
@@ -244,10 +244,10 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
         }
 
         assert_invariant(lod < mLevelCount);
-        mWeightSum[lod] = weight;
+        mKernelWeightArray[lod] = weight;
 
         // upload the coefficients
-        mWeights->setImage(engine, 0,
+        mKernelTexture->setImage(engine, 0,
                 lod, 0, 1, effectiveSampleCount, {
                 p, effectiveSampleCount * sizeof(half4),
                 PixelDataFormat::RGBA, PixelDataType::HALF});
@@ -261,8 +261,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
 
 IBLPrefilterContext::SpecularFilter::~SpecularFilter() noexcept {
     Engine& engine = mContext.mEngine;
-    engine.destroy(mWeights);
-    delete [] mWeightSum;
+    engine.destroy(mKernelTexture);
+    delete [] mKernelWeightArray;
 }
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexcept
@@ -273,7 +273,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexce
 IBLPrefilterContext::SpecularFilter& IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) {
     using std::swap;
     if (this != & rhs) {
-        swap(mWeights, rhs.mWeights);
+        swap(mKernelTexture, rhs.mKernelTexture);
         mSampleCount = rhs.mSampleCount;
         mConfig = rhs.mConfig;
     }
@@ -339,7 +339,7 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    Texture* const weights = mWeights;
+    Texture* const kernel = mKernelTexture;
     MaterialInstance* const mi = mContext.mMaterial->createInstance("IBLPrefilterContext::Filter");
 
     RenderableManager& rcm = engine.getRenderableManager();
@@ -377,10 +377,10 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         const float omegaP = (4.0f * f::PI) / float(6 * dim * dim);
 
-        mi->setParameter("kernel", weights, TextureSampler{ SamplerMagFilter::NEAREST });
+        mi->setParameter("kernel", kernel, TextureSampler{ SamplerMagFilter::NEAREST });
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
-        mi->setParameter("invWeightSum", 1.0f / mWeightSum[lod]);
+        mi->setParameter("invKernelWeight", 1.0f / mKernelWeightArray[lod]);
         mi->setParameter("log4OmegaP", log4(omegaP));
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
