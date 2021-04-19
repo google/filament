@@ -9,11 +9,7 @@
 #define DITHERING_TRIANGLE_NOISE       3
 #define DITHERING_TRIANGLE_NOISE_RGB   4
 
-#if defined(TARGET_MOBILE)
-    #define DITHERING_OPERATOR         DITHERING_TRIANGLE_NOISE
-#else
-    #define DITHERING_OPERATOR         DITHERING_TRIANGLE_NOISE
-#endif
+#define DITHERING_OPERATOR      DITHERING_TRIANGLE_NOISE
 
 //------------------------------------------------------------------------------
 // Noise

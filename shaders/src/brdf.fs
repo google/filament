@@ -28,7 +28,7 @@
 
 #define BRDF_DIFFUSE                DIFFUSE_LAMBERT
 
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
 #define BRDF_SPECULAR_D             SPECULAR_D_GGX
 #define BRDF_SPECULAR_V             SPECULAR_V_SMITH_GGX_FAST
 #define BRDF_SPECULAR_F             SPECULAR_F_SCHLICK
@@ -172,7 +172,7 @@ float visibility(float roughness, float NoV, float NoL) {
 
 vec3 fresnel(const vec3 f0, float LoH) {
 #if BRDF_SPECULAR_F == SPECULAR_F_SCHLICK
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
     return F_Schlick(f0, LoH); // f90 = 1.0
 #else
     float f90 = saturate(dot(f0, vec3(50.0 * 0.33)));

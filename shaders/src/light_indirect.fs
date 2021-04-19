@@ -72,7 +72,7 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 
 vec3 diffuseIrradiance(const vec3 n) {
     if (frameUniforms.iblSH[0].x == 65504.0) {
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
         return Irradiance_RoughnessOne(n);
 #else
         ivec2 s = textureSize(light_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
