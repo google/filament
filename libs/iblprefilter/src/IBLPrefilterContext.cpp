@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "iblprefilter/IBLPrefilterContext.h"
+#include "filament/iblprefilter/IBLPrefilterContext.h"
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>

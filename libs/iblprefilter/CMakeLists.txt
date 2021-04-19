@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(filament C ASM)
 
-set(TARGET iblprefilter)
+set(TARGET filament-iblprefilter)
 set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR "${GENERATION_ROOT}/generated/resources")
@@ -11,7 +11,7 @@ set(MATERIAL_DIR "${GENERATION_ROOT}/generated/material")
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/iblprefilter/IBLPrefilterContext.h
+        include/filament/iblprefilter/IBLPrefilterContext.h
 )
 
 set(SRCS
@@ -132,4 +132,4 @@ target_link_libraries(${TARGET} PRIVATE
 # ==================================================================================================
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/iblprefilter DESTINATION include)
+install(DIRECTORY ${PUBLIC_HDR_DIR}/filament/iblprefilter DESTINATION include)
