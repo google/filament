@@ -107,14 +107,6 @@ public:
             bool generateMipmap = true;  //!< set to false if the environment map already has mipmaps
         };
 
-        struct ReflectionsOptions {
-            using InternalFormat = filament::Texture::InternalFormat;
-            using Usage = filament::Texture::Usage;
-            uint16_t size = 256;         //!< output environment texture size. Must be Power-of-two.
-            InternalFormat format = InternalFormat::R11F_G11F_B10F; // output environment texture format
-            Usage usage = Usage::NONE;  //!< extra usage added to output environment texture
-        };
-
         /**
          * Creates a filter.
          * @param context IBLPrefilterContext to use
@@ -139,22 +131,15 @@ public:
         SpecularFilter& operator=(SpecularFilter&& rhs);
 
         /**
-         * Creates a texture suitable for being used as a reflection map
-         * @param options options for the texture creation
-         * @return a Texture object owned by the caller.
-         */
-        filament::Texture* createReflectionsTexture(ReflectionsOptions options);
-
-        /**
          * Generates a prefiltered cubemap.
          * @param options                   Options for this environment
          * @param environmentCubemap        Environment cubemap (input). Can't be null.
          *                                  This cubemap must be SAMPLEABLE.
          * @param outReflectionsTexture     Output prefiltered texture or, if null, it is
-         *                                  automatically created. outReflectionsTexture must
-         *                                  be a cubemap, it must have at least COLOR_ATTACHMENT and
-         *                                  SAMPLEABLE usages and at least the same number of levels
-         *                                  than requested by Config.
+         *                                  automatically created with some default parameters.
+         *                                  outReflectionsTexture must be a cubemap, it must have
+         *                                  at least COLOR_ATTACHMENT and SAMPLEABLE usages and at
+         *                                  least the same number of levels than requested by Config.
          * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(Options options,
@@ -177,8 +162,8 @@ public:
 
     private:
         friend class Instance;
+        filament::Texture* createReflectionsTexture();
         IBLPrefilterContext& mContext;
-        Config mConfig{};
         filament::Texture* mKernelTexture = nullptr;
         float* mKernelWeightArray = nullptr;
         uint32_t mSampleCount = 0u;
