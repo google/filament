@@ -27,8 +27,18 @@ material {
             precision: high
         },
         {
+            type : float,
+            name : log4OmegaP,
+            precision: medium
+        },
+        {
             type : uint,
             name : sampleCount,
+            precision: medium
+        },
+        {
+            type : uint,
+            name : attachmentLevel,
             precision: medium
         }
     ],
@@ -129,10 +139,11 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     for (uint i = 0u ; i < materialParams.sampleCount ; i++) {
         // { L, lod }, with L.z == NoL
-        mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(0, i), 0);
-        Lx += sampleEnvironment(materialParams_environment, Rx * entry.xyz, entry.w) * entry.z;
-        Ly += sampleEnvironment(materialParams_environment, Ry * entry.xyz, entry.w) * entry.z;
-        Lz += sampleEnvironment(materialParams_environment, Rz * entry.xyz, entry.w) * entry.z;
+        mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
+        float l = entry.w - materialParams.log4OmegaP; // we don't need to clamp, the h/w does it for us
+        Lx += sampleEnvironment(materialParams_environment, Rx * entry.xyz, l) * entry.z;
+        Ly += sampleEnvironment(materialParams_environment, Ry * entry.xyz, l) * entry.z;
+        Lz += sampleEnvironment(materialParams_environment, Rz * entry.xyz, l) * entry.z;
     }
 
     highp float invWeightSum = materialParams.invWeightSum;
