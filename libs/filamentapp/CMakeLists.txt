@@ -52,6 +52,7 @@ set(LIBS
         image
         camutils
         geometry
+        filament-iblprefilter
 )
 
 set(MATERIAL_SRCS

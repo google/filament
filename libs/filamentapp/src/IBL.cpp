@@ -26,6 +26,8 @@
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
 
+#include <filament/iblprefilter/IBLPrefilterContext.h>
+
 #include <stb_image.h>
 
 #include <utils/Path.h>
@@ -80,6 +82,10 @@ bool IBL::loadFromKtx(const std::string& prefix) {
         return false;
     }
 
+    IBLPrefilterContext context(mEngine);
+    IBLPrefilterContext::SpecularFilter filter(context);
+    mTexture = filter({ .lodOffset = 2.0f }, mTexture);
+
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
             .intensity(IBL_INTENSITY)
@@ -122,6 +128,10 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     }
 
     if (!loadCubemapLevel(&mSkyboxTexture, path)) return false;
+
+    IBLPrefilterContext context(mEngine);
+    IBLPrefilterContext::SpecularFilter filter(context);
+    mTexture = filter({ .lodOffset = 2.0f }, mTexture);
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
@@ -179,7 +189,7 @@ bool IBL::loadCubemapLevel(
             *texture = Texture::Builder()
                     .width((uint32_t)size)
                     .height((uint32_t)size)
-                    .levels((uint8_t)numLevels)
+                    .levels((uint8_t)9)
                     .format(Texture::InternalFormat::R11F_G11F_B10F)
                     .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                     .build(mEngine);

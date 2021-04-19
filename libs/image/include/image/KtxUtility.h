@@ -80,7 +80,7 @@ namespace ktx {
         Texture* texture = Texture::Builder()
             .width(ktxinfo.pixelWidth)
             .height(ktxinfo.pixelHeight)
-            .levels(static_cast<uint8_t>(nmips))
+            .levels(9) //static_cast<uint8_t>(nmips))
             .sampler(ktx.isCubemap() ? Sampler::SAMPLER_CUBEMAP : Sampler::SAMPLER_2D)
             .format(texformat)
             .build(*engine);
