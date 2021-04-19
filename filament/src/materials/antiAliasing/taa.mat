@@ -75,7 +75,7 @@ fragment {
 
 /* Configuration mobile/desktop */
 
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
 #define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
 #define BOX_TYPE                BOX_TYPE_VARIANCE
 #define USE_YCoCg               0
