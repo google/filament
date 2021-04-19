@@ -428,6 +428,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance to the near plane
      * @return Distance to the near plane
      */
     public float getNear() {
@@ -435,6 +436,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance to the far plane
      * @return Distance to the far plane
      */
     public float getCullingFar() {
@@ -631,6 +633,7 @@ public class Camera {
     }
 
     /**
+     * Gets the aperture in f-stops
      * @return Aperture in f-stops
      */
     public float getAperture() {
@@ -638,6 +641,7 @@ public class Camera {
     }
 
     /**
+     * Gets the shutter speed in seconds
      * @return Shutter speed in seconds
      */
     public float getShutterSpeed() {
@@ -645,6 +649,7 @@ public class Camera {
     }
 
     /**
+     * Gets the focal length in meters
      * @return focal length in meters [m]
      */
     public double getFocalLength() {
@@ -661,6 +666,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance from the camera to the focus plane in world units
      * @return Distance from the camera to the focus plane in world units
      */
     public float getFocusDistance() {
@@ -668,6 +674,7 @@ public class Camera {
     }
 
     /**
+     * Gets the sensitivity in ISO
      * @return Sensitivity in ISO
      */
     public float getSensitivity() {

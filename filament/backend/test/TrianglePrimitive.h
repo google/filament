@@ -31,6 +31,7 @@ class TrianglePrimitive {
 public:
 
     using PrimitiveHandle = filament::backend::Handle<filament::backend::HwRenderPrimitive>;
+    using BufferObjectHandle = filament::backend::Handle<filament::backend::HwBufferObject>;
     using VertexHandle = filament::backend::Handle<filament::backend::HwVertexBuffer>;
     using IndexHandle = filament::backend::Handle<filament::backend::HwIndexBuffer>;
 
@@ -50,6 +51,7 @@ private:
     filament::backend::DriverApi& mDriverApi;
 
     PrimitiveHandle mRenderPrimitive;
+    BufferObjectHandle mBufferObject;
     VertexHandle mVertexBuffer;
     IndexHandle mIndexBuffer;
 

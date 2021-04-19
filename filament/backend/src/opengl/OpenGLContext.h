@@ -127,9 +127,9 @@ public:
 
     // supported extensions detected at runtime
     struct {
-        bool texture_compression_s3tc = false;
-        bool texture_compression_etc2 = false;
-        bool texture_filter_anisotropic = false;
+        bool WEBGL_texture_compression_s3tc = false;
+        bool EXT_texture_compression_etc2 = false;
+        bool EXT_texture_filter_anisotropic = false;
         bool QCOM_tiled_rendering = false;
         bool OES_EGL_image_external_essl3 = false;
         bool EXT_debug_marker = false;
@@ -144,6 +144,7 @@ public:
         bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
         bool EXT_clip_control = false;
+        bool GOOGLE_cpp_style_line_directive = false;
     } ext;
 
     struct {
@@ -168,7 +169,7 @@ public:
 
         // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
-        bool disable_texture_filter_anisotropic = false;
+        bool texture_filter_anisotropic_broken_on_sampler = false;
 
         // Some drivers have issues when reading from a mip while writing to a different mip.
         // In the OpenGL ES 3.0 specification this is covered in section 4.4.3,

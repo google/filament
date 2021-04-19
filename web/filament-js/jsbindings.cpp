@@ -1296,7 +1296,9 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setDepthCulling", &MaterialInstance::setDepthCulling);
 
 class_<TextureSampler>("TextureSampler")
-    .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();
+    .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()
+    .function("setAnisotropy", &TextureSampler::setAnisotropy)
+    .function("setCompareMode", &TextureSampler::setCompareMode);
 
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")

@@ -82,6 +82,8 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
+    out << "precision lowp sampler2DArray;\n";
+    out << "precision lowp sampler3D;\n";
 
     out << SHADERS_COMMON_TYPES_FS_DATA;
 
@@ -232,7 +234,7 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
     out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
-    out << "LAYOUT_LOCATION(" << index << ") out " << typeString <<
+    out << "layout(location=" << index << ") out " << typeString <<
         " output_" << name.c_str() << ";\n";
 
     return out;

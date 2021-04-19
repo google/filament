@@ -57,17 +57,20 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
     if (strstr(renderer, "Adreno")) {
-        bugs.dont_use_timer_query = true;   // verified
+        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the
+        // GPU time.
+        bugs.dont_use_timer_query = true;
     } else if (strstr(renderer, "Mali")) {
-        bugs.dont_use_timer_query = true;   // not verified
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
             bugs.disable_glFlush = true;
             bugs.disable_shared_context_draws = true;
             bugs.texture_external_needs_rebind = true;
+            // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+            bugs.dont_use_timer_query = true;
         }
         if (strstr(renderer, "Mali-G")) {
-            bugs.disable_texture_filter_anisotropic = true;
+            // note: We have verified that timer queries work well at least on some Mali-G.
         }
     } else if (strstr(renderer, "Intel")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
@@ -79,9 +82,9 @@ OpenGLContext::OpenGLContext() noexcept {
         bugs.disable_invalidate_framebuffer = true;
     }
 
+#if defined(__EMSCRIPTEN__)
     // Chrome does not support feedback loops in WebGL 2.0. See also:
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
-#if defined(__EMSCRIPTEN__)
     bugs.disable_feedback_loops = true;
 #endif
 
@@ -143,8 +146,22 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
 #ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.texture_filter_anisotropic && !bugs.disable_texture_filter_anisotropic) {
+    if (ext.EXT_texture_filter_anisotropic) {
+        // make sure we don't have any error flag
+        while (glGetError() != GL_NO_ERROR) { }
+
+        // query max anisotropy
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.maxAnisotropy);
+
+        // check that we can actually set the anysotropy on the sampler
+        GLuint s;
+        glGenSamplers(1, &s);
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, gets.maxAnisotropy);
+        if (glGetError() != GL_NO_ERROR) {
+            // some drivers only allow to set the anisotropy on the texture itself
+            bugs.texture_filter_anisotropic_broken_on_sampler = true;
+        }
+        glDeleteSamplers(1, &s);
     }
 #endif
 
@@ -221,22 +238,23 @@ bool OpenGLContext::hasExtension(ExtentionSet const& map, utils::StaticString ex
 
 void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& exts) {
     // figure out and initialize the extensions we need
-    ext.texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
-    ext.texture_compression_etc2 = true;
-    ext.QCOM_tiled_rendering = hasExtension(exts, "GL_QCOM_tiled_rendering");
-    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
-    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
-    ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
-    ext.EXT_color_buffer_float = hasExtension(exts, "GL_EXT_color_buffer_float");
     ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
-    ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
+    ext.EXT_clip_control = hasExtension(exts, "GL_EXT_clip_control");
+    ext.EXT_color_buffer_float = hasExtension(exts, "GL_EXT_color_buffer_float");
+    ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
+    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
+    ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
     ext.EXT_multisampled_render_to_texture2 = hasExtension(exts, "GL_EXT_multisampled_render_to_texture2");
-    ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
-    ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
-    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
-    ext.EXT_clip_control = hasExtension(exts, "GL_EXT_clip_control");
+    ext.EXT_texture_compression_etc2 = true;
+    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
+    ext.EXT_texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
+    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
+    ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
+    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
+    ext.QCOM_tiled_rendering = hasExtension(exts, "GL_QCOM_tiled_rendering");
+    ext.WEBGL_texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -244,18 +262,19 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
 }
 
 void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
-    ext.texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
-    ext.texture_compression_etc2 = hasExtension(exts, "GL_ARB_ES3_compatibility");
-    ext.texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
-    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
-    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
-    ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
-    ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
-    ext.KHR_debug = major >= 4 && minor >= 3;
-    ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
-    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
     ext.EXT_clip_control = hasExtension(exts, "GL_ARB_clip_control") || (major == 4 && minor >= 5);
+    ext.EXT_color_buffer_float = true;  // Assumes core profile.
+    ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
+    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
+    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
+    ext.EXT_texture_compression_etc2 = hasExtension(exts, "GL_ARB_ES3_compatibility");
+    ext.EXT_texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
+    ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
+    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
+    ext.KHR_debug = major >= 4 && minor >= 3;
+    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
+    ext.WEBGL_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {

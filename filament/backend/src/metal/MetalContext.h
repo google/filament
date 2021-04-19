@@ -51,6 +51,9 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
+    // Supported features.
+    bool supportsTextureSwizzling = false;
+
     // Tracks resources used by command buffers.
     MetalResourceTracker resourceTracker;
 

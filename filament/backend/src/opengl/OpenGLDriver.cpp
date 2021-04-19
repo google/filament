@@ -211,6 +211,10 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
 
+void OpenGLDriver::bindSampler(GLuint unit, backend::SamplerParams params) noexcept {
+    mContext.bindSampler(unit, getSampler(params));
+}
+
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
     mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.targetIndex);
@@ -482,13 +486,12 @@ void OpenGLDriver::createVertexBufferR(
         uint8_t attributeCount,
         uint32_t elementCount,
         AttributeArray attributes,
-        BufferUsage usage,
-        bool bufferObjectsEnabled) {
+        BufferUsage usage) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
     GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
-            bufferCount, attributeCount, elementCount, attributes, bufferObjectsEnabled);
+            bufferCount, attributeCount, elementCount, attributes);
 
     GLsizei n = GLsizei(vb->bufferCount);
 
@@ -536,10 +539,11 @@ void OpenGLDriver::createBufferObjectR(
     DEBUG_MARKER()
 
     auto& gl = mContext;
-    GLBufferObject* bo = construct<GLBufferObject>(boh);
+    GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount);
     glGenBuffers(1, &bo->gl.id);
     gl.bindVertexArray(nullptr);
 
+    assert_invariant(byteCount > 0);
     assert_invariant(bindingType == BufferObjectBinding::VERTEX);
 
     gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
@@ -999,7 +1003,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, t->gl.id);
 
         // Clear the resolve bit for this particular attachment. Note that other attachment(s)
-        // might be sampleable, so this does not necessarily prevent the resolve from occuring.
+        // might be sampleable, so this does not necessarily prevent the resolve from occurring.
         resolveFlags = TargetBufferFlags::NONE;
 
     } else {
@@ -1074,10 +1078,16 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         uint32_t height, uint8_t samples) const noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     if (samples > 1) {
-        // We don't support "implicit" (i.e. EXT_multisampled_render_to_texture) renderbuffer
-        // (in practice this means that a texture must be marked 'SAMPLEABLE' if 'implicit'
-        // resolves are desired.
-        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+#ifdef GL_EXT_multisampled_render_to_texture
+        auto& gl = mContext;
+        if (gl.ext.EXT_multisampled_render_to_texture ||
+            gl.ext.EXT_multisampled_render_to_texture2) {
+            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
+        } else
+#endif
+        {
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+        }
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
@@ -1564,13 +1574,13 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     auto& gl = mContext;
     if (isETC2Compression(format)) {
-        return gl.ext.texture_compression_etc2;
+        return gl.ext.EXT_texture_compression_etc2;
     }
     if (isS3TCCompression(format)) {
         if (isS3TCSRGBCompression(format))		{
-            return gl.ext.texture_compression_s3tc && (gl.ext.EXT_texture_sRGB || gl.ext.EXT_texture_compression_s3tc_srgb);
+            return gl.ext.WEBGL_texture_compression_s3tc && (gl.ext.EXT_texture_sRGB || gl.ext.EXT_texture_compression_s3tc_srgb);
         } else {
-            return gl.ext.texture_compression_s3tc;
+            return gl.ext.WEBGL_texture_compression_s3tc;
         }
     }
     return getInternalFormat(format) != 0;
@@ -1712,29 +1722,11 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh,
-        size_t index, BufferDescriptor&& p, uint32_t byteOffset) {
-    DEBUG_MARKER()
-
-    auto& gl = mContext;
-    GLVertexBuffer* eb = handle_cast<GLVertexBuffer *>(vbh);
-    assert_invariant(!eb->bufferObjectsEnabled && "Please use setVertexBufferObject() instead.");
-
-    gl.bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[index]);
-    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, p.size, p.buffer);
-
-    scheduleDestroy(std::move(p));
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
 void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
         size_t index, Handle<HwBufferObject> boh) {
    DEBUG_MARKER()
 
     GLVertexBuffer* vb = handle_cast<GLVertexBuffer *>(vbh);
-    assert_invariant(vb->bufferObjectsEnabled && "Please use updateVertexBuffer() instead.");
-
     GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
 
     // If the specified VBO handle is different from what's already in the slot, then update the
@@ -1774,6 +1766,8 @@ void OpenGLDriver::updateBufferObject(
 
     auto& gl = mContext;
     GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
+
+    assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
@@ -2514,9 +2508,7 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         CHECK_GL_ERROR(utils::slog.e)
 
         rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
-
-        rp->gl.vertexBufferWithObjects = eb->bufferObjectsEnabled ? vbh :
-                backend::Handle<backend::HwVertexBuffer> {};
+        rp->gl.vertexBufferWithObjects = vbh;
 
         // update the VBO bindings in the VAO
         updateVertexArrayObject(rp, eb);
@@ -2825,12 +2817,13 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
 
-// TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
-#if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
+#if defined(GL_EXT_texture_filter_anisotropic)
     auto& gl = mContext;
-    if (gl.ext.texture_filter_anisotropic && !gl.bugs.disable_texture_filter_anisotropic) {
+    if (gl.ext.EXT_texture_filter_anisotropic &&
+            !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
         GLfloat anisotropy = float(1u << params.anisotropyLog2);
-        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(gl.gets.maxAnisotropy, anisotropy));
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                std::min(gl.gets.maxAnisotropy, anisotropy));
     }
 #endif
     CHECK_GL_ERROR(utils::slog.e)
@@ -3219,15 +3212,18 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 
     GLRenderPrimitive* rp = handle_cast<GLRenderPrimitive *>(rph);
 
+    // Gracefully do nothing if the render primitive has not been set up.
+    VertexBufferHandle vb = rp->gl.vertexBufferWithObjects;
+    if (UTILS_UNLIKELY(!vb)) {
+        return;
+    }
+
     gl.bindVertexArray(&rp->gl);
 
     // If necessary, mutate the bindings in the VAO.
-    VertexBufferHandle vbwo = rp->gl.vertexBufferWithObjects;
-    if (UTILS_UNLIKELY(vbwo)) {
-        const GLVertexBuffer* vb = handle_cast<GLVertexBuffer*>(vbwo);
-        if (rp->gl.vertexBufferVersion != vb->bufferObjectsVersion) {
-            updateVertexArrayObject(rp, vb);
-        }
+    const GLVertexBuffer* glvb = handle_cast<GLVertexBuffer*>(vb);
+    if (UTILS_UNLIKELY(rp->gl.vertexBufferVersion != glvb->bufferObjectsVersion)) {
+        updateVertexArrayObject(rp, glvb);
     }
 
     setRasterState(state.rasterState);

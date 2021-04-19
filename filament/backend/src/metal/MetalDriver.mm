@@ -55,7 +55,42 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         mPlatform(*platform),
         mContext(new MetalContext) {
     mContext->driver = this;
-    mContext->device = MTLCreateSystemDefaultDevice();
+
+#if !defined(IOS)
+    const bool forceIntegrated =
+            NSProcessInfo.processInfo.environment[@"FILAMENT_FORCE_INTEGRATED_GPU"] != nil;
+    if (forceIntegrated) {
+        // Find the first low power device, which is likely the integrated GPU.
+        NSArray<id<MTLDevice>>* const devices = MTLCopyAllDevices();
+        for (id<MTLDevice> device in devices) {
+            if (device.isLowPower) {
+                mContext->device = device;
+                break;
+            }
+        }
+    } else
+#endif
+    {
+        mContext->device = MTLCreateSystemDefaultDevice();
+    }
+
+    utils::slog.i << "Selected physical device '"
+                  << [mContext->device.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
+                  << utils::io::endl;
+
+    // In order to support texture swizzling, the GPU needs to support it and the system be running
+    // macOS 10.15+ / iOS 13+.
+    mContext->supportsTextureSwizzling = false;
+    if (@available(macOS 10.15, iOS 13, *)) {
+#if defined(IOS)
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
+#else
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
+#endif
+    }
+
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -89,16 +124,6 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext->timerQueryImpl;
     delete mContext;
 }
-
-#define METAL_DEBUG_COMMANDS 0
-#if !defined(NDEBUG)
-void MetalDriver::debugCommand(const char *methodName) {
-#if METAL_DEBUG_COMMANDS
-    utils::slog.d << methodName << utils::io::endl;
-#endif
-}
-#endif
-
 
 void MetalDriver::tick(int) {
 }
@@ -160,10 +185,10 @@ void MetalDriver::finish(int) {
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
-        BufferUsage usage, bool bufferObjectsEnabled) {
+        BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes, bufferObjectsEnabled);
+            attributeCount, vertexCount, attributes);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
@@ -566,11 +591,7 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    if (@available(macOS 10.15, iOS 13, *)) {
-        return true;
-    } else {
-        return false;
-    }
+    return mContext->supportsTextureSwizzling;
 }
 
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
@@ -647,14 +668,6 @@ bool MetalDriver::areFeedbackLoopsSupported() {
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
-}
-
-void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
-        BufferDescriptor&& data, uint32_t byteOffset) {
-    assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
-    auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
-    vb->buffers[index]->copyIntoBuffer(data.buffer, data.size);
-    scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -1295,8 +1308,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
 
     // Bind the vertex buffers.
 
-    MetalBuffer* buffers[MAX_VERTEX_ATTRIBUTE_COUNT];
-    size_t vertexBufferOffsets[MAX_VERTEX_ATTRIBUTE_COUNT];
+    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT];
+    size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT];
     size_t bufferIndex = 0;
 
     auto vb = primitive->vertexBuffer;
@@ -1307,7 +1320,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         }
 
         assert_invariant(vb->buffers[attribute.buffer]);
-        buffers[bufferIndex] = vb->buffers[attribute.buffer].get();
+        buffers[bufferIndex] = vb->buffers[attribute.buffer];
         vertexBufferOffsets[bufferIndex] = attribute.offset;
         bufferIndex++;
     }

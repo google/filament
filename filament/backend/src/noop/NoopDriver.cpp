@@ -175,11 +175,6 @@ math::float2 NoopDriver::getClipSpaceParams() {
     return math::float2{ -1.0f, 0.0f };
 }
 
-void NoopDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
-        BufferDescriptor&& p, uint32_t byteOffset) {
-    scheduleDestroy(std::move(p));
-}
-
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));

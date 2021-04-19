@@ -60,6 +60,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.simple_layout)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         titlebarHint = findViewById(R.id.user_hint)
         surfaceView = findViewById(R.id.main_sv)
@@ -242,6 +243,7 @@ class MainActivity : Activity() {
                 modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
                 modelViewer.scene, modelViewer.renderer)
         modelViewer.view.colorGrading = automation.getColorGrading((modelViewer.engine))
+        modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {

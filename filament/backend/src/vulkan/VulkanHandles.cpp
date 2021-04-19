@@ -403,21 +403,9 @@ bool VulkanRenderTarget::invalidate() {
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attributes, bool boEnabled) :
-        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes, boEnabled) {
-    buffers.reserve(bufferCount);
-    for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
-        uint32_t size = 0;
-        for (auto const& item : attributes) {
-            if (item.buffer == bufferIndex) {
-                uint32_t end = item.offset + elementCount * item.stride;
-                size = std::max(size, end);
-            }
-        }
-        buffers.push_back(std::make_shared<VulkanBuffer>(context, stagePool, disposer, this,
-                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, size));
-    }
-}
+        uint32_t elementCount, AttributeArray const& attributes) :
+        HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes),
+        buffers(bufferCount) {}
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage)

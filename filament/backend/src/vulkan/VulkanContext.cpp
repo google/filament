@@ -531,7 +531,23 @@ void makeSwapChainPresentable(VulkanContext& context) {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         .dstAccessMask = 0,
+
+        // Using COLOR_ATTACHMENT_OPTIMAL for oldLayout seems to be required for NVIDIA drivers
+        // (see https://github.com/google/filament/pull/3190), but the Android NDK validation layers
+        // make the following complaint:
+        //
+        //   You cannot transition the layout [...] from VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        //   when the previous known layout is VK_IMAGE_LAYOUT_PRESENT_SRC_KHR. The Vulkan spec
+        //   states: oldLayout must be VK_IMAGE_LAYOUT_UNDEFINED or the current layout of the image
+        //   subresources affected by the barrier
+        //
+        //   (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkImageMemoryBarrier-oldLayout-01197)
+#if ANDROID
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+#else
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+#endif
+
         .newLayout = swapContext.attachment.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

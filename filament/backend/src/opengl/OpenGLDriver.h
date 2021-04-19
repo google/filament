@@ -70,6 +70,8 @@ public:
     };
 
     struct GLBufferObject : public backend::HwBufferObject {
+        using HwBufferObject::HwBufferObject;
+        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
         struct {
             GLuint id = 0;
         } gl;
@@ -241,7 +243,6 @@ private:
 
 #include "private/backend/DriverAPI.inc"
 
-
     // Memory management...
 
     class HandleAllocator {
@@ -356,6 +357,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
+           void bindSampler(GLuint unit, backend::SamplerParams params) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };

@@ -5,6 +5,17 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.21
+
+- JavaScript: add missing TextureSampler bindings.
+- Metal: Fix texture swizzling crash with older Nvidia GPUs.
+- Vulkan: fix image layout validation error on Android.
+- android: fix MSAA w/ multisampled_render_to_texture on Mali.
+- engine: better anisotropic filtering with various drivers.
+- gltfio: Use BufferObject API, simplify MorphHelper.
+- gltfio: honor stride in normalizeSkinningWeights.
+- samples: Add web component demo.
+
 ## v1.9.20
 
 Android: Fix VSM.

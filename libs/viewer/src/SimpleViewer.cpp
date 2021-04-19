@@ -723,11 +723,8 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::Indent();
 
-        // We do not yet support focal length in remote mode (i.e. when mAsset is null)
-        if (mAsset) {
-            ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
-                    16.0f, 90.0f);
-        }
+        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
+                16.0f, 90.0f);
 
         bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
         int dofRingCount = mSettings.view.dof.fastGatherRingCount;
@@ -739,7 +736,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
         ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
         ImGui::Checkbox("DoF", &mSettings.view.dof.enabled);
-        ImGui::SliderFloat("Focus distance", &mSettings.view.dof.focusDistance, 0.0f, 30.0f);
+        ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
         ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
         ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
         ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
@@ -763,6 +760,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::ColorEdit3("Color##vignetteColor", &mSettings.view.vignette.color.r);
         }
 
+        // We do not yet support camera selection in the remote UI. To support this feature, we
+        // would need to send a message from DebugServer to the WebSockets client.
         if (mAsset != nullptr) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
@@ -826,6 +825,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::Unindent();
         }
 
+        // We do not yet support animation selection in the remote UI. To support this feature, we
+        // would need to send a message from DebugServer to the WebSockets client.
         if (mAnimator && mAnimator->getAnimationCount() > 0 &&
                 ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();

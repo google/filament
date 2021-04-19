@@ -62,18 +62,32 @@ public class AutomationEngine {
          * Minimum time that automation waits between applying a settings object and advancing
          * to the next test case. Specified in seconds.
          */
-        float sleepDuration = 0.2f;
+        public float sleepDuration = 0.2f;
 
         /**
          * Similar to sleepDuration, but expressed as a frame count. Both the minimum sleep time
          * and the minimum frame count must be elapsed before automation advances to the next test.
          */
-        int minFrameCount = 2;
+        public int minFrameCount = 2;
 
         /**
          * If true, test progress is dumped to the utils Log (info priority).
          */
-        boolean verbose = true;
+        public boolean verbose = true;
+    }
+
+    /**
+     * Allows remote control for the viewer.
+     */
+    public static class ViewerOptions {
+        public float cameraAperture = 16.0f;
+        public float cameraSpeed = 125.0f;
+        public float cameraISO = 100.0f;
+        public float groundShadowStrength = 0.75f;
+        public boolean groundPlaneEnabled = false;
+        public boolean skyboxEnabled = true;
+        public float cameraFocalLength = 28.0f;
+        public float cameraFocusDistance = 0.0f;
     }
 
     /**
@@ -174,11 +188,24 @@ public class AutomationEngine {
     }
 
     /**
+     * Gets the current viewer options.
+     *
+     * NOTE: Focal length here might be different from the user-specified value, due to DoF options.
+     */
+    @NonNull
+    public ViewerOptions getViewerOptions() {
+        ViewerOptions result = new ViewerOptions();
+        nGetViewerOptions(mNativeObject, result);
+        return result;
+    }
+
+    /**
      * Gets a color grading object that corresponds to the latest settings.
      *
      * This method either returns a cached instance, or it destroys the cached instance and creates
      * a new one.
      */
+    @NonNull
     public ColorGrading getColorGrading(@NonNull Engine engine) {
         // The native layer automatically destroys the old color grading instance,
         // so there is no need to call Engine#destroyColorGrading here.
@@ -220,6 +247,7 @@ public class AutomationEngine {
             float deltaTime);
     private static native void nApplySettings(long nativeObject, String jsonSettings, long view,
             long[] materials, long ibl, int light, long lightManager, long scene, long renderer);
+    private static native void nGetViewerOptions(long nativeObject, Object result);
     private static native long nGetColorGrading(long nativeObject, long nativeEngine);
     private static native void nSignalBatchMode(long nativeObject);
     private static native void nStopRunning(long nativeObject);
