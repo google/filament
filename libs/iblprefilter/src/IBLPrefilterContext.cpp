@@ -101,7 +101,7 @@ IBLPrefilterContext::IBLPrefilterContext(Engine& engine)
     mCameraEntity = em.create();
     mFullScreenQuadEntity = em.create();
 
-    mMaterial = Material::Builder().package(
+    mIntegrationMaterial = Material::Builder().package(
             IBLPREFILTER_MATERIALS_IBLPREFILTER_DATA,
             IBLPREFILTER_MATERIALS_IBLPREFILTER_SIZE).build(engine);
 
@@ -127,7 +127,7 @@ IBLPrefilterContext::IBLPrefilterContext(Engine& engine)
 
     RenderableManager::Builder(1)
             .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, mVertexBuffer, mIndexBuffer)
-            .material(0, mMaterial->getDefaultInstance())
+            .material(0, mIntegrationMaterial->getDefaultInstance())
             .culling(false)
             .castShadows(false)
             .receiveShadows(false)
@@ -157,7 +157,7 @@ IBLPrefilterContext::~IBLPrefilterContext() noexcept {
     engine.destroy(mRenderer);
     engine.destroy(mVertexBuffer);
     engine.destroy(mIndexBuffer);
-    engine.destroy(mMaterial);
+    engine.destroy(mIntegrationMaterial);
     engine.destroy(mFullScreenQuadEntity);
     engine.destroyCameraComponent(mCameraEntity);
     em.destroy(mFullScreenQuadEntity);
@@ -179,7 +179,7 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
         swap(mCamera, rhs.mCamera);
         swap(mFullScreenQuadEntity, rhs.mFullScreenQuadEntity);
         swap(mCameraEntity, rhs.mCameraEntity);
-        swap(mMaterial, rhs.mMaterial);
+        swap(mIntegrationMaterial, rhs.mIntegrationMaterial);
         swap(mView, rhs.mView);
     }
     return *this;
@@ -193,65 +193,69 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     using namespace backend;
 
     Engine& engine = mContext.mEngine;
+    View* const view = mContext.mView;
+    Renderer* const renderer = mContext.mRenderer;
+
 
     mSampleCount = std::min(config.sampleCount, uint16_t(2048));
     mLevelCount = std::max(config.levelCount, uint8_t(1u));
+
+    mKernelMaterial = Material::Builder().package(
+            IBLPREFILTER_MATERIALS_GENERATEKERNEL_DATA,
+            IBLPREFILTER_MATERIALS_GENERATEKERNEL_SIZE).build(engine);
+
 
     // { L.x, L.y, L.z, lod }
     mKernelTexture = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(Texture::InternalFormat::RGBA16F)
-            .usage(Texture::Usage::UPLOADABLE | Texture::Usage::SAMPLEABLE)
+            .usage(Texture::Usage::SAMPLEABLE | Texture::Usage::COLOR_ATTACHMENT)
             .width(mLevelCount)
             .height(mSampleCount)
             .build(engine);
 
+    MaterialInstance* const mi = mKernelMaterial->getDefaultInstance();
+    mi->setParameter("size", uint2{ mLevelCount, mSampleCount });
+    mi->setParameter("sampleBits", uint32_t(std::log2(mSampleCount) + 0.5f));
+    mi->setParameter("sampleCount", float(mSampleCount));
+    mi->setParameter("oneOverLevelsMinusOne", 1.0f / (mLevelCount - 1.0f));
+
+    RenderableManager& rcm = engine.getRenderableManager();
+    rcm.setMaterialInstanceAt(
+            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+
+    RenderTarget* const rt = RenderTarget::Builder()
+            .texture(RenderTarget::AttachmentPoint::COLOR0, mKernelTexture)
+            .build(engine);
+
+    view->setRenderTarget(rt);
+    view->setViewport({ 0, 0, mLevelCount, mSampleCount });
+
+    renderer->renderStandaloneView(view);
+
+    engine.destroy(rt);
+
+    // the code below must match the shader in generateKernel.mat
+    // this is a little bit unfortunate that we have to compute the weightSum here, but it's
+    // not too heavy.
+    const uint32_t levelCount = mLevelCount;
+    const float sampleCount = mSampleCount;
     mKernelWeightArray = new float[mLevelCount];
-
-    const uint32_t sampleCount = mSampleCount;
-    const size_t levels = mLevelCount;
-
-    // TODO: do this with a shader
-
-    for (uint32_t lod = 0 ; lod < levels; lod++) {
+    for (uint32_t lod = 0 ; lod < levelCount; lod++) {
         SYSTRACE_NAME("computeFilterLOD");
-        const float perceptualRoughness = lodToPerceptualRoughness(saturate(lod / (levels - 1.0f)));
+        const float perceptualRoughness = lodToPerceptualRoughness(saturate(lod / (levelCount - 1.0f)));
         const float roughness = perceptualRoughness * perceptualRoughness;
-
-        uint32_t effectiveSampleCount = sampleCount;
-        if (lod == 0) {
-            effectiveSampleCount = 1;
-        }
-
-        // compute the coefficients
-        half4* const p = (half4*)engine.streamAlloc(effectiveSampleCount * sizeof(half4));
-
+        const uint32_t effectiveSampleCount = (lod == 0) ? 1u : sampleCount;
         float weight = 0.0f;
         for (size_t i = 0; i < effectiveSampleCount; i++) {
             const float2 u = hammersley(uint32_t(i), 1.0f / float(effectiveSampleCount));
             const float3 H = hemisphereImportanceSampleDggx(u, roughness);
-            const float NoH = H.z;
             const float NoH2 = H.z * H.z;
             const float NoL = saturate(2 * NoH2 - 1);
-            const float3 L(2 * NoH * H.x, 2 * NoH * H.y, NoL);
-
-            const float pdf = DistributionGGX(NoH, roughness) / 4;
-            const float invOmegaS = effectiveSampleCount * pdf;
-            const float l = 1.0f - log4(invOmegaS);
-
-            weight += NoL; // note: L.z == NoL
-            p[i] = { L, l };
+            weight += NoL;
         }
-        utils::slog.d << +lod << ": " << weight << utils::io::endl;
-
         assert_invariant(lod < mLevelCount);
         mKernelWeightArray[lod] = weight;
-
-        // upload the coefficients
-        mKernelTexture->setImage(engine, 0,
-                lod, 0, 1, effectiveSampleCount, {
-                p, effectiveSampleCount * sizeof(half4),
-                PixelDataFormat::RGBA, PixelDataType::HALF});
     }
 }
 
@@ -263,6 +267,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
 IBLPrefilterContext::SpecularFilter::~SpecularFilter() noexcept {
     Engine& engine = mContext.mEngine;
     engine.destroy(mKernelTexture);
+    engine.destroy(mKernelMaterial);
     delete [] mKernelWeightArray;
 }
 
@@ -336,14 +341,12 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    Texture* const kernel = mKernelTexture;
-    MaterialInstance* const mi = mContext.mMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mContext.mIntegrationMaterial->getDefaultInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     rcm.setMaterialInstanceAt(
             rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
 
-    const uint8_t inputLevels = environmentCubemap->getLevels();
     const uint32_t sampleCount = mSampleCount;
     const float linear = options.hdrLinear;
     const float compress = options.hdrMax;
@@ -355,8 +358,8 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
 
     mi->setParameter("environment", environmentCubemap, environmentSampler);
+    mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
     mi->setParameter("compress", float2{ linear, compress });
-
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -374,7 +377,6 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         const float omegaP = (4.0f * f::PI) / float(6 * dim * dim);
 
-        mi->setParameter("kernel", kernel, TextureSampler{ SamplerMagFilter::NEAREST });
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
         mi->setParameter("invKernelWeight", 1.0f / mKernelWeightArray[lod]);
@@ -401,11 +403,6 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         dim >>= 1;
     }
-
-//    {
-//        SYSTRACE_NAME("flushAndWait");
-//        engine.flushAndWait();
-//    }
 
     return outReflectionsTexture;
 }

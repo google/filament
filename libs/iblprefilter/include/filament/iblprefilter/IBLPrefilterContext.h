@@ -164,6 +164,7 @@ public:
         friend class Instance;
         filament::Texture* createReflectionsTexture();
         IBLPrefilterContext& mContext;
+        filament::Material* mKernelMaterial = nullptr;
         filament::Texture* mKernelTexture = nullptr;
         float* mKernelWeightArray = nullptr;
         uint32_t mSampleCount = 0u;
@@ -181,8 +182,7 @@ private:
     utils::Entity mFullScreenQuadEntity{};
     utils::Entity mCameraEntity{};
     filament::View* mView{};
-    // this one might have to move into Filter
-    filament::Material* mMaterial{};
+    filament::Material* mIntegrationMaterial{};
 };
 
 #endif //TNT_IBL_PREFILTER_IBLPREFILTER_H
