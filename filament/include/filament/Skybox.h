@@ -104,12 +104,11 @@ public:
          */
         Builder& showSun(bool show) noexcept;
 
-
         /**
-         * Skybox intensity when no IndirectLight is set
+         * Skybox intensity when no IndirectLight is set on the Scene.
          *
-         * This call is ignored when an IndirectLight is set, otherwise it is used in its place.
-         *
+         * This call is ignored when an IndirectLight is set on the Scene, and the intensity
+         * of the IndirectLight is used instead.
          *
          * @param envIntensity  Scale factor applied to the skybox texel values such that
          *                      the result is in lux, or lumen/m^2 (default = 30000)
