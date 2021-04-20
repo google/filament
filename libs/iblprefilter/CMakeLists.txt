@@ -22,6 +22,7 @@ set(PRIVATE_HDRS
 )
 
 set(MATERIAL_SRCS
+        src/materials/generateKernel.mat
         src/materials/iblprefilter.mat
 )
 
