@@ -941,7 +941,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // EXT_multisampled_render_to_texture when the texture is a TEXTURE_2D_ARRAY, so we'll simply
     // fall back to non-MSAA rendering.
     const bool disableMultisampling =
-            gl.bugs.disable_sidecar_blit &&
+            gl.bugs.disable_sidecar_blit_into_texture_array &&
             rt->gl.samples > 1 && t->samples <= 1 &&
             target == GL_TEXTURE_2D_ARRAY;
 

@@ -183,7 +183,7 @@ public:
 
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
-        bool disable_sidecar_blit = false;
+        bool disable_sidecar_blit_into_texture_array = false;
     } bugs;
 
     // state getters -- as needed.
