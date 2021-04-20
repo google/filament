@@ -160,7 +160,9 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentDrawSwapChain->releaseDrawable();
+    if (mContext->currentDrawSwapChain) {
+        mContext->currentDrawSwapChain->releaseDrawable();
+    }
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 
