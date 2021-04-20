@@ -937,36 +937,17 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         attachmentTypeNotSupportedByMSRTT = true;
     }
 
-    // The following 4 techniques are different mechanisms to provide storage to the FBO.
-    // We'll use the first technique that is sufficient.
-    // nonMSAA:         MSAA was not requested, or we're rendering to an MS texture which
-    //                  doesn't require any special setup here
-    // useMSRTT:        use the EXT_multisampled_render_to_texture extension
-    // renderDirect:    texture is not sampleable, render directly into a renderbuffer
-    // emulateMSRTT:    prior 3 techniques are unsuitable, emulate MSRTT extension support
-
-    const bool nonMSAA =
-            rt->gl.samples <= 1 ||
-            (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture);
-
-    // EXT_multisampled_render_to_texture only support GL_COLOR_ATTACHMENT0
-    const bool useMSRTT =
-            !attachmentTypeNotSupportedByMSRTT && (t->depth <= 1) &&
-            ((gl.ext.EXT_multisampled_render_to_texture && attachment == GL_COLOR_ATTACHMENT0) ||
-             gl.ext.EXT_multisampled_render_to_texture2);
-
-    const bool renderDirect = !any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1;
-
-    const bool emulateMSRTT = !nonMSAA && !useMSRTT && !renderDirect;
-
     // There's a bug with certain drivers preventing us from emulating
-    // EXT_multisampled_render_to_texture, so we'll simply fall back to non-MSAA rendering.
+    // EXT_multisampled_render_to_texture when the texture is a TEXTURE_2D_ARRAY, so we'll simply
+    // fall back to non-MSAA rendering.
     const bool disableMultisampling =
             gl.bugs.disable_sidecar_blit &&
-            emulateMSRTT &&
+            rt->gl.samples > 1 && t->samples <= 1 &&
             target == GL_TEXTURE_2D_ARRAY;
 
-    if (nonMSAA || disableMultisampling) {
+    if (rt->gl.samples <= 1 ||
+        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture) ||
+        disableMultisampling) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
         // If multisampled textures are not supported and we end-up here, things should
         // still work, albeit without MSAA.
@@ -1001,7 +982,10 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         CHECK_GL_ERROR(utils::slog.e)
     } else
 #ifdef GL_EXT_multisampled_render_to_texture
-    if (useMSRTT) {
+        // EXT_multisampled_render_to_texture only support GL_COLOR_ATTACHMENT0
+    if (!attachmentTypeNotSupportedByMSRTT && (t->depth <= 1)
+        && ((gl.ext.EXT_multisampled_render_to_texture && attachment == GL_COLOR_ATTACHMENT0)
+            || gl.ext.EXT_multisampled_render_to_texture2)) {
         assert_invariant(rt->gl.samples > 1);
         // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
         // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
@@ -1018,7 +1002,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         CHECK_GL_ERROR(utils::slog.e)
     } else
 #endif
-    if (renderDirect) {
+    if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
         assert_invariant(rt->gl.samples > 1);
         assert_invariant(glIsRenderbuffer(t->gl.id));
 
