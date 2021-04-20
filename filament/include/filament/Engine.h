@@ -23,6 +23,7 @@
 
 namespace utils {
 class Entity;
+class EntityManager;
 class JobSystem;
 } // namespace utils
 
@@ -303,10 +304,24 @@ public:
      */
     static void destroy(Engine* engine);
 
+    /**
+     * @return EntityManager used by filament
+     */
+    utils::EntityManager& getEntityManager() noexcept;
+
+    /**
+     * @return RenderableManager reference
+     */
     RenderableManager& getRenderableManager() noexcept;
 
+    /**
+     * @return LightManager reference
+     */
     LightManager& getLightManager() noexcept;
 
+    /**
+     * @return TransformManager reference
+     */
     TransformManager& getTransformManager() noexcept;
 
     /**
@@ -477,16 +492,18 @@ public:
     UTILS_DEPRECATED
     void destroy(const Camera* camera);
 
-   /**
-     * Invokes one iteration of the render loop, used only on single-threaded platforms.
-     *
-     * This should be called every time the windowing system needs to paint (e.g. at 60 Hz).
-     */
+    /**
+      * Invokes one iteration of the render loop, used only on single-threaded platforms.
+      *
+      * This should be called every time the windowing system needs to paint (e.g. at 60 Hz).
+      */
     void execute();
 
-   /**
-     * Retrieves the job system that the Engine has ownership over.
-     */
+    /**
+      * Retrieves the job system that the Engine has ownership over.
+      *
+      * @return JobSystem used by filament
+      */
     utils::JobSystem& getJobSystem() noexcept;
 
     DebugRegistry& getDebugRegistry() noexcept;
