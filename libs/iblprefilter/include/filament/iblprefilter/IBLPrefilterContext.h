@@ -134,7 +134,10 @@ public:
          * Generates a prefiltered cubemap.
          * @param options                   Options for this environment
          * @param environmentCubemap        Environment cubemap (input). Can't be null.
-         *                                  This cubemap must be SAMPLEABLE.
+         *                                  This cubemap must be SAMPLEABLE and must have all its
+         *                                  levels allocated. If Options.generateMipmap is true,
+         *                                  the mipmap levels will be overwritten, otherwise
+         *                                  it is assumed that all levels are correctly initialized.
          * @param outReflectionsTexture     Output prefiltered texture or, if null, it is
          *                                  automatically created with some default parameters.
          *                                  outReflectionsTexture must be a cubemap, it must have
@@ -147,10 +150,16 @@ public:
                 filament::Texture* outReflectionsTexture = nullptr);
 
         /**
-         * Generates a prefiltered cubemap with the default options.
-         * @param environmentCubemap
-         * @param outReflectionsTexture
-         * @return
+         * Generates a prefiltered cubemap.
+         * @param environmentCubemap        Environment cubemap (input). Can't be null.
+         *                                  This cubemap must be SAMPLEABLE and must have all its
+         *                                  levels allocated. All mipmap levels will be overwritten.
+         * @param outReflectionsTexture     Output prefiltered texture or, if null, it is
+         *                                  automatically created with some default parameters.
+         *                                  outReflectionsTexture must be a cubemap, it must have
+         *                                  at least COLOR_ATTACHMENT and SAMPLEABLE usages and at
+         *                                  least the same number of levels than requested by Config.
+         * @return returns outReflectionsTexture
          */
         filament::Texture* operator()(
                 filament::Texture const* environmentCubemap,
