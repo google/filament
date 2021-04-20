@@ -116,6 +116,9 @@ public:
          * @warning VertexAttribute::TANGENTS must be specified as a quaternion and is how normals
          *          are specified.
          *
+         * @warning Not all backends support 3-component attributes that are not floats. For help
+         *          with conversion, see geometry::Transcoder.
+         *
          * @see VertexAttribute
          *
          * This is a no-op if the \p attribute is an invalid enum.
