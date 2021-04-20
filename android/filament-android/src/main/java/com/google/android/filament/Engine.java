@@ -110,6 +110,7 @@ public class Engine {
     @NonNull private final TransformManager mTransformManager;
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
+    @NonNull private final EntityManager mEntityManager;
 
     /**
      * Denotes a backend
@@ -142,6 +143,7 @@ public class Engine {
         mTransformManager = new TransformManager(nGetTransformManager(nativeEngine));
         mLightManager = new LightManager(nGetLightManager(nativeEngine));
         mRenderableManager = new RenderableManager(nGetRenderableManager(nativeEngine));
+        mEntityManager = new EntityManager(nGetEntityManager(nativeEngine));
     }
 
     /**
@@ -707,4 +709,5 @@ public class Engine {
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
     private static native long nGetJobSystem(long nativeEngine);
+    private static native long nGetEntityManager(long nativeEngine);
 }
