@@ -323,7 +323,13 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     ASSERT_PRECONDITION(environmentCubemap != nullptr, "outReflectionsTexture is null!");
 
     ASSERT_PRECONDITION(environmentCubemap->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP,
-            "outReflectionsTexture must be a cubemap!");
+            "outReflectionsTexture must be a cubemap.");
+
+    UTILS_UNUSED_IN_RELEASE
+    const uint8_t maxLevelCount = uint8_t(std::log2(environmentCubemap->getWidth()) + 0.5f) + 1u;
+
+    ASSERT_PRECONDITION(environmentCubemap->getLevels() == maxLevelCount,
+            "outReflectionsTexture must have %u mipmap levels allocated.", +maxLevelCount);
 
     if (outReflectionsTexture == nullptr) {
         outReflectionsTexture = createReflectionsTexture();
@@ -352,6 +358,7 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     const float compress = options.hdrMax;
     const uint8_t levels = outReflectionsTexture->getLevels();
     uint32_t dim = outReflectionsTexture->getWidth();
+    const float omegaP = (4.0f * f::PI) / float(6 * dim * dim);
 
     TextureSampler environmentSampler;
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
@@ -360,6 +367,7 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     mi->setParameter("environment", environmentCubemap, environmentSampler);
     mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
     mi->setParameter("compress", float2{ linear, compress });
+    mi->setParameter("log4OmegaP", log4(omegaP));
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -371,16 +379,13 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
            .texture(RenderTarget::AttachmentPoint::COLOR1, outReflectionsTexture)
            .texture(RenderTarget::AttachmentPoint::COLOR2, outReflectionsTexture);
 
-
     for (size_t lod = 0; lod < levels; lod++) {
         SYSTRACE_NAME("executeFilterLOD");
 
-        const float omegaP = (4.0f * f::PI) / float(6 * dim * dim);
 
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
         mi->setParameter("invKernelWeight", 1.0f / mKernelWeightArray[lod]);
-        mi->setParameter("log4OmegaP", log4(omegaP));
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
                .mipLevel(RenderTarget::AttachmentPoint::COLOR1, lod)

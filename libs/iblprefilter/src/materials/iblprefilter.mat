@@ -46,17 +46,17 @@ material {
         {
             name : outx,
             target : color,
-            type : float4
+            type : float3
         },
         {
             name : outy,
             target : color,
-            type : float4
+            type : float3
         },
         {
             name : outz,
             target : color,
-            type : float4
+            type : float3
         }
     ],
     variables : [
@@ -79,7 +79,8 @@ void dummy() {}
 
 precision highp float;
 
-mat3 lookAt(const vec3 N, const vec3 up) {
+mat3 tangentSpace(const vec3 N) {
+    const vec3 up = vec3(0, 0, 1);
     mat3 R;
     R[0] = normalize(cross(up, N));
     R[1] = cross(N, R[0]);
@@ -93,9 +94,9 @@ float random(const highp vec2 w) {
 }
 
 // See: http://graphicrants.blogspot.com/2013/12/tone-mapping.html, By Brian Karis
-vec3 compress(const mediump vec3 color, const mediump float linear, const mediump float compressed) {
+vec3 compress(const vec3 color, const float linear, const float compressed) {
     const mediump vec3 rec709 = vec3(0.2126, 0.7152, 0.0722);
-    mediump float luma = dot(color, rec709);  // REC 709
+    float luma = dot(color, rec709);  // REC 709
     float s = 1.0;
     if (luma > linear) {
         s = ((linear * linear - compressed * luma) / ((2.0 * linear - compressed - luma) * luma));
@@ -122,15 +123,19 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec3 ry = normalize(vec3(       p.x,  side, side *  p.y));
     vec3 rz = normalize(vec3(side * p.x,  -p.y, side));
 
-    // random rotation around r, by picking a random "up" vector
-    float a = 2.0 * PI * random(gl_FragCoord.xy);
-    float ux = cos(a);
-    float uy = sin(a);
+    // random rotation around r
+    mediump float a = 2.0 * PI * random(gl_FragCoord.xy);
+    mediump float c = cos(a);
+    mediump float s = sin(a);
+    mat3 R;
+    R[0] = vec3( c, s, 0);
+    R[1] = vec3(-s, c, 0);
+    R[2] = vec3( 0, 0, 1);
 
     // compute the rotation by which to transform our sample locations for each face
-    mat3 Rx = lookAt(rx, vec3(0, ux, uy));
-    mat3 Ry = lookAt(ry, vec3(ux, 0, uy));
-    mat3 Rz = lookAt(rz, vec3(ux, uy, 0));
+    mat3 Tx = tangentSpace(rx) * R;
+    mat3 Ty = tangentSpace(ry) * R;
+    mat3 Tz = tangentSpace(rz) * R;
 
     // accumulated environment light for each face
     vec3 Lx = vec3(0);
@@ -141,9 +146,9 @@ void postProcess(inout PostProcessInputs postProcess) {
         // { L, lod }, with L.z == NoL
         mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
         float l = entry.w - materialParams.log4OmegaP; // we don't need to clamp, the h/w does it for us
-        Lx += sampleEnvironment(materialParams_environment, Rx * entry.xyz, l) * entry.z;
-        Ly += sampleEnvironment(materialParams_environment, Ry * entry.xyz, l) * entry.z;
-        Lz += sampleEnvironment(materialParams_environment, Rz * entry.xyz, l) * entry.z;
+        Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
+        Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
+        Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
     }
 
     highp float invKernelWeight = materialParams.invKernelWeight;
@@ -151,9 +156,9 @@ void postProcess(inout PostProcessInputs postProcess) {
     Ly *= invKernelWeight;
     Lz *= invKernelWeight;
 
-    postProcess.outx = vec4(Lx, 1.0);
-    postProcess.outy = vec4(Ly, 1.0);
-    postProcess.outz = vec4(Lz, 1.0);
+    postProcess.outx = Lx;
+    postProcess.outy = Ly;
+    postProcess.outz = Lz;
 }
 
 }

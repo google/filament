@@ -93,7 +93,7 @@ public:
          * Filter configuration.
          */
         struct Config {
-            uint16_t sampleCount = 1024u;   //!< filter sample count
+            uint16_t sampleCount = 1024u;   //!< filter sample count (max 2048)
             uint8_t levelCount = 5u;        //!< number of roughness levels
             Kernel kernel = Kernel::D_GGX;  //!< filter kernel
         };
@@ -102,8 +102,8 @@ public:
          * Filtering options for the current environment.
          */
         struct Options {
-            float hdrLinear = 8.0f;      //!< no HDR compression up to this value
-            float hdrMax = 16.0f;        //!< HDR compression between hdrLinear and hdrMax
+            float hdrLinear = 1024.0f;   //!< no HDR compression up to this value
+            float hdrMax = 16384.0f;     //!< HDR compression between hdrLinear and hdrMax
             bool generateMipmap = true;  //!< set to false if the environment map already has mipmaps
         };
 
