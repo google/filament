@@ -88,7 +88,7 @@ vec4 computeWeight(const uint index, const float roughness) {
     vec3 L = vec3(2.0 * NoH * H.x, 2.0 * NoH * H.y, NoL);
     float pdf = DistributionGGX(NoH, roughness) * 0.25;
     float invOmegaS = sampleCount * pdf;
-    float l = 1.0f - log4(invOmegaS);
+    float l = -log4(invOmegaS);
     return vec4(L, l);
 }
 

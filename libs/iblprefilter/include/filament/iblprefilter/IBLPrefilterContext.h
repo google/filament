@@ -104,6 +104,7 @@ public:
         struct Options {
             float hdrLinear = 1024.0f;   //!< no HDR compression up to this value
             float hdrMax = 16384.0f;     //!< HDR compression between hdrLinear and hdrMax
+            float lodOffset = 1.0f;      //!< Good values are 1.0 or 2.0. Higher values help with heavily HDR inputs.
             bool generateMipmap = true;  //!< set to false if the environment map already has mipmaps
         };
 
