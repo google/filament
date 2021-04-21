@@ -110,13 +110,13 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(
         mContext(context), mOffscreen(false), mSamples(1) {}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
-            uint8_t samples, VulkanAttachment color[MRT::TARGET_COUNT],
+            uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
             HwRenderTarget(width, height), mContext(context), mOffscreen(true), mSamples(samples) {
 
     // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
     // miplevel and array layer.
-    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
         mColor[index] = createAttachment(spec);
         VulkanTexture* texture = spec.texture;
@@ -146,7 +146,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     const int depth = 1;
 
     // Create sidecar MSAA textures for color attachments.
-    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
         VulkanTexture* texture = spec.texture;
         if (texture && texture->samples == 1) {
@@ -183,7 +183,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
 }
 
 VulkanRenderTarget::~VulkanRenderTarget() {
-    for (int index = 0; index < MRT::TARGET_COUNT; index++) {
+    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         if (mMsaaAttachments[index].texture != mColor[index].texture) {
             delete mMsaaAttachments[index].texture;
         }
@@ -381,7 +381,7 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
         return 1;
     }
     int count = 0;
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (mColor[i].format == VK_FORMAT_UNDEFINED) {
             continue;
         }

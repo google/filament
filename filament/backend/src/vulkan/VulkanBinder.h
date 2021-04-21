@@ -76,7 +76,7 @@ class VulkanBinder {
 public:
     static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
-    static constexpr uint32_t TARGET_BINDING_COUNT = MRT::TARGET_COUNT;
+    static constexpr uint32_t TARGET_BINDING_COUNT = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
 
@@ -234,7 +234,7 @@ private:
     VkDescriptorImageInfo mDescriptorInputAttachments[TARGET_BINDING_COUNT];
     VkWriteDescriptorSet mDescriptorWrites[
             UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT + TARGET_BINDING_COUNT];
-    VkPipelineColorBlendAttachmentState mColorBlendAttachments[MRT::TARGET_COUNT];
+    VkPipelineColorBlendAttachmentState mColorBlendAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and

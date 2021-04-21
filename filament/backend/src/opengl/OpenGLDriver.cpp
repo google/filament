@@ -1179,8 +1179,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->targets = targets;
 
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
-        GLenum bufs[4] = { GL_NONE };
-        for (size_t i = 0; i < 4; i++) {
+        GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
+        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (any(targets & getMRTColorFlag(i))) {
                 rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
                 rt->gl.color[i].level = color[i].level;
@@ -1188,7 +1188,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
         }
-        glDrawBuffers(4, bufs);
+        glDrawBuffers(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, bufs);
         CHECK_GL_ERROR(utils::slog.e)
     }
 
