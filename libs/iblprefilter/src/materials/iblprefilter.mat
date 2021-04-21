@@ -28,7 +28,7 @@ material {
         },
         {
             type : float,
-            name : log4OmegaP,
+            name : lodOffset,
             precision: medium
         },
         {
@@ -145,7 +145,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     for (uint i = 0u ; i < materialParams.sampleCount ; i++) {
         // { L, lod }, with L.z == NoL
         mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
-        float l = entry.w - materialParams.log4OmegaP; // we don't need to clamp, the h/w does it for us
+        float l = entry.w + materialParams.lodOffset; // we don't need to clamp, the h/w does it for us
         Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
         Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
         Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;

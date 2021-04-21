@@ -367,7 +367,7 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     mi->setParameter("environment", environmentCubemap, environmentSampler);
     mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
     mi->setParameter("compress", float2{ linear, compress });
-    mi->setParameter("log4OmegaP", log4(omegaP));
+    mi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -382,10 +382,16 @@ filament::Texture* IBLPrefilterContext::SpecularFilter::operator()(
     for (size_t lod = 0; lod < levels; lod++) {
         SYSTRACE_NAME("executeFilterLOD");
 
-
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
         mi->setParameter("invKernelWeight", 1.0f / mKernelWeightArray[lod]);
+
+        if (lod == levels - 1) {
+            // this is the last lod, use a more agressive filtering because this level is also
+            // used for the diffuse brdf by filament, and we need it to be very smooth.
+            // So we set the lod offset to at least 2.
+            mi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));
+        }
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
                .mipLevel(RenderTarget::AttachmentPoint::COLOR1, lod)
