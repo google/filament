@@ -314,7 +314,7 @@ Java_com_google_android_filament_Engine_nGetJobSystem(JNIEnv*, jclass, jlong nat
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Engine_nGetEnityManager(JNIEnv*, jclass, jlong nativeEngine) {
+Java_com_google_android_filament_Engine_nGetEntityManager(JNIEnv*, jclass, jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
     return (jlong) &engine->getEntityManager();
 }
