@@ -20,6 +20,7 @@
 #include "fg2/FrameGraphTexture.h"
 
 #include <backend/DriverEnums.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <filament/Viewport.h>
 
@@ -30,11 +31,12 @@ namespace filament {
  * These are transient objects that exist inside a pass only.
  */
 struct FrameGraphRenderPass {
+    static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
     struct Attachments {
         union {
-            FrameGraphId<FrameGraphTexture> array[6] = {};
+            FrameGraphId<FrameGraphTexture> array[ATTACHMENT_COUNT] = {};
             struct {
-                FrameGraphId<FrameGraphTexture> color[4];
+                FrameGraphId<FrameGraphTexture> color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
                 FrameGraphId<FrameGraphTexture> depth;
                 FrameGraphId<FrameGraphTexture> stencil;
             };

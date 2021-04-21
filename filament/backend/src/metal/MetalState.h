@@ -216,7 +216,7 @@ struct PipelineState {
     id<MTLFunction> vertexFunction = nil;                                      // 8 bytes
     id<MTLFunction> fragmentFunction = nil;                                    // 8 bytes
     VertexDescription vertexDescription;                                       // 528 bytes
-    MTLPixelFormat colorAttachmentPixelFormat[4] = { MTLPixelFormatInvalid };  // 32 bytes
+    MTLPixelFormat colorAttachmentPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };  // 32 bytes
     MTLPixelFormat depthAttachmentPixelFormat = MTLPixelFormatInvalid;         // 8 bytes
     NSUInteger sampleCount = 1;                                                // 8 bytes
     BlendState blendState;                                                     // 56 bytes
@@ -228,7 +228,7 @@ struct PipelineState {
                 this->vertexFunction == rhs.vertexFunction &&
                 this->fragmentFunction == rhs.fragmentFunction &&
                 this->vertexDescription == rhs.vertexDescription &&
-                std::equal(this->colorAttachmentPixelFormat, this->colorAttachmentPixelFormat + 4,
+                std::equal(this->colorAttachmentPixelFormat, this->colorAttachmentPixelFormat + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT,
                         rhs.colorAttachmentPixelFormat) &&
                 this->depthAttachmentPixelFormat == rhs.depthAttachmentPixelFormat &&
                 this->sampleCount == rhs.sampleCount &&

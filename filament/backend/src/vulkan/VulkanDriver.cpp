@@ -555,8 +555,8 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
         backend::MRT color, TargetBufferInfo depth, TargetBufferInfo stencil) {
-    VulkanAttachment colorTargets[MRT::TARGET_COUNT] = {};
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
             colorTargets[i].texture = handle_cast<VulkanTexture>(mHandleMap, color[i].handle);
         }
@@ -1040,7 +1040,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask)
     };
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         rpkey.colorLayout[i] = rt->getColor(i).layout;
         rpkey.colorFormat[i] = rt->getColor(i).format;
         VulkanTexture* texture = rt->getColor(i).texture;
@@ -1060,7 +1060,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .layers = 1,
         .samples = rpkey.samples
     };
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (rt->getColor(i).format == VK_FORMAT_UNDEFINED) {
             fbkey.color[i] = VK_NULL_HANDLE;
             fbkey.resolve[i] = VK_NULL_HANDLE;
@@ -1087,7 +1087,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // The current command buffer now owns a reference to the render target and its attachments.
     mDisposer.acquire(rt, mContext.currentCommands->resources);
     mDisposer.acquire(depth.texture, mContext.currentCommands->resources);
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         mDisposer.acquire(rt->getColor(i).texture, mContext.currentCommands->resources);
     }
 
@@ -1104,12 +1104,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
-    VkClearValue clearValues[MRT::TARGET_COUNT + MRT::TARGET_COUNT + 1] = {};
+    VkClearValue clearValues[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
 
     // NOTE: clearValues must be populated in the same order as the attachments array in
     // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
     // actually clearing that particular target.
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (fbkey.color[i]) {
             VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
             clearValue.color.float32[0] = params.clearColor.r;
@@ -1119,7 +1119,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
     }
     // Resolve attachments are not cleared but still have entries in the list, so skip over them.
-    for (int i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (rpkey.needsResolveMask & (1u << i)) {
             renderPassInfo.clearValueCount++;
         }

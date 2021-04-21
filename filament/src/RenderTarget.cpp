@@ -127,21 +127,11 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         }
     };
 
-    if (mAttachments[COLOR0].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR0;
-        setAttachment(mrt[0], COLOR0);
-    }
-    if (mAttachments[COLOR1].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR1;
-        setAttachment(mrt[1], COLOR1);
-    }
-    if (mAttachments[COLOR2].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR2;
-        setAttachment(mrt[2], COLOR2);
-    }
-    if (mAttachments[COLOR3].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR3;
-        setAttachment(mrt[3], COLOR3);
+    for (size_t i = 0; i < ATTACHMENT_COUNT; i++) {
+        if (mAttachments[i].texture) {
+            mAttachmentMask |= getMRTColorFlag(i);
+            setAttachment(mrt[i], (AttachmentPoint)i);
+        }
     }
     if (mAttachments[DEPTH].texture) {
         mAttachmentMask |= TargetBufferFlags::DEPTH;

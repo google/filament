@@ -54,10 +54,10 @@ public:
 
 class MRT {
 public:
-    static constexpr int TARGET_COUNT = 4;
+    static constexpr int MAX_SUPPORTED_RENDER_TARGET_COUNT = 4;
 
 private:
-    TargetBufferInfo mInfos[TARGET_COUNT];
+    TargetBufferInfo mInfos[MAX_SUPPORTED_RENDER_TARGET_COUNT];
 
 public:
     TargetBufferInfo const& operator[](size_t i) const noexcept {

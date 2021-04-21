@@ -562,7 +562,7 @@ public:
     using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
     using OutputList = std::vector<Output>;
 
-    static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::TARGET_COUNT;
+    static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr size_t MAX_DEPTH_OUTPUT = 1;
     static_assert(MAX_COLOR_OUTPUT == 4,
             "When updating MRT::TARGET_COUNT, manually update post_process_inputs.fs"
