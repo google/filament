@@ -33,7 +33,7 @@ void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateSemaphore error.");
 }
 
-VkFormat getVkFormat(ElementType type, bool normalized) {
+VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
     using ElementType = ElementType;
     if (normalized) {
         switch (type) {
@@ -64,19 +64,19 @@ VkFormat getVkFormat(ElementType type, bool normalized) {
     }
     switch (type) {
         // Single Component Types
-        case ElementType::BYTE: return VK_FORMAT_R8_SINT;
-        case ElementType::UBYTE: return VK_FORMAT_R8_UINT;
-        case ElementType::SHORT: return VK_FORMAT_R16_SINT;
-        case ElementType::USHORT: return VK_FORMAT_R16_UINT;
+        case ElementType::BYTE: return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;
+        case ElementType::UBYTE: return integer ? VK_FORMAT_R8_UINT : VK_FORMAT_R8_USCALED;
+        case ElementType::SHORT: return integer ? VK_FORMAT_R16_SINT : VK_FORMAT_R16_SSCALED;
+        case ElementType::USHORT: return integer ? VK_FORMAT_R16_UINT : VK_FORMAT_R16_USCALED;
         case ElementType::HALF: return VK_FORMAT_R16_SFLOAT;
         case ElementType::INT: return VK_FORMAT_R32_SINT;
         case ElementType::UINT: return VK_FORMAT_R32_UINT;
         case ElementType::FLOAT: return VK_FORMAT_R32_SFLOAT;
         // Two Component Types
-        case ElementType::BYTE2: return VK_FORMAT_R8G8_SINT;
-        case ElementType::UBYTE2: return VK_FORMAT_R8G8_UINT;
-        case ElementType::SHORT2: return VK_FORMAT_R16G16_SINT;
-        case ElementType::USHORT2: return VK_FORMAT_R16G16_UINT;
+        case ElementType::BYTE2: return integer ? VK_FORMAT_R8G8_SINT : VK_FORMAT_R8G8_SSCALED;
+        case ElementType::UBYTE2: return integer ? VK_FORMAT_R8G8_UINT : VK_FORMAT_R8G8_USCALED;
+        case ElementType::SHORT2: return integer ? VK_FORMAT_R16G16_SINT : VK_FORMAT_R16G16_SSCALED;
+        case ElementType::USHORT2: return integer ? VK_FORMAT_R16G16_UINT : VK_FORMAT_R16G16_USCALED;
         case ElementType::HALF2: return VK_FORMAT_R16G16_SFLOAT;
         case ElementType::FLOAT2: return VK_FORMAT_R32G32_SFLOAT;
         // Three Component Types
@@ -87,10 +87,10 @@ VkFormat getVkFormat(ElementType type, bool normalized) {
         case ElementType::HALF3: return VK_FORMAT_R16G16B16_SFLOAT; // NOT MINSPEC
         case ElementType::FLOAT3: return VK_FORMAT_R32G32B32_SFLOAT;
         // Four Component Types
-        case ElementType::BYTE4: return VK_FORMAT_R8G8B8A8_SINT;
-        case ElementType::UBYTE4: return VK_FORMAT_R8G8B8A8_UINT;
-        case ElementType::SHORT4: return VK_FORMAT_R16G16B16A16_SINT;
-        case ElementType::USHORT4: return VK_FORMAT_R16G16B16A16_UINT;
+        case ElementType::BYTE4: return integer ? VK_FORMAT_R8G8B8A8_SINT : VK_FORMAT_R8G8B8A8_SSCALED;
+        case ElementType::UBYTE4: return integer ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_USCALED;
+        case ElementType::SHORT4: return integer ? VK_FORMAT_R16G16B16A16_SINT : VK_FORMAT_R16G16B16A16_SSCALED;
+        case ElementType::USHORT4: return integer ? VK_FORMAT_R16G16B16A16_UINT : VK_FORMAT_R16G16B16A16_USCALED;
         case ElementType::HALF4: return VK_FORMAT_R16G16B16A16_SFLOAT;
         case ElementType::FLOAT4: return VK_FORMAT_R32G32B32A32_SFLOAT;
     }
