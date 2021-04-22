@@ -216,7 +216,7 @@ struct PipelineState {
     id<MTLFunction> vertexFunction = nil;                                      // 8 bytes
     id<MTLFunction> fragmentFunction = nil;                                    // 8 bytes
     VertexDescription vertexDescription;                                       // 528 bytes
-    MTLPixelFormat colorAttachmentPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };  // 32 bytes
+    MTLPixelFormat colorAttachmentPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };  // 64 bytes
     MTLPixelFormat depthAttachmentPixelFormat = MTLPixelFormatInvalid;         // 8 bytes
     NSUInteger sampleCount = 1;                                                // 8 bytes
     BlendState blendState;                                                     // 56 bytes
@@ -244,7 +244,7 @@ struct PipelineState {
 
 // This assert checks that the struct is the size we expect without any "hidden" padding bytes
 // inserted by the compiler.
-static_assert(sizeof(PipelineState) == 656, "PipelineState unexpected size.");
+static_assert(sizeof(PipelineState) == 688, "PipelineState unexpected size.");
 
 struct PipelineStateCreator {
     id<MTLRenderPipelineState> operator()(id<MTLDevice> device, const PipelineState& state)

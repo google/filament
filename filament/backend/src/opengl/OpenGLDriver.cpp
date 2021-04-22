@@ -1181,7 +1181,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-            if (any(targets & getMRTColorFlag(i))) {
+            if (any(targets & getTargetBufferFlagsAt(i))) {
                 rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
                 rt->gl.color[i].level = color[i].level;
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
@@ -1708,6 +1708,10 @@ bool OpenGLDriver::areFeedbackLoopsSupported() {
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
             math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };
+}
+
+uint8_t OpenGLDriver::getMaxDrawBuffers() {
+    return std::min(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, uint8_t(mContext.gets.max_draw_buffers));
 }
 
 // ------------------------------------------------------------------------------------------------

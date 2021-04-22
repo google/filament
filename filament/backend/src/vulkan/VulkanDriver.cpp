@@ -865,6 +865,10 @@ math::float2 VulkanDriver::getClipSpaceParams() {
     return math::float2{ -0.5f, 0.5f };
 }
 
+uint8_t VulkanDriver::getMaxDrawBuffers() {
+    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
