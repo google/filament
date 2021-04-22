@@ -644,15 +644,17 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
 
         VertexBuffer::AttributeType fatype;
-        if (!getElementType(accessor->type, accessor->component_type, &fatype)) {
+        VertexBuffer::AttributeType actualType;
+        if (!getElementType(accessor->type, accessor->component_type, &fatype, &actualType)) {
             slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
+        const int stride = (fatype == actualType) ? accessor->stride : 0;
 
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
         // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
-        vbb.attribute(semantic, slot, fatype, 0, accessor->stride);
+        vbb.attribute(semantic, slot, fatype, 0, stride);
         vbb.normalized(semantic, accessor->normalized);
         addBufferSlot({accessor, atype, slot++});
     }
@@ -709,13 +711,15 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
 
             VertexBuffer::AttributeType fatype;
-            if (!getElementType(accessor->type, accessor->component_type, &fatype)) {
+            VertexBuffer::AttributeType actualType;
+            if (!getElementType(accessor->type, accessor->component_type, &fatype, &actualType)) {
                 slog.e << "Unsupported accessor type in " << name << io::endl;
                 return false;
             }
+            const int stride = (fatype == actualType) ? accessor->stride : 0;
 
             VertexAttribute attr = (VertexAttribute) (basePositionAttr + targetIndex);
-            vbb.attribute(attr, slot, fatype, 0, accessor->stride);
+            vbb.attribute(attr, slot, fatype, 0, stride);
             vbb.normalized(attr, accessor->normalized);
             addBufferSlot({accessor, atype, slot++, morphId});
         }

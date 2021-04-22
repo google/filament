@@ -97,7 +97,6 @@ target_link_libraries(filament-jni
     PRIVATE backend
     PRIVATE filaflat
     PRIVATE filabridge
-    PRIVATE geometry
     PRIVATE ibl-lite
     PRIVATE log
     PRIVATE GLESv3
@@ -105,6 +104,10 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
+
+    # libgeometry is PUBLIC because gltfio uses it.
+    PUBLIC geometry
+
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>

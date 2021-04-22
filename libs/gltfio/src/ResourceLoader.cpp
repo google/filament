@@ -17,6 +17,7 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/Image.h>
 
+#include "GltfEnums.h"
 #include "FFilamentAsset.h"
 #include "TangentsJob.h"
 #include "upcast.h"
@@ -27,6 +28,8 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+
+#include <geometry/Transcoder.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -52,6 +55,9 @@
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
+
+using filament::geometry::Transcoder;
+using filament::geometry::ComponentType;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
@@ -183,6 +189,33 @@ static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count
     for (size_t i = 0; i < count; ++i) {
         dst[i] = src[i];
     }
+}
+
+static ComponentType getComponentType(const cgltf_accessor* accessor) {
+    switch (accessor->component_type) {
+        case cgltf_component_type_r_8: return ComponentType::BYTE;
+        case cgltf_component_type_r_8u: return ComponentType::UBYTE;
+        case cgltf_component_type_r_16: return ComponentType::SHORT;
+        case cgltf_component_type_r_16u: return ComponentType::USHORT;
+        default:
+            // This should be unreachable because other types do not require conversion.
+            assert_invariant(false);
+            return {};
+    }
+}
+
+static void convertToFloats(float* dest, const cgltf_accessor* accessor) {
+    const uint32_t dim = cgltf_num_components(accessor->type);
+    const size_t floatsSize = accessor->count * sizeof(float) * dim;
+    Transcoder transcode({
+        .componentType = getComponentType(accessor),
+        .normalized = bool(accessor->normalized),
+        .componentCount = dim,
+        .inputStrideBytes = uint32_t(accessor->stride)
+    });
+    auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+    const uint8_t* source = computeBindingOffset(accessor) + bufferData;
+    transcode(dest, source, accessor->count);
 }
 
 static void decodeDracoMeshes(FFilamentAsset* asset) {
@@ -440,6 +473,17 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
+            if (requiresConversion(accessor->type, accessor->component_type)) {
+                const size_t dim = cgltf_num_components(accessor->type);
+                const size_t floatsSize = accessor->count * sizeof(float) * dim;
+                float* floatsData = (float*) malloc(floatsSize);
+                convertToFloats(floatsData, accessor);
+                BufferObject* bo = BufferObject::Builder().size(floatsSize).build(engine);
+                asset->mBufferObjects.push_back(bo);
+                bo->setBuffer(engine, BufferDescriptor(floatsData, floatsSize, FREE_CALLBACK));
+                slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                continue;
+            }
             BufferObject* bo = BufferObject::Builder().size(size).build(engine);
             asset->mBufferObjects.push_back(bo);
             bo->setBuffer(engine, BufferDescriptor(data, size,
