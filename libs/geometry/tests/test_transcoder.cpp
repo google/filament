@@ -55,8 +55,8 @@ TEST_F(TranscoderTest, Normalized) {
     Transcoder transcodeBytes({
         .componentType = ComponentType::UBYTE,
         .normalized = true,
-        .numComponents = 4,
-        .strideBytes = sizeof(Vertex)
+        .componentCount = 4u,
+        .inputStrideBytes = sizeof(Vertex)
     });
 
     transcodeBytes(result, vbuffer, count);
@@ -76,8 +76,8 @@ TEST_F(TranscoderTest, Normalized) {
     Transcoder transcodeSignedBytes({
         .componentType = ComponentType::BYTE,
         .normalized = true,
-        .numComponents = 4,
-        .strideBytes = sizeof(Vertex)
+        .componentCount = 4u,
+        .inputStrideBytes = sizeof(Vertex)
     });
 
     transcodeSignedBytes(result, vbuffer, count);
@@ -98,8 +98,8 @@ TEST_F(TranscoderTest, NonNormalized) {
     Transcoder transcodeShorts({
         .componentType = ComponentType::SHORT,
         .normalized = false,
-        .numComponents = 3,
-        .strideBytes = sizeof(Vertex)
+        .componentCount = 3u,
+        .inputStrideBytes = sizeof(Vertex)
     });
 
     size_t written = transcodeShorts(result, srcBytes + 4, count);
@@ -115,8 +115,8 @@ TEST_F(TranscoderTest, NonNormalized) {
     Transcoder transcodeHalf({
         .componentType = ComponentType::HALF,
         .normalized = false, // <= this field is ignored for HALF
-        .numComponents = 1,
-        .strideBytes = sizeof(Vertex)
+        .componentCount = 1u,
+        .inputStrideBytes = sizeof(Vertex)
     });
 
     transcodeHalf(result, srcBytes + 10, count);

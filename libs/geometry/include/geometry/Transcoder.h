@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 namespace geometry {
@@ -46,8 +47,8 @@ enum class ComponentType {
  * Transcoder transcode({
  *     .componentType = ComponentType::BYTE,
  *     .normalized = true,
- *     .numComponents = 3,
- *     .strideBytes = 0
+ *     .componentCount = 3,
+ *     .inputStrideBytes = 0
  * });
  *
  * transcode(outputPtr, inputPtr, count);
@@ -65,8 +66,8 @@ public:
     struct Config {
         ComponentType componentType;
         bool normalized;
-        int numComponents;
-        int strideBytes = 0; //!< If stride is 0, the transcoder assumes tight packing.
+        uint32_t componentCount;
+        uint32_t inputStrideBytes = 0; //!< If stride is 0, the transcoder assumes tight packing.
     };
 
     /**

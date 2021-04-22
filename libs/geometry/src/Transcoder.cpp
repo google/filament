@@ -28,13 +28,13 @@ namespace geometry {
 // untyped blobs of interleaved data. Note that this variant takes an arbitrary number of
 // components, we also have a fixed-size variant for better compiler output.
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR>
-void convert(float* target, void const* source, size_t count, int numComponents,
+void convert(float* target, void const* source, size_t count, int componentCount,
         int srcStride) {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
-    for (size_t i = 0; i < count; ++i, target += numComponents, srcBytes += srcStride) {
+    for (size_t i = 0; i < count; ++i, target += componentCount, srcBytes += srcStride) {
         SOURCE_TYPE const* src = (SOURCE_TYPE const*) srcBytes;
-        for (int n = 0; n < numComponents; ++n) {
+        for (int n = 0; n < componentCount; ++n) {
             target[n] = float(src[n]) * scale;
         }
     }
@@ -57,13 +57,13 @@ void convert(float* target, void const* source, size_t count, int srcStride) {
 // therefore be clamped. For more information, see the Vulkan spec under the section "Conversion
 // from Normalized Fixed-Point to Floating-Point".
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR>
-void convertClamped(float* target, void const* source, size_t count, int numComponents,
+void convertClamped(float* target, void const* source, size_t count, int componentCount,
         int srcStride) {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
-    for (size_t i = 0; i < count; ++i, target += numComponents, srcBytes += srcStride) {
+    for (size_t i = 0; i < count; ++i, target += componentCount, srcBytes += srcStride) {
         SOURCE_TYPE const* src = (SOURCE_TYPE const*) srcBytes;
-        for (int n = 0; n < numComponents; ++n) {
+        for (int n = 0; n < componentCount; ++n) {
             const float value = float(src[n]) * scale;
             target[n] = value < -1.0f ? -1.0f : value;
         }
@@ -84,14 +84,14 @@ void convertClamped(float* target, void const* source, size_t count, int srcStri
 }
 
 size_t Transcoder::operator()(float* target, void const* source, size_t count) const noexcept {
-    const size_t required = count * mConfig.numComponents * sizeof(float);
+    const size_t required = count * mConfig.componentCount * sizeof(float);
     if (target == nullptr) {
         return required;
     }
-    const int comp = mConfig.numComponents;
+    const uint32_t comp = mConfig.componentCount;
     switch (mConfig.componentType) {
         case ComponentType::BYTE: {
-            const int stride = mConfig.strideBytes ? mConfig.strideBytes : comp;
+            const uint32_t stride = mConfig.inputStrideBytes ? mConfig.inputStrideBytes : comp;
             if (mConfig.normalized) {
                 if (comp == 2) {
                     convertClamped<int8_t, 127, 2>(target, source, count, stride);
@@ -112,7 +112,7 @@ size_t Transcoder::operator()(float* target, void const* source, size_t count) c
             return required;
         }
         case ComponentType::UBYTE: {
-            int const stride = mConfig.strideBytes ? mConfig.strideBytes : comp;
+            const uint32_t stride = mConfig.inputStrideBytes ? mConfig.inputStrideBytes : comp;
             if (mConfig.normalized) {
                 if (comp == 2) {
                     convert<uint8_t, 255, 2>(target, source, count, stride);
@@ -133,7 +133,7 @@ size_t Transcoder::operator()(float* target, void const* source, size_t count) c
             return required;
         }
         case ComponentType::SHORT: {
-            const int stride = mConfig.strideBytes ? mConfig.strideBytes : (2 * comp);
+            const uint32_t stride = mConfig.inputStrideBytes ? mConfig.inputStrideBytes : (2 * comp);
             if (mConfig.normalized) {
                 if (comp == 2) {
                     convertClamped<int16_t, 32767, 2>(target, source, count, stride);
@@ -154,7 +154,7 @@ size_t Transcoder::operator()(float* target, void const* source, size_t count) c
             return required;
         }
         case ComponentType::USHORT: {
-            const int stride = mConfig.strideBytes ? mConfig.strideBytes : (2 * comp);
+            const uint32_t stride = mConfig.inputStrideBytes ? mConfig.inputStrideBytes : (2 * comp);
             if (mConfig.normalized) {
                 if (comp == 2) {
                     convert<uint16_t, 65535, 2>(target, source, count, stride);
@@ -175,7 +175,7 @@ size_t Transcoder::operator()(float* target, void const* source, size_t count) c
             return required;
         }
         case ComponentType::HALF: {
-            const int stride = mConfig.strideBytes ? mConfig.strideBytes : (2 * comp);
+            const uint32_t stride = mConfig.inputStrideBytes ? mConfig.inputStrideBytes : (2 * comp);
             uint8_t const* srcBytes = (uint8_t const*) source;
             for (size_t i = 0; i < count; ++i, target += comp, srcBytes += stride) {
                 half const* src = (half const*) srcBytes;
