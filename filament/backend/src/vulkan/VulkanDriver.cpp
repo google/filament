@@ -1652,7 +1652,11 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const uint32_t bufferCount = prim.vertexBuffer->attributes.size();
     for (uint32_t attribIndex = 0; attribIndex < bufferCount; attribIndex++) {
         Attribute attrib = prim.vertexBuffer->attributes[attribIndex];
-        VkFormat vkformat = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED);
+
+        const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+        const bool isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
+
+        VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
 
         // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes. Filament's
         // vertex shaders declare all attributes as either vec4 or uvec4 (the latter for bone
@@ -1660,7 +1664,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         // a dummy type of either R8G8B8A8_UINT or R8G8B8A8_SNORM, depending on whether the shader
         // expects to receive floats or ints.
         if (attrib.buffer == Attribute::BUFFER_UNUSED) {
-            const bool isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
             vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
             attrib = prim.vertexBuffer->attributes[0];
         }
