@@ -75,7 +75,7 @@ public:
      *
      * The config is not passed by const reference to allow for type inference at the call site.
      */
-    Transcoder(Config config) : mConfig(config) {}
+    Transcoder(Config config) noexcept : mConfig(config) {}
 
     /**
      * Converts arbitrary data into tightly packed 32-bit floating point values.
@@ -91,7 +91,8 @@ public:
      * @return Number of bytes required to contain "count" items after conversion to packed floats
      *
      */
-    size_t operator()(float* target, void const* source, size_t count) const noexcept;
+    size_t operator()(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source,
+            size_t count) const noexcept;
 
 private:
     const Config mConfig;

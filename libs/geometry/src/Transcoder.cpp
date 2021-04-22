@@ -28,8 +28,8 @@ namespace geometry {
 // untyped blobs of interleaved data. Note that this variant takes an arbitrary number of
 // components, we also have a fixed-size variant for better compiler output.
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR>
-void convert(float* target, void const* source, size_t count, int componentCount,
-        int srcStride) {
+void convert(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source, size_t count,
+        int componentCount, int srcStride) noexcept {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
     for (size_t i = 0; i < count; ++i, target += componentCount, srcBytes += srcStride) {
@@ -41,7 +41,8 @@ void convert(float* target, void const* source, size_t count, int componentCount
 }
 
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR, int NUM_COMPONENTS>
-void convert(float* target, void const* source, size_t count, int srcStride) {
+void convert(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source, size_t count,
+        int srcStride) noexcept {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
     for (size_t i = 0; i < count; ++i, target += NUM_COMPONENTS, srcBytes += srcStride) {
@@ -57,8 +58,8 @@ void convert(float* target, void const* source, size_t count, int srcStride) {
 // therefore be clamped. For more information, see the Vulkan spec under the section "Conversion
 // from Normalized Fixed-Point to Floating-Point".
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR>
-void convertClamped(float* target, void const* source, size_t count, int componentCount,
-        int srcStride) {
+void convertClamped(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source, size_t count,
+        int componentCount, int srcStride) noexcept {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
     for (size_t i = 0; i < count; ++i, target += componentCount, srcBytes += srcStride) {
@@ -71,7 +72,8 @@ void convertClamped(float* target, void const* source, size_t count, int compone
 }
 
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR, int NUM_COMPONENTS>
-void convertClamped(float* target, void const* source, size_t count, int srcStride) {
+void convertClamped(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source, size_t count,
+        int srcStride) noexcept {
     constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
     uint8_t const* srcBytes = (uint8_t const*) source;
     for (size_t i = 0; i < count; ++i, target += NUM_COMPONENTS, srcBytes += srcStride) {
@@ -83,7 +85,8 @@ void convertClamped(float* target, void const* source, size_t count, int srcStri
     }
 }
 
-size_t Transcoder::operator()(float* target, void const* source, size_t count) const noexcept {
+size_t Transcoder::operator()(float* UTILS_RESTRICT target, void const* UTILS_RESTRICT source,
+        size_t count) const noexcept {
     const size_t required = count * mConfig.componentCount * sizeof(float);
     if (target == nullptr) {
         return required;
