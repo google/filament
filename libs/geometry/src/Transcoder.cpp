@@ -25,7 +25,8 @@ namespace geometry {
 
 // The internal workhorse function of the Transcoder, which takes arbitrary input but always
 // produced packed floats. We expose a more readable interface than this to users, who often have
-// untyped blobs of interleaved data.
+// untyped blobs of interleaved data. Note that this variant takes an arbitrary number of
+// components, we also have a fixed-size variant for better compiler output.
 template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR>
 void convert(float* target, void const* source, size_t count, int numComponents,
         int srcStride) {
@@ -34,6 +35,18 @@ void convert(float* target, void const* source, size_t count, int numComponents,
     for (size_t i = 0; i < count; ++i, target += numComponents, srcBytes += srcStride) {
         SOURCE_TYPE const* src = (SOURCE_TYPE const*) srcBytes;
         for (int n = 0; n < numComponents; ++n) {
+            target[n] = float(src[n]) * scale;
+        }
+    }
+}
+
+template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR, int NUM_COMPONENTS>
+void convert(float* target, void const* source, size_t count, int srcStride) {
+    constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
+    uint8_t const* srcBytes = (uint8_t const*) source;
+    for (size_t i = 0; i < count; ++i, target += NUM_COMPONENTS, srcBytes += srcStride) {
+        SOURCE_TYPE const* src = (SOURCE_TYPE const*) srcBytes;
+        for (int n = 0; n < NUM_COMPONENTS; ++n) {
             target[n] = float(src[n]) * scale;
         }
     }
@@ -57,6 +70,19 @@ void convertClamped(float* target, void const* source, size_t count, int numComp
     }
 }
 
+template<typename SOURCE_TYPE, int NORMALIZATION_FACTOR, int NUM_COMPONENTS>
+void convertClamped(float* target, void const* source, size_t count, int srcStride) {
+    constexpr float scale = 1.0f / float(NORMALIZATION_FACTOR);
+    uint8_t const* srcBytes = (uint8_t const*) source;
+    for (size_t i = 0; i < count; ++i, target += NUM_COMPONENTS, srcBytes += srcStride) {
+        SOURCE_TYPE const* src = (SOURCE_TYPE const*) srcBytes;
+        for (int n = 0; n < NUM_COMPONENTS; ++n) {
+            const float value = float(src[n]) * scale;
+            target[n] = value < -1.0f ? -1.0f : value;
+        }
+    }
+}
+
 size_t Transcoder::operator()(float* target, void const* source, size_t count) const noexcept {
     const size_t required = count * mConfig.numComponents * sizeof(float);
     if (target == nullptr) {
@@ -67,36 +93,84 @@ size_t Transcoder::operator()(float* target, void const* source, size_t count) c
         case ComponentType::BYTE: {
             const int stride = mConfig.strideBytes ? mConfig.strideBytes : comp;
             if (mConfig.normalized) {
-                convertClamped<int8_t, 127>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convertClamped<int8_t, 127, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convertClamped<int8_t, 127, 3>(target, source, count, stride);
+                } else {
+                    convertClamped<int8_t, 127>(target, source, count, comp, stride);
+                }
             } else {
-                convert<int8_t, 1>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<int8_t, 1, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<int8_t, 1, 3>(target, source, count, stride);
+                } else {
+                    convert<int8_t, 1>(target, source, count, comp, stride);
+                }
             }
             return required;
         }
         case ComponentType::UBYTE: {
             int const stride = mConfig.strideBytes ? mConfig.strideBytes : comp;
             if (mConfig.normalized) {
-                convert<uint8_t, 255>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<uint8_t, 255, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<uint8_t, 255, 3>(target, source, count, stride);
+                } else {
+                    convert<uint8_t, 255>(target, source, count, comp, stride);
+                }
             } else {
-                convert<uint8_t, 1>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<uint8_t, 1, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<uint8_t, 1, 3>(target, source, count, stride);
+                } else {
+                    convert<uint8_t, 1>(target, source, count, comp, stride);
+                }
             }
             return required;
         }
         case ComponentType::SHORT: {
             const int stride = mConfig.strideBytes ? mConfig.strideBytes : (2 * comp);
             if (mConfig.normalized) {
-                convertClamped<int16_t, 32767>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convertClamped<int16_t, 32767, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convertClamped<int16_t, 32767, 3>(target, source, count, stride);
+                } else {
+                    convertClamped<int16_t, 32767>(target, source, count, comp, stride);
+                }
             } else {
-                convert<int16_t, 1>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<int16_t, 1, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<int16_t, 1, 3>(target, source, count, stride);
+                } else {
+                    convert<int16_t, 1>(target, source, count, comp, stride);
+                }
             }
             return required;
         }
         case ComponentType::USHORT: {
             const int stride = mConfig.strideBytes ? mConfig.strideBytes : (2 * comp);
             if (mConfig.normalized) {
-                convert<uint16_t, 65535>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<uint16_t, 65535, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<uint16_t, 65535, 3>(target, source, count, stride);
+                } else {
+                    convert<uint16_t, 65535>(target, source, count, comp, stride);
+                }
             } else {
-                convert<uint16_t, 1>(target, source, count, comp, stride);
+                if (comp == 2) {
+                    convert<uint16_t, 1, 2>(target, source, count, stride);
+                } else if (comp == 3) {
+                    convert<uint16_t, 1, 3>(target, source, count, stride);
+                } else {
+                    convert<uint16_t, 1>(target, source, count, comp, stride);
+                }
             }
             return required;
         }
