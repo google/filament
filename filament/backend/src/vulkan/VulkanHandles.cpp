@@ -97,6 +97,8 @@ static VulkanAttachment createAttachment(VulkanAttachment spec) {
     return {
         .format = spec.texture->getVkFormat(),
         .image = spec.texture->getVkImage(),
+        .view = {},
+        .memory = {},
         .texture = spec.texture,
         .layout = getTextureLayout(spec.texture->usage),
         .level = spec.level,
@@ -174,7 +176,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     VulkanTexture* msTexture = new VulkanTexture(context, depthTexture->target, level,
             depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
     mMsaaDepthAttachment = createAttachment({
+        .format = {},
+        .image = {},
+        .view = {},
+        .memory = {},
         .texture = msTexture,
+        .layout = {},
         .level = depthSpec.level,
         .layer = depthSpec.layer,
     });
@@ -197,6 +204,7 @@ VulkanRenderTarget::~VulkanRenderTarget() {
 VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface) {
     surfaceContext.suboptimal = false;
     surfaceContext.surface = vksurface;
+    surfaceContext.firstRenderPass = true;
     getPresentationQueue(context, surfaceContext);
     createSwapChain(context, surfaceContext);
 }
@@ -210,25 +218,9 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     surfaceContext.swapchain = VK_NULL_HANDLE;
 
     // Somewhat arbitrarily, headless rendering is double-buffered.
-    surfaceContext.swapContexts.resize(2);
+    surfaceContext.attachments.resize(2);
 
-    // Allocate a command buffer for each swap context, just like a real swap chain.
-    VkCommandBufferAllocateInfo allocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = context.commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = (uint32_t) surfaceContext.swapContexts.size()
-    };
-    std::vector<VkCommandBuffer> cmdbufs(allocateInfo.commandBufferCount);
-    vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
-    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
-        surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
-    }
-
-    // Begin a new command buffer in order to transition image layouts via vkCmdPipelineBarrier.
-    VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
-
-    for (size_t i = 0; i < surfaceContext.swapContexts.size(); ++i) {
+    for (size_t i = 0; i < surfaceContext.attachments.size(); ++i) {
         VkImage image;
         VkImageCreateInfo iCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -261,7 +253,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
         vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
         vkBindImageMemory(context.device, image, imageMemory, 0);
 
-        surfaceContext.swapContexts[i].attachment = {
+        surfaceContext.attachments[i] = {
             .format = surfaceContext.surfaceFormat.format, .image = image,
             .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
         };
@@ -277,7 +269,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
             }
         };
         vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                    &surfaceContext.swapContexts[i].attachment.view);
+                    &surfaceContext.attachments[i].view);
 
         VkImageMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -292,11 +284,10 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
                 .layerCount = 1,
             },
         };
-        vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(context.commands->get().cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                &barrier);
     }
-
-    flushWorkCommandBuffer(context);
 
     surfaceContext.surfaceCapabilities.currentExtent.width = width;
     surfaceContext.surfaceCapabilities.currentExtent.height = height;
@@ -305,7 +296,6 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     surfaceContext.clientSize.height = height;
 
     surfaceContext.imageAvailable = VK_NULL_HANDLE;
-    surfaceContext.renderingFinished = VK_NULL_HANDLE;
 
     createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
 }
@@ -361,7 +351,7 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : getSwapContext(mContext).attachment;
+    return (mOffscreen || target > 0) ? mColor[target] : getSwapChainAttachment(mContext);
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
@@ -391,14 +381,6 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
         }
     }
     return count;
-}
-
-bool VulkanRenderTarget::invalidate() {
-    if (!mOffscreen && getSwapContext(mContext).invalid) {
-        getSwapContext(mContext).invalid = false;
-        return true;
-    }
-    return false;
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
@@ -433,7 +415,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
         vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-        mDisposer.acquire(this, commands.resources);
+        mDisposer.acquire(this);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
@@ -453,14 +435,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
         mStagePool.releaseStage(stage, commands);
     };
 
-    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
-    if (mContext.currentCommands) {
-        copyToDevice(*mContext.currentCommands);
-    } else {
-        acquireWorkCommandBuffer(mContext);
-        copyToDevice(mContext.work);
-        flushWorkCommandBuffer(mContext);
-    }
+    copyToDevice(mContext.commands->get());
 }
 
 VulkanUniformBuffer::~VulkanUniformBuffer() {
@@ -603,13 +578,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
             VulkanTexture::transitionImageLayout(commands.cmdbuffer, mTextureImage,
                     VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
         };
-        if (mContext.currentCommands) {
-            transition(*mContext.currentCommands);
-        } else {
-            acquireWorkCommandBuffer(mContext);
-            transition(mContext.work);
-            flushWorkCommandBuffer(mContext);
-        }
+        transition(mContext.commands->get());
     }
 }
 
@@ -668,14 +637,7 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
         mStagePool.releaseStage(stage, commands);
     };
 
-    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
-    if (mContext.currentCommands) {
-        copyToDevice(*mContext.currentCommands);
-    } else {
-        acquireWorkCommandBuffer(mContext);
-        copyToDevice(mContext.work);
-        flushWorkCommandBuffer(mContext);
-    }
+    copyToDevice(mContext.commands->get());
 }
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
@@ -713,14 +675,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         mStagePool.releaseStage(stage, commands);
     };
 
-    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
-    if (mContext.currentCommands) {
-        copyToDevice(*mContext.currentCommands);
-    } else {
-        acquireWorkCommandBuffer(mContext);
-        copyToDevice(mContext.work);
-        flushWorkCommandBuffer(mContext);
-    }
+    copyToDevice(mContext.commands->get());
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {

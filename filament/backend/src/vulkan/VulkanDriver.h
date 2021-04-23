@@ -145,6 +145,7 @@ private:
     }
 
     void refreshSwapChain();
+    void collectGarbage();
 
     VulkanContext mContext = {};
     VulkanBinder mBinder;

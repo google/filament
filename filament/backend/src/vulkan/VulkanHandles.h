@@ -60,9 +60,9 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
     int getColorTargetCount(const VulkanRenderPass& pass) const;
-    bool invalidate();
     uint8_t getSamples() const { return mSamples; }
     bool hasDepth() const { return mDepth.format != VK_FORMAT_UNDEFINED; }
+    bool isSwapChain() const { return !mOffscreen; }
 
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
