@@ -101,7 +101,7 @@ highp vec3 getLightSpacePosition() {
  * @public-api
  */
 highp vec3 getNormalizedViewportCoord() {
-    // make sure handle our reversed-z
+    // make sure to handle our reversed-z
     return vec3(shading_normalizedViewportCoord, 1.0 - gl_FragCoord.z);
 }
 
