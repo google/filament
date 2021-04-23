@@ -43,6 +43,7 @@ public:
     explicit IBL(filament::Engine& engine);
     ~IBL();
 
+    bool loadFromEquirect(const utils::Path& path);
     bool loadFromDirectory(const utils::Path& path);
     bool loadFromKtx(const std::string& prefix);
 

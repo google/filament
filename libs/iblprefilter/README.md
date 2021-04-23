@@ -10,7 +10,7 @@ public APIs.
 ## Library and headers
 
 The library is called `libfilament-iblprefilter.a` and its public headers can be found in 
-`<filament/iblprefilter/*.h>`.
+`<filament-iblprefilter/*.h>`.
 
 ## Performance
 
@@ -21,7 +21,7 @@ samples.
 
 ```c++
 #include <filament/Engine.h>
-#include <filament/iblprefilter/IBLPrefilterContext.h>
+#include <filament-iblprefilter/IBLPrefilterContext.h>
 
 using namespace filament;
 

@@ -453,16 +453,20 @@ void FilamentApp::loadIBL(const Config& config) {
             return;
         }
 
-        if (!iblPath.isDirectory()) {
-            std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
-            return;
-        }
-
         mIBL = std::make_unique<IBL>(*mEngine);
-        if (!mIBL->loadFromDirectory(iblPath)) {
-            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-            mIBL.reset(nullptr);
-            return;
+
+        if (!iblPath.isDirectory()) {
+            if (!mIBL->loadFromEquirect(iblPath)) {
+                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+                mIBL.reset(nullptr);
+                return;
+            }
+        } else {
+            if (!mIBL->loadFromDirectory(iblPath)) {
+                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+                mIBL.reset(nullptr);
+                return;
+            }
         }
     }
 }
