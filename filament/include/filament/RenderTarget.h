@@ -59,8 +59,6 @@ public:
         COLOR  = COLOR0,     //!< identifies the 1st color attachment
     };
 
-    static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1;
-
     //! Use Builder to construct a RenderTarget object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;

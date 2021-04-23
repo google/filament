@@ -57,7 +57,8 @@ public:
 
 private:
     friend class RenderTarget;
-    Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
+    static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1;
+    Attachment mAttachments[ATTACHMENT_COUNT];
     HwHandle mHandle{};
     backend::TargetBufferFlags mAttachmentMask = {};
 };

@@ -28,7 +28,7 @@ namespace filament {
 using namespace backend;
 
 struct RenderTarget::BuilderDetails {
-    FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT] = {};
+    FRenderTarget::Attachment mAttachments[FRenderTarget::ATTACHMENT_COUNT] = {};
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
@@ -127,7 +127,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         }
     };
 
-    for (size_t i = 0; i < ATTACHMENT_COUNT; i++) {
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (mAttachments[i].texture) {
             mAttachmentMask |= getMRTColorFlag(i);
             setAttachment(mrt[i], (AttachmentPoint)i);
