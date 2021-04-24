@@ -569,17 +569,19 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             }
 
             if (converted) {
-                uint32_t* const UTILS_RESTRICT dst = (uint32_t*)converted + b * config.lutDimension * config.lutDimension;
-                half4* UTILS_RESTRICT src = (half4*) data + b * config.lutDimension * config.lutDimension;
+                uint32_t* const UTILS_RESTRICT dst = (uint32_t*) converted +
+                        b * config.lutDimension * config.lutDimension;
+                half4* UTILS_RESTRICT src = (half4*) data +
+                        b * config.lutDimension * config.lutDimension;
                 // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
                 // 32-bits results in one go.
                 const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
                 #pragma clang loop vectorize_width(8)
                 for (size_t i = 0; i < count; ++i) {
                     float4 v{src[i]};
-                    uint32_t r = uint32_t(floor(v.x * 1023.0f + 0.5f));
-                    uint32_t g = uint32_t(floor(v.y * 1023.0f + 0.5f));
-                    uint32_t b = uint32_t(floor(v.z * 1023.0f + 0.5f));
+                    uint32_t r = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
+                    uint32_t g = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
+                    uint32_t b = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
                     dst[i] = (b << 20u) | (g << 10u) | r;
                 }
             }

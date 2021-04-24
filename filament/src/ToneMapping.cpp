@@ -15,7 +15,7 @@
  */
 
 #include "ToneMapping.h"
-#include <iostream>
+
 namespace filament {
 namespace aces {
 
@@ -190,11 +190,11 @@ float genericTonemap(float x, float contrast, float shoulder,
         float midGreyIn, float midGreyOut, float hdrMax) noexcept {
     // Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines"
     // https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
-    float mc = pow(midGreyIn, contrast);
-    float mcs = pow(mc, shoulder);
+    float mc = std::pow(midGreyIn, contrast);
+    float mcs = std::pow(mc, shoulder);
 
-    float hc = pow(hdrMax, contrast);
-    float hcs = pow(hc, shoulder);
+    float hc = std::pow(hdrMax, contrast);
+    float hcs = std::pow(hc, shoulder);
 
     float b1 = -mc + hc * midGreyOut;
     float b2 = (hcs - mcs) * midGreyOut;
@@ -204,8 +204,8 @@ float genericTonemap(float x, float contrast, float shoulder,
     float c2 = (hcs - mcs) * midGreyOut;
     float c = c1 / c2;
 
-    float xc = pow(x, contrast);
-    return saturate(xc / (pow(xc, shoulder) * b + c));
+    float xc = std::pow(x, contrast);
+    return saturate(xc / (std::pow(xc, shoulder) * b + c));
 }
 
 float3 EVILS(float3 x) noexcept {
