@@ -183,6 +183,8 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
 
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
+    cg.generateQualityDefine(vs, material.quality);
+
     cg.generateDefine(vs, "MAX_SHADOW_CASTING_SPOTS", uint32_t(CONFIG_MAX_SHADOW_CASTING_SPOTS));
 
     cg.generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
@@ -300,6 +302,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
 
     utils::io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
+
+    cg.generateQualityDefine(fs, material.quality);
 
     cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA", material.specularAntiAliasing && lit);
 
@@ -473,6 +477,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     utils::io::sstream vs;
     cg.generateProlog(vs, ShaderType::VERTEX, false);
+
+    cg.generateQualityDefine(vs, material.quality);
+
     cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
 
     // The UVs are at the location immediately following the custom variables.
@@ -514,6 +521,8 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     utils::io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+
+    cg.generateQualityDefine(fs, material.quality);
 
     // The UVs are at the location immediately following the custom variables.
     cg.generateDefine(fs, "LOCATION_UVS", uint32_t(MaterialBuilder::MATERIAL_VARIABLES_COUNT));

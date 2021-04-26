@@ -100,16 +100,6 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
-    out << '\n';
-    out << "#define FILAMENT_QUALITY_LOW  0\n";
-    out << "#define FILAMENT_QUALITY_HIGH 1\n";
-    out << "#if defined(TARGET_MOBILE)\n";
-    out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_LOW\n";
-    out << "#else\n";
-    out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_HIGH\n";
-    out << "#endif\n";
-    out << '\n';
-
     Precision defaultPrecision = getDefaultPrecision(type);
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
@@ -472,6 +462,36 @@ io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
     if (isSet) {
         out << "#define " << "MATERIAL_HAS_" << getConstantName(property) << "\n";
     }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQuality quality) const {
+    out << "#define FILAMENT_QUALITY_LOW    0\n";
+    out << "#define FILAMENT_QUALITY_NORMAL 1\n";
+    out << "#define FILAMENT_QUALITY_HIGH   2\n";
+
+    switch (quality) {
+        case ShaderQuality::DEFAULT:
+            switch (mShaderModel) {
+                default:                        goto quality_normal;
+                case ShaderModel::GL_CORE_41:   goto quality_high;
+                case ShaderModel::GL_ES_30:     goto quality_low;
+            }
+        case ShaderQuality::LOW:
+        quality_low:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_LOW\n";
+            break;
+        case ShaderQuality::NORMAL:
+        default:
+        quality_normal:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_NORMAL\n";
+            break;
+        case ShaderQuality::HIGH:
+        quality_high:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_HIGH\n";
+            break;
+    }
+
     return out;
 }
 

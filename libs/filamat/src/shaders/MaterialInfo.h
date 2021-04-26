@@ -54,6 +54,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::SamplerInterfaceBlock sib;
     filament::SubpassInfo subpass;
     filament::SamplerBindingMap samplerBindings;
+    filament::ShaderQuality quality;
 };
 
 }
