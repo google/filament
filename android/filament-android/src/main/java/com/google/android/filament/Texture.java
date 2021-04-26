@@ -509,12 +509,15 @@ public class Texture {
                 case RGBA_INTEGER:
                     n = 4;
                     break;
+
+                default: throw new IllegalStateException("unsupported format enum");
             }
 
             int bpp = n;
             switch (type) {
                 case UBYTE:
                 case BYTE:
+                case COMPRESSED:
                     // nothing to do
                     break;
                 case USHORT:
