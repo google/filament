@@ -1943,6 +1943,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 </p></dd><dt>Description</dt><dd><p>      Only available in the <code>unlit</code> shading model. If this property is enabled, the final color
       computed by the material is multiplied by the shadowing factor (or visibility). This allows to
       create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
+      This is only supported with shadows from directional lights.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    name : "Invisible shadow plane",</span>
@@ -2379,7 +2380,7 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldGeometricNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldReflectedVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Reflection of the view vector about the normal (must be used after <code>prepareMaterial()</code>) </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Normalized viewport position (i.e. clip-space position normalized to [0, 1], can be used before <code>prepareMaterial()</code>) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized viewport position (i.e. NDC coordinates normalized to [0, 1], can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getNdotV()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> The result of <code>dot(normal, view)</code>, always strictly greater than 0 (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getColor()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Interpolated color of the fragment, if the color attribute is required </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv0 attribute is required </td></tr>
