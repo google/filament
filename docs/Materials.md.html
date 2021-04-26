@@ -1096,6 +1096,26 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: quality
+
+Type
+:    `string`
+
+Value
+:     Any of `low`, `normal`, `high`, `default`. Defaults to `default`.
+
+Description
+:    Set some global quality parameters of the material. `low` enables optimizations that can
+     slightly affect correctness and is the default on mobile platforms. `normal` does not affect
+     correctness and is otherwise similar to `low`. `high` enables quality settings that can
+     adversely affect performance and is the default on desktop platforms.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    quality : default
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Vertex and attributes: requires
 
 Type

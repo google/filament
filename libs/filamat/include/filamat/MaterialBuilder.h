@@ -191,6 +191,7 @@ public:
     using RefractionMode = filament::RefractionMode;
     using RefractionType = filament::RefractionType;
 
+    using ShaderQuality = filament::ShaderQuality;
     using BlendingMode = filament::BlendingMode;
     using Shading = filament::Shading;
     using Interpolation = filament::Interpolation;
@@ -342,6 +343,9 @@ public:
      *             reporting
      */
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
+
+
+    MaterialBuilder& quality(ShaderQuality quality) noexcept;
 
     //! Set the blending mode for this material.
     MaterialBuilder& blending(BlendingMode blending) noexcept;
@@ -652,6 +656,7 @@ private:
     VariableList mVariables;
     OutputList mOutputs;
 
+    ShaderQuality mShaderQuality = ShaderQuality::DEFAULT;
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
     BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
