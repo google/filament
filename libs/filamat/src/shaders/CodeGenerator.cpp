@@ -18,8 +18,12 @@
 
 #include "generated/shaders.h"
 
+#include <utils/sstream.h>
+
 #include <cctype>
 #include <iomanip>
+
+#include <assert.h>
 
 namespace filamat {
 
@@ -74,8 +78,26 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     if (mTargetApi == TargetApi::METAL) {
         out << "#define TARGET_METAL_ENVIRONMENT\n";
     }
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_ES_30) {
+        out << "#define TARGET_GLES_ENVIRONMENT\n";
+    }
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+        out << "#define TARGET_GL_ENVIRONMENT\n";
+    }
+
+    out << '\n';
     if (mTargetLanguage == TargetLanguage::SPIRV) {
-        out << "#define TARGET_LANGUAGE_SPIRV\n";
+        out << "#define FILAMENT_VULKAN_SEMANTICS\n";
+    }
+    if (mTargetLanguage == TargetLanguage::GLSL) {
+        out << "#define FILAMENT_OPENGL_SEMANTICS\n";
+    }
+
+    out << '\n';
+    if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::METAL ||
+        mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+        out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
     out << '\n';

@@ -48,7 +48,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     // note: the first time, the source texture is swizzled -- so .r and .g are the same channel
     // if swizzling is not supported, we use dofTilesSwizzle instead.
-#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     vec4 mi = textureGather(materialParams_cocMinMax, uv, 0); // 01, 11, 10, 00
     vec4 ma = textureGather(materialParams_cocMinMax, uv, 1); // 01, 11, 10, 00
 #else

@@ -68,8 +68,8 @@ public:
     };
 
     enum class TargetLanguage {
-        GLSL,
-        SPIRV
+        GLSL,           // GLSL with OpenGL semantics
+        SPIRV           // GLSL with Vulkan semantics
     };
 
     enum class Optimization {
