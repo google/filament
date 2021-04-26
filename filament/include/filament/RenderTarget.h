@@ -50,11 +50,15 @@ public:
      * Attachment identifiers
      */
     enum AttachmentPoint {
-        COLOR = 0,      //!< identifies the color attachment
-        DEPTH = 1,      //!< identifies the depth attachment
+        COLOR0 = 0,          //!< identifies the 1st color attachment
+        COLOR1 = 2,          //!< identifies the 2nd color attachment
+        COLOR2 = 3,          //!< identifies the 3rd color attachment
+        COLOR3 = 4,          //!< identifies the 4th color attachment
+        DEPTH  = 1,          //!< identifies the depth attachment
+        COLOR  = COLOR0,     //!< identifies the 1st color attachment
     };
 
-    static constexpr size_t ATTACHMENT_COUNT = 2;
+    static constexpr size_t ATTACHMENT_COUNT = 5;
 
     //! Use Builder to construct a RenderTarget object instance
     class Builder : public BuilderBase<BuilderDetails> {

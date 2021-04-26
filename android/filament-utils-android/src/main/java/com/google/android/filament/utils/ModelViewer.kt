@@ -176,12 +176,17 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      *
      * The given callback is triggered for each requested resource.
      */
-    fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer) {
+    fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer?) {
         destroyModel()
         asset = assetLoader.createAssetFromJson(buffer)
         asset?.let { asset ->
             for (uri in asset.resourceUris) {
-                resourceLoader.addResourceData(uri, callback(uri))
+                val resourceBuffer = callback(uri)
+                if (resourceBuffer == null) {
+                    this.asset = null
+                    return
+                }
+                resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
@@ -267,9 +272,14 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     private fun populateScene(asset: FilamentAsset) {
+        val rcm = engine.renderableManager
         var count = 0
         val popRenderables = {count = asset.popRenderables(readyRenderables); count != 0}
         while (popRenderables()) {
+            for (i in 0..count-1) {
+                val ri = rcm.getInstance(readyRenderables[i])
+                rcm.setScreenSpaceContactShadows(ri, true)
+            }
             scene.addEntities(readyRenderables.take(count).toIntArray())
         }
         scene.addEntities(asset.lightEntities)

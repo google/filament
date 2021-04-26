@@ -71,7 +71,7 @@ struct App {
     Scene* offscreenScene = nullptr;
     Camera* offscreenCamera = nullptr;
 
-    ReflectionMode mode;
+    ReflectionMode mode = ReflectionMode::CAMERA;
     Config config;
 
     utils::Entity quadEntity;
@@ -187,7 +187,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    App app{};
     app.config.title = "rendertarget";
     handleCommandLineArguments(argc, argv, &app);
 

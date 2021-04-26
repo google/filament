@@ -39,7 +39,7 @@ build/common/bump-version.sh $RELEASE
 Commit changes to main with the title:
 
 ```
-Bump version to $RELEASE
+Release Filament $RELEASE
 ```
 
 Do not push to origin yet.
@@ -106,7 +106,9 @@ git push origin release
 Use the GitHub UI to create a GitHub release corresponding to $RELEASE version.
 Make sure the target is set to the release branch.
 
-## 7. Delete the old rc branch.
+## 7. Delete the old rc branch (optional).
+
+This step is optional. The old rc branch may be left alive for a few weeks for posterity.
 
 ```
 git push origin --delete rc/$RELEASE
@@ -134,5 +136,5 @@ git push origin main
 ## 10. Push the new rc branch.
 
 ```
-git push origin rc/$NEXT_RELEASE
+git push origin -u rc/$NEXT_RELEASE
 ```

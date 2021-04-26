@@ -48,10 +48,10 @@ VkFormat getVkFormat(ElementType type, bool normalized) {
             case ElementType::SHORT2: return VK_FORMAT_R16G16_SNORM;
             case ElementType::USHORT2: return VK_FORMAT_R16G16_UNORM;
             // Three Component Types
-            case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SNORM;
-            case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UNORM;
-            case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SNORM;
-            case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UNORM;
+            case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SNORM;      // NOT MINSPEC
+            case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UNORM;     // NOT MINSPEC
+            case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SNORM;  // NOT MINSPEC
+            case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UNORM; // NOT MINSPEC
             // Four Component Types
             case ElementType::BYTE4: return VK_FORMAT_R8G8B8A8_SNORM;
             case ElementType::UBYTE4: return VK_FORMAT_R8G8B8A8_UNORM;
@@ -80,11 +80,11 @@ VkFormat getVkFormat(ElementType type, bool normalized) {
         case ElementType::HALF2: return VK_FORMAT_R16G16_SFLOAT;
         case ElementType::FLOAT2: return VK_FORMAT_R32G32_SFLOAT;
         // Three Component Types
-        case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SINT;
-        case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UINT;
-        case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SINT;
-        case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UINT;
-        case ElementType::HALF3: return VK_FORMAT_R16G16B16_SFLOAT;
+        case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SINT;      // NOT MINSPEC
+        case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UINT;     // NOT MINSPEC
+        case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SINT;  // NOT MINSPEC
+        case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UINT; // NOT MINSPEC
+        case ElementType::HALF3: return VK_FORMAT_R16G16B16_SFLOAT; // NOT MINSPEC
         case ElementType::FLOAT3: return VK_FORMAT_R32G32B32_SFLOAT;
         // Four Component Types
         case ElementType::BYTE4: return VK_FORMAT_R8G8B8A8_SINT;

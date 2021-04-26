@@ -29,7 +29,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.RandomAccessFile
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -154,12 +156,27 @@ class MainActivity : Activity() {
     }
 
     private suspend fun loadZip(message: RemoteServer.ReceivedMessage) {
-        val zipfileBytes = ByteArray(message.buffer.remaining())
-        message.buffer.get(zipfileBytes)
+        // To alleviate memory pressure, remove the old model before deflating the zip.
+        withContext(Dispatchers.Main) {
+            modelViewer.destroyModel()
+        }
 
+        // Large zip files should first be written to a file to prevent OOM.
+        // It is also crucial that we null out the message "buffer" field.
+        val (zipStream, zipFile) = withContext(Dispatchers.IO) {
+            val file = File.createTempFile("incoming", "zip", cacheDir)
+            val raf = RandomAccessFile(file, "rw")
+            raf.getChannel().write(message.buffer);
+            message.buffer = null
+            raf.seek(0)
+            Pair(FileInputStream(file), file)
+        }
+
+        // Deflate each resource using the IO dispatcher, one by one.
         var gltfPath: String? = null
+        var outOfMemory: String? = null
         val pathToBufferMapping = withContext(Dispatchers.IO) {
-            val deflater = ZipInputStream(ByteArrayInputStream(zipfileBytes))
+            val deflater = ZipInputStream(zipStream)
             val mapping = HashMap<String, Buffer>()
             while (true) {
                 val entry = deflater.nextEntry ?: break
@@ -171,19 +188,32 @@ class MainActivity : Activity() {
                 if (entry.name.startsWith(".DS_Store")) continue
 
                 val uri = entry.name
-                val byteArray = deflater.readBytes()
-                Log.i(TAG, "Deflated ${byteArray.size} bytes from $uri")
+                val byteArray: ByteArray? = try {
+                    deflater.readBytes()
+                }
+                catch (e: OutOfMemoryError) {
+                    outOfMemory = uri
+                    break
+                }
+                Log.i(TAG, "Deflated ${byteArray!!.size} bytes from $uri")
                 val buffer = ByteBuffer.wrap(byteArray)
                 mapping[uri] = buffer
-                if (uri.endsWith(".gltf")) {
+                if (uri.endsWith(".gltf") || uri.endsWith(".glb")) {
                     gltfPath = uri
                 }
             }
             mapping
         }
 
+        zipFile.delete()
+
         if (gltfPath == null) {
-            setStatusText("Could not find .gltf in the zip.")
+            setStatusText("Could not find .gltf or .glb in the zip.")
+            return
+        }
+
+        if (outOfMemory != null) {
+            setStatusText("Out of memory while deflating $outOfMemory")
             return
         }
 
@@ -197,13 +227,17 @@ class MainActivity : Activity() {
         }
 
         withContext(Dispatchers.Main) {
-            modelViewer.destroyModel()
-            modelViewer.loadModelGltf(gltfBuffer) { uri ->
-                val path = gltfPrefix + uri
-                if (!pathToBufferMapping.contains(path)) {
-                    Log.e(TAG, "Could not find $path in the zip.")
+            if (gltfPath!!.endsWith(".glb")) {
+                modelViewer.loadModelGlb(gltfBuffer)
+            } else {
+                modelViewer.loadModelGltf(gltfBuffer) { uri ->
+                    val path = gltfPrefix + uri
+                    if (!pathToBufferMapping.contains(path)) {
+                        Log.e(TAG, "Could not find $path in the zip.")
+                        setStatusText("Zip is missing $path")
+                    }
+                    pathToBufferMapping[path]
                 }
-                pathToBufferMapping[path]!!
             }
             modelViewer.transformToUnitCube()
         }

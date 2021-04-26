@@ -896,7 +896,7 @@ public class Texture {
      * @param level     Level to set the image for. Must be less than {@link #getLevels()}.
      * @param xoffset   x-offset in texel of the region to modify
      * @param yoffset   y-offset in texel of the region to modify
-     * @param yoffset   z-offset in texel of the region to modify
+     * @param zoffset   z-offset in texel of the region to modify
      * @param width     width in texel of the region to modify
      * @param height    height in texel of the region to modify
      * @param depth     depth in texel or index of the region to modify

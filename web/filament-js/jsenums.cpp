@@ -298,6 +298,10 @@ enum_<Texture::CubemapFace>("Texture$CubemapFace") // aka backend::TextureCubema
     .value("NEGATIVE_Z", Texture::CubemapFace::NEGATIVE_Z);
 
 enum_<RenderTarget::AttachmentPoint>("RenderTarget$AttachmentPoint")
+    .value("COLOR0", RenderTarget::AttachmentPoint::COLOR0)
+    .value("COLOR1", RenderTarget::AttachmentPoint::COLOR1)
+    .value("COLOR2", RenderTarget::AttachmentPoint::COLOR2)
+    .value("COLOR3", RenderTarget::AttachmentPoint::COLOR3)
     .value("COLOR", RenderTarget::AttachmentPoint::COLOR)
     .value("DEPTH", RenderTarget::AttachmentPoint::DEPTH);
 

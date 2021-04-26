@@ -51,6 +51,14 @@ Java_com_google_android_filament_Renderer_nRender(JNIEnv *, jclass, jlong native
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nRenderStandaloneView(JNIEnv *, jclass, jlong nativeRenderer,
+        jlong nativeView) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    View *view = (View *) nativeView;
+    renderer->renderStandaloneView(view);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv *, jclass, jlong nativeRenderer,
         jlong nativeDstSwapChain,
         jint dstLeft, jint dstBottom, jint dstWidth, jint dstHeight,

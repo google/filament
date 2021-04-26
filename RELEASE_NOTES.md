@@ -5,6 +5,19 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+- engine: Add new `Renderer::renderStandaloneView()` API.
+
+## v1.9.22
+
+- NEW API: `Renderer::renderStandaloneView()` is a new method that can be used outside of
+  beginFrame/endFrame on Views that have a RenderTarget associated. This can be used as a
+  pseudo-compute API.
+- Vulkan: bug fixes and improvements.
+- engine: RenderTarget API can now use MRT.
+- sample-gltf-viewer: improvements for reading zip files.
+- sample-gltf-viewer: enable contact-shadows functionality in mobile gltf-viewer.
+- windows: fix build error in filament_framegraph_test.
+
 ## v1.9.21
 
 - JavaScript: add missing TextureSampler bindings.
@@ -18,17 +31,17 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.20
 
-Android: Fix VSM.
-engine: Introduce BufferObject API.
-engine: Add new isTextureSwizzleSupported API on Texture.
-engine: Add support to Metal and Vulkan backends for texture swizzling.
-engine: Add new DoF settings (native/half res, gather kernel ring counts, CoC radius clamp).
-engine: DoF quality and performance improvements.
-engine: Fix high-quality upsampling issue with SSAO.
-Java: Expose `TransformManager.getParent(int)`.
-samples: Add Metal and Vulkan backend support to Suzanne sample.
-WebGL: expose fitIntoUnitCube to JS.
-WebGL: support for multiple <canvas> elements.
+- Android: Fix VSM.
+- engine: Introduce BufferObject API.
+- engine: Add new isTextureSwizzleSupported API on Texture.
+- engine: Add support to Metal and Vulkan backends for texture swizzling.
+- engine: Add new DoF settings (native/half res, gather kernel ring counts, CoC radius clamp).
+- engine: DoF quality and performance improvements.
+- engine: Fix high-quality upsampling issue with SSAO.
+- Java: Expose `TransformManager.getParent(int)`.
+- samples: Add Metal and Vulkan backend support to Suzanne sample.
+- WebGL: expose fitIntoUnitCube to JS.
+- WebGL: support for multiple `<canvas>` elements.
 
 ## v1.9.19
 

@@ -542,7 +542,7 @@ void makeSwapChainPresentable(VulkanContext& context) {
         //   subresources affected by the barrier
         //
         //   (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkImageMemoryBarrier-oldLayout-01197)
-#if ANDROID
+#ifdef ANDROID
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

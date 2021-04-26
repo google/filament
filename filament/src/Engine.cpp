@@ -824,7 +824,7 @@ void FEngine::destroy(Entity e) {
 
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations
-    if (size > 1024) {
+    if (size > 65536) {
         return nullptr;
     }
     return getDriverApi().allocate(size, alignment);
