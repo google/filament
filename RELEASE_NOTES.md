@@ -9,6 +9,15 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.22
 
+- NEW API: `Renderer::renderStandaloneView()` is a new method that can be used outside of
+  beginFrame/endFrame on Views that have a RenderTarget associated. This can be used as a
+  pseudo-compute API.
+- Vulkan: bug fixes and improvements.
+- engine: RenderTarget API can now use MRT.
+- sample-gltf-viewer: improvements for reading zip files.
+- sample-gltf-viewer: enable contact-shadows functionality in mobile gltf-viewer.
+- windows: fix build error in filament_framegraph_test.
+
 ## v1.9.21
 
 - JavaScript: add missing TextureSampler bindings.
