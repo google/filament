@@ -29,6 +29,7 @@
 #include <filament/Material.h>
 #include <filament/Scene.h>
 #include <filament/LightManager.h>
+#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
@@ -191,6 +192,17 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 }
 #pragma clang diagnostic pop
 
+static void preRender(filament::Engine* engine, filament::View* view, filament::Scene*,
+        filament::Renderer* renderer) {
+
+    // Without an IBL, we must clear the swapchain to black before each frame.
+    renderer->setClearOptions({
+            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
+            .clear = !FilamentApp::get().getIBL()  });
+
+}
+
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 static void setup(Engine* engine, View* view, Scene* scene) {
@@ -235,11 +247,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     view->setAmbientOcclusionOptions({ .enabled = true });
     view->setBloomOptions({ .enabled = true });
-    view->setFogOptions({ .density = 0.2f, .enabled = true });
-
 
     if (g_moreLights) {
-    g_lights.push_back(em.create());
+       g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(1000.0f, LightManager::EFFICIENCY_LED)
@@ -468,7 +478,7 @@ int main(int argc, char* argv[]) {
         });
     }
 
-    filamentApp.run(g_config, setup, cleanup);
+    filamentApp.run(g_config, setup, cleanup, {}, preRender);
 
     return 0;
 }
