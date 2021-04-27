@@ -164,7 +164,7 @@ enum_<ColorGrading::ToneMapping>("ColorGrading$ToneMapping")
     .value("ACES_LEGACY", ColorGrading::ToneMapping::ACES_LEGACY)
     .value("ACES", ColorGrading::ToneMapping::ACES)
     .value("FILMIC", ColorGrading::ToneMapping::FILMIC)
-    .value("UCHIMURA", ColorGrading::ToneMapping::UCHIMURA)
+    .value("EVILS", ColorGrading::ToneMapping::EVILS)
     .value("REINHARD", ColorGrading::ToneMapping::REINHARD)
     .value("DISPLAY_RANGE", ColorGrading::ToneMapping::DISPLAY_RANGE);
 

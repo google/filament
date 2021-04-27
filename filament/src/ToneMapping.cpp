@@ -176,7 +176,6 @@ float3 ACES(float3 color, float brightness) noexcept {
 
 } // namespace aces
 
-
 namespace tonemap {
 
 float3 ACES(float3 x) noexcept {
@@ -187,33 +186,62 @@ float3 ACES_Legacy(float3 x) noexcept {
     return aces::ACES(x, 1.0f / 0.6f);
 }
 
-float3 Uchimura(float3 x) noexcept {
-    // Uchimura 2017, "HDR theory and practice"
-    // Math: https://www.desmos.com/calculator/gslcdxvipg
-    // Source: https://www.slideshare.net/nikuque/hdr-theory-and-practicce-jp
+float genericTonemap(float x, float contrast, float shoulder,
+        float midGreyIn, float midGreyOut, float hdrMax) noexcept {
+    // Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines"
+    // https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
+    float mc = std::pow(midGreyIn, contrast);
+    float mcs = std::pow(mc, shoulder);
 
-    constexpr float P = 1.0;  // max display brightness
-    constexpr float a = 1.0;  // contrast
-    constexpr float m = 0.22; // linear section start
-    constexpr float l = 0.4;  // linear section length
-    constexpr float c = 1.33; // black
-    constexpr float b = 0.0;  // pedestal
+    float hc = std::pow(hdrMax, contrast);
+    float hcs = std::pow(hc, shoulder);
 
-    constexpr float l0 = ((P - m) * l) / a;
-    constexpr float S0 = m + l0;
-    constexpr float S1 = m + a * l0;
-    constexpr float C2 = (a * P) / (P - S1);
-    constexpr float CP = -C2 / P;
+    float b1 = -mc + hc * midGreyOut;
+    float b2 = (hcs - mcs) * midGreyOut;
+    float b = b1 / b2;
 
-    float3 w0 = 1.0f - smoothstep(0.0f, m, x);
-    float3 w2 = step(m + l0, x);
-    float3 w1 = 1.0f - w0 - w2;
+    float c1 = hcs * mc - hc * mcs * midGreyOut;
+    float c2 = (hcs - mcs) * midGreyOut;
+    float c = c1 / c2;
 
-    float3 T = m * pow(x / m, c) + b;
-    float3 S = P - (P - S1) * exp(CP * (x - S0));
-    float3 L = m + a * (x - m);
+    float xc = std::pow(x, contrast);
+    return saturate(xc / (std::pow(xc, shoulder) * b + c));
+}
 
-    return T * w0 + L * w1 + S * w2;
+float3 EVILS(float3 x) noexcept {
+    // Troy Sobotka, 2021, "EVILS - Exposure Value Invariant Luminance Scaling"
+    // https://colab.research.google.com/drive/1iPJzNNKR7PynFmsqSnQm3bCZmQ3CvAJ-#scrollTo=psU43hb-BLzB
+
+    // TODO: These constants were chosen to match our ACES tone mappers as closely as possible
+    //       in terms of compression. We should expose these parameters to users via an API.
+    //       We must however carefully validate exposed parameters as it is easy to get the
+    //       generic tonemapper to produce invalid curves.
+    constexpr float contrast = 1.6f;
+    constexpr float shoulder = 1.0f;
+    constexpr float midGreyIn = 0.18f;
+    constexpr float midGreyOut = 0.227f;
+    constexpr float hdrMax = 64.0f;
+
+    // We assume an input compatible with Rec.709 luminance weights
+    float luminanceIn = dot(x, LUMA_REC709);
+    float luminanceOut = genericTonemap(luminanceIn, contrast, shoulder, midGreyIn, midGreyOut, hdrMax);
+
+    float peak = max(x);
+    float3 chromaRatio = max(x / peak, 0.0f);
+
+    float chromaRatioLuminance = dot(chromaRatio, LUMA_REC709);
+
+    float3 maxReserves = 1.0f - chromaRatio;
+    float maxReservesLuminance = dot(maxReserves, LUMA_REC709);
+
+    float luminanceDifference = std::max(luminanceOut - chromaRatioLuminance, 0.0f);
+    float scaledLuminanceDifference =
+            luminanceDifference / std::max(maxReservesLuminance, std::numeric_limits<float>::min());
+
+    float chromaScale = (luminanceOut - luminanceDifference) /
+            std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
+
+    return saturate(chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves);
 }
 
 float3 DisplayRange(float3 x) noexcept {

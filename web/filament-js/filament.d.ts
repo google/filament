@@ -682,7 +682,7 @@ export enum ColorGrading$ToneMapping {
     ACES_LEGACY,
     ACES,
     FILMIC,
-    UCHIMURA,
+    EVILS,
     REINHARD,
     DISPLAY_RANGE,
 }

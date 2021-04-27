@@ -67,7 +67,7 @@ float3 ACES(float3 x) noexcept;
 
 float3 ACES_Legacy(float3 x) noexcept;
 
-float3 Uchimura(float3 x) noexcept;
+float3 EVILS(float3 x) noexcept;
 
 /**
  * Converts the input HDR RGB color into one of 16 debug colors that represent
