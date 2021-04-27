@@ -11,7 +11,7 @@ set(MATERIAL_DIR "${GENERATION_ROOT}/generated/material")
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/filament/iblprefilter/IBLPrefilterContext.h
+        include/filament-iblprefilter/IBLPrefilterContext.h
 )
 
 set(SRCS
@@ -22,6 +22,7 @@ set(PRIVATE_HDRS
 )
 
 set(MATERIAL_SRCS
+        src/materials/equirectToCube.mat
         src/materials/generateKernel.mat
         src/materials/iblprefilter.mat
 )
@@ -133,4 +134,4 @@ target_link_libraries(${TARGET} PRIVATE
 # ==================================================================================================
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/filament/iblprefilter DESTINATION include)
+install(DIRECTORY ${PUBLIC_HDR_DIR}/filament-iblprefilter DESTINATION include)

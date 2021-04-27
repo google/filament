@@ -384,10 +384,12 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
         float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        mSettings.lighting.sunlightDirection = d;
-        mSettings.lighting.sunlightColor = c.rgb;
-        mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
-        updateIndirectLight();
+        if (!std::isnan(d.x * d.y * d.z)) {
+            mSettings.lighting.sunlightDirection = d;
+            mSettings.lighting.sunlightColor = c.rgb;
+            mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
+            updateIndirectLight();
+        }
     }
 }
 

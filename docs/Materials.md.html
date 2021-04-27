@@ -1501,6 +1501,7 @@ Description
 :     Only available in the `unlit` shading model. If this property is enabled, the final color
       computed by the material is multiplied by the shadowing factor (or visibility). This allows to
       create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
+      This is only supported with shadows from directional lights.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1936,7 +1937,7 @@ The following APIs are only available from the fragment block:
 **getWorldNormalVector()**              | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
 **getWorldGeometricNormalVector()**     | float3   |  Normalized normal in world space, before bump mapping (can be used before `prepareMaterial()`)
 **getWorldReflectedVector()**           | float3   |  Reflection of the view vector about the normal (must be used after `prepareMaterial()`)
-**getNormalizedViewportCoord()**        | float2   |  Normalized viewport position (i.e. clip-space position normalized to [0, 1], can be used before `prepareMaterial()`)
+**getNormalizedViewportCoord()**        | float3   |  Normalized viewport position (i.e. NDC coordinates normalized to [0, 1], can be used before `prepareMaterial()`)
 **getNdotV()**                          | float    |  The result of `dot(normal, view)`, always strictly greater than 0 (must be used after `prepareMaterial()`)
 **getColor()**                          | float4   |  Interpolated color of the fragment, if the color attribute is required
 **getUV0()**                            | float2   |  First interpolated set of UV coordinates, only available if the uv0 attribute is required

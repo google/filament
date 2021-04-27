@@ -79,6 +79,51 @@ public:
     // -------------------------------------------------------------------------------------------
 
     /**
+     * EquirectangularToCubemap is use to convert an equirectangluar image to a cubemap.
+     */
+    class EquirectangularToCubemap {
+    public:
+        /**
+         * Creates a EquirectangularToCubemap processor.
+         * @param context IBLPrefilterContext to use
+         */
+        explicit EquirectangularToCubemap(IBLPrefilterContext& context);
+
+        /**
+         * Destroys all GPU resources created during initialization.
+         */
+        ~EquirectangularToCubemap() noexcept;
+
+        EquirectangularToCubemap(EquirectangularToCubemap const&) = delete;
+        EquirectangularToCubemap& operator=(EquirectangularToCubemap const&) = delete;
+        EquirectangularToCubemap(EquirectangularToCubemap&& rhs) noexcept;
+        EquirectangularToCubemap& operator=(EquirectangularToCubemap&& rhs);
+
+        /**
+         * Converts an equirectangular image to a cubemap.
+         * @param equirectangular   Texture to convert to a cubemap.
+         *                          - Can't be null.
+         *                          - Must be a 2d texture
+         *                          - Must have equirectangular geometry, that is width == 2*height.
+         *                          - Must be allocated with all mip levels.
+         *                          - Must be SAMPLEABLE
+         * @param outCubemap        Output cubemap. If null the texture is automatically created
+         *                          with default parameters (size of 256 with 5 levels).
+         *                          - Must be a cubemap
+         *                          - Must have SAMPLEABLE and COLOR_ATTACHMENT usage bits
+         * @return returns outCubemap
+         */
+        filament::Texture* operator()(
+                filament::Texture const* equirectangular,
+                filament::Texture* outCubemap = nullptr);
+
+    private:
+        IBLPrefilterContext& mContext;
+        filament::Material* mEquirectMaterial = nullptr;
+    };
+
+
+    /**
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
      * An instance of SpecularFilter is needed per filter configuration. A filter configuration
      * contains the filter's kernel and sample count.
@@ -109,7 +154,7 @@ public:
         };
 
         /**
-         * Creates a filter.
+         * Creates a SpecularFilter processor.
          * @param context IBLPrefilterContext to use
          * @param config  Configuration of the filter
          */
@@ -171,7 +216,6 @@ public:
         // TODO: add a callback for when the processing is done?
 
     private:
-        friend class Instance;
         filament::Texture* createReflectionsTexture();
         IBLPrefilterContext& mContext;
         filament::Material* mKernelMaterial = nullptr;
