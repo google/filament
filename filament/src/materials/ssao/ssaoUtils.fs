@@ -9,14 +9,18 @@ highp float linearizeDepth(highp float depth, highp float depthParams) {
     return depthParams / max(depth, preventDiv0);
 }
 
-highp float sampleDepthLinear(const highp sampler2D depthTexture, const highp vec2 uv, float lod, highp float depthParams) {
+highp float sampleDepth(const highp sampler2D depthTexture, const highp vec2 uv, float lod) {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     // On metal/vulkan, texture space is flipped vertically and we need to adjust the uv
     // coordinates.
-    return linearizeDepth(textureLod(depthTexture, vec2(uv.x, 1.0 - uv.y), lod).r, depthParams);
+    return textureLod(depthTexture, vec2(uv.x, 1.0 - uv.y), lod).r;
 #else
-    return linearizeDepth(textureLod(depthTexture, uv, lod).r, depthParams);
+    return textureLod(depthTexture, uv, lod).r;
 #endif
+}
+
+highp float sampleDepthLinear(const highp sampler2D depthTexture, const highp vec2 uv, float lod, highp float depthParams) {
+    return linearizeDepth(sampleDepth(depthTexture, uv, lod), depthParams);
 }
 
 #endif // MATERIALS_SSAO_UTILS

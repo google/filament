@@ -28,13 +28,10 @@ float evaluateSSAO() {
 
         // Read four AO samples and their depths values
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-        vec4 ao = textureGather(light_ssao, uv, 0); // 01, 11, 10, 00
-        vec4 dg = textureGather(light_ssao, uv, 1); // 01, 11, 10, 00
-        vec4 db = textureGather(light_ssao, uv, 2); // 01, 11, 10, 00
+        vec4 ao = textureGather(light_ssao, uv, 0);
+        vec4 dg = textureGather(light_ssao, uv, 1);
+        vec4 db = textureGather(light_ssao, uv, 2);
 #else
-        // on mobile we can't use textureGather() because we're limited to ES3.0,
-        // so we emulate it with  texelFetch(), on Pixel 4 this doesn't seem to have any
-        // significant impact on performance.
         vec3 s01 = textureLodOffset(light_ssao, uv, 0.0, ivec2(0, 1)).rgb;
         vec3 s11 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 1)).rgb;
         vec3 s10 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 0)).rgb;
