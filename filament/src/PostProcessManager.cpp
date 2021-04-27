@@ -409,7 +409,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         default:
         case View::QualityLevel::LOW:
             sampleCount = 7.0f;
-            spiralTurns = 5.0f;
+            spiralTurns = 1.0f;
             break;
         case View::QualityLevel::MEDIUM:
             sampleCount = 11.0f;
@@ -417,7 +417,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
             break;
         case View::QualityLevel::HIGH:
             sampleCount = 16.0f;
-            spiralTurns = 10.0f;
+            spiralTurns = 13.0f;
             break;
         case View::QualityLevel::ULTRA:
             sampleCount = 32.0f;
