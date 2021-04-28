@@ -54,8 +54,7 @@ public:
 
 class MRT {
 public:
-    static constexpr uint8_t MIN_SUPPORTED_RENDER_TARGET_COUNT = 4u;
-    static constexpr uint8_t MAX_SUPPORTED_RENDER_TARGET_COUNT = 8u;
+    static constexpr int MAX_SUPPORTED_RENDER_TARGET_COUNT = 4;
 
 private:
     TargetBufferInfo mInfos[MAX_SUPPORTED_RENDER_TARGET_COUNT];

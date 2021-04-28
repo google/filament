@@ -276,7 +276,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& buffer = color[i];
         if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
+            ASSERT_POSTCONDITION(none(targetBufferFlags & getMRTColorFlag(i)),
                     "The COLOR%u flag was specified, but no color texture provided.", i);
             continue;
         }
@@ -670,10 +670,6 @@ bool MetalDriver::areFeedbackLoopsSupported() {
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
-}
-
-uint8_t MetalDriver::getMaxDrawBuffers() {
-    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -1182,11 +1178,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             colorPixelFormat[0],
             colorPixelFormat[1],
             colorPixelFormat[2],
-            colorPixelFormat[3],
-            colorPixelFormat[4],
-            colorPixelFormat[5],
-            colorPixelFormat[6],
-            colorPixelFormat[7]
+            colorPixelFormat[3]
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),

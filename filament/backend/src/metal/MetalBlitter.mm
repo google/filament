@@ -165,10 +165,6 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
             blitColor ? args.destination.color.pixelFormat : MTLPixelFormatInvalid,
             MTLPixelFormatInvalid,
             MTLPixelFormatInvalid,
-            MTLPixelFormatInvalid,
-            MTLPixelFormatInvalid,
-            MTLPixelFormatInvalid,
-            MTLPixelFormatInvalid,
             MTLPixelFormatInvalid
         },
         .depthAttachmentPixelFormat =

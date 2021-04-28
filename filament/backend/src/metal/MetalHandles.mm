@@ -757,9 +757,8 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.colorAttachments[i].texture = attachment.texture;
         descriptor.colorAttachments[i].level = attachment.level;
         descriptor.colorAttachments[i].slice = attachment.layer;
-        descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
-        descriptor.colorAttachments[i].storeAction = getStoreAction(params,
-                getTargetBufferFlagsAt(i));
+        descriptor.colorAttachments[i].loadAction = getLoadAction(params, getMRTColorFlag(i));
+        descriptor.colorAttachments[i].storeAction = getStoreAction(params, getMRTColorFlag(i));
         descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
                 params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
@@ -771,7 +770,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.colorAttachments[i].texture = multisampledColor[i];
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
-            const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
+            const bool discard = any(discardFlags & getMRTColorFlag(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.texture;
                 descriptor.colorAttachments[i].resolveLevel = attachment.level;
