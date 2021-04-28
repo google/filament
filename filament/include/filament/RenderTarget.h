@@ -47,14 +47,6 @@ class UTILS_PUBLIC RenderTarget : public FilamentAPI {
 public:
     using CubemapFace = backend::TextureCubemapFace;
 
-    /** Minimum number of color attachment supported */
-    static constexpr uint8_t MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT =
-            backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT;
-
-    /** Maximum number of color attachment supported */
-    static constexpr uint8_t MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT =
-            backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
-
     /**
      * Attachment identifiers
      */
@@ -63,7 +55,7 @@ public:
         COLOR1 = 1,          //!< identifies the 2nd color attachment
         COLOR2 = 2,          //!< identifies the 3rd color attachment
         COLOR3 = 3,          //!< identifies the 4th color attachment
-        DEPTH  = MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT,   //!< identifies the depth attachment
+        DEPTH  = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT,   //!< identifies the depth attachment
         COLOR  = COLOR0,     //!< identifies the 1st color attachment
     };
 
@@ -156,14 +148,6 @@ public:
      * @return A texture layer. This is only relevant if the attachment's texture is a 3D texture.
      */
     uint32_t getLayer(AttachmentPoint attachment) const noexcept;
-
-    /**
-     * Returns the number of color attachments usable by this instance of Engine. This method is
-     * guaranteed to return at least MIN_SUPPORTED_COLOR_ATTACHMENTS_COUNT and at most
-     * MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT.
-     * @return Number of color attachments usable in a render target.
-     */
-    uint8_t getSupportedColorAttachmentsCount() const noexcept;
 };
 
 } // namespace filament

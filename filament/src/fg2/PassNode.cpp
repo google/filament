@@ -141,7 +141,7 @@ void RenderPassNode::resolve() noexcept {
 
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
             if (rt.descriptor.attachments.array[i]) {
-                const TargetBufferFlags target = getTargetBufferFlagsAt(i);
+                const TargetBufferFlags target = getMRTColorFlag(i);
 
                 rt.targetBufferFlags |= target;
 

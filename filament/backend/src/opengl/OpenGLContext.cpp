@@ -120,8 +120,6 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 #endif
 
-    assert_invariant(gets.max_draw_buffers >= 4); // minspec
-
 #if 0
     // this is useful for development, but too verbose even for debug builds
     slog.i

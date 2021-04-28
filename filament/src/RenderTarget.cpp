@@ -22,8 +22,6 @@
 #include "FilamentAPI-impl.h"
 
 #include <utils/Panic.h>
-#include <filament/RenderTarget.h>
-
 
 namespace filament {
 
@@ -81,15 +79,6 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
             return nullptr;
         }
     }
-
-    const size_t maxDrawBuffers = upcast(engine).getDriverApi().getMaxDrawBuffers();
-    for (size_t i = maxDrawBuffers; i < MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT; i++) {
-        if (!ASSERT_PRECONDITION_NON_FATAL(!mImpl->mAttachments[i].texture,
-                "Only %u color attachments are supported, but COLOR%u attachment is set",
-                maxDrawBuffers, i)) {
-            return nullptr;
-        }
-    }
     
     uint32_t minWidth = std::numeric_limits<uint32_t>::max();
     uint32_t maxWidth = 0;
@@ -118,8 +107,7 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder)
-    : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()) {
+FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder) {
 
     std::copy(std::begin(builder.mImpl->mAttachments), std::end(builder.mImpl->mAttachments),
             std::begin(mAttachments));
@@ -141,7 +129,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
 
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (mAttachments[i].texture) {
-            mAttachmentMask |= getTargetBufferFlagsAt(i);
+            mAttachmentMask |= getMRTColorFlag(i);
             setAttachment(mrt[i], (AttachmentPoint)i);
         }
     }
@@ -177,10 +165,6 @@ RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint attachment) cons
 
 uint32_t RenderTarget::getLayer(AttachmentPoint attachment) const noexcept {
     return upcast(this)->getAttachment(attachment).layer;
-}
-
-uint8_t RenderTarget::getSupportedColorAttachmentsCount() const noexcept {
-    return upcast(this)->getSupportedColorAttachmentsCount();
 }
 
 } // namespace filament
