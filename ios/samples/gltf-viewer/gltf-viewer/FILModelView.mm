@@ -296,6 +296,11 @@ const float kSensitivity = 100.0f;
     const uint32_t height = self.bounds.size.height * self.contentScaleFactor;
     _view->setViewport({0, 0, width, height});
 
+#if FILAMENT_APP_USE_METAL
+    CAMetalLayer* metalLayer = (CAMetalLayer*)self.layer;
+    metalLayer.drawableSize = CGSizeMake(width, height);
+#endif
+
     const double aspect = (double)width / height;
     _camera->setLensProjection(self.cameraFocalLength, aspect, kNearPlane, kFarPlane);
 }
