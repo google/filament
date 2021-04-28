@@ -37,6 +37,7 @@ public:
     explicit SafeString(const char* str) noexcept : mCStr(strdup(str)) { }
     SafeString(SafeString&& rhs) noexcept : mCStr(rhs.mCStr) { rhs.mCStr = nullptr; }
     SafeString& operator=(SafeString&& rhs) noexcept {
+        free((void*)mCStr);
         mCStr = rhs.mCStr;
         rhs.mCStr = nullptr;
         return *this;
