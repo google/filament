@@ -55,7 +55,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
         vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-        mDisposer.acquire(mDisposerKey, commands.resources);
+        mDisposer.acquire(mDisposerKey);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
@@ -73,14 +73,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
         mStagePool.releaseStage(stage, commands);
     };
 
-    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
-    if (mContext.currentCommands) {
-        copyToDevice(*mContext.currentCommands);
-    } else {
-        acquireWorkCommandBuffer(mContext);
-        copyToDevice(mContext.work);
-        flushWorkCommandBuffer(mContext);
-    }
+    copyToDevice(mContext.commands->get());
 }
 
 } // namespace filament

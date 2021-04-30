@@ -144,6 +144,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
+            src/vulkan/VulkanCommands.cpp
+            src/vulkan/VulkanCommands.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
             src/vulkan/VulkanDisposer.cpp

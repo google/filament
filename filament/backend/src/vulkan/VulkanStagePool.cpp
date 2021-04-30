@@ -69,7 +69,7 @@ void VulkanStagePool::releaseStage(VulkanStage const* stage, VulkanCommandBuffer
     // Replace the previous owner of the stage with the given command buffer.  When the command
     // buffer finishes execution, the stage will finally be released back into the pool.
     mDisposer.createDisposable(stage, [stage, this]() { this->releaseStage(stage); });
-    mDisposer.acquire(stage, cmd.resources);
+    mDisposer.acquire(stage);
     mDisposer.removeReference(stage);
 }
 
