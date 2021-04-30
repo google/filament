@@ -455,6 +455,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         FrameGraphId<FrameGraphTexture> ssao;
     };
 
+    const bool highQualityUpsampling =
+            options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
+
+    const bool lowPassFilterEnabled = options.lowPassFilter != View::QualityLevel::LOW;
+
     auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& desc = builder.getDescriptor(depth);
@@ -463,7 +468,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
-                        .format = (options.lowPassFilter == View::QualityLevel::LOW) ? TextureFormat::R8 : TextureFormat::RGB8
+                        .format = (lowPassFilterEnabled || highQualityUpsampling) ? TextureFormat::RGB8 : TextureFormat::R8
                 });
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
@@ -572,16 +577,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
      * Final separable bilateral blur pass
      */
 
-    if (options.lowPassFilter != View::QualityLevel::LOW) {
-        const bool highQualitySampling =
-                options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
-
+    if (lowPassFilterEnabled) {
         ssao = bilateralBlurPass(fg, ssao, { config.scale, 0 }, cameraInfo.zf,
                 TextureFormat::RGB8,
                 config);
 
         ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
-                highQualitySampling ? TextureFormat::RGB8 : TextureFormat::R8,
+                highQualityUpsampling ? TextureFormat::RGB8 : TextureFormat::R8,
                 config);
     }
 
