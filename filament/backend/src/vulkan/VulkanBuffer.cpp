@@ -69,8 +69,6 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
         };
         vkCmdPipelineBarrier(commands.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-
-        mStagePool.releaseStage(stage, commands);
     };
 
     copyToDevice(mContext.commands->get());

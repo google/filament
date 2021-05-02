@@ -431,8 +431,6 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
         vkCmdPipelineBarrier(commands.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
                 nullptr, 1, &barrier, 0, nullptr);
-
-        mStagePool.releaseStage(stage, commands);
     };
 
     copyToDevice(mContext.commands->get());
@@ -633,8 +631,6 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
                 nullptr, miplevel);
         transitionImageLayout(commands.cmdbuffer, mTextureImage,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 getTextureLayout(usage), miplevel, 1, 1, mAspect);
-
-        mStagePool.releaseStage(stage, commands);
     };
 
     copyToDevice(mContext.commands->get());
@@ -671,8 +667,6 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         transitionImageLayout(commands.cmdbuffer, mTextureImage,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
                 1, mAspect);
-
-        mStagePool.releaseStage(stage, commands);
     };
 
     copyToDevice(mContext.commands->get());

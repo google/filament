@@ -30,12 +30,11 @@ void VulkanDisposer::createDisposable(Key resource, std::function<void()> destru
     mDisposables[resource].destructor = destructor;
 }
 
-void VulkanDisposer::addReference(Key resource) noexcept {
-    assert_invariant(mDisposables[resource].refcount > 0);
-    ++mDisposables[resource].refcount;
-}
-
 void VulkanDisposer::removeReference(Key resource) noexcept {
+    // Null can be passed in as a no-op, this is not an error.
+    if (resource == nullptr) {
+        return;
+    }
     assert_invariant(mDisposables[resource].refcount > 0);
     if (--mDisposables[resource].refcount == 0) {
         mGraveyard.emplace_back(std::move(mDisposables[resource]));
@@ -44,7 +43,17 @@ void VulkanDisposer::removeReference(Key resource) noexcept {
 }
 
 void VulkanDisposer::acquire(Key resource) noexcept {
-    addReference(resource);
+    // It's fine to "acquire" a non-managed resource, it's just a no-op.
+    if (resource == nullptr || mDisposables.find(resource) == mDisposables.end()) {
+        return;
+    }
+    assert_invariant(mDisposables[resource].refcount > 0 && mDisposables[resource].refcount < 65535);
+
+    // If an auto-decrement is already in place, do not increase the ref count.
+    if (mDisposables[resource].remainingFrames == 0) {
+        ++mDisposables[resource].refcount;
+    }
+
     mDisposables[resource].remainingFrames = FRAMES_BEFORE_EVICTION;
 }
 

@@ -37,9 +37,6 @@ public:
     // Adds the given resource to the disposer and sets its reference count to 1.
     void createDisposable(Key resource, std::function<void()> destructor) noexcept;
 
-    // Increments the reference count.
-    void addReference(Key resource) noexcept;
-
     // Decrements the reference count and moves it to the graveyard if it becomes 0.
     void removeReference(Key resource) noexcept;
 
