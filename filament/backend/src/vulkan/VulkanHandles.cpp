@@ -567,16 +567,11 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     // Go ahead and create the primary image view, no need to do it lazily.
     getImageView(mPrimaryViewRange);
 
-    // Transition the layout.
+    // Transition the layout of each image slice.
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
-        auto transition = [=](VulkanCommandBuffer commands) {
-            // If this is a SAMPLER_2D_ARRAY texture, then the depth argument stores the number of
-            // texture layers.
-            const uint32_t layers = target == SamplerType::SAMPLER_2D_ARRAY ? depth : 1;
-            VulkanTexture::transitionImageLayout(commands.cmdbuffer, mTextureImage,
-                    VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
-        };
-        transition(mContext.commands->get());
+        const uint32_t layers = mPrimaryViewRange.layerCount;
+        VulkanTexture::transitionImageLayout(mContext.commands->get().cmdbuffer, mTextureImage,
+                VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
     }
 }
 
