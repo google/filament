@@ -387,8 +387,14 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
 }
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
+    if (!ASSERT_POSTCONDITION_NON_FATAL(mTarget != SamplerType::SAMPLER_EXTERNAL,
+            "External Textures are not mipmappable.")) {
+        return;
+    }
+
     const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(formatMipmappable, "Texture format is not mipmappable.")) {
+    if (!ASSERT_POSTCONDITION_NON_FATAL(formatMipmappable,
+            "Texture format %u is not mipmappable.", (unsigned)mFormat)) {
         return;
     }
 
@@ -401,23 +407,26 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         return;
     }
 
-    auto generateMipsForLayer = [this, &engine](uint16_t layer) {
+    auto generateMipsForLayer = [this, &engine](TargetBufferInfo proto) {
         FEngine::DriverApi& driver = engine.getDriverApi();
 
         // Wrap miplevel 0 in a render target so that we can use it as a blit source.
         uint8_t level = 0;
         uint32_t srcw = mWidth;
         uint32_t srch = mHeight;
-        backend::Handle<backend::HwRenderTarget> srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
-                srcw, srch, mSampleCount, { mHandle, level++, layer }, {}, {});
+        proto.handle = mHandle;
+        proto.level = level++;
+        backend::Handle<backend::HwRenderTarget> srcrth = driver.createRenderTarget(
+                TargetBufferFlags::COLOR, srcw, srch, mSampleCount, proto, {}, {});
 
         // Perform a blit for all miplevels down to 1x1.
         backend::Handle<backend::HwRenderTarget> dstrth;
         do {
             uint32_t dstw = std::max(srcw >> 1u, 1u);
             uint32_t dsth = std::max(srch >> 1u, 1u);
-            dstrth = driver.createRenderTarget(TargetBufferFlags::COLOR, dstw, dsth, mSampleCount,
-                    { mHandle, level++, layer }, {}, {});
+            proto.level = level++;
+            dstrth = driver.createRenderTarget(
+                    TargetBufferFlags::COLOR, dstw, dsth, mSampleCount, proto, {}, {});
             driver.blit(TargetBufferFlags::COLOR,
                     dstrth, { 0, 0, dstw, dsth },
                     srcrth, { 0, 0, srcw, srch },
@@ -430,12 +439,28 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         driver.destroyRenderTarget(dstrth);
     };
 
-    if (mTarget == Sampler::SAMPLER_2D) {
-        generateMipsForLayer(0);
-    } else if (mTarget == Sampler::SAMPLER_CUBEMAP) {
-        for (uint16_t layer = 0; layer < 6; ++layer) {
-            generateMipsForLayer(layer);
-        }
+    switch (mTarget) {
+        case SamplerType::SAMPLER_2D:
+            generateMipsForLayer(TargetBufferInfo{ 0 });
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            for (uint16_t layer = 0, c = mDepth; layer < c; ++layer) {
+                generateMipsForLayer(TargetBufferInfo{ layer });
+            }
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            for (uint8_t face = 0; face < 6; ++face) {
+                generateMipsForLayer(TargetBufferInfo{ TextureCubemapFace(face) });
+            }
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            // not mipmapable
+            break;
+        case SamplerType::SAMPLER_3D:
+            // TODO: handle SAMPLER_3D -- this can't be done with a 2D blit, this would require
+            //       a fragment shader
+            slog.w << "Texture::generateMipmap does not support SAMPLER_3D yet on this h/w." << io::endl;
+            break;
     }
 }
 

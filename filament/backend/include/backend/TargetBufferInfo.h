@@ -39,6 +39,10 @@ public:
     TargetBufferInfo(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
             : handle(h), level(level), layer(layer) { }
 
+    explicit TargetBufferInfo(TextureCubemapFace face) noexcept : face(face) {}
+
+    explicit TargetBufferInfo(uint16_t layer) noexcept : layer(layer) {}
+
     // texture to be used as render target
     Handle<HwTexture> handle;
     // level to be used
