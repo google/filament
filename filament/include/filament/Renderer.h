@@ -343,14 +343,14 @@ public:
      *                      - PixelBufferDescriptor::PixelDataType::INT
      *                      - PixelBufferDescriptor::PixelDataType::FLOAT
      *
-     * Other combination of format/type may be supported. If a combination is
+     * Other combinations of format/type may be supported. If a combination is
      * not supported, this operation may fail silently. Use a DEBUG build
      * to get some logs about the failure.
      *
      *
      *  Framebuffer as seen on User buffer (PixelBufferDescriptor&)
      *  screen
-	 *  
+     *  
      *      +--------------------+
      *      |                    |                .stride         .alignment
      *      |                    |         ----------------------->-->
@@ -419,14 +419,14 @@ public:
      *                      - PixelBufferDescriptor::PixelDataType::INT
      *                      - PixelBufferDescriptor::PixelDataType::FLOAT
      *
-     * Other combination of format/type may be supported. If a combination is
+     * Other combinations of format/type may be supported. If a combination is
      * not supported, this operation may fail silently. Use a DEBUG build
      * to get some logs about the failure.
      *
      *
      *  Framebuffer as seen on User buffer (PixelBufferDescriptor&)
      *  screen
-	 *  
+     *  
      *      +--------------------+
      *      |                    |                .stride         .alignment
      *      |                    |         ----------------------->-->
