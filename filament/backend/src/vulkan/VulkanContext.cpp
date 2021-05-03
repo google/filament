@@ -187,6 +187,7 @@ void createLogicalDevice(VulkanContext& context) {
     // consequences let's just enable the features we need.
     const auto& supportedFeatures = context.physicalDeviceFeatures;
     VkPhysicalDeviceFeatures enabledFeatures {
+        .samplerAnisotropy = supportedFeatures.samplerAnisotropy,
         .textureCompressionETC2 = supportedFeatures.textureCompressionETC2,
         .textureCompressionBC = supportedFeatures.textureCompressionBC,
     };
