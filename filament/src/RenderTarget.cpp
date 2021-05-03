@@ -28,7 +28,7 @@ namespace filament {
 using namespace backend;
 
 struct RenderTarget::BuilderDetails {
-    FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT] = {};
+    FRenderTarget::Attachment mAttachments[FRenderTarget::ATTACHMENT_COUNT] = {};
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
@@ -127,21 +127,11 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         }
     };
 
-    if (mAttachments[COLOR0].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR0;
-        setAttachment(mrt[0], COLOR0);
-    }
-    if (mAttachments[COLOR1].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR1;
-        setAttachment(mrt[1], COLOR1);
-    }
-    if (mAttachments[COLOR2].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR2;
-        setAttachment(mrt[2], COLOR2);
-    }
-    if (mAttachments[COLOR3].texture) {
-        mAttachmentMask |= TargetBufferFlags::COLOR3;
-        setAttachment(mrt[3], COLOR3);
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+        if (mAttachments[i].texture) {
+            mAttachmentMask |= getMRTColorFlag(i);
+            setAttachment(mrt[i], (AttachmentPoint)i);
+        }
     }
     if (mAttachments[DEPTH].texture) {
         mAttachmentMask |= TargetBufferFlags::DEPTH;

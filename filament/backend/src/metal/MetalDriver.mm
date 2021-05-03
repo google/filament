@@ -160,7 +160,9 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentDrawSwapChain->releaseDrawable();
+    if (mContext->currentDrawSwapChain) {
+        mContext->currentDrawSwapChain->releaseDrawable();
+    }
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 
@@ -270,12 +272,12 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint8_t samples, backend::MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
 
-    MetalRenderTarget::Attachment colorAttachments[4] = {{ 0 }};
-    for (size_t i = 0; i < 4; i++) {
+    MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{ nil }};
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& buffer = color[i];
         if (!buffer.handle) {
             ASSERT_POSTCONDITION(none(targetBufferFlags & getMRTColorFlag(i)),
-                    "The COLOR%d flag was specified, but no color texture provided.", i);
+                    "The COLOR%u flag was specified, but no color texture provided.", i);
             continue;
         }
 
@@ -288,7 +290,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         colorAttachments[i].layer = color[i].layer;
     }
 
-    MetalRenderTarget::Attachment depthAttachment = { 0 };
+    MetalRenderTarget::Attachment depthAttachment = { nil };
     if (depth.handle) {
         auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
@@ -1155,8 +1157,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     ASSERT_PRECONDITION(program->isValid, "Attempting to draw with an invalid Metal program.");
 
     // Pipeline state
-    MTLPixelFormat colorPixelFormat[4] = { MTLPixelFormatInvalid };
-    for (size_t i = 0; i < 4; i++) {
+    MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
         if (!attachment) {
             continue;

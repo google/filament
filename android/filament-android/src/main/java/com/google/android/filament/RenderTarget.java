@@ -52,10 +52,10 @@ public class RenderTarget {
      */
     public enum AttachmentPoint {
         COLOR,
-        DEPTH,
         COLOR1,
         COLOR2,
-        COLOR3
+        COLOR3,
+        DEPTH
     }
 
     /**

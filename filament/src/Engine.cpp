@@ -1007,6 +1007,10 @@ void Engine::flushAndWait() {
     upcast(this)->flushAndWait();
 }
 
+utils::EntityManager& Engine::getEntityManager() noexcept {
+    return upcast(this)->getEntityManager();
+}
+
 RenderableManager& Engine::getRenderableManager() noexcept {
     return upcast(this)->getRenderableManager();
 }

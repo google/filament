@@ -39,8 +39,8 @@ public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
-        VkImageLayout colorLayout[MRT::TARGET_COUNT];  // 16 bytes
-        VkFormat colorFormat[MRT::TARGET_COUNT]; // 16 bytes
+        VkImageLayout colorLayout[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];  // 16 bytes
+        VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 16 bytes
         VkImageLayout depthLayout;  // 4 bytes
         VkFormat depthFormat; // 4 bytes
         TargetBufferFlags clear : 8; // 1 byte
@@ -72,8 +72,8 @@ public:
         uint16_t height; // 2 bytes
         uint16_t layers; // 2 bytes
         uint16_t samples; // 2 bytes
-        VkImageView color[MRT::TARGET_COUNT]; // 32 bytes
-        VkImageView resolve[MRT::TARGET_COUNT]; // 32 bytes
+        VkImageView color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
+        VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkImageView depth; // 8 bytes
     };
     struct FboVal {

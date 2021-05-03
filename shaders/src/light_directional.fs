@@ -2,7 +2,7 @@
 // Directional light evaluation
 //------------------------------------------------------------------------------
 
-#if !defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
 #define SUN_AS_AREA_LIGHT
 #endif
 

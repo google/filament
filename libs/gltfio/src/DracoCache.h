@@ -44,7 +44,11 @@ private:
 
 // Decodes a Draco mesh upon construction and retains the results.
 //
-// For convenience, the decoded attributes and indices are written into glTF accessor structs.
+// The DracoMesh API leverages cgltf accessor structs in a way that bears explanation. These are
+// read / write parameters that tell the decoder where to write the decoded data, and what format
+// is desired. The buffer_view in the accessor should be null unless decompressed data is already
+// loaded. This tells the decoder that it should create a buffer_view and a buffer. The buffer
+// view, the buffer, and the buffer's data are all automatically freed when DracoMesh is destroyed.
 //
 // Note that in the gltfio architecture, the AssetLoader has the job of constructing VertexBuffer
 // objects while the ResourceLoader has the job of populating them asychronously. This means that
@@ -54,7 +58,7 @@ private:
 class DracoMesh {
 public:
     static DracoMesh* decode(const uint8_t* compressedData, size_t compressedSize);
-    void getFaceIndices(cgltf_accessor* destination) const;
+    bool getFaceIndices(cgltf_accessor* destination) const;
     bool getVertexAttributes(uint32_t attributeId, cgltf_accessor* destination) const;
     ~DracoMesh();
 private:

@@ -512,6 +512,12 @@ class_<Engine>("Engine")
         return &engine->getRenderableManager();
     }), allow_raw_pointers())
 
+    /// getEntityManager ::method::
+    /// ::retval:: an instance of [utils::EntityManager]
+    .function("getEntityManager", EMBIND_LAMBDA(utils::EntityManager*, (Engine* engine), {
+        return &engine->getEntityManager();
+    }), allow_raw_pointers())
+
     /// createSwapChain ::method::
     /// ::retval:: an instance of [SwapChain]
     .function("createSwapChain", (SwapChain* (*)(Engine*)) []

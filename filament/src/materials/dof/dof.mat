@@ -132,7 +132,7 @@ float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
     // median pass. With round() below + noise, most gaps are handled by the median pass,
     // and the quality is much better overall.
 
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
     // on mobile, the mip level is not used in computations in the shader,
     // so we just let the texture unit pick the the "nearest" mipmap level.
 #else
@@ -156,7 +156,7 @@ float sampleWeight(const float coc, const float mip) {
     // The high resolution pixel radius is sqrt(2) * 0.5.
     // x2 to scale to 1/4 res, x 2^mip for the current mip.
     // ^2 for the area.
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
     const float pixelRadiusSquared = 2.0;   // (sqrt(2) * 0.5 * 2.0)^2
 #else
     float pixelRadiusSquared = 2.0 * pow(2.0, mip);     // 2^(mip+1)
@@ -166,7 +166,7 @@ float sampleWeight(const float coc, const float mip) {
 
 float intersection(const float border, const float absCoc, const float mip) {
     // there is very little visible difference, so use the cheaper version on mobile
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
     return saturate((absCoc - border) + 0.5);
 #else
     return saturate((absCoc - border) * pow(0.5, mip) + 0.5);
@@ -597,7 +597,7 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
 
     float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
     bgOpacity = saturate(prev.cw * rcp(kernelArea));
-#if !defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
     bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
 #endif
     background = prev.c * (rcpOrZeroHighp(prev.cw) * bgOpacity);

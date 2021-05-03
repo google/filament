@@ -78,12 +78,24 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
         out << "#define TARGET_LANGUAGE_SPIRV\n";
     }
 
+    out << '\n';
+    out << "#define FILAMENT_QUALITY_LOW  0\n";
+    out << "#define FILAMENT_QUALITY_HIGH 1\n";
+    out << "#if defined(TARGET_MOBILE)\n";
+    out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_LOW\n";
+    out << "#else\n";
+    out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_HIGH\n";
+    out << "#endif\n";
+    out << '\n';
+
     Precision defaultPrecision = getDefaultPrecision(type);
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
-    out << "precision lowp sampler2DArray;\n";
-    out << "precision lowp sampler3D;\n";
+    if (mShaderModel == ShaderModel::GL_ES_30) {
+        out << "precision lowp sampler2DArray;\n";
+        out << "precision lowp sampler3D;\n";
+    }
 
     out << SHADERS_COMMON_TYPES_FS_DATA;
 

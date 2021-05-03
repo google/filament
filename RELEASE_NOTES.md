@@ -5,7 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
-- engine: Add new `Renderer::renderStandaloneView()` API.
+## v1.9.23
+
+- Vulkan: various fixes.
+- android: fix crash seen using VSM with MSAA on Adreno devices.
+- engine: Add `Engine::getEntityManager()`.
+- engine: Fix desktop crash seen with some GPU drivers.
+- engine: improve importance sampling.
+- gltfio: robustness improvements for Draco meshes.
+- libs: Add new Transcoder API for C++ clients (part of `libgeometry`).
+- libs: New `iblprefilter` library to compute IBL pre-integration on the GPU using filament.
+- materials: Fix documentation for `getNormalizedViewportCoord`.
+- samples: fix rendertarget sample crash on launch.
 
 ## v1.9.22
 

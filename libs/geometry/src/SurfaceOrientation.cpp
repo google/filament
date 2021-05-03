@@ -17,6 +17,7 @@
 #include <geometry/SurfaceOrientation.h>
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 #include <math/mat3.h>
 #include <math/norm.h>
@@ -226,6 +227,7 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithUvs() {
     memset(tan2.data(), 0, sizeof(float3) * vertexCount);
     for (size_t a = 0; a < triangleCount; ++a) {
         uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
+        assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
         const float3& v1 = positions[tri.x];
         const float3& v2 = positions[tri.y];
         const float3& v3 = positions[tri.z];
@@ -334,6 +336,7 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithFlatNormals() {
     float3* normals = new float3[vertexCount];
     for (size_t a = 0; a < triangleCount; ++a) {
         const uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
+        assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
         const float3 v1 = positions[tri.x];
         const float3 v2 = positions[tri.y];
         const float3 v3 = positions[tri.z];

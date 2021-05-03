@@ -937,8 +937,17 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         attachmentTypeNotSupportedByMSRTT = true;
     }
 
+    // There's a bug with certain drivers preventing us from emulating
+    // EXT_multisampled_render_to_texture when the texture is a TEXTURE_2D_ARRAY, so we'll simply
+    // fall back to non-MSAA rendering.
+    const bool disableMultisampling =
+            gl.bugs.disable_sidecar_blit_into_texture_array &&
+            rt->gl.samples > 1 && t->samples <= 1 &&
+            target == GL_TEXTURE_2D_ARRAY;
+
     if (rt->gl.samples <= 1 ||
-        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
+        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture) ||
+        disableMultisampling) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
         // If multisampled textures are not supported and we end-up here, things should
         // still work, albeit without MSAA.
@@ -1170,8 +1179,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->targets = targets;
 
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
-        GLenum bufs[4] = { GL_NONE };
-        for (size_t i = 0; i < 4; i++) {
+        GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
+        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (any(targets & getMRTColorFlag(i))) {
                 rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
                 rt->gl.color[i].level = color[i].level;
@@ -1179,7 +1188,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
         }
-        glDrawBuffers(4, bufs);
+        glDrawBuffers(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, bufs);
         CHECK_GL_ERROR(utils::slog.e)
     }
 

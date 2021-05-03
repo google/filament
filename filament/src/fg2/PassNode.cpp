@@ -91,7 +91,7 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
     auto incomingEdges = dependencyGraph.getIncomingEdges(this);
     auto outgoingEdges = dependencyGraph.getOutgoingEdges(this);
 
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
         if (descriptor.attachments.array[i]) {
             data.attachmentInfo[i] = attachments.array[i];
 
@@ -126,15 +126,6 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
 void RenderPassNode::resolve() noexcept {
     using namespace backend;
 
-    const TargetBufferFlags flags[6] = {
-            TargetBufferFlags::COLOR0,
-            TargetBufferFlags::COLOR1,
-            TargetBufferFlags::COLOR2,
-            TargetBufferFlags::COLOR3,
-            TargetBufferFlags::DEPTH,
-            TargetBufferFlags::STENCIL
-    };
-
     for (auto& rt : mRenderTargetData) {
 
         uint32_t minWidth = std::numeric_limits<uint32_t>::max();
@@ -148,20 +139,21 @@ void RenderPassNode::resolve() noexcept {
 
         ImportedRenderTarget* pImportedRenderTarget = nullptr;
 
-        for (size_t i = 0; i < 6; i++) {
+        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
             if (rt.descriptor.attachments.array[i]) {
+                const TargetBufferFlags target = getMRTColorFlag(i);
 
-                rt.targetBufferFlags |= flags[i];
+                rt.targetBufferFlags |= target;
 
                 // start by discarding all the attachments we have
                 // (we could set to ALL, but this is cleaner)
-                rt.backend.params.flags.discardStart |= flags[i];
-                rt.backend.params.flags.discardEnd   |= flags[i];
+                rt.backend.params.flags.discardStart |= target;
+                rt.backend.params.flags.discardEnd   |= target;
                 if (rt.outgoing[i] && rt.outgoing[i]->hasActiveReaders()) {
-                    rt.backend.params.flags.discardEnd &= ~flags[i];
+                    rt.backend.params.flags.discardEnd &= ~target;
                 }
                 if (rt.incoming[i] && rt.incoming[i]->hasActiveWriters()) {
-                    rt.backend.params.flags.discardStart &= ~flags[i];
+                    rt.backend.params.flags.discardStart &= ~target;
                 }
 
                 VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments.array[i]);
@@ -239,11 +231,22 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
     assert_invariant(any(targetBufferFlags));
     if (UTILS_LIKELY(!imported)) {
 
-        TargetBufferInfo info[6] = {};
-        for (size_t i = 0; i < 6; i++) {
+        MRT colorInfo{};
+        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (attachmentInfo[i]) {
                 auto const* pResource = static_cast<Resource<FrameGraphTexture> const*>(
                         fg.getResource(attachmentInfo[i]));
+                colorInfo[i].handle = pResource->resource.handle;
+                colorInfo[i].level = pResource->subResourceDescriptor.level;
+                colorInfo[i].layer = pResource->subResourceDescriptor.layer;
+            }
+        }
+
+        TargetBufferInfo info[2] = {};
+        for (size_t i = 0; i < 2; i++) {
+            if (attachmentInfo[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + i]) {
+                auto const* pResource = static_cast<Resource<FrameGraphTexture> const*>(
+                        fg.getResource(attachmentInfo[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + i]));
                 info[i].handle = pResource->resource.handle;
                 info[i].level = pResource->subResourceDescriptor.level;
                 info[i].layer = pResource->subResourceDescriptor.layer;
@@ -255,8 +258,7 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
                 backend.params.viewport.width,
                 backend.params.viewport.height,
                 descriptor.samples,
-                { info[0], info[1], info[2], info[3] },
-                info[4], info[5]);
+                colorInfo,info[0], info[1]);
     }
 }
 

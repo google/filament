@@ -9,10 +9,12 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/geometry/SurfaceOrientation.h
+        include/geometry/Transcoder.h
 )
 
 set(SRCS
         src/SurfaceOrientation.cpp
+        src/Transcoder.cpp
 )
 
 # ==================================================================================================
@@ -41,3 +43,11 @@ endif()
 # ==================================================================================================
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/geometry DESTINATION include)
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+    add_executable(test_transcoder tests/test_transcoder.cpp)
+    target_link_libraries(test_transcoder PRIVATE ${TARGET} gtest)
+endif()

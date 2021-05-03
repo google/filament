@@ -80,6 +80,7 @@ OpenGLContext::OpenGLContext() noexcept {
         // On Adreno (As of 3/20) timer query seem to return the CPU time, not the
         // GPU time.
         bugs.dont_use_timer_query = true;
+        bugs.disable_sidecar_blit_into_texture_array = true;
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
