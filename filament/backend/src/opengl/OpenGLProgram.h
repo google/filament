@@ -66,7 +66,12 @@ public:
         GLuint program;
     } gl; // 12 bytes
 
-    static void logCompilationError(utils::io::ostream& out, GLuint shaderId, char const* source) noexcept;
+    static void logCompilationError(utils::io::ostream& out,
+            backend::Program::Shader shaderType, const char* name,
+            GLuint shaderId, char const* source) noexcept;
+
+    static void logProgramLinkError(utils::io::ostream& out,
+            const char* name, GLuint program) noexcept;
 
 private:
     static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
