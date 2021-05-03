@@ -679,7 +679,7 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
     getImageView(mPrimaryViewRange);
 }
 
-VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
+VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool force2D) {
     auto iter = mCachedImageViews.find(range);
     if (iter != mCachedImageViews.end()) {
         return iter->second;
@@ -689,7 +689,7 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range) {
         .pNext = nullptr,
         .flags = 0,
         .image = mTextureImage,
-        .viewType = mViewType,
+        .viewType = force2D ? VK_IMAGE_VIEW_TYPE_2D : mViewType,
         .format = mVkFormat,
         .components = mSwizzle,
         .subresourceRange = range
