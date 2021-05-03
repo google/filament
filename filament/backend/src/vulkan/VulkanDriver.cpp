@@ -787,6 +787,10 @@ math::float2 VulkanDriver::getClipSpaceParams() {
     return math::float2{ -0.5f, 0.5f };
 }
 
+uint8_t VulkanDriver::getMaxDrawBuffers() {
+    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
@@ -1478,20 +1482,10 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
         mBlitter.blitDepth(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets});
     }
 
-    if (any(buffers & TargetBufferFlags::COLOR0)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 0});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR1)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 1});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR2)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 2});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR3)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 3});
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+        if (any(buffers & getTargetBufferFlagsAt(i))) {
+            mBlitter.blitColor(cmdbuf,{ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(i) });
+        }
     }
 }
 
