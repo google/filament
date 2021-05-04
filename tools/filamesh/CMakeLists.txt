@@ -18,8 +18,16 @@ add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
-target_link_libraries(${TARGET} PUBLIC assimp)
-target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} PUBLIC Assimp::assimp)
+  target_link_libraries(${TARGET} PRIVATE filameshio meshoptimizer::meshoptimizer)
+  if (MSVC)
+    target_link_libraries(${TARGET} PRIVATE getopt::getopt)
+  endif()
+else()
+  target_link_libraries(${TARGET} PUBLIC assimp)
+  target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
+endif()
 
 # ==================================================================================================
 # Compile options and optimizations

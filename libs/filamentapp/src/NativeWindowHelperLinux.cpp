@@ -18,7 +18,11 @@
 
 #include <utils/Panic.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include<SDL2/SDL_syswm.h>
+#else
 #include <SDL_syswm.h>
+#endif
 
 void* getNativeWindow(SDL_Window* sdlWindow) {
     SDL_SysWMinfo wmi;

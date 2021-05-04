@@ -85,12 +85,41 @@ include_directories(${CMAKE_BINARY_DIR})
 
 # Filamat
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-target_link_libraries(${TARGET} shaders filabridge utils smol-v)
+if(HUNTER_ENABLED)
+  target_include_directories(${TARGET} PUBLIC  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>  
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>)
+  target_link_libraries(${TARGET} 
+    shaders 
+    filabridge 
+    utils 
+    smol-v::smol-v 
+    glslang::OGLCompiler
+    glslang::OSDependent
+    glslang::SPIRV
+    SPIRV-Tools::SPIRV-Tools
+    SPIRV-Tools::SPIRV-Tools-opt
+    glslang::SPVRemapper
+    glslang::glslang
+    spirv-cross-core
+    spirv-cross-glsl
+    spirv-cross-msl)
+  install(TARGETS ${TARGET} EXPORT ${TARGETS_EXPORT_NAME})
+else()
+  target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+  target_link_libraries(${TARGET} shaders filabridge utils smol-v)
+endif()
 
 # Filamat Lite
 add_library(filamat_lite STATIC ${HDRS} ${LITE_PRIVATE_HDRS} ${LITE_SRCS})
-target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})
+if(HUNTER_ENABLED)
+  target_include_directories(filamat_lite PUBLIC  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>  
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>)
+else()
+  target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})
+endif()
+
 target_link_libraries(filamat_lite shaders filabridge utils)
 
 # We are being naughty and accessing private headers here
@@ -101,10 +130,19 @@ target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)
 # we need to force archive re-scan on new symbol dependencies via start/end-group.
 # Read more about this here https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
 if (APPLE OR MSVC)
-    target_link_libraries(${TARGET} glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
+    if(HUNTER_ENABLED)
+      target_link_libraries(${TARGET} glslang::glslang glslang::SPIRV glslang::SPVRemapper SPIRV-Tools::SPIRV-Tools-opt spirv-cross-glsl)
+    else()
+      target_link_libraries(${TARGET} glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
+    endif()
 else()
-    target_link_libraries(${TARGET}
+    if(HUNTER_ENABLED)
+      target_link_libraries(${TARGET}
+            -Wl,--start-group glslang::glslang glslang::SPIRV glslang::SPVRemapper SPIRV-Tools::SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
+    else()
+      target_link_libraries(${TARGET}
             -Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
+    endif()
 endif()
 
 # ==================================================================================================
@@ -137,7 +175,8 @@ endif()
 # them together into a single shared library and copy this into the installation folder. This
 # requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
 # query dependencies.
-set(FILAMAT_DEPS
+if(NOT HUNTER_ENABLED)
+  set(FILAMAT_DEPS
         OGLCompiler
         OSDependent
         SPIRV
@@ -151,14 +190,19 @@ set(FILAMAT_DEPS
         spirv-cross-msl
         )
 
-set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
-combine_static_libs(filamat "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS}")
+  set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
+  combine_static_libs(filamat "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS}")
 
-set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
-install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
+  set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
+  install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
+endif()
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
-install(TARGETS filamat_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+if(HUNTER_ENABLED)
+  install(TARGETS filamat_lite EXPORT ${TARGETS_EXPORT_NAME} ARCHIVE DESTINATION lib/${DIST_DIR})
+else()
+  install(TARGETS filamat_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+endif()
 
 # ==================================================================================================
 # Tests
@@ -173,7 +217,11 @@ add_executable(${TARGET} ${SRCS})
 
 target_include_directories(${TARGET} PRIVATE src)
 
-target_link_libraries(${TARGET} filamat gtest)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} filamat GTest::gtest GTest::gtest_main Threads::Threads)
+else()
+  target_link_libraries(${TARGET} filamat gtest)
+endif()
 
 set(TARGET test_filamat_lite)
 set(SRCS
@@ -183,4 +231,8 @@ add_executable(${TARGET} ${SRCS})
 
 target_include_directories(${TARGET} PRIVATE src)
 
-target_link_libraries(${TARGET} filamat_lite gtest)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} filamat_lite GTest::gtest GTest::gtest_main Threads::Threads)
+else()
+  target_link_libraries(${TARGET} filamat_lite gtest)
+endif()

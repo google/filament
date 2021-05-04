@@ -18,8 +18,13 @@
 
 #include "GLSLTools.h"
 
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/Include/intermediate.h>
+#include <glslang/MachineIndependent/localintermediate.h>
+#else
 #include <intermediate.h>
 #include <localintermediate.h>
+#endif
 
 #include <utils/Log.h>
 

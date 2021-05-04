@@ -29,4 +29,8 @@
 #define STBI_NO_STDIO
 #endif
 
+#ifdef FILAMENT_USE_HUNTER
+#include <stb/stb_image.h>
+#else
 #include <stb_image.h>
+#endif

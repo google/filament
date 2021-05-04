@@ -53,7 +53,11 @@
 #include <assimp/scene.h>
 #include <assimp/pbrmaterial.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <stb/stb_image.h>
+#else
 #include <stb_image.h>
+#endif
 
 #include <backend/DriverEnums.h>
 

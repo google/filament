@@ -20,7 +20,11 @@
 #include <deque>
 #include <string>
 #include <vector>
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/Include/intermediate.h>
+#else
 #include <intermediate.h>
+#endif
 
 #include "GLSLTools.h"
 

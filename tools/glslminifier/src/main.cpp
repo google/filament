@@ -18,7 +18,12 @@
 
 #include <utils/Path.h>
 
+#if !defined (FILAMENT_USE_HUNTER)
 #include <getopt/getopt.h>
+#else
+#include <getopt.h>
+#endif
+
 
 #include <fstream>
 #include <iostream>

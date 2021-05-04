@@ -17,7 +17,11 @@
 #ifndef VIEWER_JSON_PARSE_UTILS_H
 #define VIEWER_JSON_PARSE_UTILS_H
 
+#ifdef FILAMENT_USE_HUNTER
+#include <jsmn/jsmn.h>
+#else
 #include <jsmn.h>
+#endif
 
 namespace filament {
 namespace viewer {

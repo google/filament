@@ -105,10 +105,19 @@ endif()
 # Include and target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${RESGEN_SOURCE})
-target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+
+if(HUNTER_ENABLED)
+  target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+else()
+  target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 # ==================================================================================================
 # Installation
 # ==================================================================================================
 
-install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+if(HUNTER_ENABLED)
+  install(TARGETS ${TARGET} EXPORT ${TARGETS_EXPORT_NAME} ARCHIVE DESTINATION lib/${DIST_DIR})
+else()
+  install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+endif()

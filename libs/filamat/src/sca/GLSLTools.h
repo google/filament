@@ -24,7 +24,11 @@
 
 #include <filamat/MaterialBuilder.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/Public/ShaderLang.h>
+#else
 #include <ShaderLang.h>
+#endif
 
 class TIntermNode;
 namespace glslang {

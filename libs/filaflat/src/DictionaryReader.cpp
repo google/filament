@@ -21,7 +21,11 @@
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <utils/Log.h>
+#ifdef FILAMENT_USE_HUNTER
+#include <smol-v/smolv.h>
+#else
 #include <smolv.h>
+#endif
 #endif
 
 #include <assert.h>

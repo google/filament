@@ -18,7 +18,11 @@
 
 #include <filameshio/filamesh.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <meshoptimizer/meshoptimizer.h>
+#else
 #include <meshoptimizer.h>
+#endif
 
 using namespace filamesh;
 using namespace filament::math;

@@ -35,11 +35,19 @@
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
 
+#if defined (_MSC_VER) || !defined (FILAMENT_USE_HUNTER)
 #include <getopt/getopt.h>
+#else
+#include <getopt.h>
+#endif
 
 #include <utils/Path.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <stb/stb_image.h>
+#else
 #include <stb_image.h>
+#endif
 
 #include <iostream>
 

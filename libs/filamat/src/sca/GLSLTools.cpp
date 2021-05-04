@@ -30,8 +30,13 @@
 #include "ASTHelpers.h"
 
 // GLSLANG headers
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/Include/InfoSink.h>
+#include <glslang/MachineIndependent/localintermediate.h>
+#else
 #include <InfoSink.h>
 #include <localintermediate.h>
+#endif
 
 #include "builtinResource.h"
 

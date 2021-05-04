@@ -13,7 +13,14 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} matdbg filaflat backend_headers utils getopt SPIRV-Tools spirv-cross-glsl)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} matdbg filaflat backend_headers utils SPIRV-Tools::SPIRV-Tools spirv-cross-glsl)
+  if (MSVC)
+    target_link_libraries(${TARGET} getopt::getopt)
+  endif()
+else()
+  target_link_libraries(${TARGET} matdbg filaflat backend_headers utils getopt SPIRV-Tools spirv-cross-glsl)
+endif()
 
 # glslang contains a copy of the SPIRV headers, so let's just use those. The leading ".." in the
 # following variable refers to the project name that we define in glslang/tnt, and the trailing ".."

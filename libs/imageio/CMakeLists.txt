@@ -30,7 +30,11 @@ add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-target_link_libraries(${TARGET} PUBLIC image math png tinyexr utils z astcenc stb EtcLib)
+if (HUNTER_ENABLED)
+  target_link_libraries(${TARGET} PUBLIC image math PNG::PNG tinyexr::tinyexr utils ZLIB::zlib astc-encoder::astcenc stb::stb etc2comp::EtcLib)
+else ()
+  target_link_libraries(${TARGET} PUBLIC image math png tinyexr utils z astcenc stb EtcLib)
+endif()
 if (WIN32)
     target_link_libraries(${TARGET} PRIVATE wsock32)
 endif()

@@ -32,7 +32,11 @@
 #include "JsonishParser.h"
 #include "ParametersProcessor.h"
 
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/SPIRV/GlslangToSpv.h>
+#else
 #include <GlslangToSpv.h>
+#endif
 
 #include "sca/builtinResource.h"
 

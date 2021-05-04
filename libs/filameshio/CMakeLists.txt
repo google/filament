@@ -21,10 +21,17 @@ set(SRCS src/MeshReader.cpp)
 include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-target_link_libraries(${TARGET}
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET}
+    PRIVATE meshoptimizer::meshoptimizer
+    PUBLIC filament # Public only because the filamesh API needs Box.h
+  )
+else()
+  target_link_libraries(${TARGET}
     PRIVATE meshoptimizer
     PUBLIC filament # Public only because the filamesh API needs Box.h
-)
+  )
+endif()
 
 # ==================================================================================================
 # Installation
@@ -38,5 +45,9 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 if (NOT IOS AND NOT WEBGL AND NOT ANDROID)
     add_executable(test_${TARGET} tests/test_filamesh.cpp )
-    target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
+    if(HUNTER_ENABLED)
+      target_link_libraries(test_${TARGET} PRIVATE filameshio GTest::gtest GTest::gtest_main Threads::Threads)
+    else()
+      target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
+    endif()
 endif()

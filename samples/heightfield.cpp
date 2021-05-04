@@ -32,12 +32,20 @@
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
 
+#if defined (_MSC_VER) || !defined (FILAMENT_USE_HUNTER)
 #include <getopt/getopt.h>
+#else
+#include <getopt.h>
+#endif
 
 #include <filamentapp/FilamentApp.h>
 
 #define STB_PERLIN_IMPLEMENTATION
+#ifdef FILAMENT_USE_HUNTER
+#include <stb/stb_perlin.h>
+#else
 #include <stb_perlin.h>
+#endif
 
 #include <math/mat4.h>
 #include <math/norm.h>

@@ -26,7 +26,11 @@
 #include <filament/RenderableManager.h>
 #include <filament/VertexBuffer.h>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <meshoptimizer/meshoptimizer.h>
+#else
 #include <meshoptimizer.h>
+#endif
 
 #include <utils/EntityManager.h>
 #include <utils/Log.h>

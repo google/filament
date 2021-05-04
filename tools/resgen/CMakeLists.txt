@@ -12,7 +12,14 @@ set(SRCS src/main.cpp)
 # Target definitions
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
-target_link_libraries(${TARGET} PRIVATE utils getopt)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} PRIVATE utils)
+  if (MSVC)
+    target_link_libraries(${TARGET} PRIVATE getopt::getopt)
+  endif()
+else()
+  target_link_libraries(${TARGET} PRIVATE utils getopt)
+endif()
 
 # =================================================================================================
 # Licenses

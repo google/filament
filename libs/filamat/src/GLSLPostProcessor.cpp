@@ -19,9 +19,15 @@
 #include <sstream>
 #include <vector>
 
+#ifdef FILAMENT_USE_HUNTER
+#include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/SPIRV/SPVRemapper.h>
+#include <glslang/MachineIndependent/localintermediate.h>
+#else 
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
 #include <localintermediate.h>
+#endif
 
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>

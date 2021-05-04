@@ -16,7 +16,11 @@
 
 #include "DictionarySpirvChunk.h"
 
+#ifdef FILAMENT_USE_HUNTER
+#include <smol-v/smolv.h>
+#else
 #include <smolv.h>
+#endif
 
 namespace filamat {
 

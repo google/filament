@@ -15,7 +15,14 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
+if(HUNTER_ENABLED)
+  target_link_libraries(${TARGET} PRIVATE math utils ZLIB::zlib image imageio)
+  if (MSVC)
+    target_link_libraries(${TARGET} PRIVATE getopt::getopt)
+  endif()
+else()
+  target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
+endif()
 
 # ==================================================================================================
 # Compile options and optimizations

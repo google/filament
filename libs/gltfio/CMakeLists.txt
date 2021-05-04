@@ -163,14 +163,28 @@ add_library(gltfio_resources_lite ${DUMMY_SRC} ${RESGEN_SOURCE})
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb geometry gltfio_resources tsl trie)
+if(HUNTER_ENABLED)
+  link_libraries(math utils filament cgltf::cgltf stb::stb geometry gltfio_resources tsl::hat_trie tsl::robin_map)
+else()
+  link_libraries(math utils filament cgltf stb geometry gltfio_resources tsl trie)
+endif()
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+if(HUNTER_ENABLED)
+  target_include_directories(gltfio_core PUBLIC  
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>  
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>)
+else()
+  target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+endif()
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
-target_link_libraries(gltfio_core PUBLIC dracodec)
+if(HUNTER_ENABLED)
+  target_link_libraries(gltfio_core PUBLIC draco::draco)
+else()
+  target_link_libraries(gltfio_core PUBLIC dracodec)
+endif()
 
 if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
@@ -179,7 +193,14 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
-    target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+    
+    if(HUNTER_ENABLED)
+      target_include_directories(${TARGET} PUBLIC  
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>  
+        $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>)
+    else()
+      target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+    endif()
 
     # ==================================================================================================
     # Compiler flags
@@ -194,7 +215,11 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Installation
     # ==================================================================================================
-    install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+    if(HUNTER_ENABLED)
+      install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite EXPORT ${TARGETS_EXPORT_NAME} ARCHIVE DESTINATION lib/${DIST_DIR})
+    else()
+      install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
+    endif()
     install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
 
 else()
