@@ -165,9 +165,9 @@ const float kSensitivity = 100.0f;
     if (!_asset) {
         return;
     }
+    _resourceLoader->evictResourceData();
     _scene->removeEntities(_asset->getEntities(), _asset->getEntityCount());
     _assetLoader->destroyAsset(_asset);
-    _materialProvider->destroyMaterials();
     _asset = nullptr;
     _animator = nullptr;
 }
@@ -248,6 +248,7 @@ const float kSensitivity = 100.0f;
 
     delete _manipulator;
 
+    _materialProvider->destroyMaterials();
     delete _materialProvider;
     auto* ncm = _assetLoader->getNames();
     delete ncm;
