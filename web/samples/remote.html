@@ -210,8 +210,10 @@ class App {
         const connection = this.websocket;
         if (connection && connection.readyState == connection.OPEN) {
             console.info(`Uploading ${file.name}`);
-            connection.send(file.name);
-            connection.send(file);
+            file.arrayBuffer().then(buffer => {
+                connection.send(file.name);
+                connection.send(buffer);
+            });
         } else {
             this.pendingFile = file;
         }
