@@ -102,11 +102,6 @@ OpenGLContext::OpenGLContext() noexcept {
     } else if (strstr(renderer, "Mozilla")) {
         bugs.disable_invalidate_framebuffer = true;
     }
-#if defined(__EMSCRIPTEN__)
-    // Chrome does not support feedback loops in WebGL 2.0. See also:
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
-    bugs.disable_feedback_loops = true;
-#endif
 
     // now we can query getter and features
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
