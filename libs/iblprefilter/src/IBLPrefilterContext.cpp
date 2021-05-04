@@ -49,33 +49,6 @@ constexpr static float4 sFullScreenTriangleVertices[3] = {
 
 constexpr static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static float DistributionGGX(float NoH, float linearRoughness) noexcept {
-    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
-    float a = linearRoughness;
-    float f = (a - 1) * ((a + 1) * (NoH * NoH)) + 1;
-    return (a * a) / ((float)F_PI * f * f);
-}
-
-static float3 hemisphereImportanceSampleDggx(float2 u, float a) { // pdf = D(a) * cosTheta
-    const float phi = 2.0f * (float)F_PI * u.x;
-    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
-    const float cosTheta2 = (1 - u.y) / (1 + (a + 1) * ((a - 1) * u.y));
-    const float cosTheta = std::sqrt(cosTheta2);
-    const float sinTheta = std::sqrt(1 - cosTheta2);
-    return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
-}
-
-inline math::float2 hammersley(uint32_t i, float iN) {
-    constexpr float tof = 0.5f / 0x80000000U;
-    uint32_t bits = i;
-    bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    return { i * iN, bits * tof };
-}
-
 static float lodToPerceptualRoughness(float lod) noexcept {
     // Inverse perceptualRoughness-to-LOD mapping:
     // The LOD-to-perceptualRoughness mapping is a quadratic fit for
@@ -179,8 +152,8 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
         swap(mCamera, rhs.mCamera);
         swap(mFullScreenQuadEntity, rhs.mFullScreenQuadEntity);
         swap(mCameraEntity, rhs.mCameraEntity);
-        swap(mIntegrationMaterial, rhs.mIntegrationMaterial);
         swap(mView, rhs.mView);
+        swap(mIntegrationMaterial, rhs.mIntegrationMaterial);
     }
     return *this;
 }
@@ -341,29 +314,6 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     renderer->renderStandaloneView(view);
 
     engine.destroy(rt);
-
-    // the code below must match the shader in generateKernel.mat
-    // this is a little bit unfortunate that we have to compute the weightSum here, but it's
-    // not too heavy.
-    const uint32_t levelCount = mLevelCount;
-    const float sampleCount = mSampleCount;
-    mKernelWeightArray = new float[mLevelCount];
-    for (uint32_t lod = 0 ; lod < levelCount; lod++) {
-        SYSTRACE_NAME("computeFilterLOD");
-        const float perceptualRoughness = lodToPerceptualRoughness(saturate(lod / (levelCount - 1.0f)));
-        const float roughness = perceptualRoughness * perceptualRoughness;
-        const uint32_t effectiveSampleCount = (lod == 0) ? 1u : sampleCount;
-        float weight = 0.0f;
-        for (size_t i = 0; i < effectiveSampleCount; i++) {
-            const float2 u = hammersley(uint32_t(i), 1.0f / float(effectiveSampleCount));
-            const float3 H = hemisphereImportanceSampleDggx(u, roughness);
-            const float NoH2 = H.z * H.z;
-            const float NoL = saturate(2 * NoH2 - 1);
-            weight += NoL;
-        }
-        assert_invariant(lod < mLevelCount);
-        mKernelWeightArray[lod] = weight;
-    }
 }
 
 UTILS_NOINLINE
@@ -375,7 +325,6 @@ IBLPrefilterContext::SpecularFilter::~SpecularFilter() noexcept {
     Engine& engine = mContext.mEngine;
     engine.destroy(mKernelTexture);
     engine.destroy(mKernelMaterial);
-    delete [] mKernelWeightArray;
 }
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexcept
@@ -386,8 +335,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexce
 IBLPrefilterContext::SpecularFilter& IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) {
     using std::swap;
     if (this != & rhs) {
+        swap(mKernelMaterial, rhs.mKernelMaterial);
         swap(mKernelTexture, rhs.mKernelTexture);
-        swap(mKernelWeightArray, rhs.mKernelWeightArray);
         mSampleCount = rhs.mSampleCount;
         mLevelCount = rhs.mLevelCount;
     }
@@ -492,7 +441,6 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
-        mi->setParameter("invKernelWeight", 1.0f / mKernelWeightArray[lod]);
 
         if (lod == levels - 1) {
             // this is the last lod, use a more agressive filtering because this level is also

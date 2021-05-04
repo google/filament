@@ -23,11 +23,6 @@ material {
         },
         {
             type : float,
-            name : invKernelWeight,
-            precision: high
-        },
-        {
-            type : float,
             name : lodOffset,
             precision: medium
         },
@@ -142,16 +137,20 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec3 Ly = vec3(0);
     vec3 Lz = vec3(0);
 
+    float kernelWeight = 0.0;
     for (uint i = 0u ; i < materialParams.sampleCount ; i++) {
         // { L, lod }, with L.z == NoL
         mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
-        float l = entry.w + materialParams.lodOffset; // we don't need to clamp, the h/w does it for us
-        Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
-        Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
-        Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
+        if (entry.z > 0.0) {
+            float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
+            Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
+            Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
+            Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
+            kernelWeight += entry.z;
+        }
     }
 
-    highp float invKernelWeight = materialParams.invKernelWeight;
+    float invKernelWeight = 1.0 / kernelWeight;
     Lx *= invKernelWeight;
     Ly *= invKernelWeight;
     Lz *= invKernelWeight;
