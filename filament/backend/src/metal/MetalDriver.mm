@@ -91,6 +91,17 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 #endif
     }
 
+    mContext->maxColorRenderTargets = 4;
+#if defined(IOS)
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#else
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#endif
+
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -673,7 +684,7 @@ math::float2 MetalDriver::getClipSpaceParams() {
 }
 
 uint8_t MetalDriver::getMaxDrawBuffers() {
-    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+    return mContext->maxColorRenderTargets;
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
