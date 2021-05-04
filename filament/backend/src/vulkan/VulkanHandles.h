@@ -143,7 +143,9 @@ struct VulkanTexture : public HwTexture {
     void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
 
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
-    VkImageView getImageView(VkImageSubresourceRange range);
+    // If force2D is true, this always returns an image view that has type = VK_IMAGE_VIEW_TYPE_2D,
+    // regardless of the type of the primary image view.
+    VkImageView getImageView(VkImageSubresourceRange range, bool force2D = false);
 
     // Convenient "single subresource" overload for the above method.
     VkImageView getImageView(int singleLevel, int singleLayer, VkImageAspectFlags aspect) {
@@ -153,7 +155,7 @@ struct VulkanTexture : public HwTexture {
             .levelCount = uint32_t(1),
             .baseArrayLayer = uint32_t(singleLayer),
             .layerCount = uint32_t(1),
-        });
+        }, true);
     }
 
     VkFormat getVkFormat() const { return mVkFormat; }
