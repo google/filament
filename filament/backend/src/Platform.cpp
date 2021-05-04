@@ -41,11 +41,14 @@
         #include "vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
-    #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER) && !defined(FILAMENT_USE_EGL_OPENGL)
         #include "opengl/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkLinux.h"
+    #endif
+    #if defined (FILAMENT_USE_EGL_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+        #include "opengl/PlatformEGLOpenGL.h"
     #endif
 #elif defined(WIN32)
     #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
@@ -121,7 +124,11 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     #elif defined(__APPLE__)
         return new PlatformCocoaGL();
     #elif defined(__linux__)
-        return new PlatformGLX();
+        #if defined(FILAMENT_USE_EGL_OPENGL)
+           return new PlatformEGLOpenGL();
+        #else
+           return new PlatformGLX();
+        #endif
     #elif defined(WIN32)
         return new PlatformWGL();
     #elif defined(__EMSCRIPTEN__)

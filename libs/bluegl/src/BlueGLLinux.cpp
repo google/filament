@@ -18,6 +18,10 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#ifdef FILAMENT_USE_EGL_OPENGL
+#include <EGL/egl.h>
+#endif
+
 namespace bluegl {
 
 struct Driver {
@@ -26,6 +30,9 @@ struct Driver {
 } g_driver = {nullptr, nullptr};
 
 bool initBinder() {
+#ifdef FILAMENT_USE_EGL_OPENGL
+    return true;
+#endif
     const char* library_name = "libGL.so.1";
     g_driver.library = dlopen(library_name, RTLD_GLOBAL | RTLD_NOW);
 
@@ -40,10 +47,17 @@ bool initBinder() {
 }
 
 void* loadFunction(const char* name) {
-    return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
+#ifdef FILAMENT_USE_EGL_OPENGL
+  return (void *)eglGetProcAddress(name);
+#else
+  return (void*) g_driver.glXGetProcAddress((const GLubyte*) name);
+#endif
 }
 
 void shutdownBinder() {
+#ifdef FILAMENT_USE_EGL_OPENGL
+    return;
+#endif
     dlclose(g_driver.library);
     memset(&g_driver, 0, sizeof(g_driver));
 }

@@ -67,6 +67,9 @@ add_executable(test_${TARGET}
 
 if (LINUX)
     target_link_libraries(test_${TARGET} PUBLIC dl)
+    if (EGL)
+      target_link_libraries(test_${TARGET} PUBLIC EGL)
+    endif()
 endif()
 
 # and we're linking against the libraries below, importing their public headers

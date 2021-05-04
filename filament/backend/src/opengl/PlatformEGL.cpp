@@ -86,13 +86,28 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     EGLint major, minor;
     EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
+
+    if(!initialized) {
+      EGLDeviceEXT eglDevice;
+      EGLint numDevices;
+
+      PFNEGLQUERYDEVICESEXTPROC eglQueryDevicesEXT = 
+              (PFNEGLQUERYDEVICESEXTPROC)eglGetProcAddress("eglQueryDevicesEXT");
+      if (eglQueryDevicesEXT != NULL) {
+          eglQueryDevicesEXT(1, &eglDevice, &numDevices);
+          mEGLDisplay = eglGetPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevice, 0);
+          initialized = eglInitialize(mEGLDisplay, &major, &minor);
+      }
+    }
+
     if (UTILS_UNLIKELY(!initialized)) {
         slog.e << "eglInitialize failed" << io::endl;
         return nullptr;
     }
 
+#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
     importGLESExtensionsEntryPoints();
-
+#endif
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
@@ -103,6 +118,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC) eglGetProcAddress("eglDestroyImageKHR");
 
     EGLint configsCount;
+#ifdef ANDROID
     EGLint configAttribs[] = {
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,        //  0
             EGL_RED_SIZE,    8,                                 //  2
@@ -113,6 +129,18 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
             EGL_RECORDABLE_ANDROID, 1,                          // 12
             EGL_NONE                                            // 14
     };
+#else
+   EGLint configAttribs[] = {
+          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+          EGL_RED_SIZE, 8,
+          EGL_GREEN_SIZE, 8,
+          EGL_BLUE_SIZE, 8,
+          EGL_ALPHA_SIZE,  0, 
+          EGL_DEPTH_SIZE, 8,
+          EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+          EGL_NONE
+            };
+#endif
 
     EGLint contextAttribs[] = {
             EGL_CONTEXT_CLIENT_VERSION, 3,
@@ -143,6 +171,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         goto error;
     }
 
+#ifdef ANDROID
     if (configsCount == 0) {
       // warn and retry without EGL_RECORDABLE_ANDROID
       logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
@@ -154,6 +183,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
           goto error;
       }
     }
+#endif
 
     // find a transparent config
     configAttribs[8] = EGL_ALPHA_SIZE;
@@ -164,6 +194,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         goto error;
     }
 
+#ifdef ANDROID
     if (configsCount == 0) {
       // warn and retry without EGL_RECORDABLE_ANDROID
         logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
@@ -176,6 +207,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
           goto error;
       }
     }
+#endif
 
     if (!extensions.has("EGL_KHR_no_config_context")) {
         // if we have the EGL_KHR_no_config_context, we don't need to worry about the config
