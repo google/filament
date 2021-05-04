@@ -1702,10 +1702,6 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
-bool OpenGLDriver::areFeedbackLoopsSupported() {
-    return !mContext.bugs.disable_feedback_loops;
-}
-
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
             math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };

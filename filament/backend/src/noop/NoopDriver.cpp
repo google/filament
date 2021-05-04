@@ -167,10 +167,6 @@ bool NoopDriver::isFrameTimeSupported() {
     return true;
 }
 
-bool NoopDriver::areFeedbackLoopsSupported() {
-    return true;
-}
-
 math::float2 NoopDriver::getClipSpaceParams() {
     return math::float2{ -1.0f, 0.0f };
 }

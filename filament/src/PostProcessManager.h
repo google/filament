@@ -83,17 +83,24 @@ public:
             const View::DepthOfFieldOptions& dofOptions, bool translucent,
             const CameraInfo& cameraInfo, math::float2 scale) noexcept;
 
-    // Color grading, tone mapping, etc.
+    // Bloom
+    FrameGraphId<FrameGraphTexture> bloom(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+
+    // Color grading, tone mapping, dithering and bloom
+    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, math::float2 scale,
+            const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
+            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions) noexcept;
+
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
-            View::VignetteOptions vignetteOptions, bool fxaa, bool dithering,
+            ColorGradingConfig const& colorGradingConfig,
+            View::VignetteOptions vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
 
-    void colorGradingSubpass(backend::DriverApi& driver, bool translucent) noexcept;
-
-    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
-            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
-            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept;
+    void colorGradingSubpass(backend::DriverApi& driver,
+            ColorGradingConfig const& colorGradingConfig) noexcept;
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
@@ -158,10 +165,6 @@ private:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
-    FrameGraphId<FrameGraphTexture> bloomPassPingPong(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
-
     void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material, uint8_t variant,
             backend::DriverApi& driver) const noexcept;
@@ -221,7 +224,6 @@ private:
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
-    bool mDisableFeedbackLoops;
 };
 
 

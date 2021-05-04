@@ -663,10 +663,6 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
-bool MetalDriver::areFeedbackLoopsSupported() {
-    return true;
-}
-
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
