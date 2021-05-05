@@ -388,7 +388,16 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
     .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("highlight", &filament::View::BloomOptions::highlight);
+    .field("highlight", &filament::View::BloomOptions::highlight)
+    .field("lensFlare", &filament::View::BloomOptions::lensFlare)
+    .field("starburst", &filament::View::BloomOptions::starburst)
+    .field("chromaticAberration", &filament::View::BloomOptions::chromaticAberration)
+    .field("ghostCount", &filament::View::BloomOptions::ghostCount)
+    .field("ghostSpacing", &filament::View::BloomOptions::ghostSpacing)
+    .field("ghostThreshold", &filament::View::BloomOptions::ghostThreshold)
+    .field("haloThickness", &filament::View::BloomOptions::haloThickness)
+    .field("haloRadius", &filament::View::BloomOptions::haloRadius)
+    .field("haloThreshold", &filament::View::BloomOptions::haloThreshold);
 
 // TODO: add support for dirt texture in BloomOptions.
 // Note that simply including the field in the above list causes binding errors for nullptr.
