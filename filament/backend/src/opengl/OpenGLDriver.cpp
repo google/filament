@@ -488,30 +488,7 @@ void OpenGLDriver::createVertexBufferR(
         AttributeArray attributes,
         BufferUsage usage) {
     DEBUG_MARKER()
-
-    auto& gl = mContext;
-    GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
-            bufferCount, attributeCount, elementCount, attributes);
-
-    GLsizei n = GLsizei(vb->bufferCount);
-
-    assert_invariant(n <= (GLsizei)vb->gl.buffers.size());
-    glGenBuffers(n, vb->gl.buffers.data());
-
-    for (GLsizei i = 0; i < n; i++) {
-        // figure out the size needed for each buffer
-        size_t size = 0;
-        for (auto const& item : attributes) {
-            if (item.buffer == i) {
-                size_t end = item.offset + elementCount * item.stride;
-                size = std::max(size, end);
-            }
-        }
-        gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[i]);
-        glBufferData(GL_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
-    }
-
-    CHECK_GL_ERROR(utils::slog.e)
+    construct<GLVertexBuffer>(vbh, bufferCount, attributeCount, elementCount, attributes);
 }
 
 void OpenGLDriver::createIndexBufferR(
@@ -1298,15 +1275,7 @@ void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
-
-    if (vbh) {
-        auto& gl = mContext;
-        GLVertexBuffer const* eb = handle_cast<const GLVertexBuffer*>(vbh);
-        GLsizei n = GLsizei(eb->bufferCount);
-        const auto& buffers = eb->gl.buffers;
-        gl.deleteBuffers(n, buffers.data(), GL_ARRAY_BUFFER);
-        destruct(vbh, eb);
-    }
+    // Do nothing, because a VertexBuffer is just a collection of BufferObject handles.
 }
 
 void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
