@@ -218,6 +218,7 @@ private:
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
+    backend::Handle<backend::HwTexture> mStarburstTexture;
 
     size_t mSeparableGaussianBlurKernelStorageSize = 0;
 

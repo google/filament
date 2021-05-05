@@ -43,9 +43,11 @@ fragment {
     void dummy(){}
 
     void threshold(inout vec3 c) {
-        float l = max3(c);
-        highp float f = l;
-        c *= step(1.0, l) / (1.0 + f * materialParams.invHighlight);
+        // threshold everything below 1.0
+        c = max(vec3(0.0), c - 1.0);
+        // crush everything above 1
+        highp float f = max3(c);
+        c *= 1.0 / (1.0 + f * materialParams.invHighlight);
     }
 
     vec3 box4x4(vec3 s0, vec3 s1, vec3 s2, vec3 s3) {

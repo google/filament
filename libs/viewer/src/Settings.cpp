@@ -416,6 +416,24 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, BloomOpt
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "highlight") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->highlight);
+        } else if (compare(tok, jsonChunk, "lensFlare") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lensFlare);
+        } else if (compare(tok, jsonChunk, "starburst") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->starburst);
+        } else if (compare(tok, jsonChunk, "chromaticAberration") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->chromaticAberration);
+        } else if (compare(tok, jsonChunk, "ghostCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostCount);
+        } else if (compare(tok, jsonChunk, "ghostSpacing") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostSpacing);
+        } else if (compare(tok, jsonChunk, "ghostThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostThreshold);
+        } else if (compare(tok, jsonChunk, "haloThickness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloThickness);
+        } else if (compare(tok, jsonChunk, "haloRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloRadius);
+        } else if (compare(tok, jsonChunk, "haloThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloThreshold);
         } else {
             slog.w << "Invalid bloom options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);

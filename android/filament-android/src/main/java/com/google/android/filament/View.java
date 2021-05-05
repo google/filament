@@ -363,6 +363,52 @@ public class View {
          * minimum value is 10.0.
          */
         public float highlight = 1000.0f;
+
+
+        /**
+         * enable screen-space lens flare
+         */
+        public boolean lensFlare = false;
+
+        /**
+         * enable starburst effect on lens flare
+         */
+        public boolean starburst = true;
+
+        /**
+         * amount of chromatic aberration
+         */
+        public float chromaticAberration = 0.005f;
+
+        /**
+         * number of flare "ghosts"
+         */
+        public int ghostCount = 4;
+
+        /**
+         * spacing of the ghost in screen units [0, 1[
+         */
+        public float ghostSpacing = 0.6f;
+
+        /**
+         * hdr threshold for the ghosts
+         */
+        public float ghostThreshold = 10.0f;
+
+        /**
+         * thickness of halo in vertical screen units, 0 to disable
+         */
+        public float haloThickness = 0.1f;
+
+        /**
+         * radius of halo in vertical screen units [0, 0.5]
+         */
+        public float haloRadius = 0.4f;
+
+        /**
+         * hdr threshold for the halo
+         */
+        public float haloThreshold = 10.0f;
     }
 
     /**
@@ -1357,7 +1403,10 @@ public class View {
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
                 options.anamorphism, options.levels, options.blendingMode.ordinal(),
-                options.threshold, options.enabled, options.highlight);
+                options.threshold, options.enabled, options.highlight,
+                options.lensFlare, options.starburst, options.chromaticAberration,
+                options.ghostCount, options.ghostSpacing, options.ghostThreshold,
+                options.haloThickness, options.haloRadius, options.haloThreshold);
     }
 
     /**
@@ -1501,7 +1550,8 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
-    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
+    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
+            boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter,

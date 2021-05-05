@@ -622,6 +622,7 @@ void SimpleViewer::updateUserInterface() {
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
         ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
+        ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
 
         if (ImGui::CollapsingHeader("SSAO Options")) {
             auto& ssao = mSettings.view.ssao;
