@@ -684,7 +684,7 @@ math::float2 MetalDriver::getClipSpaceParams() {
 }
 
 uint8_t MetalDriver::getMaxDrawBuffers() {
-    return mContext->maxColorRenderTargets;
+    return std::min(mContext->maxColorRenderTargets, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
