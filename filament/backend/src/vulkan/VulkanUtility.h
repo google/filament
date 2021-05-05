@@ -24,6 +24,17 @@
 namespace filament {
 namespace backend {
 
+struct VulkanLayoutTransition {
+    VkImage image;
+    VkImageLayout oldLayout;
+    VkImageLayout newLayout;
+    VkImageSubresourceRange subresources;
+    VkPipelineStageFlags srcStage;
+    VkAccessFlags srcAccessMask;
+    VkPipelineStageFlags dstStage;
+    VkAccessFlags dstAccessMask;
+};
+
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
 VkFormat getVkFormat(TextureFormat format);
@@ -34,6 +45,7 @@ VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
+void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 
 } // namespace filament
 } // namespace backend

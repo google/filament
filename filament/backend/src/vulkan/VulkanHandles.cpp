@@ -702,8 +702,6 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool forc
     return imageView;
 }
 
-// TODO: replace the last 4 args with VkImageSubresourceRange
-// TODO: replace this function with a flexible thin wrapper over image barrier creation
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
         VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
         uint32_t layerCount, uint32_t levelCount, VkImageAspectFlags aspect) {

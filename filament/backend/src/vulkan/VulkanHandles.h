@@ -161,13 +161,13 @@ struct VulkanTexture : public HwTexture {
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
 
+private:
     // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
     // layout to a GPU-readable layout.
     static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
             VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
             uint32_t layers, uint32_t levels, VkImageAspectFlags aspect);
 
-private:
     // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
     // height define a subregion within the miplevel.
     void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
