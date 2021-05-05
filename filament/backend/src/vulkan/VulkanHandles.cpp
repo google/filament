@@ -418,19 +418,26 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
         mDisposer.acquire(this);
 
         // Ensure that the copy finishes before the next draw call.
+
+        // NOTE: ideally dstAccessMask would be VK_ACCESS_UNIFORM_READ_BIT and dstStageMask would be
+        // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
+        // seems to be insufficient on Mali devices. To work around this we are using a more
+        // aggressive VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT barrier.
+
         VkBufferMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT,
+            .dstAccessMask = 0,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = mGpuBuffer,
             .size = VK_WHOLE_SIZE
         };
 
-        vkCmdPipelineBarrier(commands.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                nullptr, 1, &barrier, 0, nullptr);
+        vkCmdPipelineBarrier(commands.cmdbuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                0, 0, nullptr, 1, &barrier, 0, nullptr);
     };
 
     copyToDevice(mContext.commands->get());

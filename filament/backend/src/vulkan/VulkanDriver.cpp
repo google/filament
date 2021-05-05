@@ -1088,12 +1088,16 @@ void VulkanDriver::endRenderPass(int) {
     // require more state tracking, so we've chosen to use a memory barrier for simplicity and
     // correctness.
 
-    // NOTE: We've noticed that this barrier is especially crucial on some Mali devices.
+    // NOTE: ideally dstAccessMask would be VK_ACCESS_SHADER_READ_BIT and dstStageMask would be
+    // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
+    // seems to be insufficient on Mali devices. To work around this we are using a more
+    // aggressive TOP_OF_PIPE barrier.
+
     if (!mCurrentRenderTarget->isSwapChain()) {
         VkMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dstAccessMask = 0,
         };
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         if (mCurrentRenderTarget->hasDepth()) {
@@ -1102,7 +1106,7 @@ void VulkanDriver::endRenderPass(int) {
         }
         vkCmdPipelineBarrier(cmdbuffer,
                 srcStageMask,
-                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                 0, 1, &barrier, 0, nullptr, 0, nullptr);
     }
 
