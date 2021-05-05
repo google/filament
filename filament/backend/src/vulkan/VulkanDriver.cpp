@@ -1054,8 +1054,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     renderPassInfo.pClearValues = &clearValues[0];
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo,
-            VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = mContext.viewport = {
         .x = (float) params.viewport.left,
@@ -1077,9 +1076,36 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 }
 
 void VulkanDriver::endRenderPass(int) {
-    assert_invariant(mContext.currentSurface);
+    VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    vkCmdEndRenderPass(cmdbuffer);
+
     assert_invariant(mCurrentRenderTarget);
-    vkCmdEndRenderPass(mContext.commands->get().cmdbuffer);
+
+    // Since we might soon be sampling from the render target that we just wrote to, we need a
+    // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
+    // than an image barrier. If we were to use image barriers here, we would potentially need to
+    // issue several of them when considering MRT. This would be very complex to set up and would
+    // require more state tracking, so we've chosen to use a memory barrier for simplicity and
+    // correctness.
+
+    // NOTE: We've noticed that this barrier is especially crucial on some Mali devices.
+    if (!mCurrentRenderTarget->isSwapChain()) {
+        VkMemoryBarrier barrier {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        };
+        VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        if (mCurrentRenderTarget->hasDepth()) {
+            barrier.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        }
+        vkCmdPipelineBarrier(cmdbuffer,
+                srcStageMask,
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0, 1, &barrier, 0, nullptr, 0, nullptr);
+    }
+
     mCurrentRenderTarget = VK_NULL_HANDLE;
     if (mContext.currentRenderPass.currentSubpass > 0) {
         for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
