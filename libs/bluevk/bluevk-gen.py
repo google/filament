@@ -216,6 +216,7 @@ def consumeXML(spec):
         'VkExternalSemaphoreHandleTypeFlagBits',
         'VkSwapchainImageUsageFlagBitsANDROID',
         'VkSurfaceCounterFlagBitsEXT',
+        'VkPipelineStageFlagBits2KHR',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':

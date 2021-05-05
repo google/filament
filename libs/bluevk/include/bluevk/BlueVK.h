@@ -939,7 +939,6 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderCoreProper
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkShaderModuleCreateFlagBits& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineCompilerControlFlagBitsAMD& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkToolPurposeFlagBitsEXT& value);
-utils::io::ostream& operator<<(utils::io::ostream& out, const VkPipelineStageFlagBits2KHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkSubmitFlagBitsKHR& value);
 utils::io::ostream& operator<<(utils::io::ostream& out, const VkEventCreateFlagBits& value);
 #endif
