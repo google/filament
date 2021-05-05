@@ -136,6 +136,94 @@ static void createBitmap(DriverApi& dapi, Handle<HwTexture> texture, int baseWid
     dapi.update2DImage(texture, level, 0, 0, width, height, std::move(pb));
 }
 
+static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidth, int baseHeight,
+        int level, float3 color) {
+    auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
+    const int width = baseWidth >> level;
+    const int height = baseHeight >> level;
+    const size_t size0 = height * width * 4 * 6;
+    uint8_t* buffer0 = (uint8_t*) calloc(size0, 1);
+    PixelBufferDescriptor pb(buffer0, size0, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
+
+    const float3 foreground = color;
+    const float3 background = float3(1, 1, 0);
+    const float radius = 0.25f;
+
+    // Draw a circle on a yellow background.
+    uint32_t* texels = (uint32_t*) buffer0;
+    FaceOffsets offsets;
+    for (int face = 0; face < 6; face++) {
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                float2 uv = { (col - width / 2.0f) / width, (row - height / 2.0f) / height };
+                const float d = distance(uv, float2(0));
+                const float t = d < radius ? 1.0 : 0.0;
+                const float3 color = mix(foreground, background, t);
+                texels[row * width + col] = toUintColor(float4(color, 1.0f));
+            }
+        }
+        offsets[face] = face * width * height * 4;
+        texels += offsets[face] / 4;
+    }
+
+    // Upload to the GPU.
+    dapi.updateCubeImage(texture, level, std::move(pb), offsets);
+}
+
+TEST_F(BackendTest, CubemapMinify) {
+    auto& api = getDriverApi();
+
+    Handle<HwTexture> texture = api.createTexture(
+        SamplerType::SAMPLER_CUBEMAP, 4, TextureFormat::RGBA8, 1, 256, 256, 1,
+        TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
+
+    createFaces(api, texture, 256, 256, 0, float3(0.5, 0, 0));
+
+    const int srcLevel = 0;
+    const int dstLevel = 1;
+
+    const TextureCubemapFace srcFace = TextureCubemapFace::NEGATIVE_Y;
+    const TextureCubemapFace dstFace = TextureCubemapFace::NEGATIVE_Y;
+
+    const TargetBufferInfo srcInfo = { texture, srcLevel, srcFace };
+    const TargetBufferInfo dstInfo = { texture, dstLevel, dstFace };
+
+    Handle<HwRenderTarget> srcRenderTarget;
+    srcRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
+            256 >> srcLevel, 256 >> srcLevel, 1, { srcInfo }, {}, {});
+
+    Handle<HwRenderTarget> dstRenderTarget;
+    dstRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
+            256 >> dstLevel, 256 >> dstLevel, 1, { dstInfo }, {}, {});
+
+   api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
+           {0, 0, 256 >> dstLevel, 256 >> dstLevel}, srcRenderTarget,
+           {0, 0, 256 >> srcLevel, 256 >> srcLevel}, SamplerMagFilter::LINEAR);
+
+    // Push through an empty frame. Note that this test does not do
+    // makeCurrent / commit and is therefore similar to renderStandaloneView.
+    api.beginFrame(0, 0);
+    api.endFrame(0);
+
+    // Grab a screenshot.
+    ScreenshotParams params { 256 >> dstLevel, 256 >> dstLevel, "CubemapMinify.png" };
+    api.beginFrame(0, 0);
+    dumpScreenshot(api, dstRenderTarget, &params);
+    api.endFrame(0);
+
+    // Wait for the ReadPixels result to come back.
+    api.finish();
+    executeCommands();
+    getDriver().purge();
+
+    // Cleanup.
+    api.destroyTexture(texture);
+    api.destroyRenderTarget(srcRenderTarget);
+    api.destroyRenderTarget(dstRenderTarget);
+    executeCommands();
+}
+
+
 TEST_F(BackendTest, ColorMagnify) {
     auto& api = getDriverApi();
 
