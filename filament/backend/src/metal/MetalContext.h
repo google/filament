@@ -53,6 +53,7 @@ struct MetalContext {
 
     // Supported features.
     bool supportsTextureSwizzling = false;
+    uint8_t maxColorRenderTargets = 4;
 
     // Tracks resources used by command buffers.
     MetalResourceTracker resourceTracker;
