@@ -4,9 +4,9 @@
 
 To build Filament, you must first install the following tools:
 
-- CMake 3.10 (or more recent)
+- CMake 3.19 (or more recent)
 - clang 7.0 (or more recent)
-- [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
+- [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 To build the Java based components of the project you can optionally install (recommended):
 
@@ -17,9 +17,9 @@ section below.
 
 To build Filament for Android you must also install the following:
 
-- Android Studio 4.1.0 or more recent
+- Android Studio 4.2.0 or more recent
 - Android SDK
-- Android NDK "side-by-side" 22.0 or higher
+- Android NDK "side-by-side" 22.1 or higher
 
 ### Environment variables
 

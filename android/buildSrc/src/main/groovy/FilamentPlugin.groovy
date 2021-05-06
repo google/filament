@@ -19,8 +19,11 @@ import org.gradle.api.file.FileType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.incremental.InputFileDetails
@@ -33,24 +36,23 @@ import java.nio.file.Paths
 
 class TaskWithBinary extends DefaultTask {
     private final String binaryName
-    private File binaryPath = null
+    private Property<String> binaryPath = null
 
     TaskWithBinary(String name) {
         binaryName = name
     }
 
-    String getBinaryName() {
-        return binaryName
-    }
-
-    File getBinary() {
+    @Input
+    Property<String> getBinary() {
         if (binaryPath == null) {
             def tool = ["/bin/${binaryName}.exe", "/bin/${binaryName}"]
             def fullPath = tool.collect { path ->
                 Paths.get(project.ext.filamentToolsPath.absolutePath, path).toFile()
             }
 
-            binaryPath = OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]
+            binaryPath = project.objects.property(String.class)
+            binaryPath.set(
+                    (OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]).toString())
         }
         return binaryPath
     }
@@ -65,14 +67,6 @@ class LogOutputStream extends ByteArrayOutputStream {
         this.level = level
     }
 
-    Logger getLogger() {
-        return logger
-    }
-
-    LogLevel getLevel() {
-        return level
-    }
-
     @Override
     void flush() {
         logger.log(level, toString())
@@ -85,10 +79,10 @@ class LogOutputStream extends ByteArrayOutputStream {
 abstract class MaterialCompiler extends TaskWithBinary {
     @Incremental
     @InputDirectory
-    final DirectoryProperty inputDir = project.objects.directoryProperty()
+    abstract DirectoryProperty getInputDir()
 
     @OutputDirectory
-    final DirectoryProperty outputDir = project.objects.directoryProperty()
+    abstract DirectoryProperty getOutputDir()
 
     MaterialCompiler() {
         super("matc")
@@ -115,8 +109,8 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 out.write(header)
                 out.flush()
 
-                if (!getBinary().exists()) {
-                    throw new GradleException("Could not find ${getBinary()}." +
+                if (!new File(binary.get()).exists()) {
+                    throw new GradleException("Could not find ${binary.get()}." +
                             " Ensure Filament has been built/installed before building this app.")
                 }
 
@@ -129,7 +123,7 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 project.exec {
                     standardOutput out
                     errorOutput err
-                    executable "${getBinary()}"
+                    executable "${binary.get()}"
                     args matcArgs
                 }
             }
@@ -143,15 +137,17 @@ abstract class MaterialCompiler extends TaskWithBinary {
 
 // Custom task to process IBLs using cmgen
 // This task handles incremental builds
-class IblGenerator extends TaskWithBinary {
-    String cmgenArgs = null
+abstract class IblGenerator extends TaskWithBinary {
+    @Input
+    @Optional
+    abstract Property<String> getCmgenArgs()
 
     @Incremental
     @InputFile
-    final RegularFileProperty inputFile = project.objects.fileProperty()
+    abstract RegularFileProperty getInputFile()
 
     @OutputDirectory
-    final DirectoryProperty outputDir = project.objects.directoryProperty()
+    abstract DirectoryProperty getOutputDir()
 
     IblGenerator() {
         super("cmgen")
@@ -178,23 +174,25 @@ class IblGenerator extends TaskWithBinary {
                 out.write(header)
                 out.flush()
 
-                if (!getBinary().exists()) {
-                    throw new GradleException("Could not find ${getBinary()}." +
+                if (!new File(binary.get()).exists()) {
+                    throw new GradleException("Could not find ${binary.get()}." +
                             " Ensure Filament has been built/installed before building this app.")
                 }
 
                 def outputPath = outputDir.get().asFile
+                def commandArgs = cmgenArgs.getOrNull()
+                if (commandArgs == null) {
+                    commandArgs =
+                            '-q -x ' + outputPath + ' --format=rgb32f ' +
+                                    '--extract-blur=0.08 --extract=' + outputPath.absolutePath
+                }
+                commandArgs = commandArgs + " " + file
+
                 project.exec {
                     standardOutput out
-                    if (!cmgenArgs) {
-                        cmgenArgs =
-                                '-q -x ' + outputPath + ' --format=rgb32f ' +
-                                '--extract-blur=0.08 --extract=' + outputPath.absolutePath
-                    }
-                    cmgenArgs = cmgenArgs + " " + file
                     errorOutput err
-                    executable "${getBinary()}"
-                    args(cmgenArgs.split())
+                    executable "${binary.get()}"
+                    args(commandArgs.split())
                 }
             }
         }
@@ -207,13 +205,13 @@ class IblGenerator extends TaskWithBinary {
 
 // Custom task to compile mesh files using filamesh
 // This task handles incremental builds
-class MeshCompiler extends TaskWithBinary {
+abstract class MeshCompiler extends TaskWithBinary {
     @Incremental
     @InputFile
-    final RegularFileProperty inputFile = project.objects.fileProperty()
+    abstract RegularFileProperty getInputFile()
 
     @OutputDirectory
-    final DirectoryProperty outputDir = project.objects.directoryProperty()
+    abstract DirectoryProperty getOutputDir()
 
     MeshCompiler() {
         super("filamesh")
@@ -240,15 +238,15 @@ class MeshCompiler extends TaskWithBinary {
                 out.write(header)
                 out.flush()
 
-                if (!getBinary().exists()) {
-                    throw new GradleException("Could not find ${getBinary()}." +
+                if (!new File(binary.get()).exists()) {
+                    throw new GradleException("Could not find ${binary.get()}." +
                             " Ensure Filament has been built/installed before building this app.")
                 }
 
                 project.exec {
                     standardOutput out
                     errorOutput err
-                    executable "${getBinary()}"
+                    executable "${binary.get()}"
                     args(file, getOutputFile(file))
                 }
             }
@@ -291,8 +289,8 @@ class FilamentToolsPlugin implements Plugin<Project> {
             enabled =
                     extension.materialInputDir.isPresent() &&
                     extension.materialOutputDir.isPresent()
-            inputDir = extension.materialInputDir.getOrNull()
-            outputDir = extension.materialOutputDir.getOrNull()
+            inputDir.set(extension.materialInputDir.getOrNull())
+            outputDir.set(extension.materialOutputDir.getOrNull())
         }
 
         project.preBuild.dependsOn "filamentCompileMaterials"
