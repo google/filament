@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(SPIRV-Cross)
 
 # Use assertions instead of exceptions so we can succesfully compile with -fno-exceptions.

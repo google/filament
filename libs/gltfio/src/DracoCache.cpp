@@ -211,7 +211,10 @@ bool DracoMesh::getVertexAttributes(uint32_t attributeId, cgltf_accessor* target
 DracoMesh::~DracoMesh() {}
 struct DracoMeshDetails {};
 DracoMesh* DracoMesh::decode(const uint8_t* data, size_t dataSize) { return nullptr; }
-bool DracoMesh::getFaceIndices(cgltf_accessor* target) const {}
+
+bool DracoMesh::getFaceIndices(cgltf_accessor* target) const {
+    return false;
+}
 
 bool DracoMesh::getVertexAttributes(uint32_t attributeId, cgltf_accessor* target) const {
     return false;

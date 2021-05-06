@@ -8,7 +8,7 @@
 #
 # The default is release
 
-NDK_VERSION="ndk;22.0.7026061"
+NDK_VERSION="ndk;22.1.7171670"
 ANDROID_NDK_VERSION=22
 
 echo "This script is intended to run in a CI environment and may modify your current environment."

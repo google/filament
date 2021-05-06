@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.19)
+project(filament-utils-android)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
