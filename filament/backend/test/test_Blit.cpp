@@ -196,9 +196,9 @@ TEST_F(BackendTest, CubemapMinify) {
     dstRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
             256 >> dstLevel, 256 >> dstLevel, 1, { dstInfo }, {}, {});
 
-   api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
-           {0, 0, 256 >> dstLevel, 256 >> dstLevel}, srcRenderTarget,
-           {0, 0, 256 >> srcLevel, 256 >> srcLevel}, SamplerMagFilter::LINEAR);
+    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
+            {0, 0, 256 >> dstLevel, 256 >> dstLevel}, srcRenderTarget,
+            {0, 0, 256 >> srcLevel, 256 >> srcLevel}, SamplerMagFilter::LINEAR);
 
     // Push through an empty frame. Note that this test does not do
     // makeCurrent / commit and is therefore similar to renderStandaloneView.
