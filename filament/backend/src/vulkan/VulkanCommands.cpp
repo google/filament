@@ -74,6 +74,14 @@ VulkanCommandBuffer& VulkanCommands::get() {
         return *mCurrent;
     }
 
+    // If we ran out of available command buffers, stall until one finishes. This is very rare.
+    // It occurs only when Filament invokes commit() or endFrame() a large number of times without
+    // presenting the swap chain or waiting on a fence.
+    while (mAvailableCount == 0) {
+        wait();
+        gc();
+    }
+
     // Find an available slot.
     for (auto& wrapper : mStorage) {
         if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
@@ -82,9 +90,8 @@ VulkanCommandBuffer& VulkanCommands::get() {
         }
     }
 
-    // In theory, Filament could overflow the pool if it issues commit() an unreasonable number of
-    // times without presenting the swap chain or waiting on a fence.
-    ASSERT_POSTCONDITION(mCurrent, "Too many in-flight command buffers.");
+    assert_invariant(mCurrent);
+    --mAvailableCount;
 
     // Create the low-level command buffer.
     const VkCommandBufferAllocateInfo allocateInfo {
@@ -213,6 +220,7 @@ void VulkanCommands::gc() {
                 wrapper.cmdbuffer = VK_NULL_HANDLE;
                 wrapper.fence->status.store(VK_SUCCESS);
                 wrapper.fence.reset();
+                ++mAvailableCount;
             }
         }
     }

@@ -89,6 +89,7 @@ class VulkanCommands {
         VkSemaphore mInjectedSignal = {};
         VulkanCommandBuffer mStorage[CAPACITY] = {};
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
+        size_t mAvailableCount = CAPACITY;
 };
 
 } // namespace filament
