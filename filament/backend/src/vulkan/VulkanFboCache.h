@@ -111,9 +111,7 @@ private:
     uint32_t mCurrentTime = 0;
 
     // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
-    // is evicted from the cache. Ideally this constant is greater than or equal to the number of
-    // elements in the swap chain. Since we use triple buffering on some platforms, we've chosen an
-    // eviction time of 3.
+    // is evicted from the cache.
     static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 };
 

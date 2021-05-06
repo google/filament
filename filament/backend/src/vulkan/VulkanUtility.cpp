@@ -407,6 +407,24 @@ VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
     return map;
 }
 
+void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition) {
+    if (transition.oldLayout == transition.newLayout) {
+        return;
+    }
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = transition.oldLayout;
+    barrier.newLayout = transition.newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = transition.image;
+    barrier.subresourceRange = transition.subresources;
+    barrier.srcAccessMask = transition.srcAccessMask;
+    barrier.dstAccessMask = transition.dstAccessMask;
+    vkCmdPipelineBarrier(cmdbuffer, transition.srcStage, transition.dstStage, 0, 0, nullptr, 0,
+            nullptr, 1, &barrier);
+}
+
 } // namespace filament
 } // namespace backend
 

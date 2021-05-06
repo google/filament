@@ -1328,8 +1328,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     const VkDevice device = mContext.device;
     const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
-    const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
-    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() : swapChainFormat;
+    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() :
+            mContext.currentSurface->surfaceFormat.format;
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
@@ -1369,16 +1369,31 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     // Transition the staging image layout.
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    VulkanTexture::transitionImageLayout(cmdbuffer, stagingImage,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 1,
-            VK_IMAGE_ASPECT_COLOR_BIT);
 
-    const uint8_t srcMipLevel = srcTarget->getColor(0).level;
+    transitionImageLayout(cmdbuffer, {
+        .image = stagingImage,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .subresources = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+    });
+
+    const VulkanAttachment srcAttachment = srcTarget->getColor(0);
 
     VkImageCopy imageCopyRegion = {
         .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = srcMipLevel,
+            .mipLevel = srcAttachment.level,
+            .baseArrayLayer = srcAttachment.layer,
             .layerCount = 1,
         },
         .srcOffset = {
@@ -1398,10 +1413,25 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the source image layout (which might be the swap chain)
 
+    const VkImageSubresourceRange srcRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = srcAttachment.level,
+        .levelCount = 1,
+        .baseArrayLayer = srcAttachment.layer,
+        .layerCount = 1,
+    };
+
     VkImage srcImage = srcTarget->getColor(0).image;
-    VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcMipLevel, 1, 1,
-            VK_IMAGE_ASPECT_COLOR_BIT);
+    transitionImageLayout(cmdbuffer, {
+        .image = srcImage,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .subresources = srcRange,
+        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+    });
 
     // Perform the blit.
 
@@ -1413,13 +1443,27 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     if (srcTexture || mContext.currentSurface->presentQueue) {
         const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-                VK_IMAGE_LAYOUT_UNDEFINED, srcTexture ? getTextureLayout(srcTexture->usage) : present,
-                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+        transitionImageLayout(cmdbuffer, {
+            .image = srcImage,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = srcTexture ? getTextureLayout(srcTexture->usage) : present,
+            .subresources = srcRange,
+            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        });
     } else {
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+        transitionImageLayout(cmdbuffer, {
+            .image = srcImage,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .subresources = srcRange,
+            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        });
     }
 
     // Transition the staging image layout to GENERAL.
