@@ -1274,7 +1274,10 @@ void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
-    // Do nothing, because a VertexBuffer is just a collection of BufferObject handles.
+    if (vbh) {
+        GLVertexBuffer const* vb = handle_cast<const GLVertexBuffer*>(vbh);
+        destruct(vbh, vb);
+    }
 }
 
 void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
