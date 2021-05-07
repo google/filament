@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## Next release (main branch)
 
 - engine: new screen-space lens flare
+- engine: new experimental tone mapper, `EVILS` (name will most likely change)
 
 ## v1.9.24
 
