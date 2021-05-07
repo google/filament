@@ -26,20 +26,6 @@ body {
     height: 100%;
 }
 
-.status-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    max-width: 640px;
-    max-height: 32px;
-    background: burlywood;
-    border: solid 2px black;
-    border-bottom: none;
-    font-size: 12px;
-}
-
 .connection-settings {
     display: flex;
     justify-content: center;
@@ -102,8 +88,7 @@ canvas {
 }
 
 .dropbox-area p { text-align: center; }
-.instructions-area p { margin: 4px; }
-.instructions-area { margin-bottom: 12px; }
+.instructions-area { margin-top: 12px; }
 a { text-decoration: none; }
 a:visited { color: rgb(26, 65, 78); }
 .bad { background: lightcoral; }
@@ -118,15 +103,9 @@ a:visited { color: rgb(26, 65, 78); }
     <input id="connection-url" type="text" value="localhost" />
     <label class="port-label">: 8082</label>
 </div>
-<div id="status" class="status-area">Disconnected</div>
 <canvas id="webgl2-canvas"></canvas>
-<div id="dropbox" class="dropbox-area">
-    <div>
-        <p>Drop a <b>glb</b> or a <b>zip</b> file here.</p>
-    </div>
-</div>
+<div id="dropbox" class="dropbox-area"><p>Disconnected.</p></div>
 <div id="instructions" class="instructions-area">
-    <p><code>adb forward tcp:8082 tcp:8082</code></p>
     <button id="copyButton">Copy adb command to clipboard</button>
 </div>
 </div>
@@ -252,7 +231,6 @@ class App {
 
         this.connectionUrl = document.getElementById("connection-url");
         this.dropbox = document.getElementById("dropbox");
-        this.status = document.getElementById("status");
         this.canvas = document.getElementsByTagName("canvas")[0];
 
         const engine = this.engine = Filament.Engine.create(this.canvas);
@@ -339,7 +317,8 @@ class App {
             const file = event.dataTransfer.items[0].getAsFile();
             const is_glb = file.name.match(/\.(glb)$/i);
             const is_zip = file.name.match(/\.(zip)$/i);
-            if (!is_glb && !is_zip) return;
+            const is_hdr = file.name.match(/\.(hdr)$/i);
+            if (!is_glb && !is_zip && !is_hdr) return;
             const files = event.dataTransfer.files;
             ([...files]).forEach(upload);
         }, false);
@@ -373,9 +352,21 @@ class App {
     }
 
     updateDom() {
-        const connected = this.connection.isConnected();
-        this.status.innerHTML = connected ? "Connected" : "Disconnected";
-        this.status.style.backgroundColor = connected ? "#45d48d" : "burlywood";
+        const instructions = document.getElementById("instructions");
+        if (this.connection.isConnected()) {
+            instructions.style.visibility = "hidden";
+            this.dropbox.innerHTML = `<div>
+                <p>Connected.</p>
+                <p>Drop a <b>glb</b>, <b>zip</b>, or <b>hdr</b> file here.</p>
+            </div>`;
+        } else {
+            instructions.style.visibility = "visible";
+            this.dropbox.innerHTML = `<div>
+                <p>Disconnected.</p>
+                <p>Ensure app is active and port forwarding is enabled.</p>
+                <p><b>adb forward tcp:8082 tcp:8082</b></p>
+            </div>`;
+        }
     }
 
     startConnection() {
