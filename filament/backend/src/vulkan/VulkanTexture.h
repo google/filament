@@ -69,6 +69,12 @@ private:
             uint32_t width, uint32_t height, uint32_t depth,
             FaceOffsets const* faceOffsets, uint32_t miplevel);
 
+    void updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
+        uint32_t height, uint32_t depth, int miplevel);
+
+    void updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
+        uint32_t height, uint32_t depth, int miplevel);
+
     const VkFormat mVkFormat;
     const VkComponentMapping mSwizzle;
     VkImageViewType mViewType;

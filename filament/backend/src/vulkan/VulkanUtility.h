@@ -38,6 +38,8 @@ struct VulkanLayoutTransition {
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
 VkFormat getVkFormat(TextureFormat format);
+VkFormat getVkFormat(PixelDataFormat format, PixelDataType type);
+VkFormat getVkFormatLinear(VkFormat format);
 uint32_t getBytesPerPixel(TextureFormat format);
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
