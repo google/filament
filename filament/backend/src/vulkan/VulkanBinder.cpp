@@ -20,7 +20,9 @@
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
-#define FILAMENT_VULKAN_VERBOSE 0
+#include "VulkanConstants.h"
+
+static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -31,10 +33,6 @@ using namespace bluevk;
 
 namespace filament {
 namespace backend {
-
-// All vkCreate* and vkDestroy functions take an optional allocator. For now we select the default
-// allocator by passing in a null pointer, and we pinpoint the argument by using the VKALLOC macro.
-static constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 // Maximum number of descriptor sets that can be allocated by the pool.
 // TODO: Make VulkanBinder robust against a large number of descriptors.

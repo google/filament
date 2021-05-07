@@ -109,10 +109,6 @@ private:
     tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq> mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;
-
-    // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
-    // is evicted from the cache.
-    static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 };
 
 } // namespace filament
