@@ -28,7 +28,10 @@ using namespace filament;
 using namespace filament::math;
 using namespace image;
 
-static jlong nCreateTexture(JNIEnv* env, jclass,
+jlong nCreateHDRTexture(JNIEnv* env, jclass,
+        jlong nativeEngine, jobject javaBuffer, jint remaining, jint internalFormat);
+
+static jlong nCreateKTXTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
@@ -80,15 +83,26 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
         return -1;
     }
 
-    jclass c = env->FindClass("com/google/android/filament/utils/KtxLoader");
-    if (c == nullptr) return JNI_ERR;
+    int rc;
 
-    static const JNINativeMethod methods[] = {
-        {"nCreateTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateTexture)},
+    // KTXLoader
+    jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTXLoader");
+    if (ktxloaderClass == nullptr) return JNI_ERR;
+    static const JNINativeMethod ktxMethods[] = {
+        {"nCreateKTXTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
         {"nCreateIndirectLight", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
         {"nCreateSkybox", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
     };
-    int rc = env->RegisterNatives(c, methods, sizeof(methods) / sizeof(JNINativeMethod));
+    rc = env->RegisterNatives(ktxloaderClass, ktxMethods, sizeof(ktxMethods) / sizeof(JNINativeMethod));
+    if (rc != JNI_OK) return rc;
+
+    // HDRLoader
+    jclass hdrloaderClass = env->FindClass("com/google/android/filament/utils/HDRLoader");
+    if (hdrloaderClass == nullptr) return JNI_ERR;
+    static const JNINativeMethod hdrMethods[] = {
+        {"nCreateHDRTexture", "(JLjava/nio/Buffer;II)J", reinterpret_cast<void*>(nCreateHDRTexture)},
+    };
+    rc = env->RegisterNatives(hdrloaderClass, hdrMethods, sizeof(hdrMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
 
     return JNI_VERSION_1_6;

@@ -21,15 +21,16 @@ add_library(civetweb STATIC IMPORTED)
 set_target_properties(civetweb PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libcivetweb.a)
 
-include_directories(${FILAMENT_DIR}/include
-        ..
-        ../../libs/utils/include)
+add_library(iblprefilter STATIC IMPORTED)
+set_target_properties(iblprefilter PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilament-iblprefilter.a)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.map")
 
 add_library(filament-utils-jni SHARED
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
+        src/main/cpp/HDRLoader.cpp
         src/main/cpp/Utils.cpp
         src/main/cpp/Manipulator.cpp
         src/main/cpp/RemoteServer.cpp
@@ -37,6 +38,12 @@ add_library(filament-utils-jni SHARED
         ../common/CallbackUtils.cpp
         ../common/NioUtils.cpp
 )
+
+target_include_directories(filament-utils-jni PRIVATE
+        ${FILAMENT_DIR}/include
+        ..
+        ../../third_party/stb
+        ../../libs/utils/include)
 
 set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.symbols)
@@ -46,6 +53,7 @@ target_link_libraries(filament-utils-jni
         gltfio-jni
         civetweb
         camutils
+        iblprefilter
         image
         viewer
 )
