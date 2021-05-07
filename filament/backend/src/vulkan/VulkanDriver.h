@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 #define TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanBlitter.h"
 #include "VulkanDisposer.h"
 #include "VulkanContext.h"
@@ -148,14 +148,14 @@ private:
     void collectGarbage();
 
     VulkanContext mContext = {};
-    VulkanBinder mBinder;
+    VulkanPipelineCache mBinder;
     VulkanBlitter mBlitter;
     VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
-    VulkanSamplerGroup* mSamplerBindings[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+    VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 };

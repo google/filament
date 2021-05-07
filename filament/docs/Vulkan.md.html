@@ -53,7 +53,7 @@ swap chain objects, but in practice the swap chain is basically a singleton.
 *  |                                          |   |                                         |  *
 *  |    Helpers            VulkanContext      |   |    SwapContext       SwapContext        |  *
 *  |  .--------------.    .---------------.   |   |   .----------------+----------------.   |  *
-*  |  | Binder       |   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
+*  |  | PipelineCache|   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
 *  |  +--------------+   | VkInstance      |  |   |  | VkImageView     | VkImageView     |  |  *
 *  |  | Disposer     |   |                 |  |   |  |                 |                 |  |  *
 *  |  +--------------+   +-----------------+  |   |  +-----------------+-----------------+  |  *
@@ -138,7 +138,7 @@ between `VulkanIndexBuffer` and `VulkanVertexBuffer`.
 they do follow a common set of conventions. For example, most of them implement a `gc()` method
 that is called once per frame to free unused objects.
 
-VulkanBinder
+VulkanPipelineCache
 : Cache of VkDescriptorSet and VkPipeline.
 
 VulkanDisposer
@@ -161,17 +161,17 @@ no subfolders. All backend-specific types and functions live directly in the `fi
 namespace, and we simply prefix our names with "Vulkan" when necessary to avoid ambiguation with
 OpenGL.
 
-# VulkanBinder
+# VulkanPipelineCache
 
 Uniforms, samplers, and shaders are not directly bindable in Vulkan; instead they are bound through
-indirection layers called *pipelines* and *descriptor sets*. The `VulkanBinder` class allows
+indirection layers called *pipelines* and *descriptor sets*. The `VulkanPipelineCache` class allows
 the driver to call methods that are conceptually simple like `bindUniformBuffer`, even though no
 such function exists in the low-level Vulkan API.
 
-Although it is actually just another cache manager, `VulkanBinder` has a fairly rich set of public
+Although it is actually just another cache manager, `VulkanPipelineCache` has a fairly rich set of public
 methods. See its header file for details.
 
-In the interest of simplicity, the binder never mutates descriptor sets (see
+In the interest of simplicity, the pipeline cache never mutates descriptor sets (see
 `vkUpdateDescriptorSets`) except upon creation. Doing so would either require the use of
 synchronization primitives, or require double-buffering for all descriptors.
 
@@ -181,9 +181,9 @@ synchronization primitives, or require double-buffering for all descriptors.
     monolithic UBO. To avoid synchronization issues, bgfx creates a separate descriptor pool for
     each element of the swap chain.
 
-The binder also manages the *layout objects*, which constrain the number of uniform buffers and
-samplers that can be bound simultaneously (see `VkDescriptorSetLayout` and `VkPipelineLayout`). Here
-we take advantage of Filament's opinionated shading model in order to keep things simple, which
+The pipeline cache also manages the *layout objects*, which constrain the number of uniform buffers
+and samplers that can be bound simultaneously (see `VkDescriptorSetLayout` and `VkPipelineLayout`).
+Here we take advantage of Filament's opinionated shading model in order to keep things simple, which
 allows us to create only one layout for the entire lifetime of the app.
 
 # Memory Allocation

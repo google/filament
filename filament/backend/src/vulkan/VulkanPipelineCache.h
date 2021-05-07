@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANBINDER_H
-#define TNT_FILAMENT_DRIVER_VULKANBINDER_H
+#ifndef TNT_FILAMENT_DRIVER_VULKANPIPELINECACHE_H
+#define TNT_FILAMENT_DRIVER_VULKANPIPELINECACHE_H
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -33,9 +33,9 @@
 namespace filament {
 namespace backend {
 
-// VulkanBinder manages a cache of descriptor sets and pipelines.
+// VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
-// The VulkanBinder interface has two parts: the "bindFoo" methods (bindRasterState,
+// The VulkanPipelineCache interface has two parts: the "bindFoo" methods (bindRasterState,
 // bindUniformBuffer, etc), and the "getOrCreateFoo" methods (getOrCreateDescriptors,
 // getOrCreatePipeline).
 //
@@ -65,14 +65,14 @@ namespace backend {
 // The class declaration and implementation have no dependencies on any other Filament files,
 // modulo some constants and low-level utility functions.
 //
-// In the name of simplicity, VulkanBinder has the following limitations:
+// In the name of simplicity, VulkanPipelineCache has the following limitations:
 // - Push constants are not supported. (if adding support, see VkPipelineLayoutCreateInfo)
 // - Only three descriptor sets are bound at a time (one for each type of descriptor).
 // - Descriptor sets are never mutated using vkUpdateDescriptorSets, except upon creation.
 // - Assumes that viewport and scissor should be dynamic. (not baked into VkPipeline)
 // - Assumes that uniform buffers should be visible across all shader stages.
 //
-class VulkanBinder {
+class VulkanPipelineCache {
 public:
     static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
@@ -111,8 +111,8 @@ public:
     // calls. On destruction it will free any cached Vulkan objects that haven't already been freed
     // via resetBindings(). We don't pass the VkDevice to the constructor to allow the client to own
     // a concrete instance of Binder rather than going through a pointer.
-    VulkanBinder();
-    ~VulkanBinder();
+    VulkanPipelineCache();
+    ~VulkanPipelineCache();
     void setDevice(VkDevice device) { mDevice = device; }
 
     // Clients should initialize their copy of the raster state using this method. They can then
@@ -155,7 +155,7 @@ public:
 
     // Force the subsequent call to getOrCreate to unconditionally return true, thus signaling
     // to the client that we need to re-bind the current descriptor set and pipeline. This should
-    // be called after every swap if the VulkanBinder is shared amongst command buffers.
+    // be called after every swap if the VulkanPipelineCache is shared amongst command buffers.
     void resetBindings() noexcept;
 
     // Evicts old unused Vulkan objects. Call this once per frame.
@@ -266,4 +266,4 @@ private:
 } // namespace filament
 } // namespace backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANBINDER_H
+#endif // TNT_FILAMENT_DRIVER_VULKANPIPELINECACHE_H

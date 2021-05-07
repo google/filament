@@ -138,8 +138,6 @@ endif()
 # See root CMakeLists.txt for platforms that support Vulkan
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
-            src/vulkan/VulkanBinder.cpp
-            src/vulkan/VulkanBinder.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -159,6 +157,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
             src/vulkan/VulkanMemory.cpp
+            src/vulkan/VulkanPipelineCache.cpp
+            src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
