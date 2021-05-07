@@ -67,13 +67,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     if (!strcmp(cbdata->pMessageIdName, "VUID-vkCmdDrawIndexed-None-04584")) {
         return VK_FALSE;
     }
-    // TODO: For now, we are silencing an error message relating to mutable comparison samplers.
-    // It is likely that the internal "depthSampleCompare" feature flag is mistakenly set to false
-    // by the Molten implementation. In my case, the GPU is an AMD Radeon Pro 5500M. See this bug:
-    // https://vulkan.lunarg.com/issue/view/602578385df1127a24f3cb4b
-    if (!strcmp(cbdata->pMessageIdName, "VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450")) {
-        return VK_FALSE;
-    }
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
