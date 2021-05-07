@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-#include "vulkan/VulkanStagePool.h"
+#include "VulkanStagePool.h"
+
+#include "VulkanConstants.h"
 
 #include <utils/Panic.h>
+
+static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 namespace filament {
 namespace backend {

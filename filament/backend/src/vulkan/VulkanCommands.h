@@ -20,6 +20,7 @@
 #include <bluevk/BlueVK.h>
 
 #include "VulkanBinder.h"
+#include "VulkanConstants.h"
 
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
@@ -79,7 +80,7 @@ class VulkanCommands {
         void updateFences();
 
     private:
-        static constexpr int CAPACITY = 32;
+        static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
         const VkDevice mDevice;
         VulkanBinder& mBinder;
         VkQueue mQueue;

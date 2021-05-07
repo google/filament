@@ -23,10 +23,6 @@ using namespace bluevk;
 namespace filament {
 namespace backend {
 
-// All vkCreate* functions take an optional allocator. For now we select the default allocator by
-// passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
-constexpr VkAllocationCallbacks* VKALLOC = nullptr;
-
 VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
     VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     if (signaled) {

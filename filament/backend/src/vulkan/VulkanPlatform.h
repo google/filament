@@ -31,11 +31,6 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // }
 //
-#if defined(NDEBUG)
-#define VK_ENABLE_VALIDATION 0
-#else
-#define VK_ENABLE_VALIDATION 1
-#endif
 
 namespace filament {
 namespace backend {
