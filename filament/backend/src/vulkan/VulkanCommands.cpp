@@ -40,7 +40,7 @@ VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) 
     vkDestroyFence(device, fence, VKALLOC);
 }
 
-VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanBinder& binder) :
+VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanPipelineCache& binder) :
         mDevice(device), mBinder(binder) {
     VkCommandPoolCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -111,12 +111,12 @@ VulkanCommandBuffer& VulkanCommands::get() {
     vkBeginCommandBuffer(mCurrent->cmdbuffer, &binfo);
 
     // NOTE: vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
-    // buffer; they are not global to the device. Since VulkanBinder doesn't have context about the
+    // buffer; they are not global to the device. Since VulkanPipelineCache doesn't have context about the
     // current command buffer, we need to reset its bindings after swapping over to a new command
     // buffer. This causes us to issue a few more vkBind* calls than strictly necessary, but only in
     // the first draw call of the frame.
 
-    // TODO: consider instancing a separate VulkanBinder for each element in the swap chain, which
+    // TODO: consider instancing a separate VulkanPipelineCache for each element in the swap chain, which
     // would not only remove the need for this call, but would allow descriptor sets to be safely
     // mutated.
     mBinder.resetBindings();

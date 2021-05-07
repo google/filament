@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
 #define TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
 
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanDisposer.h"
@@ -74,7 +74,7 @@ struct VulkanContext {
     bool debugMarkersSupported;
     bool debugUtilsSupported;
     bool portabilitySubsetSupported;
-    VulkanBinder::RasterState rasterState;
+    VulkanPipelineCache::RasterState rasterState;
     VulkanSurfaceContext* currentSurface;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;

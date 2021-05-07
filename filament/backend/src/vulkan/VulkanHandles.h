@@ -18,7 +18,7 @@
  #define TNT_FILAMENT_DRIVER_VULKANHANDLES_H
 
 #include "VulkanDriver.h"
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanBuffer.h"
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
@@ -30,7 +30,7 @@ struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
     ~VulkanProgram();
     VulkanContext& context;
-    VulkanBinder::ProgramBundle bundle;
+    VulkanPipelineCache::ProgramBundle bundle;
     Program::SamplerGroupInfo samplerGroupInfo;
 };
 

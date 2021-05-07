@@ -1112,7 +1112,7 @@ void VulkanDriver::endRenderPass(int) {
 
     mCurrentRenderTarget = VK_NULL_HANDLE;
     if (mContext.currentRenderPass.currentSubpass > 0) {
-        for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+        for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
             mBinder.bindInputAttachment(i, {});
         }
         mContext.currentRenderPass.currentSubpass = 0;
@@ -1133,7 +1133,7 @@ void VulkanDriver::nextSubpass(int) {
     mBinder.bindRenderPass(mContext.currentRenderPass.renderPass,
             ++mContext.currentRenderPass.currentSubpass);
 
-    for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
         if ((1 << i) & mContext.currentRenderPass.subpassMask) {
             VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
             VkDescriptorImageInfo info = {
@@ -1621,7 +1621,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     mContext.rasterState.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
 
     // Declare fixed-size arrays that get passed to the binder and to vkCmdBindVertexBuffers.
-    VulkanBinder::VertexArray varray = {};
+    VulkanPipelineCache::VertexArray varray = {};
     VkBuffer buffers[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
     VkDeviceSize offsets[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
 
@@ -1658,7 +1658,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         };
     }
 
-    // Push state changes to the VulkanBinder instance. This is fast and does not make VK calls.
+    // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mBinder.bindProgramBundle(program->bundle);
     mBinder.bindRasterState(mContext.rasterState);
     mBinder.bindPrimitiveTopology(prim.primitiveTopology);
@@ -1668,7 +1668,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
-    VkDescriptorImageInfo samplers[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+    VkDescriptorImageInfo samplers[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
 
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];

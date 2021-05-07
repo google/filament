@@ -19,7 +19,7 @@
 
 #include <bluevk/BlueVK.h>
 
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanConstants.h"
 
 #include <utils/Condition.h>
@@ -51,7 +51,7 @@ struct VulkanCommandBuffer {
 // Submitted command buffers form a dependency chain using VkSemaphore.
 class VulkanCommands {
     public:
-        VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanBinder& binder);
+        VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanPipelineCache& binder);
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.
@@ -82,7 +82,7 @@ class VulkanCommands {
     private:
         static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
         const VkDevice mDevice;
-        VulkanBinder& mBinder;
+        VulkanPipelineCache& mBinder;
         VkQueue mQueue;
         VkCommandPool mPool;
         VulkanCommandBuffer* mCurrent = nullptr;
