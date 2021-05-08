@@ -49,6 +49,16 @@ enum class Interpolation : uint8_t {
 };
 
 /**
+ * Shader quality, affect some global quality parameters
+ */
+enum class ShaderQuality : int8_t {
+    DEFAULT = -1,   // LOW on mobile, HIGH on desktop
+    LOW     = 0,    // enable optimizations that can slightly affect correctness
+    NORMAL  = 1,    // normal quality, correctness honored
+    HIGH    = 2     // higher quality (e.g. better upscaling, etc...)
+};
+
+/**
  * Supported blending modes
  */
 enum class BlendingMode : uint8_t {

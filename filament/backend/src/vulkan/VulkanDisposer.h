@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_DRIVER_VULKANDISPOSER_H
 
 #include <tsl/robin_map.h>
-#include <tsl/robin_set.h>
 
 #include <functional>
 #include <memory>
@@ -30,28 +29,20 @@ namespace backend {
 // VulkanDisposer tracks resources (such as textures or vertex buffers) that need deferred
 // destruction due to potential use by one or more reference holders. An example of a reference
 // holder is an active Vulkan command buffer. Resources are represented with void* to allow callers
-// to use any type of handle. Reference holders (e.g. VulkanCommandBuffer) have an associated
-// robin_set of resource handles.
+// to use any type of handle.
 class VulkanDisposer {
 public:
     using Key = const void*;
-    using Set = tsl::robin_set<Key>;
 
     // Adds the given resource to the disposer and sets its reference count to 1.
     void createDisposable(Key resource, std::function<void()> destructor) noexcept;
 
-    // Increments the reference count.
-    void addReference(Key resource) noexcept;
-
     // Decrements the reference count and moves it to the graveyard if it becomes 0.
     void removeReference(Key resource) noexcept;
 
-    // If the given resource is not in the given set, then it gets added to the set and its
-    // reference count is incremented.
-    void acquire(Key resource, Set& resources) noexcept;
-
-    // Decrements the reference count for all resources in the set, then clears it.
-    void release(Set& resources);
+    // Increments the reference count and auto-decrements it after FRAMES_BEFORE_EVICTION frames.
+    // This is helpful when the current command buffer has a reference to the resource.
+    void acquire(Key resource) noexcept;
 
     // Invokes the destructor function for each disposable in the graveyard.
     void gc() noexcept;
@@ -61,8 +52,9 @@ public:
 
 private:
     struct Disposable {
-        int refcount = 1;
-        std::function<void()> destructor;
+        uint16_t refcount = 1;
+        uint16_t remainingFrames = 0;
+        std::function<void()> destructor = []() {};
     };
     tsl::robin_map<Key, Disposable> mDisposables;
     std::vector<Disposable> mGraveyard;

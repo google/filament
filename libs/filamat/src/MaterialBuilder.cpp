@@ -262,6 +262,11 @@ MaterialBuilder& MaterialBuilder::refractionType(RefractionType refractionType) 
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::quality(ShaderQuality quality) noexcept {
+    mShaderQuality = quality;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -461,6 +466,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAOSet = mSpecularAOSet;
     info.refractionMode = mRefractionMode;
     info.refractionType = mRefractionType;
+    info.quality = mShaderQuality;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,

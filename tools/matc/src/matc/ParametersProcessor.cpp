@@ -377,6 +377,22 @@ static bool processCulling(MaterialBuilder& builder, const JsonishValue& value) 
     return true;
 }
 
+static bool processQuality(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::ShaderQuality> strToEnum {
+        { "low", MaterialBuilder::ShaderQuality::LOW },
+        { "normal", MaterialBuilder::ShaderQuality::NORMAL },
+        { "high", MaterialBuilder::ShaderQuality::HIGH },
+        { "default", MaterialBuilder::ShaderQuality::DEFAULT },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("quality", *jsonString, strToEnum);
+    }
+
+    builder.quality(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
@@ -713,6 +729,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["refractionType"]                = { &processRefractionType, Type::STRING };
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
+    mParameters["quality"]                       = { &processQuality, Type::STRING };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

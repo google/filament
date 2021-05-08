@@ -10,7 +10,7 @@ XCODEBUILD_FLAGS='CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_AL
 # This sets the BUILD_DEBUG and BUILD_RELEASE variables based on the CI job.
 pushd `dirname $0`/../../ios/samples
 
-PROJECTS="hello-ar hello-gltf hello-pbr hello-triangle transparent-rendering"
+PROJECTS="gltf-viewer hello-ar hello-gltf hello-pbr hello-triangle transparent-rendering"
 
 function build_project {
     local project="$1"

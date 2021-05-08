@@ -2,7 +2,7 @@
 // Directional light evaluation
 //------------------------------------------------------------------------------
 
-#if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
 #define SUN_AS_AREA_LIGHT
 #endif
 

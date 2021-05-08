@@ -27,10 +27,11 @@ float evaluateSSAO() {
         highp vec2 size = vec2(textureSize(light_ssao, 0));
 
         // Read four AO samples and their depths values
-#if defined(TARGET_MOBILE)
-        // on mobile we can't use textureGather() because we're limited to ES3.0,
-        // so we emulate it with  texelFetch(), on Pixel 4 this doesn't seem to have any
-        // significant impact on performance.
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+        vec4 ao = textureGather(light_ssao, uv, 0);
+        vec4 dg = textureGather(light_ssao, uv, 1);
+        vec4 db = textureGather(light_ssao, uv, 2);
+#else
         vec3 s01 = textureLodOffset(light_ssao, uv, 0.0, ivec2(0, 1)).rgb;
         vec3 s11 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 1)).rgb;
         vec3 s10 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 0)).rgb;
@@ -38,10 +39,6 @@ float evaluateSSAO() {
         vec4 ao = vec4(s01.r, s11.r, s10.r, s00.r);
         vec4 dg = vec4(s01.g, s11.g, s10.g, s00.g);
         vec4 db = vec4(s01.b, s11.b, s10.b, s00.b);
-#else
-        vec4 ao = textureGather(light_ssao, uv, 0); // 01, 11, 10, 00
-        vec4 dg = textureGather(light_ssao, uv, 1); // 01, 11, 10, 00
-        vec4 db = textureGather(light_ssao, uv, 2); // 01, 11, 10, 00
 #endif
         // bilinear weights
         vec2 f = fract(uv * size - 0.5);

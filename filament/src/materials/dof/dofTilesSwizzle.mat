@@ -46,7 +46,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     ivec2 i = ivec2(uv * size - 0.5);
 
-#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     vec4 mi = textureGather(materialParams_cocMinMax, uv, 0); // 01, 11, 10, 00
 #else
     vec4 mi;

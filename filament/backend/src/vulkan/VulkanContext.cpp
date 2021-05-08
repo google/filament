@@ -37,18 +37,6 @@ using namespace bluevk;
 namespace filament {
 namespace backend {
 
-VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    if (signaled) {
-        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    }
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
-}
-
- VulkanCmdFence::~VulkanCmdFence() {
-    vkDestroyFence(device, fence, VKALLOC);
-}
-
 void selectPhysicalDevice(VulkanContext& context) {
     uint32_t physicalDeviceCount = 0;
     VkResult result = vkEnumeratePhysicalDevices(context.instance, &physicalDeviceCount, nullptr);
@@ -261,17 +249,6 @@ void createLogicalDevice(VulkanContext& context) {
         .instance = context.instance
     };
     vmaCreateAllocator(&allocatorInfo, &context.allocator);
-
-    // Create the work command buffer and fence for work unrelated to the swap chain.
-    const VkCommandBufferAllocateInfo allocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = context.commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
-    const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    vkAllocateCommandBuffers(context.device, &allocateInfo, &context.work.cmdbuffer);
-    vkBeginCommandBuffer(context.work.cmdbuffer, &binfo);
 }
 
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
@@ -417,14 +394,13 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     uint32_t imageCount;
     result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, nullptr);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR count error.");
-    surfaceContext.swapContexts.resize(imageCount);
+    surfaceContext.attachments.resize(imageCount);
     std::vector<VkImage> images(imageCount);
     result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount,
             images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
-        surfaceContext.swapContexts[i].invalid = true;
-        surfaceContext.swapContexts[i].attachment = {
+        surfaceContext.attachments[i] = {
             .format = surfaceContext.surfaceFormat.format,
             .image = images[i],
             .view = {},
@@ -453,25 +429,12 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     for (size_t i = 0; i < images.size(); ++i) {
         ivCreateInfo.image = images[i];
         result = vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                &surfaceContext.swapContexts[i].attachment.view);
+                &surfaceContext.attachments[i].view);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateImageView error.");
     }
 
     createSemaphore(context.device, &surfaceContext.imageAvailable);
-    createSemaphore(context.device, &surfaceContext.renderingFinished);
-
-    // Allocate command buffers.
-    VkCommandBufferAllocateInfo allocateInfo = {};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = context.commandPool;
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = (uint32_t) surfaceContext.swapContexts.size();
-    std::vector<VkCommandBuffer> cmdbufs(allocateInfo.commandBufferCount);
-    result = vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkAllocateCommandBuffers error.");
-    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
-        surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
-    }
+    surfaceContext.acquired = false;
 
     createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
 }
@@ -480,32 +443,19 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
         VulkanDisposer& disposer) {
     waitForIdle(context);
     const VkDevice device = context.device;
-    for (SwapContext& swapContext : surfaceContext.swapContexts) {
-        disposer.release(swapContext.commands.resources);
-        vkFreeCommandBuffers(device, context.commandPool, 1,
-                &swapContext.commands.cmdbuffer);
-
-        // The wrapper object for the submission fence has shared ownership semantics, so here
-        // we notify other owners that the swap chain (and its associated command buffers) have
-        // been destroyed.
-        if (swapContext.commands.fence) {
-            swapContext.commands.fence->swapChainDestroyed = true;
-            swapContext.commands.fence.reset();
-        }
+    for (VulkanAttachment& swapContext : surfaceContext.attachments) {
 
         // If this is headless, then we own the image and need to explicitly destroy it.
         if (!surfaceContext.swapchain) {
-            vkDestroyImage(device, swapContext.attachment.image, VKALLOC);
-            vkFreeMemory(device, swapContext.attachment.memory, VKALLOC);
+            vkDestroyImage(device, swapContext.image, VKALLOC);
+            vkFreeMemory(device, swapContext.memory, VKALLOC);
         }
 
-        vkDestroyImageView(device, swapContext.attachment.view, VKALLOC);
-        swapContext.commands.fence = VK_NULL_HANDLE;
-        swapContext.attachment.view = VK_NULL_HANDLE;
+        vkDestroyImageView(device, swapContext.view, VKALLOC);
+        swapContext.view = VK_NULL_HANDLE;
     }
     vkDestroySwapchainKHR(device, surfaceContext.swapchain, VKALLOC);
     vkDestroySemaphore(device, surfaceContext.imageAvailable, VKALLOC);
-    vkDestroySemaphore(device, surfaceContext.renderingFinished, VKALLOC);
 
     vkDestroyImageView(device, surfaceContext.depth.view, VKALLOC);
     vkDestroyImage(device, surfaceContext.depth.image, VKALLOC);
@@ -521,12 +471,11 @@ void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceConte
 //
 // Note however that we *do* use a render pass to transition the swap chain back to
 // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL on the subsequent frame that writes to it.
-void makeSwapChainPresentable(VulkanContext& context) {
-    VulkanSurfaceContext& surface = *context.currentSurface;
+void makeSwapChainPresentable(VulkanContext& context, VulkanSurfaceContext& surface) {
     if (surface.headlessQueue) {
         return;
     }
-    SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
+    VulkanAttachment& swapContext = surface.attachments[surface.currentSwapIndex];
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -548,17 +497,17 @@ void makeSwapChainPresentable(VulkanContext& context) {
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
-        .newLayout = swapContext.attachment.layout,
+        .newLayout = swapContext.layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = swapContext.attachment.image,
+        .image = swapContext.image,
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .levelCount = 1,
             .layerCount = 1,
         },
     };
-    vkCmdPipelineBarrier(context.currentCommands->cmdbuffer,
+    vkCmdPipelineBarrier(context.commands->get().cmdbuffer,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
@@ -576,9 +525,9 @@ uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) 
     return (uint32_t) ~0ul;
 }
 
-SwapContext& getSwapContext(VulkanContext& context) {
+VulkanAttachment& getSwapChainAttachment(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
-    return surface.swapContexts[surface.currentSwapIndex];
+    return surface.attachments[surface.currentSwapIndex];
 }
 
 void waitForIdle(VulkanContext& context) {
@@ -586,128 +535,41 @@ void waitForIdle(VulkanContext& context) {
     if (!context.device) {
         return;
     }
-
-    // Flush the work command buffer and wait for it to finish.
-    if (!context.work.fence->submitted) {
-        flushWorkCommandBuffer(context);
-        acquireWorkCommandBuffer(context);
-    }
-
-    // Wait for submitted command buffer(s) to finish.
-    if (context.currentSurface) {
-        VkFence fences[4];
-        uint32_t nfences = 0;
-        auto& surfaceContext = *context.currentSurface;
-        for (auto& swapContext : surfaceContext.swapContexts) {
-            assert_invariant(nfences < 4);
-            if (swapContext.commands.fence && swapContext.commands.fence->submitted) {
-                fences[nfences++] = swapContext.commands.fence->fence;
-                swapContext.commands.fence->submitted = false;
-            }
-        }
-        if (nfences > 0) {
-            vkWaitForFences(context.device, nfences, fences, VK_TRUE, UINT64_MAX);
-        }
-
-        // Next flush the active command buffer and wait for it to finish.
-        if (context.currentCommands) {
-            flushCommandBuffer(context);
-        }
-    }
+    context.commands->flush();
+    context.commands->wait();
 }
 
-bool acquireSwapCommandBuffer(VulkanContext& context) {
-    // Ask Vulkan for the next image in the swap chain and update the currentSwapIndex.
-    VulkanSurfaceContext& surface = *context.currentSurface;
-
+bool acquireSwapChain(VulkanContext& context, VulkanSurfaceContext& surface) {
     if (surface.headlessQueue) {
+        surface.currentSwapIndex = (surface.currentSwapIndex + 1) % surface.attachments.size();
+        return true;
 
-        surface.currentSwapIndex = (surface.currentSwapIndex + 1) % surface.swapContexts.size();
-
-    } else {
-
-        VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
-                UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
-
-        // We should be notified of a suboptimal surface, but it should not cause a cascade of
-        // log messages or a loop of re-creations.
-        if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
-            utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
-            surface.suboptimal = true;
-        }
-
-        // The surface can be "out of date" when it has been resized, which is not an error.
-        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            return false;
-        }
-
-        assert_invariant(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
     }
 
-    SwapContext& swap = getSwapContext(context);
+    // This immediately retrieves the index of the next available presentable image, and
+    // asynchronously requests the GPU to trigger the "imageAvailable" semaphore.
+    VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
+            UINT64_MAX, surface.imageAvailable, VK_NULL_HANDLE, &surface.currentSwapIndex);
 
-    // Ensure that the previous submission of this command buffer has finished.
-    auto& cmdfence = swap.commands.fence;
-    if (cmdfence) {
-        VkResult result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_TRUE, UINT64_MAX);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
+    // Users should be notified of a suboptimal surface, but it should not cause a cascade of
+    // log messages or a loop of re-creations.
+    if (result == VK_SUBOPTIMAL_KHR && !surface.suboptimal) {
+        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        surface.suboptimal = true;
     }
 
-     cmdfence.reset(new VulkanCmdFence(context.device));
+    // The surface can be "out of date" when it has been resized, which is not an error.
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        return false;
+    }
 
-    // Restart the command buffer.
-    VkCommandBuffer cmdbuffer = swap.commands.cmdbuffer;
-    VkResult error = vkResetCommandBuffer(cmdbuffer, 0);
-    ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
-    VkCommandBufferBeginInfo beginInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-    ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
-    context.currentCommands = &swap.commands;
+    // To ensure that the next command buffer submission does not write into the image before
+    // it has been acquired, push the image available semaphore into the command buffer manager.
+    context.commands->injectDependency(surface.imageAvailable);
+    surface.acquired = true;
+
+    assert_invariant(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR);
     return true;
-}
-
-// Flushes the current command buffer and waits for it to finish executing.
-void flushCommandBuffer(VulkanContext& context) {
-    VulkanSurfaceContext& surface = *context.currentSurface;
-    SwapContext& swapContext = surface.swapContexts[surface.currentSwapIndex];
-
-    makeSwapChainPresentable(context);
-
-    // Submit the command buffer.
-    VkResult error = vkEndCommandBuffer(context.currentCommands->cmdbuffer);
-    ASSERT_POSTCONDITION(!error, "vkEndCommandBuffer error.");
-    VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pWaitDstStageMask = &waitDestStageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &context.currentCommands->cmdbuffer,
-    };
-
-    auto& cmdfence = swapContext.commands.fence;
-    std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
-    error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, cmdfence->fence);
-    lock.unlock();
-    ASSERT_POSTCONDITION(!error, "vkQueueSubmit error.");
-    swapContext.invalid = true;
-    cmdfence->condition.notify_all();
-
-    // Restart the command buffer.
-    error = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_TRUE, UINT64_MAX);
-    ASSERT_POSTCONDITION(!error, "vkWaitForFences error.");
-    error = vkResetFences(context.device, 1, &cmdfence->fence);
-    ASSERT_POSTCONDITION(!error, "vkResetFences error.");
-    error = vkResetCommandBuffer(context.currentCommands->cmdbuffer, 0);
-    ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
-    VkCommandBufferBeginInfo beginInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    error = vkBeginCommandBuffer(context.currentCommands->cmdbuffer, &beginInfo);
-    ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
 }
 
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
@@ -724,34 +586,6 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
         }
     }
     return VK_FORMAT_UNDEFINED;
-}
-
-VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context) {
-    VulkanCommandBuffer& work = context.work;
-    const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    if (work.fence && work.fence->submitted) {
-        work.fence->submitted = false;
-        vkWaitForFences(context.device, 1, &work.fence->fence, VK_TRUE, UINT64_MAX);
-        vkResetCommandBuffer(work.cmdbuffer, 0);
-        vkBeginCommandBuffer(work.cmdbuffer, &binfo);
-    }
-    work.fence.reset(new VulkanCmdFence(context.device));
-    return work.cmdbuffer;
-}
-
-void flushWorkCommandBuffer(VulkanContext& context) {
-    VulkanCommandBuffer& work = context.work;
-    ASSERT_PRECONDITION(!work.fence->submitted, "Flushed the work buffer more than once.");
-    const VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pWaitDstStageMask = &waitDestStageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &work.cmdbuffer,
-    };
-    vkEndCommandBuffer(work.cmdbuffer);
-    vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence->fence);
-    work.fence->submitted = true;
 }
 
 void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
@@ -811,7 +645,7 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfac
     surfaceContext.depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     // Begin a new command buffer solely for the purpose of transitioning the image layout.
-    VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
+    VkCommandBuffer cmdbuffer = context.commands->get().cmdbuffer;
 
     // Transition the depth image into an optimal layout.
     VkImageMemoryBarrier barrier {
@@ -829,8 +663,6 @@ void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfac
     };
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    flushWorkCommandBuffer(context);
 }
 
 VkImageLayout getTextureLayout(TextureUsage usage) {

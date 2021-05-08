@@ -41,6 +41,7 @@ set(SRCS
 set(LIBS
         assimp
         filament
+        filament-iblprefilter
         sdl2
         stb
         math

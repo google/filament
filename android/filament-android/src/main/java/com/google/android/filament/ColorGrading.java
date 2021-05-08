@@ -109,8 +109,8 @@ public class ColorGrading {
         ACES,
         /** Filmic tone mapping, modelled after ACES but applied in sRGB space. */
         FILMIC,
-        /** Filmic tone mapping, with more contrast and saturation. */
-        UCHIMURA,
+        /** Exposure value invariant luminance scaling tone mapping, offers the best behaviors in high intensity areas. */
+        EVILS,
         /** Reinhard luma-based tone mapping. */
         REINHARD,
         /** Tone mapping used to validate/debug scene exposure. */

@@ -749,13 +749,13 @@ public:
     void setIntensityCandela(Instance i, float intensity) noexcept;
 
     /**
-     * returns the light's luminous intensity in lumen.
+     * returns the light's luminous intensity in candela.
      *
      * @param i     Instance of the component obtained from getInstance().
      *
      * @note for Type.FOCUSED_SPOT lights, the returned value depends on the \p outer cone angle.
      *
-     * @return luminous intensity in lumen.
+     * @return luminous intensity in candela.
      */
     float getIntensity(Instance i) const noexcept;
 

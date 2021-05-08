@@ -45,7 +45,7 @@
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID)
+#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS)
 #define USE_FILESYSTEM 0
 #else
 #define USE_FILESYSTEM 1
@@ -94,7 +94,7 @@ struct ResourceLoader::Impl {
     std::string mGltfPath;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
-    // This is used on platforms without traditional file systems, such as Android and WebGL.
+    // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
     UriDataCache mUriDataCache;
 
     // The two texture caches are populated while textures are being decoded, and they are no longer

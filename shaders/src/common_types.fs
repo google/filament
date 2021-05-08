@@ -1,4 +1,4 @@
-#if !defined(TARGET_MOBILE) || defined(TARGET_LANGUAGE_SPIRV)
+#if defined(FILAMENT_VULKAN_SEMANTICS)
 #define LAYOUT_LOCATION(x) layout(location = x)
 #else
 #define LAYOUT_LOCATION(x)

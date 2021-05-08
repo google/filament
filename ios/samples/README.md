@@ -60,6 +60,7 @@ When building for the simulator, the sample will then link against the libraries
 
 Open up one of the Xcode projects:
 
+- gltf-viewer/gltf-viewer.xcodeproj
 - hello-ar/hello-ar.xcodeproj
 - hello-gltf/hello-gltf.xcodeproj
 - hello-pbr/hello-pbr.xcodeproj

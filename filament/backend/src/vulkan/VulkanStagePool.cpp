@@ -54,25 +54,6 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     return stage;
 }
 
-void VulkanStagePool::releaseStage(VulkanStage const* stage) noexcept {
-    auto iter = mUsedStages.find(stage);
-    if (iter == mUsedStages.end()) {
-        utils::slog.e << "Unknown stage: " << stage->capacity << " bytes" << utils::io::endl;
-        return;
-    }
-    stage->lastAccessed = mCurrentFrame;
-    mUsedStages.erase(iter);
-    mFreeStages.insert(std::make_pair(stage->capacity, stage));
-}
-
-void VulkanStagePool::releaseStage(VulkanStage const* stage, VulkanCommandBuffer& cmd) noexcept {
-    // Replace the previous owner of the stage with the given command buffer.  When the command
-    // buffer finishes execution, the stage will finally be released back into the pool.
-    mDisposer.createDisposable(stage, [stage, this]() { this->releaseStage(stage); });
-    mDisposer.acquire(stage, cmd.resources);
-    mDisposer.removeReference(stage);
-}
-
 void VulkanStagePool::gc() noexcept {
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
     if (++mCurrentFrame <= TIME_BEFORE_EVICTION) {
@@ -80,9 +61,9 @@ void VulkanStagePool::gc() noexcept {
     }
     const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
 
-    decltype(mFreeStages) stages;
-    stages.swap(mFreeStages);
-    for (auto pair : stages) {
+    decltype(mFreeStages) freeStages;
+    freeStages.swap(mFreeStages);
+    for (auto pair : freeStages) {
         if (pair.second->lastAccessed < evictionTime) {
             vmaDestroyBuffer(mContext.allocator, pair.second->buffer, pair.second->memory);
             delete pair.second;
@@ -90,10 +71,25 @@ void VulkanStagePool::gc() noexcept {
             mFreeStages.insert(pair);
         }
     }
+
+    decltype(mUsedStages) usedStages;
+    usedStages.swap(mUsedStages);
+    for (auto stage : usedStages) {
+        if (stage->lastAccessed < evictionTime) {
+            stage->lastAccessed = mCurrentFrame;
+            mFreeStages.insert(std::make_pair(stage->capacity, stage));
+        } else {
+            mUsedStages.insert(stage);
+        }
+    }
 }
 
 void VulkanStagePool::reset() noexcept {
-    assert_invariant(mUsedStages.empty());
+    for (auto stage : mUsedStages) {
+        vmaDestroyBuffer(mContext.allocator, stage->buffer, stage->memory);
+        delete stage;
+    }
+    mUsedStages.clear();
     for (auto pair : mFreeStages) {
         vmaDestroyBuffer(mContext.allocator, pair.second->buffer, pair.second->memory);
         delete pair.second;

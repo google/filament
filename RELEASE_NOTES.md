@@ -5,6 +5,20 @@ A new header is inserted each time a *tag* is created.
 
 ## Next release (main branch)
 
+## v1.9.24
+
+- engine: Fix memory leaks in OpenGL driver.
+- engine: new experimental tone mapper, `EVILS` (name will most likely change).
+- engine: Improvements to Vulkan backend.
+- engine: Fix incorrect units documented for `LightManager.getIntensity`.
+- engine: fix high quality upsampling for SSAO.
+- engine: implement accurate normal reconstruction for SSAO.
+- engine: improve LOW and HIGH quality levels for SSAO.
+- libs: improvements to `libiblprefilter`.
+- materials: New `quality` property.
+- samples: Add new gltf-viewer iOS sample.
+- samples: clear the background in lightbulb sample.
+
 ## v1.9.23
 
 - Vulkan: various fixes.

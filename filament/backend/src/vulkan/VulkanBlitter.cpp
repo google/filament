@@ -125,7 +125,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     // Determine the desired texture layout for the destination while ensuring that the default
     // render target is supported, which has no associated texture.
     const VkImageLayout desiredLayout = dst.texture ? getTextureLayout(dst.texture->usage) :
-            getSwapContext(mContext).attachment.layout;
+            getSwapChainAttachment(mContext).layout;
 
     VulkanTexture::transitionImageLayout(cmdbuffer, dst.image, VK_IMAGE_LAYOUT_UNDEFINED,
             desiredLayout, dst.level, 1, 1, aspect);

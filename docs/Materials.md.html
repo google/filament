@@ -1096,6 +1096,26 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: quality
+
+Type
+:    `string`
+
+Value
+:     Any of `low`, `normal`, `high`, `default`. Defaults to `default`.
+
+Description
+:    Set some global quality parameters of the material. `low` enables optimizations that can
+     slightly affect correctness and is the default on mobile platforms. `normal` does not affect
+     correctness and is otherwise similar to `low`. `high` enables quality settings that can
+     adversely affect performance and is the default on desktop platforms.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    quality : default
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Vertex and attributes: requires
 
 Type
@@ -1501,6 +1521,7 @@ Description
 :     Only available in the `unlit` shading model. If this property is enabled, the final color
       computed by the material is multiplied by the shadowing factor (or visibility). This allows to
       create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
+      This is only supported with shadows from directional lights.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {

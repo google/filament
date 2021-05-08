@@ -189,14 +189,47 @@ fragment {
     //       are essentially equivalent to textureGather (which we don't have on ES3.0),
     //       and this is executed just once.
     highp vec3 computeViewSpaceNormal(const highp vec3 position, const highp vec2 uv) {
+        precision highp float;
         highp vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
         highp vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
-        highp vec3 px = computeViewSpacePositionFromDepth(uvdx,
+        vec3 px = computeViewSpacePositionFromDepth(uvdx,
                 sampleDepthLinear(materialParams_depth, uvdx, 0.0, materialParams.depthParams));
-        highp vec3 py = computeViewSpacePositionFromDepth(uvdy,
+        vec3 py = computeViewSpacePositionFromDepth(uvdy,
                 sampleDepthLinear(materialParams_depth, uvdy, 0.0, materialParams.depthParams));
-        highp vec3 dpdx = px - position;
-        highp vec3 dpdy = py - position;
+        vec3 dpdx = px - position;
+        vec3 dpdy = py - position;
+        return faceNormal(dpdx, dpdy);
+    }
+
+    // Accurate view-space normal reconstruction
+    // Based on Yuwen Wu "Accurate Normal Reconstruction"
+    // (https://atyuwen.github.io/posts/normal-reconstruction)
+    highp vec3 computeViewSpaceNormalAccurate(const highp float depth, const highp vec3 position, const highp vec2 uv) {
+        precision highp float;
+
+        vec3 pos_c = position;
+        highp vec2 dx = vec2(materialParams.resolution.z, 0.0);
+        highp vec2 dy = vec2(0.0, materialParams.resolution.w);
+
+        vec4 H;
+        H.x = sampleDepth(materialParams_depth, uv - dx, 0.0);
+        H.y = sampleDepth(materialParams_depth, uv + dx, 0.0);
+        H.z = sampleDepth(materialParams_depth, uv - dx * 2.0, 0.0);
+        H.w = sampleDepth(materialParams_depth, uv + dx * 2.0, 0.0);
+        vec2 he = abs((2.0 * H.xy - H.zw) - depth);
+        vec3 pos_l = computeViewSpacePositionFromDepth(uv - dx, linearizeDepth(H.x, materialParams.depthParams));
+        vec3 pos_r = computeViewSpacePositionFromDepth(uv + dx, linearizeDepth(H.y, materialParams.depthParams));
+        vec3 dpdx = (he.x < he.y) ? (pos_c - pos_l) : (pos_r - pos_c);
+
+        vec4 V;
+        V.x = sampleDepth(materialParams_depth, uv - dy, 0.0);
+        V.y = sampleDepth(materialParams_depth, uv + dy, 0.0);
+        V.z = sampleDepth(materialParams_depth, uv - dy * 2.0, 0.0);
+        V.w = sampleDepth(materialParams_depth, uv + dy * 2.0, 0.0);
+        vec2 ve = abs((2.0 * V.xy - V.zw) - depth);
+        vec3 pos_d = computeViewSpacePositionFromDepth(uv - dy, linearizeDepth(V.x, materialParams.depthParams));
+        vec3 pos_u = computeViewSpacePositionFromDepth(uv + dy, linearizeDepth(V.y, materialParams.depthParams));
+        vec3 dpdy = (ve.x < ve.y) ? (pos_c - pos_d) : (pos_u - pos_c);
         return faceNormal(dpdx, dpdy);
     }
 
@@ -312,9 +345,16 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
-        highp float depth = sampleDepthLinear(materialParams_depth, uv, 0.0, materialParams.depthParams);
-        highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
-        vec3 normal = computeViewSpaceNormal(origin, uv);
+        highp float depth = sampleDepth(materialParams_depth, uv, 0.0);
+        highp float z = linearizeDepth(depth, materialParams.depthParams);
+        highp vec3 origin = computeViewSpacePositionFromDepth(uv, z);
+
+        // todo: maybe make this a quality parameter of SSAO
+        #if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
+            vec3 normal = computeViewSpaceNormalAccurate(depth, origin, uv);
+        #else
+            vec3 normal = computeViewSpaceNormal(origin, uv);
+        #endif
 
         float occlusion = 0.0;
 
