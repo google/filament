@@ -373,20 +373,19 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
-    // Create a copy-to-device functor.
-    auto copyToDevice = [this, faceOffsets, stage, miplevel] (VulkanCommandBuffer& commands) {
-        uint32_t width = std::max(1u, this->width >> miplevel);
-        uint32_t height = std::max(1u, this->height >> miplevel);
-        transitionImageLayout(commands.cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
-        copyBufferToImage(commands.cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
-                &faceOffsets, miplevel);
-        transitionImageLayout(commands.cmdbuffer, mTextureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
-                1, mAspect);
-    };
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    const uint32_t width = std::max(1u, this->width >> miplevel);
+    const uint32_t height = std::max(1u, this->height >> miplevel);
 
-    copyToDevice(mContext.commands->get());
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
+
+    copyBufferToImage(cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
+            &faceOffsets, miplevel);
+
+    transitionImageLayout(cmdbuffer, mTextureImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
+            1, mAspect);
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {
