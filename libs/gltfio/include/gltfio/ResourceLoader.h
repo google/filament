@@ -50,6 +50,9 @@ struct ResourceConfiguration {
     //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
     //! do not need this, but it is useful for robustness.
     bool recomputeBoundingBoxes;
+
+    //! If true, skip mip map generation on loading textures.
+    bool skipMipMapGeneration;
 };
 
 /**

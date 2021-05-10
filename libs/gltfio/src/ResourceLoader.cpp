@@ -86,11 +86,13 @@ struct ResourceLoader::Impl {
         mEngine = config.engine;
         mNormalizeSkinningWeights = config.normalizeSkinningWeights;
         mRecomputeBoundingBoxes = config.recomputeBoundingBoxes;
+        mSkipMipMapGeneration = config.skipMipMapGeneration;
     }
 
     Engine* mEngine;
     bool mNormalizeSkinningWeights;
     bool mRecomputeBoundingBoxes;
+    bool mSkipMipMapGeneration;
     std::string mGltfPath;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
@@ -596,7 +598,9 @@ void ResourceLoader::Impl::uploadPendingTextures() {
                     texture->getWidth() * texture->getHeight() * 4,
                     Texture::Format::RGBA, Texture::Type::UBYTE, FREE_CALLBACK);
             texture->setImage(engine, 0, std::move(pbd));
-            texture->generateMipmaps(engine);
+            if (!mSkipMipMapGeneration) {
+                texture->generateMipmaps(engine);
+            }
             entry->completed = true;
             mNumDecoderTasksFinished++;
             mCurrentAsset->mDependencyGraph.markAsReady(texture);
