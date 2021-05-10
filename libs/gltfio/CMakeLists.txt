@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
         include/gltfio/ResourceLoader.h
         include/gltfio/FilamentAsset.h
         include/gltfio/FilamentInstance.h
+        include/gltfio/ReusableAnimator.h
 )
 
 set(SRCS
@@ -40,6 +41,7 @@ set(SRCS
         src/math.h
         src/upcast.h
         src/Image.cpp
+        src/ReusableAnimator.cpp
 )
 
 # ==================================================================================================
