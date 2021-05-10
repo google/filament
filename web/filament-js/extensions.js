@@ -275,7 +275,6 @@ Filament.loadClassExtensions = function() {
     Filament.View.prototype.setBloomOptions = function(overrides) {
         const options = {
             dirtStrength: 0.2,
-            highlight: 1000.0,
             strength: 0.10,
             resolution: 360,
             anamorphism: 1.0,
@@ -283,6 +282,16 @@ Filament.loadClassExtensions = function() {
             blendMode: Filament.View$BloomOptions$BlendMode.ADD,
             threshold: true,
             enabled: false,
+            highlight: 1000.0,
+            lensFlare: false,
+            starburst: true,
+            chromaticAberration: 0.005,
+            ghostCount: 4,
+            ghostSpacing: 0.6,
+            ghostThreshold: 10.0,
+            haloThickness: 0.1,
+            haloRadius: 0.4,
+            haloThreshold: 10.0,
             dirt: null
         };
         Object.assign(options, overrides);
