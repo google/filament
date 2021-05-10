@@ -1123,7 +1123,7 @@ static std::ostream& operator<<(std::ostream& out, const BloomOptions& in) {
         << "\"threshold\": " << to_string(in.threshold) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"highlight\": " << (in.highlight) << ",\n"
-        << "\"lensFlare\": " << (in.lensFlare) << ",\n"
+        << "\"lensFlare\": " << to_string(in.lensFlare) << ",\n"
         << "\"starburst\": " << (in.starburst) << ",\n"
         << "\"chromaticAberration\": " << (in.chromaticAberration) << ",\n"
         << "\"ghostCount\": " << int(in.ghostCount) << ",\n"
