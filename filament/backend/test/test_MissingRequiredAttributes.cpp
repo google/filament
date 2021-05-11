@@ -18,6 +18,7 @@
 
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
+#include <utils/Log.h>
 
 namespace {
 
@@ -59,6 +60,7 @@ void main() {
 
 namespace test {
 
+using namespace utils;
 using namespace filament;
 using namespace filament::backend;
 
@@ -67,6 +69,12 @@ using namespace filament::backend;
  * successfully.
  */
 TEST_F(BackendTest, MissingRequiredAttributes) {
+    
+    if (sBackend == Backend::METAL) {
+        slog.i << "metal backend is not support MissingRequiredAttributes test !" << io::endl;
+        return;
+    }
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
