@@ -21,6 +21,8 @@
 #include "details/Engine.h"
 #include "details/Scene.h"
 
+#include "private/backend/DriverApi.h"
+
 #include <filament/Viewport.h>
 
 #include <utils/BinaryTreeArray.h>
@@ -42,13 +44,6 @@ namespace filament {
 
 using namespace backend;
 
-/*
- * This enables froxels to be rectangular which allows us to use a bit more froxel
- * with the same amount of memory in the GPU.
- * Currently not enabled because not enough tested.
- */
-static constexpr bool USE_NON_SQUARE_FROXELS = false;
-
 // The Froxel buffer is set to FROXEL_BUFFER_WIDTH x n
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
 // in all version of GLES.
@@ -59,11 +54,10 @@ constexpr size_t FROXEL_BUFFER_WIDTH        = 1u << FROXEL_BUFFER_WIDTH_SHIFT;
 constexpr size_t FROXEL_BUFFER_WIDTH_MASK   = FROXEL_BUFFER_WIDTH - 1u;
 constexpr size_t FROXEL_BUFFER_HEIGHT       = (FROXEL_BUFFER_ENTRY_COUNT_MAX + FROXEL_BUFFER_WIDTH_MASK) / FROXEL_BUFFER_WIDTH;
 
-constexpr size_t RECORD_BUFFER_WIDTH_SHIFT  = 5u;
+constexpr size_t RECORD_BUFFER_WIDTH_SHIFT  = 4u;
 constexpr size_t RECORD_BUFFER_WIDTH        = 1u << RECORD_BUFFER_WIDTH_SHIFT;
-
-constexpr size_t RECORD_BUFFER_HEIGHT       = 2048;
-constexpr size_t RECORD_BUFFER_ENTRY_COUNT  = RECORD_BUFFER_WIDTH * RECORD_BUFFER_HEIGHT; // 64K
+constexpr size_t RECORD_BUFFER_HEIGHT       = 1024;
+constexpr size_t RECORD_BUFFER_ENTRY_COUNT  = RECORD_BUFFER_WIDTH * RECORD_BUFFER_HEIGHT; // 16K
 
 // Buffer needed for Froxelizer internal data structures (~256 KiB)
 constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
@@ -90,10 +84,11 @@ Froxelizer::Froxelizer(FEngine& engine)
 
     DriverApi& driverApi = engine.getDriverApi();
 
-    // RecordBuffer cannot be larger than 65536 entries, because indices are uint16_t
-    GPUBuffer::ElementType type = std::is_same<RecordBufferType, uint8_t>::value
-                                  ? GPUBuffer::ElementType::UINT8 : GPUBuffer::ElementType::UINT16;
-    mRecordsBuffer = GPUBuffer(driverApi, { type, 1 }, RECORD_BUFFER_WIDTH, RECORD_BUFFER_HEIGHT);
+    static_assert(std::is_same_v<RecordBufferType, uint8_t>,
+            "Record Buffer must use bytes");
+
+    mRecordsBuffer = driverApi.createUniformBuffer(RECORD_BUFFER_ENTRY_COUNT,BufferUsage::DYNAMIC);
+
     mFroxelBuffer  = GPUBuffer(driverApi, { GPUBuffer::ElementType::UINT16, 2 },
             FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
 }
@@ -111,7 +106,8 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     mPlanesX = nullptr;
     mDistancesZ = nullptr;
 
-    mRecordsBuffer.terminate(driverApi);
+    driverApi.destroyUniformBuffer(mRecordsBuffer);
+
     mFroxelBuffer.terminate(driverApi);
 }
 
@@ -160,7 +156,7 @@ bool Froxelizer::prepare(
             driverApi.allocatePod<FroxelEntry>(FROXEL_BUFFER_ENTRY_COUNT_MAX),
             FROXEL_BUFFER_ENTRY_COUNT_MAX };
 
-    // record buffer (~64 KiB)
+    // record buffer (~16 KiB)
     mRecordBufferUser = {
             driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT),
             RECORD_BUFFER_ENTRY_COUNT };
@@ -195,49 +191,41 @@ void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
         filament::Viewport const& viewport) noexcept {
 
-    if (USE_NON_SQUARE_FROXELS == false) {
-        const uint32_t width  = std::max(16u, viewport.width);
-        const uint32_t height = std::max(16u, viewport.height);
+    auto roundTo8 = [](uint32_t v) { return (v + 7u) & ~7u; };
 
-        // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
-        // - Start from the maximum number of froxels we can use in the x-y plane
-        size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
-        size_t froxelPlaneCount = FROXEL_BUFFER_ENTRY_COUNT_MAX / froxelSliceCount;
-        // - compute the number of square froxels we need in width and height, rounded down
-        //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
-        //            |  froxelCountX / froxelCountY == width / height
-        size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
-        size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
-        // - compute the froxels dimensions, rounded up
-        size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
-        size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
-        // - and since our froxels must be square, only keep the largest dimension
-        size_t froxelDimension = std::max(froxelSizeX, froxelSizeY);
+    const uint32_t width  = std::max(16u, viewport.width);
+    const uint32_t height = std::max(16u, viewport.height);
 
-        // Here we recompute the froxel counts which may have changed a little due to the rounding
-        // and the squareness requirement of froxels
-        froxelCountX = (width  + froxelDimension - 1) / froxelDimension;
-        froxelCountY = (height + froxelDimension - 1) / froxelDimension;
+    // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
+    // - Start from the maximum number of froxels we can use in the x-y plane
+    size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
+    size_t froxelPlaneCount = FROXEL_BUFFER_ENTRY_COUNT_MAX / froxelSliceCount;
+    // - compute the number of square froxels we need in width and height, rounded down
+    //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
+    //            |  froxelCountX / froxelCountY == width / height
+    size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
+    size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
+    // - compute the froxels dimensions, rounded up
+    size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
+    size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
+    // - and since our froxels must be square, only keep the largest dimension
 
-        assert_invariant(froxelCountX);
-        assert_invariant(froxelCountY);
-        assert_invariant(froxelCountX * froxelCountY <= froxelPlaneCount);
+    //  make sure we're at lease multiple of 8 to improve performance in the shader
+    size_t froxelDimension = roundTo8((roundTo8(froxelSizeX) >= froxelSizeY) ? froxelSizeX : froxelSizeY);
 
-        *dim = froxelDimension;
-        *countX = uint16_t(froxelCountX);
-        *countY = uint16_t(froxelCountY);
-        *countZ = uint16_t(froxelSliceCount);
-    } else {
-        // TODO: don't hardcode this
-        *countX = uint16_t(32);
-        *countY = uint16_t(16);
-        *countZ = uint16_t(FEngine::CONFIG_FROXEL_SLICE_COUNT);
-        if (viewport.height > viewport.width) {
-            std::swap(*countX, *countY);
-        }
-         dim->x = (viewport.width  + *countX - 1) / *countX;
-         dim->y = (viewport.height + *countY - 1) / *countY;
-    }
+    // Here we recompute the froxel counts which may have changed a little due to the rounding
+    // and the squareness requirement of froxels
+    froxelCountX = (width  + froxelDimension - 1) / froxelDimension;
+    froxelCountY = (height + froxelDimension - 1) / froxelDimension;
+
+    assert_invariant(froxelCountX);
+    assert_invariant(froxelCountY);
+    assert_invariant(froxelCountX * froxelCountY <= froxelPlaneCount);
+
+    *dim = froxelDimension;
+    *countX = uint16_t(froxelCountX);
+    *countY = uint16_t(froxelCountY);
+    *countZ = uint16_t(froxelSliceCount);
 }
 
 UTILS_NOINLINE
@@ -514,7 +502,10 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
     mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
-    mRecordsBuffer.commit(driverApi, mRecordBufferUser);
+
+    driverApi.loadUniformBuffer(mRecordsBuffer,
+            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT });
+
 #ifndef NDEBUG
     mFroxelBufferUser.clear();
     mRecordBufferUser.clear();
@@ -622,6 +613,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     // inlined and vectorized in release builds.
 
     // this gets very well vectorized...
+
     utils::Slice<LightRecord> records(mLightRecords);
     for (size_t j = 0, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
@@ -635,11 +627,31 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         }
     }
 
+    LightRecord::bitset allLights{};
+    for (size_t j = 0, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
+        allLights |= records[j].lights;
+    }
+
     uint16_t offset = 0;
     FroxelEntry* const UTILS_RESTRICT froxels = mFroxelBufferUser.data();
 
     const size_t froxelCountX = mFroxelCountX;
     RecordBufferType* const UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
+
+    // initialize the first record with all lights in the scene -- this will be used only if
+    // we run out of record space.
+    const uint8_t allLightsCount = (uint8_t)std::min(size_t(255), allLights.count());
+    offset += allLightsCount;
+    allLights.forEachSetBit([point = froxelRecords, froxelRecords](size_t l) mutable {
+        // make sure to keep this code branch-less
+        const size_t word = l / LIGHT_PER_GROUP;
+        const size_t bit  = l % LIGHT_PER_GROUP;
+        l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
+        *point = (RecordBufferType)l;
+        // we need to "cancel" the write if we have more than 255 spot or point lights
+        // (this is a limitation of the data type used to store the light counts per froxel)
+        point += (point - froxelRecords < 255) ? 1 : 0;
+    });
 
     // how many froxel record entries were reused (for debugging)
     UTILS_UNUSED size_t reused = 0;
@@ -653,10 +665,10 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
         // We have a limitation of 255 spot + 255 point lights per froxel.
         // note: initializer list for union cannot have more than one element
-        FroxelEntry entry; 
-        entry.offset = offset;
-        entry.count = (uint8_t)std::min(size_t(255), b.lights.count());
-
+        FroxelEntry entry{
+                .offset = offset,
+                .count = (uint8_t)std::min(size_t(255), b.lights.count()),
+        };
         const size_t lightCount = entry.count;
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
@@ -665,9 +677,12 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 #endif
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
-            do { // this compiles to memset()
-                froxels[i++].u32 = 0;
-            } while(i < c);
+            do {
+                froxels[i] = { .offset = 0, .count = allLightsCount };
+                if (records[i].lights.none()) {
+                    froxels[i].u32 = 0;
+                }
+            } while(++i < c);
             goto out_of_memory;
         }
 
@@ -706,6 +721,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         } while(records[i].lights == b.lights);
     }
 out_of_memory:
+    // FIXME: on big-endian systems we need to change the endianness of the record buffer
     ;
 }
 

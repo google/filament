@@ -7,7 +7,7 @@
 #define FROXEL_BUFFER_WIDTH         (1u << FROXEL_BUFFER_WIDTH_SHIFT)
 #define FROXEL_BUFFER_WIDTH_MASK    (FROXEL_BUFFER_WIDTH - 1u)
 
-#define RECORD_BUFFER_WIDTH_SHIFT   5u
+#define RECORD_BUFFER_WIDTH_SHIFT   4u
 #define RECORD_BUFFER_WIDTH         (1u << RECORD_BUFFER_WIDTH_SHIFT)
 #define RECORD_BUFFER_WIDTH_MASK    (RECORD_BUFFER_WIDTH - 1u)
 
@@ -72,12 +72,14 @@ FroxelParams getFroxelParams(uint froxelIndex) {
 }
 
 /**
- * Returns the coordinates of the light record in the light_records texture
- * given the specified index. A light record is a single uint index into the
- * lights data buffer (lightsUniforms UBO).
+ * Return the light index from the record index
+ * A light record is a single uint index into the lights data buffer (lightsUniforms UBO).
  */
-ivec2 getRecordTexCoord(uint index) {
-    return ivec2(index & RECORD_BUFFER_WIDTH_MASK, index >> RECORD_BUFFER_WIDTH_SHIFT);
+uint getLightIndex(const uint index) {
+    uint v = index >> 4u;
+    uint c = (index >> 2u) & 0x3u;
+    uint s = (index & 0x3u) * 8u;
+    return (froxelRecordUniforms.records[v][c] >> s) & 0xFFu;
 }
 
 float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
@@ -110,10 +112,8 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
  * lightsUniforms uniform buffer.
  */
 Light getLight(const uint index) {
-
     // retrieve the light data from the UBO
-    ivec2 texCoord = getRecordTexCoord(index);
-    uint lightIndex = texelFetch(light_records, texCoord, 0).r;
+    uint lightIndex = getLightIndex(index);
     highp vec4 positionFalloff       = lightsUniforms.lights[lightIndex][0];
     highp vec4 colorIntensity        = lightsUniforms.lights[lightIndex][1];
           vec4 directionIES          = lightsUniforms.lights[lightIndex][2];
@@ -187,7 +187,7 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
         }
 #endif
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        if (light.NoL <= 0.0) {
+        if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
             continue;
         }
 #endif

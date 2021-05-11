@@ -50,7 +50,7 @@ public:
     VulkanPipelineCache(VulkanPipelineCache const&) = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
 
-    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
+    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
     static constexpr uint32_t TARGET_BINDING_COUNT = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;

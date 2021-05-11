@@ -421,6 +421,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::LIGHTS, UibGenerator::getLightsUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
+            BindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
+    cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
     cg.generateSeparator(fs);
     cg.generateSamplers(fs,
