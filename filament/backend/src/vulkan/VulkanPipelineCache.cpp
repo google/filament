@@ -44,7 +44,8 @@ static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT = 1500;
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
-    resetBindings();
+    markDirtyDescriptor();
+    markDirtyPipeline();
     mDescriptorKey = {};
 }
 
@@ -52,28 +53,46 @@ VulkanPipelineCache::~VulkanPipelineCache() {
     destroyCache();
 }
 
-bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[3],
-        VkPipelineLayout* pipelineLayout) noexcept {
+void VulkanPipelineCache::bindDescriptors(VulkanCommands& commands) noexcept {
+    VkDescriptorSet descriptors[VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT];
+    if (getOrCreateDescriptors(descriptors)) {
+        vkCmdBindDescriptorSets(commands.get().cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                mPipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
+                0, nullptr);
+    }
+}
+
+void VulkanPipelineCache::bindPipeline(VulkanCommands& commands) noexcept {
+    VkPipeline pipeline;
+    if (getOrCreatePipeline(&pipeline)) {
+        vkCmdBindPipeline(commands.get().cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    }
+}
+
+bool VulkanPipelineCache::getOrCreateDescriptors(
+        VkDescriptorSet descriptorSets[DESCRIPTOR_TYPE_COUNT]) noexcept {
     // If this method has never been called before, we need to create a new layout object.
     if (!mPipelineLayout) {
         createLayoutsAndDescriptors();
     }
 
+    DescriptorBundle*& descriptorBundle = mCmdBufferState[mCmdBufferIndex].currentDescriptorBundle;
+
     // If no bindings have been dirtied, update the timestamp (most recent access) and return false
     // to indicate there's no need to re-bind.
-    if (!mDirtyDescriptor) {
-        assert_invariant(mCurrentDescriptorBundle && mCurrentDescriptorBundle->bound);
-        descriptorSets[0] = mCurrentDescriptorBundle->handles[0];
-        descriptorSets[1] = mCurrentDescriptorBundle->handles[1];
-        descriptorSets[2] = mCurrentDescriptorBundle->handles[2];
-        mCurrentDescriptorBundle->timestamp = mCurrentTime;
+    if (!mDirtyDescriptor[mCmdBufferIndex]) {
+        assert_invariant(descriptorBundle && descriptorBundle->bound);
+        descriptorSets[0] = descriptorBundle->handles[0];
+        descriptorSets[1] = descriptorBundle->handles[1];
+        descriptorSets[2] = descriptorBundle->handles[2];
+        descriptorBundle->timestamp = mCurrentTime;
         return false;
     }
 
     // Release the previously bound descriptor and update its time stamp.
-    if (mCurrentDescriptorBundle) {
-        mCurrentDescriptorBundle->timestamp = mCurrentTime;
-        mCurrentDescriptorBundle->bound = false;
+    if (descriptorBundle) {
+        descriptorBundle->timestamp = mCurrentTime;
+        descriptorBundle->bound = false;
     }
 
     // If a cached object exists, update the timestamp (most recent access) and return true to
@@ -81,14 +100,13 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
     // value method for obtaining a stable reference.
     auto iter = mDescriptorBundles.find(mDescriptorKey);
     if (UTILS_LIKELY(iter != mDescriptorBundles.end())) {
-        mCurrentDescriptorBundle = &iter.value();
-        descriptorSets[0] = mCurrentDescriptorBundle->handles[0];
-        descriptorSets[1] = mCurrentDescriptorBundle->handles[1];
-        descriptorSets[2] = mCurrentDescriptorBundle->handles[2];
-        mCurrentDescriptorBundle->timestamp = mCurrentTime;
-        mCurrentDescriptorBundle->bound = true;
-        mDirtyDescriptor = false;
-        *pipelineLayout = mPipelineLayout;
+        descriptorBundle = &iter.value();
+        descriptorSets[0] = descriptorBundle->handles[0];
+        descriptorSets[1] = descriptorBundle->handles[1];
+        descriptorSets[2] = descriptorBundle->handles[2];
+        descriptorBundle->timestamp = mCurrentTime;
+        descriptorBundle->bound = true;
+        mDirtyDescriptor.unset(mCmdBufferIndex);
         return true;
     }
 
@@ -102,7 +120,6 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
     ASSERT_POSTCONDITION(err != VK_ERROR_FRAGMENTED_POOL,
             "Descriptor set allocation has failed due to fragmentation of pool memory.");
     ASSERT_POSTCONDITION(err == VK_SUCCESS, "Unable to allocate descriptor set.");
-    *pipelineLayout = mPipelineLayout;
 
     // Here we construct a DescriptorBundle in place, then stash its pointer to allow fast
     // subsequent calls to getOrCreateDescriptor when nothing has been dirtied. Note that the
@@ -113,8 +130,8 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
         .bound = true
     })).first.value();
 
-    mCurrentDescriptorBundle = &bundle;
-    mDirtyDescriptor = false;
+    descriptorBundle = &bundle;
+    mDirtyDescriptor.unset(mCmdBufferIndex);
 
     VkDescriptorBufferInfo descriptorBuffers[UBUFFER_BINDING_COUNT];
     VkDescriptorImageInfo descriptorSamplers[SAMPLER_BINDING_COUNT];
@@ -135,7 +152,7 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptorBundle->handles[0];
+            writeInfo.dstSet = descriptorBundle->handles[0];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
@@ -152,7 +169,7 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptorBundle->handles[1];
+            writeInfo.dstSet = descriptorBundle->handles[1];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
@@ -169,7 +186,7 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptorBundle->handles[2];
+            writeInfo.dstSet = descriptorBundle->handles[2];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
@@ -184,22 +201,23 @@ bool VulkanPipelineCache::getOrCreateDescriptors(VkDescriptorSet descriptorSets[
 }
 
 bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
-    ASSERT_POSTCONDITION(mPipelineLayout,
-            "Must call getOrCreateDescriptor before getOrCreatePipeline.");
+    assert_invariant(mPipelineLayout && "Must call getOrCreateDescriptor before getOrCreatePipeline.");
+    PipelineVal*& currentPipeline = mCmdBufferState[mCmdBufferIndex].currentPipeline;
+
     // If no bindings have been dirtied, update the timestamp (most recent access) and return false
     // to indicate there's no need to re-bind.
-    if (!mDirtyPipeline) {
-        assert_invariant(mCurrentPipeline && mCurrentPipeline->bound);
-        *pipeline = mCurrentPipeline->handle;
-        mCurrentPipeline->timestamp = mCurrentTime;
+    if (!mDirtyPipeline[mCmdBufferIndex]) {
+        assert_invariant(currentPipeline && currentPipeline->bound);
+        *pipeline = currentPipeline->handle;
+        currentPipeline->timestamp = mCurrentTime;
         return false;
     }
     assert_invariant(mPipelineKey.shaders[0] && "Vertex shader is not bound.");
 
     // Release the previously bound pipeline and update its time stamp.
-    if (mCurrentPipeline) {
-        mCurrentPipeline->timestamp = mCurrentTime;
-        mCurrentPipeline->bound = false;
+    if (currentPipeline) {
+        currentPipeline->timestamp = mCurrentTime;
+        currentPipeline->bound = false;
     }
 
     // If a cached object exists, update the timestamp (most recent access) and return true to
@@ -207,11 +225,11 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     // method for obtaining a stable reference.
     auto iter = mPipelines.find(mPipelineKey);
     if (UTILS_LIKELY(iter != mPipelines.end())) {
-        mCurrentPipeline = &iter.value();
-        *pipeline = mCurrentPipeline->handle;
-        mCurrentPipeline->timestamp = mCurrentTime;
-        mCurrentPipeline->bound = true;
-        mDirtyPipeline = false;
+        currentPipeline = &iter.value();
+        *pipeline = currentPipeline->handle;
+        currentPipeline->timestamp = mCurrentTime;
+        currentPipeline->bound = true;
+        mDirtyPipeline.unset(mCmdBufferIndex);
         return true;
     }
 
@@ -320,9 +338,9 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     // Here we construct a PipelineVal in place, then stash its pointer to allow fast subsequent
     // calls to getOrCreatePipeline when nothing has been dirtied. Note that the robin_map
     // iterator type proffers a "value" method, which returns a stable reference.
-    mCurrentPipeline = &mPipelines.emplace(std::make_pair(mPipelineKey, PipelineVal {
+    currentPipeline = &mPipelines.emplace(std::make_pair(mPipelineKey, PipelineVal {
         *pipeline, mCurrentTime, true })).first.value();
-    mDirtyPipeline = false;
+    mDirtyPipeline.unset(mCmdBufferIndex);
     return true;
 }
 
@@ -330,7 +348,7 @@ void VulkanPipelineCache::bindProgramBundle(const ProgramBundle& bundle) noexcep
     const VkShaderModule shaders[2] = { bundle.vertex, bundle.fragment };
     for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
         if (mPipelineKey.shaders[ssi] != shaders[ssi]) {
-            mDirtyPipeline = true;
+            markDirtyPipeline();
             mPipelineKey.shaders[ssi] = shaders[ssi];
         }
     }
@@ -363,14 +381,14 @@ void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexce
             ms0.rasterizationSamples != ms1.rasterizationSamples ||
             ms0.alphaToCoverageEnable != ms1.alphaToCoverageEnable
     ) {
-        mDirtyPipeline = true;
+        markDirtyPipeline();
         mPipelineKey.rasterState = rasterState;
     }
 }
 
 void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
     if (mPipelineKey.renderPass != renderPass || mPipelineKey.subpassIndex != subpassIndex) {
-        mDirtyPipeline = true;
+        markDirtyPipeline();
         mPipelineKey.renderPass = renderPass;
         mPipelineKey.subpassIndex = subpassIndex;
     }
@@ -378,7 +396,7 @@ void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassInd
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
     if (mPipelineKey.topology != topology) {
-        mDirtyPipeline = true;
+        markDirtyPipeline();
         mPipelineKey.topology = topology;
     }
 }
@@ -393,7 +411,7 @@ void VulkanPipelineCache::bindVertexArray(const VertexArray& varray) noexcept {
             attrib0.binding = attrib1.binding;
             attrib0.location = attrib1.location;
             attrib0.offset = attrib1.offset;
-            mDirtyPipeline = true;
+            markDirtyPipeline();
         }
         VkVertexInputBindingDescription& buffer0 = mPipelineKey.vertexBuffers[i];
         const VkVertexInputBindingDescription& buffer1 = varray.buffers[i];
@@ -401,7 +419,7 @@ void VulkanPipelineCache::bindVertexArray(const VertexArray& varray) noexcept {
             buffer0.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
             buffer0.binding = buffer1.binding;
             buffer0.stride = buffer1.stride;
-            mDirtyPipeline = true;
+            markDirtyPipeline();
         }
     }
 }
@@ -413,7 +431,7 @@ void VulkanPipelineCache::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
             key.uniformBuffers[bindingIndex] = {};
             key.uniformBufferSizes[bindingIndex] = {};
             key.uniformBufferOffsets[bindingIndex] = {};
-            mDirtyDescriptor = true;
+            markDirtyDescriptor();
         }
     }
 }
@@ -421,12 +439,14 @@ void VulkanPipelineCache::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
 void VulkanPipelineCache::unbindImageView(VkImageView imageView) noexcept {
     for (auto& sampler : mDescriptorKey.samplers) {
         if (sampler.imageView == imageView) {
-            mDirtyDescriptor = true;
+            sampler.imageView = VK_NULL_HANDLE;
+            markDirtyDescriptor();
         }
     }
     for (auto& target : mDescriptorKey.inputAttachments) {
         if (target.imageView == imageView) {
-            mDirtyDescriptor = true;
+            target.imageView = VK_NULL_HANDLE;
+            markDirtyDescriptor();
         }
     }
 }
@@ -443,7 +463,7 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer unif
         key.uniformBuffers[bindingIndex] = uniformBuffer;
         key.uniformBufferOffsets[bindingIndex] = offset;
         key.uniformBufferSizes[bindingIndex] = size;
-        mDirtyDescriptor = true;
+        markDirtyDescriptor();
     }
 }
 
@@ -455,7 +475,7 @@ void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BI
             existing.imageView != requested.imageView ||
             existing.imageLayout != requested.imageLayout) {
             existing = requested;
-            mDirtyDescriptor = true;
+            markDirtyDescriptor();
         }
     }
 }
@@ -469,7 +489,7 @@ void VulkanPipelineCache::bindInputAttachment(uint32_t bindingIndex,
     if (imageInfo.imageView != targetInfo.imageView ||
             imageInfo.imageLayout != targetInfo.imageLayout) {
         imageInfo = targetInfo;
-        mDirtyDescriptor = true;
+        markDirtyDescriptor();
     }
 }
 
@@ -480,13 +500,10 @@ void VulkanPipelineCache::destroyCache() noexcept {
         vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
     }
     mPipelines.clear();
-    mCurrentPipeline = nullptr;
-    mDirtyPipeline = true;
-}
-
-void VulkanPipelineCache::resetBindings() noexcept {
-    mDirtyPipeline = true;
-    mDirtyDescriptor = true;
+    for (int i = 0; i < VK_MAX_COMMAND_BUFFERS; i++) {
+        mCmdBufferState[mCmdBufferIndex].currentPipeline = nullptr;
+    }
+    markDirtyPipeline();
 }
 
 // Frees up old descriptor sets and pipelines, then nulls out their key.
@@ -616,8 +633,10 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
     }
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
     mDescriptorPool = VK_NULL_HANDLE;
-    mCurrentDescriptorBundle = nullptr;
-    mDirtyDescriptor = true;
+    for (int i = 0; i < VK_MAX_COMMAND_BUFFERS; i++) {
+        mCmdBufferState[i].currentDescriptorBundle = nullptr;
+    }
+    markDirtyDescriptor();
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const VulkanPipelineCache::PipelineKey& k1,

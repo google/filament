@@ -1714,6 +1714,9 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     mPipelineCache.bindSamplers(samplers);
 
+    // Bind new descriptor sets if they need to change.
+    mPipelineCache.bindDescriptors(*mContext.commands);
+
     // Set scissoring.
     // Compute the intersection of the requested scissor rectangle with the current viewport.
     const int32_t x = std::max(viewportScissor.left, (int32_t)mContext.viewport.x);
@@ -1726,23 +1729,12 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             .offset = { std::max(0, x), std::max(0, y) },
             .extent = { (uint32_t)right - x, (uint32_t)top - y }
     };
+
     rt->transformClientRectToPlatform(&scissor);
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 
-    // Bind new descriptor sets if they need to change.
-    VkDescriptorSet descriptors[3];
-    VkPipelineLayout pipelineLayout;
-    if (mPipelineCache.getOrCreateDescriptors(descriptors, &pipelineLayout)) {
-        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 3,
-                descriptors, 0, nullptr);
-    }
-
-    // Bind the pipeline if it changed. This can happen, for example, if the raster state changed.
-    // Creating a new pipeline is slow, so we should consider using pipeline cache objects.
-    VkPipeline pipeline;
-    if (mPipelineCache.getOrCreatePipeline(&pipeline)) {
-        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    }
+    // Bind a new pipeline if the pipeline state changed.
+    mPipelineCache.bindPipeline(*mContext.commands);
 
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
