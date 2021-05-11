@@ -170,6 +170,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofDilate.mat
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofMedian.mat
+        src/materials/flare/flare.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -255,7 +256,6 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
-        DEPENDS ../shaders/src/bloom.fs
         APPEND
 )
 

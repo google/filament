@@ -209,6 +209,7 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur", MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "bloomDownsample",       MATERIAL(BLOOMDOWNSAMPLE) },
         { "bloomUpsample",         MATERIAL(BLOOMUPSAMPLE) },
+        { "flare",                 MATERIAL(FLARE) },
         { "blitLow",               MATERIAL(BLITLOW) },
         { "blitMedium",            MATERIAL(BLITMEDIUM) },
         { "blitHigh",              MATERIAL(BLITHIGH) },
@@ -254,15 +255,25 @@ void PostProcessManager::init() noexcept {
     mDummyZeroTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+    mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
+
     PixelBufferDescriptor dataOne(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataOneArray(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
     PixelBufferDescriptor dataZero(driver.allocate(4), 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
+    PixelBufferDescriptor dataStarburst(driver.allocate(256), 256, PixelDataFormat::R, PixelDataType::UBYTE);
     *static_cast<uint32_t *>(dataOne.buffer) = 0xFFFFFFFF;
     *static_cast<uint32_t *>(dataOneArray.buffer) = 0xFFFFFFFF;
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
+    std::generate_n((uint8_t*)dataStarburst.buffer, 256,
+            [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
+        float r = 0.5 + 0.5 * dist(gen);
+        return uint8_t(r * 255.0f);
+    });
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
     driver.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1, std::move(dataOneArray));
     driver.update2DImage(mDummyZeroTexture, 0, 0, 0, 1, 1, std::move(dataZero));
+    driver.update2DImage(mStarburstTexture, 0, 0, 0, 256, 1, std::move(dataStarburst));
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
@@ -270,6 +281,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     driver.destroyTexture(mDummyOneTexture);
     driver.destroyTexture(mDummyOneTextureArray);
     driver.destroyTexture(mDummyZeroTexture);
+    driver.destroyTexture(mStarburstTexture);
     auto first = mMaterialRegistry.begin();
     auto last = mMaterialRegistry.end();
     while (first != last) {
@@ -1343,6 +1355,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
         View::BloomOptions& bloomOptions, float2 scale) noexcept {
+
     FrameGraphId<FrameGraphTexture> bloom = bloomPass(fg, input,
             outFormat, bloomOptions, scale);
 
@@ -1467,9 +1480,55 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         driver.setMinMaxLevels(hwOut, i,
                                 i); // safe because we're using LINEAR_MIPMAP_NEAREST
                     }
+                    driver.setMinMaxLevels(hwOut, 0, bloomOptions.levels - 1);
                 });
 
         input = bloomDownsamplePass->out;
+
+        // flare pass
+        auto& flarePass = fg.addPass<BloomPassData>("Flare",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.in = builder.sample(input);
+                    data.out = builder.createTexture("Flare Texture", {
+                            .width  = width  / 2,
+                            .height = height / 2,
+                            .format = outFormat
+                    });
+                    data.out = builder.declareRenderPass(data.out);
+                },
+                [=](FrameGraphResources const& resources,
+                        auto const& data, DriverApi& driver) {
+                    auto in = resources.getTexture(data.in);
+                    auto out = resources.getRenderPassInfo(0);
+                    const float aspectRatio = float(width) / height;
+
+                    auto const& material = getPostProcessMaterial("flare");
+                    FMaterialInstance* mi = material.getMaterialInstance();
+
+                    mi->setParameter("color", in, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
+
+                    mi->setParameter("level", 1.0f);    // adjust with resolution
+                    mi->setParameter("aspectRatio",
+                            float2{ aspectRatio, 1.0f / aspectRatio });
+                    mi->setParameter("threshold",
+                            float2{ bloomOptions.ghostThreshold, bloomOptions.haloThreshold });
+                    mi->setParameter("chromaticAberration",
+                            bloomOptions.chromaticAberration);
+                    mi->setParameter("ghostCount", (float)bloomOptions.ghostCount);
+                    mi->setParameter("ghostSpacing", bloomOptions.ghostSpacing);
+                    mi->setParameter("haloRadius", bloomOptions.haloRadius);
+                    mi->setParameter("haloThickness", bloomOptions.haloThickness);
+
+                    commitAndRender(out, material, driver);
+                });
+
+        auto flare = gaussianBlurPass(fg, flarePass->out, 0,
+                {}, 0, false, 9);
+
+        fg.getBlackboard().put("flare", flare);
 
         // upsample phase
         auto& bloomUpsamplePass = fg.addPass<BloomPassData>("Bloom Upsample",
@@ -1521,6 +1580,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                     driver.setMinMaxLevels(hwIn, 0, bloomOptions.levels - 1);
                 });
+
         return bloomUpsamplePass->out;
 
     } else { // !isWebGL
@@ -1756,11 +1816,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
     Blackboard& blackboard = fg.getBlackboard();
 
     FrameGraphId<FrameGraphTexture> bloomDirt;
-    FrameGraphId<FrameGraphTexture> bloomBlur = blackboard.get<FrameGraphTexture>("bloom");
+    FrameGraphId<FrameGraphTexture> starburst;
+    FrameGraphId<FrameGraphTexture> bloom = blackboard.get<FrameGraphTexture>("bloom");
+    FrameGraphId<FrameGraphTexture> flare = blackboard.get<FrameGraphTexture>("flare");
 
-    float bloom = 0.0f;
+    float bloomStrength = 0.0f;
     if (bloomOptions.enabled) {
-        bloom = clamp(bloomOptions.strength, 0.0f, 1.0f);
+        bloomStrength = clamp(bloomOptions.strength, 0.0f, 1.0f);
         if (bloomOptions.dirt) {
             FTexture* fdirt = upcast(bloomOptions.dirt);
             FrameGraphTexture frameGraphTexture{ .handle = fdirt->getHwHandle() };
@@ -1770,13 +1832,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     .format = fdirt->getFormat()
             }, FrameGraphTexture::Usage::SAMPLEABLE, frameGraphTexture);
         }
+
+        if (bloomOptions.lensFlare && bloomOptions.starburst) {
+            starburst = fg.import("starburst", {
+                    .width = 256, .height = 1, .format = TextureFormat::R8
+            }, FrameGraphTexture::Usage::SAMPLEABLE,
+                    FrameGraphTexture{ .handle = mStarburstTexture });
+        }
     }
 
     struct PostProcessColorGrading {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> bloom;
+        FrameGraphId<FrameGraphTexture> flare;
         FrameGraphId<FrameGraphTexture> dirt;
+        FrameGraphId<FrameGraphTexture> starburst;
     };
 
     auto& ppColorGrading = fg.addPass<PostProcessColorGrading>("colorGrading",
@@ -1790,11 +1861,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 });
                 data.output = builder.declareRenderPass(data.output);
 
-                if (bloomBlur) {
-                    data.bloom = builder.sample(bloomBlur);
+                if (bloom) {
+                    data.bloom = builder.sample(bloom);
                 }
                 if (bloomDirt) {
                     data.dirt = builder.sample(bloomDirt);
+                }
+                if (bloomOptions.lensFlare && flare) {
+                    data.flare = builder.sample(flare);
+                    data.starburst = builder.sample(starburst);
                 }
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
@@ -1803,8 +1878,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 Handle<HwTexture> bloomTexture =
                         data.bloom ? resources.getTexture(data.bloom) : getZeroTexture();
 
+                Handle<HwTexture> flareTexture =
+                        data.flare ? resources.getTexture(data.flare) : getZeroTexture();
+
                 Handle<HwTexture> dirtTexture =
                         data.dirt ? resources.getTexture(data.dirt) : getOneTexture();
+
+                Handle<HwTexture> starburstTexture =
+                        data.starburst ? resources.getTexture(data.starburst) : getOneTexture();
 
                 auto const& out = resources.getRenderPassInfo();
 
@@ -1819,17 +1900,27 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR /* always read base level in shader */
                 });
+                mi->setParameter("flareBuffer", flareTexture, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                });
                 mi->setParameter("dirtBuffer", dirtTexture, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("starburstBuffer", starburstTexture, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR,
+                        .wrapS = SamplerWrapMode::REPEAT,
+                        .wrapT = SamplerWrapMode::REPEAT
+                });
 
                 // Bloom params
                 float4 bloomParameters{
-                    bloom / float(bloomOptions.levels),
+                    bloomStrength / float(bloomOptions.levels),
                     1.0f,
                     (bloomOptions.enabled && bloomOptions.dirt) ? bloomOptions.dirtStrength : 0.0f,
-                    0.0f
+                    bloomOptions.lensFlare ? bloomStrength : 0.0f
                 };
                 if (bloomOptions.blendMode == View::BloomOptions::BlendMode::INTERPOLATE) {
                     bloomParameters.y = 1.0f - bloomParameters.x;

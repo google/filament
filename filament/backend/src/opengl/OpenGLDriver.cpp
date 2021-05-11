@@ -779,8 +779,12 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
     rp->maxVertexCount = vb->vertexCount;
     for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
         const auto& attribute = vb->attributes[i];
-        if (attribute.buffer != Attribute::BUFFER_UNUSED) {
-            uint8_t bi = attribute.buffer;
+        const uint8_t bi = attribute.buffer;
+
+        // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
+        // take care to avoid it. This can occur when VertexBuffer is only partially populated with
+        // BufferObject items.
+        if (bi != Attribute::BUFFER_UNUSED && UTILS_LIKELY(vb->gl.buffers[bi] != 0)) {
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                 glVertexAttribIPointer(GLuint(i),

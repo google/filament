@@ -236,44 +236,121 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
 void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         uint32_t depth, int miplevel) {
     assert_invariant(width <= this->width && height <= this->height && depth <= this->depth);
-    const uint32_t srcBytesPerTexel = getBytesPerPixel(format);
-    const bool reshape = srcBytesPerTexel == 3 || srcBytesPerTexel == 6;
-    const void* cpuData = data.buffer;
-    const uint32_t numSrcBytes = data.size;
-    const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
+    const PixelBufferDescriptor* hostData = &data;
+    PixelBufferDescriptor reshapedData;
 
-    // Create and populate the staging buffer.
-    VulkanStage const* stage = mStagePool.acquireStage(numDstBytes);
-    void* mapped;
-    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    switch (srcBytesPerTexel) {
-        case 3:
-            // Morph the data from 3 bytes per texel to 4 bytes per texel and set alpha to 1.
-            DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
-            break;
-        case 6:
-            // Morph the data from 6 bytes per texel to 8 bytes per texel. Note that this does not
-            // set alpha to 1 for half-float formats, but in practice that's fine since alpha is
-            // just a dummy channel in this situation.
-            DataReshaper::reshape<uint16_t, 3, 4>(mapped, cpuData, numSrcBytes);
-            break;
-        default:
-            memcpy(mapped, cpuData, numSrcBytes);
+    // First, reshape 3-component data into 4-component data. The fourth component is usually
+    // set to 1 (one exception is when type = HALF). In practice, alpha is just a dummy channel.
+    // Note that the reshaped data is freed at the end of this method due to the callback.
+
+    if (data.format == PixelDataFormat::RGB) {
+        const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
+        const size_t reshapedSize = 4 * data.size / 3;
+        const PixelDataFormat reshapedFormat = PixelDataFormat::RGBA;
+        switch (data.type) {
+            case PixelDataType::BYTE:
+            case PixelDataType::UBYTE: {
+                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
+                DataReshaper::reshape<uint8_t, 3, 4>(bytes, data.buffer, data.size);
+                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+                reshapedData = std::move(pbd);
+                hostData = &reshapedData;
+                break;
+            }
+            case PixelDataType::SHORT:
+            case PixelDataType::USHORT:
+            case PixelDataType::HALF: {
+                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
+                DataReshaper::reshape<uint16_t, 3, 4>(bytes, data.buffer, data.size);
+                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+                reshapedData = std::move(pbd);
+                hostData = &reshapedData;
+                break;
+            }
+            case PixelDataType::INT:
+            case PixelDataType::UINT:
+            case PixelDataType::FLOAT: {
+                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
+                DataReshaper::reshape<uint32_t, 3, 4>(bytes, data.buffer, data.size);
+                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+                reshapedData = std::move(pbd);
+                hostData = &reshapedData;
+                break;
+            }
+
+            default:
+                break;
+        }
     }
+
+    // If format conversion is both required and supported, use vkCmdBlitImage. Otherwise, use
+    // vkCmdCopyBufferToImage.
+
+    const VkFormat hostFormat = backend::getVkFormat(hostData->format, hostData->type);
+    const VkFormat deviceFormat = getVkFormatLinear(mVkFormat);
+
+    if (hostFormat != deviceFormat && hostFormat != VK_FORMAT_UNDEFINED) {
+        updateWithBlitImage(*hostData, width, height, depth, miplevel);
+    } else {
+        updateWithCopyBuffer(*hostData, width, height, depth, miplevel);
+    }
+}
+
+void VulkanTexture::updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
+        uint32_t height, uint32_t depth, int miplevel) {
+    void* mapped = nullptr;
+    VulkanStage const* stage = mStagePool.acquireStage(hostData.size);
+    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
+    memcpy(mapped, hostData.buffer, hostData.size);
     vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, hostData.size);
 
-    // Create a copy-to-device functor.
-    auto copyToDevice = [this, stage, width, height, depth, miplevel] (VulkanCommandBuffer& commands) {
-        transitionImageLayout(commands.cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
-        copyBufferToImage(commands.cmdbuffer, stage->buffer, mTextureImage, width, height, depth,
-                nullptr, miplevel);
-        transitionImageLayout(commands.cmdbuffer, mTextureImage,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                getTextureLayout(usage), miplevel, 1, 1, mAspect);
-    };
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
 
-    copyToDevice(mContext.commands->get());
+    copyBufferToImage(cmdbuffer, stage->buffer, mTextureImage, width, height, depth,
+            nullptr, miplevel);
+
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            getTextureLayout(usage), miplevel, 1, 1, mAspect);
+}
+
+void VulkanTexture::updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
+        uint32_t height, uint32_t depth, int miplevel) {
+    void* mapped = nullptr;
+    VulkanStageImage const* stage = mStagePool.acquireImage(hostData.format, hostData.type,
+            width, height);
+    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
+    memcpy(mapped, hostData.buffer, hostData.size);
+    vmaUnmapMemory(mContext.allocator, stage->memory);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, hostData.size);
+
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+
+    // TODO: support blit-based format conversion for 3D images and cubemaps.
+    const int layer = 0;
+
+    const VkOffset3D rect[2] { {0, 0, 0}, {int32_t(width), int32_t(height), 1} };
+
+    const VkImageBlit blitRegions[1] = {{
+        .srcSubresource = { mAspect, 0, 0, 1 },
+        .srcOffsets = { rect[0], rect[1] },
+        .dstSubresource = { mAspect, uint32_t(miplevel), layer, 1 },
+        .dstOffsets = { rect[0], rect[1] }
+    }};
+
+    transitionImageLayout(cmdbuffer, stage->image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, miplevel, 1, 1, mAspect);
+
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1, 1, mAspect);
+
+    vkCmdBlitImage(cmdbuffer, stage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mTextureImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_NEAREST);
+
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            getTextureLayout(usage), miplevel, 1, 1, mAspect);
 }
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
@@ -296,20 +373,19 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
-    // Create a copy-to-device functor.
-    auto copyToDevice = [this, faceOffsets, stage, miplevel] (VulkanCommandBuffer& commands) {
-        uint32_t width = std::max(1u, this->width >> miplevel);
-        uint32_t height = std::max(1u, this->height >> miplevel);
-        transitionImageLayout(commands.cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
-        copyBufferToImage(commands.cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
-                &faceOffsets, miplevel);
-        transitionImageLayout(commands.cmdbuffer, mTextureImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
-                1, mAspect);
-    };
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    const uint32_t width = std::max(1u, this->width >> miplevel);
+    const uint32_t height = std::max(1u, this->height >> miplevel);
 
-    copyToDevice(mContext.commands->get());
+    transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6, 1, mAspect);
+
+    copyBufferToImage(cmdbuffer, stage->buffer, mTextureImage, width, height, 1,
+            &faceOffsets, miplevel);
+
+    transitionImageLayout(cmdbuffer, mTextureImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
+            1, mAspect);
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {

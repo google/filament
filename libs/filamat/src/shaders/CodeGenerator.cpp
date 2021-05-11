@@ -96,7 +96,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     out << '\n';
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
-        mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41)) {
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 

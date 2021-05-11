@@ -110,8 +110,15 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* v
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, bool* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
-    *val = 0 == compare(tokens[i], jsonChunk, "true");
-    return i + 1;
+    if (0 == compare(tokens[i], jsonChunk, "true")) {
+        *val = true;
+        return i + 1;
+    }
+    if (0 == compare(tokens[i], jsonChunk, "false")) {
+        *val = false;
+        return i + 1;
+    }
+    return -1;
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float3* val) {
@@ -416,6 +423,24 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, BloomOpt
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "highlight") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->highlight);
+        } else if (compare(tok, jsonChunk, "lensFlare") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lensFlare);
+        } else if (compare(tok, jsonChunk, "starburst") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->starburst);
+        } else if (compare(tok, jsonChunk, "chromaticAberration") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->chromaticAberration);
+        } else if (compare(tok, jsonChunk, "ghostCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostCount);
+        } else if (compare(tok, jsonChunk, "ghostSpacing") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostSpacing);
+        } else if (compare(tok, jsonChunk, "ghostThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->ghostThreshold);
+        } else if (compare(tok, jsonChunk, "haloThickness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloThickness);
+        } else if (compare(tok, jsonChunk, "haloRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloRadius);
+        } else if (compare(tok, jsonChunk, "haloThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->haloThreshold);
         } else {
             slog.w << "Invalid bloom options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1104,7 +1129,16 @@ static std::ostream& operator<<(std::ostream& out, const BloomOptions& in) {
         << "\"blendMode\": " << (in.blendMode) << ",\n"
         << "\"threshold\": " << to_string(in.threshold) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
-        << "\"highlight\": " << (in.highlight) << "\n"
+        << "\"highlight\": " << (in.highlight) << ",\n"
+        << "\"lensFlare\": " << to_string(in.lensFlare) << ",\n"
+        << "\"starburst\": " << to_string(in.starburst) << ",\n"
+        << "\"chromaticAberration\": " << (in.chromaticAberration) << ",\n"
+        << "\"ghostCount\": " << int(in.ghostCount) << ",\n"
+        << "\"ghostSpacing\": " << (in.ghostSpacing) << ",\n"
+        << "\"ghostThreshold\": " << (in.ghostThreshold) << ",\n"
+        << "\"haloThickness\": " << (in.haloThickness) << ",\n"
+        << "\"haloRadius\": " << (in.haloRadius) << ",\n"
+        << "\"haloThreshold\": " << (in.haloThreshold) << "\n"
         << "}";
 }
 
@@ -1118,7 +1152,7 @@ static std::ostream& operator<<(std::ostream& out, const FogOptions& in) {
         << "\"density\": " << (in.density) << ",\n"
         << "\"inScatteringStart\": " << (in.inScatteringStart) << ",\n"
         << "\"inScatteringSize\": " << (in.inScatteringSize) << ",\n"
-        << "\"fogColorFromIbl\": " << (in.fogColorFromIbl) << ",\n"
+        << "\"fogColorFromIbl\": " << to_string(in.fogColorFromIbl) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
 }
@@ -1210,7 +1244,7 @@ static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << ",\n"
-        << "\"nativeResolution\": " << (in.nativeResolution) << ",\n"
+        << "\"nativeResolution\": " << to_string(in.nativeResolution) << ",\n"
         << "\"foregroundRingCount\": " << int(in.foregroundRingCount) << ",\n"
         << "\"backgroundRingCount\": " << int(in.backgroundRingCount) << ",\n"
         << "\"fastGatherRingCount\": " << int(in.fastGatherRingCount) << ",\n"

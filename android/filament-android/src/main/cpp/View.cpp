@@ -253,7 +253,10 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
         jlong nativeView, jlong nativeTexture,
         jfloat dirtStrength, jfloat strength, jint resolution, jfloat anamorphism, jint levels,
-        jint blendMode, jboolean threshold, jboolean enabled, jfloat highlight) {
+        jint blendMode, jboolean threshold, jboolean enabled, jfloat highlight,
+        jboolean lensFlare, jboolean starburst, jfloat chromaticAberration, jint ghostCount,
+        jfloat ghostSpacing, jfloat ghostThreshold, jfloat haloThickness, jfloat haloRadius,
+        jfloat haloThreshold) {
     View* view = (View*) nativeView;
     Texture* dirt = (Texture*) nativeTexture;
     View::BloomOptions options = {
@@ -266,7 +269,16 @@ Java_com_google_android_filament_View_nSetBloomOptions(JNIEnv*, jclass,
             .blendMode = (View::BloomOptions::BlendMode)blendMode,
             .threshold = (bool)threshold,
             .enabled = (bool)enabled,
-            .highlight = highlight
+            .highlight = highlight,
+            .lensFlare = (bool)lensFlare,
+            .starburst = (bool)starburst,
+            .chromaticAberration = chromaticAberration,
+            .ghostCount = (uint8_t)ghostCount,
+            .ghostSpacing = ghostSpacing,
+            .ghostThreshold = ghostThreshold,
+            .haloThickness = haloThickness,
+            .haloRadius = haloRadius,
+            .haloThreshold = haloThreshold
     };
     view->setBloomOptions(options);
 }

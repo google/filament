@@ -72,6 +72,8 @@ HEADER_FILE_TEMPLATE = COPYRIGHT_HEADER + '''
 #ifndef TNT_FILAMENT_BLUEVK_H
 #define TNT_FILAMENT_BLUEVK_H
 
+#define VK_ENABLE_BETA_EXTENSIONS
+
 // BlueVK dynamically loads all function pointers, so it cannot allow function prototypes, which
 // would assume static linking for Vulkan entry points.
 #if defined(VULKAN_H_) && !defined(VK_NO_PROTOTYPES)
