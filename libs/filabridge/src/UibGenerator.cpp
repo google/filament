@@ -154,4 +154,12 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     return uib;
 }
 
+UniformInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
+    static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
+            .name("FroxelRecordUniforms")
+            .add("records", 1024, UniformInterfaceBlock::Type::UINT4, Precision::HIGH)
+            .build();
+    return uib;
+}
+
 } // namespace filament

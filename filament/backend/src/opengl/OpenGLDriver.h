@@ -378,7 +378,7 @@ private:
         return pos->second;
     }
 
-    const std::array<backend::HwSamplerGroup*, backend::Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
+    const std::array<backend::HwSamplerGroup*, backend::Program::BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
@@ -399,7 +399,7 @@ private:
     void setViewportScissor(backend::Viewport const& viewportScissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<backend::HwSamplerGroup*, backend::Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 8 pointers
+    std::array<backend::HwSamplerGroup*, backend::Program::BINDING_COUNT> mSamplerBindings = {};   // 8 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

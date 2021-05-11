@@ -449,6 +449,7 @@ private:
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
         driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
+        driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
         driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 

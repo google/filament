@@ -39,8 +39,6 @@
 
 #include "generated/resources/materials.h"
 
-#include <private/filament/SibGenerator.h>
-
 #include <filament/MaterialEnums.h>
 
 #include <math/half.h>

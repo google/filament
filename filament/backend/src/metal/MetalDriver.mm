@@ -1253,8 +1253,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
 
     // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
+    MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             MetalUniformBuffer* uniform, uint32_t index) {
@@ -1263,7 +1263,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
             0, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT, uniformsToBind, offsets,
-            Program::UNIFORM_BINDING_COUNT);
+            Program::BINDING_COUNT);
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -1411,7 +1411,7 @@ void MetalDriver::enumerateSamplerGroups(
 
 void MetalDriver::enumerateBoundUniformBuffers(
         const std::function<void(const UniformBufferState&, MetalUniformBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < Program::BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;

@@ -87,7 +87,7 @@ private:
         static_assert(TEXTURE_UNIT_COUNT <= 16, "TEXTURE_UNIT_COUNT must be <= 16");
 
         // if SAMPLER_BINDING_COUNT > 8, the binding bitfield must be increased accordingly
-        static_assert(backend::Program::SAMPLER_BINDING_COUNT <= 8, "SAMPLER_BINDING_COUNT must be <= 8");
+        static_assert(backend::Program::BINDING_COUNT <= 8, "BINDING_COUNT must be <= 8");
     };
 
     uint8_t mUsedBindingsCount = 0;
@@ -95,7 +95,7 @@ private:
     bool mIsValid = false;
 
     // information about each USED sampler buffer (no gaps)
-    std::array<BlockInfo, backend::Program::SAMPLER_BINDING_COUNT> mBlockInfos;   // 8 bytes
+    std::array<BlockInfo, backend::Program::BINDING_COUNT> mBlockInfos;   // 8 bytes
 
     // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
     std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 16 bytes

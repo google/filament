@@ -33,6 +33,9 @@ public:
     static UniformInterfaceBlock const& getLightsUib() noexcept;
     static UniformInterfaceBlock const& getShadowUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
+    static UniformInterfaceBlock const& getFroxelRecordUib() noexcept;
+    // When adding an UBO here, make sure to also update
+    //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
 };
 
 /*
@@ -159,6 +162,7 @@ struct LightsUib {
     uint32_t               shadow;            // { shadow bits (see ShadowInfo) }
     uint32_t               type;              // { 0=point, 1=spot }
 };
+static_assert(sizeof(LightsUib) == 64, "the actual UBO is an array of 256 mat4");
 
 // UBO for punctual (spot light) shadows.
 struct ShadowUib {
@@ -168,6 +172,15 @@ struct ShadowUib {
 
     filament::math::mat4f spotLightFromWorldMatrix[CONFIG_MAX_SHADOW_CASTING_SPOTS];
     filament::math::float4 directionShadowBias[CONFIG_MAX_SHADOW_CASTING_SPOTS]; // light direction, normal bias
+};
+
+// UBO froxel record buffer.
+struct FroxelRecordUib {
+    static const UniformInterfaceBlock& getUib() noexcept {
+        return UibGenerator::getFroxelRecordUib();
+    }
+
+    filament::math::uint4 records[1024];
 };
 
 // This is not the UBO proper, but just an element of a bone array.
