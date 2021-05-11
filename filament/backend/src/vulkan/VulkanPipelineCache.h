@@ -97,7 +97,8 @@ public:
     const RasterState& getDefaultRasterState() const { return mDefaultRasterState; }
 
     // Creates new descriptor sets if necessary and binds them using vkCmdBindDescriptorSets.
-    void bindDescriptors(VulkanCommands& commands) noexcept;
+    // Returns false if descriptor set allocation fails.
+    bool bindDescriptors(VulkanCommands& commands) noexcept;
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommands& commands) noexcept;
@@ -128,22 +129,16 @@ public:
     // Destroys all managed Vulkan objects. This should be called before changing the VkDevice.
     void destroyCache() noexcept;
 
-    // Evicts old unused Vulkan objects. Call this once per frame.
-    void gc() noexcept;
-
     // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
     // buffer; they are not global to the device. Therefore we need to be notified when a
     // new command buffer becomes active.
-    void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) override {
-        mCmdBufferIndex = cmdbuffer.index;
-    }
+    void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) override;
+
+    // Injects a dummy texture that can be used to clear out old descriptor sets.
+    void setDummyTexture(VkImageView imageView) { mDummyImageView = imageView; }
 
 private:
-    // Returns true if vkCmdBindDescriptorSets is required.
-    bool getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT]) noexcept;
-
-    // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
-    bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
+    static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
@@ -168,12 +163,6 @@ private:
         bool operator()(const PipelineKey& k1, const PipelineKey& k2) const;
     };
 
-    struct PipelineVal {
-        VkPipeline handle;
-        uint32_t timestamp;
-        bool bound;
-    };
-
     // The descriptor key is a POD that represents all currently bound states that go into the
     // descriptor set. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreateDescriptors.
@@ -195,11 +184,19 @@ private:
         bool operator()(const DescriptorKey& k1, const DescriptorKey& k2) const;
     };
 
-    // Represents a set of descriptor sets that are bound simultanously.
+    // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
         VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
-        uint32_t timestamp;
-        bool bound;
+        utils::bitset32 commandBuffers;
+    };
+
+    struct PipelineVal {
+        VkPipeline handle;
+
+        // The "age" of a pipeline cache entry is the number of command buffer flush events that
+        // have occurred since it was last used in a command buffer. This is used for LRU caching,
+        // which is a crucial feature because VkPipeline construction is very slow.
+        uint32_t age;
     };
 
     struct CmdBufferState {
@@ -208,11 +205,17 @@ private:
         DescriptorBundle* currentDescriptorBundle = nullptr;
     };
 
+    // If bind is set to true, vkCmdBindDescriptorSets is required.
+    // If overflow is set to true, a descriptor set allocation error has occurred.
+    void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
+            bool* bind, bool* overflow) noexcept;
+
+    // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
+    bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
+
     void createLayoutsAndDescriptors() noexcept;
     void destroyLayoutsAndDescriptors() noexcept;
-
-    static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
-
+    void destroyCacheEntries(uint32_t cmdBufferIndex) noexcept;
     void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
     void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
 
@@ -237,14 +240,21 @@ private:
 
     VkDescriptorSetLayout mDescriptorSetLayouts[DESCRIPTOR_TYPE_COUNT] = {};
 
+    std::vector<VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
+
     VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
     tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual> mPipelines;
     tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual> mDescriptorBundles;
     VkDescriptorPool mDescriptorPool;
-    int mCmdBufferIndex = 0;
+    uint32_t mCmdBufferIndex = 0;
 
-    // Store the current "time" (really just a frame count) and LRU eviction parameters.
-    uint32_t mCurrentTime = 0;
+    VkImageView mDummyImageView = VK_NULL_HANDLE;
+    VkDescriptorBufferInfo mDummyBufferInfo = {};
+    VkWriteDescriptorSet mDummyBufferWriteInfo = {};
+    VkDescriptorImageInfo mDummySamplerInfo = {};
+    VkWriteDescriptorSet mDummySamplerWriteInfo = {};
+    VkDescriptorImageInfo mDummyTargetInfo = {};
+    VkWriteDescriptorSet mDummyTargetWriteInfo = {};
 };
 
 } // namespace filament

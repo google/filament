@@ -198,7 +198,7 @@ void VulkanCommands::wait() {
     VkFence fences[CAPACITY];
     uint32_t count = 0;
     for (auto& wrapper : mStorage) {
-        if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
+        if (wrapper.cmdbuffer != VK_NULL_HANDLE && mCurrent != &wrapper) {
             fences[count++] = wrapper.fence->fence;
         }
     }

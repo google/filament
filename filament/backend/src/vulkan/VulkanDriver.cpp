@@ -204,10 +204,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     mContext.commands = new VulkanCommands(mContext.device, mContext.graphicsQueueFamilyIndex);
 
-    mContext.commands->setObserver(&mPipelineCache);
-
-    mPipelineCache.setDevice(mContext.device);
     createEmptyTexture(mContext, mStagePool);
+
+    mContext.commands->setObserver(&mPipelineCache);
+    mPipelineCache.setDevice(mContext.device);
+    mPipelineCache.setDummyTexture(mContext.emptyTexture->getPrimaryImageView());
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
@@ -298,7 +299,6 @@ void VulkanDriver::tick(int) {
 void VulkanDriver::collectGarbage() {
     mStagePool.gc();
     mFramebufferCache.gc();
-    mPipelineCache.gc();
     mDisposer.gc();
     mContext.commands->gc();
 }
@@ -1715,7 +1715,11 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     mPipelineCache.bindSamplers(samplers);
 
     // Bind new descriptor sets if they need to change.
-    mPipelineCache.bindDescriptors(*mContext.commands);
+    // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
+    // message since the validation layers already do so.
+    if (!mPipelineCache.bindDescriptors(*mContext.commands)) {
+        return;
+    }
 
     // Set scissoring.
     // Compute the intersection of the requested scissor rectangle with the current viewport.
