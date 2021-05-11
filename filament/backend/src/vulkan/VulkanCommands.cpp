@@ -85,7 +85,7 @@ VulkanCommandBuffer const& VulkanCommands::get() {
     }
 
     // Find an available slot.
-    for (auto& wrapper : mStorage) {
+    for (VulkanCommandBuffer& wrapper : mStorage) {
         if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
             mCurrent = &wrapper;
             break;
