@@ -48,4 +48,9 @@ constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 // We choose a capacity of 3 because this matches the needs of triple-buffering.
 constexpr static const int VK_MAX_COMMAND_BUFFERS = 3;
 
+// Maximum number of command buffer flush events that can occur before an unused pipeline is removed
+// from the cache. If this number is low, VkPipeline construction will occur frequently, which can
+// be extremely slow. If this number is high, the memory footprint will be large.
+constexpr static const int VK_MAX_PIPELINE_AGE = 5;
+
 #endif
