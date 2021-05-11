@@ -65,8 +65,6 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mFroxelizer.getRecordBuffer().setSampler(PerViewSib::RECORDS, mPerViewSb);
-    mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
@@ -78,6 +76,10 @@ FView::FView(FEngine& engine)
     mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), backend::BufferUsage::DYNAMIC);
     mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), backend::BufferUsage::DYNAMIC);
     mShadowUbh = driver.createUniformBuffer(mShadowUb.getSize(), backend::BufferUsage::DYNAMIC);
+    assert(FroxelUib::getUib().getSize() == 32768);
+    assert(RecordsUib::getUib().getSize() == 65536);
+    mFroxelUbh = driver.createUniformBuffer(FroxelUib::getUib().getSize(), backend::BufferUsage::DYNAMIC);
+    mRecordsUbh = driver.createUniformBuffer(RecordsUib::getUib().getSize(), backend::BufferUsage::DYNAMIC);
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
@@ -96,6 +98,8 @@ void FView::terminate(FEngine& engine) {
     driver.destroyUniformBuffer(mPerViewUbh);
     driver.destroyUniformBuffer(mLightUbh);
     driver.destroyUniformBuffer(mShadowUbh);
+    driver.destroyUniformBuffer(mFroxelUbh);
+    driver.destroyUniformBuffer(mRecordsUbh);
     driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
     drainFrameHistory(engine);
@@ -726,7 +730,7 @@ void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
 
 void FView::commitFroxels(backend::DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
-        mFroxelizer.commit(driverApi);
+        mFroxelizer.commit(driverApi, mFroxelUbh, mRecordsUbh);
     }
 }
 

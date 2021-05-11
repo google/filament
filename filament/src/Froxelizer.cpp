@@ -59,6 +59,10 @@ constexpr size_t FROXEL_BUFFER_WIDTH        = 1u << FROXEL_BUFFER_WIDTH_SHIFT;
 constexpr size_t FROXEL_BUFFER_WIDTH_MASK   = FROXEL_BUFFER_WIDTH - 1u;
 constexpr size_t FROXEL_BUFFER_HEIGHT       = (FROXEL_BUFFER_ENTRY_COUNT_MAX + FROXEL_BUFFER_WIDTH_MASK) / FROXEL_BUFFER_WIDTH;
 
+static_assert(FROXEL_BUFFER_WIDTH == 64);
+static_assert(FROXEL_BUFFER_HEIGHT == 128);
+
+
 constexpr size_t RECORD_BUFFER_WIDTH_SHIFT  = 5u;
 constexpr size_t RECORD_BUFFER_WIDTH        = 1u << RECORD_BUFFER_WIDTH_SHIFT;
 
@@ -71,6 +75,8 @@ constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
                                                   FROXEL_BUFFER_ENTRY_COUNT_MAX + 3 +
                                                   FEngine::CONFIG_FROXEL_SLICE_COUNT / 4 + 1);
 
+static_assert(RECORD_BUFFER_WIDTH == 32);
+static_assert(RECORD_BUFFER_HEIGHT == 2048);
 
 // number of lights processed by one group (e.g. 32)
 static constexpr size_t LIGHT_PER_GROUP = sizeof(Froxelizer::LightGroupType) * 8;
@@ -91,8 +97,9 @@ Froxelizer::Froxelizer(FEngine& engine)
     DriverApi& driverApi = engine.getDriverApi();
 
     // RecordBuffer cannot be larger than 65536 entries, because indices are uint16_t
-    GPUBuffer::ElementType type = std::is_same<RecordBufferType, uint8_t>::value
+    constexpr GPUBuffer::ElementType type = std::is_same<RecordBufferType, uint8_t>::value
                                   ? GPUBuffer::ElementType::UINT8 : GPUBuffer::ElementType::UINT16;
+    static_assert(type == GPUBuffer::ElementType::UINT8);
     mRecordsBuffer = GPUBuffer(driverApi, { type, 1 }, RECORD_BUFFER_WIDTH, RECORD_BUFFER_HEIGHT);
     mFroxelBuffer  = GPUBuffer(driverApi, { GPUBuffer::ElementType::UINT16, 2 },
             FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
@@ -511,10 +518,25 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 }
 
 
-void Froxelizer::commit(backend::DriverApi& driverApi) {
+void Froxelizer::commit(backend::DriverApi& driverApi, backend::UniformBufferHandle mFroxelUbh,
+        backend::UniformBufferHandle mRecordsUbh) {
     // send data to GPU
     mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
     mRecordsBuffer.commit(driverApi, mRecordBufferUser);
+
+    {
+        void const* begin = mFroxelBufferUser.cbegin();
+        void const* end = mFroxelBufferUser.cend();
+        const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
+        driverApi.loadUniformBuffer(mFroxelUbh, { begin, sizeInBytes });
+    }
+    {
+        void const* begin = mRecordBufferUser.cbegin();
+        void const* end = mRecordBufferUser.cend();
+        const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
+        driverApi.loadUniformBuffer(mRecordsUbh, { begin, sizeInBytes });
+    }
+
 #ifndef NDEBUG
     mFroxelBufferUser.clear();
     mRecordBufferUser.clear();

@@ -22,6 +22,12 @@ import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.SurfaceView
+import com.google.android.filament.Engine
+import com.google.android.filament.utils.KtxLoader
+import com.google.android.filament.utils.ModelViewer
+import com.google.android.filament.utils.Utils
 import android.widget.TextView
 import android.widget.Toast
 import com.google.android.filament.utils.*
@@ -70,7 +76,9 @@ class MainActivity : Activity() {
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
 
-        modelViewer = ModelViewer(surfaceView)
+        modelViewer = ModelViewer(surfaceView, Engine.create(Engine.Backend.VULKAN))
+
+        modelViewer.camera.setExposure(32.0f, 0.004f, 100.0f)
 
         surfaceView.setOnTouchListener { _, event ->
             modelViewer.onTouchEvent(event)
@@ -100,7 +108,7 @@ class MainActivity : Activity() {
     }
 
     private fun createRenderables() {
-        val buffer = assets.open("models/scene.gltf").use { input ->
+        val buffer = assets.open("models/rgb-lights.gltf").use { input ->
             val bytes = ByteArray(input.available())
             input.read(bytes)
             ByteBuffer.wrap(bytes)
@@ -116,7 +124,7 @@ class MainActivity : Activity() {
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             scene.indirectLight = KtxLoader.createIndirectLight(engine, it)
-            scene.indirectLight!!.intensity = 30_000.0f
+            scene.indirectLight!!.intensity = 0.0f
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             scene.skybox = KtxLoader.createSkybox(engine, it)

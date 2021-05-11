@@ -59,16 +59,32 @@ ivec2 getFroxelTexCoord(uint froxelIndex) {
 
 /**
  * Returns the froxel data for the given froxel index. The data is fetched
- * from the light_froxels texture.
+ * from the FROXELS UBO.
  */
 FroxelParams getFroxelParams(uint froxelIndex) {
-    ivec2 texCoord = getFroxelTexCoord(froxelIndex);
-    uvec2 entry = texelFetch(light_froxels, texCoord, 0).rg;
+    // The froxels UBO is an array of UINT4. The froxels are ordered starting
+    // at the first entry of the first row.
 
-    FroxelParams froxel;
-    froxel.recordOffset = entry.r;
-    froxel.count = entry.g & 0xFFu;
-    return froxel;
+    //   col    0    1    2    3
+    // row
+    //   0:  XXXX XXXX XXXX XXXX
+    //   1:  XXXX XXXX XXXX XXXX
+    //   2:  XXXX XXXX XXXX XXXX
+    //              ...
+
+    highp uint row = froxelIndex / 4u;
+    highp uint col = uint(mod(float(froxelIndex), float(4u)));
+    highp uint froxel = froxels.froxel[row][col];
+
+    // Each UINT is a froxel, comprised of two entries:
+    // XXXX
+    //   ^^ -- record offset (lowest 16 bits)
+    // ^^   -- count (highest 16 bits)
+
+    FroxelParams f;
+    f.recordOffset = froxel & 0xFFFFu;
+    f.count = (froxel >> 16u);
+    return f;
 }
 
 /**
@@ -78,6 +94,29 @@ FroxelParams getFroxelParams(uint froxelIndex) {
  */
 ivec2 getRecordTexCoord(uint index) {
     return ivec2(index & RECORD_BUFFER_WIDTH_MASK, index >> RECORD_BUFFER_WIDTH_SHIFT);
+}
+
+highp uint getRecord(uint r) {
+    // The record buffer is an array of bytes and we'd like to access them individually, but GLSL
+    // has no 'byte' type. So, we reinterpret the record buffer as an array of uints and assume a
+    // little-endian architecture.
+    //
+    // For example, this means that the first four record bytes:
+    //  0  1  2  3
+    // [A][B][C][D]
+    //
+    // get stored as
+    // 0xDCBA
+    //
+    // So, if we want to access byte D at offset 3, we right-shift by 3*8 bits.
+    // 0xDCBA >> 3*8 = 0xD
+
+    uint c = (r % 16u) / 4u;
+
+    if (c == 0u) return (records.record[r / 16u].x >> ((r % 4u) * 8u)) & 0xFFu;
+    if (c == 1u) return (records.record[r / 16u].y >> ((r % 4u) * 8u)) & 0xFFu;
+    if (c == 2u) return (records.record[r / 16u].z >> ((r % 4u) * 8u)) & 0xFFu;
+    if (c == 3u) return (records.record[r / 16u].w >> ((r % 4u) * 8u)) & 0xFFu;
 }
 
 float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
@@ -112,8 +151,8 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
 Light getLight(const uint index) {
 
     // retrieve the light data from the UBO
-    ivec2 texCoord = getRecordTexCoord(index);
-    uint lightIndex = texelFetch(light_records, texCoord, 0).r;
+    uint lightIndex = getRecord(index);
+
     highp vec4 positionFalloff       = lightsUniforms.lights[lightIndex][0];
     highp vec4 colorIntensity        = lightsUniforms.lights[lightIndex][1];
           vec4 directionIES          = lightsUniforms.lights[lightIndex][2];

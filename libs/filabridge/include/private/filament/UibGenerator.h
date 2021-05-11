@@ -33,6 +33,8 @@ public:
     static UniformInterfaceBlock const& getLightsUib() noexcept;
     static UniformInterfaceBlock const& getShadowUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
+    static UniformInterfaceBlock const& getFroxelUib() noexcept;
+    static UniformInterfaceBlock const& getRecordsUib() noexcept;
 };
 
 /*
@@ -177,6 +179,26 @@ struct PerRenderableUibBone {
     filament::math::float4 s = { 1, 1, 1, 0 };
     filament::math::float4 ns = { 1, 1, 1, 0 };
 };
+
+struct FroxelUib {
+    static const UniformInterfaceBlock& getUib() noexcept {
+        return UibGenerator::getFroxelUib();
+    }
+
+    filament::math::uint4 f;
+};
+
+static_assert(sizeof(FroxelUib) == 16);
+
+struct RecordsUib {
+    static const UniformInterfaceBlock& getUib() noexcept {
+        return UibGenerator::getRecordsUib();
+    }
+
+    filament::math::uint4 r;
+};
+
+static_assert(sizeof(RecordsUib) == 16);
 
 } // namespace filament
 

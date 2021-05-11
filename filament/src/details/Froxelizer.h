@@ -126,6 +126,10 @@ public:
     void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
 
+    /**
+     * Update per-view uniforms with froxel information. The actual froxel/record data is uploaded
+     * into the FROXEL and RECORDS uniforms inside commit().
+     */
     void updateUniforms(UniformBuffer& u) {
         u.setUniform(offsetof(PerViewUib, zParams), mParamsZ);
         u.setUniform(offsetof(PerViewUib, fParams), mParamsF.yz);
@@ -135,7 +139,8 @@ public:
     }
 
     // send froxel data to GPU
-    void commit(backend::DriverApi& driverApi);
+    void commit(backend::DriverApi& driverApi, backend::UniformBufferHandle mFroxelUbh,
+            backend::UniformBufferHandle mRecordsUbh);
 
 
     /*

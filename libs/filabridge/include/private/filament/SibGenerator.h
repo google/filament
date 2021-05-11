@@ -36,15 +36,13 @@ public:
 struct PerViewSib {
     // indices of each samplers in this SamplerInterfaceBlock (see: getPerViewSib())
     static constexpr size_t SHADOW_MAP     = 0;
-    static constexpr size_t RECORDS        = 1;
-    static constexpr size_t FROXELS        = 2;
-    static constexpr size_t IBL_DFG_LUT    = 3;
-    static constexpr size_t IBL_SPECULAR   = 4;
-    static constexpr size_t SSAO           = 5;
-    static constexpr size_t SSR            = 6;
-    static constexpr size_t STRUCTURE      = 7;
+    static constexpr size_t IBL_DFG_LUT    = 1;
+    static constexpr size_t IBL_SPECULAR   = 2;
+    static constexpr size_t SSAO           = 3;
+    static constexpr size_t SSR            = 4;
+    static constexpr size_t STRUCTURE      = 5;
 
-    static constexpr size_t SAMPLER_COUNT  = 8;
+    static constexpr size_t SAMPLER_COUNT  = 6;
 };
 
 }

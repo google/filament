@@ -109,7 +109,7 @@ class MainActivity : Activity() {
     }
 
     private fun setupFilament() {
-        engine = Engine.create()
+        engine = Engine.create(Engine.Backend.VULKAN)
         renderer = engine.createRenderer()
         scene = engine.createScene()
         view = engine.createView()

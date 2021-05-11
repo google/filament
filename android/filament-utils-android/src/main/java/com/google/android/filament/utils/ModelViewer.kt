@@ -126,7 +126,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
                 .castShadows(true)
                 .build(engine, light)
 
-        scene.addEntity(light)
+        //scene.addEntity(light)
     }
 
     constructor(surfaceView: SurfaceView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
