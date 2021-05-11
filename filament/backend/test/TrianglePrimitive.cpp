@@ -44,6 +44,12 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
                     .flags = 0
             }
     };
+
+   // Backends do not (and should not) know the semantics of each vertex attribute, but they
+   // need to know whether the vertex shader consumes them as integers or as floats.
+   // NOTE: This flag needs to be set regardless of whether the attribute is actually declared.
+   attributes[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
+
     AttributeBitset enabledAttributes;
     enabledAttributes.set(VertexAttribute::POSITION);
 
