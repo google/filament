@@ -106,7 +106,7 @@ function print_matdbg_help {
 # Requirements
 CMAKE_MAJOR=3
 CMAKE_MINOR=19
-ANDROID_NDK_VERSION=22
+ANDROID_NDK_VERSION=$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")
 
 # Internal variables
 ISSUE_CLEAN=false

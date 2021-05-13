@@ -8,8 +8,9 @@
 #
 # The default is release
 
-NDK_VERSION="ndk;22.1.7171670"
-ANDROID_NDK_VERSION=22
+export FILAMENT_NDK_VERSION=$(cat `dirname $0`/ndk.version)
+NDK_VERSION="ndk;$FILAMENT_NDK_VERSION"
+ANDROID_NDK_VERSION=$(echo "$FILAMENT_NDK_VERSION" | cut -f 1 -d ".")
 
 echo "This script is intended to run in a CI environment and may modify your current environment."
 echo "Please refer to BUILDING.md for more information."
