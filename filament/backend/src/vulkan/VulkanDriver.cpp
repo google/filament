@@ -1639,7 +1639,15 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             attrib = prim.vertexBuffer->attributes[0];
         }
 
-        buffers[attribIndex] = prim.vertexBuffer->buffers[attrib.buffer]->getGpuBuffer();
+        const VulkanBuffer* buffer = prim.vertexBuffer->buffers[attrib.buffer];
+
+        // If the vertex buffer is missing a constituent buffer object, skip the draw call.
+        // There is no need to emit an error message because this is not explicitly forbidden.
+        if (buffer == nullptr) {
+            return;
+        }
+
+        buffers[attribIndex] = buffer->getGpuBuffer();
         offsets[attribIndex] = attrib.offset;
         varray.attributes[attribIndex] = {
             .location = attribIndex, // matches the GLSL layout specifier
