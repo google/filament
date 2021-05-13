@@ -131,19 +131,16 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     // If there are no available descriptor sets that can be re-used, then create brand new ones
     // (one for each type). Otherwise, grab a descriptor set from each of the arenas.
     if (mDescriptorSetArena[0].empty()) {
+        if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
+            growDescriptorPool();
+        }
         VkDescriptorSetAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = mDescriptorPool;
         allocInfo.descriptorSetCount = DESCRIPTOR_TYPE_COUNT;
         allocInfo.pSetLayouts = mDescriptorSetLayouts;
-
-        if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
-            // TODO: handle this gracefully.
-            *overflow = true;
-            return;
-        }
-
         VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
+        assert_invariant(err == VK_SUCCESS);
         if (err != VK_SUCCESS) {
             *overflow = true;
             return;
@@ -554,9 +551,14 @@ void VulkanPipelineCache::destroyCache() noexcept {
 }
 
 void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) {
+    // This method is called each time a command buffer is flushed and a new command buffer is
+    // ready to be written into. Stash the index of this command buffer for state-tracking purposes.
     mCmdBufferIndex = cmdbuffer.index;
 
-    // Due to robin_map restrictions, we cannot use auto or range-based loops.
+    // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
+
+    // Check if any bundles in the cache are no longer in use by any command buffer. Descriptors
+    // from unused bundles are moved back to their respective arenas.
     using ConstDescIterator = decltype(mDescriptorBundles)::const_iterator;
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
         const DescriptorBundle& cacheEntry = iter.value();
@@ -570,11 +572,16 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
         }
     }
 
+    // Increment the "age" of all cached pipelines. If the age of any pipeline is 0, then it is
+    // being used by the command buffer that was just flushed.
     using PipeIterator = decltype(mPipelines)::iterator;
     for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
         ++iter.value().age;
     }
 
+    // Evict any pipelines that have not been used in a while.
+    // Any pipeline older than VK_MAX_COMMAND_BUFFERS can be safely destroyed.
+    static_assert(VK_MAX_PIPELINE_AGE >= VK_MAX_COMMAND_BUFFERS);
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {
@@ -585,9 +592,31 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
         }
     }
 
+    // We know that the new command buffer is not being processed by the GPU, so we can clear
+    // its "in use" bit from all descriptors in the cache.
     using DescIterator = decltype(mDescriptorBundles)::iterator;
     for (DescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end(); ++iter) {
         iter.value().commandBuffers.unset(mCmdBufferIndex);
+    }
+
+    // Descriptor sets that arose from an old pool (i.e. before the most recent growth event)
+    // also need to have their "in use" bit cleared for this command buffer.
+    bool canPurgeExtinctPools = true;
+    for (auto& bundle : mExtinctDescriptorBundles) {
+        bundle.commandBuffers.unset(mCmdBufferIndex);
+        if (bundle.commandBuffers.getValue() != 0) {
+            canPurgeExtinctPools = false;
+        }
+    }
+
+    // If there are no descriptors from any extinct pool that are still in use, we can safely
+    // destroy the extinct pools, which implicity frees their associated descriptor sets.
+    if (canPurgeExtinctPools) {
+        for (VkDescriptorPool pool : mExtinctDescriptorPools) {
+            vkDestroyDescriptorPool(mDevice, pool, VKALLOC);
+        }
+        mExtinctDescriptorPools.clear();
+        mExtinctDescriptorBundles.clear();
     }
 }
 
@@ -679,8 +708,9 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
             << utils::io::endl;
     #endif
 
+    // There is no need to free descriptor sets individually since destroying the VkDescriptorPool
+    // implicitly frees them.
     for (auto& arena : mDescriptorSetArena) {
-        vkFreeDescriptorSets(mDevice, mDescriptorPool, arena.size(), arena.data());
         arena.clear();
     }
 
@@ -696,7 +726,38 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
     for (int i = 0; i < VK_MAX_COMMAND_BUFFERS; i++) {
         mCmdBufferState[i].currentDescriptorBundle = nullptr;
     }
+
+    for (VkDescriptorPool pool : mExtinctDescriptorPools) {
+        vkDestroyDescriptorPool(mDevice, pool, VKALLOC);
+    }
+    mExtinctDescriptorPools.clear();
+    mExtinctDescriptorBundles.clear();
+
     markDirtyDescriptor();
+}
+
+void VulkanPipelineCache::growDescriptorPool() noexcept {
+    // We need to destroy the old VkDescriptorPool, but we can't do so immediately because many
+    // of its descriptors are still in use. So, stash it in an "extinct" list.
+    mExtinctDescriptorPools.push_back(mDescriptorPool);
+
+    // Create the new VkDescriptorPool, twice as big as the old one.
+    mDescriptorPoolSize *= 2;
+    mDescriptorPool = createDescriptorPool(mDescriptorPoolSize);
+
+    // Clear out all unused descriptor sets in the arena so they don't get reclaimed. There is no
+    // need to free them individually since the old VkDescriptorPool will be destroyed.
+    for (auto& arena : mDescriptorSetArena) {
+        arena.clear();
+    }
+
+    // Move all in-use descriptors from the primary cache into an "extinct" list, so that they will
+    // later be destroyed rather than reclaimed.
+    using DescIterator = decltype(mDescriptorBundles)::iterator;
+    for (DescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end(); ++iter) {
+        mExtinctDescriptorBundles.push_back(iter.value());
+    }
+    mDescriptorBundles.clear();
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const VulkanPipelineCache::PipelineKey& k1,

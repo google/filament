@@ -221,6 +221,7 @@ private:
     void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
     void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
     VkDescriptorPool createDescriptorPool(uint32_t size) const;
+    void growDescriptorPool() noexcept;
 
     VkDevice mDevice = nullptr;
     const RasterState mDefaultRasterState;
@@ -252,6 +253,12 @@ private:
 
     VkDescriptorPool mDescriptorPool;
     uint32_t mDescriptorPoolSize = 500;
+
+    // After a growth event (i.e. when the VkDescriptorPool is replaced with a bigger version), all
+    // currently used descriptors are moved into the "extinct" sets so that they can be safely
+    // destroyed a few frames later.
+    std::vector<VkDescriptorPool> mExtinctDescriptorPools = {};
+    std::vector<DescriptorBundle> mExtinctDescriptorBundles;
 
     VkImageView mDummyImageView = VK_NULL_HANDLE;
     VkDescriptorBufferInfo mDummyBufferInfo = {};
