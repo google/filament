@@ -8,9 +8,8 @@
 #
 # The default is release
 
-export FILAMENT_NDK_VERSION=$(cat `dirname $0`/ndk.version)
-NDK_VERSION="ndk;$FILAMENT_NDK_VERSION"
-ANDROID_NDK_VERSION=$(echo "$FILAMENT_NDK_VERSION" | cut -f 1 -d ".")
+# Unless explicitly specified, NDK version will be set to match exactly the required one
+export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 echo "This script is intended to run in a CI environment and may modify your current environment."
 echo "Please refer to BUILDING.md for more information."
@@ -49,10 +48,11 @@ fi
 source `dirname $0`/../common/build-common.sh
 
 # Only update and install the NDK if necessary, as this can be slow
+NDK_VERSION="ndk;$FILAMENT_NDK_VERSION"
 ndk_side_by_side="${ANDROID_HOME}/ndk/"
 if [[ -d $ndk_side_by_side ]]; then
     ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
-    if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
+    if [[ ${ndk_version} -lt $(echo "$FILAMENT_NDK_VERSION" | cut -f 1 -d ".") ]]; then
         ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
     fi
 else

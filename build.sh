@@ -103,10 +103,13 @@ function print_matdbg_help {
     echo ""
 }
 
+# Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
+export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".").}
+
 # Requirements
 CMAKE_MAJOR=3
 CMAKE_MINOR=19
-ANDROID_NDK_VERSION=$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")
+ANDROID_NDK_VERSION=$FILAMENT_NDK_VERSION
 
 # Internal variables
 ISSUE_CLEAN=false
