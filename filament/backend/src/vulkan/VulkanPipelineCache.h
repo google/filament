@@ -199,6 +199,9 @@ private:
         uint32_t age;
     };
 
+    using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
+    using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
+
     struct CmdBufferState {
         // Weak references to the currently bound pipeline and descriptor sets.
         PipelineVal* currentPipeline = nullptr;
@@ -215,9 +218,9 @@ private:
 
     void createLayoutsAndDescriptors() noexcept;
     void destroyLayoutsAndDescriptors() noexcept;
-    void destroyCacheEntries(uint32_t cmdBufferIndex) noexcept;
     void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
     void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
+    VkDescriptorPool createDescriptorPool(uint32_t size) const;
 
     VkDevice mDevice = nullptr;
     const RasterState mDefaultRasterState;
@@ -243,10 +246,12 @@ private:
     std::vector<VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
 
     VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
-    tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual> mPipelines;
-    tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual> mDescriptorBundles;
-    VkDescriptorPool mDescriptorPool;
+    PipelineMap mPipelines;
+    DescriptorMap mDescriptorBundles;
     uint32_t mCmdBufferIndex = 0;
+
+    VkDescriptorPool mDescriptorPool;
+    uint32_t mDescriptorPoolSize = 500;
 
     VkImageView mDummyImageView = VK_NULL_HANDLE;
     VkDescriptorBufferInfo mDummyBufferInfo = {};

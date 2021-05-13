@@ -32,13 +32,6 @@ using namespace bluevk;
 namespace filament {
 namespace backend {
 
-// Maximum number of descriptor sets that can be allocated by the pool.
-// TODO: Make VulkanPipelineCache robust against a large number of descriptors.
-// There are several approaches we could take to deal with too many descriptors:
-// - Create another pool after hitting the limit of the first pool.
-// - Allow several uniform buffer descriptors to bind simultaneously instead of just one.
-static constexpr uint32_t MAX_DESCRIPTOR_SET_COUNT = 1500;
-
 static VulkanPipelineCache::RasterState createDefaultRasterState();
 
 VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
@@ -143,6 +136,13 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         allocInfo.descriptorPool = mDescriptorPool;
         allocInfo.descriptorSetCount = DESCRIPTOR_TYPE_COUNT;
         allocInfo.pSetLayouts = mDescriptorSetLayouts;
+
+        if (mDescriptorBundles.size() >= mDescriptorPoolSize) {
+            // TODO: handle this gracefully.
+            *overflow = true;
+            return;
+        }
+
         VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptorSets);
         if (err != VK_SUCCESS) {
             *overflow = true;
@@ -555,10 +555,7 @@ void VulkanPipelineCache::destroyCache() noexcept {
 
 void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) {
     mCmdBufferIndex = cmdbuffer.index;
-    destroyCacheEntries(mCmdBufferIndex);
-}
 
-void VulkanPipelineCache::destroyCacheEntries(uint32_t cmdBufferIndex) noexcept {
     // Due to robin_map restrictions, we cannot use auto or range-based loops.
     using ConstDescIterator = decltype(mDescriptorBundles)::const_iterator;
     for (ConstDescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end();) {
@@ -571,11 +568,6 @@ void VulkanPipelineCache::destroyCacheEntries(uint32_t cmdBufferIndex) noexcept 
         } else {
             ++iter;
         }
-    }
-
-    using DescIterator = decltype(mDescriptorBundles)::iterator;
-    for (DescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end(); ++iter) {
-        iter.value().commandBuffers.unset(cmdBufferIndex);
     }
 
     using PipeIterator = decltype(mPipelines)::iterator;
@@ -591,6 +583,11 @@ void VulkanPipelineCache::destroyCacheEntries(uint32_t cmdBufferIndex) noexcept 
         } else {
             ++iter;
         }
+    }
+
+    using DescIterator = decltype(mDescriptorBundles)::iterator;
+    for (DescIterator iter = mDescriptorBundles.begin(); iter != mDescriptorBundles.end(); ++iter) {
+        iter.value().commandBuffers.unset(mCmdBufferIndex);
     }
 }
 
@@ -644,13 +641,16 @@ void VulkanPipelineCache::createLayoutsAndDescriptors() noexcept {
             &mPipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
-    // Create the VkDescriptorPool.
+    mDescriptorPool = createDescriptorPool(mDescriptorPoolSize);
+}
+
+VkDescriptorPool VulkanPipelineCache::createDescriptorPool(uint32_t size) const {
     VkDescriptorPoolSize poolSizes[DESCRIPTOR_TYPE_COUNT] = {};
     VkDescriptorPoolCreateInfo poolInfo {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = nullptr,
         .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = MAX_DESCRIPTOR_SET_COUNT,
+        .maxSets = size * DESCRIPTOR_TYPE_COUNT,
         .poolSizeCount = DESCRIPTOR_TYPE_COUNT,
         .pPoolSizes = poolSizes
     };
@@ -661,8 +661,10 @@ void VulkanPipelineCache::createLayoutsAndDescriptors() noexcept {
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     poolSizes[2].descriptorCount = poolInfo.maxSets * TARGET_BINDING_COUNT;
 
-    err = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &mDescriptorPool);
-    ASSERT_POSTCONDITION(!err, "Unable to create descriptor pool.");
+    VkDescriptorPool pool;
+    const UTILS_UNUSED VkResult result = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &pool);
+    assert_invariant(result == VK_SUCCESS);
+    return pool;
 }
 
 void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
