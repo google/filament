@@ -32,7 +32,7 @@
 // }
 //
 #if defined(NDEBUG)
-#define VK_ENABLE_VALIDATION 1
+#define VK_ENABLE_VALIDATION 0
 #else
 #define VK_ENABLE_VALIDATION 1
 #endif
