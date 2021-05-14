@@ -16,6 +16,7 @@
 
 #include "vulkan/PlatformVkWindows.h"
 
+#include "VulkanConstants.h"
 #include "VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
