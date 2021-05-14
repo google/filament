@@ -104,12 +104,11 @@ function print_matdbg_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".").}
+export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")}
 
 # Requirements
 CMAKE_MAJOR=3
 CMAKE_MINOR=19
-ANDROID_NDK_VERSION=$FILAMENT_NDK_VERSION
 
 # Internal variables
 ISSUE_CLEAN=false
@@ -369,16 +368,9 @@ function ensure_android_build {
         exit 1
     fi
 
-    local ndk_side_by_side="${ANDROID_HOME}/ndk/"
-    if [[ -d ${ndk_side_by_side} ]]; then
-        # shellcheck disable=SC2012
-        local ndk_version=$(ls "${ndk_side_by_side}" | sort -V | tail -n 1 | cut -f 1 -d ".")
-        if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
-            echo "Error: Android NDK side-by-side version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
-            exit 1
-        fi
-    else
-        echo "Error: Android NDK side-by-side version ${ANDROID_NDK_VERSION} or higher must be installed, exiting"
+    # shellcheck disable=SC2012
+    if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "${FILAMENT_NDK_VERSION}") ]]; then
+        echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or higher must be installed, exiting"
         exit 1
     fi
 
