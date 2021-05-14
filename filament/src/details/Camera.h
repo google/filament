@@ -63,8 +63,6 @@ public:
     void setCustomProjection(math::mat4 const& projection,
             math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
-    void setScaling(math::double4 const& scaling) noexcept { mScaling = scaling.xy; }
-
     void setScaling(math::double2 scaling) noexcept { mScaling = scaling; }
 
     math::double4 getScaling() const noexcept { return math::double4{ mScaling, 1.0, 1.0 }; }

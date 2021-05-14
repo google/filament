@@ -77,7 +77,7 @@ public class PreviewMeshPanel extends JPanel {
 
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             mScene = engine.createScene();
-            mCamera = engine.createCamera();
+            mCamera = engine.createCamera(EntityManager.get().create());
             mView = engine.createView();
             mRenderer = engine.createRenderer();
             mPreviewCamera = new PreviewCamera(mCamera);
@@ -136,7 +136,8 @@ public class PreviewMeshPanel extends JPanel {
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             engine.destroyRenderer(mRenderer);
             engine.destroyScene(mScene);
-            engine.destroyCamera(mCamera);
+            engine.destroyCameraComponent(mCamera.getEntity());
+            EntityManager.get().destroy(mCamera.getEntity());
             engine.destroyView(mView);
             mFilamentPanel.destroy(engine);
             engine.destroyVertexBuffer(mVertexBuffer);

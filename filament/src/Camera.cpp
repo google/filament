@@ -354,10 +354,6 @@ void Camera::setScaling(math::double2 scaling) noexcept {
     upcast(this)->setScaling(scaling);
 }
 
-void Camera::setScaling(math::double4 const& scaling) noexcept {
-    upcast(this)->setScaling(scaling);
-}
-
 void Camera::setShift(math::double2 shift) noexcept {
     upcast(this)->setShift(shift);
 }

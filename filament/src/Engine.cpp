@@ -1043,14 +1043,4 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
 }
 
-Camera* Engine::createCamera() noexcept {
-    return createCamera(upcast(this)->getEntityManager().create());
-}
-
-void Engine::destroy(const Camera* camera) {
-    Entity e = camera->getEntity();
-    destroyCameraComponent(e);
-    upcast(this)->getEntityManager().destroy(e);
-}
-
 } // namespace filament
