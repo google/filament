@@ -131,7 +131,9 @@ public:
          * @return This Builder, for chaining calls.
          *
          * @see Texture::setExternalStream()
+         * @deprecated this method existed only for ARCore which doesn't need this anymore, use Texture::import() instead.
          */
+        UTILS_DEPRECATED
         Builder& stream(intptr_t externalTextureId) noexcept;
 
         /**

@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: User materials can now use 9 samplers instead of 8 [⚠️ **Material breakage**].
 - engine: Remove `populateTangentQuaternions`  [⚠️ **API change**].
+- engine: Deprecate `Stream::Builder::stream(intptr_t)` [⚠️ **API Change**].
 
 ## v1.9.25
 
