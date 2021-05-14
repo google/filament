@@ -174,13 +174,30 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     mDummyBufferInfo.buffer = mDescriptorKey.uniformBuffers[0];
     mDummyBufferInfo.offset = mDescriptorKey.uniformBufferOffsets[0];
     mDummyBufferInfo.range = mDescriptorKey.uniformBufferSizes[0];
-    for (uint32_t binding = 0; binding < SAMPLER_BINDING_COUNT; binding++) {
-        if (mDescriptorKey.samplers[binding].sampler) {
-            mDummySamplerInfo = mDescriptorKey.samplers[binding];
-            break;
-        }
-    }
+    mDummySamplerInfo.imageLayout = mDummyTargetInfo.imageLayout;
+    mDummySamplerInfo.imageView = mDummyImageView;
     mDummyTargetInfo.imageView = mDummyImageView;
+
+    if (mDummySamplerInfo.sampler == VK_NULL_HANDLE) {
+        VkSamplerCreateInfo samplerInfo {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+            .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            .anisotropyEnable = VK_FALSE,
+            .maxAnisotropy = 1,
+            .compareEnable = VK_FALSE,
+            .compareOp = VK_COMPARE_OP_ALWAYS,
+            .minLod = 0.0f,
+            .maxLod = 1.0f,
+            .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+            .unnormalizedCoordinates = VK_FALSE
+        };
+        vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &mDummySamplerInfo.sampler);
+    }
 
     // Rewrite every binding in the new descriptor sets.
     VkDescriptorBufferInfo descriptorBuffers[UBUFFER_BINDING_COUNT];
@@ -548,6 +565,10 @@ void VulkanPipelineCache::destroyCache() noexcept {
         mCmdBufferState[i].currentPipeline = nullptr;
     }
     markDirtyPipeline();
+    if (mDummySamplerInfo.sampler) {
+        vkDestroySampler(mDevice, mDummySamplerInfo.sampler, VKALLOC);
+        mDummySamplerInfo.sampler = VK_NULL_HANDLE;
+    }
 }
 
 void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) {

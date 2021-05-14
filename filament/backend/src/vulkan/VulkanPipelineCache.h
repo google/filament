@@ -257,7 +257,7 @@ private:
     // After a growth event (i.e. when the VkDescriptorPool is replaced with a bigger version), all
     // currently used descriptors are moved into the "extinct" sets so that they can be safely
     // destroyed a few frames later.
-    std::vector<VkDescriptorPool> mExtinctDescriptorPools = {};
+    std::vector<VkDescriptorPool> mExtinctDescriptorPools;
     std::vector<DescriptorBundle> mExtinctDescriptorBundles;
 
     VkImageView mDummyImageView = VK_NULL_HANDLE;
