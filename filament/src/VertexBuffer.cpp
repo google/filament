@@ -21,8 +21,6 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <geometry/SurfaceOrientation.h>
-
 #include <math/quat.h>
 
 #include <utils/Panic.h>
@@ -264,28 +262,6 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
 void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
         BufferObject const* bufferObject) {
     upcast(this)->setBufferObjectAt(upcast(engine), bufferIndex, upcast(bufferObject));
-}
-
-void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
-    auto* quats = geometry::SurfaceOrientation::Builder()
-        .vertexCount(ctx.quatCount)
-        .normals(ctx.normals, ctx.normalsStride)
-        .tangents(ctx.tangents, ctx.tangentsStride)
-        .build();
-
-    switch (ctx.quatType) {
-        case HALF4:
-            quats->getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
-            break;
-        case SHORT4:
-            quats->getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
-            break;
-        case FLOAT4:
-            quats->getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
-            break;
-    }
-
-    delete quats;
 }
 
 } // namespace filament

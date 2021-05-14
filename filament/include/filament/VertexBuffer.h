@@ -194,51 +194,6 @@ public:
      * @param bufferObject The handle to the GPU data that will be used in this buffer slot.
      */
     void setBufferObjectAt(Engine& engine, uint8_t bufferIndex, BufferObject const* bufferObject);
-
-    /**
-     * Specifies the quaternion type for the "populateTangentQuaternions" utility.
-     */
-    enum QuatType {
-        HALF4,  //!< 2 bytes per component as half-floats (8 bytes per quat)
-        SHORT4, //!< 2 bytes per component as normalized integers (8 bytes per quat)
-        FLOAT4, //!< 4 bytes per component as floats (16 bytes per quat)
-    };
-
-    /**
-     * Specifies the parameters for the "populateTangentQuaternions" utility.
-     */
-    struct QuatTangentContext {
-        QuatType quatType;                      //!< desired quaternion type (required)
-        size_t quatCount;                       //!< number of quaternions (required)
-        void* outBuffer;                        //!< pre-allocated output buffer (required)
-        size_t outStride;                       //!< desired stride in bytes (optional)
-        const math::float3* normals;  //!< source normals (required)
-        size_t normalsStride;                   //!< normals stride in bytes (optional)
-        const math::float4* tangents; //!< source tangents (optional)
-        size_t tangentsStride;                  //!< tangents stride in bytes (optional)
-    };
-
-    /**
-     * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
-     * produces quaternions that can be passed into a TANGENTS buffer.
-     *
-     * The given output buffer must be preallocated with at least quatCount * outStride bytes.
-     *
-     * Normals are required but tangents are optional, in which case this function tries to generate
-     * reasonable tangents. The given normals should be unit length.
-     *
-     * If supplied, the tangent vectors should be unit length and should be orthogonal to the
-     * normals. The w component of the tangent is a sign (-1 or +1) indicating handedness of the
-     * basis.
-     *
-     * @param ctx An initialized QuatTangentContext structure.
-     *
-     * @deprecated Instead please use filament::geometry::SurfaceOrientation from libgeometry, it
-     * has additional capabilities and a daisy-chain API. Be sure to explicitly link libgeometry
-     * since its dependency might be removed in future versions of libfilament.
-     */
-    UTILS_DEPRECATED
-    static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
 
 } // namespace filament
