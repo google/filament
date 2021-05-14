@@ -932,16 +932,6 @@ public class View {
     }
 
     /**
-     * Enables or disables shadow mapping. Enabled by default.
-     *
-     * @deprecated Use {@link #setShadowingEnabled}
-     */
-    @Deprecated
-    public void setShadowsEnabled(boolean enabled) {
-        setShadowingEnabled(enabled);
-    }
-
-    /**
      * @return whether shadowing is enabled
      */
     boolean isShadowingEnabled() {

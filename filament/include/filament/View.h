@@ -525,15 +525,6 @@ public:
     void setShadowingEnabled(bool enabled) noexcept;
 
     /**
-     * Enables or disables shadow mapping. Enabled by default.
-     * @deprecated use setShadowingEnabled
-     */
-    UTILS_DEPRECATED
-    void setShadowsEnabled(bool enabled) noexcept {
-        setShadowingEnabled(enabled);
-    }
-
-    /**
      * @return whether shadowing is enabled
      */
     bool isShadowingEnabled() const noexcept;
