@@ -388,7 +388,6 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
             << mShaderStages[0].module << ", " << mShaderStages[1].module << ")" << utils::io::endl;
     #endif
-
     VkResult err = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
             VKALLOC, pipeline);
     if (err) {
@@ -575,6 +574,9 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     // This method is called each time a command buffer is flushed and a new command buffer is
     // ready to be written into. Stash the index of this command buffer for state-tracking purposes.
     mCmdBufferIndex = cmdbuffer.index;
+
+    mDirtyPipeline.set(mCmdBufferIndex);
+    mDirtyDescriptor.set(mCmdBufferIndex);
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 
