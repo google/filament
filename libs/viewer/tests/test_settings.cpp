@@ -103,7 +103,6 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
         },
         "dof": {
             "enabled": false,
-            "focusDistance": 10.0,
             "cocScale": 1.0,
             "maxApertureDiameter": 0.01
         },

@@ -33,7 +33,7 @@ namespace viewer {
  * [{
  *    "name": "simple",
  *    "base": {
- *      "view.dof.focusDistance": 0.1,
+ *      "view.dof.cocScale": 1.0,
  *      "view.bloom.strength": 0.5
  *   },
  *   "permute": {

@@ -506,9 +506,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (0 == compare(tok, jsonChunk, "focusDistance")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->focusDistance);
-        } else if (0 == compare(tok, jsonChunk, "cocScale")) {
+        if (0 == compare(tok, jsonChunk, "cocScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->cocScale);
         } else if (0 == compare(tok, jsonChunk, "maxApertureDiameter")) {
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
@@ -1239,7 +1237,6 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
 
 static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
     return out << "{\n"
-        << "\"focusDistance\": " << (in.focusDistance) << ",\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"

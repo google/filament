@@ -296,10 +296,7 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     d                  = std::max(zn, camera.getFocusDistance());
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera,
-        float focusDistance) noexcept {
-    // note: DepthOfFieldOptions is deprecated, but we continue to support it by passing it here
-    // and we're using it if the camera focus distance hasn't been set.
+CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept {
     const mat4f modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
@@ -310,7 +307,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     ev100              = Exposure::ev100(camera);
     f                  = camera.getFocalLength();
     A                  = f / camera.getAperture();
-    d                  = std::max(zn, camera.getFocusDistance() > 0.0f ? camera.getFocusDistance() : focusDistance);
+    d                  = std::max(zn, camera.getFocusDistance());
     worldOffset        = camera.getPosition();
     worldOrigin        = worldOriginCamera;
 }
