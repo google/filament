@@ -48,7 +48,6 @@ source `dirname $0`/../common/build-common.sh
 export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 # Install the required NDK version specifically (if not present)
-NDK_VERSION="ndk;$FILAMENT_NDK_VERSION"
 if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
     ${ANDROID_HOME}/tools/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
 fi
