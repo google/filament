@@ -45,7 +45,7 @@ fi
 source `dirname $0`/../common/build-common.sh
 
 # Unless explicitly specified, NDK version will be set to match exactly the required one
-export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 # Install the required NDK version specifically (if not present)
 if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
@@ -60,4 +60,4 @@ if [[ "$TARGET" == "presubmit" ]]; then
 fi
 
 pushd `dirname $0`/../.. > /dev/null
-./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE

@@ -104,7 +104,7 @@ function print_matdbg_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-export FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")}
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/android/ndk.version | cut -f 1 -d ".")}
 
 # Requirements
 CMAKE_MAJOR=3
@@ -200,6 +200,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
+            -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
@@ -370,7 +371,7 @@ function ensure_android_build {
 
     # shellcheck disable=SC2012
     if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "^${FILAMENT_NDK_VERSION}") ]]; then
-        echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or higher must be installed, exiting"
+        echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or compatible must be installed, exiting"
         exit 1
     fi
 
