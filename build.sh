@@ -200,7 +200,6 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
-            -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
@@ -325,6 +324,7 @@ function build_android_target {
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
+            -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${MATDBG_OPTION} \
