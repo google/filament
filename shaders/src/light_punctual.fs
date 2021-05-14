@@ -79,7 +79,9 @@ uint getLightIndex(const uint index) {
     uint v = index >> 4u;
     uint c = (index >> 2u) & 0x3u;
     uint s = (index & 0x3u) * 8u;
-    return (froxelRecordUniforms.records[v][c] >> s) & 0xFFu;
+    // this intermediate is needed to workaround a bug on qualcomm h/w
+    highp uvec4 d = froxelRecordUniforms.records[v];
+    return (d[c] >> s) & 0xFFu;
 }
 
 float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
