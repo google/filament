@@ -104,48 +104,6 @@ public class VertexBuffer {
         HALF3,
         HALF4,
     }
-    /**
-     * Specifies the quaternion type for the {@link #populateTangentQuaternions} utility.
-     */
-    public enum QuatType {
-        /** 2 bytes per component as half-floats (8 bytes per quat) */
-        HALF4,
-
-        /** 2 bytes per component as normalized integers (8 bytes per quat) */
-        SHORT4,
-
-        /** 4 bytes per component as floats (16 bytes per quat) */
-        FLOAT4,
-    }
-
-    /**
-     * Specifies the parameters for the {@link #populateTangentQuaternions} utility.
-     */
-    public static class QuatTangentContext {
-        /** desired quaternion type (required) */
-        public QuatType quatType;
-
-        /** number of quaternions (required) */
-        public int quatCount;
-
-        /** pre-allocated output buffer (required) */
-        public Buffer outBuffer;
-
-        /** desired stride in bytes (optional) */
-        public int outStride;
-
-        /** source normals (required) */
-        public Buffer normals;
-
-        /** normals stride in bytes (optional) */
-        public int normalsStride;
-
-        /** source tangents (optional) */
-        public Buffer tangents;
-
-        /** tangents stride in bytes (optional) */
-        public int tangentsStride;
-    }
 
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
@@ -429,38 +387,6 @@ public class VertexBuffer {
                 bufferObject.getNativeObject());
     }
 
-    /**
-     * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
-     * produces quaternions that can be passed into a TANGENTS buffer.
-     *
-     * <p>
-     * The given output buffer must be preallocated with at least quatCount * outStride bytes.
-     * <p>
-     *
-     * <p>
-     * Normals are required but tangents are optional, in which case this function tries to generate
-     * reasonable tangents. The given normals should be unit length.
-     * </p>
-     *
-     * <p>
-     * If supplied, the tangent vectors should be unit length and should be orthogonal to the
-     * normals. The w component of the tangent is a sign (-1 or +1) indicating handedness of the
-     * basis.
-     * </p>
-     *
-     * @deprecated Instead please use SurfaceOrientation since it has additional capabilities and a
-     * builder-style API.
-     *
-     * @param context an initialized QuatTangentContext object
-     */
-    public static void populateTangentQuaternions(@NonNull QuatTangentContext context) {
-        nPopulateTangentQuaternions(context.quatType.ordinal(), context.quatCount,
-                context.outBuffer, context.outBuffer.remaining(), context.outStride,
-                context.normals, context.normals.remaining(), context.normalsStride,
-                context.tangents, context.tangents != null ? context.tangents.remaining() : 0,
-                context.tangentsStride);
-    }
-
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed VertexBuffer");
@@ -490,8 +416,4 @@ public class VertexBuffer {
 
     private static native void nSetBufferObjectAt(long nativeVertexBuffer, long nativeEngine,
             int bufferIndex, long nativeBufferObject);
-
-    private static native void nPopulateTangentQuaternions(int quatType, int quatCount,
-            Buffer outBuffer, int outRemaining, int outStride, Buffer normals, int normalsRemaining,
-            int normalsStride, Buffer tangents, int tangentsRemaining, int tangentsStride);
 }
