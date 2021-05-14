@@ -94,7 +94,9 @@ struct Primitive {
     filament::VertexBuffer* vertices = nullptr;
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
-    UvMap uvmap; // small mapping from each glTF UV set to either UV0 or UV1
+    UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
+    uint8_t morphPositions[4] = {};  // Buffer indices for MORPH_POSITION_0, MORPH_POSITION_1 etc.
+    uint8_t morphTangents[4] = {};   // Buffer indices for MORPH_TANGENTS_0, MORPH_TANGENTS_1, etc.
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
