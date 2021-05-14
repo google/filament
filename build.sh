@@ -369,7 +369,7 @@ function ensure_android_build {
     fi
 
     # shellcheck disable=SC2012
-    if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "${FILAMENT_NDK_VERSION}") ]]; then
+    if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "^${FILAMENT_NDK_VERSION}") ]]; then
         echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or higher must be installed, exiting"
         exit 1
     fi
