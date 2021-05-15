@@ -20,44 +20,44 @@
 #include <utils/debug.h>
 
 #if defined(ANDROID)
-    #ifndef FILAMENT_USE_EXTERNAL_GLES3
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "opengl/PlatformEGLAndroid.h"
     #endif
-    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkAndroid.h"
     #endif
 #elif defined(IOS)
-    #ifndef FILAMENT_USE_EXTERNAL_GLES3
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "opengl/PlatformCocoaTouchGL.h"
     #endif
-    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoaTouch.h"
     #endif
 #elif defined(__APPLE__)
-    #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include "opengl/PlatformCocoaGL.h"
     #endif
-    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
-    #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include "opengl/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkLinux.h"
     #endif
 #elif defined(WIN32)
-    #if !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include "opengl/PlatformWGL.h"
     #endif
-    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkWindows.h"
     #endif
 #elif defined(__EMSCRIPTEN__)
     #include "opengl/PlatformWebGL.h"
 #else
-    #ifndef FILAMENT_USE_EXTERNAL_GLES3
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "opengl/PlatformDummyGL.h"
     #endif
 #endif
@@ -112,22 +112,27 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
         return nullptr;
 #endif
     }
-    #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
-        return nullptr;
-    #elif defined(ANDROID)
-        return new PlatformEGLAndroid();
-    #elif defined(IOS)
-        return new PlatformCocoaTouchGL();
-    #elif defined(__APPLE__)
-        return new PlatformCocoaGL();
-    #elif defined(__linux__)
-        return new PlatformGLX();
-    #elif defined(WIN32)
-        return new PlatformWGL();
-    #elif defined(__EMSCRIPTEN__)
-        return new PlatformWebGL();
+    assert_invariant(*backend == Backend::OPENGL);
+    #if defined(FILAMENT_SUPPORTS_OPENGL)
+        #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
+            return nullptr;
+        #elif defined(ANDROID)
+            return new PlatformEGLAndroid();
+        #elif defined(IOS)
+            return new PlatformCocoaTouchGL();
+        #elif defined(__APPLE__)
+            return new PlatformCocoaGL();
+        #elif defined(__linux__)
+            return new PlatformGLX();
+        #elif defined(WIN32)
+            return new PlatformWGL();
+        #elif defined(__EMSCRIPTEN__)
+            return new PlatformWebGL();
+        #else
+            return new PlatformDummyGL();
+        #endif
     #else
-        return new PlatformDummyGL();
+        return nullptr;
     #endif
 }
 
