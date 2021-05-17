@@ -76,6 +76,19 @@ static jlong nCreateSkybox(JNIEnv* env, jclass,
     return (jlong) Skybox::Builder().environment(cubemap).showSun(true).build(*engine);
 }
 
+static jboolean nGetSphericalHarmonics(JNIEnv* env, jclass, jobject javaBuffer, jint remaining,
+        jfloatArray outSphericalHarmonics_) {
+    AutoBuffer buffer(env, javaBuffer, remaining);
+    KtxBundle bundle((const uint8_t*) buffer.getData(), buffer.getSize());
+
+    jfloat* outSphericalHarmonics = env->GetFloatArrayElements(outSphericalHarmonics_, nullptr);
+    const auto success = bundle.getSphericalHarmonics(
+        reinterpret_cast<filament::math::float3*>(outSphericalHarmonics)
+    );
+    env->ReleaseFloatArrayElements(outSphericalHarmonics_, outSphericalHarmonics, JNI_ABORT);
+
+    return success ? JNI_TRUE : JNI_FALSE;
+}
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     JNIEnv* env;
@@ -92,6 +105,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
         {"nCreateKTXTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
         {"nCreateIndirectLight", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
         {"nCreateSkybox", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
+        {"nGetSphericalHarmonics", "(Ljava/nio/Buffer;I[F)Z", reinterpret_cast<void*>(nGetSphericalHarmonics)},
     };
     rc = env->RegisterNatives(ktxloaderClass, ktxMethods, sizeof(ktxMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
