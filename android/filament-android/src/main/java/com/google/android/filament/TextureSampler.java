@@ -120,6 +120,10 @@ public class TextureSampler {
 
     int mSampler = 0; // bit field used by native
 
+    public TextureSampler(int sampler) {
+        mSampler = sampler;
+    }
+
     /**
      * Initializes the <code>TextureSampler</code> with default values.
      * <br>Minification filter: {@link MinFilter#LINEAR_MIPMAP_LINEAR}

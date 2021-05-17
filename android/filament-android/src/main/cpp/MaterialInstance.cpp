@@ -53,6 +53,187 @@ enum FloatElement {
 };
 
 template<typename T>
+static T getParameter(JNIEnv* env, jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    T value = instance->getParameter<T>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return value;
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterBool(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_) {
+    return jboolean(getParameter<bool>(env, nativeMaterialInstance, name_));
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterBool2(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jbooleanArray result_) {
+    bool2 result = getParameter<bool2>(env, nativeMaterialInstance, name_);
+    jboolean* v = env->GetBooleanArrayElements(result_, NULL);
+    v[0] = jboolean(result[0]);
+    v[1] = jboolean(result[1]);
+    env->ReleaseBooleanArrayElements(result_, v, 0);
+
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterBool3(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jbooleanArray result_) {
+    bool3 result = getParameter<bool3>(env, nativeMaterialInstance, name_);
+    jboolean* v = env->GetBooleanArrayElements(result_, NULL);
+    v[0] = jboolean(result[0]);
+    v[1] = jboolean(result[1]);
+    v[2] = jboolean(result[2]);
+    env->ReleaseBooleanArrayElements(result_, v, 0);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterBool4(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jbooleanArray result_) {
+    bool4 result = getParameter<bool4>(env, nativeMaterialInstance, name_);
+    jboolean* v = env->GetBooleanArrayElements(result_, NULL);
+    v[0] = jboolean(result[0]);
+    v[1] = jboolean(result[1]);
+    v[2] = jboolean(result[2]);
+    v[3] = jboolean(result[3]);
+    env->ReleaseBooleanArrayElements(result_, v, 0);
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterFloat(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_) {
+    return jfloat(getParameter<float>(env, nativeMaterialInstance, name_));
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterFloat2(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jfloatArray result_) {
+    float2 result = getParameter<float2>(env, nativeMaterialInstance, name_);
+    jfloat* v = env->GetFloatArrayElements(result_, NULL);
+    v[0] = jfloat(result[0]);
+    v[1] = jfloat(result[1]);
+    env->ReleaseFloatArrayElements(result_, v, 0);
+
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterFloat3(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jfloatArray result_) {
+    float3 result = getParameter<float3>(env, nativeMaterialInstance, name_);
+    jfloat* v = env->GetFloatArrayElements(result_, NULL);
+    v[0] = jfloat(result[0]);
+    v[1] = jfloat(result[1]);
+    v[2] = jfloat(result[2]);
+    env->ReleaseFloatArrayElements(result_, v, 0);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterFloat4(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jfloatArray result_) {
+    float4 result = getParameter<float4>(env, nativeMaterialInstance, name_);
+    jfloat* v = env->GetFloatArrayElements(result_, NULL);
+    v[0] = jfloat(result[0]);
+    v[1] = jfloat(result[1]);
+    v[2] = jfloat(result[2]);
+    v[3] = jfloat(result[3]);
+    env->ReleaseFloatArrayElements(result_, v, 0);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterMat3f(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jfloatArray result_) {
+    mat3f result = getParameter<mat3f>(env, nativeMaterialInstance, name_);
+    jfloat* v = env->GetFloatArrayElements(result_, NULL);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            v[i + j * 3] = jfloat(result[i][j]);
+        }
+    }
+    env->ReleaseFloatArrayElements(result_, v, 0);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterMat4f(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance,
+        jstring name_,
+        jfloatArray result_) {
+    mat4f result = getParameter<mat4f>(env, nativeMaterialInstance, name_);
+    jfloat* v = env->GetFloatArrayElements(result_, NULL);
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            v[i + j * 4] = jfloat(result[i][j]);
+        }
+    }
+    env->ReleaseFloatArrayElements(result_, v, 0);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterInt(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    return jint(getParameter<int>(env, nativeMaterialInstance, name_));
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterInt2(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance, jstring name_,
+        jintArray result_) {
+    int2 result = getParameter<int2>(env, nativeMaterialInstance, name_);
+    jint* v = env->GetIntArrayElements(result_, NULL);
+    v[0] = jint(result[0]);
+    v[1] = jint(result[1]);
+    env->ReleaseIntArrayElements(result_, v, 0);
+
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterInt3(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance, jstring name_,
+        jintArray result_) {
+    int3 result = getParameter<int3>(env, nativeMaterialInstance, name_);
+    jint* v = env->GetIntArrayElements(result_, NULL);
+    v[0] = jint(result[0]);
+    v[1] = jint(result[1]);
+    v[2] = jint(result[2]);
+    env->ReleaseIntArrayElements(result_, v, 0);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterInt4(JNIEnv* env, jclass,
+        jlong nativeMaterialInstance, jstring name_,
+        jintArray result_) {
+    int3 result = getParameter<int3>(env, nativeMaterialInstance, name_);
+    jint* v = env->GetIntArrayElements(result_, NULL);
+    v[0] = jint(result[0]);
+    v[1] = jint(result[1]);
+    v[2] = jint(result[2]);
+    v[3] = jint(result[3]);
+    env->ReleaseIntArrayElements(result_, v, 0);
+}
+
+template<typename T>
 static void setParameter(JNIEnv* env, jlong nativeMaterialInstance, jstring name_, T v) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     const char *name = env->GetStringUTFChars(name_, 0);
@@ -258,6 +439,48 @@ Java_com_google_android_filament_MaterialInstance_nSetParameterTexture(
     const char *name = env->GetStringUTFChars(name_, 0);
     instance->setParameter(name, texture, sampler);
     env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetParameterTexture(
+        JNIEnv *env, jclass, jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    Texture const* texture;
+    TextureSampler sampler;
+
+    const char *name = env->GetStringUTFChars(name_, 0);
+    auto success = instance->getParameter(name, texture, sampler);
+    env->ReleaseStringUTFChars(name_, name);
+
+    if (!success) {
+        return NULL;
+    }
+
+    const auto jTextureClass = env->FindClass("com/google/android/filament/Texture");
+    const auto jTextureCtor = env->GetMethodID(jTextureClass, "<init>", "(J)V");
+    const auto jTextureSamplerClass = env->FindClass("com/google/android/filament/TextureSampler");
+    const auto jTextureSamplerCtor = env->GetMethodID(jTextureSamplerClass, "<init>", "(I)V");
+    const auto jTexture = env->NewObject(jTextureClass, jTextureCtor, (jlong)texture);
+    const auto jTextureSampler = env->NewObject(
+            jTextureSamplerClass,
+            jTextureSamplerCtor,
+            static_cast<jint>(sampler.getSamplerParams().u)
+    );
+    const auto jTextureAndSamplerClass = env->FindClass(
+            "com/google/android/filament/MaterialInstance$TextureAndSampler"
+    );
+    const auto jTextureAndSamplerCtor = env->GetMethodID(
+            jTextureAndSamplerClass,
+            "<init>",
+            "(Lcom/google/android/filament/Texture;Lcom/google/android/filament/TextureSampler;)V"
+    );
+    return env->NewObject(
+            jTextureAndSamplerClass,
+            jTextureAndSamplerCtor,
+            jTexture,
+            jTextureSampler
+    );
 }
 
 extern "C"

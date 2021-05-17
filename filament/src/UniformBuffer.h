@@ -184,6 +184,10 @@ public:
     template<size_t Size>
     void setUniformArrayUntyped(size_t offset, void const* UTILS_RESTRICT begin, size_t count) noexcept;
 
+    const void* getUniformUntyped(size_t offset) const noexcept {
+        return static_cast<char const*>(mBuffer) + offset;
+    }
+
 private:
 #if !defined(NDEBUG)
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const UniformBuffer& rhs);

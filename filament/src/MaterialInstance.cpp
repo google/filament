@@ -35,6 +35,37 @@ namespace filament {
 
 using namespace backend;
 
+//getParameter() functions, using non-inlined untyped calls for code size optimization, see setParameter() functions
+UTILS_NOINLINE
+const void* FMaterialInstance::getParameterUntypedImpl(const char* name) noexcept {
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
+    if (UTILS_LIKELY(offset >= 0)) {
+        return mUniforms.getUniformUntyped(size_t(offset));
+    }
+    return nullptr;
+}
+
+template<typename T>
+UTILS_ALWAYS_INLINE
+inline T FMaterialInstance::getParameterImpl(const char* name) noexcept {
+    static_assert(!std::is_same_v<T, math::mat3f>);
+    return *reinterpret_cast<T const*>(getParameterUntypedImpl(name));
+}
+
+//specialization for mat3f
+template<>
+inline mat3f FMaterialInstance::getParameterImpl(const char* name) noexcept {
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getUniformOffset(name, 0);
+    if (UTILS_LIKELY(offset >= 0)) {
+        return mUniforms.getUniform<mat3f>(size_t(offset));
+    }
+}
+
+template <typename T, typename>
+T MaterialInstance::getParameter(const char* name) noexcept {
+    return upcast(this)->getParameterImpl<T>(name);
+}
+
 // ------------------------------------------------------------------------------------------------
 
 // This is the untyped/sized version of the setParameter: we end up here for e.g. vec4<int> and
@@ -113,6 +144,28 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<float3>  (const char* 
 template UTILS_PUBLIC void MaterialInstance::setParameter<float4>  (const char* name, float4 const&   v) noexcept;
 template UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>   (const char* name, mat3f const&    v) noexcept;
 template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* name, mat4f const&    v) noexcept;
+
+template UTILS_PUBLIC bool MaterialInstance::getParameter<bool>(const char *name) noexcept;
+template UTILS_PUBLIC bool2 MaterialInstance::getParameter<bool2>(const char *name) noexcept;
+template UTILS_PUBLIC bool3 MaterialInstance::getParameter<bool3>(const char *name) noexcept;
+template UTILS_PUBLIC bool4 MaterialInstance::getParameter<bool4>(const char *name) noexcept;
+
+template UTILS_PUBLIC float MaterialInstance::getParameter<float>(const char *name) noexcept;
+template UTILS_PUBLIC float2 MaterialInstance::getParameter<float2>(const char *name) noexcept;
+template UTILS_PUBLIC float3 MaterialInstance::getParameter<float3>(const char *name) noexcept;
+template UTILS_PUBLIC float4 MaterialInstance::getParameter<float4>(const char *name) noexcept;
+
+template UTILS_PUBLIC int32_t MaterialInstance::getParameter<int32_t>(const char *name) noexcept;
+template UTILS_PUBLIC int2 MaterialInstance::getParameter<int2>(const char *name) noexcept;
+template UTILS_PUBLIC int3 MaterialInstance::getParameter<int3>(const char *name) noexcept;
+template UTILS_PUBLIC int4 MaterialInstance::getParameter<int4>(const char *name) noexcept;
+
+template UTILS_PUBLIC uint32_t MaterialInstance::getParameter<uint32_t>(const char *name) noexcept;
+template UTILS_PUBLIC uint2 MaterialInstance::getParameter<uint2>(const char *name) noexcept;
+template UTILS_PUBLIC uint3 MaterialInstance::getParameter<uint3>(const char *name) noexcept;
+template UTILS_PUBLIC uint4 MaterialInstance::getParameter<uint4>(const char *name) noexcept;
+template UTILS_PUBLIC mat3f MaterialInstance::getParameter<mat3f>(const char *name) noexcept;
+template UTILS_PUBLIC mat4f MaterialInstance::getParameter<mat4f>(const char *name) noexcept;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -282,6 +335,10 @@ inline void FMaterialInstance::setParameterImpl(const char* name, const T* value
 
 void FMaterialInstance::setParameter(const char* name,
         backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept {
+    const auto cachedSamplerParameters = mSamplerParametersCache.find(name);
+    if (cachedSamplerParameters != mSamplerParametersCache.cend()) {
+        mSamplerParametersCache.erase(cachedSamplerParameters);
+    }
     size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
     mSamplers.setSampler(index, { texture, params });
 }
@@ -289,6 +346,7 @@ void FMaterialInstance::setParameter(const char* name,
 void FMaterialInstance::setParameterImpl(const char* name,
         Texture const* texture, TextureSampler const& sampler) noexcept {
     setParameter(name, upcast(texture)->getHwHandle(), sampler.getSamplerParams());
+    mSamplerParametersCache[name] = SamplerParameters { texture, sampler };
 }
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
@@ -301,6 +359,17 @@ void FMaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept
 
 void FMaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
     setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
+}
+
+bool FMaterialInstance::getParameter(const char *name,
+        const Texture *&outTexture, TextureSampler &outSampler) noexcept {
+    const auto cachedSamplerParameters = mSamplerParametersCache.find(name);
+    if (cachedSamplerParameters == mSamplerParametersCache.cend()) {
+        return false;
+    }
+    outTexture = cachedSamplerParameters->second.texture;
+    outSampler = cachedSamplerParameters->second.sampler;
+    return true;
 }
 
 void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
@@ -342,6 +411,10 @@ const char* MaterialInstance::getName() const noexcept {
 void MaterialInstance::setParameter(const char* name, Texture const* texture,
         TextureSampler const& sampler) noexcept {
     return upcast(this)->setParameterImpl(name, texture, sampler);
+}
+
+bool MaterialInstance::getParameter(const char *name, const Texture *&outTexture, TextureSampler &outSampler) noexcept {
+    return upcast(this)->getParameter(name, outTexture, outSampler);
 }
 
 void MaterialInstance::setParameter(const char* name, RgbType type, float3 color) noexcept {

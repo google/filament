@@ -30,6 +30,9 @@
 #include <utils/compiler.h>
 
 #include <filament/MaterialInstance.h>
+#include <filament/TextureSampler.h>
+
+#include <map>
 
 namespace filament {
 
@@ -116,14 +119,25 @@ public:
 
     const char* getName() const noexcept;
 
+    template <typename T, typename = is_supported_parameter_t<T>>
+    T getParameter(const char* name) noexcept;
+
     void setParameter(const char* name,
             backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept;
+
+    bool getParameter(const char *name,
+            Texture const *&outTexture, TextureSampler &outSampler) noexcept;
 
     using MaterialInstance::setParameter;
 
 private:
     friend class FMaterial;
     friend class MaterialInstance;
+
+    const void* getParameterUntypedImpl(const char* name) noexcept;
+
+    template<typename T>
+    T getParameterImpl(const char* name) noexcept;
 
     template<size_t Size>
     void setParameterUntypedImpl(const char* name, const void* value) noexcept;
@@ -150,6 +164,12 @@ private:
     FMaterial const* mMaterial = nullptr;
     backend::Handle<backend::HwUniformBuffer> mUbHandle;
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
+
+    struct SamplerParameters {
+        Texture const* texture;
+        TextureSampler sampler;
+    };
+    std::map<std::string, SamplerParameters> mSamplerParametersCache;
 
     UniformBuffer mUniforms;
     backend::SamplerGroup mSamplers;

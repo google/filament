@@ -66,6 +66,9 @@ public:
      */
     Material const* getMaterial() const noexcept;
 
+    template<typename T, typename = is_supported_parameter_t<T>>
+    T getParameter(const char* name) noexcept;
+
     /**
      * @return the name associated with this instance
      */
@@ -102,6 +105,17 @@ public:
      */
     void setParameter(const char* name,
             Texture const* texture, TextureSampler const& sampler) noexcept;
+
+    /**
+     * Get a texture as the named parameter
+     *
+     * @param name              Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param[out] outTexture   Texture pointer.
+     * @param[out] outSampler   Sampler parameters.
+     * @return True if return values are set correctly, false otherwise.
+     */
+    bool getParameter(const char* name,
+            Texture const*& outTexture, TextureSampler& outSampler) noexcept;
 
     /**
      * Set an RGB color as the named parameter.
