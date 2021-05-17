@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.0 (currently main branch)
+## v1.10.1 (currently main branch)
+
+## v1.10.0
 
 - engine: User materials can now use 9 samplers instead of 8 [⚠️ **Material breakage**].
 - engine: Remove `populateTangentQuaternions`  [⚠️ **API change**].
@@ -11,7 +13,12 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.9.25
 
-- engine: new screen-space lens flare
+- NEW API: Screen-space lens flare effect.
+- engine: Fix several memory leaks in the GL backend.
+- Vulkan: General bug fixes and improvements.
+- Vulkan: Fix some problems seen on Mali devices.
+- ios: Fix VSM shadows not working.
+- webgl: Fix black screen seen with some samples.
 
 ## v1.9.24
 
