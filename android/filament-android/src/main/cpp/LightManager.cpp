@@ -379,3 +379,17 @@ Java_com_google_android_filament_LightManager_nIsShadowCaster(JNIEnv*, jclass,
     LightManager *lm = (LightManager *) nativeLightManager;
     return (jboolean)lm->isShadowCaster((LightManager::Instance) i);
 }
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_LightManager_nGetOuterConeAngle(JNIEnv*, jclass,
+        jlong nativeLightManager, jint i) {
+    LightManager *lm = (LightManager *) nativeLightManager;
+    return (jfloat)lm->getSpotLightOuterCone((LightManager::Instance) i);
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_LightManager_nGetInnerConeAngle(JNIEnv*, jclass,
+        jlong nativeLightManager, jint i) {
+    LightManager *lm = (LightManager *) nativeLightManager;
+    return (jfloat)lm->getSpotLightInnerCone((LightManager::Instance) i);
+}
