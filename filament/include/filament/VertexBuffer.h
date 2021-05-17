@@ -24,6 +24,7 @@
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 
@@ -159,6 +160,12 @@ public:
     private:
         friend class FVertexBuffer;
     };
+
+    /**
+     * Return this vertex buffer underlying backend handle.
+     * @return this vertex buffer underlying backend handle.
+     */
+    backend::NativeHandle getBackendHandle(Engine& engine, uint8_t bufferIndex) const noexcept;
 
     /**
      * Returns the vertex count.

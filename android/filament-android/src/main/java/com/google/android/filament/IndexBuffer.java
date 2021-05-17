@@ -214,6 +214,12 @@ public class IndexBuffer {
         mNativeObject = 0;
     }
 
+    public long getBackendHandle(@NonNull Engine engine) {
+        return nGetBackendHandle(getNativeObject(), engine.getNativeObject());
+    }
+
+    private static native long nGetBackendHandle(long nativeObject, long nativeEngine);
+
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native void nBuilderIndexCount(long nativeBuilder, int indexCount);

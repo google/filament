@@ -1042,6 +1042,23 @@ void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, 
 
 }
 
+void MetalDriver::getTextureBackendHandle(Handle<HwTexture> th, backend::NativeHandle* pOut) {
+    auto t = handle_cast<MetalTexture>(mHandleMap, th);
+    *pOut = reinterpret_cast<backend::NativeHandle>((__bridge void*) t->texture);
+}
+
+void MetalDriver::getVertexBufferBackendHandle(Handle<HwVertexBuffer> vbh,
+        uint8_t bufferIndex, backend::NativeHandle* pOut) {
+    auto vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(vb->buffers[bufferIndex]->getCpuBuffer());
+}
+
+void MetalDriver::getIndexBufferBackendHandle(Handle<HwIndexBuffer> ibh,
+        backend::NativeHandle* pOut) {
+    auto ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(ib->buffer.getCpuBuffer());
+}
+
 void MetalDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, backend::Viewport dstRect,
         Handle<HwRenderTarget> src, backend::Viewport srcRect,

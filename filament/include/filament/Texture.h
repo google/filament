@@ -20,8 +20,10 @@
 #define TNT_FILAMENT_TEXTURE_H
 
 #include <filament/FilamentAPI.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 
@@ -287,6 +289,12 @@ public:
      * @return this texture InternalFormat as set by Builder::format().
      */
     InternalFormat getFormat() const noexcept;
+
+    /**
+     * Return this texture underlying backend handle.
+     * @return this texture underlying backend handle.
+     */
+    backend::NativeHandle getBackendHandle(Engine& engine) const noexcept;
 
     /**
      * Specify the image of a 2D texture for a level.

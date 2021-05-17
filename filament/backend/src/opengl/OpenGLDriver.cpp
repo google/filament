@@ -2757,6 +2757,23 @@ void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
     }
 }
 
+void OpenGLDriver::getTextureBackendHandle(Handle<HwTexture> th, backend::NativeHandle* pOut) {
+    GLTexture* t = handle_cast<GLTexture*>(th);
+    *pOut = reinterpret_cast<backend::NativeHandle>(t->gl.id);
+}
+
+void OpenGLDriver::getVertexBufferBackendHandle(Handle<HwVertexBuffer> vbh,
+        uint8_t bufferIndex, backend::NativeHandle* pOut) {
+    GLVertexBuffer* vb = handle_cast<GLVertexBuffer*>(vbh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(vb->gl.buffers[bufferIndex]);
+}
+
+void OpenGLDriver::getIndexBufferBackendHandle(Handle<HwIndexBuffer> ibh,
+        backend::NativeHandle* pOut) {
+    GLIndexBuffer* ib = handle_cast<GLIndexBuffer*>(ibh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(ib->gl.buffer);
+}
+
 // ------------------------------------------------------------------------------------------------
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------

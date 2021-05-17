@@ -24,6 +24,8 @@
 namespace filament {
 namespace backend {
 
+typedef struct _NativeHandle {} *NativeHandle;
+
 struct HwBufferObject;
 struct HwFence;
 struct HwIndexBuffer;

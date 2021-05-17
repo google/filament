@@ -481,6 +481,11 @@ size_t FTexture::getFormatSize(InternalFormat format) noexcept {
     return backend::getFormatSize(format);
 }
 
+backend::NativeHandle FTexture::getBackendHandle(FEngine& engine) const noexcept {
+    backend::NativeHandle nativeHandle = nullptr;
+    engine.getDriverApi().getTextureBackendHandle(mHandle, &nativeHandle);
+    return nativeHandle;
+}
 
 // this is a hack to be able to create a std::function<> with a non-copyable closure
 template<class F>
@@ -1131,6 +1136,10 @@ size_t Texture::computeTextureDataSize(Texture::Format format, Texture::Type typ
 void Texture::generatePrefilterMipmap(Engine& engine, Texture::PixelBufferDescriptor&& buffer,
         const Texture::FaceOffsets& faceOffsets, PrefilterOptions const* options) {
     upcast(this)->generatePrefilterMipmap(upcast(engine), std::move(buffer), faceOffsets, options);
+}
+
+backend::NativeHandle Texture::getBackendHandle(Engine& engine) const noexcept {
+    return upcast(this)->getBackendHandle(upcast(engine));
 }
 
 } // namespace filament

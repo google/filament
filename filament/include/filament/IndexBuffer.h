@@ -22,8 +22,8 @@
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
-
 #include <backend/BufferDescriptor.h>
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 
@@ -118,6 +118,12 @@ public:
      * @return The number of indices the IndexBuffer holds.
      */
     size_t getIndexCount() const noexcept;
+
+    /**
+     * Return this index buffer underlying backend handle.
+     * @return this index buffer underlying backend handle.
+     */
+    backend::NativeHandle getBackendHandle(Engine& engine) const noexcept;
 };
 
 } // namespace filament

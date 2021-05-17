@@ -73,6 +73,14 @@ Java_com_google_android_filament_IndexBuffer_nGetIndexCount(JNIEnv *env, jclass 
     return (jint) indexBuffer->getIndexCount();
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_IndexBuffer_nGetBackendHandle(JNIEnv*, jclass,
+        jlong nativeIndexBuffer, jlong nativeEngine) {
+    Engine *engine = (Engine *)nativeEngine;
+    IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
+    return (jlong) indexBuffer->getBackendHandle(*engine);
+}
+
 extern "C" JNIEXPORT int JNICALL
 Java_com_google_android_filament_IndexBuffer_nSetBuffer(JNIEnv *env, jclass type,
         jlong nativeIndexBuffer, jlong nativeEngine, jobject buffer, int remaining,

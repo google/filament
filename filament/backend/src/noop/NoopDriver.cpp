@@ -307,6 +307,17 @@ void NoopDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, u
     scheduleDestroy(std::move(p));
 }
 
+void NoopDriver::getTextureBackendHandle(Handle<HwTexture> th, backend::NativeHandle* pOut) {
+}
+
+void NoopDriver::getVertexBufferBackendHandle(Handle<HwVertexBuffer> vbh,
+        uint8_t bufferIndex, backend::NativeHandle* pOut) {
+}
+
+void NoopDriver::getIndexBufferBackendHandle(Handle<HwIndexBuffer> ibh,
+        backend::NativeHandle* pOut) {
+}
+
 void NoopDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, backend::Viewport dstRect,
         Handle<HwRenderTarget> src, backend::Viewport srcRect,

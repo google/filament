@@ -51,6 +51,12 @@ IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
+backend::NativeHandle FIndexBuffer::getBackendHandle(FEngine& engine) const noexcept {
+    backend::NativeHandle nativeHandle = nullptr;
+    engine.getDriverApi().getIndexBufferBackendHandle(mHandle, &nativeHandle);
+    return nativeHandle;
+}
+
 FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
         : mIndexCount(builder->mIndexCount) {
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -72,6 +78,10 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
+
+backend::NativeHandle IndexBuffer::getBackendHandle(Engine& engine) const noexcept {
+    return upcast(this)->getBackendHandle(upcast(engine));
+}
 
 void IndexBuffer::setBuffer(Engine& engine,
         IndexBuffer::BufferDescriptor&& buffer, uint32_t byteOffset) {

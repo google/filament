@@ -49,6 +49,8 @@ public:
 
     size_t getVertexCount() const noexcept;
 
+    backend::NativeHandle getBackendHandle(FEngine& engine, uint8_t bufferIndex) const noexcept;
+
     AttributeBitset getDeclaredAttributes() const noexcept {
         return mDeclaredAttributes;
     }

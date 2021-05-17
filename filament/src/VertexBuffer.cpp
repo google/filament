@@ -221,6 +221,12 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
     return mVertexCount;
 }
 
+backend::NativeHandle FVertexBuffer::getBackendHandle(FEngine& engine, uint8_t bufferIndex) const noexcept {
+    backend::NativeHandle nativeHandle = nullptr;
+    engine.getDriverApi().getVertexBufferBackendHandle(mHandle, bufferIndex, &nativeHandle);
+    return nativeHandle;
+}
+
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
     ASSERT_PRECONDITION(!mBufferObjectsEnabled, "Please use setBufferObjectAt()");
@@ -249,6 +255,10 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
+
+backend::NativeHandle VertexBuffer::getBackendHandle(Engine& engine, uint8_t bufferIndex) const noexcept {
+    return upcast(this)->getBackendHandle(upcast(engine), bufferIndex);
+}
 
 size_t VertexBuffer::getVertexCount() const noexcept {
     return upcast(this)->getVertexCount();

@@ -398,6 +398,12 @@ public class VertexBuffer {
         mNativeObject = 0;
     }
 
+    public long getBackendHandle(@NonNull Engine engine, int bufferIndex) {
+        return nGetBackendHandle(getNativeObject(), bufferIndex, engine.getNativeObject());
+    }
+
+    private static native long nGetBackendHandle(long nativeObject, int bufferIndex, long nativeEngine);
+
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native void nBuilderVertexCount(long nativeBuilder, int vertexCount);

@@ -1519,6 +1519,23 @@ void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y,
     scheduleDestroy(std::move(p));
 }
 
+void VulkanDriver::getTextureBackendHandle(Handle<HwTexture> th, backend::NativeHandle* pOut) {
+    auto t = handle_cast<VulkanTexture>(mHandleMap, th);
+    *pOut = reinterpret_cast<backend::NativeHandle>(t->getVkImage());
+}
+
+void VulkanDriver::getVertexBufferBackendHandle(Handle<HwVertexBuffer> vbh,
+        uint8_t bufferIndex, backend::NativeHandle* pOut) {
+    auto vb = handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(vb->buffers[bufferIndex]);
+}
+
+void VulkanDriver::getIndexBufferBackendHandle(Handle<HwIndexBuffer> ibh,
+        backend::NativeHandle* pOut) {
+    auto ib = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
+    *pOut = reinterpret_cast<backend::NativeHandle>(ib->buffer.get());
+}
+
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
     VulkanRenderTarget* dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);

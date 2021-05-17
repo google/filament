@@ -475,6 +475,19 @@ DECL_DRIVER_API_N(readStreamPixels,
         uint32_t, height,
         backend::PixelBufferDescriptor&&, data)
 
+DECL_DRIVER_API_SYNCHRONOUS_N(void, getTextureBackendHandle,
+        backend::TextureHandle, th,
+        backend::NativeHandle*, pOut)
+
+DECL_DRIVER_API_SYNCHRONOUS_N(void, getVertexBufferBackendHandle,
+        backend::VertexBufferHandle, vbh,
+        uint8_t, bufferIndex,
+        backend::NativeHandle*, pOut)
+
+DECL_DRIVER_API_SYNCHRONOUS_N(void, getIndexBufferBackendHandle,
+        backend::IndexBufferHandle, ibh,
+        backend::NativeHandle*, pOut)
+
 /*
  * Rendering operations
  * --------------------

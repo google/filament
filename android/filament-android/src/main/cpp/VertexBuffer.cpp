@@ -96,6 +96,14 @@ Java_com_google_android_filament_VertexBuffer_nGetVertexCount(JNIEnv *env, jclas
     return (jint) vertexBuffer->getVertexCount();
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_VertexBuffer_nGetBackendHandle(JNIEnv*, jclass,
+        jlong nativeVertexBuffer, jint bufferIndex, jlong nativeEngine) {
+    Engine *engine = (Engine *)nativeEngine;
+    VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
+    return (jlong) vertexBuffer->getBackendHandle(*engine, (uint8_t)bufferIndex);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass type,
         jlong nativeVertexBuffer, jlong nativeEngine, jint bufferIndex,

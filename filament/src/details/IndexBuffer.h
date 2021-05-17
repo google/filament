@@ -40,6 +40,8 @@ public:
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
 
+    backend::NativeHandle getBackendHandle(FEngine& engine) const noexcept;
+
     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
 private:
