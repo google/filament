@@ -432,6 +432,10 @@ public:
     // (e.g.: after the FrameFraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
+
+    uint32_t getRenderableCount() noexcept;
+    uint32_t* getRenderableInstances() noexcept;
+    uint8_t* getVisibilityMasks() noexcept;
 private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;

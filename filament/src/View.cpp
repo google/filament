@@ -854,6 +854,24 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
     }
 }
 
+uint32_t FView::getRenderableCount() noexcept {
+    FScene* const scene = getScene();
+    FScene::RenderableSoa& renderableData = scene->getRenderableData();
+  return (uint32_t)renderableData.size();
+}
+
+uint32_t* FView::getRenderableInstances() noexcept {
+    FScene* const scene = getScene();
+    FScene::RenderableSoa& renderableData = scene->getRenderableData();
+    return (uint32_t*)renderableData.data<FScene::RENDERABLE_INSTANCE>();
+}
+
+uint8_t* FView::getVisibilityMasks() noexcept {
+    FScene* const scene = getScene();
+    FScene::RenderableSoa& renderableData = scene->getRenderableData();
+    return (uint8_t*)renderableData.data<FScene::VISIBLE_MASK>();
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -1076,7 +1094,19 @@ View::BlendMode View::getBlendMode() const noexcept {
 }
 
 uint8_t View::getVisibleLayers() const noexcept {
-  return upcast(this)->getVisibleLayers();
+    return upcast(this)->getVisibleLayers();
+}
+
+uint32_t View::getRenderableCount() noexcept {
+    return upcast(this)->getRenderableCount();
+}
+
+uint32_t* View::getRenderableInstances() noexcept {
+    return upcast(this)->getRenderableInstances();
+}
+
+uint8_t* View::getVisibilityMasks() noexcept {
+    return upcast(this)->getVisibilityMasks();
 }
 
 bool View::isShadowingEnabled() const noexcept {

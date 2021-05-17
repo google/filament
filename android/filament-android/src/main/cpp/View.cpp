@@ -350,6 +350,36 @@ Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, 
             .filterWidth = filterWidth, .feedback = feedback, .enabled = (bool) enabled});
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetRenderableCount(JNIEnv *env, jclass clazz,
+        jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->getRenderableCount();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nGetRenderableEntities(JNIEnv* env, jclass clazz,
+        jlong nativeView, jintArray renderableEntities_) {
+    View* view = (View*) nativeView;
+    jsize available = env->GetArrayLength(renderableEntities_);
+    int* renderableEntities = (int*)env->GetIntArrayElements(renderableEntities_, nullptr);
+    std::copy_n(view->getRenderableInstances(), std::min(available, (jsize) view->getRenderableCount()),
+        renderableEntities);
+    env->ReleaseIntArrayElements(renderableEntities_, (jint*)renderableEntities, 0);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nGetVisibilityMasks(JNIEnv* env, jclass clazz,
+        jlong nativeView, jintArray visibilityMasks_) {
+    View* view = (View*) nativeView;
+    jsize available = env->GetArrayLength(visibilityMasks_);
+    int* visibilityMasks = (int *)env->GetIntArrayElements(visibilityMasks_, nullptr);
+    std::copy_n(view->getVisibilityMasks(), std::min(available, (jsize)view->getRenderableCount()),
+        visibilityMasks);
+    env->ReleaseIntArrayElements(visibilityMasks_, (jint*)visibilityMasks, 0);
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {

@@ -922,6 +922,12 @@ public:
      */
     UTILS_DEPRECATED
     AmbientOcclusion getAmbientOcclusion() const noexcept;
+
+
+    uint32_t getRenderableCount() noexcept;
+    uint32_t* getRenderableInstances() noexcept;
+    uint8_t* getVisibilityMasks() noexcept;
+
 };
 
 

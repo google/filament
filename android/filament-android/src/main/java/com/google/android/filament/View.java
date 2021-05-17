@@ -1511,6 +1511,26 @@ public class View {
         return mDepthOfFieldOptions;
     }
 
+    // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
+    // (either camera or light).
+    //
+    // bits                               7 6 5 4 3 2 1 0
+    // +------------------------------------------------+
+    // VISIBLE_RENDERABLE                               X
+    // VISIBLE_DIR_SHADOW_RENDERABLE                  X
+    // VISIBLE_SPOT_SHADOW_RENDERABLE_0             X
+    // VISIBLE_SPOT_SHADOW_RENDERABLE_1           X
+    public int[] getVisibilityMaskList() {
+        int[] visibilities = new int[nGetRenderableCount(getNativeObject())];
+        nGetVisibilityMasks(getNativeObject(), visibilities);
+        return visibilities;
+    }
+
+    public int[] getRenderableEntityList() {
+        int[] entities = new int[nGetRenderableCount(getNativeObject())];
+        nGetRenderableEntities(getNativeObject(), entities);
+        return entities;
+    }
 
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1558,6 +1578,9 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native int nGetRenderableCount(long nativeView);
+    private static native void nGetRenderableEntities(long nativeView, int[] renderableEntities);
+    private static native void nGetVisibilityMasks(long nativeView, int[] visibilityMasks );
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
