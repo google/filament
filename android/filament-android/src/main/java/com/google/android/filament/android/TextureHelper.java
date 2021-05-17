@@ -23,6 +23,9 @@ import androidx.annotation.NonNull;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Texture;
 
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+
 public final class TextureHelper {
     // Keep in sync with Texture.cpp
     private static final int BITMAP_CONFIG_ALPHA_8    = 0;
@@ -95,10 +98,21 @@ public final class TextureHelper {
         return BITMAP_CONFIG_RGBA_8888;
     }
 
+    public static ByteBuffer getBitmapInternalBuffer(@NonNull Bitmap bitmap, int offset, int size) {
+        return nGetBitmapInternalBuffer(bitmap, offset, size);
+    }
+
+    public static void unlockBitmapInternalBuffer(@NonNull Bitmap bitmap) {
+        nUnlockBitmapInternalBuffer(bitmap);
+    }
+
     private static native void nSetBitmap(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format);
 
     private static native void nSetBitmapWithCallback(long nativeTexture, long nativeEngine,
             int level, int xoffset, int yoffset, int width, int height, Bitmap bitmap, int format,
             Object handler, Runnable callback);
+
+    private static native ByteBuffer nGetBitmapInternalBuffer(Bitmap bitmap, int offset, int size);
+    private static native void nUnlockBitmapInternalBuffer(Bitmap bitmap);
 }

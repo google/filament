@@ -27,6 +27,7 @@
 #include <filament/Engine.h>
 #include <filament/Stream.h>
 #include <filament/Texture.h>
+#include <utils/Log.h>
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
@@ -612,5 +613,46 @@ Java_com_google_android_filament_android_TextureHelper_nSetBitmapWithCallback(JN
             (uint32_t) width, (uint32_t) height,
             std::move(desc));
 }
+
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_google_android_filament_android_TextureHelper_nGetBitmapInternalBuffer(JNIEnv *env, jclass, jobject bitmap, jint offset, jint size) {
+
+    void* pixelPtr;
+    AndroidBitmapInfo bitmapInfo;
+
+    int rc = AndroidBitmap_getInfo(env, bitmap, &bitmapInfo);
+    if (rc != ANDROID_BITMAP_RESULT_SUCCESS) {
+        utils::slog.w << "Failed to get Bitmap info" << utils::io::endl;
+        return nullptr;
+    }
+
+    if (bitmapInfo.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+        utils::slog.w << "Unexpected bitmap format" << utils::io::endl;
+        return nullptr;
+    }
+
+    jlong arrayLength = bitmapInfo.width * bitmapInfo.height * 4;
+     if (offset < 0 || size < 0 || offset > arrayLength || arrayLength - offset < size) {
+         utils::slog.w << "GetBitmapInternalBuffer: Index out of bounds" << utils::io::endl;
+          return nullptr;
+     }
+
+    rc = AndroidBitmap_lockPixels(env, bitmap, &pixelPtr);
+    if (rc != ANDROID_BITMAP_RESULT_SUCCESS) {
+        utils::slog.w << "Failed to lock Bitmap pixels" << utils::io::endl;
+        return nullptr;
+    }
+
+    pixelPtr = (void*) ((uint8_t*) pixelPtr + offset);
+    jobject buffer = env->NewDirectByteBuffer(pixelPtr, size);
+    return buffer;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_android_TextureHelper_nUnlockBitmapInternalBuffer(JNIEnv *env, jclass, jobject bitmap) {
+    AndroidBitmap_unlockPixels(env, bitmap);
+}
+
 
 #endif
