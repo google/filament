@@ -187,6 +187,7 @@ void createLogicalDevice(VulkanContext& context) {
     // consequences let's just enable the features we need.
     const auto& supportedFeatures = context.physicalDeviceFeatures;
     VkPhysicalDeviceFeatures enabledFeatures {
+        .samplerAnisotropy = supportedFeatures.samplerAnisotropy,
         .textureCompressionETC2 = supportedFeatures.textureCompressionETC2,
         .textureCompressionBC = supportedFeatures.textureCompressionBC,
     };
@@ -194,6 +195,16 @@ void createLogicalDevice(VulkanContext& context) {
     deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
     deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensionNames.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensionNames.data();
+
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+        .pNext = nullptr,
+        .mutableComparisonSamplers = VK_TRUE,
+    };
+    if (context.portabilitySubsetSupported) {
+        deviceCreateInfo.pNext = &portability;
+    }
+
     VkResult result = vkCreateDevice(context.physicalDevice, &deviceCreateInfo, VKALLOC,
             &context.device);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");

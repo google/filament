@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(filament C ASM)
 
 set(TARGET backend)
@@ -138,14 +138,13 @@ endif()
 # See root CMakeLists.txt for platforms that support Vulkan
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
-            src/vulkan/VulkanBinder.cpp
-            src/vulkan/VulkanBinder.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
             src/vulkan/VulkanCommands.cpp
             src/vulkan/VulkanCommands.h
+            src/vulkan/VulkanConstants.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
             src/vulkan/VulkanDisposer.cpp
@@ -158,12 +157,16 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
             src/vulkan/VulkanMemory.cpp
+            src/vulkan/VulkanPipelineCache.cpp
+            src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
+            src/vulkan/VulkanTexture.cpp
+            src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp
             src/vulkan/VulkanUtility.h
     )

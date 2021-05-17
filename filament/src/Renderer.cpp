@@ -438,12 +438,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // prepare color grading as subpass material
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
-                            view.getColorGrading(),
+                            view.getColorGrading(), colorGradingConfig,
                             view.getVignetteOptions(),
-                            colorGradingConfig.fxaa,
-                            colorGradingConfig.dithering,
-                            config.svp.width,
-                            config.svp.height);
+                            config.svp.width, config.svp.height);
                 }
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
@@ -500,19 +497,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (dofOptions.enabled) {
             input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
         }
+
+        if (bloomOptions.enabled) {
+            // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
+            // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
+            ppm.bloom(fg, input, TextureFormat::R11F_G11F_B10F, bloomOptions, scale);
+        }
+
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input,
-                        view.getColorGrading(),
-                        colorGradingConfig.ldrFormat,
-                        colorGradingConfig.translucent,
-                        colorGradingConfig.fxaa,
-                        scale, bloomOptions, vignetteOptions,
-                        colorGradingConfig.dithering);
+                input = ppm.colorGrading(fg, input, scale,
+                        view.getColorGrading(), colorGradingConfig,
+                        bloomOptions, vignetteOptions);
             }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || needsAlphaChannel);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat,
+                    !colorGrading || needsAlphaChannel);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
@@ -827,7 +828,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     out.params.subpassMask = 1;
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());
-                    ppm.colorGradingSubpass(driver, colorGradingConfig.translucent);
+                    ppm.colorGradingSubpass(driver, colorGradingConfig);
                 } else {
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());

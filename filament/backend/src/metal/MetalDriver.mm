@@ -91,6 +91,17 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 #endif
     }
 
+    mContext->maxColorRenderTargets = 4;
+#if defined(IOS)
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#else
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#endif
+
     mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->commandQueue.label = @"Filament";
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -276,7 +287,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& buffer = color[i];
         if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getMRTColorFlag(i)),
+            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
                     "The COLOR%u flag was specified, but no color texture provided.", i);
             continue;
         }
@@ -663,13 +674,13 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
-bool MetalDriver::areFeedbackLoopsSupported() {
-    return true;
-}
-
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
+}
+
+uint8_t MetalDriver::getMaxDrawBuffers() {
+    return std::min(mContext->maxColorRenderTargets, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -1178,7 +1189,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             colorPixelFormat[0],
             colorPixelFormat[1],
             colorPixelFormat[2],
-            colorPixelFormat[3]
+            colorPixelFormat[3],
+            colorPixelFormat[4],
+            colorPixelFormat[5],
+            colorPixelFormat[6],
+            colorPixelFormat[7]
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),

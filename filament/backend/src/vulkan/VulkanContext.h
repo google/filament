@@ -17,8 +17,9 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
 #define TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
 
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
+#include "VulkanConstants.h"
 #include "VulkanDisposer.h"
 
 #include <backend/DriverEnums.h>
@@ -39,14 +40,6 @@
 
 namespace filament {
 namespace backend {
-
-// All vkCreate* functions take an optional allocator. For now we select the default allocator by
-// passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
-constexpr VkAllocationCallbacks* VKALLOC = nullptr;
-
-// At the time of this writing, our copy of MoltenVK supports Vulkan 1.0 only.
-constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
-constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 
 struct VulkanRenderTarget;
 struct VulkanSurfaceContext;
@@ -81,7 +74,7 @@ struct VulkanContext {
     bool debugMarkersSupported;
     bool debugUtilsSupported;
     bool portabilitySubsetSupported;
-    VulkanBinder::RasterState rasterState;
+    VulkanPipelineCache::RasterState rasterState;
     VulkanSurfaceContext* currentSurface;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;

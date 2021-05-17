@@ -29,6 +29,30 @@ using namespace bluevk;
 namespace filament {
 namespace backend {
 
+// Helper function for populating barrier fields based on the desired image layout.
+// This logic is specific to blitting, please keep this private to VulkanBlitter.
+static VulkanLayoutTransition transitionHelper(VulkanLayoutTransition transition) {
+    switch (transition.newLayout) {
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_GENERAL:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        default:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.dstAccessMask = 0;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+    }
+    return transition;
+}
+
 void VulkanBlitter::blitColor(VkCommandBuffer cmdBuffer, BlitArgs args) {
     lazyInit();
     const VulkanAttachment src = args.srcTarget->getColor(args.targetIndex);
@@ -99,11 +123,39 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
         .extent = { srcExtent.width, srcExtent.height, 1 }
     }};
 
-    VulkanTexture::transitionImageLayout(cmdbuffer, src.image, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src.level, 1, 1, aspect);
+    const VkImageSubresourceRange srcRange = {
+        .aspectMask = aspect,
+        .baseMipLevel = src.level,
+        .levelCount = 1,
+        .baseArrayLayer = src.layer,
+        .layerCount = 1,
+    };
 
-    VulkanTexture::transitionImageLayout(cmdbuffer, dst.image, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst.level, 1, 1, aspect);
+    const VkImageSubresourceRange dstRange = {
+        .aspectMask = aspect,
+        .baseMipLevel = dst.level,
+        .levelCount = 1,
+        .baseArrayLayer = dst.layer,
+        .layerCount = 1,
+    };
+
+    transitionImageLayout(cmdbuffer, {
+        src.image,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        srcRange,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT
+    });
+
+    transitionImageLayout(cmdbuffer, {
+        dst.image,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        dstRange,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+    });
 
     if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
         assert_invariant(aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
@@ -115,11 +167,19 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     }
 
     if (src.texture) {
-        VulkanTexture::transitionImageLayout(cmdbuffer, src.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                getTextureLayout(src.texture->usage), src.level, 1, 1, aspect);
+        transitionImageLayout(cmdbuffer, transitionHelper({
+            .image = src.image,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = getTextureLayout(src.texture->usage),
+            .subresources = srcRange
+        }));
     } else if  (!mContext.currentSurface->headlessQueue) {
-        VulkanTexture::transitionImageLayout(cmdbuffer, src.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, src.level, 1, 1, aspect);
+        transitionImageLayout(cmdbuffer, transitionHelper({
+            .image = src.image,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .subresources = srcRange
+        }));
     }
 
     // Determine the desired texture layout for the destination while ensuring that the default
@@ -127,8 +187,12 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
     const VkImageLayout desiredLayout = dst.texture ? getTextureLayout(dst.texture->usage) :
             getSwapChainAttachment(mContext).layout;
 
-    VulkanTexture::transitionImageLayout(cmdbuffer, dst.image, VK_IMAGE_LAYOUT_UNDEFINED,
-            desiredLayout, dst.level, 1, 1, aspect);
+    transitionImageLayout(cmdbuffer, transitionHelper({
+        .image = dst.image,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = desiredLayout,
+        .subresources = dstRange,
+    }));
 }
 
 void VulkanBlitter::shutdown() noexcept {

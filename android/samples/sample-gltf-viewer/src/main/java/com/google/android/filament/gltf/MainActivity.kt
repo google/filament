@@ -83,17 +83,18 @@ class MainActivity : Activity() {
 
         setStatusText("To load a new model, go to the above URL on your host machine.")
 
-        val dynamicResolutionOptions = modelViewer.view.dynamicResolutionOptions
-        dynamicResolutionOptions.enabled = true
-        modelViewer.view.dynamicResolutionOptions = dynamicResolutionOptions
+        val view = modelViewer.view
+        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+            enabled = true
+        }
 
-        val ssaoOptions = modelViewer.view.ambientOcclusionOptions
-        ssaoOptions.enabled = true
-        modelViewer.view.ambientOcclusionOptions = ssaoOptions
+        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+            enabled = true
+        }
 
-        val bloomOptions = modelViewer.view.bloomOptions
-        bloomOptions.enabled = true
-        modelViewer.view.bloomOptions = bloomOptions
+        view.bloomOptions = view.bloomOptions.apply {
+            enabled = true
+        }
 
         remoteServer = RemoteServer(8082)
     }

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.19)
+project(filament-android)
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)

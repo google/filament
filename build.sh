@@ -105,8 +105,8 @@ function print_matdbg_help {
 
 # Requirements
 CMAKE_MAJOR=3
-CMAKE_MINOR=10
-ANDROID_NDK_VERSION=21
+CMAKE_MINOR=19
+ANDROID_NDK_VERSION=22
 
 # Internal variables
 ISSUE_CLEAN=false

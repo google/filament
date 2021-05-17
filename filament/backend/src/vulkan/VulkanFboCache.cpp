@@ -18,7 +18,11 @@
 
 #include <utils/Panic.h>
 
-#define FILAMENT_VULKAN_VERBOSE 0
+#include "VulkanConstants.h"
+
+// If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
+// is evicted from the cache.
+static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 using namespace bluevk;
 

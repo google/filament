@@ -67,13 +67,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     if (!strcmp(cbdata->pMessageIdName, "VUID-vkCmdDrawIndexed-None-04584")) {
         return VK_FALSE;
     }
-    // TODO: For now, we are silencing an error message relating to mutable comparison samplers.
-    // It is likely that the internal "depthSampleCompare" feature flag is mistakenly set to false
-    // by the Molten implementation. In my case, the GPU is an AMD Radeon Pro 5500M. See this bug:
-    // https://vulkan.lunarg.com/issue/view/602578385df1127a24f3cb4b
-    if (!strcmp(cbdata->pMessageIdName, "VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450")) {
-        return VK_FALSE;
-    }
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
@@ -778,13 +771,13 @@ bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }
 
-bool VulkanDriver::areFeedbackLoopsSupported() {
-    return true;
-}
-
 math::float2 VulkanDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
+}
+
+uint8_t VulkanDriver::getMaxDrawBuffers() {
+    return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
@@ -1054,8 +1047,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     renderPassInfo.pClearValues = &clearValues[0];
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo,
-            VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = mContext.viewport = {
         .x = (float) params.viewport.left,
@@ -1077,12 +1069,43 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 }
 
 void VulkanDriver::endRenderPass(int) {
-    assert_invariant(mContext.currentSurface);
+    VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    vkCmdEndRenderPass(cmdbuffer);
+
     assert_invariant(mCurrentRenderTarget);
-    vkCmdEndRenderPass(mContext.commands->get().cmdbuffer);
+
+    // Since we might soon be sampling from the render target that we just wrote to, we need a
+    // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
+    // than an image barrier. If we were to use image barriers here, we would potentially need to
+    // issue several of them when considering MRT. This would be very complex to set up and would
+    // require more state tracking, so we've chosen to use a memory barrier for simplicity and
+    // correctness.
+
+    // NOTE: ideally dstAccessMask would be VK_ACCESS_SHADER_READ_BIT and dstStageMask would be
+    // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
+    // seems to be insufficient on Mali devices. To work around this we are using a more
+    // aggressive TOP_OF_PIPE barrier.
+
+    if (!mCurrentRenderTarget->isSwapChain()) {
+        VkMemoryBarrier barrier {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = 0,
+        };
+        VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        if (mCurrentRenderTarget->hasDepth()) {
+            barrier.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        }
+        vkCmdPipelineBarrier(cmdbuffer,
+                srcStageMask,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                0, 1, &barrier, 0, nullptr, 0, nullptr);
+    }
+
     mCurrentRenderTarget = VK_NULL_HANDLE;
     if (mContext.currentRenderPass.currentSubpass > 0) {
-        for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+        for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
             mBinder.bindInputAttachment(i, {});
         }
         mContext.currentRenderPass.currentSubpass = 0;
@@ -1103,7 +1126,7 @@ void VulkanDriver::nextSubpass(int) {
     mBinder.bindRenderPass(mContext.currentRenderPass.renderPass,
             ++mContext.currentRenderPass.currentSubpass);
 
-    for (uint32_t i = 0; i < VulkanBinder::TARGET_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
         if ((1 << i) & mContext.currentRenderPass.subpassMask) {
             VulkanAttachment subpassInput = mCurrentRenderTarget->getColor(i);
             VkDescriptorImageInfo info = {
@@ -1298,8 +1321,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     const VkDevice device = mContext.device;
     const VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
     const VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
-    const VkFormat swapChainFormat = mContext.currentSurface->surfaceFormat.format;
-    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() : swapChainFormat;
+    const VkFormat srcFormat = srcTexture ? srcTexture->getVkFormat() :
+            mContext.currentSurface->surfaceFormat.format;
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
 
     // Create a host visible, linearly tiled image as a staging area.
@@ -1339,16 +1362,31 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     // Transition the staging image layout.
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-    VulkanTexture::transitionImageLayout(cmdbuffer, stagingImage,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 1,
-            VK_IMAGE_ASPECT_COLOR_BIT);
 
-    const uint8_t srcMipLevel = srcTarget->getColor(0).level;
+    transitionImageLayout(cmdbuffer, {
+        .image = stagingImage,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .subresources = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+    });
+
+    const VulkanAttachment srcAttachment = srcTarget->getColor(0);
 
     VkImageCopy imageCopyRegion = {
         .srcSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = srcMipLevel,
+            .mipLevel = srcAttachment.level,
+            .baseArrayLayer = srcAttachment.layer,
             .layerCount = 1,
         },
         .srcOffset = {
@@ -1368,10 +1406,25 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the source image layout (which might be the swap chain)
 
+    const VkImageSubresourceRange srcRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = srcAttachment.level,
+        .levelCount = 1,
+        .baseArrayLayer = srcAttachment.layer,
+        .layerCount = 1,
+    };
+
     VkImage srcImage = srcTarget->getColor(0).image;
-    VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcMipLevel, 1, 1,
-            VK_IMAGE_ASPECT_COLOR_BIT);
+    transitionImageLayout(cmdbuffer, {
+        .image = srcImage,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .subresources = srcRange,
+        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+    });
 
     // Perform the blit.
 
@@ -1383,13 +1436,27 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     if (srcTexture || mContext.currentSurface->presentQueue) {
         const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-                VK_IMAGE_LAYOUT_UNDEFINED, srcTexture ? getTextureLayout(srcTexture->usage) : present,
-                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+        transitionImageLayout(cmdbuffer, {
+            .image = srcImage,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = srcTexture ? getTextureLayout(srcTexture->usage) : present,
+            .subresources = srcRange,
+            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        });
     } else {
-        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                srcMipLevel, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+        transitionImageLayout(cmdbuffer, {
+            .image = srcImage,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .subresources = srcRange,
+            .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        });
     }
 
     // Transition the staging image layout to GENERAL.
@@ -1478,20 +1545,10 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
         mBlitter.blitDepth(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets});
     }
 
-    if (any(buffers & TargetBufferFlags::COLOR0)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 0});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR1)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 1});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR2)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 2});
-    }
-
-    if (any(buffers & TargetBufferFlags::COLOR3)) {
-        mBlitter.blitColor(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, 3});
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+        if (any(buffers & getTargetBufferFlagsAt(i))) {
+            mBlitter.blitColor(cmdbuf,{ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(i) });
+        }
     }
 }
 
@@ -1557,7 +1614,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     mContext.rasterState.colorTargetCount = rt->getColorTargetCount(mContext.currentRenderPass);
 
     // Declare fixed-size arrays that get passed to the binder and to vkCmdBindVertexBuffers.
-    VulkanBinder::VertexArray varray = {};
+    VulkanPipelineCache::VertexArray varray = {};
     VkBuffer buffers[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
     VkDeviceSize offsets[backend::MAX_VERTEX_ATTRIBUTE_COUNT] = {};
 
@@ -1594,7 +1651,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         };
     }
 
-    // Push state changes to the VulkanBinder instance. This is fast and does not make VK calls.
+    // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mBinder.bindProgramBundle(program->bundle);
     mBinder.bindRasterState(mContext.rasterState);
     mBinder.bindPrimitiveTopology(prim.primitiveTopology);
@@ -1604,7 +1661,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
 
-    VkDescriptorImageInfo samplers[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+    VkDescriptorImageInfo samplers[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
 
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];

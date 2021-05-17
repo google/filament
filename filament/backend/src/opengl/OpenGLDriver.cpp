@@ -779,8 +779,12 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
     rp->maxVertexCount = vb->vertexCount;
     for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
         const auto& attribute = vb->attributes[i];
-        if (attribute.buffer != Attribute::BUFFER_UNUSED) {
-            uint8_t bi = attribute.buffer;
+        const uint8_t bi = attribute.buffer;
+
+        // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
+        // take care to avoid it. This can occur when VertexBuffer is only partially populated with
+        // BufferObject items.
+        if (bi != Attribute::BUFFER_UNUSED && UTILS_LIKELY(vb->gl.buffers[bi] != 0)) {
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                 glVertexAttribIPointer(GLuint(i),
@@ -1157,15 +1161,16 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
-        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-            if (any(targets & getMRTColorFlag(i))) {
+        const size_t maxDrawBuffers = getMaxDrawBuffers();
+        for (size_t i = 0; i < maxDrawBuffers; i++) {
+            if (any(targets & getTargetBufferFlagsAt(i))) {
                 rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
                 rt->gl.color[i].level = color[i].level;
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
         }
-        glDrawBuffers(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, bufs);
+        glDrawBuffers(maxDrawBuffers, bufs);
         CHECK_GL_ERROR(utils::slog.e)
     }
 
@@ -1673,13 +1678,13 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
-bool OpenGLDriver::areFeedbackLoopsSupported() {
-    return !mContext.bugs.disable_feedback_loops;
-}
-
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
             math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };
+}
+
+uint8_t OpenGLDriver::getMaxDrawBuffers() {
+    return std::min(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, uint8_t(mContext.gets.max_draw_buffers));
 }
 
 // ------------------------------------------------------------------------------------------------

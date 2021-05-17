@@ -64,9 +64,9 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 30,
         'compileSdk': 30,
-        'kotlin': '1.4.31',
+        'kotlin': '1.5.0',
         'buildTools': '30.0.3',
-        'ndk': '22.0.7026061'
+        'ndk': '22.1.7171670'
     ]
 
     ext.deps = [
@@ -78,7 +78,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.3'
+        classpath 'com.android.tools.build:gradle:4.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
@@ -116,7 +116,6 @@ buildscript {
     repositories {
         mavenCentral()
         google()
-        jcenter()
     }
 }
 
@@ -138,7 +137,6 @@ subprojects {
     repositories {
         mavenCentral()
         google()
-        jcenter()
     }
 
     if (!name.startsWith("sample")) {
@@ -168,6 +166,7 @@ subprojects {
 
             externalNativeBuild {
                 cmake {
+                    version "3.19.0+"
                     path "CMakeLists.txt"
                 }
             }

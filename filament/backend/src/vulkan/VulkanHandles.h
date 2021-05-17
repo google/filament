@@ -18,8 +18,9 @@
  #define TNT_FILAMENT_DRIVER_VULKANHANDLES_H
 
 #include "VulkanDriver.h"
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanBuffer.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
 namespace filament {
@@ -29,7 +30,7 @@ struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
     ~VulkanProgram();
     VulkanContext& context;
-    VulkanBinder::ProgramBundle bundle;
+    VulkanPipelineCache::ProgramBundle bundle;
     Program::SamplerGroupInfo samplerGroupInfo;
 };
 
@@ -122,66 +123,6 @@ private:
 
 struct VulkanSamplerGroup : public HwSamplerGroup {
     VulkanSamplerGroup(VulkanContext& context, uint32_t count) : HwSamplerGroup(count) {}
-};
-
-struct VulkanTexture : public HwTexture {
-    VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
-    ~VulkanTexture();
-    void update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            int miplevel);
-    void update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-            uint32_t depth, int miplevel);
-    void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
-            int miplevel);
-
-    // Returns the primary image view, which is used for shader sampling.
-    VkImageView getPrimaryImageView() const { return mCachedImageViews.at(mPrimaryViewRange); }
-
-    // Sets the min/max range of miplevels in the primary image view.
-    void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
-
-    // Gets or creates a cached VkImageView for a range of miplevels and array layers.
-    VkImageView getImageView(VkImageSubresourceRange range);
-
-    // Convenient "single subresource" overload for the above method.
-    VkImageView getImageView(int singleLevel, int singleLayer, VkImageAspectFlags aspect) {
-        return getImageView({
-            .aspectMask = aspect,
-            .baseMipLevel = uint32_t(singleLevel),
-            .levelCount = uint32_t(1),
-            .baseArrayLayer = uint32_t(singleLayer),
-            .layerCount = uint32_t(1),
-        });
-    }
-
-    VkFormat getVkFormat() const { return mVkFormat; }
-    VkImage getVkImage() const { return mTextureImage; }
-
-    // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
-    // layout to a GPU-readable layout.
-    static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
-            VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel,
-            uint32_t layers, uint32_t levels, VkImageAspectFlags aspect);
-
-private:
-    // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
-    // height define a subregion within the miplevel.
-    void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
-            uint32_t width, uint32_t height, uint32_t depth,
-            FaceOffsets const* faceOffsets, uint32_t miplevel);
-
-    const VkFormat mVkFormat;
-    const VkComponentMapping mSwizzle;
-    VkImageViewType mViewType;
-    VkImage mTextureImage = VK_NULL_HANDLE;
-    VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;
-    VkImageSubresourceRange mPrimaryViewRange;
-    std::map<VkImageSubresourceRange, VkImageView> mCachedImageViews;
-    VkImageAspectFlags mAspect;
-    VulkanContext& mContext;
-    VulkanStagePool& mStagePool;
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {

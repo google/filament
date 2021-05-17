@@ -140,8 +140,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                 };
 
                 if (view.hasVsm()) {
-                    // TODO: support 16-bit VSM depth textures.
-                    shadowTextureDesc.format = TextureFormat::RG32F;
+                    shadowTextureDesc.format = TextureFormat::RG16F;
                 }
 
                 data.shadows = builder.createTexture("Shadow Texture", shadowTextureDesc);

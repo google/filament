@@ -25,7 +25,7 @@
 
 #include <private/backend/BackendUtils.h>
 
-#include <cctype>
+#include <ctype.h>
 
 namespace filament {
 
@@ -77,7 +77,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
             if (UTILS_UNLIKELY(status != GL_TRUE)) {
-                logCompilationError(slog.e, shaderId, source);
+                logCompilationError(slog.e, type,
+                        programBuilder.getName().c_str_safe(), shaderId, source);
                 glDeleteShader(shaderId);
                 return;
             }
@@ -101,13 +102,11 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         glGetProgramiv(program, GL_LINK_STATUS, &status);
         if (UTILS_UNLIKELY(status != GL_TRUE)) {
-            char error[512];
-            glGetProgramInfoLog(program, sizeof(error), nullptr, error);
-
-            slog.e << "LINKING: " << error << io::endl;
+            logProgramLinkError(slog.e, programBuilder.getName().c_str_safe(), program);
             glDeleteProgram(program);
             return;
         }
+
         this->gl.program = program;
 
         // Associate each UniformBlock in the program to a known binding.
@@ -251,11 +250,23 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void UTILS_NOINLINE OpenGLProgram::logCompilationError(
-        io::ostream& out, GLuint shaderId, char const* source) noexcept {
-    char error[512];
+UTILS_NOINLINE
+void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shaderType,
+        const char* name, GLuint shaderId, char const* source) noexcept {
+
+    auto to_string = [](Program::Shader type) -> const char* {
+        switch (type) {
+            case Program::Shader::VERTEX:       return "vertex";
+            case Program::Shader::FRAGMENT:     return "fragment";
+        }
+    };
+
+    char error[1024];
     glGetShaderInfoLog(shaderId, sizeof(error), nullptr, error);
-    out << "COMPILE ERROR: " << io::endl << error << io::endl;
+
+    out << "Compilation error in " << to_string(shaderType) << " shader \"" << name << "\":\n"
+        << "\"" << error << "\""
+        << io::endl;
 
     size_t lc = 1;
     char* shader = strdup(source);
@@ -271,6 +282,16 @@ void UTILS_NOINLINE OpenGLProgram::logCompilationError(
     }
 
     free(shader);
+}
+
+UTILS_NOINLINE
+void OpenGLProgram::logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
+    char error[1024];
+    glGetProgramInfoLog(program, sizeof(error), nullptr, error);
+
+    out << "Link error in \"" << name << "\":\n"
+        << "\"" << error << "\""
+        << io::endl;
 }
 
 } // namespace filament

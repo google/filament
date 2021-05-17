@@ -3,7 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release (main branch)
+## v1.9.26 (currently main branch)
+
+## v1.9.25
+
+- NEW API: Screen-space lens flare effect.
+- engine: Fix several memory leaks in the GL backend.
+- Vulkan: General bug fixes and improvements.
+- Vulkan: Fix some problems seen on Mali devices.
+- ios: Fix VSM shadows not working.
+- webgl: Fix black screen seen with some samples.
 
 ## v1.9.24
 

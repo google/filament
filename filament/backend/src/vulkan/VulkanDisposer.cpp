@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "vulkan/VulkanDisposer.h"
+#include "VulkanDisposer.h"
+#include "VulkanConstants.h"
 
 #include <utils/debug.h>
 #include <utils/Log.h>
@@ -24,7 +25,7 @@ namespace backend {
 
 // Always wait at least 3 frames after a DriverAPI-level resource has been destroyed for safe
 // destruction, due to potential usage by outstanding command buffers and triple buffering.
-static constexpr uint32_t FRAMES_BEFORE_EVICTION = 3;
+static constexpr uint32_t FRAMES_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 void VulkanDisposer::createDisposable(Key resource, std::function<void()> destructor) noexcept {
     mDisposables[resource].destructor = destructor;
