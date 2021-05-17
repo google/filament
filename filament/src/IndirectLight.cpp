@@ -24,6 +24,9 @@
 #include <backend/DriverEnums.h>
 #include <filament/IndirectLight.h>
 
+#include <image/KtxBundle.h>
+#include <image/KtxUtility.h>
+
 #include <utils/Panic.h>
 
 #include <math/scalar.h>
@@ -142,6 +145,20 @@ IndirectLight::Builder& IndirectLight::Builder::intensity(float envIntensity) no
 
 IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) noexcept {
     mImpl->mRotation = rotation;
+    return *this;
+}
+
+IndirectLight::Builder& IndirectLight::Builder::ktx(Engine& engine, const void* data, size_t size) noexcept {
+    const auto bundle = new image::KtxBundle((const uint8_t *)data, size);
+
+    mImpl->mReflectionsMap = image::ktx::createTexture(&engine, bundle, false);
+
+    math::float3 bands[9] = {};
+    bundle->getSphericalHarmonics(bands);
+    this->irradiance(3, bands);
+
+    delete bundle;
+
     return *this;
 }
 
@@ -271,6 +288,10 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
+
+math::float3 const* IndirectLight::getSH() const noexcept {
+    return upcast(this)->getSH();
+}
 
 void IndirectLight::setIntensity(float intensity) noexcept {
     upcast(this)->setIntensity(intensity);

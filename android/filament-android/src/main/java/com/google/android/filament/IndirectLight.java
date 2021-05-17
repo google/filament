@@ -21,6 +21,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
+import java.nio.Buffer;
+
 /**
  * <code>IndirectLight</code> is used to simulate environment lighting, a form of global illumination.
  *
@@ -313,6 +315,19 @@ public class IndirectLight {
         }
 
         /**
+         * Specifies irradiance and reflections cubemap from KTX data.
+         *
+         * @param engine  The {@link Engine} to associate loaded <code>Texture</code> with.
+         * @param buffer  buffer containing KTX data
+         * @param size    size of the KTX data in bytes
+         */
+        @NonNull
+        public Builder ktx(@NonNull Engine engine, @NonNull Buffer buffer, @IntRange(from = 0) int size) {
+            nKtx(mNativeBuilder, engine.getNativeObject(), buffer, size);
+            return this;
+        }
+
+        /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
          * @param engine The {@link Engine} to associate this <code>IndirectLight</code> with.
@@ -343,6 +358,16 @@ public class IndirectLight {
                 }
             }
         }
+    }
+
+    /**
+     * Returns the irradiance coefs.
+     */
+    @NonNull @Size(min = 9)
+    public float[] getSH() {
+        float[] sh = new float[9 * 3];
+        nGetSH(getNativeObject(), sh);
+        return sh;
     }
 
     /**
@@ -512,7 +537,9 @@ public class IndirectLight {
     private static native void nIrradianceAsTexture(long nativeBuilder, long nativeTexture);
     private static native void nIntensity(long nativeBuilder, float envIntensity);
     private static native void nRotation(long nativeBuilder, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8) ;
+    private static native void nKtx(long nativeBuilder, long nativeEngine, @NonNull Buffer buffer, int size);
 
+    private static native void nGetSH(long nativeIndirectLight, float[] outSH);
     private static native void nSetIntensity(long nativeIndirectLight, float intensity);
     private static native float nGetIntensity(long nativeIndirectLight);
     private static native void nSetRotation(long nativeIndirectLight, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8);

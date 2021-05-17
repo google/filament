@@ -23,6 +23,10 @@ add_library(ibl-lite STATIC IMPORTED)
 set_target_properties(ibl-lite PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl-lite.a)
 
+add_library(image STATIC IMPORTED)
+set_target_properties(image PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
+
 add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
@@ -99,6 +103,7 @@ target_link_libraries(filament-jni
     PRIVATE filaflat
     PRIVATE filabridge
     PRIVATE ibl-lite
+    PRIVATE image
     PRIVATE log
     PRIVATE GLESv3
     PRIVATE EGL

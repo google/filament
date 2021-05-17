@@ -236,6 +236,14 @@ public:
         Builder& rotation(math::mat3f const& rotation) noexcept;
 
         /**
+         * Specifies irradiance and reflections cubemap from KTX data.
+         *
+         * @param data Pointer to the KTX data.
+         * @param size Size of the KTX data pointed to by "data" in bytes.
+         */
+        Builder& ktx(Engine& engine, const void* data, size_t size) noexcept;
+
+        /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this IndirectLight with.
@@ -252,6 +260,11 @@ public:
     private:
         friend class FIndirectLight;
     };
+
+    /**
+     * Returns the irradiance coefs.
+     */
+    math::float3 const* getSH() const noexcept;
 
     /**
      * Sets the environment's intensity.
