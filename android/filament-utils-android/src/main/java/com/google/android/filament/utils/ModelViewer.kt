@@ -16,6 +16,7 @@
 
 package com.google.android.filament.utils
 
+import android.content.Context
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
@@ -26,6 +27,8 @@ import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
 import java.nio.Buffer
+import java.nio.ByteBuffer
+import java.nio.channels.Channels
 
 private const val kNearPlane = 0.05     // 5 cm
 private const val kFarPlane = 1000.0    // 1 km
@@ -58,7 +61,7 @@ private const val kSensitivity = 100f
  *
  * See `sample-gltf-viewer` for a usage example.
  */
-class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
+class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener, MaterialProvider.ExternalSource {
     var asset: FilamentAsset? = null
         private set
 
@@ -85,6 +88,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     @Entity val light: Int
 
     private val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
+    private lateinit var context: Context
     private lateinit var displayHelper: DisplayHelper
     private lateinit var cameraManipulator: Manipulator
     private lateinit var gestureDetector: GestureDetector
@@ -94,6 +98,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     private var fetchResourcesJob: Job? = null
 
     private var swapChain: SwapChain? = null
+    private var materialProvider: MaterialProvider
     private var assetLoader: AssetLoader
     private var resourceLoader: ResourceLoader
     private val readyRenderables = IntArray(128) // add up to 128 entities at a time
@@ -110,7 +115,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.scene = scene
         view.camera = camera
 
-        assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
+        materialProvider = MaterialProvider(engine, MaterialProvider.MaterialSource.EXTERNAL, this)
+        assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
 
         // Always add a direct light source since it is required for shadowing.
@@ -130,6 +136,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     constructor(surfaceView: SurfaceView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+        context = surfaceView.context
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(surfaceView.width, surfaceView.height)
@@ -145,6 +152,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     @Suppress("unused")
     constructor(textureView: TextureView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+        context = textureView.context
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(textureView.width, textureView.height)
@@ -192,6 +200,112 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
             animator = asset.animator
             asset.releaseSourceData()
         }
+    }
+
+    override fun resolveMaterial(materialConfig: MaterialProvider.MaterialConfig, uvMap: MaterialProvider.UvMap, name: String): Material {
+        val shadingModel = when {
+            materialConfig.unlit -> "unlit"
+            materialConfig.useSpecularGlossiness -> "specularGlossiness"
+            else -> "lit"
+        }
+        val blending = when (materialConfig.alphaMode) {
+            MaterialProvider.AlphaMode.BLEND -> "fade"
+            MaterialProvider.AlphaMode.MASK -> "masked"
+            MaterialProvider.AlphaMode.OPAQUE -> "opaque"
+            else -> "opaque"
+        }
+        val resource = if (materialConfig.hasSheen) {
+            "materials/${shadingModel}_sheen.filamat"
+        } else if (materialConfig.hasTransmissionTexture) {
+            "materials/${shadingModel}_transmission.filamat"
+        } else {
+            "materials/${shadingModel}_${blending}.filamat"
+        }
+
+        return context.assets.openFd(resource).let { fd ->
+            val input = fd.createInputStream()
+            val dst = ByteBuffer.allocate(fd.length.toInt())
+
+            val src = Channels.newChannel(input)
+            src.read(dst)
+            src.close()
+
+            dst.apply { rewind() }
+        }.let {
+            val material = Material.Builder()
+                    .payload(it, it.remaining())
+                    .build(engine)
+            material
+        }
+    }
+
+    override fun instantiateMaterial(material: Material, materialConfig: MaterialProvider.MaterialConfig, uvMap: MaterialProvider.UvMap): MaterialInstance {
+        val materialInstance = material.createInstance()
+
+        val getUvIndex = { srcIndex: Int, hasTexture: Boolean ->
+            if (!hasTexture) {
+                -1
+            } else {
+                uvMap.getChannel(srcIndex).nativeValue - 1
+            }
+        }
+
+        materialInstance.setParameter("baseColorIndex", getUvIndex(
+                materialConfig.baseColorUV, materialConfig.hasBaseColorTexture
+        ).toInt())
+        materialInstance.setParameter("normalIndex", getUvIndex(
+                materialConfig.normalUV, materialConfig.hasNormalTexture
+        ).toInt())
+        materialInstance.setParameter("metallicRoughnessIndex", getUvIndex(
+                materialConfig.metallicRoughnessUV, materialConfig.hasMetallicRoughnessTexture
+        ).toInt())
+        materialInstance.setParameter("aoIndex", getUvIndex(
+                materialConfig.aoUV, materialConfig.hasOcclusionTexture
+        ).toInt())
+        materialInstance.setParameter("emissiveIndex", getUvIndex(
+                materialConfig.emissiveUV, materialConfig.hasEmissiveTexture
+        ).toInt())
+        materialInstance.setParameter("clearCoatIndex", getUvIndex(
+                materialConfig.clearCoatUV, materialConfig.hasClearCoatTexture
+        ).toInt())
+        materialInstance.setParameter("clearCoatRoughnessIndex", getUvIndex(
+                materialConfig.clearCoatRoughnessUV, materialConfig.hasClearCoatRoughnessTexture
+        ).toInt())
+        materialInstance.setParameter("clearCoatNormalIndex", getUvIndex(
+                materialConfig.clearCoatNormalUV, materialConfig.hasClearCoatNormalTexture
+        ).toInt())
+        materialInstance.setParameter("transmissionIndex", getUvIndex(
+                materialConfig.transmissionUV, materialConfig.hasTransmissionTexture
+        ).toInt())
+        materialInstance.setParameter("sheenColorIndex", getUvIndex(
+                materialConfig.sheenColorUV, materialConfig.hasSheenColorTexture
+        ).toInt())
+        materialInstance.setParameter("sheenRoughnessIndex", getUvIndex(
+                materialConfig.sheenRoughnessUV, materialConfig.hasSheenRoughnessTexture
+        ).toInt())
+
+        materialInstance.setDoubleSided(materialConfig.doubleSided)
+        materialInstance.setCullingMode(
+                if (materialConfig.doubleSided)
+                    Material.CullingMode.NONE
+                else
+                    Material.CullingMode.BACK
+        )
+
+        val identity = floatArrayOf(
+                1.0f, 0.0f, 0.0f,
+                0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 1.0f
+        )
+        listOf(
+                "baseColorUvMatrix", "metallicRoughnessUvMatrix", "normalUvMatrix",
+                "occlusionUvMatrix", "emissiveUvMatrix", "clearCoatUvMatrix",
+                "clearCoatRoughnessUvMatrix", "clearCoatNormalUvMatrix", "transmissionUvMatrix",
+                "sheenColorUvMatrix", "sheenRoughnessUvMatrix").forEach {
+            materialInstance.setParameter(it, MaterialInstance.FloatElement.FLOAT3, identity, 0, 3)
+        }
+
+        return materialInstance
     }
 
     /**

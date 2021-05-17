@@ -8,6 +8,14 @@ filamentTools {
     cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/default_env"
     iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/lightroom_14b.hdr")
     iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+}
+
+task copyMaterials(type: Copy) {
+    from "../../../out/cmake-release/libs/gltfio"
+    include "*.mat"
+    into "src/main/materials"
 }
 
 task copyMesh(type: Copy) {
@@ -15,6 +23,7 @@ task copyMesh(type: Copy) {
     into "src/main/assets/models"
 }
 
+preBuild.dependsOn copyMaterials
 preBuild.dependsOn copyMesh
 
 clean.doFirst {
@@ -28,6 +37,10 @@ android {
         minSdkVersion 19
         targetSdkVersion versions.targetSdk
         missingDimensionStrategy 'functionality', 'full'
+    }
+
+    aaptOptions {
+        noCompress 'filamat', 'ktx'
     }
 }
 

@@ -738,7 +738,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     // requirements. The color data should be a sequence of normalized UBYTE4, so dummy UVs are
     // USHORT2 to make the sizes match.
     bool needsDummyData = false;
-    if (mMaterials->getSource() == LOAD_UBERSHADERS) {
+    if (mMaterials->getSource() == LOAD_UBERSHADERS || mMaterials->getSource() == EXTERNAL) {
         if (!hasUv0) {
             needsDummyData = true;
             vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);

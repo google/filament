@@ -35,6 +35,7 @@ set(SRCS
         src/TangentsJob.h
         src/TangentsJob.cpp
         src/UbershaderLoader.cpp
+        src/ExternalMaterialLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/math.h

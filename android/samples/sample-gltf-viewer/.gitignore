@@ -8,5 +8,6 @@
 .DS_Store
 /build
 /captures
+/src/main/materials
 /src/main/assets
 .externalNativeBuild
