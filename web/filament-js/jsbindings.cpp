@@ -1742,6 +1742,12 @@ class_<Animator>("gltfio$Animator")
     .function("getAnimationDuration", &Animator::getAnimationDuration)
     .function("getAnimationName", EMBIND_LAMBDA(std::string, (Animator* self, size_t index), {
         return std::string(self->getAnimationName(index));
+    }), allow_raw_pointers())
+    .function("getChannelsCount", EMBIND_LAMBDA(size_t, (Animator* self, size_t index), {
+        return self->getChannelsCount(index);
+    }), allow_raw_pointers())
+    .function("getTargets", EMBIND_LAMBDA(EntityVector, (Animator* self, size_t index), {
+        return self->getTargets(index);
     }), allow_raw_pointers());
 
 class_<FilamentAsset>("gltfio$FilamentAsset")

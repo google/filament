@@ -632,6 +632,8 @@ export class gltfio$Animator {
     public getAnimationCount(): number;
     public getAnimationDuration(index: number): number;
     public getAnimationName(index: number): string;
+    public getChannelsCount(index: number): number;
+    public getTargets(index: number): Vector<Entity>;
 }
 
 export class SurfaceOrientation$Builder {

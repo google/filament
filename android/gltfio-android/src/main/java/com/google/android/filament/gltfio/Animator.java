@@ -19,6 +19,9 @@ package com.google.android.filament.gltfio;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.google.android.filament.Entity;
+
 import java.nio.Buffer;
 
 /**
@@ -96,6 +99,24 @@ public class Animator {
         return nGetAnimationName(getNativeObject(), animationIndex);
     }
 
+    /**
+     * Returns the number of channels of the specified <code>animation</code>.
+     */
+    public int getChannelsCount(@IntRange(from = 0) int animationIndex) {
+        return nGetChannelsCount(mNativeObject, animationIndex);
+    }
+
+    /**
+     * Gets the list of animated entities.
+     *
+     * <p>All of these have a transform component.</p>
+     */
+    public @Entity int[] getTargets(@IntRange(from = 0) int animationIndex) {
+        int[] result = new int[nGetChannelsCount(mNativeObject, animationIndex)];
+        nGetTargets(mNativeObject, animationIndex, result);
+        return result;
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Using Animator on destroyed asset");
@@ -112,4 +133,7 @@ public class Animator {
     private static native int nGetAnimationCount(long nativeAnimator);
     private static native float nGetAnimationDuration(long nativeAnimator, int index);
     private static native String nGetAnimationName(long nativeAnimator, int index);
+
+    private static native int nGetChannelsCount(long nativeAnimator, int index);
+    private static native void nGetTargets(long nativeAnimator, int index, int[] result);
 }

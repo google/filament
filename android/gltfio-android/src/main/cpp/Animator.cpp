@@ -57,3 +57,22 @@ Java_com_google_android_filament_gltfio_Animator_nGetAnimationName(JNIEnv* env, 
     return val ? env->NewStringUTF(val) : nullptr;
 
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_Animator_nGetChannelsCount(JNIEnv*, jclass,
+        jlong nativeAnimator, jint index) {
+    Animator* animator = (Animator*) nativeAnimator;
+    return animator->getChannelsCount(index);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_Animator_nGetTargets(JNIEnv* env, jclass,
+       jlong nativeAnimator, jint index, jintArray result) {
+    Animator* animator = (Animator*) nativeAnimator;
+    jsize available = env->GetArrayLength(result);
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    std::vector<Entity> targets = animator->getTargets(index);
+    std::copy_n(targets.data(),
+            std::min(available, (jsize) animator->getChannelsCount(index)), entities);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+}

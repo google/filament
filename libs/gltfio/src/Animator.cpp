@@ -470,4 +470,18 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     transformManager->setTransform(node, xform);
 }
 
+size_t Animator::getChannelsCount(size_t animationIndex) const {
+    return mImpl->animations[animationIndex].channels.size();
+}
+
+std::vector<utils::Entity> Animator::getTargets(size_t animationIndex) const noexcept {
+    const Animation& anim = mImpl->animations[animationIndex];
+    std::vector<utils::Entity> result;
+    result.reserve(anim.channels.size());
+    for (const auto& channel : anim.channels) {
+        result.push_back(channel.targetEntity);
+    }
+    return result;
+}
+
 } // namespace gltfio

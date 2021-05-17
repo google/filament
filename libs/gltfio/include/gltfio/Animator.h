@@ -20,6 +20,8 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
 
+#include <vector>
+
 namespace gltfio {
 
 struct FFilamentAsset;
@@ -67,6 +69,15 @@ public:
      * empty string if none was specified.
      */
     const char* getAnimationName(size_t animationIndex) const;
+
+    /** Returns the number of channels of the specified \c animation. */
+    size_t getChannelsCount(size_t animationIndex) const;
+
+    /**
+     * Gets the list of targets of the specified \c animation. All of these have a
+     * Transform component. Can contain duplicates.
+     */
+    std::vector<utils::Entity> getTargets(size_t animationIndex) const noexcept;
 
     // For internal use only.
     void addInstance(FFilamentInstance* instance);
