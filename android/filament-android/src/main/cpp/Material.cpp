@@ -24,12 +24,17 @@ using namespace filament;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Material_nBuilderBuild(JNIEnv *env, jclass,
-        jlong nativeEngine, jobject buffer_, jint size) {
+        jlong nativeEngine, jobject buffer_, jint size, jstring name_) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, buffer_, size);
+    const char* name = name_ ? env->GetStringUTFChars(name_, 0) : nullptr;
     Material* material = Material::Builder()
             .package(buffer.getData(), buffer.getSize())
+            .name(name)
             .build(*engine);
+    if (name_) {
+        env->ReleaseStringUTFChars(name_, name);
+    }
     return (jlong) material;
 }
 

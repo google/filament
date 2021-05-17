@@ -106,6 +106,14 @@ public:
         Builder& package(const void* payload, size_t size);
 
         /**
+         * Specifies the material name. If material name is not specified, value defined in binary
+         * blob is used by default.
+         *
+         * @param name string containing material name
+         */
+        Builder& name(const char *name);
+
+        /**
          * Creates the Material object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Material with.

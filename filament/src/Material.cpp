@@ -76,6 +76,7 @@ static MaterialParser* createParser(Backend backend, const void* data, size_t si
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
+    const char* mName = nullptr;
     MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
 };
@@ -95,6 +96,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 Material::Builder& Material::Builder::package(const void* payload, size_t size) {
     mImpl->mPayload = payload;
     mImpl->mSize = size;
+    return *this;
+}
+
+Material::Builder& Material::Builder::name(const char* name) {
+    mImpl->mName = name;
     return *this;
 }
 
@@ -156,6 +162,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     UTILS_UNUSED_IN_RELEASE bool nameOk = parser->getName(&mName);
     assert_invariant(nameOk);
+
+    if (builder->mName) {
+        mName = CString(builder->mName);
+    }
 
     UTILS_UNUSED_IN_RELEASE bool sibOK = parser->getSIB(&mSamplerInterfaceBlock);
     assert_invariant(sibOK);

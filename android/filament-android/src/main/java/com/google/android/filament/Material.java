@@ -288,6 +288,7 @@ public class Material {
     public static class Builder {
         private Buffer mBuffer;
         private int mSize;
+        private String mName;
 
         /**
          * Specifies the material data. The material data is a binary blob produced by
@@ -304,6 +305,18 @@ public class Material {
         }
 
         /**
+         * Specifies the material name. If material name is not specified, value defined in binary
+         * blob is used by default.
+         *
+         * @param name    string containing material name
+         */
+        @NonNull
+        public Builder name(String name) {
+            mName = name;
+            return this;
+        }
+
+        /**
          * Creates and returns the Material object.
          *
          * @param engine reference to the Engine instance to associate this Material with
@@ -314,7 +327,7 @@ public class Material {
          */
         @NonNull
         public Material build(@NonNull Engine engine) {
-            long nativeMaterial = nBuilderBuild(engine.getNativeObject(), mBuffer, mSize);
+            long nativeMaterial = nBuilderBuild(engine.getNativeObject(), mBuffer, mSize, mName);
             if (nativeMaterial == 0) throw new IllegalStateException("Couldn't create Material");
             return new Material(nativeMaterial);
         }
@@ -884,7 +897,7 @@ public class Material {
         mNativeObject = 0;
     }
 
-    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size);
+    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size, String name);
     private static native long nCreateInstance(long nativeMaterial);
     private static native long nCreateInstanceWithName(long nativeMaterial, @NonNull String name);
     private static native long nGetDefaultInstance(long nativeMaterial);
