@@ -225,6 +225,12 @@ public:
      */
     const void* getSourceAsset() noexcept;
 
+    size_t getSkinCount() const noexcept;
+    size_t getJointsCount(int skinIndex)  const noexcept;
+    size_t getSkinTargetsCount(int skinIndex)  const noexcept;
+    const utils::Entity* getJoints(int skinIndex) const noexcept;
+    const utils::Entity* getSkinTargets(int skinIndex) const noexcept;
+
     /*! \cond PRIVATE */
 
     FilamentInstance** getAssetInstances() noexcept;

@@ -166,6 +166,45 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetMaterialInstances(JNIE
     env->ReleaseLongArrayElements(result, dst, 0);
 }
 
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetSkinCount(JNIEnv *env, jclass clazz, jlong native_asset) {
+    FilamentAsset* asset = (FilamentAsset*) native_asset;
+    return asset->getSkinCount();
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetJointsCount(JNIEnv *env, jclass clazz, jlong native_asset, jint skinIndex) {
+    FilamentAsset* asset = (FilamentAsset*) native_asset;
+    return asset->getJointsCount(skinIndex);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetSkinTargetsCount(JNIEnv *env, jclass clazz, jlong native_asset, jint skinIndex) {
+    FilamentAsset* asset = (FilamentAsset*) native_asset;
+    return asset->getSkinTargetsCount(skinIndex);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetJoints(JNIEnv* env, jclass,
+                                                                   jlong nativeAsset, jint skinIndex, jintArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    std::copy_n(asset->getJoints(skinIndex), asset->getJointsCount(skinIndex), entities);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_FilamentAsset_nGetSkinTargets(JNIEnv* env, jclass,
+                                                                 jlong nativeAsset, jint skinIndex, jintArray result) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    Entity* entities = (Entity*) env->GetIntArrayElements(result, nullptr);
+    std::copy_n(asset->getSkinTargets(skinIndex), asset->getSkinTargetsCount(skinIndex), entities);
+    env->ReleaseIntArrayElements(result, (jint*) entities, 0);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_FilamentAsset_nGetBoundingBox(JNIEnv* env, jclass,
         jlong nativeAsset, jfloatArray result) {

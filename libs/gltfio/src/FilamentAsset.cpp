@@ -286,4 +286,24 @@ size_t FilamentAsset::getAssetInstanceCount() const noexcept {
     return upcast(this)->getAssetInstanceCount();
 }
 
+size_t FilamentAsset::getSkinCount() const noexcept {
+    return upcast(this)->getSkinCount();
+}
+
+size_t FilamentAsset::getJointsCount(int skinIndex) const noexcept {
+    return upcast(this)->getJointsCount(skinIndex);
+}
+
+size_t FilamentAsset::getSkinTargetsCount(int skinIndex) const noexcept {
+    return upcast(this)->getSkinTargetsCount(skinIndex);
+}
+
+const Entity* FilamentAsset::getJoints(int skinIndex) const noexcept {
+    return upcast(this)->getJoints(skinIndex);
+}
+
+const Entity* FilamentAsset::getSkinTargets(int skinIndex) const noexcept {
+    return upcast(this)->getSkinTargets(skinIndex);
+}
+
 } // namespace gltfio

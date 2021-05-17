@@ -170,6 +170,30 @@ public class FilamentAsset {
         return result;
     }
 
+    public int getSkinCount() {
+        return nGetSkinCount(mNativeObject);
+    }
+
+    public @Entity int[] getJoints(int skinIndex) {
+        int jointsCount = nGetJointsCount(mNativeObject, skinIndex);
+        if (jointsCount == 0) {
+            return new int[0];
+        }
+        int[] result = new int[jointsCount];
+        nGetJoints(mNativeObject, skinIndex, result);
+        return result;
+    }
+
+    public @Entity int[] getSkinTargets(int skinIndex) {
+        int skinTargetCount = nGetSkinTargetsCount(mNativeObject, skinIndex);
+        if (skinTargetCount == 0) {
+            return new int[0];
+        }
+        int[] result = new int[skinTargetCount];
+        nGetSkinTargets(mNativeObject, skinIndex, result);
+        return result;
+    }
+
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
      */
@@ -250,6 +274,11 @@ public class FilamentAsset {
     private static native int nGetMaterialInstanceCount(long nativeAsset);
     private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
 
+    private static native int nGetSkinCount(long nativeAsset);
+    private static native int nGetJointsCount(long nativeAsset, int skinIndex);
+    private static native int nGetSkinTargetsCount(long nativeAsset, int skinIndex);
+    private static native void nGetJoints(long nativeAsset, int skinIndex, int[] result);
+    private static native void nGetSkinTargets(long nativeAsset, int skinIndex, int[] result);
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);

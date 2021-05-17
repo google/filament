@@ -1786,6 +1786,18 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
+    .function("getSkinCount", &FilamentAsset::getSkinCount)
+
+    .function("getJoints", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self, size_t skinIndex), {
+        const utils::Entity* ptr = self->getJoints(skinIndex);
+        return EntityVector(ptr, ptr + self->getJointsCount(skinIndex));
+    }), allow_raw_pointers())
+
+    .function("getSkinTargets", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self, size_t skinIndex), {
+        const utils::Entity* ptr = self->getSkinTargets(skinIndex);
+        return EntityVector(ptr, ptr + self->getSkinTargetsCount(skinIndex));
+    }), allow_raw_pointers())
+
     .function("_getAssetInstances", EMBIND_LAMBDA(std::vector<FilamentInstance*>,
             (FilamentAsset* self), {
         FilamentInstance** ptr = self->getAssetInstances();

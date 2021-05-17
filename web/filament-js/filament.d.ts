@@ -611,6 +611,9 @@ export class gltfio$FilamentAsset {
     public getRoot(): Entity;
     public popRenderable(): Entity;
     public getMaterialInstances(): Vector<MaterialInstance>;
+    public getSkinCount(): number;
+    public getJoints(skinIndex: number): Entity[];
+    public getSkinTargets(skinIndex: number): Entity[];
     public getResourceUris(): Vector<string>;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;

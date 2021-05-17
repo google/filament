@@ -210,6 +210,26 @@ struct FFilamentAsset : public FilamentAsset {
         return mInstances.size();
     }
 
+    size_t getSkinCount() const noexcept {
+        return mSkins.size();
+    }
+
+    size_t getJointsCount(int skinIndex) const noexcept {
+        return mSkins[skinIndex].joints.size();
+    }
+
+    size_t getSkinTargetsCount(int skinIndex) const noexcept {
+        return mSkins[skinIndex].targets.size();
+    }
+
+    const utils::Entity* getJoints(int skinIndex) const noexcept {
+        return mSkins[skinIndex].joints.empty() ? nullptr : mSkins[skinIndex].joints.data();
+    }
+
+    const utils::Entity* getSkinTargets(int skinIndex) const noexcept {
+        return mSkins[skinIndex].targets.empty() ? nullptr : mSkins[skinIndex].targets.data();
+    }
+
     void takeOwnership(filament::Texture* texture) {
         mTextures.push_back(texture);
     }
