@@ -180,6 +180,8 @@ struct FFilamentAsset : public FilamentAsset {
 
     const char* getName(utils::Entity entity) const noexcept;
 
+    const char* getExtras(utils::Entity entity) const noexcept;
+
     utils::Entity getFirstEntityByName(const char* name) noexcept;
 
     size_t getEntitiesByName(const char* name, utils::Entity* entities,
@@ -243,6 +245,7 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
+    tsl::robin_map<utils::Entity, std::shared_ptr<const char>> mEntityToExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};

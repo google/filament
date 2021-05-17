@@ -17,6 +17,7 @@
 package com.google.android.filament.gltfio;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.android.filament.Entity;
 
@@ -67,6 +68,20 @@ public class FilamentInstance {
     }
 
     /**
+     * Gets the <code>NameComponentManager</code> label for the given entity, if it exists.
+     */
+    public String getName(@Entity int entity) {
+        return nGetName(mNativeObject, entity);
+    }
+
+    /**
+     * Gets the application-specific extras loaded from asset for specific entity, if such exist.
+     */
+    public @Nullable String getExtras(@Entity int entity) {
+        return nGetExtras(mNativeObject, entity);
+    }
+
+    /**
      * Creates or retrieves the <code>Animator</code> for this instance.
      *
      * <p>When calling this for the first time, this must be called after
@@ -83,5 +98,7 @@ public class FilamentInstance {
     private static native int nGetRoot(long nativeAsset);
     private static native int nGetEntityCount(long nativeAsset);
     private static native void nGetEntities(long nativeAsset, int[] result);
+    private static native String nGetName(long nativeAsset, int entity);
+    private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
 }

@@ -41,6 +41,14 @@ Animator* FFilamentInstance::getAnimator() noexcept {
     return animator;
 }
 
+const char *FFilamentInstance::getName(utils::Entity entity) const noexcept {
+    return owner->getName(entity);
+}
+
+const char* FFilamentInstance::getExtras(utils::Entity entity) const noexcept {
+    return owner->getExtras(entity);
+}
+
 size_t FilamentInstance::getEntityCount() const noexcept {
     return upcast(this)->entities.size();
 }
@@ -52,6 +60,14 @@ const Entity* FilamentInstance::getEntities() const noexcept {
 
 Entity FilamentInstance::getRoot() const noexcept {
     return upcast(this)->root;
+}
+
+const char* FilamentInstance::getName(utils::Entity entity) const noexcept {
+    return upcast(this)->getName(entity);
+}
+
+const char* FilamentInstance::getExtras(utils::Entity entity) const noexcept {
+    return upcast(this)->getExtras(entity);
 }
 
 Animator* FilamentInstance::getAnimator() noexcept {

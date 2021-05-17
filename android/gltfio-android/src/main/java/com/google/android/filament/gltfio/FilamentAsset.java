@@ -187,6 +187,13 @@ public class FilamentAsset {
     }
 
     /**
+     * Gets the application-specific extras loaded from asset for specific entity, if such exist.
+     */
+    public @Nullable String getExtras(@Entity int entity) {
+        return nGetExtras(mNativeObject, entity);
+    }
+
+    /**
      * Creates or retrieves the <code>Animator</code> interface for this asset.
      *
      * <p>When calling this for the first time, this must be called after
@@ -252,6 +259,7 @@ public class FilamentAsset {
 
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
+    private static native String nGetExtras(long nativeAsset, int entity);
     private static native long nGetAnimator(long nativeAsset);
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);

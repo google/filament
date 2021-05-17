@@ -22,6 +22,7 @@
 namespace gltfio {
 
 class Animator;
+class FilamentAsset;
 
 /**
  * \class FilamentInstance FilamentInstance.h gltfio/FilamentInstance.h
@@ -34,6 +35,9 @@ class Animator;
  */
 class FilamentInstance {
 public:
+    /** Gets owner of this instance */
+    FilamentAsset* getOwner() const noexcept;
+
     /**
      * Gets the list of entities in this instance, one for each glTF node. All of these have a
      * Transform component. Some of the returned entities may also have a Renderable component or
@@ -48,6 +52,12 @@ public:
 
     /** Gets the transform root for the instance, which has no matching glTF node. */
     utils::Entity getRoot() const noexcept;
+
+    /** Gets the NameComponentManager label for the given entity, if it exists. */
+    const char* getName(utils::Entity) const noexcept;
+
+    /** Gets the application-specific extras loaded from asset for specific entity, if such exist. */
+    const char* getExtras(utils::Entity entity) const noexcept;
 
     /**
      * Lazily creates the animation engine for the instance, or returns it from the cache.

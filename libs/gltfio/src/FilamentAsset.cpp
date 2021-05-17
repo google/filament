@@ -119,6 +119,14 @@ const char* FFilamentAsset::getName(utils::Entity entity) const noexcept {
     return nameInstance ? mNameManager->getName(nameInstance) : nullptr;
 }
 
+const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
+    const auto itExtras = mEntityToExtras.find(entity);
+    if (itExtras == mEntityToExtras.cend()) {
+        return nullptr;
+    }
+    return itExtras->second.get();
+}
+
 Entity FFilamentAsset::getFirstEntityByName(const char* name) noexcept {
     const auto iter = mNameToEntity.find(name);
     if (iter == mNameToEntity.end()) {
@@ -242,6 +250,10 @@ filament::Aabb FilamentAsset::getBoundingBox() const noexcept {
 
 const char* FilamentAsset::getName(Entity entity) const noexcept {
     return upcast(this)->getName(entity);
+}
+
+const char* FilamentAsset::getExtras(Entity entity) const noexcept {
+    return upcast(this)->getExtras(entity);
 }
 
 Entity FilamentAsset::getFirstEntityByName(const char* name) noexcept {

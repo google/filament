@@ -48,6 +48,24 @@ Java_com_google_android_filament_gltfio_FilamentInstance_nGetEntities(JNIEnv* en
     env->ReleaseIntArrayElements(result, (jint*) entities, 0);
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetName(JNIEnv* env, jclass,
+        jlong nativeInstance, jint entityId) {
+    Entity entity = Entity::import(entityId);
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    const char* val = instance->getName(entity);
+    return val ? env->NewStringUTF(val) : nullptr;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_gltfio_FilamentInstance_nGetExtras(JNIEnv* env, jclass,
+        jlong nativeInstance, jint entityId) {
+    Entity entity = Entity::import(entityId);
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    const auto val = instance->getExtras(entity);
+    return val ? env->NewStringUTF(val) : nullptr;
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_FilamentInstance_nGetAnimator(JNIEnv* , jclass,
         jlong nativeInstance) {

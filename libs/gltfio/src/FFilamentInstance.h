@@ -55,6 +55,8 @@ struct FFilamentInstance : public FilamentInstance {
     SkinVector skins;
     NodeMap nodeMap;
     Animator* getAnimator() noexcept;
+    const char* getName(utils::Entity entity) const noexcept;
+    const char* getExtras(utils::Entity entity) const noexcept;
 };
 
 FILAMENT_UPCAST(FilamentInstance)

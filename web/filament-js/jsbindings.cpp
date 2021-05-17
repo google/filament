@@ -1804,6 +1804,9 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
     }), allow_raw_pointers())
+    .function("getExtras", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
+        return std::string(self->getExtras(entity));
+    }), allow_raw_pointers())
     .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
@@ -1816,6 +1819,12 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     }), allow_raw_pointers())
 
     .function("getRoot", &FilamentInstance::getRoot)
+    .function("getName", EMBIND_LAMBDA(std::string, (FilamentInstance* self, utils::Entity entity), {
+        return std::string(self->getName(entity));
+    }), allow_raw_pointers())
+    .function("getExtras", EMBIND_LAMBDA(std::string, (FilamentInstance* self, utils::Entity entity), {
+        return std::string(self->getExtras(entity));
+    }), allow_raw_pointers())
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
 // This little wrapper exists to get around RTTI requirements in embind.
