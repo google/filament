@@ -112,7 +112,9 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     engine->destroy(renderer);
     engine->destroy(scene);
     engine->destroy(filaView);
-    engine->destroy(camera);
+    Entity c = camera->getEntity();
+    engine->destroyCameraComponent(c);
+    EntityManager::get().destroy(c);
     engine->destroy(swapChain);
     engine->destroy(&engine);
 }
@@ -144,7 +146,8 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     swapChain = engine->createSwapChain((__bridge void*) self.layer);
     renderer = engine->createRenderer();
     scene = engine->createScene();
-    camera = engine->createCamera();
+    Entity c = EntityManager::get().create();
+    camera = engine->createCamera(c);
     renderer->setClearOptions({.clearColor={0.1, 0.125, 0.25, 1.0}, .clear = true});
 
     filaView = engine->createView();

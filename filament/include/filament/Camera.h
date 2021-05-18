@@ -252,9 +252,6 @@ public:
      */
     void setScaling(math::double2 scaling) noexcept;
 
-    [[deprecated]]
-    void setScaling(math::double4 const& scaling) noexcept;
-
     /**
      * Sets an additional matrix that shifts the projection matrix.
      * By default, this is an identity matrix.

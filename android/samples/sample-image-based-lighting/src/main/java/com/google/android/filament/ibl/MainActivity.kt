@@ -113,7 +113,7 @@ class MainActivity : Activity() {
         renderer = engine.createRenderer()
         scene = engine.createScene()
         view = engine.createView()
-        camera = engine.createCamera()
+        camera = engine.createCamera(engine.entityManager.create())
     }
 
     private fun setupView() {
@@ -249,12 +249,13 @@ class MainActivity : Activity() {
         engine.destroyMaterial(material)
         engine.destroyView(view)
         engine.destroyScene(scene)
-        engine.destroyCamera(camera)
+        engine.destroyCameraComponent(camera.entity)
 
         // Engine.destroyEntity() destroys Filament related resources only
         // (components), not the entity itself
         val entityManager = EntityManager.get()
         entityManager.destroy(light)
+        entityManager.destroy(camera.entity)
 
         // Destroying the engine will free up any resource you may have forgotten
         // to destroy, but it's recommended to do the cleanup properly

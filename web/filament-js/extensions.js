@@ -256,10 +256,9 @@ Filament.loadClassExtensions = function() {
 
     /// setDepthOfFieldOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// focusDistance, cocScale, maxApertureDiameter, enabled.
+    /// cocScale, maxApertureDiameter, enabled.
     Filament.View.prototype.setDepthOfFieldOptions = function(overrides) {
         const options = {
-            focusDistance: 10.0,
             cocScale: 1.0,
             maxApertureDiameter: 0.01,
             enabled: false

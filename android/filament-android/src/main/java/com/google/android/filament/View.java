@@ -483,14 +483,6 @@ public class View {
         }
 
         /**
-         * focus distance in world units
-         *
-         * @deprecated use {@link Camera#setFocusDistance(float)}
-         */
-        @Deprecated
-        public float focusDistance = 10.0f;
-
-        /**
          * circle of confusion scale factor (amount of blur)
          *
          * <p>cocScale can be used to set the depth of field blur independently from the camera
@@ -937,16 +929,6 @@ public class View {
      */
     public void setShadowingEnabled(boolean enabled) {
         nSetShadowingEnabled(getNativeObject(), enabled);
-    }
-
-    /**
-     * Enables or disables shadow mapping. Enabled by default.
-     *
-     * @deprecated Use {@link #setShadowingEnabled}
-     */
-    @Deprecated
-    public void setShadowsEnabled(boolean enabled) {
-        setShadowingEnabled(enabled);
     }
 
     /**
@@ -1491,7 +1473,7 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale,
+        nSetDepthOfFieldOptions(getNativeObject(), options.cocScale,
                 options.maxApertureDiameter, options.enabled, options.filter.ordinal(),
                 options.nativeResolution, options.foregroundRingCount, options.backgroundRingCount,
                 options.fastGatherRingCount, options.maxForegroundCOC, options.maxBackgroundCOC);
@@ -1554,7 +1536,7 @@ public class View {
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
+    private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
