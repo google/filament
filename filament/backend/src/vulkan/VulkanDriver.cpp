@@ -62,11 +62,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
-    // TODO: For now, we are silencing an error message relating to writes to the depth buffer
-    // and the fact that we are not using a read-only depth layout.
-    if (!strcmp(cbdata->pMessageIdName, "VUID-vkCmdDrawIndexed-None-04584")) {
-        return VK_FALSE;
-    }
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
@@ -936,8 +931,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     const VkExtent2D extent = rt->getExtent();
     assert_invariant(extent.width > 0 && extent.height > 0);
 
-    const VulkanAttachment depth = rt->getDepth();
-
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
@@ -945,6 +938,32 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     if (rt->isSwapChain() && surface.firstRenderPass) {
         discardStart |= TargetBufferFlags::COLOR;
         surface.firstRenderPass = false;
+    }
+
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+    VulkanAttachment depth = rt->getDepth();
+    VulkanTexture* depthFeedback = nullptr;
+
+    // If an uncleared depth buffer is attached but discarded at the end of the pass, then we should
+    // permit the shader to sample from it by transitioning the layout of all its subresources to a
+    // read-only layout. This is especially crucial for SSAO.
+    if (depth.texture && any(params.flags.discardEnd & TargetBufferFlags::DEPTH) &&
+            !any(params.flags.clear & TargetBufferFlags::DEPTH)) {
+        depthFeedback = depth.texture;
+        const VulkanLayoutTransition transition = {
+            .image = depth.image,
+            .oldLayout = depth.layout,
+            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+            .subresources = {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .levelCount = depth.texture->levels,
+                .layerCount = depth.texture->depth,
+            },
+            .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+        };
+        transitionImageLayout(cmdbuffer, transition);
+        depth.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     }
 
     // Create the VkRenderPass or fetch it from cache.
@@ -1047,7 +1066,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
     renderPassInfo.pClearValues = &clearValues[0];
 
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = mContext.viewport = {
@@ -1065,7 +1083,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     mContext.currentRenderPass = {
         .renderPass = renderPassInfo.renderPass,
         .subpassMask = params.subpassMask,
-        .currentSubpass = 0
+        .currentSubpass = 0,
+        .depthFeedback = depthFeedback
     };
 }
 
@@ -1074,6 +1093,23 @@ void VulkanDriver::endRenderPass(int) {
     vkCmdEndRenderPass(cmdbuffer);
 
     assert_invariant(mCurrentRenderTarget);
+
+    VulkanTexture* depthFeedback = mContext.currentRenderPass.depthFeedback;
+    if (depthFeedback) {
+        const VulkanLayoutTransition transition = {
+            .image = depthFeedback->getVkImage(),
+            .oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .subresources = {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .levelCount = depthFeedback->levels,
+                .layerCount = depthFeedback->depth,
+            },
+            .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            .dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+        };
+        transitionImageLayout(cmdbuffer, transition);
+    }
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
@@ -1717,6 +1753,10 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 .imageView = texture->getPrimaryImageView(),
                 .imageLayout = getTextureLayout(texture->usage)
             };
+
+            if (mContext.currentRenderPass.depthFeedback == texture) {
+                samplers[bindingPoint].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            }
         }
     }
 
