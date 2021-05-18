@@ -28,7 +28,7 @@ namespace utils {
 /**
  * An abstract representation of file and directory paths.
  */
-class UTILS_PUBLIC Path {
+class Path {
 public:
     /**
      * Creates a new empty path.
