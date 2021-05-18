@@ -56,6 +56,7 @@ struct VulkanRenderPass {
     VkRenderPass renderPass;
     uint32_t subpassMask;
     int currentSubpass;
+    VulkanTexture* depthFeedback;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
