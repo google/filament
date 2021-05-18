@@ -63,8 +63,6 @@ public:
     void setCustomProjection(math::mat4 const& projection,
             math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
-    void setScaling(math::double4 const& scaling) noexcept { mScaling = scaling.xy; }
-
     void setScaling(math::double2 scaling) noexcept { mScaling = scaling; }
 
     math::double4 getScaling() const noexcept { return math::double4{ mScaling, 1.0, 1.0 }; }
@@ -200,8 +198,7 @@ private:
 struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera,
-            const math::mat4f& worldOriginCamera, float focusDistance) noexcept;
+    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
 
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling

@@ -201,7 +201,6 @@ public:
             NONE = 0,
             MEDIAN = 2
         };
-        float focusDistance = 10.0f;        //!< @deprecated use Camera::setFocusDistance() instead
         float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
@@ -524,15 +523,6 @@ public:
      *      RenderableManager::Builder::castShadows(),
      */
     void setShadowingEnabled(bool enabled) noexcept;
-
-    /**
-     * Enables or disables shadow mapping. Enabled by default.
-     * @deprecated use setShadowingEnabled
-     */
-    UTILS_DEPRECATED
-    void setShadowsEnabled(bool enabled) noexcept {
-        setShadowingEnabled(enabled);
-    }
 
     /**
      * @return whether shadowing is enabled

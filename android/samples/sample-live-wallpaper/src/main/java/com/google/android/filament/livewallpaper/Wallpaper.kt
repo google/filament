@@ -101,7 +101,7 @@ class FilamentLiveWallpaper : WallpaperService() {
             renderer = engine.createRenderer()
             scene = engine.createScene()
             view = engine.createView()
-            camera = engine.createCamera()
+            camera = engine.createCamera(engine.entityManager.create())
         }
 
         private fun setupView() {
@@ -167,7 +167,8 @@ class FilamentLiveWallpaper : WallpaperService() {
             engine.destroyRenderer(renderer)
             engine.destroyView(view)
             engine.destroyScene(scene)
-            engine.destroyCamera(camera)
+            engine.destroyCameraComponent(camera.entity)
+            EntityManager.get().destroy(camera.entity)
 
             // Destroying the engine will free up any resource you may have forgotten
             // to destroy, but it's recommended to do the cleanup properly

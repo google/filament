@@ -29,7 +29,7 @@ import androidx.annotation.Size;
  *
  * In Filament, Camera is a component that must be associated with an entity. To do so,
  * use {@link Engine#createCamera(int)}. A Camera component is destroyed using
- * {@link Engine#destroyCamera(Camera)}.
+ * {@link Engine#destroyCameraComponent(int Entity)} ()}.
  *
  * <pre>
  *  Camera myCamera = engine.createCamera(myCameraEntity);
@@ -37,7 +37,7 @@ import androidx.annotation.Size;
  *  myCamera.lookAt(0, 1.60, 1,
  *                  0, 0, 0,
  *                  0, 1, 0);
- *  engine.destroyCamera(myCamera);
+ *  engine.destroyCameraComponent(myCameraEntity);
  * </pre>
  *
  *
@@ -121,6 +121,9 @@ import androidx.annotation.Size;
 public class Camera {
     private long mNativeObject;
 
+    @Entity
+    private final int mEntity;
+
     /**
      * Denotes the projection type used by this camera.
      * @see #setProjection
@@ -143,8 +146,9 @@ public class Camera {
         HORIZONTAL
     }
 
-    Camera(long nativeCamera) {
+    Camera(long nativeCamera, @Entity int entity) {
         mNativeObject = nativeCamera;
+        mEntity = entity;
     }
 
     /**
@@ -679,6 +683,15 @@ public class Camera {
      */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());
+    }
+
+    /**
+     * Gets the entity representing this Camera
+     * @return the entity this Camera component is attached to
+     */
+    @Entity
+    public int getEntity() {
+        return mEntity;
     }
 
     /**

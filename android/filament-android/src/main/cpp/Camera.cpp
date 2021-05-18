@@ -18,6 +18,8 @@
 
 #include <filament/Camera.h>
 
+#include <utils/Entity.h>
+
 #include <math/mat4.h>
 
 using namespace filament;

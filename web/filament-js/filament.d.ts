@@ -102,7 +102,6 @@ export interface View$AmbientOcclusionOptions {
 }
 
 export interface View$DepthOfFieldOptions {
-    focusDistance?: number;
     cocScale?: number;
     maxApertureDiameter?: number;
     enabled?: boolean;

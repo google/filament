@@ -357,7 +357,6 @@ public:
     }
 
     void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
-        options.focusDistance = std::max(0.0f, options.focusDistance);
         options.cocScale = std::max(0.0f, options.cocScale);
         options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
         mDepthOfFieldOptions = options;

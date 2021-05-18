@@ -388,7 +388,7 @@ public:
      * @param entity An entity.
      * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
      *         have a Camera component. The pointer is valid until destroyCameraComponent()
-     *         (or destroyCamera()) is called or the entity itself is destroyed.
+     *         is called or the entity itself is destroyed.
      */
     Camera* getCameraComponent(utils::Entity entity) noexcept;
 
@@ -471,26 +471,6 @@ public:
      *       the current command buffer is executed.
      */
     void* streamAlloc(size_t size, size_t alignment = alignof(double)) noexcept;
-
-
-    /**
-     * helper for creating an Entity and Camera component in one call
-     *
-     * @deprecated use createCamera(Entity) instead
-     *
-     * @return A camera component
-     */
-    UTILS_DEPRECATED
-    Camera* createCamera() noexcept;
-
-    /**
-     * helper for destroying the Camera component and its Entity in one call
-     *
-     * @param camera Camera component to destroy. The associated entity is also destroyed.
-     * @deprecated use destroyCameraComponent(Entity) instead
-     */
-    UTILS_DEPRECATED
-    void destroy(const Camera* camera);
 
     /**
       * Invokes one iteration of the render loop, used only on single-threaded platforms.
