@@ -107,6 +107,15 @@ void selectPhysicalDevice(VulkanContext& context) {
             if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
                 context.portabilitySubsetSupported = true;
             }
+            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+                context.maintenanceSupported[0] = true;
+            }
+            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
+                context.maintenanceSupported[1] = true;
+            }
+            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
+                context.maintenanceSupported[2] = true;
+            }
         }
         if (!supportsSwapchain) continue;
 
@@ -174,6 +183,15 @@ void createLogicalDevice(VulkanContext& context) {
     }
     if (context.portabilitySubsetSupported) {
         deviceExtensionNames.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+    }
+    if (context.maintenanceSupported[0]) {
+        deviceExtensionNames.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+    }
+    if (context.maintenanceSupported[1]) {
+        deviceExtensionNames.push_back(VK_KHR_MAINTENANCE2_EXTENSION_NAME);
+    }
+    if (context.maintenanceSupported[2]) {
+        deviceExtensionNames.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
     }
     deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     deviceQueueCreateInfo->queueFamilyIndex = context.graphicsQueueFamilyIndex;
