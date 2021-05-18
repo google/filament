@@ -74,6 +74,7 @@ struct VulkanContext {
     bool debugMarkersSupported;
     bool debugUtilsSupported;
     bool portabilitySubsetSupported;
+    bool maintenanceSupported[3];
     VulkanPipelineCache::RasterState rasterState;
     VulkanSurfaceContext* currentSurface;
     VulkanRenderPass currentRenderPass;
