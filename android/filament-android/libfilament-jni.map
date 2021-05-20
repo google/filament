@@ -13,6 +13,7 @@ LIBFILAMENT {
     *filament*IndirectLight*;
     *filament*LightManager*;
     *filament*Renderer*;
+    *filament*RenderTarget*;
     *filament*Scene*;
     *filament*Transform*;
     *filament*Material*;

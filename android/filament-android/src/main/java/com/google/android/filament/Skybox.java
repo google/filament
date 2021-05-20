@@ -51,11 +51,7 @@ import static com.google.android.filament.Colors.LinearColor;
 public class Skybox {
     private long mNativeObject;
 
-    public Skybox(Engine engine, long nativeSkybox) {
-        mNativeObject = nativeSkybox;
-    }
-
-    Skybox(long nativeSkybox) {
+    public Skybox(long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 

@@ -73,11 +73,7 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
 public class Texture {
     private long mNativeObject;
 
-    Texture(long nativeTexture) {
-        mNativeObject = nativeTexture;
-    }
-
-    public Texture(Engine engine, long nativeTexture) {
+    public Texture(long nativeTexture) {
         mNativeObject = nativeTexture;
     }
 
