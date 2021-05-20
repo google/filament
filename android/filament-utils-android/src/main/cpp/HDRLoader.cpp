@@ -19,16 +19,16 @@
 #include <filament/Engine.h>
 #include <filament/Texture.h>
 
+#include <imageio/HDRDecoder.h>
+
 #include <utils/Log.h>
+
+#include <sstream>
 
 #include "common/NioUtils.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_HDR
-
-#include <stb_image.h>
-
 using namespace filament;
+using namespace image;
 using namespace utils;
 
 using PixelBufferDescriptor = Texture::PixelBufferDescriptor;
@@ -40,20 +40,24 @@ jlong nCreateHDRTexture(JNIEnv* env, jclass,
     AutoBuffer buffer(env, javaBuffer, remaining);
     Texture::InternalFormat textureFormat = (Texture::InternalFormat) internalFormat;
 
-    auto dataPtr = (const stbi_uc*) buffer.getData();
+    auto dataPtr = (char const*) buffer.getData();
     const size_t byteCount = buffer.getSize();
 
-    int width, height, nchan;
+    // This creates a copy but it's the easest way to create a memory stream.
+    std::string ins(dataPtr, byteCount);
+    std::istringstream in(ins);
 
-    float* const floatsPtr = stbi_loadf_from_memory(dataPtr, byteCount, &width, &height, &nchan, 3);
-    if (floatsPtr == nullptr) {
-        slog.e << "Unable to decode HDR image: " << stbi_failure_reason() << io::endl;
+    LinearImage* image = new LinearImage(ImageDecoder::decode(in, "memory.hdr"));
+
+    // This can happen if a decoding error occurs.
+    if (image->getChannels() != 3) {
+        delete image;
         return 0;
     }
 
     Texture* texture = Texture::Builder()
-        .width(width)
-        .height(height)
+        .width(image->getWidth())
+        .height(image->getHeight())
         .levels(0xff)
         .sampler(Texture::Sampler::SAMPLER_2D)
         .format(textureFormat)
@@ -61,20 +65,21 @@ jlong nCreateHDRTexture(JNIEnv* env, jclass,
 
     if (texture == nullptr) {
         slog.e << "Unable to create Filament Texture from HDR image." << io::endl;
-        stbi_image_free(floatsPtr);
+        delete image;
         return 0;
     }
 
-    PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void*) {
-        stbi_image_free(buf);
+    PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* userdata) {
+        delete (LinearImage*) userdata;
     };
 
     PixelBufferDescriptor pbd(
-        (void const* ) floatsPtr,
-        width * height * 3 * sizeof(float),
+        (void const* ) image->getPixelRef(),
+        image->getWidth() * image->getHeight() * 3 * sizeof(float),
         PixelBufferDescriptor::PixelDataFormat::RGB,
         PixelBufferDescriptor::PixelDataType::FLOAT,
-        freeCallback);
+        freeCallback,
+        image);
 
     // Note that the setImage call could fail (e.g. due to an invalid combination of internal format
     // and PixelDataFormat) but there is no way of detecting such a failure.
