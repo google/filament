@@ -17,30 +17,43 @@
 #include <iosfwd>
 #include <math/mathfwd.h>
 
+#if __has_attribute(visibility)
+#    define MATHIO_PUBLIC __attribute__((visibility("default")))
+#else
+#    define MATHIO_PUBLIC
+#endif
+
 namespace filament {
 namespace math {
 
 namespace details { template<typename T> class TQuaternion; }
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TVec2<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TVec3<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TVec4<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TMat22<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TMat33<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TMat44<T>& v) noexcept;
 
 template<typename T>
+MATHIO_PUBLIC
 std::ostream& operator<<(std::ostream& out, const details::TQuaternion<T>& v) noexcept;
 
 }  // namespace math

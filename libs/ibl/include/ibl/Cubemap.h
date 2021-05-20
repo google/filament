@@ -40,7 +40,7 @@ namespace ibl {
  * @see CubemapUtils
  *
  */
-class Cubemap {
+class UTILS_PUBLIC Cubemap {
 public:
 
     /**

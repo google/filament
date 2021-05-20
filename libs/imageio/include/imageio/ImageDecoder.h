@@ -22,9 +22,11 @@
 
 #include <image/LinearImage.h>
 
+#include <utils/compiler.h>
+
 namespace image {
 
-class ImageDecoder {
+class UTILS_PUBLIC ImageDecoder {
 public:
     enum class ColorSpace {
         LINEAR,

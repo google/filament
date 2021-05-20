@@ -38,7 +38,7 @@ class Cubemap;
 /**
  * Computes spherical harmonics
  */
-class CubemapSH {
+class UTILS_PUBLIC CubemapSH {
 public:
     /**
      * Spherical Harmonics decomposition of the given cubemap

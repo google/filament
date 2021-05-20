@@ -20,6 +20,8 @@
 #include <ibl/Cubemap.h>
 #include <ibl/Image.h>
 
+#include <utils/compiler.h>
+
 #include <functional>
 
 namespace utils {
@@ -34,7 +36,7 @@ class CubemapIBL;
 /**
  * Create and convert Cubemap formats
  */
-class CubemapUtils {
+class UTILS_PUBLIC CubemapUtils {
 public:
     //! Creates a cubemap object and its backing Image
     static Cubemap create(Image& image, size_t dim, bool horizontal = true);

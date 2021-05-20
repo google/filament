@@ -19,6 +19,8 @@
 
 #include <math/vec3.h>
 
+#include <utils/compiler.h>
+
 #include <cstdint>
 #include <memory>
 
@@ -61,7 +63,7 @@ struct KtxMetadata;
  *
  *     https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
  */
-class KtxBundle {
+class UTILS_PUBLIC KtxBundle {
 public:
 
     ~KtxBundle();

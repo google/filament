@@ -19,6 +19,8 @@
 
 #include <viewer/Settings.h>
 
+#include <utils/compiler.h>
+
 namespace filament {
 namespace viewer {
 
@@ -48,7 +50,7 @@ namespace viewer {
  *   }
  * }]
  */
-class AutomationSpec {
+class UTILS_PUBLIC AutomationSpec {
 public:
 
     // Parses a JSON spec, then generates a list of Settings objects.

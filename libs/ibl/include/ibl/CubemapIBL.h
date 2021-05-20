@@ -19,7 +19,8 @@
 
 #include <math/vec3.h>
 
-#include<utils/Slice.h>
+#include <utils/Slice.h>
+#include <utils/compiler.h>
 
 #include <vector>
 
@@ -39,7 +40,7 @@ class Image;
 /**
  * Generates cubemaps for the IBL.
  */
-class CubemapIBL {
+class UTILS_PUBLIC CubemapIBL {
 public:
     typedef void (*Progress)(size_t, float, void*);
 
