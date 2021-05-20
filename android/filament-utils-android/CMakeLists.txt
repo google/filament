@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(filament-utils-android)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
+set(IMAGEIO_DIR ../../libs/imageio)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gltfio-android ${CMAKE_CURRENT_BINARY_DIR}/gltfio-android)
 
@@ -35,14 +36,21 @@ add_library(filament-utils-jni SHARED
         src/main/cpp/Manipulator.cpp
         src/main/cpp/RemoteServer.cpp
 
+        ${IMAGEIO_DIR}/include/imageio/ImageDecoder.h
+        ${IMAGEIO_DIR}/include/imageio/HDRDecoder.h
+        ${IMAGEIO_DIR}/src/HDRDecoder.cpp
+
         ../common/CallbackUtils.cpp
         ../common/NioUtils.cpp
 )
+
+target_compile_definitions(filament-utils-jni PUBLIC IMAGEIO_LITE=1)
 
 target_include_directories(filament-utils-jni PRIVATE
         ${FILAMENT_DIR}/include
         ..
         ../../third_party/stb
+        ${IMAGEIO_DIR}/include
         ../../libs/utils/include)
 
 set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS
