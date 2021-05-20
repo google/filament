@@ -84,11 +84,7 @@ import androidx.annotation.Size;
 public class IndirectLight {
     long mNativeObject;
 
-    public IndirectLight(Engine engine, long indirectLight) {
-        mNativeObject = indirectLight;
-    }
-
-    IndirectLight(long indirectLight) {
+    public IndirectLight(long indirectLight) {
         mNativeObject = indirectLight;
     }
 
