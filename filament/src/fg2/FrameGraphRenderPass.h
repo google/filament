@@ -59,6 +59,7 @@ struct FrameGraphRenderPass {
         uint8_t samples = 0; // # of samples (0 = unset, default)
         backend::TargetBufferFlags clearFlags{};
         backend::TargetBufferFlags discardStart{};
+        backend::TargetBufferFlags keepOverrideEnd{};
     };
 
     uint32_t id = 0;

@@ -201,7 +201,7 @@ private:
     DisplayInfo mDisplayInfo;
     FrameRateOptions mFrameRateOptions;
     ClearOptions mClearOptions;
-    backend::TargetBufferFlags mDiscardedFlags{};
+    backend::TargetBufferFlags mDiscardStartFlags{};
     backend::TargetBufferFlags mClearFlags{};
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
