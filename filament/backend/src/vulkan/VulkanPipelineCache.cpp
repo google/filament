@@ -633,7 +633,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     }
 
     // If there are no descriptors from any extinct pool that are still in use, we can safely
-    // destroy the extinct pools, which implicity frees their associated descriptor sets.
+    // destroy the extinct pools, which implicitly frees their associated descriptor sets.
     if (canPurgeExtinctPools) {
         for (VkDescriptorPool pool : mExtinctDescriptorPools) {
             vkDestroyDescriptorPool(mDevice, pool, VKALLOC);
