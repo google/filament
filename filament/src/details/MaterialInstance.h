@@ -37,9 +37,11 @@ class FMaterial;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-    FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name);
+    FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
+
+    static FMaterialInstance* duplicate(FMaterialInstance const* other, const char* name) noexcept;
 
     ~FMaterialInstance() noexcept;
 
@@ -142,7 +144,6 @@ private:
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
-    void initialize(FMaterial const* material);
 
     void commitSlow(FEngine::DriverApi& driver) const;
 
