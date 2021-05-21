@@ -47,9 +47,14 @@ static const char* DEFAULT_AUTOMATION = R"TXT([
         }
     },
     {
+        "name": "vieweropts",
+        "base": {
+            "viewer.cameraFocusDistance": 0.1
+        }
+    },
+    {
         "name": "viewopts",
         "base": {
-            "view.dof.focusDistance": 0.1
         },
         "permute": {
             "view.sampleCount": [1, 4],
