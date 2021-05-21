@@ -25,6 +25,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
@@ -91,6 +92,7 @@ public:
       filament::Texture* mTexture = nullptr;
       bool mHasSynced = false;
       ImGuiContext* mImGuiContext;
+      filament::TextureSampler mSampler;
 };
 
 } // namespace filagui
