@@ -364,3 +364,19 @@ Java_com_google_android_filament_MaterialInstance_nGetMaterial(JNIEnv* env, jcla
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     return (jlong) instance->getMaterial();
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_MaterialInstance_nDuplicate(JNIEnv* env, jclass clazz,
+        jlong otherNativeMaterialInstance, jstring name) {
+    MaterialInstance* other = (MaterialInstance*) otherNativeMaterialInstance;
+    const char *cstr = nullptr;
+    if (name != nullptr) {
+        cstr = env->GetStringUTFChars(name, nullptr);
+    }
+    MaterialInstance* mi = MaterialInstance::duplicate(other, cstr);
+    if (name != nullptr) {
+        env->ReleaseStringUTFChars(name, cstr);
+    }
+    return (jlong)mi;
+}

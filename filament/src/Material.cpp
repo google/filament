@@ -329,7 +329,7 @@ void FMaterial::terminate(FEngine& engine) {
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return mEngine.createMaterialInstance(this, name);
+    return FMaterialInstance::duplicate(&mDefaultInstance, name);
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {

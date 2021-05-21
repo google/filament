@@ -64,6 +64,22 @@ public class MaterialInstance {
         mNativeMaterial = nGetMaterial(mNativeObject);
     }
 
+    /**
+     * Creates a new {@link #MaterialInstance} using another {@link #MaterialInstance} as a template for initialization.
+     * The new {@link #MaterialInstance} is an instance of the same {@link Material} of the template instance and
+     * must be destroyed just like any other {@link #MaterialInstance}.
+     *
+     * @param other A {@link #MaterialInstance} to use as a template for initializing a new instance
+     * @param name  A name for the new {@link #MaterialInstance} or nullptr to use the template's name
+     * @return      A new {@link #MaterialInstance}
+     */
+    @NonNull
+    public static MaterialInstance duplicate(@NonNull MaterialInstance other, String name) {
+        long nativeInstance = nDuplicate(other.mNativeObject, name);
+        if (nativeInstance == 0) throw new IllegalStateException("Couldn't duplicate MaterialInstance");
+        return new MaterialInstance(other.mMaterial, nativeInstance);
+    }
+
     /** @return the {@link Material} associated with this instance */
     @NonNull
     public Material getMaterial() {
@@ -539,4 +555,6 @@ public class MaterialInstance {
 
     private static native String nGetName(long nativeMaterialInstance);
     private static native long nGetMaterial(long nativeMaterialInstance);
+
+    private static native long nDuplicate(long otherNativeMaterialInstance, String name);
 }

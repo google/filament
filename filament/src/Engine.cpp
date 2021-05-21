@@ -602,8 +602,8 @@ FRenderer* FEngine::createRenderer() noexcept {
 }
 
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
-        const char* name) noexcept {
-    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
+        const FMaterialInstance* other, const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name);
     if (p) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);

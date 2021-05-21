@@ -177,26 +177,45 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material, const char* name) :
-        mName(name) {
+FMaterialInstance::FMaterialInstance(FEngine& engine,
+        FMaterialInstance const* other, const char* name)
+        : mMaterial(other->mMaterial),
+          mPolygonOffset(other->mPolygonOffset),
+          mCulling(other->mCulling),
+          mColorWrite(other->mColorWrite),
+          mDepthWrite(other->mDepthWrite),
+          mDepthFunc(other->mDepthFunc),
+          mScissorRect(other->mScissorRect),
+          mName(name ? CString(name) : other->mName) {
+
     FEngine::DriverApi& driver = engine.getDriverApi();
+    FMaterial const* const material = other->getMaterial();
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
+        mUniforms.setUniforms(other->getUniformBuffer());
         mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerGroup());
+        mSamplers.setSamplers(other->getSamplerGroup());
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
-    initialize(material);
+    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
+            material->getId(), material->generateMaterialInstanceId());
 }
 
-// This version is used to initialize the default material instance
+FMaterialInstance* FMaterialInstance::duplicate(
+        FMaterialInstance const* other, const char* name) noexcept {
+    FMaterial const* const material = other->getMaterial();
+    FEngine& engine = material->getEngine();
+    return engine.createMaterialInstance(material, other, name);
+}
+
 void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
     FEngine::DriverApi& driver = engine.getDriverApi();
+
+    mMaterial = material;
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
@@ -208,27 +227,11 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
-    initialize(material);
-}
-
-FMaterialInstance::~FMaterialInstance() noexcept = default;
-
-void FMaterialInstance::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mUbHandle);
-    driver.destroySamplerGroup(mSbHandle);
-}
-
-UTILS_NOINLINE
-void FMaterialInstance::initialize(FMaterial const* material) {
-    mMaterial = material;
-
-    const RasterState& rasterState = mMaterial->getRasterState();
+    const RasterState& rasterState = material->getRasterState();
 
     // We inherit the resolved culling mode rather than the builder-set culling mode.
     // This preserves the property whereby double-sidedness automatically disables culling.
     mCulling = rasterState.culling;
-
     mColorWrite = rasterState.colorWrite;
     mDepthWrite = rasterState.depthWrite;
     mDepthFunc = rasterState.depthFunc;
@@ -248,6 +251,14 @@ void FMaterialInstance::initialize(FMaterial const* material) {
         setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
         setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
     }
+}
+
+FMaterialInstance::~FMaterialInstance() noexcept = default;
+
+void FMaterialInstance::terminate(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.destroyUniformBuffer(mUbHandle);
+    driver.destroySamplerGroup(mSbHandle);
 }
 
 void FMaterialInstance::commitSlow(DriverApi& driver) const {
@@ -338,7 +349,6 @@ const char* MaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-
 void MaterialInstance::setParameter(const char* name, Texture const* texture,
         TextureSampler const& sampler) noexcept {
     return upcast(this)->setParameterImpl(name, texture, sampler);
@@ -395,6 +405,10 @@ void MaterialInstance::setDepthWrite(bool enable) noexcept {
 
 void MaterialInstance::setDepthCulling(bool enable) noexcept {
     upcast(this)->setDepthCulling(enable);
+}
+
+MaterialInstance* MaterialInstance::duplicate(MaterialInstance const* other, const char* name) noexcept {
+    return FMaterialInstance::duplicate(upcast(other), name);
 }
 
 
