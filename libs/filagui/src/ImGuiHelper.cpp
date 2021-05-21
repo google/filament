@@ -65,8 +65,8 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // For proggy, switch to NEAREST for pixel-perfect text.
     if (fontPath.isEmpty() && !imGuiContext) {
-        TextureSampler sampler(MinFilter::NEAREST, MagFilter::NEAREST);
-        mMaterial->setDefaultParameter("albedo", mTexture, sampler);
+        mSampler = TextureSampler(MinFilter::NEAREST, MagFilter::NEAREST);
+        mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
     }
 
     utils::EntityManager& em = utils::EntityManager::get();
@@ -108,8 +108,8 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
             .build(*engine);
     mTexture->setImage(*engine, 0, std::move(pb));
 
-    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
-    mMaterial->setDefaultParameter("albedo", mTexture, sampler);
+    mSampler = TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR);
+    mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
 }
 
 ImGuiHelper::~ImGuiHelper() {
@@ -220,6 +220,8 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 if (pcmd.TextureId) {
                     TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
                     materialInstance->setParameter("albedo", (Texture const*)pcmd.TextureId, sampler);
+                } else {
+                    materialInstance->setParameter("albedo", mTexture, mSampler);
                 }
                 rbuilder
                         .geometry(primIndex, RenderableManager::PrimitiveType::TRIANGLES,
