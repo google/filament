@@ -63,7 +63,9 @@
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
-    #include "metal/PlatformMetal.h"
+namespace filament::backend {
+filament::backend::DefaultPlatform* createDefaultMetalPlatform();
+}
 #endif
 
 #include "noop/PlatformNoop.h"
@@ -107,7 +109,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::METAL) {
 #if defined(FILAMENT_SUPPORTS_METAL)
-        return new PlatformMetal();
+        return createDefaultMetalPlatform();
 #else
         return nullptr;
 #endif

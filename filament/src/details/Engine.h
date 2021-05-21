@@ -210,6 +210,10 @@ public:
         return mBackend;
     }
 
+    Platform* getPlatform() const noexcept {
+        return mPlatform;
+    }
+
     ResourceAllocator& getResourceAllocator() noexcept {
         assert_invariant(mResourceAllocator);
         return *mResourceAllocator;

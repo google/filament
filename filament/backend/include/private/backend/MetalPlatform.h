@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 #ifndef TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
 #define TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
 
-#include <stdint.h>
-
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+
+#import <Metal/Metal.h>
 
 namespace filament {
 namespace backend {
@@ -28,17 +28,25 @@ namespace backend {
 class MetalPlatform : public DefaultPlatform {
 public:
     ~MetalPlatform() override;
+
+    Driver* createDriver(void* sharedContext) noexcept override;
+    int getOSVersion() const noexcept override { return 0; }
+
+    virtual id<MTLDevice> createDevice() noexcept;
+    virtual id<MTLCommandQueue> createCommandQueue(id<MTLDevice> device) noexcept;
+
+    /**
+     * Obtain a MTLCommandBuffer enqueued on this Platform's MTLCommandQueue. The command buffer is
+     * guaranteed to execute before all subsequent command buffers.
+     */
+    id<MTLCommandBuffer> createAndEnqueueCommandBuffer() noexcept;
+
+private:
+    id<MTLCommandQueue> mCommandQueue = nil;
+
 };
 
 } // namespace backend
-
-class PlatformMetal final : public backend::MetalPlatform {
-public:
-    backend::Driver* createDriver(void* sharedContext) noexcept override;
-    int getOSVersion() const noexcept override { return 0; }
-    ~PlatformMetal() override;
-};
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_PLATFORM_METAL_H

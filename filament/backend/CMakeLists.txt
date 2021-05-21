@@ -115,7 +115,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
-            src/metal/PlatformMetal.mm
+            src/metal/MetalPlatform.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
