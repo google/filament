@@ -114,7 +114,7 @@ kernel void main0(constant UBO& v_41 [[buffer(0)]], uint3 gl_GlobalInvocationID 
 {
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 1];
     device main0_in* gl_in = &spvIn[min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1] - 1) * spvIndirectParams[0]];
-    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1]);
+    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1] - 1);
     float2 p0 = gl_in[0].vPatchPosBase.xy;
     float2 param = p0;
     if (!frustum_cull(param, v_41))

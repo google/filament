@@ -12,7 +12,7 @@ layout(location = 0) out int _entryPointOutput;
 
 int _231;
 
-mat4 SPIRV_Cross_workaround_load_row_major(mat4 wrap) { return wrap; }
+mat4 spvWorkaroundRowMajor(mat4 wrap) { return wrap; }
 
 void main()
 {
@@ -37,7 +37,7 @@ void main()
                     _223 = mat4(vec4(1.0, 0.0, 0.0, 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
                     break;
                 } while(false);
-                vec4 _170 = (_223 * SPIRV_Cross_workaround_load_row_major(_11.lightVP[_222])) * vec4(fragWorld, 1.0);
+                vec4 _170 = (_223 * spvWorkaroundRowMajor(_11.lightVP[_222])) * vec4(fragWorld, 1.0);
                 float _172 = _170.z;
                 float _179 = _170.x;
                 float _181 = _170.y;

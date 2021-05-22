@@ -43,13 +43,13 @@ float4 mod(float4 x, float4 y)
     return x - y * floor(x / y);
 }
 
-uint SPIRV_Cross_packFloat2x16(min16float2 value)
+uint spvPackFloat2x16(min16float2 value)
 {
     uint2 Packed = f32tof16(value);
     return Packed.x | (Packed.y << 16);
 }
 
-min16float2 SPIRV_Cross_unpackFloat2x16(uint value)
+min16float2 spvUnpackFloat2x16(uint value)
 {
     return min16float2(f16tof32(uint2(value & 0xffff, value >> 16)));
 }
@@ -128,9 +128,9 @@ void test_builtins()
     bool4 btmp = isnan(v4);
     btmp = isinf(v4);
     res = mad(v4, v4, v4);
-    uint pack0 = SPIRV_Cross_packFloat2x16(v4.xy);
-    uint pack1 = SPIRV_Cross_packFloat2x16(v4.zw);
-    res = min16float4(SPIRV_Cross_unpackFloat2x16(pack0), SPIRV_Cross_unpackFloat2x16(pack1));
+    uint pack0 = spvPackFloat2x16(v4.xy);
+    uint pack1 = spvPackFloat2x16(v4.zw);
+    res = min16float4(spvUnpackFloat2x16(pack0), spvUnpackFloat2x16(pack1));
     min16float t0 = length(v4);
     t0 = distance(v4, v4);
     t0 = dot(v4, v4);

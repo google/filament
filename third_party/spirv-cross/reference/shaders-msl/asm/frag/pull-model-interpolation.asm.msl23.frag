@@ -84,7 +84,7 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-void func(thread float4& FragColor, thread float2 baz, thread spvUnsafeArray<float2, 2> (&a), thread _13& s, thread main0_in& in)
+void func(thread float4& FragColor, thread float2 baz, thread spvUnsafeArray<float2, 2>& a, thread _13& s, thread main0_in& in)
 {
     float2 _237 = FragColor.xy + baz;
     FragColor = float4(_237.x, _237.y, FragColor.z, FragColor.w);

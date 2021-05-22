@@ -58,7 +58,7 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-void set_globals(thread spvUnsafeArray<float, 2> (&FragColors), thread float3& vColor, thread float2& FragColor2, thread float3& FragColor3)
+void set_globals(thread spvUnsafeArray<float, 2>& FragColors, thread float3& vColor, thread float2& FragColor2, thread float3& FragColor3)
 {
     FragColors[0] = vColor.x;
     FragColors[1] = vColor.y;

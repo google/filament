@@ -13,7 +13,7 @@ struct main0_out
 static inline __attribute__((always_inline))
 float sample_depth_from_function(thread const depth2d<float> uT, thread const sampler uS)
 {
-    return uT.sample_compare(uS, float3(0.5).xy, float3(0.5).z);
+    return uT.sample_compare(uS, float3(0.5).xy, 0.5);
 }
 
 static inline __attribute__((always_inline))
