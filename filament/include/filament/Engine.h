@@ -463,7 +463,7 @@ public:
      * Returns the Platform object that belongs to this Engine.
      *
      * When Engine::create is called with no platform argument, Filament creates an appropriate
-     * Platform subclass automatically. The specific subclass created depends on the Backend and
+     * Platform subclass automatically. The specific subclass created depends on the backend and
      * OS. For example, when the OpenGL backend is used, the Platform object will be a descendant of
      * OpenGLPlatform.
      *

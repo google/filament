@@ -32,12 +32,26 @@ public:
     Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 
+    /**
+     * Obtain the preferred Metal device object for the backend to use.
+     *
+     * On desktop platforms, there may be multiple GPUs suitable for rendering, and this method is
+     * free to decide which one to use. On mobile systems with a single GPU, implementations should
+     * simply return the result of MTLCreateSystemDefaultDevice();
+     */
     virtual id<MTLDevice> createDevice() noexcept;
+
+    /**
+     * Create a command submission queue on the Metal device object.
+     *
+     * @param device The device which was returned from createDevice()
+     */
     virtual id<MTLCommandQueue> createCommandQueue(id<MTLDevice> device) noexcept;
 
     /**
      * Obtain a MTLCommandBuffer enqueued on this Platform's MTLCommandQueue. The command buffer is
-     * guaranteed to execute before all subsequent command buffers.
+     * guaranteed to execute before all subsequent command buffers created either by Filament, or
+     * further calls to this method.
      */
     id<MTLCommandBuffer> createAndEnqueueCommandBuffer() noexcept;
 
