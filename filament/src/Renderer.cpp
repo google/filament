@@ -318,7 +318,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (currentRenderTarget) {
         // For custom RenderTarget, we look at each attachment flag and if they have their
-        // SAMPLEABLE usage bit set, we assume they most not be discarded after the render pass.
+        // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
         // "+1" to the cound for the DEPTH attachment (we don't have stencil for the public RenderTarget)
         for (size_t i = 0; i < RenderTarget::MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1; i++) {
             auto attachment = currentRenderTarget->getAttachment((RenderTarget::AttachmentPoint)i);
