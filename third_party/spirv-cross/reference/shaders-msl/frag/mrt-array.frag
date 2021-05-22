@@ -66,13 +66,13 @@ inline Tx mod(Tx x, Ty y)
 }
 
 static inline __attribute__((always_inline))
-void write_deeper_in_function(thread spvUnsafeArray<float4, 4> (&FragColor), thread float4& vA, thread float4& vB)
+void write_deeper_in_function(thread spvUnsafeArray<float4, 4>& FragColor, thread float4& vA, thread float4& vB)
 {
     FragColor[3] = vA * vB;
 }
 
 static inline __attribute__((always_inline))
-void write_in_function(thread spvUnsafeArray<float4, 4> (&FragColor), thread float4& vA, thread float4& vB)
+void write_in_function(thread spvUnsafeArray<float4, 4>& FragColor, thread float4& vA, thread float4& vB)
 {
     FragColor[2] = vA - vB;
     write_deeper_in_function(FragColor, vA, vB);

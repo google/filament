@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020 Hans-Kristian Arntzen
+ * Copyright 2019-2021 Hans-Kristian Arntzen
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+/*
+ * At your option, you may choose to accept this material under either:
+ *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
+ *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #ifndef SPIRV_CROSS_C_API_H
@@ -33,7 +40,7 @@ extern "C" {
 /* Bumped if ABI or API breaks backwards compatibility. */
 #define SPVC_C_API_VERSION_MAJOR 0
 /* Bumped if APIs or enumerations are added in a backwards compatible way. */
-#define SPVC_C_API_VERSION_MINOR 42
+#define SPVC_C_API_VERSION_MINOR 47
 /* Bumped if internal implementation details change. */
 #define SPVC_C_API_VERSION_PATCH 0
 
@@ -91,6 +98,13 @@ typedef struct spvc_reflected_resource
 	spvc_type_id type_id;
 	const char *name;
 } spvc_reflected_resource;
+
+typedef struct spvc_reflected_builtin_resource
+{
+	SpvBuiltIn builtin;
+	spvc_type_id value_type_id;
+	spvc_reflected_resource resource;
+} spvc_reflected_builtin_resource;
 
 /* See C++ API. */
 typedef struct spvc_entry_point
@@ -213,6 +227,14 @@ typedef enum spvc_resource_type
 	SPVC_RESOURCE_TYPE_RAY_QUERY = 13,
 	SPVC_RESOURCE_TYPE_INT_MAX = 0x7fffffff
 } spvc_resource_type;
+
+typedef enum spvc_builtin_resource_type
+{
+	SPVC_BUILTIN_RESOURCE_TYPE_UNKNOWN = 0,
+	SPVC_BUILTIN_RESOURCE_TYPE_STAGE_INPUT = 1,
+	SPVC_BUILTIN_RESOURCE_TYPE_STAGE_OUTPUT = 2,
+	SPVC_BUILTIN_RESOURCE_TYPE_INT_MAX = 0x7fffffff
+} spvc_builtin_resource_type;
 
 /* Maps to spirv_cross::SPIRType::BaseType. */
 typedef enum spvc_basetype
@@ -647,6 +669,12 @@ typedef enum spvc_compiler_option
 
 	SPVC_COMPILER_OPTION_HLSL_FLATTEN_MATRIX_VERTEX_INPUT_SEMANTICS = 71 | SPVC_COMPILER_OPTION_HLSL_BIT,
 
+	SPVC_COMPILER_OPTION_MSL_IOS_USE_SIMDGROUP_FUNCTIONS = 72 | SPVC_COMPILER_OPTION_MSL_BIT,
+	SPVC_COMPILER_OPTION_MSL_EMULATE_SUBGROUPS = 73 | SPVC_COMPILER_OPTION_MSL_BIT,
+	SPVC_COMPILER_OPTION_MSL_FIXED_SUBGROUP_SIZE = 74 | SPVC_COMPILER_OPTION_MSL_BIT,
+	SPVC_COMPILER_OPTION_MSL_FORCE_SAMPLE_RATE_SHADING = 75 | SPVC_COMPILER_OPTION_MSL_BIT,
+	SPVC_COMPILER_OPTION_MSL_IOS_SUPPORT_BASE_VERTEX_INSTANCE = 76 | SPVC_COMPILER_OPTION_MSL_BIT,
+
 	SPVC_COMPILER_OPTION_INT_MAX = 0x7fffffff
 } spvc_compiler_option;
 
@@ -708,6 +736,10 @@ SPVC_PUBLIC_API spvc_result spvc_compiler_require_extension(spvc_compiler compil
 SPVC_PUBLIC_API spvc_result spvc_compiler_flatten_buffer_block(spvc_compiler compiler, spvc_variable_id id);
 
 SPVC_PUBLIC_API spvc_bool spvc_compiler_variable_is_depth_or_compare(spvc_compiler compiler, spvc_variable_id id);
+
+SPVC_PUBLIC_API spvc_result spvc_compiler_mask_stage_output_by_location(spvc_compiler compiler,
+                                                                        unsigned location, unsigned component);
+SPVC_PUBLIC_API spvc_result spvc_compiler_mask_stage_output_by_builtin(spvc_compiler compiler, SpvBuiltIn builtin);
 
 /*
  * HLSL specifics.
@@ -792,6 +824,11 @@ SPVC_PUBLIC_API spvc_result spvc_resources_get_resource_list_for_type(spvc_resou
                                                                       const spvc_reflected_resource **resource_list,
                                                                       size_t *resource_size);
 
+SPVC_PUBLIC_API spvc_result spvc_resources_get_builtin_resource_list_for_type(
+		spvc_resources resources, spvc_builtin_resource_type type,
+		const spvc_reflected_builtin_resource **resource_list,
+		size_t *resource_size);
+
 /*
  * Decorations.
  * Maps to C++ API.
@@ -848,6 +885,8 @@ SPVC_PUBLIC_API unsigned spvc_compiler_get_execution_mode_argument(spvc_compiler
 SPVC_PUBLIC_API unsigned spvc_compiler_get_execution_mode_argument_by_index(spvc_compiler compiler,
                                                                             SpvExecutionMode mode, unsigned index);
 SPVC_PUBLIC_API SpvExecutionModel spvc_compiler_get_execution_model(spvc_compiler compiler);
+SPVC_PUBLIC_API void spvc_compiler_update_active_builtins(spvc_compiler compiler);
+SPVC_PUBLIC_API spvc_bool spvc_compiler_has_active_builtin(spvc_compiler compiler, SpvBuiltIn builtin, SpvStorageClass storage);
 
 /*
  * Type query interface.

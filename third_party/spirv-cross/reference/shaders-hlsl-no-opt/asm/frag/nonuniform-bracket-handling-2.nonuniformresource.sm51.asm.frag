@@ -1,8 +1,8 @@
-ByteAddressBuffer _8 : register(t0, space0);
+ByteAddressBuffer _8 : register(t0, space2);
 Texture2D<float4> uSamplers[] : register(t0, space0);
 SamplerState _uSamplers_sampler[] : register(s0, space0);
-Texture2D<float4> uSampler : register(t0, space1);
-SamplerState _uSampler_sampler : register(s0, space1);
+Texture2D<float4> uSampler : register(t1, space1);
+SamplerState _uSampler_sampler : register(s1, space1);
 
 static float4 gl_FragCoord;
 static float4 FragColor;

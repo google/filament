@@ -1,0 +1,15 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(set = 0, binding = 0) uniform texture2D uTex[];
+layout(set = 1, binding = 0) uniform sampler Immut;
+
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) flat in int vIndex;
+layout(location = 0) in vec2 vUV;
+
+void main()
+{
+    FragColor = texture(nonuniformEXT(sampler2D(uTex[vIndex], Immut)), vUV);
+}
+

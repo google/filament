@@ -30,14 +30,14 @@
                OpMemberDecorate %SSBO 0 NonWritable
                OpMemberDecorate %SSBO 0 Offset 0
                OpDecorate %SSBO BufferBlock
-               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ DescriptorSet 2
                OpDecorate %_ Binding 0
                OpDecorate %26 NonUniform
                OpDecorate %28 NonUniform
                OpDecorate %29 NonUniform
                OpDecorate %vUV Location 0
                OpDecorate %uSampler DescriptorSet 1
-               OpDecorate %uSampler Binding 0
+               OpDecorate %uSampler Binding 1
                OpDecorate %38 NonUniform
                OpDecorate %gl_FragCoord BuiltIn FragCoord
        %void = OpTypeVoid

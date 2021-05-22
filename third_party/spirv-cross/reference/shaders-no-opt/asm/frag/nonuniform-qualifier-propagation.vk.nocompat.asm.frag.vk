@@ -24,7 +24,7 @@ void main()
     int i = vIndex;
     int _59 = i + 10;
     int _64 = i + 40;
-    FragColor = texture(sampler2D(uSamplers[nonuniformEXT(_59)], uSamps[nonuniformEXT(_64)]), vUV);
+    FragColor = texture(nonuniformEXT(sampler2D(uSamplers[_59], uSamps[_64])), vUV);
     int _71 = i + 10;
     FragColor = texture(uCombinedSamplers[nonuniformEXT(_71)], vUV);
     int _77 = i + 20;

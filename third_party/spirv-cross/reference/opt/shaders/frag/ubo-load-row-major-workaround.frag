@@ -34,12 +34,12 @@ layout(binding = 3, std140) uniform UBONoWorkaround
 layout(location = 0) out vec4 FragColor;
 layout(location = 0) in vec4 Clip;
 
-NestedRowMajor SPIRV_Cross_workaround_load_row_major(NestedRowMajor wrap) { return wrap; }
-mat4 SPIRV_Cross_workaround_load_row_major(mat4 wrap) { return wrap; }
+NestedRowMajor spvWorkaroundRowMajor(NestedRowMajor wrap) { return wrap; }
+mat4 spvWorkaroundRowMajor(mat4 wrap) { return wrap; }
 
 void main()
 {
-    FragColor = (((SPIRV_Cross_workaround_load_row_major(_17.rm2).rm.B * SPIRV_Cross_workaround_load_row_major(_35.rm.B)) * SPIRV_Cross_workaround_load_row_major(_42.A)) * SPIRV_Cross_workaround_load_row_major(_42.C)) * Clip;
+    FragColor = (((spvWorkaroundRowMajor(_17.rm2).rm.B * spvWorkaroundRowMajor(_35.rm.B)) * spvWorkaroundRowMajor(_42.A)) * spvWorkaroundRowMajor(_42.C)) * Clip;
     FragColor += (_56.D * Clip);
     FragColor += (_42.A[1] * Clip);
 }

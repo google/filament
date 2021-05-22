@@ -20,6 +20,7 @@ float4 load_subpasses(thread const texture2d_ms_array<float> uInput, thread uint
 fragment main0_out main0(texture2d_ms_array<float> uSubpass0 [[texture(0)]], texture2d_ms_array<float> uSubpass1 [[texture(1)]], uint gl_SampleID [[sample_id]], float4 gl_FragCoord [[position]], uint gl_Layer [[render_target_array_index]])
 {
     main0_out out = {};
+    gl_FragCoord.xy += get_sample_position(gl_SampleID) - 0.5;
     out.FragColor = (uSubpass0.read(uint2(gl_FragCoord.xy), gl_Layer, 1) + uSubpass1.read(uint2(gl_FragCoord.xy), gl_Layer, 2)) + load_subpasses(uSubpass0, gl_SampleID, gl_FragCoord, gl_Layer);
     return out;
 }

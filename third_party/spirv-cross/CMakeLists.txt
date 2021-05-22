@@ -1,4 +1,4 @@
-# Copyright 2016-2020 Google Inc.
+# Copyright 2016-2021 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.8)
+#
+# At your option, you may choose to accept this material under either:
+#  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
+#  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
+# SPDX-License-Identifier: Apache-2.0 OR MIT.
+#
+
+cmake_minimum_required(VERSION 3.0)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Avoid a warning if parent project sets VERSION in project().
 if (${CMAKE_VERSION} VERSION_GREATER "3.0.1")
@@ -133,7 +141,8 @@ if (CMAKE_COMPILER_IS_GNUCXX OR ((${CMAKE_CXX_COMPILER_ID} MATCHES "Clang") AND 
 		set(spirv-cross-link-flags "${spirv-cross-link-flags} -fsanitize=thread")
 	endif()
 elseif (MSVC)
-	set(spirv-compiler-options ${spirv-compiler-options} /wd4267 /wd4996)
+	# AppVeyor spuriously fails in debug build on older MSVC without /bigobj.
+	set(spirv-compiler-options ${spirv-compiler-options} /wd4267 /wd4996 $<$<CONFIG:DEBUG>:/bigobj>)
 endif()
 
 macro(extract_headers out_abs file_list)
@@ -323,7 +332,7 @@ if (SPIRV_CROSS_STATIC)
 endif()
 
 set(spirv-cross-abi-major 0)
-set(spirv-cross-abi-minor 42)
+set(spirv-cross-abi-minor 47)
 set(spirv-cross-abi-patch 0)
 
 if (SPIRV_CROSS_SHARED)
