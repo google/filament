@@ -35,15 +35,15 @@ namespace filament {
 using namespace backend;
 
 struct CocoaGLSwapChain : public Platform::SwapChain {
-    CocoaGLSwapChain( NSView* inView );
+    CocoaGLSwapChain(NSView* inView);
     ~CocoaGLSwapChain() noexcept;
 
     NSView* view;
     NSRect previousBounds;
     NSRect previousWindowFrame;
-    __strong NSMutableArray< id<NSObject> >* observers;
-    NSRect curBounds;
-    NSRect curWindowFrame;
+    __strong NSMutableArray<id<NSObject>>* observers;
+    NSRect currentBounds;
+    NSRect currentWindowFrame;
 };
 
 struct PlatformCocoaGLImpl {
@@ -54,19 +54,19 @@ struct PlatformCocoaGLImpl {
 };
 
 CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
-        : view( inView )
-        , previousBounds( NSZeroRect )
-        , previousWindowFrame( NSZeroRect )
-        , observers( [NSMutableArray array] )
-        , curBounds( NSZeroRect )
-        , curWindowFrame( NSZeroRect ) {
+        : view(inView)
+        , previousBounds(NSZeroRect)
+        , previousWindowFrame(NSZeroRect)
+        , observers([NSMutableArray array])
+        , currentBounds(NSZeroRect)
+        , currentWindowFrame(NSZeroRect) {
     __weak NSView* weakView = view;
     
     void (^noteHandler)(NSNotification *note) = ^(NSNotification *note) {
         if (weakView != nil) {
             __strong NSView* strongView = weakView;
-            curBounds = [strongView convertRectToBacking: strongView.bounds];
-            curWindowFrame = strongView.window.frame;
+            currentBounds = [strongView convertRectToBacking: strongView.bounds];
+            currentWindowFrame = strongView.window.frame;
         }
     };
     
@@ -75,12 +75,12 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     // -[NSWindow frame], -[NSView superview],
     // -[NSView setPostsFrameChangedNotifications:],
     // -[NSView setPostsBoundsChangedNotifications:]
-    dispatch_async( dispatch_get_main_queue(), ^(void) {
+    dispatch_async(dispatch_get_main_queue(), ^(void) {
         if (weakView != nil) {
             __strong NSView* strongView = weakView;
             
-            curBounds = [strongView convertRectToBacking: strongView.bounds];
-            curWindowFrame = strongView.window.frame;
+            currentBounds = [strongView convertRectToBacking: strongView.bounds];
+            currentWindowFrame = strongView.window.frame;
 
             id<NSObject> observer = [NSNotificationCenter.defaultCenter
                 addObserverForName: NSWindowDidResizeNotification
@@ -118,8 +118,7 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     });
 }
 
-CocoaGLSwapChain::~CocoaGLSwapChain() noexcept
-{
+CocoaGLSwapChain::~CocoaGLSwapChain() noexcept {
     for (id<NSObject> observer in observers) {
          [NSNotificationCenter.defaultCenter removeObserver: observer];
     }
@@ -212,8 +211,8 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
     CocoaGLSwapChain* swapChain = (CocoaGLSwapChain*)drawSwapChain;
-    NSRect currentBounds = swapChain->curBounds;
-    NSRect currentWindowFrame = swapChain->curWindowFrame;
+    NSRect currentBounds = swapChain->currentBounds;
+    NSRect currentWindowFrame = swapChain->currentWindowFrame;
 
     // Check if the view has been swapped out or resized.
     // updateOpenGLContext() needs to call -clearDrawable if the view was
