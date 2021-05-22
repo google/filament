@@ -138,6 +138,8 @@ void RenderPassNode::resolve() noexcept {
          */
 
         ImportedRenderTarget* pImportedRenderTarget = nullptr;
+        rt.backend.params.flags.discardStart = backend::TargetBufferFlags::NONE;
+        rt.backend.params.flags.discardEnd   = backend::TargetBufferFlags::NONE;
 
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
             if (rt.descriptor.attachments.array[i]) {
@@ -145,15 +147,11 @@ void RenderPassNode::resolve() noexcept {
 
                 rt.targetBufferFlags |= target;
 
-                // start by discarding all the attachments we have
-                // (we could set to ALL, but this is cleaner)
-                rt.backend.params.flags.discardStart |= target;
-                rt.backend.params.flags.discardEnd   |= target;
-                if (rt.outgoing[i] && rt.outgoing[i]->hasActiveReaders()) {
-                    rt.backend.params.flags.discardEnd &= ~target;
+                if (!rt.outgoing[i] || !rt.outgoing[i]->hasActiveReaders()) {
+                    rt.backend.params.flags.discardEnd |= target;
                 }
-                if (rt.incoming[i] && rt.incoming[i]->hasActiveWriters()) {
-                    rt.backend.params.flags.discardStart &= ~target;
+                if (!rt.incoming[i] || !rt.incoming[i]->hasActiveWriters()) {
+                    rt.backend.params.flags.discardStart |= target;
                 }
 
                 VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments.array[i]);
@@ -219,6 +217,9 @@ void RenderPassNode::resolve() noexcept {
 
             // discard start is also taken from the imported target
             rt.backend.params.flags.discardStart = rt.descriptor.discardStart & rt.targetBufferFlags;
+
+            // but don't discard attachments the imported target tells us to keep
+            rt.backend.params.flags.discardEnd &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
         }
 
         rt.backend.params.flags.clear = rt.descriptor.clearFlags & rt.targetBufferFlags;

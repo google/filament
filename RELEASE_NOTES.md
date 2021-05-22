@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.1 (currently main branch)
 
+- -engine: Attachments of custom RendereTargets are not systematically discarded
+
 ## v1.10.0
 
 - engine: User materials can now use 9 samplers instead of 8 [⚠️ **Material breakage**].
