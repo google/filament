@@ -2331,7 +2331,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
-            std::array<GLenum, 6> attachments; // NOLINT
+            AttachmentArray attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2401,7 +2401,7 @@ void OpenGLDriver::endRenderPass(int) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-            std::array<GLenum, 6> attachments; // NOLINT
+            AttachmentArray attachments; // NOLINT
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
@@ -2450,7 +2450,7 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     }
 }
 
-GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
+GLsizei OpenGLDriver::getAttachments(AttachmentArray& attachments,
         GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept {
     assert_invariant(buffers <= rt->targets);
 
@@ -2471,6 +2471,22 @@ GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 6>& attachments,
     if (any(buffers & TargetBufferFlags::COLOR3)) {
         assert_invariant(!defaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT3;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR4)) {
+        assert_invariant(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT4;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR5)) {
+        assert_invariant(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT5;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR6)) {
+        assert_invariant(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT6;
+    }
+    if (any(buffers & TargetBufferFlags::COLOR7)) {
+        assert_invariant(!defaultFramebuffer);
+        attachments[attachmentCount++] = GL_COLOR_ATTACHMENT7;
     }
     if (any(buffers & TargetBufferFlags::DEPTH)) {
         attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
