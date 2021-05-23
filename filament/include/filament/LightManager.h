@@ -787,7 +787,23 @@ public:
      */
     void setSpotLightCone(Instance i, float inner, float outer) noexcept;
 
+    /**
+     * returns the outer cone angle in *radians* between inner and pi/2.
+     * @param i     Instance of the component obtained from getInstance().
+     * @return the outer cone angle of this light.
+     */
     float getSpotLightOuterCone(Instance i) const noexcept;
+
+    /**
+     * returns the inner cone angle in *radians* between 0 and pi/2.
+     * 
+     * The value is recomputed from the initial values, thus is not precisely
+     * the same as the one passed to setSpotLightCone() or Builder.spotLightCone().
+     * 
+     * @param i     Instance of the component obtained from getInstance().
+     * @return the inner cone angle of this light.
+     */
+    float getSpotLightInnerCone(Instance i) const noexcept;
 
     /**
      * Dynamically updates the angular radius of a Type.SUN light
