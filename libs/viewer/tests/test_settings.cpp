@@ -190,7 +190,7 @@ TEST_F(ViewSettingsTest, JsonTestMaterial) {
 TEST_F(ViewSettingsTest, DefaultAutomationSpec) {
     AutomationSpec* specs = AutomationSpec::generateDefaultTestCases();
     ASSERT_TRUE(specs);
-    ASSERT_EQ(specs->size(), 65);
+    ASSERT_EQ(specs->size(), 66);
 
     Settings settings;
 
@@ -201,8 +201,8 @@ TEST_F(ViewSettingsTest, DefaultAutomationSpec) {
     ASSERT_TRUE(specs->get(1, &settings));
     ASSERT_TRUE(settings.view.postProcessingEnabled);
 
-    ASSERT_TRUE(specs->get(64, &settings));
-    ASSERT_FALSE(specs->get(65, &settings));
+    ASSERT_TRUE(specs->get(65, &settings));
+    ASSERT_FALSE(specs->get(66, &settings));
 
     delete specs;
 }
