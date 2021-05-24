@@ -695,6 +695,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 VertexAttribute attr = (VertexAttribute) (baseTangentsAttr + targetIndex);
                 vbb.attribute(attr, slot, VertexBuffer::AttributeType::SHORT4);
                 vbb.normalized(attr);
+                outPrim->morphTangents[targetIndex] = slot;
                 addBufferSlot({&mResult->mGenerateTangents, atype, slot++, morphId});
                 continue;
             }
@@ -721,6 +722,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             VertexAttribute attr = (VertexAttribute) (basePositionAttr + targetIndex);
             vbb.attribute(attr, slot, fatype, 0, stride);
             vbb.normalized(attr, accessor->normalized);
+            outPrim->morphPositions[targetIndex] = slot;
             addBufferSlot({accessor, atype, slot++, morphId});
         }
     }

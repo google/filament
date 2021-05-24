@@ -898,8 +898,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     mSwapChain->makeCurrent(driver);
 }
 
-bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        FrameScheduledCallback callback, void* user) {
+bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
     SYSTRACE_CALL();
@@ -955,10 +954,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = getEngine();
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        if (UTILS_UNLIKELY(callback)) {
-            // this is here just to handle the deprecated version of beginFrame()
-            driver.setFrameScheduledCallback(swapChain->getHwHandle(), callback, user);
-        }
         driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
@@ -1159,14 +1154,7 @@ void Renderer::render(View const* view) {
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano,
-            nullptr, nullptr);
-}
-
-bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameScheduledCallback callback, void* user) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano,
-            callback, user);
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,

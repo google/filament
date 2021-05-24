@@ -58,7 +58,8 @@ private:
 
     struct GltfPrimitive {
         filament::VertexBuffer* vertexBuffer;
-        int baseSlot;
+        uint8_t positions[4];
+        uint8_t tangents[4];
         std::vector<GltfTarget> targets; // TODO: flatten this?
     };
 
@@ -67,7 +68,6 @@ private:
     };
 
     void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, TableEntry* entry);
-    int determineBaseSlot(const cgltf_primitive& prim) const;
 
     std::vector<float> mPartiallySortedWeights;
     tsl::robin_map<Entity, TableEntry> mMorphTable;

@@ -65,7 +65,6 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mFroxelizer.getRecordBuffer().setSampler(PerViewSib::RECORDS, mPerViewSb);
     mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
@@ -405,7 +404,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
     // the viewing camera), we can set worldOriginScene to identity when mViewingCamera
     // is set
-    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene, mDepthOfFieldOptions.focusDistance);
+    mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
 
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),

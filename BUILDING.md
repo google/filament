@@ -84,6 +84,7 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_ENABLE_JAVA`:          Compile Java projects: requires a JDK and the JAVA_HOME env var
 - `FILAMENT_ENABLE_LTO`:           Enable link-time optimizations if supported by the compiler
 - `FILAMENT_BUILD_FILAMAT`:        Build filamat and JNI buildings
+- `FILAMENT_SUPPORTS_OPENGL`:      Include the OpenGL backend
 - `FILAMENT_SUPPORTS_METAL`:       Include the Metal backend
 - `FILAMENT_SUPPORTS_VULKAN`:      Include the Vulkan backend
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS

@@ -19,6 +19,18 @@
 
 #define FILAMENT_VULKAN_VERBOSE 0
 
+// In debug builds, we enable validation layers and set up a debug callback if the extension is
+// available. Caution: the debug callback causes a null pointer dereference with optimized builds.
+//
+// To enable validation layers in Android, also be sure to set the jniLibs property in the gradle
+// file for your app by adding the following lines into the "android" section. This copies the
+// appropriate libraries from the NDK to the device. This makes the aar much larger, so it should be
+// avoided in release builds.
+//
+// sourceSets.main.jniLibs {
+//   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
+// }
+//
 #if defined(NDEBUG)
 #define VK_ENABLE_VALIDATION 0
 #else
@@ -35,5 +47,10 @@ constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 
 // We choose a capacity of 3 because this matches the needs of triple-buffering.
 constexpr static const int VK_MAX_COMMAND_BUFFERS = 3;
+
+// Maximum number of command buffer flush events that can occur before an unused pipeline is removed
+// from the cache. If this number is low, VkPipeline construction will occur frequently, which can
+// be extremely slow. If this number is high, the memory footprint will be large.
+constexpr static const int VK_MAX_PIPELINE_AGE = 5;
 
 #endif

@@ -160,3 +160,5 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
     postProcess.color = vec4(color, 1.0);
 }
+
+}

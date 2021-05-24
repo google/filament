@@ -217,7 +217,7 @@ public:
          *
          * With Metal, the id<MTLTexture> object should be cast to an intptr_t using
          * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
-         * the textue object when the Filament texture is destroyed.
+         * the texture object when the Filament texture is destroyed.
          *
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
          *  id <MTLTexture> metalTexture = ...

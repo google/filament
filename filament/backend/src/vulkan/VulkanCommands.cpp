@@ -17,6 +17,7 @@
 #include "VulkanCommands.h"
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 using namespace bluevk;
 
@@ -40,8 +41,9 @@ VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) 
     vkDestroyFence(device, fence, VKALLOC);
 }
 
-VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanPipelineCache& binder) :
-        mDevice(device), mBinder(binder) {
+CommandBufferObserver::~CommandBufferObserver() {}
+
+VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex) : mDevice(device) {
     VkCommandPoolCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     createInfo.flags =
@@ -54,6 +56,10 @@ VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, Vulka
     for (auto& semaphore : mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
     }
+
+    for (uint32_t index = 0; index < VK_MAX_COMMAND_BUFFERS; ++index) {
+        mStorage[index].index = index;
+    }
 }
 
 VulkanCommands::~VulkanCommands() {
@@ -65,7 +71,7 @@ VulkanCommands::~VulkanCommands() {
     }
 }
 
-VulkanCommandBuffer& VulkanCommands::get() {
+VulkanCommandBuffer const& VulkanCommands::get() {
     if (mCurrent) {
         return *mCurrent;
     }
@@ -79,7 +85,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
     }
 
     // Find an available slot.
-    for (auto& wrapper : mStorage) {
+    for (VulkanCommandBuffer& wrapper : mStorage) {
         if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
             mCurrent = &wrapper;
             break;
@@ -110,16 +116,10 @@ VulkanCommandBuffer& VulkanCommands::get() {
     };
     vkBeginCommandBuffer(mCurrent->cmdbuffer, &binfo);
 
-    // NOTE: vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
-    // buffer; they are not global to the device. Since VulkanPipelineCache doesn't have context about the
-    // current command buffer, we need to reset its bindings after swapping over to a new command
-    // buffer. This causes us to issue a few more vkBind* calls than strictly necessary, but only in
-    // the first draw call of the frame.
-
-    // TODO: consider instancing a separate VulkanPipelineCache for each element in the swap chain, which
-    // would not only remove the need for this call, but would allow descriptor sets to be safely
-    // mutated.
-    mBinder.resetBindings();
+    // Notify the observer that a new command buffer has been activated.
+    if (mObserver) {
+        mObserver->onCommandBuffer(*mCurrent);
+    }
 
     return *mCurrent;
 }
@@ -198,7 +198,7 @@ void VulkanCommands::wait() {
     VkFence fences[CAPACITY];
     uint32_t count = 0;
     for (auto& wrapper : mStorage) {
-        if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
+        if (wrapper.cmdbuffer != VK_NULL_HANDLE && mCurrent != &wrapper) {
             fences[count++] = wrapper.fence->fence;
         }
     }

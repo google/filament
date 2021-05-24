@@ -30,7 +30,7 @@ private:
 
     bool peek(MaterialType* type) const noexcept;
 
-    void readBlock() noexcept;
+    bool readBlock() noexcept;
     void readIdentifier() noexcept;
     void readUnknown() noexcept;
 };

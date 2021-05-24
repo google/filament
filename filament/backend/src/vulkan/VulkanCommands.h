@@ -19,7 +19,6 @@
 
 #include <bluevk/BlueVK.h>
 
-#include "VulkanPipelineCache.h"
 #include "VulkanConstants.h"
 
 #include <utils/Condition.h>
@@ -43,19 +42,29 @@ struct VulkanCmdFence {
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VkCommandBuffer cmdbuffer;
+    VulkanCommandBuffer() {}
+    VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
+    VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
+    VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fence;
+    uint32_t index;
+};
+
+class CommandBufferObserver {
+public:
+    virtual void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) = 0;
+    virtual ~CommandBufferObserver();
 };
 
 // Lazily creates command buffers and manages a set of submitted command buffers.
 // Submitted command buffers form a dependency chain using VkSemaphore.
 class VulkanCommands {
     public:
-        VulkanCommands(VkDevice device, uint32_t queueFamilyIndex, VulkanPipelineCache& binder);
+        VulkanCommands(VkDevice device, uint32_t queueFamilyIndex);
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.
-        VulkanCommandBuffer& get();
+        VulkanCommandBuffer const& get();
 
         // Submits the current command buffer if it exists, then sets "current" to null.
         // If there are no outstanding commands then nothing happens and this returns false.
@@ -79,10 +88,13 @@ class VulkanCommands {
         // Updates the atomic "status" variable in every extant fence.
         void updateFences();
 
+        // Sets an observer who is notified every time a new command buffer has been made "current".
+        // The observer's event handler can only be called during get().
+        void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
+
     private:
         static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
         const VkDevice mDevice;
-        VulkanPipelineCache& mBinder;
         VkQueue mQueue;
         VkCommandPool mPool;
         VulkanCommandBuffer* mCurrent = nullptr;
@@ -91,6 +103,7 @@ class VulkanCommands {
         VulkanCommandBuffer mStorage[CAPACITY] = {};
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
         size_t mAvailableCount = CAPACITY;
+        CommandBufferObserver* mObserver = nullptr;
 };
 
 } // namespace filament

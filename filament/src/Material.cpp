@@ -378,6 +378,7 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey)
         .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
         .setUniformBlock(BindingPoints::SHADOW, UibGenerator::getShadowUib().getName())
         .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
+        .setUniformBlock(BindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib().getName())
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     if (Variant(variantKey).hasSkinningOrMorphing()) {

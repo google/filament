@@ -76,8 +76,7 @@ public:
     // do all the work here!
     void renderJob(ArenaScope& arena, FView& view);
 
-    bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-            backend::FrameScheduledCallback callback, void* user);
+    bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
 
     void render(FView const* view);
 

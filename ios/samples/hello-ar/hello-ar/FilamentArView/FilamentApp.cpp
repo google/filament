@@ -183,7 +183,9 @@ FilamentApp::~FilamentApp() {
     engine->destroy(renderer);
     engine->destroy(scene);
     engine->destroy(view);
-    engine->destroy(camera);
+    Entity c = camera->getEntity();
+    engine->destroyCameraComponent(c);
+    EntityManager::get().destroy(c);
     engine->destroy(swapChain);
     engine->destroy(&engine);
 }
@@ -197,7 +199,8 @@ void FilamentApp::setupFilament() {
     swapChain = engine->createSwapChain(nativeLayer);
     renderer = engine->createRenderer();
     scene = engine->createScene();
-    camera = engine->createCamera();
+    Entity c = EntityManager::get().create();
+    camera = engine->createCamera(c);
     camera->setProjection(60, (float) width / height, 0.1, 10);
 }
 

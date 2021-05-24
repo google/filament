@@ -55,7 +55,7 @@ set(PRIVATE_HDRS
 # OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-if (NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
+if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
     list(APPEND SRCS
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
@@ -255,7 +255,10 @@ add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
 # ==================================================================================================
 
 if (ANDROID)
-    target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
+    if (FILAMENT_SUPPORTS_OPENGL)
+        target_link_libraries(${TARGET} PUBLIC GLESv3 EGL)
+    endif()
+    target_link_libraries(${TARGET} PUBLIC android)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
@@ -270,7 +273,7 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 
 # Android, iOS, and WebGL do not use bluegl.
-if(NOT IOS AND NOT ANDROID AND NOT WEBGL)
+if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
 

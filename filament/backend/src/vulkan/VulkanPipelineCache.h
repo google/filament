@@ -24,61 +24,40 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
 #include <vector>
 
+#include "VulkanCommands.h"
+
 namespace filament {
 namespace backend {
 
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
-// The VulkanPipelineCache interface has two parts: the "bindFoo" methods (bindRasterState,
-// bindUniformBuffer, etc), and the "getOrCreateFoo" methods (getOrCreateDescriptors,
-// getOrCreatePipeline).
+// Please note the following limitations:
 //
-// Abbreviated example usage:
-//
-//     void Driver::bindUniformBuffer(uint32_t index, UniformBlock block) {
-//         VkBuffer buffer = block->getGpuBuffer();
-//         mBinder.bindUniformBuffer(index, buffer);
-//     }
-//
-//     void Driver::draw(Geometry geo) {
-//        mBinder.bindPrimitiveTopology(geo.topology);
-//        mBinder.bindVertexArray(geo.varray);
-//        VkDescriptorSet descriptors[3];
-//        if (mBinder.getOrCreateDescriptors(descriptors, ...)) {
-//            vkCmdBindDescriptorSets(... descriptors ...);
-//        }
-//        VkPipeline pipeline;
-//        if (mBinder.getOrCreatePipeline(&pipeline)) {
-//            vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-//        }
-//        vkCmdBindVertexBuffers(cmdbuffer, geo.vbo, ...);
-//        vkCmdBindIndexBuffer(cmdbuffer, geo.ibo, ...);
-//        vkCmdDrawIndexed(cmdbuffer, ...);
-//     }
-//
-// The class declaration and implementation have no dependencies on any other Filament files,
-// modulo some constants and low-level utility functions.
-//
-// In the name of simplicity, VulkanPipelineCache has the following limitations:
 // - Push constants are not supported. (if adding support, see VkPipelineLayoutCreateInfo)
-// - Only three descriptor sets are bound at a time (one for each type of descriptor).
-// - Descriptor sets are never mutated using vkUpdateDescriptorSets, except upon creation.
+// - Only DESCRIPTOR_TYPE_COUNT descriptor sets are bound at a time.
 // - Assumes that viewport and scissor should be dynamic. (not baked into VkPipeline)
 // - Assumes that uniform buffers should be visible across all shader stages.
 //
-class VulkanPipelineCache {
+class VulkanPipelineCache : public CommandBufferObserver {
 public:
-    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
+    VulkanPipelineCache(VulkanPipelineCache const&) = delete;
+    VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
+
+    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
     static constexpr uint32_t TARGET_BINDING_COUNT = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
+
+    // Three descriptor set layouts: uniforms, combined image samplers, and input attachments.
+    static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
@@ -107,10 +86,8 @@ public:
     };
     static_assert(std::is_pod<RasterState>::value, "RasterState must be a POD for fast hashing.");
 
-    // Upon construction, the binder initializes some internal state but does not make any Vulkan
-    // calls. On destruction it will free any cached Vulkan objects that haven't already been freed
-    // via resetBindings(). We don't pass the VkDevice to the constructor to allow the client to own
-    // a concrete instance of Binder rather than going through a pointer.
+    // Upon construction, the pipeCache initializes some internal state but does not make any Vulkan
+    // calls. On destruction it will free any cached Vulkan objects that haven't already been freed.
     VulkanPipelineCache();
     ~VulkanPipelineCache();
     void setDevice(VkDevice device) { mDevice = device; }
@@ -119,14 +96,14 @@ public:
     // mutate their copy and pass it back through bindRasterState().
     const RasterState& getDefaultRasterState() const { return mDefaultRasterState; }
 
-    // Returns true if vkCmdBindDescriptorSets is required.
-    bool getOrCreateDescriptors(VkDescriptorSet descriptors[3], VkPipelineLayout* pipelineLayout)
-            noexcept;
+    // Creates new descriptor sets if necessary and binds them using vkCmdBindDescriptorSets.
+    // Returns false if descriptor set allocation fails.
+    bool bindDescriptors(VulkanCommands& commands) noexcept;
 
-    // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
-    bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
+    // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
+    void bindPipeline(VulkanCommands& commands) noexcept;
 
-    // Each bind method is fast and does not make Vulkan calls.
+    // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgramBundle(const ProgramBundle& bundle) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
@@ -149,19 +126,20 @@ public:
 
     // NOTE: In theory we should proffer "unbindSampler" but in practice we never destroy samplers.
 
-    // Destroys all managed Vulkan objects. This should be called before changing the VkDevice, or
-    // when the cache gets too big.
+    // Destroys all managed Vulkan objects. This should be called before changing the VkDevice.
     void destroyCache() noexcept;
 
-    // Force the subsequent call to getOrCreate to unconditionally return true, thus signaling
-    // to the client that we need to re-bind the current descriptor set and pipeline. This should
-    // be called after every swap if the VulkanPipelineCache is shared amongst command buffers.
-    void resetBindings() noexcept;
+    // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
+    // buffer; they are not global to the device. Therefore we need to be notified when a
+    // new command buffer becomes active.
+    void onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) override;
 
-    // Evicts old unused Vulkan objects. Call this once per frame.
-    void gc() noexcept;
+    // Injects a dummy texture that can be used to clear out old descriptor sets.
+    void setDummyTexture(VkImageView imageView) { mDummyImageView = imageView; }
 
 private:
+    static constexpr uint32_t ALL_COMMAND_BUFFERS = (1 << VK_MAX_COMMAND_BUFFERS) - 1;
+
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
@@ -185,12 +163,6 @@ private:
         bool operator()(const PipelineKey& k1, const PipelineKey& k2) const;
     };
 
-    struct PipelineVal {
-        VkPipeline handle;
-        uint32_t timestamp;
-        bool bound;
-    };
-
     // The descriptor key is a POD that represents all currently bound states that go into the
     // descriptor set. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreateDescriptors.
@@ -212,29 +184,47 @@ private:
         bool operator()(const DescriptorKey& k1, const DescriptorKey& k2) const;
     };
 
-    // Represents a set of descriptor sets that are bound simultanously.
+    // Represents a group of descriptor sets that are bound simultaneously.
     struct DescriptorBundle {
-        VkDescriptorSet handles[3];
-        uint32_t timestamp;
-        bool bound;
+        VkDescriptorSet handles[DESCRIPTOR_TYPE_COUNT];
+        utils::bitset32 commandBuffers;
     };
+
+    struct PipelineVal {
+        VkPipeline handle;
+
+        // The "age" of a pipeline cache entry is the number of command buffer flush events that
+        // have occurred since it was last used in a command buffer. This is used for LRU caching,
+        // which is a crucial feature because VkPipeline construction is very slow.
+        uint32_t age;
+    };
+
+    using PipelineMap = tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual>;
+    using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
+
+    struct CmdBufferState {
+        // Weak references to the currently bound pipeline and descriptor sets.
+        PipelineVal* currentPipeline = nullptr;
+        DescriptorBundle* currentDescriptorBundle = nullptr;
+    };
+
+    // If bind is set to true, vkCmdBindDescriptorSets is required.
+    // If overflow is set to true, a descriptor set allocation error has occurred.
+    void getOrCreateDescriptors(VkDescriptorSet descriptors[DESCRIPTOR_TYPE_COUNT],
+            bool* bind, bool* overflow) noexcept;
+
+    // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
+    bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
 
     void createLayoutsAndDescriptors() noexcept;
     void destroyLayoutsAndDescriptors() noexcept;
-    void evictDescriptors(std::function<bool(const DescriptorKey&)> filter) noexcept;
+    void markDirtyPipeline() noexcept { mDirtyPipeline.setValue(ALL_COMMAND_BUFFERS); }
+    void markDirtyDescriptor() noexcept { mDirtyDescriptor.setValue(ALL_COMMAND_BUFFERS); }
+    VkDescriptorPool createDescriptorPool(uint32_t size) const;
+    void growDescriptorPool() noexcept;
 
     VkDevice mDevice = nullptr;
     const RasterState mDefaultRasterState;
-
-    // These structs are used only in a transient way but are stored for convenience.
-    VkPipelineShaderStageCreateInfo mShaderStages[SHADER_MODULE_COUNT];
-    VkPipelineColorBlendStateCreateInfo mColorBlendState;
-    VkDescriptorBufferInfo mDescriptorBuffers[UBUFFER_BINDING_COUNT];
-    VkDescriptorImageInfo mDescriptorSamplers[SAMPLER_BINDING_COUNT];
-    VkDescriptorImageInfo mDescriptorInputAttachments[TARGET_BINDING_COUNT];
-    VkWriteDescriptorSet mDescriptorWrites[
-            UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT + TARGET_BINDING_COUNT];
-    VkPipelineColorBlendAttachmentState mColorBlendAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
@@ -242,25 +232,41 @@ private:
     PipelineKey mPipelineKey;
     DescriptorKey mDescriptorKey;
 
-    // Weak references to the currently bound pipeline and descriptor sets.
-    PipelineVal* mCurrentPipeline = nullptr;
-    DescriptorBundle* mCurrentDescriptorBundle = nullptr;
+    // Each command buffer has associated state, including the bindings set up by vkCmdBindPipeline
+    // and vkCmdBindDescriptorSets.
+    CmdBufferState mCmdBufferState[VK_MAX_COMMAND_BUFFERS];
 
-    // If one of these dirty flags is set, then one or more its constituent bindings have changed, so
-    // a new pipeline or descriptor set needs to be retrieved from the cache or created.
-    bool mDirtyPipeline = true;
-    bool mDirtyDescriptor = true;
+    // One dirty bit per command buffer, stored in a bitset to permit fast "set all dirty bits". If
+    // a dirty flag is set for the current command buffer, then a new pipeline or descriptor set
+    // needs to be retrieved from the cache or created.
+    utils::bitset32 mDirtyPipeline;
+    utils::bitset32 mDirtyDescriptor;
 
-    // Cached Vulkan objects. These objects are owned by the Binder.
-    VkDescriptorSetLayout mDescriptorSetLayouts[3] = {};
+    VkDescriptorSetLayout mDescriptorSetLayouts[DESCRIPTOR_TYPE_COUNT] = {};
+
+    std::vector<VkDescriptorSet> mDescriptorSetArena[DESCRIPTOR_TYPE_COUNT];
+
     VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
-    tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual> mPipelines;
-    tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual> mDescriptorBundles;
-    VkDescriptorPool mDescriptorPool;
-    std::vector<DescriptorBundle> mDescriptorGraveyard;
+    PipelineMap mPipelines;
+    DescriptorMap mDescriptorBundles;
+    uint32_t mCmdBufferIndex = 0;
 
-    // Store the current "time" (really just a frame count) and LRU eviction parameters.
-    uint32_t mCurrentTime = 0;
+    VkDescriptorPool mDescriptorPool;
+    uint32_t mDescriptorPoolSize = 500;
+
+    // After a growth event (i.e. when the VkDescriptorPool is replaced with a bigger version), all
+    // currently used descriptors are moved into the "extinct" sets so that they can be safely
+    // destroyed a few frames later.
+    std::vector<VkDescriptorPool> mExtinctDescriptorPools;
+    std::vector<DescriptorBundle> mExtinctDescriptorBundles;
+
+    VkImageView mDummyImageView = VK_NULL_HANDLE;
+    VkDescriptorBufferInfo mDummyBufferInfo = {};
+    VkWriteDescriptorSet mDummyBufferWriteInfo = {};
+    VkDescriptorImageInfo mDummySamplerInfo = {};
+    VkWriteDescriptorSet mDummySamplerWriteInfo = {};
+    VkDescriptorImageInfo mDummyTargetInfo = {};
+    VkWriteDescriptorSet mDummyTargetWriteInfo = {};
 };
 
 } // namespace filament

@@ -122,8 +122,17 @@ void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count
         for (const auto& target : prim.targets) {
             const int index = indexOf(target.morphTargetIndex, primaryIndices);
             if (index > -1) {
+                assert_invariant(primaryIndices[index] == target.morphTargetIndex);
                 VertexBuffer* vb = prim.vertexBuffer;
-                vb->setBufferObjectAt(engine, prim.baseSlot + index, target.bufferObject);
+                const int bufferObjectSlot = target.type == cgltf_attribute_type_position ?
+                        prim.positions[index] : prim.tangents[index];
+
+                // Slot 0 is always used for the base position so if it's getting clobbered, then
+                // something is seriously wrong. Should never occur, assert just in case.
+                assert_invariant(bufferObjectSlot != 0);
+
+                vb->setBufferObjectAt(engine, bufferObjectSlot, target.bufferObject);
+
                 // Do not break out early because there could be more than one target entry for this
                 // particular target index (e.g. positions + tangents).
             }
@@ -139,13 +148,21 @@ void MorphHelper::applyWeights(Entity entity, float const* weights, size_t count
     renderableManager->setMorphWeights(renderable, highest);
 }
 
+// This method copies various morphing-related data from the FilamentAsset MeshCache primitive
+// (which lives in transient memory) into the MorphHelper primitive (which will stay resident).
 void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, TableEntry* entry) {
     auto& engine = *mAsset->mEngine;
     const cgltf_primitive& prim = mesh->primitives[primitiveIndex];
-    VertexBuffer* vertexBuffer = mAsset->mMeshCache.at(mesh)[primitiveIndex].vertices;
+    const auto& gltfioPrim = mAsset->mMeshCache.at(mesh)[primitiveIndex];
+    VertexBuffer* vertexBuffer = gltfioPrim.vertices;
 
-    entry->primitives.push_back({ vertexBuffer, determineBaseSlot(prim) });
-    std::vector<GltfTarget>& targets = entry->primitives.back().targets;
+    entry->primitives.push_back({ vertexBuffer });
+    auto& morphHelperPrim = entry->primitives.back();
+
+    for (int i = 0; i < 4; i++) {
+        morphHelperPrim.positions[i] = gltfioPrim.morphPositions[i];
+        morphHelperPrim.tangents[i] = gltfioPrim.morphTangents[i];
+    }
 
     const cgltf_accessor* previous = nullptr;
     for (int targetIndex = 0; targetIndex < prim.targets_count; targetIndex++) {
@@ -170,20 +187,20 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Table
                     VertexBuffer::BufferDescriptor bd(params.out.results, size, FREE_CALLBACK);
                     bufferObject->setBuffer(engine, std::move(bd));
                     params.out.results = nullptr;
-                    targets.push_back({bufferObject, targetIndex, atype});
+                    morphHelperPrim.targets.push_back({bufferObject, targetIndex, atype});
                 }
                 continue;
             }
             if (atype == cgltf_attribute_type_position) {
                 // All position attributes must have the same data type.
-                assert(!previous || previous->component_type == accessor->component_type);
-                assert(!previous || previous->type == accessor->type);
+                assert_invariant(!previous || previous->component_type == accessor->component_type);
+                assert_invariant(!previous || previous->type == accessor->type);
                 previous = accessor;
 
                 // This should always be non-null, but don't crash if the glTF is malformed.
                 if (accessor->buffer_view) {
                     auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-                    assert(bufferData);
+                    assert_invariant(bufferData);
                     const uint8_t* data = computeBindingOffset(accessor) + bufferData;
                     const uint32_t size = computeBindingSize(accessor);
 
@@ -196,40 +213,11 @@ void MorphHelper::addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, Table
                     BufferObject* bufferObject = BufferObject::Builder().size(size).build(engine);
                     VertexBuffer::BufferDescriptor bd(clone, size, FREE_CALLBACK);
                     bufferObject->setBuffer(engine, std::move(bd));
-                    targets.push_back({bufferObject, targetIndex, atype});
+                    morphHelperPrim.targets.push_back({bufferObject, targetIndex, atype});
                 }
             }
         }
     }
 }
-
-// This mimics some of the logic in AssetLoader in order to determine which VertexBuffer slots
-// correspond to the morph targets.
-int MorphHelper::determineBaseSlot(const cgltf_primitive& prim) const {
-    int slot = 0;
-    bool hasNormals = false;
-    for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
-        const cgltf_attribute& attribute = prim.attributes[aindex];
-        const int index = attribute.index;
-        const cgltf_attribute_type atype = attribute.type;
-        const cgltf_accessor* accessor = attribute.data;
-        if (atype == cgltf_attribute_type_tangent) {
-            continue;
-        }
-        if (atype == cgltf_attribute_type_normal) {
-            slot++;
-            hasNormals = true;
-            continue;
-        }
-        slot++;
-    }
-
-    // If the model has lighting but not normals, then a slot is used for generated flat normals.
-    if (prim.material && !prim.material->unlit && !hasNormals) {
-        slot++;
-    }
-
-    return slot;
-};
 
 }  // namespace gltfio

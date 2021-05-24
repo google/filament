@@ -28,7 +28,6 @@
 #include <backend/PresentCallable.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "private/backend/DriverApi.h"
 #include "private/backend/Program.h"
 #include "private/backend/SamplerGroup.h"
 

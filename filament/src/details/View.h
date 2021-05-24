@@ -357,7 +357,6 @@ public:
     }
 
     void setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
-        options.focusDistance = std::max(0.0f, options.focusDistance);
         options.cocScale = std::max(0.0f, options.cocScale);
         options.maxApertureDiameter = std::max(0.0f, options.maxApertureDiameter);
         mDepthOfFieldOptions = options;
@@ -449,6 +448,7 @@ private:
         driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
         driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
+        driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
         driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 

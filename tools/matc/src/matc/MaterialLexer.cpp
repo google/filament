@@ -18,10 +18,15 @@
 
 namespace matc {
 
-void MaterialLexer::readBlock() noexcept {
+bool MaterialLexer::readBlock() noexcept {
     size_t braceCount = 0;
      while (hasMore()) {
          skipWhiteSpace();
+
+        // This can occur if the block is malformed.
+        if (mCursor >= mEnd) {
+            return false;
+        }
 
          if (*mCursor == '{') {
              braceCount++;
@@ -31,11 +36,12 @@ void MaterialLexer::readBlock() noexcept {
 
          if (braceCount == 0) {
              consume();
-             break;
+             return true;
          }
 
          consume();
      }
+     return true;
 }
 
 void MaterialLexer::readIdentifier() noexcept {
@@ -76,7 +82,11 @@ bool MaterialLexer::readLexeme() noexcept {
     size_t line = getLine();
     size_t cursor = getCursor();
     switch (nextMaterialType) {
-        case MaterialType::BLOCK :     readBlock();      break;
+        case MaterialType::BLOCK:
+            if (!readBlock()) {
+                nextMaterialType = MaterialType::UNKNOWN;
+                break;
+            }
         case MaterialType::IDENTIFIER: readIdentifier(); break;
         case MaterialType::UNKNOWN:    readUnknown();    break;
         default:

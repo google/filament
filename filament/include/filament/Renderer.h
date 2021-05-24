@@ -244,15 +244,6 @@ public:
             uint64_t vsyncSteadyClockTimeNano = 0u);
 
     /**
-     * @deprecated, use SwapChain::setFrameScheduledCallback to set the callback instead.
-     * @see beginFrame(SwapChain*, uint64_t)
-     */
-    UTILS_DEPRECATED
-    bool beginFrame(SwapChain* swapChain,
-            uint64_t vsyncSteadyClockTimeNano,
-            backend::FrameScheduledCallback callback, void* user = nullptr);
-
-    /**
      * Render a View into this renderer's window.
      *
      * This is filament main rendering method, most of the CPU-side heavy lifting is performed

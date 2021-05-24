@@ -105,7 +105,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     init {
         renderer = engine.createRenderer()
         scene = engine.createScene()
-        camera = engine.createCamera().apply { setExposure(kAperture, kShutterSpeed, kSensitivity) }
+        camera = engine.createCamera(engine.entityManager.create()).apply { setExposure(kAperture, kShutterSpeed, kSensitivity) }
         view = engine.createView()
         view.scene = scene
         view.camera = camera
@@ -299,7 +299,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
                 engine.destroyRenderer(renderer)
                 engine.destroyView(this@ModelViewer.view)
                 engine.destroyScene(scene)
-                engine.destroyCamera(camera)
+                engine.destroyCameraComponent(camera.entity)
+                EntityManager.get().destroy(camera.entity)
 
                 EntityManager.get().destroy(light)
 

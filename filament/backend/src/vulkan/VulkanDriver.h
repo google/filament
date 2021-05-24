@@ -148,7 +148,7 @@ private:
     void collectGarbage();
 
     VulkanContext mContext = {};
-    VulkanPipelineCache mBinder;
+    VulkanPipelineCache mPipelineCache;
     VulkanBlitter mBlitter;
     VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;

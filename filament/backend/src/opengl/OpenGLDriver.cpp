@@ -2785,9 +2785,8 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> 
 
 void OpenGLDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
-
+    assert_invariant(index < Program::BINDING_COUNT);
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
-    assert_invariant(index < Program::SAMPLER_BINDING_COUNT);
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
 }

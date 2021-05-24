@@ -321,7 +321,7 @@ Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
         // View::DepthOfFieldOptions::Filter::MEDIAN value is actually 2
         eFilter = View::DepthOfFieldOptions::Filter::MEDIAN;
     }
-    view->setDepthOfFieldOptions({.focusDistance = focusDistance, .cocScale = cocScale,
+    view->setDepthOfFieldOptions({.cocScale = cocScale,
             .maxApertureDiameter = maxApertureDiameter, .enabled = (bool)enabled, .filter = eFilter,
             .nativeResolution = (bool)nativeResolution,
             .foregroundRingCount = (uint8_t)foregroundRingCount,

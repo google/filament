@@ -166,7 +166,9 @@ public class Stream {
          *                          <code>GL_TEXTURE_EXTERNAL_OES.</code>
          * @return This Builder, for chaining calls.
          * @see Texture#setExternalStream
+         * @deprecated this method existed only for ARCore which doesn't need this anymore, use {@link Texture.Builder#importTexture(long)} instead.
          */
+        @Deprecated
         @NonNull
         public Builder stream(long externalTextureId) {
             nBuilderStream(mNativeBuilder, externalTextureId);

@@ -110,8 +110,15 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* v
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, bool* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
-    *val = 0 == compare(tokens[i], jsonChunk, "true");
-    return i + 1;
+    if (0 == compare(tokens[i], jsonChunk, "true")) {
+        *val = true;
+        return i + 1;
+    }
+    if (0 == compare(tokens[i], jsonChunk, "false")) {
+        *val = false;
+        return i + 1;
+    }
+    return -1;
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float3* val) {
@@ -499,9 +506,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfF
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (0 == compare(tok, jsonChunk, "focusDistance")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->focusDistance);
-        } else if (0 == compare(tok, jsonChunk, "cocScale")) {
+        if (0 == compare(tok, jsonChunk, "cocScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->cocScale);
         } else if (0 == compare(tok, jsonChunk, "maxApertureDiameter")) {
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
@@ -1123,8 +1128,8 @@ static std::ostream& operator<<(std::ostream& out, const BloomOptions& in) {
         << "\"threshold\": " << to_string(in.threshold) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"highlight\": " << (in.highlight) << ",\n"
-        << "\"lensFlare\": " << (in.lensFlare) << ",\n"
-        << "\"starburst\": " << (in.starburst) << ",\n"
+        << "\"lensFlare\": " << to_string(in.lensFlare) << ",\n"
+        << "\"starburst\": " << to_string(in.starburst) << ",\n"
         << "\"chromaticAberration\": " << (in.chromaticAberration) << ",\n"
         << "\"ghostCount\": " << int(in.ghostCount) << ",\n"
         << "\"ghostSpacing\": " << (in.ghostSpacing) << ",\n"
@@ -1145,7 +1150,7 @@ static std::ostream& operator<<(std::ostream& out, const FogOptions& in) {
         << "\"density\": " << (in.density) << ",\n"
         << "\"inScatteringStart\": " << (in.inScatteringStart) << ",\n"
         << "\"inScatteringSize\": " << (in.inScatteringSize) << ",\n"
-        << "\"fogColorFromIbl\": " << (in.fogColorFromIbl) << ",\n"
+        << "\"fogColorFromIbl\": " << to_string(in.fogColorFromIbl) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
 }
@@ -1232,12 +1237,11 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
 
 static std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
     return out << "{\n"
-        << "\"focusDistance\": " << (in.focusDistance) << ",\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << ",\n"
-        << "\"nativeResolution\": " << (in.nativeResolution) << ",\n"
+        << "\"nativeResolution\": " << to_string(in.nativeResolution) << ",\n"
         << "\"foregroundRingCount\": " << int(in.foregroundRingCount) << ",\n"
         << "\"backgroundRingCount\": " << int(in.backgroundRingCount) << ",\n"
         << "\"fastGatherRingCount\": " << int(in.fastGatherRingCount) << ",\n"

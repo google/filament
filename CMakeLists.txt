@@ -25,6 +25,10 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
+set(FILAMENT_NDK_VERSION "" CACHE STRING
+    "Android NDK version or version prefix to be used when building for Android."
+)
+
 set(FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB "2" CACHE STRING
     "Per render pass arena size. Must be roughly 1 MB larger than FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, default 2."
 )
@@ -365,6 +369,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebIn
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTNT_DEV")
 endif()
 
+# By default, build with support for OpenGL on all platforms.
+option(FILAMENT_SUPPORTS_OPENGL "Include the OpenGL backend" ON)
+if (FILAMENT_SUPPORTS_OPENGL)
+    add_definitions(-DFILAMENT_SUPPORTS_OPENGL)
+endif()
+
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
 if (WIN32 OR WEBGL OR IOS)
@@ -420,9 +430,9 @@ endif()
 
 set(MATC_API_FLAGS )
 
-# TODO: Add a flag to build Filament without support for OpenGL.
-set(MATC_API_FLAGS ${MATC_API_FLAGS} -a opengl)
-
+if (FILAMENT_SUPPORTS_OPENGL)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a opengl)
+endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a vulkan)
 endif()
@@ -639,7 +649,9 @@ if (WEBGL)
 endif()
 
 if (IS_HOST_PLATFORM)
-    add_subdirectory(${LIBRARIES}/bluegl)
+    if (FILAMENT_SUPPORTS_OPENGL)
+        add_subdirectory(${LIBRARIES}/bluegl)
+    endif()
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/imageio)
 
