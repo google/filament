@@ -374,7 +374,7 @@ float FLightManager::getSpotLightInnerCone(Instance i) const noexcept {
     const auto& spotParams = getSpotParams(i);
     float cosOuter = std::cos(spotParams.outerClamped);
     float scale = spotParams.scaleOffset.x;
-    float inner = std::acos((1.0f / spotParams.scaleOffset.x) + cosOuter);
+    float inner = std::acos((1.0f / scale) + cosOuter);
     return inner;
 }
 
