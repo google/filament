@@ -460,6 +460,32 @@ public:
     Backend getBackend() const noexcept;
 
     /**
+     * Returns the Platform object that belongs to this Engine.
+     *
+     * When Engine::create is called with no platform argument, Filament creates an appropriate
+     * Platform subclass automatically. The specific subclass created depends on the backend and
+     * OS. For example, when the OpenGL backend is used, the Platform object will be a descendant of
+     * OpenGLPlatform.
+     *
+     * dynamic_cast should be used to cast the returned Platform object into a specific subclass.
+     * Note that RTTI must be available to use dynamic_cast.
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * Platform* platform = engine->getPlatform();
+     * // static_cast also works, but more dangerous.
+     * SpecificPlatform* specificPlatform = dynamic_cast<SpecificPlatform*>(platform);
+     * specificPlatform->platformSpecificMethod();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * When a custom Platform is passed to Engine::create, Filament will use it instead, and this
+     * method will return it.
+     *
+     * @return A pointer to the Platform object that was provided to Engine::create, or the
+     * Filament-created one.
+     */
+    Platform* getPlatform() const noexcept;
+
+    /**
      * Allocate a small amount of memory directly in the command stream. The allocated memory is
      * guaranteed to be preserved until the current command buffer is executed
      *
