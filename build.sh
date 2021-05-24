@@ -17,6 +17,10 @@ function print_help {
     echo "        Generate .tgz build archives, implies -i."
     echo "    -c"
     echo "        Clean build directories."
+    echo "    -C"
+    echo "        Clean build directories and revert android/ to a freshly sync'ed state."
+    echo "        All (and only) git-ignored files under android/ are deleted."
+    echo "        This is sometimes needed instead of -c (which still misses some clean steps)."
     echo "    -d"
     echo "        Enable matdbg and disable material optimization."
     echo "    -f"
@@ -112,6 +116,7 @@ CMAKE_MINOR=19
 
 # Internal variables
 ISSUE_CLEAN=false
+ISSUE_CLEAN_AGGRESSIVE=false
 
 ISSUE_DEBUG_BUILD=false
 ISSUE_RELEASE_BUILD=false
@@ -168,6 +173,12 @@ function build_clean {
     rm -Rf android/filamat-android/build android/filamat-android/.externalNativeBuild android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild android/gltfio-android/.cxx
     rm -Rf android/filament-utils-android/build android/filament-utils-android/.externalNativeBuild android/filament-utils-android/.cxx
+}
+
+function build_clean_aggressive {
+    echo "Cleaning build directories..."
+    rm -Rf out
+    git clean -qfX android
 }
 
 function build_desktop_target {
@@ -678,7 +689,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacfijmp:q:uvslwtd" opt; do
+while getopts ":hacCfijmp:q:uvslwtd" opt; do
     case ${opt} in
         h)
             print_help
@@ -690,6 +701,9 @@ while getopts ":hacfijmp:q:uvslwtd" opt; do
             ;;
         c)
             ISSUE_CLEAN=true
+            ;;
+        C)
+            ISSUE_CLEAN_AGGRESSIVE=true
             ;;
         d)
             PRINT_MATDBG_HELP=true
@@ -828,6 +842,10 @@ validate_build_command
 
 if [[ "${ISSUE_CLEAN}" == "true" ]]; then
     build_clean
+fi
+
+if [[ "${ISSUE_CLEAN_AGGRESSIVE}" == "true" ]]; then
+    build_clean_aggressive
 fi
 
 if [[ "${ISSUE_DESKTOP_BUILD}" == "true" ]]; then
