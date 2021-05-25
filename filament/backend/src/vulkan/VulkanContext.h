@@ -34,7 +34,6 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
-#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -42,9 +41,20 @@ namespace filament {
 namespace backend {
 
 struct VulkanRenderTarget;
-struct VulkanSurfaceContext;
+struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
+
+struct VulkanAttachment {
+    VkFormat format;
+    VkImage image;
+    VkImageView view;
+    VkDeviceMemory memory;
+    VulkanTexture* texture = nullptr;
+    VkImageLayout layout;
+    uint8_t level;
+    uint16_t layer;
+};
 
 struct VulkanTimestamps {
     VkQueryPool pool;
@@ -77,7 +87,7 @@ struct VulkanContext {
     bool portabilitySubsetSupported;
     bool maintenanceSupported[3];
     VulkanPipelineCache::RasterState rasterState;
-    VulkanSurfaceContext* currentSurface;
+    VulkanSwapChain* currentSurface;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
@@ -86,59 +96,14 @@ struct VulkanContext {
     VulkanCommands* commands = nullptr;
 };
 
-struct VulkanAttachment {
-    VkFormat format;
-    VkImage image;
-    VkImageView view;
-    VkDeviceMemory memory;
-    VulkanTexture* texture = nullptr;
-    VkImageLayout layout;
-    uint8_t level;
-    uint16_t layer;
-};
-
-// The SurfaceContext stores various state (including the swap chain) that we tightly associate
-// with VkSurfaceKHR, which is basically one-to-one with a platform-specific window.
-struct VulkanSurfaceContext {
-    VkSurfaceKHR surface;
-    VkSwapchainKHR swapchain;
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    VkSurfaceFormatKHR surfaceFormat;
-    VkExtent2D clientSize;
-    std::vector<VkSurfaceFormatKHR> surfaceFormats;
-    VkQueue presentQueue;
-    VkQueue headlessQueue;
-    std::vector<VulkanAttachment> attachments;
-    uint32_t currentSwapIndex;
-
-    // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
-    // submission.
-    VkSemaphore imageAvailable;
-
-    // This is true after the swap chain image has been acquired, but before it has been presented.
-    bool acquired;
-
-    VulkanAttachment depth;
-    bool suboptimal;
-    bool firstRenderPass;
-};
-
 void selectPhysicalDevice(VulkanContext& context);
 void createLogicalDevice(VulkanContext& context);
-void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
-void getHeadlessQueue(VulkanContext& context, VulkanSurfaceContext& sc);
-
-void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
-void destroySwapChain(VulkanContext& context, VulkanSurfaceContext& sc, VulkanDisposer& disposer);
-void makeSwapChainPresentable(VulkanContext& context, VulkanSurfaceContext& surface);
 
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VulkanAttachment& getSwapChainAttachment(VulkanContext& context);
 void waitForIdle(VulkanContext& context);
-bool acquireSwapChain(VulkanContext& context, VulkanSurfaceContext& surface);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features);
-void createFinalDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 VkImageLayout getTextureLayout(TextureUsage usage);
 void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);
 

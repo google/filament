@@ -105,7 +105,7 @@ static VulkanAttachment createAttachment(VulkanAttachment spec) {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-// Note that the attachment structs are unused in this case in favor of VulkanSurfaceContext.
+// Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
         mContext(context), mOffscreen(false), mSamples(1) {}
 
@@ -196,106 +196,6 @@ VulkanRenderTarget::~VulkanRenderTarget() {
     if (mMsaaDepthAttachment.texture != mDepth.texture) {
         delete mMsaaDepthAttachment.texture;
     }
-}
-
-// Primary SwapChain constructor. (not headless)
-VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface) {
-    surfaceContext.suboptimal = false;
-    surfaceContext.surface = vksurface;
-    surfaceContext.firstRenderPass = true;
-    getPresentationQueue(context, surfaceContext);
-    createSwapChain(context, surfaceContext);
-}
-
-// Headless SwapChain constructor. (does not create a VkSwapChainKHR)
-VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height) {
-    surfaceContext.surface = VK_NULL_HANDLE;
-    getHeadlessQueue(context, surfaceContext);
-
-    surfaceContext.surfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
-    surfaceContext.swapchain = VK_NULL_HANDLE;
-
-    // Somewhat arbitrarily, headless rendering is double-buffered.
-    surfaceContext.attachments.resize(2);
-
-    for (size_t i = 0; i < surfaceContext.attachments.size(); ++i) {
-        VkImage image;
-        VkImageCreateInfo iCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = surfaceContext.surfaceFormat.format,
-            .extent = {
-                .width = width,
-                .height = height,
-                .depth = 1,
-            },
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-        };
-        assert_invariant(iCreateInfo.extent.width > 0);
-        assert_invariant(iCreateInfo.extent.height > 0);
-        vkCreateImage(context.device, &iCreateInfo, VKALLOC, &image);
-
-        VkMemoryRequirements memReqs = {};
-        vkGetImageMemoryRequirements(context.device, image, &memReqs);
-        VkMemoryAllocateInfo allocInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memReqs.size,
-            .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-        };
-        VkDeviceMemory imageMemory;
-        vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
-        vkBindImageMemory(context.device, image, imageMemory, 0);
-
-        surfaceContext.attachments[i] = {
-            .format = surfaceContext.surfaceFormat.format, .image = image,
-            .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
-        };
-        VkImageViewCreateInfo ivCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = surfaceContext.surfaceFormat.format,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .levelCount = 1,
-                .layerCount = 1,
-            }
-        };
-        vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                    &surfaceContext.attachments[i].view);
-
-        VkImageMemoryBarrier barrier {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .levelCount = 1,
-                .layerCount = 1,
-            },
-        };
-        vkCmdPipelineBarrier(context.commands->get().cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                &barrier);
-    }
-
-    surfaceContext.surfaceCapabilities.currentExtent.width = width;
-    surfaceContext.surfaceCapabilities.currentExtent.height = height;
-
-    surfaceContext.clientSize.width = width;
-    surfaceContext.clientSize.height = height;
-
-    surfaceContext.imageAvailable = VK_NULL_HANDLE;
-
-    createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
