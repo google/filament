@@ -1765,7 +1765,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Bind new descriptor sets if they need to change.
     // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
     // message since the validation layers already do so.
-    if (!mPipelineCache.bindDescriptors(*mContext.commands)) {
+    if (!mPipelineCache.bindDescriptors(cmdbuffer)) {
         return;
     }
 
@@ -1783,10 +1783,10 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     };
 
     rt->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
+    mPipelineCache.bindScissor(cmdbuffer, scissor);
 
     // Bind a new pipeline if the pipeline state changed.
-    mPipelineCache.bindPipeline(*mContext.commands);
+    mPipelineCache.bindPipeline(cmdbuffer);
 
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
