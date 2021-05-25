@@ -524,6 +524,10 @@ bool equivalent(const VkRect2D& a, const VkRect2D& b) {
             a.offset.x == b.offset.x && a.offset.y == b.offset.y;
 }
 
+bool equivalent(const VkExtent2D& a, const VkExtent2D& b) {
+    return a.height == b.height && a.width == b.width;
+}
+
 } // namespace filament
 } // namespace backend
 

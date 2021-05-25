@@ -199,45 +199,12 @@ VulkanRenderTarget::~VulkanRenderTarget() {
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
-    // For the backbuffer, there are corner cases where the platform's surface resolution does not
-    // match what Filament expects, so we need to make an appropriate transformation (e.g. create a
-    // VkSurfaceKHR on a high DPI display, then move it to a low DPI display).
-    if (!mOffscreen) {
-        const VkExtent2D platformSize = mContext.currentSurface->surfaceCapabilities.currentExtent;
-        const VkExtent2D clientSize = mContext.currentSurface->clientSize;
-
-        // Because these types of coordinates are pixel-addressable, we purposefully use integer
-        // math and rely on left-to-right evaluation.
-        bounds->offset.x = bounds->offset.x * platformSize.width / clientSize.width;
-        bounds->offset.y = bounds->offset.y * platformSize.height / clientSize.height;
-        bounds->extent.width = bounds->extent.width * platformSize.width / clientSize.width;
-        bounds->extent.height = bounds->extent.height * platformSize.height / clientSize.height;
-    }
     const auto& extent = getExtent();
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
-    // For the backbuffer, we must check if platform size and client size differ, then scale
-    // appropriately. Note the +2 correction factor. This prevents the platform from lerping pixels
-    // along the edge of the viewport with pixels that live outside the viewport. Luckily this
-    // correction factor only applies in obscure conditions (e.g. after dragging a high-DPI window
-    // to a low-DPI display).
-    if (!mOffscreen) {
-        const VkExtent2D platformSize = mContext.currentSurface->surfaceCapabilities.currentExtent;
-        const VkExtent2D clientSize = mContext.currentSurface->clientSize;
-        if (platformSize.width != clientSize.width) {
-            const float xscale = float(platformSize.width + 2) / float(clientSize.width);
-            bounds->x *= xscale;
-            bounds->width *= xscale;
-        }
-        if (platformSize.height != clientSize.height) {
-            const float yscale = float(platformSize.height + 2) / float(clientSize.height);
-            bounds->y *= yscale;
-            bounds->height *= yscale;
-        }
-    }
     flipVertically(bounds, getExtent().height);
 }
 
@@ -245,7 +212,7 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
     if (mOffscreen) {
         return {width, height};
     }
-    return mContext.currentSurface->surfaceCapabilities.currentExtent;
+    return mContext.currentSurface->clientSize;
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(int target) const {

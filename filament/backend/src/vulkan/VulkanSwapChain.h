@@ -31,14 +31,13 @@ struct VulkanSwapChain : public HwSwapChain {
     void create();
     void destroy();
     void makePresentable();
+    bool hasResized() const;
 
     VulkanContext& context;
     VkSurfaceKHR surface;
     VkSwapchainKHR swapchain;
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
     VkSurfaceFormatKHR surfaceFormat;
     VkExtent2D clientSize;
-    std::vector<VkSurfaceFormatKHR> surfaceFormats;
     VkQueue presentQueue;
     VkQueue headlessQueue;
     std::vector<VulkanAttachment> attachments;
