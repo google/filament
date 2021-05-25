@@ -20,6 +20,7 @@
 #include "VulkanDriver.h"
 #include "VulkanPipelineCache.h"
 #include "VulkanBuffer.h"
+#include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
@@ -73,12 +74,6 @@ private:
     const uint8_t mSamples;
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
-};
-
-struct VulkanSwapChain : public HwSwapChain {
-    VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface);
-    VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height);
-    VulkanSurfaceContext surfaceContext;
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer {
