@@ -41,7 +41,7 @@ struct CocoaGLSwapChain : public Platform::SwapChain {
     NSView* view;
     NSRect previousBounds;
     NSRect previousWindowFrame;
-    __strong NSMutableArray<id<NSObject>>* observers;
+    NSMutableArray<id<NSObject>>* observers;
     NSRect currentBounds;
     NSRect currentWindowFrame;
 };
@@ -60,12 +60,12 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
         , observers([NSMutableArray array])
         , currentBounds(NSZeroRect)
         , currentWindowFrame(NSZeroRect) {
-    __weak NSView* weakView = view;
-    __weak NSMutableArray* weakObservers = observers;
+    NSView* __weak weakView = view;
+    NSMutableArray* __weak weakObservers = observers;
     
     void (^notificationHandler)(NSNotification *notification) = ^(NSNotification *notification) {
+        NSView* strongView = weakView;
         if ((weakView != nil) && (weakObservers != nil)) {
-            __strong NSView* strongView = weakView;
             this->currentBounds = [strongView convertRectToBacking: strongView.bounds];
             this->currentWindowFrame = strongView.window.frame;
         }
@@ -77,14 +77,14 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     // -[NSView setPostsFrameChangedNotifications:],
     // -[NSView setPostsBoundsChangedNotifications:]
     dispatch_async(dispatch_get_main_queue(), ^(void) {
-		if ((weakView == nil) || (weakObservers == nil)) {
+        NSView* strongView = weakView;
+		NSMutableArray* strongObservers = weakObservers;
+        if ((weakView == nil) || (weakObservers == nil)) {
 			return;
 		}
-		__strong NSView* strongView = weakView;
-		__strong NSMutableArray* strongObservers = weakObservers;
 		@synchronized (strongObservers) {
-			currentBounds = [strongView convertRectToBacking: strongView.bounds];
-			currentWindowFrame = strongView.window.frame;
+			this->currentBounds = [strongView convertRectToBacking: strongView.bounds];
+			this->currentWindowFrame = strongView.window.frame;
 
 			id<NSObject> observer = [NSNotificationCenter.defaultCenter
 				addObserverForName: NSWindowDidResizeNotification
