@@ -29,7 +29,7 @@ kernel void main0(constant UBO& _41 [[buffer(0)]], uint3 gl_GlobalInvocationID [
 {
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 1];
     device main0_in* gl_in = &spvIn[min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1] - 1) * spvIndirectParams[0]];
-    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1]);
+    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 1, spvIndirectParams[1] - 1);
     float2 _431 = (gl_in[0].vPatchPosBase.xy - float2(10.0)) * _41.uScale.xy;
     float2 _441 = ((gl_in[0].vPatchPosBase.xy + _41.uPatchSize) + float2(10.0)) * _41.uScale.xy;
     float3 _446 = float3(_431.x, -10.0, _431.y);

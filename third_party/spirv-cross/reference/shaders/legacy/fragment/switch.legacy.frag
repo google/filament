@@ -8,7 +8,7 @@ void main()
 {
     int vIndex = int(vIndexF);
     highp vec4 v = vec4(0.0);
-    for (int SPIRV_Cross_Dummy21 = 0; SPIRV_Cross_Dummy21 < 1; SPIRV_Cross_Dummy21++)
+    for (int spvDummy21 = 0; spvDummy21 < 1; spvDummy21++)
     {
         if (vIndex == 2)
         {
@@ -65,7 +65,7 @@ void main()
         }
     }
     highp vec4 w = vec4(20.0);
-    for (int SPIRV_Cross_Dummy165 = 0; SPIRV_Cross_Dummy165 < 1; SPIRV_Cross_Dummy165++)
+    for (int spvDummy165 = 0; spvDummy165 < 1; spvDummy165++)
     {
         if ((vIndex == 10) || (vIndex == 20))
         {

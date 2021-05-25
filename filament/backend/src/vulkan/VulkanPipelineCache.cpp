@@ -21,6 +21,7 @@
 #include <utils/trap.h>
 
 #include "VulkanConstants.h"
+#include "VulkanUtility.h"
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -72,7 +73,7 @@ VulkanPipelineCache::~VulkanPipelineCache() {
     destroyCache();
 }
 
-bool VulkanPipelineCache::bindDescriptors(VulkanCommands& commands) noexcept {
+bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
     VkDescriptorSet descriptors[VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT];
     bool bind = false, overflow = false;
     getOrCreateDescriptors(descriptors, &bind, &overflow);
@@ -81,17 +82,24 @@ bool VulkanPipelineCache::bindDescriptors(VulkanCommands& commands) noexcept {
         return false;
     }
     if (bind) {
-        vkCmdBindDescriptorSets(commands.get().cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                mPipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
-                0, nullptr);
+        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0,
+                VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors, 0, nullptr);
     }
     return true;
 }
 
-void VulkanPipelineCache::bindPipeline(VulkanCommands& commands) noexcept {
+void VulkanPipelineCache::bindPipeline(VkCommandBuffer cmdbuffer) noexcept {
     VkPipeline pipeline;
     if (getOrCreatePipeline(&pipeline)) {
-        vkCmdBindPipeline(commands.get().cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    }
+}
+
+void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept {
+    VkRect2D& currentScissor = mCmdBufferState[mCmdBufferIndex].scissor;
+    if (UTILS_UNLIKELY(!equivalent(currentScissor, scissor))) {
+        currentScissor = scissor;
+        vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
     }
 }
 
@@ -575,8 +583,11 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     // ready to be written into. Stash the index of this command buffer for state-tracking purposes.
     mCmdBufferIndex = cmdbuffer.index;
 
+    // Mark everything as dirty, as per the Vulkan spec, which says: "When a command buffer begins
+    // recording, all state in that command buffer is undefined."
     mDirtyPipeline.set(mCmdBufferIndex);
     mDirtyDescriptor.set(mCmdBufferIndex);
+    mCmdBufferState[mCmdBufferIndex].scissor = {};
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 

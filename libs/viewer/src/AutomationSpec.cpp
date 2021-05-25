@@ -38,7 +38,7 @@ static const bool VERBOSE = false;
 namespace filament {
 namespace viewer {
 
-// The default spec generates 65 test cases.
+// The default spec generates 66 test cases.
 static const char* DEFAULT_AUTOMATION = R"TXT([
     {
         "name": "ppoff",

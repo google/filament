@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.1 (currently main branch)
+## v1.10.2 (currently main branch)
+
+## v1.10.1
 
 - engine: Attachments of custom RendereTargets are not systematically discarded
 - engine: New API to duplicate a `MaterialInstance`
@@ -13,6 +15,15 @@ A new header is inserted each time a *tag* is created.
 - engine: User materials can now use 9 samplers instead of 8 [⚠️ **Material breakage**].
 - engine: Remove `populateTangentQuaternions`  [⚠️ **API change**].
 - engine: Deprecate `Stream::Builder::stream(intptr_t)` [⚠️ **API Change**].
+- engine: Remove deprecated APIs: `Camera::setScaling`, `Engine::destroy(Camera*)`,
+  `Engine::createCamera`, `Renderer::beginFrame(SwapChain*, uint64_t,
+  backend::FrameScheduledCallback, void*)`, and `View::setShadowsEnabled` [⚠️ **API Change**].
+- engine: Remove `focusDistance` from `View::BloomOptions` [⚠️ **API Change**].
+- engine: Add a `FILAMENT_SUPPORTS_OPENGL` CMake option to enable/disable OpenGL support.
+- Vulkan: fixes and improvements for large scenes.
+- gltfio: fix morphing bugs uncovered by MorphStressTest.
+- Java: add API for `Texture::Builder::import()`.
+- WebGL: Fix a potential INVALID_OPERATION.
 
 ## v1.9.25
 

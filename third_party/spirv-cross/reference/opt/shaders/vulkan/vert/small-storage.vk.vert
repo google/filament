@@ -1,6 +1,8 @@
 #version 450
 #if defined(GL_AMD_gpu_shader_int16)
 #extension GL_AMD_gpu_shader_int16 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
 #else
 #error No extension available for Int16.
 #endif

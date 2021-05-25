@@ -518,6 +518,12 @@ void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition tra
             nullptr, 1, &barrier);
 }
 
+bool equivalent(const VkRect2D& a, const VkRect2D& b) {
+    // These are all integers so there's no need for an epsilon.
+    return a.extent.width == b.extent.width && a.extent.height == b.extent.height &&
+            a.offset.x == b.offset.x && a.offset.y == b.offset.y;
+}
+
 } // namespace filament
 } // namespace backend
 

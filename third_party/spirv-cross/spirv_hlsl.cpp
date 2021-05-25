@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 Robert Konrad
+ * Copyright 2016-2021 Robert Konrad
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ */
+
+/*
+ * At your option, you may choose to accept this material under either:
+ *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
+ *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #include "spirv_hlsl.hpp"
@@ -562,7 +570,7 @@ void CompilerHLSL::emit_builtin_outputs_in_struct()
 		switch (builtin)
 		{
 		case BuiltInPosition:
-			type = "float4";
+			type = is_position_invariant() && backend.support_precise_qualifier ? "precise float4" : "float4";
 			semantic = legacy ? "POSITION" : "SV_Position";
 			break;
 
@@ -810,8 +818,8 @@ string CompilerHLSL::to_interpolation_qualifiers(const Bitset &flags)
 		res += "patch "; // Seems to be different in actual HLSL.
 	if (flags.get(DecorationSample))
 		res += "sample ";
-	if (flags.get(DecorationInvariant))
-		res += "invariant "; // Not supported?
+	if (flags.get(DecorationInvariant) && backend.support_precise_qualifier)
+		res += "precise "; // Not supported?
 
 	return res;
 }
@@ -831,6 +839,21 @@ std::string CompilerHLSL::to_semantic(uint32_t location, ExecutionModel em, Stor
 	return join("TEXCOORD", location);
 }
 
+std::string CompilerHLSL::to_initializer_expression(const SPIRVariable &var)
+{
+	// We cannot emit static const initializer for block constants for practical reasons,
+	// so just inline the initializer.
+	// FIXME: There is a theoretical problem here if someone tries to composite extract
+	// into this initializer since we don't declare it properly, but that is somewhat non-sensical.
+	auto &type = get<SPIRType>(var.basetype);
+	bool is_block = has_decoration(type.self, DecorationBlock);
+	auto *c = maybe_get<SPIRConstant>(var.initializer);
+	if (is_block && c)
+		return constant_expression(*c);
+	else
+		return CompilerGLSL::to_initializer_expression(var);
+}
+
 void CompilerHLSL::emit_io_block(const SPIRVariable &var)
 {
 	auto &execution = get_entry_point();
@@ -842,24 +865,10 @@ void CompilerHLSL::emit_io_block(const SPIRVariable &var)
 	begin_scope();
 	type.member_name_cache.clear();
 
-	uint32_t base_location = get_decoration(var.self, DecorationLocation);
-
 	for (uint32_t i = 0; i < uint32_t(type.member_types.size()); i++)
 	{
-		string semantic;
-		if (has_member_decoration(type.self, i, DecorationLocation))
-		{
-			uint32_t location = get_member_decoration(type.self, i, DecorationLocation);
-			semantic = join(" : ", to_semantic(location, execution.model, var.storage));
-		}
-		else
-		{
-			// If the block itself has a location, but not its members, use the implicit location.
-			// There could be a conflict if the block members partially specialize the locations.
-			// It is unclear how SPIR-V deals with this. Assume this does not happen for now.
-			uint32_t location = base_location + i;
-			semantic = join(" : ", to_semantic(location, execution.model, var.storage));
-		}
+		uint32_t location = get_accumulated_member_location(var, i, false);
+		string semantic = join(" : ", to_semantic(location, execution.model, var.storage));
 
 		add_member_name(type, i);
 
@@ -1000,11 +1009,42 @@ void CompilerHLSL::emit_builtin_variables()
 
 	bool need_base_vertex_info = false;
 
+	std::unordered_map<uint32_t, ID> builtin_to_initializer;
+	ir.for_each_typed_id<SPIRVariable>([&](uint32_t, SPIRVariable &var) {
+		if (!is_builtin_variable(var) || var.storage != StorageClassOutput || !var.initializer)
+			return;
+
+		auto *c = this->maybe_get<SPIRConstant>(var.initializer);
+		if (!c)
+			return;
+
+		auto &type = this->get<SPIRType>(var.basetype);
+		if (type.basetype == SPIRType::Struct)
+		{
+			uint32_t member_count = uint32_t(type.member_types.size());
+			for (uint32_t i = 0; i < member_count; i++)
+			{
+				if (has_member_decoration(type.self, i, DecorationBuiltIn))
+				{
+					builtin_to_initializer[get_member_decoration(type.self, i, DecorationBuiltIn)] =
+						c->subconstants[i];
+				}
+			}
+		}
+		else if (has_decoration(var.self, DecorationBuiltIn))
+			builtin_to_initializer[get_decoration(var.self, DecorationBuiltIn)] = var.initializer;
+	});
+
 	// Emit global variables for the interface variables which are statically used by the shader.
 	builtins.for_each_bit([&](uint32_t i) {
 		const char *type = nullptr;
 		auto builtin = static_cast<BuiltIn>(i);
 		uint32_t array_size = 0;
+
+		string init_expr;
+		auto init_itr = builtin_to_initializer.find(builtin);
+		if (init_itr != builtin_to_initializer.end())
+			init_expr = join(" = ", to_expression(init_itr->second));
 
 		switch (builtin)
 		{
@@ -1098,16 +1138,16 @@ void CompilerHLSL::emit_builtin_variables()
 		if (type)
 		{
 			if (array_size)
-				statement("static ", type, " ", builtin_to_glsl(builtin, storage), "[", array_size, "];");
+				statement("static ", type, " ", builtin_to_glsl(builtin, storage), "[", array_size, "]", init_expr, ";");
 			else
-				statement("static ", type, " ", builtin_to_glsl(builtin, storage), ";");
+				statement("static ", type, " ", builtin_to_glsl(builtin, storage), init_expr, ";");
 		}
 
 		// SampleMask can be both in and out with sample builtin, in this case we have already
 		// declared the input variable and we need to add the output one now.
 		if (builtin == BuiltInSampleMask && storage == StorageClassInput && this->active_output_builtins.get(i))
 		{
-			statement("static ", type, " ", this->builtin_to_glsl(builtin, StorageClassOutput), ";");
+			statement("static ", type, " ", this->builtin_to_glsl(builtin, StorageClassOutput), init_expr, ";");
 		}
 	});
 
@@ -1133,7 +1173,11 @@ void CompilerHLSL::emit_composite_constants()
 			return;
 
 		auto &type = this->get<SPIRType>(c.constant_type);
-		if (type.basetype == SPIRType::Struct || !type.array.empty())
+
+		// Cannot declare block type constants here.
+		// We do not have the struct type yet.
+		bool is_block = has_decoration(type.self, DecorationBlock);
+		if (!is_block && (type.basetype == SPIRType::Struct || !type.array.empty()))
 		{
 			auto name = to_name(c.self);
 			statement("static const ", variable_decl(type, name), " = ", constant_expression(c), ";");
@@ -1214,7 +1258,7 @@ void CompilerHLSL::replace_illegal_names()
 {
 	static const unordered_set<string> keywords = {
 		// Additional HLSL specific keywords.
-		"line", "linear", "matrix", "point", "row_major", "sampler",
+		"line", "linear", "matrix", "point", "row_major", "sampler", "vector"
 	};
 
 	CompilerGLSL::replace_illegal_names(keywords);
@@ -1304,7 +1348,8 @@ void CompilerHLSL::emit_resources()
 		}
 
 		if (var.storage != StorageClassFunction && !is_builtin_variable(var) && !var.remapped_variable &&
-		    type.pointer && (type.storage == StorageClassUniformConstant || type.storage == StorageClassAtomicCounter))
+		    type.pointer && (type.storage == StorageClassUniformConstant || type.storage == StorageClassAtomicCounter) &&
+		    !is_hidden_variable(var))
 		{
 			emit_uniform(var);
 			emitted = true;
@@ -1458,6 +1503,9 @@ void CompilerHLSL::emit_resources()
 	for (auto global : global_variables)
 	{
 		auto &var = get<SPIRVariable>(global);
+		if (is_hidden_variable(var, true))
+			continue;
+
 		if (var.storage != StorageClassOutput)
 		{
 			if (!variable_is_lut(var))
@@ -1528,14 +1576,14 @@ void CompilerHLSL::emit_resources()
 	if (requires_fp16_packing)
 	{
 		// HLSL does not pack into a single word sadly :(
-		statement("uint SPIRV_Cross_packHalf2x16(float2 value)");
+		statement("uint spvPackHalf2x16(float2 value)");
 		begin_scope();
 		statement("uint2 Packed = f32tof16(value);");
 		statement("return Packed.x | (Packed.y << 16);");
 		end_scope();
 		statement("");
 
-		statement("float2 SPIRV_Cross_unpackHalf2x16(uint value)");
+		statement("float2 spvUnpackHalf2x16(uint value)");
 		begin_scope();
 		statement("return f16tof32(uint2(value & 0xffff, value >> 16));");
 		end_scope();
@@ -1544,13 +1592,13 @@ void CompilerHLSL::emit_resources()
 
 	if (requires_uint2_packing)
 	{
-		statement("uint64_t SPIRV_Cross_packUint2x32(uint2 value)");
+		statement("uint64_t spvPackUint2x32(uint2 value)");
 		begin_scope();
 		statement("return (uint64_t(value.y) << 32) | uint64_t(value.x);");
 		end_scope();
 		statement("");
 
-		statement("uint2 SPIRV_Cross_unpackUint2x32(uint64_t value)");
+		statement("uint2 spvUnpackUint2x32(uint64_t value)");
 		begin_scope();
 		statement("uint2 Unpacked;");
 		statement("Unpacked.x = uint(value & 0xffffffff);");
@@ -1563,14 +1611,14 @@ void CompilerHLSL::emit_resources()
 	if (requires_explicit_fp16_packing)
 	{
 		// HLSL does not pack into a single word sadly :(
-		statement("uint SPIRV_Cross_packFloat2x16(min16float2 value)");
+		statement("uint spvPackFloat2x16(min16float2 value)");
 		begin_scope();
 		statement("uint2 Packed = f32tof16(value);");
 		statement("return Packed.x | (Packed.y << 16);");
 		end_scope();
 		statement("");
 
-		statement("min16float2 SPIRV_Cross_unpackFloat2x16(uint value)");
+		statement("min16float2 spvUnpackFloat2x16(uint value)");
 		begin_scope();
 		statement("return min16float2(f16tof32(uint2(value & 0xffff, value >> 16)));");
 		end_scope();
@@ -1580,14 +1628,14 @@ void CompilerHLSL::emit_resources()
 	// HLSL does not seem to have builtins for these operation, so roll them by hand ...
 	if (requires_unorm8_packing)
 	{
-		statement("uint SPIRV_Cross_packUnorm4x8(float4 value)");
+		statement("uint spvPackUnorm4x8(float4 value)");
 		begin_scope();
 		statement("uint4 Packed = uint4(round(saturate(value) * 255.0));");
 		statement("return Packed.x | (Packed.y << 8) | (Packed.z << 16) | (Packed.w << 24);");
 		end_scope();
 		statement("");
 
-		statement("float4 SPIRV_Cross_unpackUnorm4x8(uint value)");
+		statement("float4 spvUnpackUnorm4x8(uint value)");
 		begin_scope();
 		statement("uint4 Packed = uint4(value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, value >> 24);");
 		statement("return float4(Packed) / 255.0;");
@@ -1597,14 +1645,14 @@ void CompilerHLSL::emit_resources()
 
 	if (requires_snorm8_packing)
 	{
-		statement("uint SPIRV_Cross_packSnorm4x8(float4 value)");
+		statement("uint spvPackSnorm4x8(float4 value)");
 		begin_scope();
 		statement("int4 Packed = int4(round(clamp(value, -1.0, 1.0) * 127.0)) & 0xff;");
 		statement("return uint(Packed.x | (Packed.y << 8) | (Packed.z << 16) | (Packed.w << 24));");
 		end_scope();
 		statement("");
 
-		statement("float4 SPIRV_Cross_unpackSnorm4x8(uint value)");
+		statement("float4 spvUnpackSnorm4x8(uint value)");
 		begin_scope();
 		statement("int SignedValue = int(value);");
 		statement("int4 Packed = int4(SignedValue << 24, SignedValue << 16, SignedValue << 8, SignedValue) >> 24;");
@@ -1615,14 +1663,14 @@ void CompilerHLSL::emit_resources()
 
 	if (requires_unorm16_packing)
 	{
-		statement("uint SPIRV_Cross_packUnorm2x16(float2 value)");
+		statement("uint spvPackUnorm2x16(float2 value)");
 		begin_scope();
 		statement("uint2 Packed = uint2(round(saturate(value) * 65535.0));");
 		statement("return Packed.x | (Packed.y << 16);");
 		end_scope();
 		statement("");
 
-		statement("float2 SPIRV_Cross_unpackUnorm2x16(uint value)");
+		statement("float2 spvUnpackUnorm2x16(uint value)");
 		begin_scope();
 		statement("uint2 Packed = uint2(value & 0xffff, value >> 16);");
 		statement("return float2(Packed) / 65535.0;");
@@ -1632,14 +1680,14 @@ void CompilerHLSL::emit_resources()
 
 	if (requires_snorm16_packing)
 	{
-		statement("uint SPIRV_Cross_packSnorm2x16(float2 value)");
+		statement("uint spvPackSnorm2x16(float2 value)");
 		begin_scope();
 		statement("int2 Packed = int2(round(clamp(value, -1.0, 1.0) * 32767.0)) & 0xffff;");
 		statement("return uint(Packed.x | (Packed.y << 16));");
 		end_scope();
 		statement("");
 
-		statement("float2 SPIRV_Cross_unpackSnorm2x16(uint value)");
+		statement("float2 spvUnpackSnorm2x16(uint value)");
 		begin_scope();
 		statement("int SignedValue = int(value);");
 		statement("int2 Packed = int2(SignedValue << 16, SignedValue) >> 16;");
@@ -1653,7 +1701,7 @@ void CompilerHLSL::emit_resources()
 		static const char *types[] = { "uint", "uint2", "uint3", "uint4" };
 		for (auto &type : types)
 		{
-			statement(type, " SPIRV_Cross_bitfieldInsert(", type, " Base, ", type, " Insert, uint Offset, uint Count)");
+			statement(type, " spvBitfieldInsert(", type, " Base, ", type, " Insert, uint Offset, uint Count)");
 			begin_scope();
 			statement("uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));");
 			statement("return (Base & ~Mask) | ((Insert << Offset) & Mask);");
@@ -1667,7 +1715,7 @@ void CompilerHLSL::emit_resources()
 		static const char *unsigned_types[] = { "uint", "uint2", "uint3", "uint4" };
 		for (auto &type : unsigned_types)
 		{
-			statement(type, " SPIRV_Cross_bitfieldUExtract(", type, " Base, uint Offset, uint Count)");
+			statement(type, " spvBitfieldUExtract(", type, " Base, uint Offset, uint Count)");
 			begin_scope();
 			statement("uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);");
 			statement("return (Base >> Offset) & Mask;");
@@ -1679,7 +1727,7 @@ void CompilerHLSL::emit_resources()
 		static const char *signed_types[] = { "int", "int2", "int3", "int4" };
 		for (auto &type : signed_types)
 		{
-			statement(type, " SPIRV_Cross_bitfieldSExtract(", type, " Base, int Offset, int Count)");
+			statement(type, " spvBitfieldSExtract(", type, " Base, int Offset, int Count)");
 			begin_scope();
 			statement("int Mask = Count == 32 ? -1 : ((1 << Count) - 1);");
 			statement(type, " Masked = (Base >> Offset) & Mask;");
@@ -1694,7 +1742,7 @@ void CompilerHLSL::emit_resources()
 	{
 		statement("// Returns the inverse of a matrix, by using the algorithm of calculating the classical");
 		statement("// adjoint and dividing by the determinant. The contents of the matrix are changed.");
-		statement("float2x2 SPIRV_Cross_Inverse(float2x2 m)");
+		statement("float2x2 spvInverse(float2x2 m)");
 		begin_scope();
 		statement("float2x2 adj;	// The adjoint matrix (inverse after dividing by determinant)");
 		statement_no_indent("");
@@ -1718,29 +1766,29 @@ void CompilerHLSL::emit_resources()
 	if (requires_inverse_3x3)
 	{
 		statement("// Returns the determinant of a 2x2 matrix.");
-		statement("float SPIRV_Cross_Det2x2(float a1, float a2, float b1, float b2)");
+		statement("float spvDet2x2(float a1, float a2, float b1, float b2)");
 		begin_scope();
 		statement("return a1 * b2 - b1 * a2;");
 		end_scope();
 		statement_no_indent("");
 		statement("// Returns the inverse of a matrix, by using the algorithm of calculating the classical");
 		statement("// adjoint and dividing by the determinant. The contents of the matrix are changed.");
-		statement("float3x3 SPIRV_Cross_Inverse(float3x3 m)");
+		statement("float3x3 spvInverse(float3x3 m)");
 		begin_scope();
 		statement("float3x3 adj;	// The adjoint matrix (inverse after dividing by determinant)");
 		statement_no_indent("");
 		statement("// Create the transpose of the cofactors, as the classical adjoint of the matrix.");
-		statement("adj[0][0] =  SPIRV_Cross_Det2x2(m[1][1], m[1][2], m[2][1], m[2][2]);");
-		statement("adj[0][1] = -SPIRV_Cross_Det2x2(m[0][1], m[0][2], m[2][1], m[2][2]);");
-		statement("adj[0][2] =  SPIRV_Cross_Det2x2(m[0][1], m[0][2], m[1][1], m[1][2]);");
+		statement("adj[0][0] =  spvDet2x2(m[1][1], m[1][2], m[2][1], m[2][2]);");
+		statement("adj[0][1] = -spvDet2x2(m[0][1], m[0][2], m[2][1], m[2][2]);");
+		statement("adj[0][2] =  spvDet2x2(m[0][1], m[0][2], m[1][1], m[1][2]);");
 		statement_no_indent("");
-		statement("adj[1][0] = -SPIRV_Cross_Det2x2(m[1][0], m[1][2], m[2][0], m[2][2]);");
-		statement("adj[1][1] =  SPIRV_Cross_Det2x2(m[0][0], m[0][2], m[2][0], m[2][2]);");
-		statement("adj[1][2] = -SPIRV_Cross_Det2x2(m[0][0], m[0][2], m[1][0], m[1][2]);");
+		statement("adj[1][0] = -spvDet2x2(m[1][0], m[1][2], m[2][0], m[2][2]);");
+		statement("adj[1][1] =  spvDet2x2(m[0][0], m[0][2], m[2][0], m[2][2]);");
+		statement("adj[1][2] = -spvDet2x2(m[0][0], m[0][2], m[1][0], m[1][2]);");
 		statement_no_indent("");
-		statement("adj[2][0] =  SPIRV_Cross_Det2x2(m[1][0], m[1][1], m[2][0], m[2][1]);");
-		statement("adj[2][1] = -SPIRV_Cross_Det2x2(m[0][0], m[0][1], m[2][0], m[2][1]);");
-		statement("adj[2][2] =  SPIRV_Cross_Det2x2(m[0][0], m[0][1], m[1][0], m[1][1]);");
+		statement("adj[2][0] =  spvDet2x2(m[1][0], m[1][1], m[2][0], m[2][1]);");
+		statement("adj[2][1] = -spvDet2x2(m[0][0], m[0][1], m[2][0], m[2][1]);");
+		statement("adj[2][2] =  spvDet2x2(m[0][0], m[0][1], m[1][0], m[1][1]);");
 		statement_no_indent("");
 		statement("// Calculate the determinant as a combination of the cofactors of the first row.");
 		statement("float det = (adj[0][0] * m[0][0]) + (adj[0][1] * m[1][0]) + (adj[0][2] * m[2][0]);");
@@ -1757,7 +1805,7 @@ void CompilerHLSL::emit_resources()
 		if (!requires_inverse_3x3)
 		{
 			statement("// Returns the determinant of a 2x2 matrix.");
-			statement("float SPIRV_Cross_Det2x2(float a1, float a2, float b1, float b2)");
+			statement("float spvDet2x2(float a1, float a2, float b1, float b2)");
 			begin_scope();
 			statement("return a1 * b2 - b1 * a2;");
 			end_scope();
@@ -1765,71 +1813,71 @@ void CompilerHLSL::emit_resources()
 		}
 
 		statement("// Returns the determinant of a 3x3 matrix.");
-		statement("float SPIRV_Cross_Det3x3(float a1, float a2, float a3, float b1, float b2, float b3, float c1, "
+		statement("float spvDet3x3(float a1, float a2, float a3, float b1, float b2, float b3, float c1, "
 		          "float c2, float c3)");
 		begin_scope();
-		statement("return a1 * SPIRV_Cross_Det2x2(b2, b3, c2, c3) - b1 * SPIRV_Cross_Det2x2(a2, a3, c2, c3) + c1 * "
-		          "SPIRV_Cross_Det2x2(a2, a3, "
+		statement("return a1 * spvDet2x2(b2, b3, c2, c3) - b1 * spvDet2x2(a2, a3, c2, c3) + c1 * "
+		          "spvDet2x2(a2, a3, "
 		          "b2, b3);");
 		end_scope();
 		statement_no_indent("");
 		statement("// Returns the inverse of a matrix, by using the algorithm of calculating the classical");
 		statement("// adjoint and dividing by the determinant. The contents of the matrix are changed.");
-		statement("float4x4 SPIRV_Cross_Inverse(float4x4 m)");
+		statement("float4x4 spvInverse(float4x4 m)");
 		begin_scope();
 		statement("float4x4 adj;	// The adjoint matrix (inverse after dividing by determinant)");
 		statement_no_indent("");
 		statement("// Create the transpose of the cofactors, as the classical adjoint of the matrix.");
 		statement(
-		    "adj[0][0] =  SPIRV_Cross_Det3x3(m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], "
+		    "adj[0][0] =  spvDet3x3(m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[0][1] = -SPIRV_Cross_Det3x3(m[0][1], m[0][2], m[0][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], "
+		    "adj[0][1] = -spvDet3x3(m[0][1], m[0][2], m[0][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[0][2] =  SPIRV_Cross_Det3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[3][1], m[3][2], "
+		    "adj[0][2] =  spvDet3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[3][1], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[0][3] = -SPIRV_Cross_Det3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], "
+		    "adj[0][3] = -spvDet3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], "
 		    "m[2][3]);");
 		statement_no_indent("");
 		statement(
-		    "adj[1][0] = -SPIRV_Cross_Det3x3(m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], "
+		    "adj[1][0] = -spvDet3x3(m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[1][1] =  SPIRV_Cross_Det3x3(m[0][0], m[0][2], m[0][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], "
+		    "adj[1][1] =  spvDet3x3(m[0][0], m[0][2], m[0][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[1][2] = -SPIRV_Cross_Det3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[3][0], m[3][2], "
+		    "adj[1][2] = -spvDet3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[3][0], m[3][2], "
 		    "m[3][3]);");
 		statement(
-		    "adj[1][3] =  SPIRV_Cross_Det3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], "
+		    "adj[1][3] =  spvDet3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], "
 		    "m[2][3]);");
 		statement_no_indent("");
 		statement(
-		    "adj[2][0] =  SPIRV_Cross_Det3x3(m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], "
+		    "adj[2][0] =  spvDet3x3(m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], "
 		    "m[3][3]);");
 		statement(
-		    "adj[2][1] = -SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], "
+		    "adj[2][1] = -spvDet3x3(m[0][0], m[0][1], m[0][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], "
 		    "m[3][3]);");
 		statement(
-		    "adj[2][2] =  SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[3][0], m[3][1], "
+		    "adj[2][2] =  spvDet3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[3][0], m[3][1], "
 		    "m[3][3]);");
 		statement(
-		    "adj[2][3] = -SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], "
+		    "adj[2][3] = -spvDet3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], "
 		    "m[2][3]);");
 		statement_no_indent("");
 		statement(
-		    "adj[3][0] = -SPIRV_Cross_Det3x3(m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], "
+		    "adj[3][0] = -spvDet3x3(m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], "
 		    "m[3][2]);");
 		statement(
-		    "adj[3][1] =  SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], "
+		    "adj[3][1] =  spvDet3x3(m[0][0], m[0][1], m[0][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], "
 		    "m[3][2]);");
 		statement(
-		    "adj[3][2] = -SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[3][0], m[3][1], "
+		    "adj[3][2] = -spvDet3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[3][0], m[3][1], "
 		    "m[3][2]);");
 		statement(
-		    "adj[3][3] =  SPIRV_Cross_Det3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], "
+		    "adj[3][3] =  spvDet3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], "
 		    "m[2][2]);");
 		statement_no_indent("");
 		statement("// Calculate the determinant as a combination of the cofactors of the first row.");
@@ -1846,7 +1894,7 @@ void CompilerHLSL::emit_resources()
 	if (requires_scalar_reflect)
 	{
 		// FP16/FP64? No templates in HLSL.
-		statement("float SPIRV_Cross_Reflect(float i, float n)");
+		statement("float spvReflect(float i, float n)");
 		begin_scope();
 		statement("return i - 2.0 * dot(n, i) * n;");
 		end_scope();
@@ -1856,7 +1904,7 @@ void CompilerHLSL::emit_resources()
 	if (requires_scalar_refract)
 	{
 		// FP16/FP64? No templates in HLSL.
-		statement("float SPIRV_Cross_Refract(float i, float n, float eta)");
+		statement("float spvRefract(float i, float n, float eta)");
 		begin_scope();
 		statement("float NoI = n * i;");
 		statement("float NoI2 = NoI * NoI;");
@@ -1876,7 +1924,7 @@ void CompilerHLSL::emit_resources()
 	if (requires_scalar_faceforward)
 	{
 		// FP16/FP64? No templates in HLSL.
-		statement("float SPIRV_Cross_FaceForward(float n, float i, float nref)");
+		statement("float spvFaceForward(float n, float i, float nref)");
 		begin_scope();
 		statement("return i * nref < 0.0 ? n : -n;");
 		end_scope();
@@ -1915,7 +1963,7 @@ void CompilerHLSL::emit_texture_size_variants(uint64_t variant_mask, const char 
 			if ((variant_mask & mask) == 0)
 				continue;
 
-			statement(ret_types[index], " SPIRV_Cross_", (uav ? "image" : "texture"), "Size(", (uav ? "RW" : ""),
+			statement(ret_types[index], " spv", (uav ? "Image" : "Texture"), "Size(", (uav ? "RW" : ""),
 			          dims[index], "<", type_qualifier, types[type_index], vecsize_qualifier, "> Tex, ",
 			          (uav ? "" : "uint Level, "), "out uint Param)");
 			begin_scope();
@@ -2187,7 +2235,7 @@ void CompilerHLSL::emit_push_constant_block(const SPIRVariable &var)
 
 string CompilerHLSL::to_sampler_expression(uint32_t id)
 {
-	auto expr = join("_", to_expression(id));
+	auto expr = join("_", to_non_uniform_aware_expression(id));
 	auto index = expr.find_first_of('[');
 	if (index == string::npos)
 	{
@@ -2281,7 +2329,7 @@ void CompilerHLSL::emit_function_prototype(SPIRFunction &func, const Bitset &ret
 		out_argument += "out ";
 		out_argument += type_to_glsl(type);
 		out_argument += " ";
-		out_argument += "SPIRV_Cross_return_value";
+		out_argument += "spvReturnValue";
 		out_argument += type_to_array_glsl(type);
 		arglist.push_back(move(out_argument));
 	}
@@ -2692,13 +2740,16 @@ void CompilerHLSL::emit_texture_op(const Instruction &i, bool sparse)
 	bool proj = false;
 	const uint32_t *opt = nullptr;
 	auto *combined_image = maybe_get<SPIRCombinedImageSampler>(img);
-	auto img_expr = to_expression(combined_image ? combined_image->image : img);
+
+	if (combined_image && has_decoration(img, DecorationNonUniform))
+	{
+		set_decoration(combined_image->image, DecorationNonUniform);
+		set_decoration(combined_image->sampler, DecorationNonUniform);
+	}
+
+	auto img_expr = to_non_uniform_aware_expression(combined_image ? combined_image->image : img);
 
 	inherited_expressions.push_back(coord);
-
-	// Make sure non-uniform decoration is back-propagated to where it needs to be.
-	if (has_decoration(img, DecorationNonUniformEXT))
-		propagate_nonuniform_qualifier(img);
 
 	switch (op)
 	{
@@ -2954,7 +3005,7 @@ void CompilerHLSL::emit_texture_op(const Instruction &i, bool sparse)
 	{
 		string sampler_expr;
 		if (combined_image)
-			sampler_expr = to_expression(combined_image->sampler);
+			sampler_expr = to_non_uniform_aware_expression(combined_image->sampler);
 		else
 			sampler_expr = to_sampler_expression(img);
 		expr += sampler_expr;
@@ -3410,7 +3461,7 @@ string CompilerHLSL::bitcast_glsl_op(const SPIRType &out_type, const SPIRType &i
 			requires_explicit_fp16_packing = true;
 			force_recompile();
 		}
-		return "SPIRV_Cross_unpackFloat2x16";
+		return "spvUnpackFloat2x16";
 	}
 	else if (out_type.basetype == SPIRType::UInt && in_type.basetype == SPIRType::Half && in_type.vecsize == 2)
 	{
@@ -3419,7 +3470,7 @@ string CompilerHLSL::bitcast_glsl_op(const SPIRType &out_type, const SPIRType &i
 			requires_explicit_fp16_packing = true;
 			force_recompile();
 		}
-		return "SPIRV_Cross_packFloat2x16";
+		return "spvPackFloat2x16";
 	}
 	else
 		return "";
@@ -3484,7 +3535,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_fp16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_packHalf2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvPackHalf2x16");
 		break;
 
 	case GLSLstd450UnpackHalf2x16:
@@ -3493,7 +3544,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_fp16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_unpackHalf2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvUnpackHalf2x16");
 		break;
 
 	case GLSLstd450PackSnorm4x8:
@@ -3502,7 +3553,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_snorm8_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_packSnorm4x8");
+		emit_unary_func_op(result_type, id, args[0], "spvPackSnorm4x8");
 		break;
 
 	case GLSLstd450UnpackSnorm4x8:
@@ -3511,7 +3562,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_snorm8_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_unpackSnorm4x8");
+		emit_unary_func_op(result_type, id, args[0], "spvUnpackSnorm4x8");
 		break;
 
 	case GLSLstd450PackUnorm4x8:
@@ -3520,7 +3571,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_unorm8_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_packUnorm4x8");
+		emit_unary_func_op(result_type, id, args[0], "spvPackUnorm4x8");
 		break;
 
 	case GLSLstd450UnpackUnorm4x8:
@@ -3529,7 +3580,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_unorm8_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_unpackUnorm4x8");
+		emit_unary_func_op(result_type, id, args[0], "spvUnpackUnorm4x8");
 		break;
 
 	case GLSLstd450PackSnorm2x16:
@@ -3538,7 +3589,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_snorm16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_packSnorm2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvPackSnorm2x16");
 		break;
 
 	case GLSLstd450UnpackSnorm2x16:
@@ -3547,7 +3598,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_snorm16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_unpackSnorm2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvUnpackSnorm2x16");
 		break;
 
 	case GLSLstd450PackUnorm2x16:
@@ -3556,7 +3607,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_unorm16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_packUnorm2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvPackUnorm2x16");
 		break;
 
 	case GLSLstd450UnpackUnorm2x16:
@@ -3565,7 +3616,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 			requires_unorm16_packing = true;
 			force_recompile();
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_unpackUnorm2x16");
+		emit_unary_func_op(result_type, id, args[0], "spvUnpackUnorm2x16");
 		break;
 
 	case GLSLstd450PackDouble2x32:
@@ -3614,7 +3665,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 				force_recompile();
 			}
 		}
-		emit_unary_func_op(result_type, id, args[0], "SPIRV_Cross_Inverse");
+		emit_unary_func_op(result_type, id, args[0], "spvInverse");
 		break;
 	}
 
@@ -3637,7 +3688,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 				requires_scalar_reflect = true;
 				force_recompile();
 			}
-			emit_binary_func_op(result_type, id, args[0], args[1], "SPIRV_Cross_Reflect");
+			emit_binary_func_op(result_type, id, args[0], args[1], "spvReflect");
 		}
 		else
 			CompilerGLSL::emit_glsl_op(result_type, id, eop, args, count);
@@ -3651,7 +3702,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 				requires_scalar_refract = true;
 				force_recompile();
 			}
-			emit_trinary_func_op(result_type, id, args[0], args[1], args[2], "SPIRV_Cross_Refract");
+			emit_trinary_func_op(result_type, id, args[0], args[1], args[2], "spvRefract");
 		}
 		else
 			CompilerGLSL::emit_glsl_op(result_type, id, eop, args, count);
@@ -3665,7 +3716,7 @@ void CompilerHLSL::emit_glsl_op(uint32_t result_type, uint32_t id, uint32_t eop,
 				requires_scalar_faceforward = true;
 				force_recompile();
 			}
-			emit_trinary_func_op(result_type, id, args[0], args[1], args[2], "SPIRV_Cross_FaceForward");
+			emit_trinary_func_op(result_type, id, args[0], args[1], args[2], "spvFaceForward");
 		}
 		else
 			CompilerGLSL::emit_glsl_op(result_type, id, eop, args, count);
@@ -3750,6 +3801,10 @@ void CompilerHLSL::read_access_chain(string *expr, const string &lhs, const SPIR
 		SPIRV_CROSS_THROW("Reading types other than 32-bit from ByteAddressBuffer not yet supported, unless SM 6.2 and "
 		                  "native 16-bit types are enabled.");
 
+	string base = chain.base;
+	if (has_decoration(chain.self, DecorationNonUniform))
+		convert_non_uniform_expression(base, chain.self);
+
 	bool templated_load = hlsl_options.shader_model >= 62;
 	string load_expr;
 
@@ -3782,7 +3837,7 @@ void CompilerHLSL::read_access_chain(string *expr, const string &lhs, const SPIR
 		if (templated_load)
 			load_op = "Load";
 
-		load_expr = join(chain.base, ".", load_op, template_expr, "(", chain.dynamic_index, chain.static_index, ")");
+		load_expr = join(base, ".", load_op, template_expr, "(", chain.dynamic_index, chain.static_index, ")");
 	}
 	else if (type.columns == 1)
 	{
@@ -3804,7 +3859,7 @@ void CompilerHLSL::read_access_chain(string *expr, const string &lhs, const SPIR
 
 		for (uint32_t r = 0; r < type.vecsize; r++)
 		{
-			load_expr += join(chain.base, ".Load", template_expr, "(", chain.dynamic_index,
+			load_expr += join(base, ".Load", template_expr, "(", chain.dynamic_index,
 			                  chain.static_index + r * chain.matrix_stride, ")");
 			if (r + 1 < type.vecsize)
 				load_expr += ", ";
@@ -3853,7 +3908,7 @@ void CompilerHLSL::read_access_chain(string *expr, const string &lhs, const SPIR
 
 		for (uint32_t c = 0; c < type.columns; c++)
 		{
-			load_expr += join(chain.base, ".", load_op, template_expr, "(", chain.dynamic_index,
+			load_expr += join(base, ".", load_op, template_expr, "(", chain.dynamic_index,
 			                  chain.static_index + c * chain.matrix_stride, ")");
 			if (c + 1 < type.columns)
 				load_expr += ", ";
@@ -3882,7 +3937,7 @@ void CompilerHLSL::read_access_chain(string *expr, const string &lhs, const SPIR
 		{
 			for (uint32_t r = 0; r < type.vecsize; r++)
 			{
-				load_expr += join(chain.base, ".Load", template_expr, "(", chain.dynamic_index,
+				load_expr += join(base, ".Load", template_expr, "(", chain.dynamic_index,
 				                  chain.static_index + c * (type.width / 8) + r * chain.matrix_stride, ")");
 
 				if ((r + 1 < type.vecsize) || (c + 1 < type.columns))
@@ -3918,9 +3973,6 @@ void CompilerHLSL::emit_load(const Instruction &instruction)
 		uint32_t result_type = ops[0];
 		uint32_t id = ops[1];
 		uint32_t ptr = ops[2];
-
-		if (has_decoration(ptr, DecorationNonUniformEXT))
-			propagate_nonuniform_qualifier(ptr);
 
 		auto &type = get<SPIRType>(result_type);
 		bool composite_load = !type.array.empty() || type.basetype == SPIRType::Struct;
@@ -4060,9 +4112,6 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 	// Make sure we trigger a read of the constituents in the access chain.
 	track_expression_read(chain.self);
 
-	if (has_decoration(chain.self, DecorationNonUniformEXT))
-		propagate_nonuniform_qualifier(chain.self);
-
 	SPIRType target_type;
 	target_type.basetype = SPIRType::UInt;
 	target_type.vecsize = type.vecsize;
@@ -4085,6 +4134,10 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 		                  "native 16-bit types are enabled.");
 
 	bool templated_store = hlsl_options.shader_model >= 62;
+
+	auto base = chain.base;
+	if (has_decoration(chain.self, DecorationNonUniform))
+		convert_non_uniform_expression(base, chain.self);
 
 	string template_expr;
 	if (templated_store)
@@ -4121,7 +4174,7 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 		}
 		else
 			store_op = "Store";
-		statement(chain.base, ".", store_op, template_expr, "(", chain.dynamic_index, chain.static_index, ", ",
+		statement(base, ".", store_op, template_expr, "(", chain.dynamic_index, chain.static_index, ", ",
 		          store_expr, ");");
 	}
 	else if (type.columns == 1)
@@ -4152,7 +4205,7 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 					store_expr = join(bitcast_op, "(", store_expr, ")");
 			}
 
-			statement(chain.base, ".Store", template_expr, "(", chain.dynamic_index,
+			statement(base, ".Store", template_expr, "(", chain.dynamic_index,
 			          chain.static_index + chain.matrix_stride * r, ", ", store_expr, ");");
 		}
 	}
@@ -4196,7 +4249,7 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 					store_expr = join(bitcast_op, "(", store_expr, ")");
 			}
 
-			statement(chain.base, ".", store_op, template_expr, "(", chain.dynamic_index,
+			statement(base, ".", store_op, template_expr, "(", chain.dynamic_index,
 			          chain.static_index + c * chain.matrix_stride, ", ", store_expr, ");");
 		}
 	}
@@ -4220,7 +4273,7 @@ void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t val
 				auto bitcast_op = bitcast_glsl_op(target_type, type);
 				if (!bitcast_op.empty())
 					store_expr = join(bitcast_op, "(", store_expr, ")");
-				statement(chain.base, ".Store", template_expr, "(", chain.dynamic_index,
+				statement(base, ".Store", template_expr, "(", chain.dynamic_index,
 				          chain.static_index + c * (type.width / 8) + r * chain.matrix_stride, ", ", store_expr, ");");
 			}
 		}
@@ -4322,9 +4375,6 @@ void CompilerHLSL::emit_access_chain(const Instruction &instruction)
 			inherit_expression_dependencies(ops[1], ops[i]);
 			add_implied_read_expression(e, ops[i]);
 		}
-
-		if (has_decoration(ops[1], DecorationNonUniformEXT))
-			propagate_nonuniform_qualifier(ops[1]);
 	}
 	else
 	{
@@ -4424,13 +4474,16 @@ void CompilerHLSL::emit_atomic(const uint32_t *ops, uint32_t length, spv::Op op)
 
 		if (data_type.storage == StorageClassImage || !chain)
 		{
-			statement(atomic_op, "(", to_expression(ops[0]), ", ", to_expression(ops[3]), ", ", to_expression(tmp_id),
-			          ");");
+			statement(atomic_op, "(", to_non_uniform_aware_expression(ops[0]), ", ",
+			          to_expression(ops[3]), ", ", to_expression(tmp_id), ");");
 		}
 		else
 		{
+			string base = chain->base;
+			if (has_decoration(chain->self, DecorationNonUniform))
+				convert_non_uniform_expression(base, chain->self);
 			// RWByteAddress buffer is always uint in its underlying type.
-			statement(chain->base, ".", atomic_op, "(", chain->dynamic_index, chain->static_index, ", ",
+			statement(base, ".", atomic_op, "(", chain->dynamic_index, chain->static_index, ", ",
 			          to_expression(ops[3]), ", ", to_expression(tmp_id), ");");
 		}
 	}
@@ -4448,14 +4501,17 @@ void CompilerHLSL::emit_atomic(const uint32_t *ops, uint32_t length, spv::Op op)
 		SPIRType::BaseType expr_type;
 		if (data_type.storage == StorageClassImage || !chain)
 		{
-			statement(atomic_op, "(", to_expression(ops[2]), ", ", value_expr, ", ", to_name(id), ");");
+			statement(atomic_op, "(", to_non_uniform_aware_expression(ops[2]), ", ", value_expr, ", ", to_name(id), ");");
 			expr_type = data_type.basetype;
 		}
 		else
 		{
 			// RWByteAddress buffer is always uint in its underlying type.
+			string base = chain->base;
+			if (has_decoration(chain->self, DecorationNonUniform))
+				convert_non_uniform_expression(base, chain->self);
 			expr_type = SPIRType::UInt;
-			statement(chain->base, ".", atomic_op, "(", chain->dynamic_index, chain->static_index, ", ", value_expr,
+			statement(base, ".", atomic_op, "(", chain->dynamic_index, chain->static_index, ", ", value_expr,
 			          ", ", to_name(id), ");");
 		}
 
@@ -4556,13 +4612,35 @@ void CompilerHLSL::emit_subgroup_op(const Instruction &i)
 	}
 
 	case OpGroupNonUniformShuffle:
-		SPIRV_CROSS_THROW("Cannot trivially implement Shuffle in HLSL.");
+		emit_binary_func_op(result_type, id, ops[3], ops[4], "WaveReadLaneAt");
+		break;
 	case OpGroupNonUniformShuffleXor:
-		SPIRV_CROSS_THROW("Cannot trivially implement ShuffleXor in HLSL.");
+	{
+		bool forward = should_forward(ops[3]);
+		emit_op(ops[0], ops[1],
+		        join("WaveReadLaneAt(", to_unpacked_expression(ops[3]), ", ",
+		             "WaveGetLaneIndex() ^ ", to_enclosed_expression(ops[4]), ")"), forward);
+		inherit_expression_dependencies(ops[1], ops[3]);
+		break;
+	}
 	case OpGroupNonUniformShuffleUp:
-		SPIRV_CROSS_THROW("Cannot trivially implement ShuffleUp in HLSL.");
+	{
+		bool forward = should_forward(ops[3]);
+		emit_op(ops[0], ops[1],
+		        join("WaveReadLaneAt(", to_unpacked_expression(ops[3]), ", ",
+		             "WaveGetLaneIndex() - ", to_enclosed_expression(ops[4]), ")"), forward);
+		inherit_expression_dependencies(ops[1], ops[3]);
+		break;
+	}
 	case OpGroupNonUniformShuffleDown:
-		SPIRV_CROSS_THROW("Cannot trivially implement ShuffleDown in HLSL.");
+	{
+		bool forward = should_forward(ops[3]);
+		emit_op(ops[0], ops[1],
+		        join("WaveReadLaneAt(", to_unpacked_expression(ops[3]), ", ",
+		             "WaveGetLaneIndex() + ", to_enclosed_expression(ops[4]), ")"), forward);
+		inherit_expression_dependencies(ops[1], ops[3]);
+		break;
+	}
 
 	case OpGroupNonUniformAll:
 		emit_unary_func_op(result_type, id, ops[3], "WaveActiveAllTrue");
@@ -4573,12 +4651,8 @@ void CompilerHLSL::emit_subgroup_op(const Instruction &i)
 		break;
 
 	case OpGroupNonUniformAllEqual:
-	{
-		auto &type = get<SPIRType>(result_type);
-		emit_unary_func_op(result_type, id, ops[3],
-		                   type.basetype == SPIRType::Boolean ? "WaveActiveAllEqualBool" : "WaveActiveAllEqual");
+		emit_unary_func_op(result_type, id, ops[3], "WaveActiveAllEqual");
 		break;
-	}
 
 	// clang-format off
 #define HLSL_GROUP_OP(op, hlsl_op, supports_scan) \
@@ -4626,6 +4700,9 @@ case OpGroupNonUniform##op: \
 	HLSL_GROUP_OP(BitwiseAnd, BitAnd, false)
 	HLSL_GROUP_OP(BitwiseOr, BitOr, false)
 	HLSL_GROUP_OP(BitwiseXor, BitXor, false)
+	HLSL_GROUP_OP_CAST(LogicalAnd, BitAnd, uint_type)
+	HLSL_GROUP_OP_CAST(LogicalOr, BitOr, uint_type)
+	HLSL_GROUP_OP_CAST(LogicalXor, BitXor, uint_type)
 
 #undef HLSL_GROUP_OP
 #undef HLSL_GROUP_OP_CAST
@@ -4702,9 +4779,9 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 			}
 
 			if (bitcast_type == CompilerHLSL::TypePackUint2x32)
-				emit_unary_func_op(ops[0], ops[1], ops[2], "SPIRV_Cross_packUint2x32");
+				emit_unary_func_op(ops[0], ops[1], ops[2], "spvPackUint2x32");
 			else
-				emit_unary_func_op(ops[0], ops[1], ops[2], "SPIRV_Cross_unpackUint2x32");
+				emit_unary_func_op(ops[0], ops[1], ops[2], "spvUnpackUint2x32");
 		}
 
 		break;
@@ -5089,7 +5166,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 		auto dummy_samples_levels = join(get_fallback_name(id), "_dummy_parameter");
 		statement("uint ", dummy_samples_levels, ";");
 
-		auto expr = join("SPIRV_Cross_textureSize(", to_expression(ops[2]), ", ",
+		auto expr = join("spvTextureSize(", to_non_uniform_aware_expression(ops[2]), ", ",
 		                 bitcast_expression(SPIRType::UInt, ops[3]), ", ", dummy_samples_levels, ")");
 
 		auto &restype = get<SPIRType>(ops[0]);
@@ -5115,9 +5192,9 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 
 		string expr;
 		if (uav)
-			expr = join("SPIRV_Cross_imageSize(", to_expression(ops[2]), ", ", dummy_samples_levels, ")");
+			expr = join("spvImageSize(", to_non_uniform_aware_expression(ops[2]), ", ", dummy_samples_levels, ")");
 		else
-			expr = join("SPIRV_Cross_textureSize(", to_expression(ops[2]), ", 0u, ", dummy_samples_levels, ")");
+			expr = join("spvTextureSize(", to_non_uniform_aware_expression(ops[2]), ", 0u, ", dummy_samples_levels, ")");
 
 		auto &restype = get<SPIRType>(ops[0]);
 		expr = bitcast_expression(restype, SPIRType::UInt, expr);
@@ -5147,9 +5224,9 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 		statement(variable_decl(type, to_name(id)), ";");
 
 		if (uav)
-			statement("SPIRV_Cross_imageSize(", to_expression(ops[2]), ", ", to_name(id), ");");
+			statement("spvImageSize(", to_non_uniform_aware_expression(ops[2]), ", ", to_name(id), ");");
 		else
-			statement("SPIRV_Cross_textureSize(", to_expression(ops[2]), ", 0u, ", to_name(id), ");");
+			statement("spvTextureSize(", to_non_uniform_aware_expression(ops[2]), ", 0u, ", to_name(id), ");");
 
 		auto &restype = get<SPIRType>(ops[0]);
 		auto expr = bitcast_expression(restype, SPIRType::UInt, to_name(id));
@@ -5180,16 +5257,16 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 				if (operands != ImageOperandsSampleMask || instruction.length != 6)
 					SPIRV_CROSS_THROW("Multisampled image used in OpImageRead, but unexpected operand mask was used.");
 				uint32_t sample = ops[5];
-				imgexpr = join(to_expression(ops[2]), ".Load(int2(gl_FragCoord.xy), ", to_expression(sample), ")");
+				imgexpr = join(to_non_uniform_aware_expression(ops[2]), ".Load(int2(gl_FragCoord.xy), ", to_expression(sample), ")");
 			}
 			else
-				imgexpr = join(to_expression(ops[2]), ".Load(int3(int2(gl_FragCoord.xy), 0))");
+				imgexpr = join(to_non_uniform_aware_expression(ops[2]), ".Load(int3(int2(gl_FragCoord.xy), 0))");
 
 			pure = true;
 		}
 		else
 		{
-			imgexpr = join(to_expression(ops[2]), "[", to_expression(ops[3]), "]");
+			imgexpr = join(to_non_uniform_aware_expression(ops[2]), "[", to_expression(ops[3]), "]");
 			// The underlying image type in HLSL depends on the image format, unlike GLSL, where all images are "vec4",
 			// except that the underlying type changes how the data is interpreted.
 
@@ -5238,7 +5315,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 			value_expr = remap_swizzle(narrowed_type, expression_type(ops[2]).vecsize, value_expr);
 		}
 
-		statement(to_expression(ops[0]), "[", to_expression(ops[1]), "] = ", value_expr, ";");
+		statement(to_non_uniform_aware_expression(ops[0]), "[", to_expression(ops[1]), "] = ", value_expr, ";");
 		if (var && variable_storage_is_aliased(*var))
 			flush_all_aliased_variables();
 		break;
@@ -5250,10 +5327,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 		uint32_t id = ops[1];
 
 		auto expr = to_expression(ops[2]);
-		if (has_decoration(id, DecorationNonUniformEXT) || has_decoration(ops[2], DecorationNonUniformEXT))
-			convert_non_uniform_expression(expression_type(ops[2]), expr);
 		expr += join("[", to_expression(ops[3]), "]");
-
 		auto &e = set<SPIRExpression>(id, expr, result_type, true);
 
 		// When using the pointer, we need to know which variable it is actually loaded from.
@@ -5390,7 +5464,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 			force_recompile();
 		}
 
-		auto expr = join("SPIRV_Cross_bitfieldInsert(", to_expression(ops[2]), ", ", to_expression(ops[3]), ", ",
+		auto expr = join("spvBitfieldInsert(", to_expression(ops[2]), ", ", to_expression(ops[3]), ", ",
 		                 to_expression(ops[4]), ", ", to_expression(ops[5]), ")");
 
 		bool forward =
@@ -5412,9 +5486,9 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 		}
 
 		if (opcode == OpBitFieldSExtract)
-			HLSL_TFOP(SPIRV_Cross_bitfieldSExtract);
+			HLSL_TFOP(spvBitfieldSExtract);
 		else
-			HLSL_TFOP(SPIRV_Cross_bitfieldUExtract);
+			HLSL_TFOP(spvBitfieldUExtract);
 		break;
 	}
 
@@ -5431,7 +5505,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 
 	case OpArrayLength:
 	{
-		auto *var = maybe_get<SPIRVariable>(ops[2]);
+		auto *var = maybe_get_backing_variable(ops[2]);
 		if (!var)
 			SPIRV_CROSS_THROW("Array length must point directly to an SSBO block.");
 
@@ -5441,7 +5515,7 @@ void CompilerHLSL::emit_instruction(const Instruction &instruction)
 
 		// This must be 32-bit uint, so we're good to go.
 		emit_uninitialized_temporary_expression(ops[0], ops[1]);
-		statement(to_expression(ops[2]), ".GetDimensions(", to_expression(ops[1]), ");");
+		statement(to_non_uniform_aware_expression(ops[2]), ".GetDimensions(", to_expression(ops[1]), ");");
 		uint32_t offset = type_struct_member_offset(type, ops[3]);
 		uint32_t stride = type_struct_member_array_stride(type, ops[3]);
 		statement(to_expression(ops[1]), " = (", to_expression(ops[1]), " - ", offset, ") / ", stride, ";");
@@ -5608,6 +5682,12 @@ void CompilerHLSL::validate_shader_model()
 			if (hlsl_options.shader_model < 51)
 				SPIRV_CROSS_THROW(
 				    "Shader model 5.1 or higher is required to use bindless resources or NonUniformResourceIndex.");
+			break;
+
+		case CapabilityVariablePointers:
+		case CapabilityVariablePointersStorageBuffer:
+			SPIRV_CROSS_THROW("VariablePointers capability is not supported in HLSL.");
+
 		default:
 			break;
 		}
@@ -5650,6 +5730,9 @@ string CompilerHLSL::compile()
 	backend.can_return_array = false;
 	backend.nonuniform_qualifier = "NonUniformResourceIndex";
 	backend.support_case_fallthrough = false;
+
+	// SM 4.1 does not support precise for some reason.
+	backend.support_precise_qualifier = hlsl_options.shader_model >= 50 || hlsl_options.shader_model == 40;
 
 	fixup_type_alias();
 	reorder_type_alias();

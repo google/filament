@@ -16,6 +16,7 @@ struct VSOutput_1
 };
 
 layout(location = 0) in vec4 position;
+layout(location = 0) out VSOutput_1 _entryPointOutput;
 
 VSOutput _main(VSInput _input)
 {

@@ -1,0 +1,35 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer Alias;
+layout(buffer_reference) buffer _6;
+layout(buffer_reference) buffer _7;
+layout(buffer_reference, std430) readonly buffer Alias
+{
+    vec4 v[];
+};
+
+layout(buffer_reference, std430) restrict buffer _6
+{
+    vec4 v[];
+};
+
+layout(buffer_reference, std430) coherent writeonly buffer _7
+{
+    vec4 v[];
+};
+
+layout(push_constant, std430) uniform Registers
+{
+    Alias ro;
+    _6 rw;
+    _7 wo;
+} registers;
+
+void main()
+{
+    registers.rw.v[gl_GlobalInvocationID.x] = registers.ro.v[gl_GlobalInvocationID.x];
+    registers.wo.v[gl_GlobalInvocationID.x] = registers.ro.v[gl_GlobalInvocationID.x];
+}
+

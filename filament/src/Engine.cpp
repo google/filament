@@ -899,6 +899,10 @@ Backend Engine::getBackend() const noexcept {
     return upcast(this)->getBackend();
 }
 
+Platform* Engine::getPlatform() const noexcept {
+    return upcast(this)->getPlatform();
+}
+
 Renderer* Engine::createRenderer() noexcept {
     return upcast(this)->createRenderer();
 }
