@@ -40,8 +40,6 @@ using namespace bluevk;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-static constexpr int SWAP_CHAIN_MAX_ATTEMPTS = 16;
-
 #if VK_ENABLE_VALIDATION
 
 namespace {
@@ -1202,35 +1200,15 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
         return;
     }
 
-    // With MoltenVK, it might take several attempts to acquire a swap chain that is not marked as
-    // "out of date" after a resize event.
-    int attempts = 0;
-    while (!surf.acquire()) {
+    // Query the surface caps to see if it has been resized.  This handles not just resized windows,
+    // but also screen rotation on Android and dragging between low DPI and high DPI monitors.
+    if (surf.hasResized()) {
         refreshSwapChain();
-        if (attempts++ > SWAP_CHAIN_MAX_ATTEMPTS) {
-            PANIC_POSTCONDITION("Unable to acquire image from swap chain.");
-        }
     }
 
-    #ifdef ANDROID
-    // Polling VkSurfaceCapabilitiesKHR is the most reliable way to detect a rotation change on
-    // Android. Checking for VK_SUBOPTIMAL_KHR is not sufficient on pre-Android 10 devices. Even
-    // on Android 10, we cannot rely on SUBOPTIMAL because we always use IDENTITY for the
-    // preTransform field in VkSwapchainCreateInfoKHR (see other comment in createSwapChain).
-    //
-    // NOTE: we support apps that have "orientation|screenSize" enabled in android:configChanges.
-    //
-    // NOTE: we poll the currentExtent rather than currentTransform. The transform seems to change
-    // before the extent (on a Pixel 4 anyway), which causes us to create a badly sized VkSwapChain.
-    VkSurfaceCapabilitiesKHR caps;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surf.surface, &caps);
-    const VkExtent2D previous = surf.surfaceCapabilities.currentExtent;
-    const VkExtent2D current = caps.currentExtent;
-    if (current.width != previous.width || current.height != previous.height) {
-        refreshSwapChain();
-        surf.acquire();
-    }
-    #endif
+    // Call vkAcquireNextImageKHR and insert its signal semaphore into the command manager's
+    // dependency chain.
+    surf.acquire();
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {

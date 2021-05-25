@@ -49,6 +49,7 @@ PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
+bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 
 } // namespace filament
 } // namespace backend

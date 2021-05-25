@@ -19,33 +19,15 @@
 #include <utils/Panic.h>
 
 using namespace bluevk;
+using namespace utils;
 
 namespace filament {
 namespace backend {
-
-static VkSurfaceCapabilitiesKHR getSurfaceCaps(VulkanContext& context, VulkanSwapChain& sc) {
-    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physicalDevice,
-            sc.surface, &sc.surfaceCapabilities);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR error.");
-    ASSERT_POSTCONDITION(
-            sc.surfaceCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            "Vulkan surface doesn't support VK_IMAGE_USAGE_TRANSFER_DST_BIT.");
-    uint32_t surfaceFormatsCount;
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, sc.surface,
-            &surfaceFormatsCount, nullptr);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR count error.");
-    sc.surfaceFormats.resize(surfaceFormatsCount);
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, sc.surface,
-            &surfaceFormatsCount, sc.surfaceFormats.data());
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR error.");
-    return sc.surfaceCapabilities;
-}
 
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
         currentSwapIndex = (currentSwapIndex + 1) % attachments.size();
         return true;
-
     }
 
     // This immediately retrieves the index of the next available presentable image, and
@@ -56,13 +38,8 @@ bool VulkanSwapChain::acquire() {
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !suboptimal) {
-        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         suboptimal = true;
-    }
-
-    // The surface can be "out of date" when it has been resized, which is not an error.
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        return false;
     }
 
     // To ensure that the next command buffer submission does not write into the image before
@@ -75,9 +52,8 @@ bool VulkanSwapChain::acquire() {
 }
 
 static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surfaceContext,
-        VkFormat depthFormat) {
+        VkFormat depthFormat, VkExtent2D size) {
     // Create an appropriately-sized device-only VkImage.
-    const auto size = surfaceContext.surfaceCapabilities.currentExtent;
     VkImage depthImage;
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -152,7 +128,8 @@ static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surf
 }
 
 void VulkanSwapChain::create() {
-    const auto caps = getSurfaceCaps(context, *this);
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physicalDevice, surface, &caps);
 
     // The general advice is to require one more than the minimum swap chain length, since the
     // absolute minimum could easily require waiting for a driver or presentation layer to release
@@ -167,29 +144,43 @@ void VulkanSwapChain::create() {
     // the number of images, though there may be limits related to the total amount of memory used
     // by presentable images."
     if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
-        utils::slog.e << "Swap chain does not support " << desiredImageCount << " images.\n";
-        desiredImageCount = surfaceCapabilities.minImageCount;
+        slog.e << "Swap chain does not support " << desiredImageCount << " images." << io::endl;
+        desiredImageCount = caps.minImageCount;
     }
-    surfaceFormat = surfaceFormats[0];
-    for (const VkSurfaceFormatKHR& format : surfaceFormats) {
-        if (format.format == VK_FORMAT_R8G8B8A8_UNORM) {
-            surfaceFormat = format;
+
+    // Find a suitable surface format.
+    if (surfaceFormat.format == VK_FORMAT_UNDEFINED) {
+
+        uint32_t surfaceFormatsCount;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
+                &surfaceFormatsCount, nullptr);
+
+        std::vector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatsCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
+                &surfaceFormatsCount, surfaceFormats.data());
+
+        surfaceFormat = surfaceFormats[0];
+        for (const VkSurfaceFormatKHR& format : surfaceFormats) {
+            if (format.format == VK_FORMAT_R8G8B8A8_UNORM) {
+                surfaceFormat = format;
+            }
         }
     }
+
+    clientSize = caps.currentExtent;
+
     const auto compositionCaps = caps.supportedCompositeAlpha;
     const auto compositeAlpha = (compositionCaps & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
             VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
     // Create the low-level swap chain.
-    auto size = clientSize = caps.currentExtent;
-
     VkSwapchainCreateInfoKHR createInfo {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
         .minImageCount = desiredImageCount,
         .imageFormat = surfaceFormat.format,
         .imageColorSpace = surfaceFormat.colorSpace,
-        .imageExtent = size,
+        .imageExtent = clientSize,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | // Allows use as a blit destination.
@@ -219,8 +210,7 @@ void VulkanSwapChain::create() {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR count error.");
     attachments.resize(imageCount);
     std::vector<VkImage> images(imageCount);
-    result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount,
-            images.data());
+    result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
         attachments[i] = {
@@ -232,14 +222,14 @@ void VulkanSwapChain::create() {
             .layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         };
     }
-    utils::slog.i
+    slog.i
             << "vkCreateSwapchain"
-            << ": " << size.width << "x" << size.height
+            << ": " << clientSize.width << "x" << clientSize.height
             << ", " << surfaceFormat.format
             << ", " << surfaceFormat.colorSpace
             << ", " << imageCount
             << ", " << caps.currentTransform
-            << utils::io::endl;
+            << io::endl;
 
     // Create image views.
     VkImageViewCreateInfo ivCreateInfo = {};
@@ -259,7 +249,7 @@ void VulkanSwapChain::create() {
     createSemaphore(context.device, &imageAvailable);
     acquired = false;
 
-    createFinalDepthBuffer(context, *this, context.finalDepthFormat);
+    createFinalDepthBuffer(context, *this, context.finalDepthFormat, clientSize);
 }
 
 void VulkanSwapChain::destroy() {
@@ -480,15 +470,21 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
                 &barrier);
     }
 
-    surfaceCapabilities.currentExtent.width = width;
-    surfaceCapabilities.currentExtent.height = height;
-
     clientSize.width = width;
     clientSize.height = height;
 
     imageAvailable = VK_NULL_HANDLE;
 
-    createFinalDepthBuffer(context, *this, context.finalDepthFormat);
+    createFinalDepthBuffer(context, *this, context.finalDepthFormat, clientSize);
+}
+
+bool VulkanSwapChain::hasResized() const {
+    if (surface == VK_NULL_HANDLE) {
+        return false;
+    }
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.physicalDevice, surface, &surfaceCapabilities);
+    return !equivalent(clientSize, surfaceCapabilities.currentExtent);
 }
 
 } // namespace filament
