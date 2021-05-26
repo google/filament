@@ -44,15 +44,12 @@ public:
 
     Slice() noexcept = default;
 
-    template <typename Iter>
-    Slice(Iter begin, Iter end) noexcept
-            : mBegin(iterator(begin)),
-              mEndOffset(size_type(iterator(end)-iterator(begin))) {
+    Slice(const_iterator begin, const_iterator end) noexcept
+            : mBegin(const_cast<iterator>(begin)), mEndOffset(size_type(end - begin)) {
     }
 
-    template <typename Iter>
-    Slice(Iter begin, size_type count) noexcept
-            : mBegin(begin), mEndOffset(size_type(count)) {
+    Slice(const_pointer begin, size_type count) noexcept
+            : mBegin(const_cast<iterator>(begin)), mEndOffset(size_type(count)) {
     }
 
     Slice(Slice const& rhs) noexcept = default;
@@ -60,15 +57,13 @@ public:
     Slice& operator=(Slice const& rhs) noexcept = default;
     Slice& operator=(Slice&& rhs) noexcept = default;
 
-    template<typename Iter>
-    void set(Iter begin, size_type count) UTILS_RESTRICT noexcept {
-        mBegin = &*begin;
+    void set(pointer begin, size_type count) UTILS_RESTRICT noexcept {
+        mBegin = begin;
         mEndOffset = size_type(count);
     }
 
-    template<typename Iter>
-    void set(Iter begin, Iter end) UTILS_RESTRICT noexcept {
-        mBegin = &*begin;
+    void set(iterator begin, iterator end) UTILS_RESTRICT noexcept {
+        mBegin = begin;
         mEndOffset = size_type(end - begin);
     }
 
