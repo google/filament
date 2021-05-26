@@ -19,6 +19,8 @@
 
 #include <math/vec3.h>
 
+#include<utils/Slice.h>
+
 #include <vector>
 
 #include <stdint.h>
@@ -50,6 +52,11 @@ public:
      * @param maxNumSamples     number of samples for importance sampling
      * @param updater           a callback for the caller to track progress
      */
+    static void roughnessFilter(
+            utils::JobSystem& js, Cubemap& dst, const utils::Slice<Cubemap>& levels,
+            float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,
+            Progress updater = nullptr, void* userdata = nullptr);
+
     static void roughnessFilter(
             utils::JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
             float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,

@@ -24,6 +24,7 @@
 #include <private/filament/SibGenerator.h>
 
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 
 namespace filament {
 
@@ -86,8 +87,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     };
 
     using ShadowPass = std::pair<const ShadowMapEntry*, RenderPass>;
-    std::vector<ShadowPass> passes;
-    passes.reserve(MAX_SHADOW_LAYERS);
+    auto passes = utils::FixedCapacityVector<ShadowPass>::with_capacity(MAX_SHADOW_LAYERS);
     uint8_t layerSampleCount[MAX_SHADOW_LAYERS] = {};
 
     assert_invariant(mTextureRequirements.layers <= MAX_SHADOW_LAYERS);
