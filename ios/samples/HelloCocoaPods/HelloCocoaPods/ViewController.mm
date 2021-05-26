@@ -153,7 +153,7 @@ struct Vertex {
         // Compile for Metal on mobile platforms.
         .targetApi(filamat::MaterialBuilder::TargetApi::METAL)
         .platform(filamat::MaterialBuilder::Platform::MOBILE)
-        .build();
+        .build(_engine->getJobSystem());
     assert(pkg.isValid());
 
     // We're done building materials.
