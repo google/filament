@@ -289,6 +289,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         choreographer.removeFrameCallback(frameScheduler)
+        remoteServer?.close()
     }
 
     fun loadModelData(message: RemoteServer.ReceivedMessage) {
