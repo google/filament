@@ -47,7 +47,7 @@ struct VulkanCommandBuffer {
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
     VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fence;
-    uint32_t index;
+    uint32_t index = 0;
 };
 
 class CommandBufferObserver {
