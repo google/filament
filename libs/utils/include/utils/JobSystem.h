@@ -39,7 +39,7 @@
 namespace utils {
 
 class JobSystem {
-    static constexpr size_t MAX_JOB_COUNT = 4096;
+    static constexpr size_t MAX_JOB_COUNT = 16384;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
 
@@ -196,6 +196,7 @@ public:
         if (job) {
             new(job->storage) T(std::move(data));
         }
+        assert(job);
         return job;
     }
 
@@ -361,6 +362,7 @@ private:
     void finish(Job* job) noexcept;
 
     void put(WorkQueue& workQueue, Job* job) noexcept {
+        assert(job);
         size_t index = job - mJobStorageBase;
         assert(index >= 0 && index < MAX_JOB_COUNT);
         workQueue.push(uint16_t(index + 1));
