@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+#if defined(_MSC_VER)
 #pragma warning( push )
 #pragma warning( disable : 26812) // Unscoped enums
+#endif
 
 #include "VulkanCommands.h"
 
@@ -179,15 +181,15 @@ bool VulkanCommands::flush() {
 
     if (FILAMENT_VULKAN_VERBOSE) {
         slog.i << "Submitting cmdbuffer=" << mCurrent->cmdbuffer
-          << " wait=(" << signals[0] << ", " << signals[1] << ") "
-          << " signal=" << renderingFinished
-          << io::endl;
+            << " wait=(" << signals[0] << ", " << signals[1] << ") "
+            << " signal=" << renderingFinished
+            << io::endl;
     }
 
     auto& cmdfence = mCurrent->fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     cmdfence->status.store(VK_NOT_READY);
-    VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
+    UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
     lock.unlock();
     cmdfence->condition.notify_all();
 
@@ -203,7 +205,7 @@ VkSemaphore VulkanCommands::acquireFinishedSignal() {
     VkSemaphore semaphore = mSubmissionSignal;
     mSubmissionSignal = VK_NULL_HANDLE;
     if (FILAMENT_VULKAN_VERBOSE) {
-      slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
+        slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
     }
     return semaphore;
 }
@@ -260,4 +262,6 @@ void VulkanCommands::updateFences() {
 } // namespace filament
 } // namespace backend
 
+#if defined(_MSC_VER)
 #pragma warning( pop )
+#endif

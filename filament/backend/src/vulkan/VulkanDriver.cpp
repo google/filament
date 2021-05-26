@@ -65,6 +65,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
                 << cbdata->pMessage << utils::io::endl;
         utils::debug_trap();
     } else {
+        // TODO: emit best practices warnings about aggressive pipeline barriers.
+        if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT") || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
+           return VK_FALSE;
+        }
         utils::slog.w << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
     }
@@ -150,6 +154,21 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+
+#if VK_ENABLE_VALIDATION
+    VkValidationFeatureEnableEXT enables[] = {
+        VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+        // TODO: Enable synchronization validation.
+        // VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+    };
+    VkValidationFeaturesEXT features = {};
+    features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
+    features.pEnabledValidationFeatures = enables;
+
+    instanceCreateInfo.pNext = &features;
+#endif
+
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
     bluevk::bindInstance(mContext.instance);
