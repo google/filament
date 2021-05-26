@@ -43,6 +43,7 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
         "VK_MVK_macos_surface", // TODO: replace with VK_EXT_metal_surface
         "VK_KHR_get_physical_device_properties2",
 #if VK_ENABLE_VALIDATION
+        "VK_EXT_validation_features",
         "VK_EXT_debug_utils",
 #endif
     };
