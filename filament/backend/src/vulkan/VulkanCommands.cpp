@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
+#pragma warning( push )
+#pragma warning( disable : 26812) // Unscoped enums
+
 #include "VulkanCommands.h"
 
+#include "VulkanConstants.h"
+
+#include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
 using namespace bluevk;
+using namespace utils;
 
 namespace filament {
 namespace backend {
@@ -37,7 +44,7 @@ VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) 
     status.store(VK_INCOMPLETE);
 }
 
- VulkanCmdFence::~VulkanCmdFence() {
+VulkanCmdFence::~VulkanCmdFence() {
     vkDestroyFence(device, fence, VKALLOC);
 }
 
@@ -130,7 +137,7 @@ bool VulkanCommands::flush() {
         return false;
     }
 
-    const int index = mCurrent - &mStorage[0];
+    const int64_t index = mCurrent - &mStorage[0];
     VkSemaphore renderingFinished = mSubmissionSignals[index];
 
     vkEndCommandBuffer(mCurrent->cmdbuffer);
@@ -170,12 +177,21 @@ bool VulkanCommands::flush() {
         signals[submitInfo.waitSemaphoreCount++] = mInjectedSignal;
     }
 
+    if (FILAMENT_VULKAN_VERBOSE) {
+        slog.i << "Submitting cmdbuffer=" << mCurrent->cmdbuffer
+          << " wait=(" << signals[0] << ", " << signals[1] << ") "
+          << " signal=" << renderingFinished
+          << io::endl;
+    }
+
     auto& cmdfence = mCurrent->fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     cmdfence->status.store(VK_NOT_READY);
-    vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
+    VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
     lock.unlock();
     cmdfence->condition.notify_all();
+
+    assert_invariant(result == VK_SUCCESS);
 
     mSubmissionSignal = renderingFinished;
     mInjectedSignal = VK_NULL_HANDLE;
@@ -186,12 +202,18 @@ bool VulkanCommands::flush() {
 VkSemaphore VulkanCommands::acquireFinishedSignal() {
     VkSemaphore semaphore = mSubmissionSignal;
     mSubmissionSignal = VK_NULL_HANDLE;
+    if (FILAMENT_VULKAN_VERBOSE) {
+      slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
+    }
     return semaphore;
 }
 
 void VulkanCommands::injectDependency(VkSemaphore next) {
     assert_invariant(mInjectedSignal == VK_NULL_HANDLE);
     mInjectedSignal = next;
+    if (FILAMENT_VULKAN_VERBOSE) {
+        slog.i << "Injecting " << next << " (e.g. due to vkAcquireNextImageKHR)" << io::endl;
+    }
 }
 
 void VulkanCommands::wait() {
@@ -237,3 +259,5 @@ void VulkanCommands::updateFences() {
 
 } // namespace filament
 } // namespace backend
+
+#pragma warning( pop )
