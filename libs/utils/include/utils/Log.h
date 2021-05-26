@@ -17,49 +17,27 @@
 #ifndef TNT_UTILS_LOG_H
 #define TNT_UTILS_LOG_H
 
-#include <string>
-
-#include <utils/ThreadLocal.h>
-#include <utils/bitset.h>
-#include <utils/compiler.h> // ssize_t is a POSIX type.
-
+#include <utils/compiler.h>
 #include <utils/ostream.h>
+#include <utils/ThreadLocal.h>
 
 namespace utils {
-namespace io {
-
-class UTILS_PUBLIC LogStream : public ostream {
-public:
-
-    enum Priority {
-        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO
-    };
-
-    explicit LogStream(Priority p) noexcept : mPriority(p) {}
-
-    ostream& flush() noexcept override;
-
-private:
-    Priority mPriority;
-};
-
-} // namespace io
 
 struct UTILS_PUBLIC Loggers {
     // DEBUG level logging stream
-    io::LogStream& d;
+    io::ostream& d;
 
     // ERROR level logging stream
-    io::LogStream& e;
+    io::ostream& e;
 
     // WARNING level logging stream
-    io::LogStream& w;
+    io::ostream& w;
 
     // INFORMATION level logging stream
-    io::LogStream& i;
+    io::ostream& i;
 };
 
-extern UTILS_PUBLIC const Loggers slog;
+extern UTILS_PUBLIC UTILS_DECLARE_TLS(Loggers) const slog;
 
 } // namespace utils
 
