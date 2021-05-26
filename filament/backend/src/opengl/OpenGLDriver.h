@@ -254,8 +254,22 @@ private:
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit HandleAllocator(const utils::HeapArea& area);
-        void* alloc(size_t size, size_t alignment, size_t extra = 0) noexcept;
-        void free(void* p, size_t size) noexcept;
+
+        // this is in fact always called with a constexpr size argument
+        inline void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
+            assert_invariant(size <= mPool2.getSize());
+            if (size <= mPool0.getSize()) return mPool0.alloc(size, 16, extra);
+            if (size <= mPool1.getSize()) return mPool1.alloc(size, 32, extra);
+            if (size <= mPool2.getSize()) return mPool2.alloc(size, 32, extra);
+            return nullptr;
+        }
+
+        // this is in fact always called with a constexpr size argument
+        inline void free(void* p, size_t size) noexcept {
+            if (size <= mPool0.getSize()) { mPool0.free(p); return; }
+            if (size <= mPool1.getSize()) { mPool1.free(p); return; }
+            if (size <= mPool2.getSize()) { mPool2.free(p); return; }
+        }
     };
 
     // the arenas for handle allocation needs to be thread-safe
@@ -271,6 +285,7 @@ private:
     HandleArena mHandleArena;
 
     backend::HandleBase::HandleId allocateHandle(size_t size) noexcept;
+    backend::HandleBase::HandleId allocateHandle(void* addr) noexcept;
 
     template<typename D, typename ... ARGS>
     backend::Handle<D> initHandle(ARGS&& ... args) noexcept;
