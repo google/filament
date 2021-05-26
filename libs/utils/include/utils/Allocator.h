@@ -346,7 +346,7 @@ public:
         mFreeList.push(p);
     }
 
-    size_t getSize() const noexcept { return ELEMENT_SIZE; }
+    constexpr size_t getSize() const noexcept { return ELEMENT_SIZE; }
 
     PoolAllocator(void* begin, void* end) noexcept
         : mFreeList(begin, end, ELEMENT_SIZE, ALIGNMENT, OFFSET) {
