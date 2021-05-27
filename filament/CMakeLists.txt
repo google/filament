@@ -66,7 +66,7 @@ set(SRCS
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
         src/PostProcessManager.cpp
-        src/FrameGraphRenderPass.cpp
+        src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
         src/Renderer.cpp
