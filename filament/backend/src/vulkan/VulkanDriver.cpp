@@ -107,6 +107,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 #if VK_ENABLE_VALIDATION
     const utils::StaticString DESIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
+#if FILAMENT_VULKAN_DUMP_API
+        "VK_LAYER_LUNARG_api_dump",
+#endif
 #if defined(ENABLE_RENDERDOC)
         "VK_LAYER_RENDERDOC_Capture",
 #endif
@@ -1165,25 +1168,24 @@ void VulkanDriver::endRenderPass(int) {
     // require more state tracking, so we've chosen to use a memory barrier for simplicity and
     // correctness.
 
-    // NOTE: ideally dstAccessMask would be VK_ACCESS_SHADER_READ_BIT and dstStageMask would be
-    // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
-    // seems to be insufficient on Mali devices. To work around this we are using a more
-    // aggressive TOP_OF_PIPE barrier.
+    // NOTE: ideally dstStageMask would merely be VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
+    // seems to be insufficient on Mali devices. To work around this we are adding a more aggressive
+    // TOP_OF_PIPE barrier.
 
     if (!mCurrentRenderTarget->isSwapChain()) {
         VkMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dstAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         };
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         if (mCurrentRenderTarget->hasDepth()) {
             barrier.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         }
-        vkCmdPipelineBarrier(cmdbuffer,
-                srcStageMask,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        vkCmdPipelineBarrier(cmdbuffer, srcStageMask,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | // <== For Mali
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 0, 1, &barrier, 0, nullptr, 0, nullptr);
     }
 
