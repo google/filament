@@ -68,6 +68,7 @@ struct MaterialInputs {
     vec4  postLightingColor;
 #endif
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
 #if defined(HAS_REFRACTION)
 #if defined(MATERIAL_HAS_ABSORPTION)
     vec3 absorption;
@@ -80,6 +81,11 @@ struct MaterialInputs {
 #endif
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
     float microThickness;
+#endif
+#elif !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_IOR)
+    float ior;
+#endif
 #endif
 #endif
 };
@@ -149,6 +155,7 @@ void initMaterial(out MaterialInputs material) {
     material.postLightingColor = vec4(0.0);
 #endif
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
 #if defined(HAS_REFRACTION)
 #if defined(MATERIAL_HAS_ABSORPTION)
     material.absorption = vec3(0.0);
@@ -161,6 +168,11 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)
     material.microThickness = 0.0;
+#endif
+#elif !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(MATERIAL_HAS_IOR)
+    material.ior = 1.5;
+#endif
 #endif
 #endif
 }
