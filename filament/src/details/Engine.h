@@ -282,6 +282,17 @@ public:
     // flush the current buffer
     void flush();
 
+    // flush the current buffer based on some heuristics
+    void flushIfNeeded() {
+        auto counter = mFlushCounter + 1;
+        if (UTILS_LIKELY(counter < 128)) {
+            mFlushCounter = counter;
+        } else {
+            mFlushCounter = 0;
+            flush();
+        }
+    }
+
     /**
      * Processes the platform's event queue when called from the platform's event-handling thread.
      * Returns false when called from any other thread.
@@ -375,6 +386,7 @@ private:
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;
     DriverApi mCommandStream;
+    uint32_t mFlushCounter = 0;
 
     LinearAllocatorArena mPerRenderPassAllocator;
     HeapAllocatorArena mHeapAllocator;
