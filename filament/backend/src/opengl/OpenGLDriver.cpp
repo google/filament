@@ -537,7 +537,7 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
+void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
     DEBUG_MARKER()
 
     construct<GLSamplerGroup>(sbh, size);
@@ -545,7 +545,7 @@ void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) 
 
 void OpenGLDriver::createUniformBufferR(
         Handle<HwUniformBuffer> ubh,
-        size_t size,
+        uint32_t size,
         BufferUsage usage) {
     DEBUG_MARKER()
 
@@ -1706,7 +1706,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
-        size_t index, Handle<HwBufferObject> boh) {
+        uint32_t index, Handle<HwBufferObject> boh) {
    DEBUG_MARKER()
 
     GLVertexBuffer* vb = handle_cast<GLVertexBuffer *>(vbh);
@@ -2122,8 +2122,7 @@ void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     setExternalTexture(handle_cast<GLTexture*>(th), image);
 }
 
-void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
-
+void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
@@ -2771,7 +2770,7 @@ void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
+void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
     DEBUG_MARKER()
     auto& gl = mContext;
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
@@ -2780,8 +2779,8 @@ void OpenGLDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) 
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
-        size_t offset, size_t size) {
+void OpenGLDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+        uint32_t offset, uint32_t size) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -2793,7 +2792,7 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> 
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
+void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
     assert_invariant(index < Program::BINDING_COUNT);
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
@@ -2829,7 +2828,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     return s;
 }
 
-void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
+void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (gl.ext.EXT_debug_marker) {
@@ -2838,7 +2837,7 @@ void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string,  uint32_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
