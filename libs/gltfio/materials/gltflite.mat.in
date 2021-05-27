@@ -34,7 +34,10 @@ material {
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
-        { type : sampler2d, name : emissiveMap }
+        { type : sampler2d, name : emissiveMap },
+
+        // Reflectance
+        { type : float, name : reflectance }
     ],
 }
 
@@ -67,10 +70,10 @@ fragment {
         material.baseColor *= getColor();
 
         #if !defined(SHADING_MODEL_UNLIT)
-
             #if defined(SHADING_MODEL_LIT)
                 material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
+                material.reflectance = materialParams.reflectance;
             #endif
 
             material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);

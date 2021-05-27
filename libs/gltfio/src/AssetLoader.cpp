@@ -46,6 +46,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <cmath>
 #include <vector>
 
 #define CGLTF_IMPLEMENTATION
@@ -951,7 +952,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
         .sheenRoughnessUV = (uint8_t) shConfig.sheen_roughness_texture.texcoord,
         .hasSheen = !!inputMat->has_sheen,
-        .hasIOR = !!inputMat->has_ior,
+        .hasIOR = !!inputMat->has_ior
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1137,8 +1138,18 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    // IOR can be implemented either has IOR or reflectance because of ubershaders
     if (matkey.hasIOR) {
-        mi->setParameter("ior", inputMat->ior.ior);
+        if (mi->getMaterial()->hasParameter("ior")) {
+            mi->setParameter("ior", inputMat->ior.ior);
+        }
+        if (mi->getMaterial()->hasParameter("reflectance")) {
+            float ior = inputMat->ior.ior;
+            float f0 = (ior - 1.0f) / (ior + 1.0f);
+            f0 *= f0;
+            float reflectance = std::sqrt(f0 / 0.16f);
+            mi->setParameter("reflectance", reflectance);
+        }
     }
 
     mResult->mMatInstanceCache[key] = {mi, *uvmap};
