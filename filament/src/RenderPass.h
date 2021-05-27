@@ -220,6 +220,8 @@ public:
         uint8_t reserved = {};                                          // 1 byte
     };
 
+    static_assert(sizeof(PrimitiveInfo) == sizeof(void*) + 16);
+
     struct alignas(8) Command {     // 32 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 24 bytes
@@ -230,6 +232,9 @@ public:
             return ptr;
         }
     };
+
+    static_assert(sizeof(Command) == 32);
+
     static_assert(std::is_trivially_destructible<Command>::value,
             "Command isn't trivially destructible");
 
