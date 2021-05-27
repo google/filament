@@ -106,16 +106,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
 #if VK_ENABLE_VALIDATION
     const utils::StaticString DESIRED_LAYERS[] = {
-#if defined(ANDROID)
-        // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
-        "VK_LAYER_GOOGLE_threading",
-        "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_GOOGLE_unique_objects"
-#else
         "VK_LAYER_KHRONOS_validation",
-#endif
 #if defined(ENABLE_RENDERDOC)
         "VK_LAYER_RENDERDOC_Capture",
 #endif
@@ -139,19 +130,17 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
 
-#if !defined(ANDROID)
-    // Check if VK_EXT_validation_features is supported.
-    uint32_t availableExtsCount = 0;
-    vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
-    std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
-    vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
-    for  (const auto& extProps : availableExts) {
-        if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
-            validationFeaturesSupported = true;
-            break;
+        // Check if VK_EXT_validation_features is supported.
+        uint32_t availableExtsCount = 0;
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
+        std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
+        for  (const auto& extProps : availableExts) {
+            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+                validationFeaturesSupported = true;
+                break;
+            }
         }
-    }
-#endif
 
     } else {
 #if defined(ANDROID)
@@ -174,7 +163,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
 #if VK_ENABLE_VALIDATION
+#if defined(ANDROID)
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
+#else
     ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+#endif
     if (validationFeaturesSupported) {
         ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
     }
