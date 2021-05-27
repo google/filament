@@ -83,7 +83,6 @@ struct alignas(4) MaterialKey {
     uint8_t sheenRoughnessUV : 7;
     bool hasSheen : 1;
     bool hasIOR : 1;
-    bool hasReflectance : 1;
 };
 
 static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected padding.");

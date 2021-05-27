@@ -1138,7 +1138,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
-    // IOR can be implemented either has IOR or reflectance because of ubershaders
+    // IOR can be implemented as either IOR or reflectance because of ubershaders
     if (matkey.hasIOR) {
         if (mi->getMaterial()->hasParameter("ior")) {
             mi->setParameter("ior", inputMat->ior.ior);
