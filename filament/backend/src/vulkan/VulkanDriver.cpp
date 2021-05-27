@@ -83,12 +83,12 @@ namespace filament {
 namespace backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
-    return VulkanDriver::create(platform, ppEnabledExtensions, enabledExtensionCount);
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept {
+    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount);
 }
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mContextManager(*platform),
         mBlitter(mContext),
@@ -101,6 +101,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
     VkInstanceCreateInfo instanceCreateInfo = {};
+
+    bool validationFeaturesSupported = false;
+
 #if VK_ENABLE_VALIDATION
     const utils::StaticString DESIRED_LAYERS[] = {
 #if defined(ANDROID)
@@ -135,6 +138,21 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     if (!enabledLayers.empty()) {
         instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+
+#if !defined(ANDROID)
+    // Check if VK_EXT_validation_features is supported.
+    uint32_t availableExtsCount = 0;
+    vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
+    std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
+    vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
+    for  (const auto& extProps : availableExts) {
+        if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+            validationFeaturesSupported = true;
+            break;
+        }
+    }
+#endif
+
     } else {
 #if defined(ANDROID)
         utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
@@ -146,6 +164,28 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 #endif // VK_ENABLE_VALIDATION
 
+    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 4
+    // instance extensions here in the common code. So that's a max of 6.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 6;
+    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
+    uint32_t enabledExtensionCount = 0;
+
+    // Request all cross-platform extensions.
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
+#if VK_ENABLE_VALIDATION
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+    if (validationFeaturesSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
+    }
+#endif
+
+    // Request platform-specific extensions.
+    for (uint32_t i = 0; i < requiredExtensionCount; ++i) {
+        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
+        ppEnabledExtensions[enabledExtensionCount++] = ppRequiredExtensions[i];
+    }
+
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -155,19 +195,18 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
 
-#if VK_ENABLE_VALIDATION
+    VkValidationFeaturesEXT features = {};
     VkValidationFeatureEnableEXT enables[] = {
         VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
         // TODO: Enable synchronization validation.
         // VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
     };
-    VkValidationFeaturesEXT features = {};
-    features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-    features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
-    features.pEnabledValidationFeatures = enables;
-
-    instanceCreateInfo.pNext = &features;
-#endif
+    if (validationFeaturesSupported) {
+        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
+        features.pEnabledValidationFeatures = enables;
+        instanceCreateInfo.pNext = &features;
+    }
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
