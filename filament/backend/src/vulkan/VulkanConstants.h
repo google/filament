@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_VULKANCONSTANTS_H
 
 #define FILAMENT_VULKAN_VERBOSE 0
+#define FILAMENT_VULKAN_DUMP_API 0
 
 // In debug builds, we enable validation layers and set up a debug callback.
 //
