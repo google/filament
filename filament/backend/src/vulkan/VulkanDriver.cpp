@@ -378,11 +378,11 @@ void VulkanDriver::finish(int dummy) {
     mContext.commands->flush();
 }
 
-void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count) {
+void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
     construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
             mStagePool, mDisposer, size, usage);
@@ -821,7 +821,7 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
     return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
-void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
@@ -941,7 +941,7 @@ SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 
-void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
@@ -1305,7 +1305,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             result == VK_ERROR_OUT_OF_DATE_KHR);
 }
 
-void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
+void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
@@ -1313,18 +1313,18 @@ void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) 
     mPipelineCache.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
-        size_t offset, size_t size) {
+void VulkanDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+        uint32_t offset, uint32_t size) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     mPipelineCache.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
+void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto* hwsb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
     mSamplerBindings[index] = hwsb;
 }
 
-void VulkanDriver::insertEventMarker(char const* string, size_t len) {
+void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
@@ -1343,7 +1343,7 @@ void VulkanDriver::insertEventMarker(char const* string, size_t len) {
     }
 }
 
-void VulkanDriver::pushGroupMarker(char const* string, size_t len) {
+void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
     // TODO: Add group marker color to the Driver API
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
