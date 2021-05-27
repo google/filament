@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.2 (currently main branch)
 
+- gltfio: added support for `KHR_materials_ior`.
+
 ## v1.10.1
 
 - engine: Attachments of custom RendereTargets are not systematically discarded
