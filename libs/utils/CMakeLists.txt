@@ -138,6 +138,7 @@ set(TEST_SRCS
         test/test_CString.cpp
         test/test_CyclicBarrier.cpp
         test/test_Entity.cpp
+        test/test_FixedCapacityVector.cpp
         test/test_JobSystem.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
