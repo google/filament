@@ -49,7 +49,10 @@ material {
         { type : int, name : sheenRoughnessIndex },
         { type : float, name : sheenRoughnessFactor },
         { type : sampler2d, name : sheenRoughnessMap },
-        { type : mat3, name : sheenRoughnessUvMatrix }
+        { type : mat3, name : sheenRoughnessUvMatrix },
+
+        // Reflectance
+        { type : float, name : reflectance }
     ],
 }
 
@@ -86,6 +89,7 @@ fragment {
         material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
         material.sheenColor = materialParams.sheenColorFactor;
         material.sheenRoughness = materialParams.sheenRoughnessFactor;
+        material.reflectance = materialParams.reflectance;
 
         if (materialParams.sheenColorIndex > -1) {
             highp float2 uv = uvs[materialParams.sheenColorIndex];

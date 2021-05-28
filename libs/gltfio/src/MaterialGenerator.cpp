@@ -280,6 +280,12 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasIOR) {
+            shader += R"SHADER(
+                material.ior = materialParams.ior;
+            )SHADER";
+        }
     }
 
     shader += "}\n";
@@ -419,7 +425,6 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
     // TRANSMISSION
     if (config.hasTransmission) {
-
         // According to KHR_materials_transmission, the minimum expectation for a compliant renderer
         // is to at least render any opaque objects that lie behind transmitting objects.
         builder.refractionMode(RefractionMode::SCREEN_SPACE);
@@ -439,9 +444,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
         builder.blending(MaterialBuilder::BlendingMode::FADE);
         builder.depthWrite(true);
-
     } else {
-
         // BLENDING
         switch (config.alphaMode) {
             case AlphaMode::OPAQUE:
@@ -458,6 +461,11 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
                 // Ignore
                 break;
         }
+    }
+
+    // IOR
+    if (config.hasIOR) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "ior");
     }
 
     if (config.unlit) {

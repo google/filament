@@ -52,7 +52,8 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.sheenColorUV == k2.sheenColorUV) &&
         (k1.hasSheenRoughnessTexture == k2.hasSheenRoughnessTexture) &&
         (k1.sheenRoughnessUV == k2.sheenRoughnessUV) &&
-        (k1.hasSheen == k2.hasSheen);
+        (k1.hasSheen == k2.hasSheen) &&
+        (k1.hasIOR == k2.hasIOR);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows

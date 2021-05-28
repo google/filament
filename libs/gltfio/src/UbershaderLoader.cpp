@@ -252,6 +252,13 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         }
     }
 
+    if (mi->getMaterial()->hasParameter("ior")) {
+        mi->setParameter("ior", 1.5f);
+    }
+    if (mi->getMaterial()->hasParameter("reflectance")) {
+        mi->setParameter("reflectance", 0.5f);
+    }
+
     return mi;
 }
 
