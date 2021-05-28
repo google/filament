@@ -25,7 +25,8 @@ utils::io::ostream& sstream::flush() noexcept {
 }
 
 const char* sstream::c_str() const noexcept {
-    return mData.get();
+    char const* buffer = mData.get();
+    return buffer ? buffer : "";
 }
 
 } // namespace io
