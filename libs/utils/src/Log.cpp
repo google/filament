@@ -18,7 +18,6 @@
 
 #include <string>
 #include <utils/compiler.h>
-#include <utils/ThreadLocal.h>
 
 #ifdef ANDROID
 #   include <android/log.h>
@@ -30,21 +29,6 @@
 namespace utils {
 
 namespace io {
-
-class LogStream : public ostream {
-public:
-
-    enum Priority {
-        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO
-    };
-
-    explicit LogStream(Priority p) noexcept : mPriority(p) {}
-
-    ostream& flush() noexcept override;
-
-private:
-    Priority mPriority;
-};
 
 ostream& LogStream::flush() noexcept {
     Buffer& buf = getBuffer();
@@ -79,15 +63,15 @@ ostream& LogStream::flush() noexcept {
     return *this;
 }
 
-UTILS_DEFINE_TLS(LogStream) cout(LogStream::Priority::LOG_DEBUG);
-UTILS_DEFINE_TLS(LogStream) cerr(LogStream::Priority::LOG_ERROR);
-UTILS_DEFINE_TLS(LogStream) cwarn(LogStream::Priority::LOG_WARNING);
-UTILS_DEFINE_TLS(LogStream) cinfo(LogStream::Priority::LOG_INFO);
+static LogStream cout(LogStream::Priority::LOG_DEBUG);
+static LogStream cerr(LogStream::Priority::LOG_ERROR);
+static LogStream cwarn(LogStream::Priority::LOG_WARNING);
+static LogStream cinfo(LogStream::Priority::LOG_INFO);
 
 } // namespace io
 
 
-UTILS_DEFINE_TLS(Loggers) const slog = {
+const Loggers slog = {
         io::cout,   // debug
         io::cerr,   // error
         io::cwarn,  // warning
