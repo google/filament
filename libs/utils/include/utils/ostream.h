@@ -70,14 +70,14 @@ protected:
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
-        char* buffer = nullptr;     // buffer address
-        char* curr = nullptr;       // current pointer
-        size_t size = 0;            // size remaining
-        size_t capacity = 0;        // total capacity of the buffer
+        char* buffer;
+        char* curr;
+        size_t size = 0;
+        size_t capacity = 0;
         const char* get() const noexcept { return buffer; }
         void advance(ssize_t n) noexcept;
         void reset() noexcept;
-        void reserve(size_t newSize) noexcept;
+        void resize(size_t newSize) noexcept;
     };
 
     Buffer mData;
