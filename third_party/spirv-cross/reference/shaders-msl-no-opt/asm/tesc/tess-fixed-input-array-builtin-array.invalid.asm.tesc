@@ -85,7 +85,7 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-HSOut _hs_main(thread const spvUnsafeArray<VertexOutput, 3> (&p), thread const uint& i)
+HSOut _hs_main(thread const spvUnsafeArray<VertexOutput, 3>& p, thread const uint& i)
 {
     HSOut _output;
     _output.pos = p[i].pos;
@@ -94,7 +94,7 @@ HSOut _hs_main(thread const spvUnsafeArray<VertexOutput, 3> (&p), thread const u
 }
 
 static inline __attribute__((always_inline))
-HSConstantOut PatchHS(thread const spvUnsafeArray<VertexOutput, 3> (&_patch))
+HSConstantOut PatchHS(thread const spvUnsafeArray<VertexOutput, 3>& _patch)
 {
     HSConstantOut _output;
     _output.EdgeTess[0] = (float2(1.0) + _patch[0].uv).x;

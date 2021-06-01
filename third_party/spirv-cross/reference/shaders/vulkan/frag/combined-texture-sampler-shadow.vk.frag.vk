@@ -10,7 +10,7 @@ layout(location = 0) out float FragColor;
 
 float samp2(mediump texture2D t, mediump samplerShadow s)
 {
-    return texture(sampler2DShadow(t, s), vec3(vec3(1.0).xy, vec3(1.0).z));
+    return texture(sampler2DShadow(t, s), vec3(vec3(1.0).xy, 1.0));
 }
 
 float samp3(mediump texture2D t, mediump sampler s)

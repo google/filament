@@ -370,6 +370,14 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
     }
 }
 
+float FLightManager::getSpotLightInnerCone(Instance i) const noexcept {
+    const auto& spotParams = getSpotParams(i);
+    float cosOuter = std::cos(spotParams.outerClamped);
+    float scale = spotParams.scaleOffset.x;
+    float inner = std::acos((1.0f / scale) + cosOuter);
+    return inner;
+}
+
 // ------------------------------------------------------------------------------------------------
 // ShadowCascades utility methods
 // ------------------------------------------------------------------------------------------------
@@ -480,6 +488,10 @@ void LightManager::setSpotLightCone(Instance i, float inner, float outer) noexce
 
 float LightManager::getSpotLightOuterCone(Instance i) const noexcept {
     return upcast(this)->getSpotParams(i).outerClamped;
+}
+
+float LightManager::getSpotLightInnerCone(Instance i) const noexcept {
+    return upcast(this)->getSpotLightInnerCone(i);
 }
 
 void LightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {

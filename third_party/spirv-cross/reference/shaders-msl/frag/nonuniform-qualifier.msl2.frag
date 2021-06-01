@@ -47,10 +47,10 @@ fragment main0_out main0(main0_in in [[stage_in]], constant UBO* ubos_0 [[buffer
     out.FragColor = uCombinedSamplers[_53].sample(uCombinedSamplersSmplr[_53], in.vUV);
     int _69 = i + 20;
     int _73 = i + 40;
-    out.FragColor += ubos[(_69)]->v[_73];
+    out.FragColor += ubos[_69]->v[_73];
     int _87 = i + 50;
     int _91 = i + 60;
-    out.FragColor += ssbos[(_87)]->v[_91];
+    out.FragColor += ssbos[_87]->v[_91];
     return out;
 }
 

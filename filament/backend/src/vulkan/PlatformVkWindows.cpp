@@ -31,16 +31,8 @@ using namespace backend;
 
 Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-    const char* requiredInstanceExtensions[] = {
-        "VK_KHR_surface",
-        "VK_KHR_win32_surface",
-        "VK_KHR_get_physical_device_properties2",
-#if VK_ENABLE_VALIDATION
-        "VK_EXT_debug_utils",
-#endif
-    };
-    return VulkanDriverFactory::create(this, requiredInstanceExtensions,
-        sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
+    const char* requiredInstanceExtensions[] = { "VK_KHR_win32_surface" };
+    return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1);
 }
 
 void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {

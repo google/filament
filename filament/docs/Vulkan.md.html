@@ -47,7 +47,7 @@ swap chain objects, but in practice the swap chain is basically a singleton.
 *                      v                                              v                        *
 *   .----------------------------------------.     .---------------------------------------.   *
 *  |                                          |   |                                         |  *
-*  |       VulkanDriver : DriverBase          |   |   VulkanSurfaceContext : HwSwapChain    |  *
+*  |       VulkanDriver : DriverBase          |   |     VulkanSwapChain : HwSwapChain       |  *
 *  |                                          |   |                                         |  *
 *  |------------------------------------------|   |-----------------------------------------|  *
 *  |                                          |   |                                         |  *
@@ -108,8 +108,7 @@ VulkanRenderTarget
 : Descends from `HwRenderTarget`, contains references to `VkImage` objects.
 
 VulkanSwapChain
-: Descends from `HwSwapChain`, owns `VulkanSurfaceContext` which has a reference to `VkSurfaceKHR`
-  and `VkSwapchainKHR`.
+: Descends from `HwSwapChain`, has a reference to `VkSurfaceKHR` and `VkSwapchainKHR`.
 
 VulkanVertexBuffer
 : Descends from `HwVertexBuffer`, owns a set of `VkBuffer`.

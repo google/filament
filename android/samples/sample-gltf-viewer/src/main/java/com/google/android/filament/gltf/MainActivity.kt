@@ -24,6 +24,8 @@ import android.view.*
 import android.view.GestureDetector
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.filament.IndirectLight
+import com.google.android.filament.Skybox
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -158,12 +160,30 @@ class MainActivity : Activity() {
 
     private suspend fun loadHdr(message: RemoteServer.ReceivedMessage) {
         withContext(Dispatchers.Main) {
-            val texture = HDRLoader.createTexture(modelViewer.engine, message.buffer)
-            if (texture == null) {
+            val engine = modelViewer.engine
+            val equirect = HDRLoader.createTexture(engine, message.buffer)
+            if (equirect == null) {
                 setStatusText("Could not decode HDR file.")
             } else {
-                // TODO: Add Java bindings for IBLPrefilterContext and use them here.
                 setStatusText("Successfully decoded HDR file.")
+
+                val context = IBLPrefilterContext(engine)
+                val equirectToCubemap = IBLPrefilterContext.EquirectangularToCubemap(context)
+                val skyboxTexture = equirectToCubemap.run(equirect)!!
+                engine.destroyTexture(equirect)
+
+                val specularFilter = IBLPrefilterContext.SpecularFilter(context)
+                val reflections = specularFilter.run(skyboxTexture)
+
+                val ibl = IndirectLight.Builder()
+                         .reflections(reflections)
+                         .intensity(30000.0f)
+                         .build(engine)
+
+                val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
+
+                modelViewer.scene.skybox = sky
+                modelViewer.scene.indirectLight = ibl
             }
         }
     }
@@ -269,6 +289,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         choreographer.removeFrameCallback(frameScheduler)
+        remoteServer?.close()
     }
 
     fun loadModelData(message: RemoteServer.ReceivedMessage) {

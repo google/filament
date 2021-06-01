@@ -76,7 +76,20 @@ object KTXLoader {
         return Skybox(nativeSkybox)
     }
 
+    /**
+     * Retrieves spherical harmonics from the content of a KTX file.
+     *
+     * @param buffer The content of the KTX File.
+     * @return The resulting array of 9 * 3 floats, or null on failure.
+     */
+    fun getSphericalHarmonics(buffer: Buffer): FloatArray? {
+        val sphericalHarmonics = FloatArray(9 * 3)
+        val success = nGetSphericalHarmonics(buffer, buffer.remaining(), sphericalHarmonics)
+        return if (success) sphericalHarmonics else null
+    }
+
     private external fun nCreateKTXTexture(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
     private external fun nCreateIndirectLight(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
+    private external fun nGetSphericalHarmonics(buffer: Buffer, remaining: Int, outSphericalHarmonics: FloatArray): Boolean
     private external fun nCreateSkybox(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
 }

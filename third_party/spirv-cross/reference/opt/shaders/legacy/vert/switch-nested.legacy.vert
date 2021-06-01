@@ -11,12 +11,12 @@ uniform UBO _34;
 void main()
 {
     vec4 _102;
-    for (int SPIRV_Cross_Dummy30 = 0; SPIRV_Cross_Dummy30 < 1; SPIRV_Cross_Dummy30++)
+    for (int spvDummy30 = 0; spvDummy30 < 1; spvDummy30++)
     {
         if (_34.func_arg != 0)
         {
             vec4 _101;
-            for (int SPIRV_Cross_Dummy45 = 0; SPIRV_Cross_Dummy45 < 1; SPIRV_Cross_Dummy45++)
+            for (int spvDummy45 = 0; spvDummy45 < 1; spvDummy45++)
             {
                 if (_34.inner_func_arg != 0)
                 {

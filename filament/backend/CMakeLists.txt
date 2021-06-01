@@ -115,7 +115,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
-            src/metal/PlatformMetal.mm
+            src/metal/MetalPlatform.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
@@ -165,6 +165,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
+            src/vulkan/VulkanSwapChain.cpp
+            src/vulkan/VulkanSwapChain.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp

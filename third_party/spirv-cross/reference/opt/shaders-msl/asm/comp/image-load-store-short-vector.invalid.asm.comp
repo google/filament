@@ -1,0 +1,22 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+static inline __attribute__((always_inline))
+void _main(thread const uint3& id, thread texture2d<float, access::read_write> TargetTexture)
+{
+    float2 loaded = TargetTexture.read(uint2(id.xy)).xy;
+    float2 storeTemp = loaded + float2(1.0);
+    TargetTexture.write(storeTemp.xyyy, uint2((id.xy + uint2(1u))));
+}
+
+kernel void main0(texture2d<float, access::read_write> TargetTexture [[texture(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    uint3 id = gl_WorkGroupID;
+    uint3 param = id;
+    _main(param, TargetTexture);
+}
+

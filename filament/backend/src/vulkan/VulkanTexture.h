@@ -18,7 +18,6 @@
  #define TNT_FILAMENT_DRIVER_VULKANTEXTURE_H
 
 #include "VulkanDriver.h"
-#include "VulkanPipelineCache.h"
 #include "VulkanBuffer.h"
 #include "VulkanUtility.h"
 

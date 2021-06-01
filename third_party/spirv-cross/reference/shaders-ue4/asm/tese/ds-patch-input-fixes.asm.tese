@@ -246,9 +246,9 @@ struct main0_out
     float4 out_var_TEXCOORD7 [[user(locn1)]];
     float4 out_var_TEXCOORD10_centroid [[user(locn2)]];
     float4 out_var_TEXCOORD11_centroid [[user(locn3)]];
+    float4 gl_Position [[position]];
     float gl_ClipDistance [[clip_distance]] [1];
     float gl_ClipDistance_0 [[user(clip0)]];
-    float4 gl_Position [[position]];
 };
 
 struct main0_in

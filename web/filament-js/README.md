@@ -32,6 +32,9 @@ git commit && git tag -a v{XX}.{YY}.{ZZ}
 6. Push your change to GitHub, then make a GitHub Release associated with your new tag.
 7. Perform a "dry run" of the npm packaging process:
 
+:bangbang: | If there is a material change, be sure to update the live demos!
+:---: | :---
+
 ```
 cd out/cmake-webgl-release/web/filament-js
 npm publish --dry-run

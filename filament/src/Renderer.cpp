@@ -322,7 +322,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // "+1" to the count for the DEPTH attachment (we don't have stencil for the public RenderTarget)
         for (size_t i = 0; i < RenderTarget::MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1; i++) {
             auto attachment = currentRenderTarget->getAttachment((RenderTarget::AttachmentPoint)i);
-            if (any(attachment.texture->getUsage() &
+            if (attachment.texture && any(attachment.texture->getUsage() &
                     (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
                 keepOverrideEndFlags |= backend::getTargetBufferFlagsAt(i);
             }

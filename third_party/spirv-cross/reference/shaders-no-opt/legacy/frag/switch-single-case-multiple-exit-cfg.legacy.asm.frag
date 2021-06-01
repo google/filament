@@ -7,7 +7,7 @@ vec2 _19;
 void main()
 {
     highp vec2 _30;
-    for (int SPIRV_Cross_Dummy15 = 0; SPIRV_Cross_Dummy15 < 1; SPIRV_Cross_Dummy15++)
+    for (int spvDummy15 = 0; spvDummy15 < 1; spvDummy15++)
     {
         if (gl_FragCoord.x != gl_FragCoord.x)
         {

@@ -40,8 +40,6 @@ using namespace bluevk;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-static constexpr int SWAP_CHAIN_MAX_ATTEMPTS = 16;
-
 #if VK_ENABLE_VALIDATION
 
 namespace {
@@ -67,6 +65,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
                 << cbdata->pMessage << utils::io::endl;
         utils::debug_trap();
     } else {
+        // TODO: emit best practices warnings about aggressive pipeline barriers.
+        if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT") || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
+           return VK_FALSE;
+        }
         utils::slog.w << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") "
                 << cbdata->pMessage << utils::io::endl;
     }
@@ -81,12 +83,12 @@ namespace filament {
 namespace backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
-    return VulkanDriver::create(platform, ppEnabledExtensions, enabledExtensionCount);
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept {
+    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount);
 }
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mContextManager(*platform),
         mBlitter(mContext),
@@ -99,17 +101,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
     VkInstanceCreateInfo instanceCreateInfo = {};
+
+    bool validationFeaturesSupported = false;
+
 #if VK_ENABLE_VALIDATION
     const utils::StaticString DESIRED_LAYERS[] = {
-#if defined(ANDROID)
-        // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
-        "VK_LAYER_GOOGLE_threading",
-        "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_object_tracker",
-        "VK_LAYER_LUNARG_core_validation",
-        "VK_LAYER_GOOGLE_unique_objects"
-#else
         "VK_LAYER_KHRONOS_validation",
+#if FILAMENT_VULKAN_DUMP_API
+        "VK_LAYER_LUNARG_api_dump",
 #endif
 #if defined(ENABLE_RENDERDOC)
         "VK_LAYER_RENDERDOC_Capture",
@@ -133,6 +132,19 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     if (!enabledLayers.empty()) {
         instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+
+        // Check if VK_EXT_validation_features is supported.
+        uint32_t availableExtsCount = 0;
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
+        std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
+        for  (const auto& extProps : availableExts) {
+            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+                validationFeaturesSupported = true;
+                break;
+            }
+        }
+
     } else {
 #if defined(ANDROID)
         utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
@@ -144,6 +156,32 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 #endif // VK_ENABLE_VALIDATION
 
+    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 4
+    // instance extensions here in the common code. So that's a max of 6.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 6;
+    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
+    uint32_t enabledExtensionCount = 0;
+
+    // Request all cross-platform extensions.
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
+#if VK_ENABLE_VALIDATION
+#if defined(ANDROID)
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
+#else
+    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+#endif
+    if (validationFeaturesSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
+    }
+#endif
+
+    // Request platform-specific extensions.
+    for (uint32_t i = 0; i < requiredExtensionCount; ++i) {
+        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
+        ppEnabledExtensions[enabledExtensionCount++] = ppRequiredExtensions[i];
+    }
+
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -152,6 +190,20 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+
+    VkValidationFeaturesEXT features = {};
+    VkValidationFeatureEnableEXT enables[] = {
+        VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+        // TODO: Enable synchronization validation.
+        // VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+    };
+    if (validationFeaturesSupported) {
+        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
+        features.pEnabledValidationFeatures = enables;
+        instanceCreateInfo.pNext = &features;
+    }
+
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
     bluevk::bindInstance(mContext.instance);
@@ -329,11 +381,11 @@ void VulkanDriver::finish(int dummy) {
     mContext.commands->flush();
 }
 
-void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count) {
+void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
     construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
             mStagePool, mDisposer, size, usage);
@@ -523,17 +575,13 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     const VkInstance instance = mContext.instance;
     auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
             flags);
-    auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, vksurface);
-
-    // TODO: move the following line into makeCurrent.
-    mContext.currentSurface = &swapChain->surfaceContext;
+    construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, vksurface);
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
-    auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, width, height);
-    mContext.currentSurface = &swapChain->surfaceContext;
+    construct_handle<VulkanSwapChain>(mHandleMap, sch, mContext, width, height);
 }
 
 void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
@@ -641,8 +689,8 @@ void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
 
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        VulkanSurfaceContext& surfaceContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
-        backend::destroySwapChain(mContext, surfaceContext, mDisposer);
+        VulkanSwapChain& surfaceContext = *handle_cast<VulkanSwapChain>(mHandleMap, sch);
+        surfaceContext.destroy();
 
         vkDestroySurfaceKHR(mContext.instance, surfaceContext.surface, VKALLOC);
         if (mContext.currentSurface == &surfaceContext) {
@@ -776,7 +824,7 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
     return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
-void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
@@ -896,7 +944,7 @@ SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 
-void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
@@ -923,8 +971,6 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
-    assert_invariant(mContext.currentSurface);
-    VulkanSurfaceContext& surface = *mContext.currentSurface;
     mCurrentRenderTarget = handle_cast<VulkanRenderTarget>(mHandleMap, rth);
     VulkanRenderTarget* rt = mCurrentRenderTarget;
 
@@ -935,9 +981,13 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
-    if (rt->isSwapChain() && surface.firstRenderPass) {
-        discardStart |= TargetBufferFlags::COLOR;
-        surface.firstRenderPass = false;
+    if (rt->isSwapChain()) {
+        assert_invariant(mContext.currentSurface);
+        VulkanSwapChain& surface = *mContext.currentSurface;
+        if (surface.firstRenderPass) {
+            discardStart |= TargetBufferFlags::COLOR;
+            surface.firstRenderPass = false;
+        }
     }
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
@@ -1118,25 +1168,24 @@ void VulkanDriver::endRenderPass(int) {
     // require more state tracking, so we've chosen to use a memory barrier for simplicity and
     // correctness.
 
-    // NOTE: ideally dstAccessMask would be VK_ACCESS_SHADER_READ_BIT and dstStageMask would be
-    // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
-    // seems to be insufficient on Mali devices. To work around this we are using a more
-    // aggressive TOP_OF_PIPE barrier.
+    // NOTE: ideally dstStageMask would merely be VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
+    // seems to be insufficient on Mali devices. To work around this we are adding a more aggressive
+    // TOP_OF_PIPE barrier.
 
     if (!mCurrentRenderTarget->isSwapChain()) {
         VkMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dstAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         };
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         if (mCurrentRenderTarget->hasDepth()) {
             barrier.srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             srcStageMask |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         }
-        vkCmdPipelineBarrier(cmdbuffer,
-                srcStageMask,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        vkCmdPipelineBarrier(cmdbuffer, srcStageMask,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | // <== For Mali
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 0, 1, &barrier, 0, nullptr, 0, nullptr);
     }
 
@@ -1196,7 +1245,7 @@ void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
                                   "Vulkan driver does not support distinct draw/read swap chains.");
-    VulkanSurfaceContext& surf = handle_cast<VulkanSwapChain>(mHandleMap, drawSch)->surfaceContext;
+    VulkanSwapChain& surf = *handle_cast<VulkanSwapChain>(mHandleMap, drawSch);
     mContext.currentSurface = &surf;
 
     // Leave early if the swap chain image has already been acquired but not yet presented.
@@ -1204,43 +1253,23 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
         return;
     }
 
-    // With MoltenVK, it might take several attempts to acquire a swap chain that is not marked as
-    // "out of date" after a resize event.
-    int attempts = 0;
-    while (!acquireSwapChain(mContext, surf)) {
+    // Query the surface caps to see if it has been resized.  This handles not just resized windows,
+    // but also screen rotation on Android and dragging between low DPI and high DPI monitors.
+    if (surf.hasResized()) {
         refreshSwapChain();
-        if (attempts++ > SWAP_CHAIN_MAX_ATTEMPTS) {
-            PANIC_POSTCONDITION("Unable to acquire image from swap chain.");
-        }
     }
 
-    #ifdef ANDROID
-    // Polling VkSurfaceCapabilitiesKHR is the most reliable way to detect a rotation change on
-    // Android. Checking for VK_SUBOPTIMAL_KHR is not sufficient on pre-Android 10 devices. Even
-    // on Android 10, we cannot rely on SUBOPTIMAL because we always use IDENTITY for the
-    // preTransform field in VkSwapchainCreateInfoKHR (see other comment in createSwapChain).
-    //
-    // NOTE: we support apps that have "orientation|screenSize" enabled in android:configChanges.
-    //
-    // NOTE: we poll the currentExtent rather than currentTransform. The transform seems to change
-    // before the extent (on a Pixel 4 anyway), which causes us to create a badly sized VkSwapChain.
-    VkSurfaceCapabilitiesKHR caps;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surf.surface, &caps);
-    const VkExtent2D previous = surf.surfaceCapabilities.currentExtent;
-    const VkExtent2D current = caps.currentExtent;
-    if (current.width != previous.width || current.height != previous.height) {
-        refreshSwapChain();
-        acquireSwapChain(mContext, surf);
-    }
-    #endif
+    // Call vkAcquireNextImageKHR and insert its signal semaphore into the command manager's
+    // dependency chain.
+    surf.acquire();
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
-    VulkanSurfaceContext& surface = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
+    VulkanSwapChain& surface = *handle_cast<VulkanSwapChain>(mHandleMap, sch);
 
     // Before swapping, transition the current swap chain image to the PRESENT layout. This cannot
     // be done as part of the render pass because it does not know if it is last pass in the frame.
-    makeSwapChainPresentable(mContext, surface);
+    surface.makePresentable();
 
     if (mContext.commands->flush()) {
         collectGarbage();
@@ -1278,7 +1307,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             result == VK_ERROR_OUT_OF_DATE_KHR);
 }
 
-void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
+void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
@@ -1286,18 +1315,18 @@ void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) 
     mPipelineCache.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
-        size_t offset, size_t size) {
+void VulkanDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+        uint32_t offset, uint32_t size) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     mPipelineCache.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
+void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto* hwsb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
     mSamplerBindings[index] = hwsb;
 }
 
-void VulkanDriver::insertEventMarker(char const* string, size_t len) {
+void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
@@ -1316,7 +1345,7 @@ void VulkanDriver::insertEventMarker(char const* string, size_t len) {
     }
 }
 
-void VulkanDriver::pushGroupMarker(char const* string, size_t len) {
+void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
     // TODO: Add group marker color to the Driver API
     constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
@@ -1765,7 +1794,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Bind new descriptor sets if they need to change.
     // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
     // message since the validation layers already do so.
-    if (!mPipelineCache.bindDescriptors(*mContext.commands)) {
+    if (!mPipelineCache.bindDescriptors(cmdbuffer)) {
         return;
     }
 
@@ -1783,10 +1812,10 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     };
 
     rt->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
+    mPipelineCache.bindScissor(cmdbuffer, scissor);
 
     // Bind a new pipeline if the pipeline state changed.
-    mPipelineCache.bindPipeline(*mContext.commands);
+    mPipelineCache.bindPipeline(cmdbuffer);
 
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
@@ -1824,11 +1853,11 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void VulkanDriver::refreshSwapChain() {
-    VulkanSurfaceContext& surface = *mContext.currentSurface;
+    VulkanSwapChain& surface = *mContext.currentSurface;
 
     assert_invariant(!surface.headlessQueue && "Resizing headless swap chains is not supported.");
-    backend::destroySwapChain(mContext, surface, mDisposer);
-    createSwapChain(mContext, surface);
+    surface.destroy();
+    surface.create();
 
     mFramebufferCache.reset();
 }

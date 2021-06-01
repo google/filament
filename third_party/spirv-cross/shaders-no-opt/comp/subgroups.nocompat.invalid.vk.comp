@@ -72,6 +72,9 @@ void main()
 	uvec4 anded = subgroupAnd(ballot_value);
 	uvec4 ored = subgroupOr(ballot_value);
 	uvec4 xored = subgroupXor(ballot_value);
+	bvec4 anded_b = subgroupAnd(equal(ballot_value, uvec4(42)));
+	bvec4 ored_b = subgroupOr(equal(ballot_value, uvec4(42)));
+	bvec4 xored_b = subgroupXor(equal(ballot_value, uvec4(42)));
 
 	added = subgroupInclusiveAdd(added);
 	iadded = subgroupInclusiveAdd(iadded);
@@ -116,6 +119,10 @@ void main()
 	anded = subgroupClusteredAnd(anded, 4u);
 	ored = subgroupClusteredOr(ored, 4u);
 	xored = subgroupClusteredXor(xored, 4u);
+
+	anded_b = subgroupClusteredAnd(equal(anded, uvec4(2u)), 4u);
+	ored_b = subgroupClusteredOr(equal(ored, uvec4(3u)), 4u);
+	xored_b = subgroupClusteredXor(equal(xored, uvec4(4u)), 4u);
 
 	// quad
 	vec4 swap_horiz = subgroupQuadSwapHorizontal(vec4(20.0));

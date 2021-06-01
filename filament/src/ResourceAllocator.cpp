@@ -20,8 +20,11 @@
 
 #include "details/Texture.h"
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/debug.h>
+
+#include <iterator>
 
 using namespace utils;
 
@@ -211,12 +214,10 @@ void ResourceAllocator::gc() noexcept {
     }
 
     if (UTILS_UNLIKELY(mCacheSize >= CACHE_CAPACITY)) {
-        // make a copy of our cache to a vector
-        std::vector<std::pair<TextureKey, TextureCachePayload>> cache;
-        cache.reserve(textureCache.size());
-        for (auto const& item : textureCache) {
-            cache.push_back(item);
-        }
+        // make a copy of our CacheContainer to a vector
+        using Vector = FixedCapacityVector<std::pair<TextureKey, TextureCachePayload>>;
+        auto cache = Vector::with_capacity(textureCache.size());
+        std::copy(textureCache.begin(), textureCache.end(), std::back_insert_iterator<Vector>(cache));
 
         // sort by least recently used
         std::sort(cache.begin(), cache.end(), [](auto const& lhs, auto const& rhs) {

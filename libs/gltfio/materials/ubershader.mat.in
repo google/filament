@@ -57,7 +57,10 @@ material {
         { type : int, name : clearCoatNormalIndex },
         { type : sampler2d, name : clearCoatNormalMap },
         { type : mat3, name : clearCoatNormalUvMatrix },
-        { type : float, name : clearCoatNormalScale }
+        { type : float, name : clearCoatNormalScale },
+
+        // Reflectance
+        { type : float, name : reflectance }
     ],
 }
 
@@ -127,6 +130,8 @@ fragment {
             #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
                 material.glossiness = materialParams.glossinessFactor;
                 material.specularColor = materialParams.specularFactor;
+            #else
+                material.reflectance = materialParams.reflectance;
             #endif
 
             if (materialParams.metallicRoughnessIndex > -1) {

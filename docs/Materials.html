@@ -246,7 +246,7 @@ in <a href="#table_standardproperties">table&nbsp;1</a>.
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:left"> A detail normal used to perturb the clear coat layer using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color that can be blended with the result of the lighting computations. See <code>postLightingBlending</code> </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:left"> Index of refraction for refractive objects </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">ior</strong> </td><td style="text-align:left"> Index of refraction, either for refractive objects or as an alternative to reflectance </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">transmission</strong> </td><td style="text-align:left"> Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">absorption</strong> </td><td style="text-align:left"> Absorption factor for refractive objects </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">microThickness</strong> </td><td style="text-align:left"> Thickness of the thin layer of refractive objects </td></tr>
@@ -317,7 +317,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <p></p><p>
 
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
-    therefore they don't need to be both specified. Typically, only the reflectance is specified
+    therefore they don't need to be both specified. Typically, only the reflectance is specified,
     and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
     deduced automatically. It is possible to specify both, in which case their values are kept
     as-is, which can lead to physically impossible materials, however, this might be desirable
@@ -844,7 +844,8 @@ this option for more information.
 The <code>ior</code> property only affects non-metallic surfaces. This property can be used to control the
 index of refraction and the specular intensity of materials. The <code>ior</code> property is intended to
 be used with refractive (transmissive) materials, which are enabled when the <code>refractionMode</code> is
-set to <code>cubemap</code> or <code>screenspace</code>.
+set to <code>cubemap</code> or <code>screenspace</code>. It can also be used on non-refractive objects as an alternative
+to setting the reflectance.
 
 </p><p>
 

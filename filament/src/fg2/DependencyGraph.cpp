@@ -18,6 +18,8 @@
 
 #include <utils/Systrace.h>
 
+#include <iterator>
+
 namespace filament {
 
 DependencyGraph::DependencyGraph() noexcept {
@@ -33,9 +35,15 @@ uint32_t DependencyGraph::generateNodeId() noexcept {
 }
 
 void DependencyGraph::registerNode(Node* node, NodeID id) noexcept {
-    // node* is not fully constructed here
+    // Node* is not fully constructed here
     assert_invariant(id == mNodes.size());
-    mNodes.push_back(node);
+
+    // here we manually grow the fixed-size vector
+    NodeContainer& nodes = mNodes;
+    if (UTILS_UNLIKELY(nodes.capacity() == nodes.size())) {
+        nodes.reserve(nodes.capacity() * 2);
+    }
+    nodes.push_back(node);
 }
 
 bool DependencyGraph::isEdgeValid(DependencyGraph::Edge const* edge) const noexcept {
@@ -46,7 +54,12 @@ bool DependencyGraph::isEdgeValid(DependencyGraph::Edge const* edge) const noexc
 }
 
 void DependencyGraph::link(DependencyGraph::Edge* edge) noexcept {
-    mEdges.push_back(edge);
+    // here we manually grow the fixed-size vector
+    EdgeContainer& edges = mEdges;
+    if (UTILS_UNLIKELY(edges.capacity() == edges.size())) {
+        edges.reserve(edges.capacity() * 2);
+    }
+    edges.push_back(edge);
 }
 
 DependencyGraph::EdgeContainer const& DependencyGraph::getEdges() const noexcept {
@@ -61,28 +74,22 @@ DependencyGraph::NodeContainer const& DependencyGraph::getNodes() const noexcept
 DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
         DependencyGraph::Node const* node) const noexcept {
     // TODO: we might need something more efficient
-    EdgeContainer result;
-    result.reserve(mEdges.size());
+    auto result = EdgeContainer::with_capacity(mEdges.size());
     NodeID const nodeId = node->getId();
-    for (auto* edge : mEdges) {
-        if (edge->to == nodeId) {
-            result.push_back(edge);
-        }
-    }
+    std::copy_if(mEdges.begin(), mEdges.end(),
+            std::back_insert_iterator<EdgeContainer>(result),
+            [nodeId](auto edge) { return edge->to == nodeId; });
     return result;
 }
 
 DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
         DependencyGraph::Node const* node) const noexcept {
     // TODO: we might need something more efficient
-    EdgeContainer result;
-    result.reserve(mEdges.size());
+    auto result = EdgeContainer::with_capacity(mEdges.size());
     NodeID const nodeId = node->getId();
-    for (auto* edge : mEdges) {
-        if (edge->from == nodeId) {
-            result.push_back(edge);
-        }
-    }
+    std::copy_if(mEdges.begin(), mEdges.end(),
+            std::back_insert_iterator<EdgeContainer>(result),
+            [nodeId](auto edge) { return edge->from == nodeId; });
     return result;
 }
 
@@ -108,8 +115,7 @@ void DependencyGraph::cull() noexcept {
     }
 
     // cull nodes with a 0 reference count
-    NodeContainer stack;
-    stack.reserve(nodes.size());
+    auto stack = NodeContainer::with_capacity(nodes.size());
     for (Node* const pNode : nodes) {
         if (pNode->getRefCount() == 0) {
             stack.push_back(pNode);
