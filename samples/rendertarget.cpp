@@ -211,8 +211,8 @@ int main(int argc, char** argv) {
             .usage(Texture::Usage::DEPTH_ATTACHMENT)
             .format(Texture::InternalFormat::DEPTH24).build(*engine);
         app.offscreenRenderTarget = RenderTarget::Builder()
-            .texture(RenderTarget::COLOR, app.offscreenColorTexture)
-            .texture(RenderTarget::DEPTH, app.offscreenDepthTexture)
+            .texture(RenderTarget::AttachmentPoint::COLOR, app.offscreenColorTexture)
+            .texture(RenderTarget::AttachmentPoint::DEPTH, app.offscreenDepthTexture)
             .build(*engine);
         app.offscreenView->setRenderTarget(app.offscreenRenderTarget);
         app.offscreenView->setViewport({0, 0, vp.width, vp.height});
