@@ -29,7 +29,7 @@ import java.nio.Buffer
  * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
  * into a single file.
  */
-object KtxLoader {
+object KTXLoader {
     class Options {
         var srgb = false
     }
@@ -44,8 +44,8 @@ object KtxLoader {
      */
     fun createTexture(engine: Engine, buffer: Buffer, options: Options = Options()): Texture {
         val nativeEngine = engine.nativeObject
-        val nativeTexture = nCreateTexture(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return Texture(engine, nativeTexture)
+        val nativeTexture = nCreateKTXTexture(nativeEngine, buffer, buffer.remaining(), options.srgb)
+        return Texture(nativeTexture)
     }
 
     /**
@@ -59,7 +59,7 @@ object KtxLoader {
     fun createIndirectLight(engine: Engine, buffer: Buffer, options: Options = Options()): IndirectLight {
         val nativeEngine = engine.nativeObject
         val nativeIndirectLight = nCreateIndirectLight(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return IndirectLight(engine, nativeIndirectLight)
+        return IndirectLight(nativeIndirectLight)
     }
 
     /**
@@ -73,10 +73,10 @@ object KtxLoader {
     fun createSkybox(engine: Engine, buffer: Buffer, options: Options = Options()): Skybox {
         val nativeEngine = engine.nativeObject
         val nativeSkybox = nCreateSkybox(nativeEngine, buffer, buffer.remaining(), options.srgb)
-        return Skybox(engine, nativeSkybox)
+        return Skybox(nativeSkybox)
     }
 
-    private external fun nCreateTexture(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
+    private external fun nCreateKTXTexture(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
     private external fun nCreateIndirectLight(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
     private external fun nCreateSkybox(nativeEngine: Long, buffer: Buffer, remaining: Int, srgb: Boolean): Long
 }

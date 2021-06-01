@@ -386,7 +386,7 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
 
     #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
-            << mShaderStages[0].module << ", " << mShaderStages[1].module << ")" << utils::io::endl;
+            << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
     #endif
     VkResult err = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
             VKALLOC, pipeline);
@@ -633,7 +633,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
     }
 
     // If there are no descriptors from any extinct pool that are still in use, we can safely
-    // destroy the extinct pools, which implicity frees their associated descriptor sets.
+    // destroy the extinct pools, which implicitly frees their associated descriptor sets.
     if (canPurgeExtinctPools) {
         for (VkDescriptorPool pool : mExtinctDescriptorPools) {
             vkDestroyDescriptorPool(mDevice, pool, VKALLOC);

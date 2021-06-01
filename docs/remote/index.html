@@ -160,7 +160,7 @@ const debounce = (callback, delay) => {
  */
 class Connection {
     constructor() {
-        this.RETRY_INTERVAL = 3000;
+        this.retryInterval = 3000;
         this.poll = null;
         this.connectionOpen = false;
         this.listeners = {};
@@ -199,14 +199,14 @@ class Connection {
             // Reset the polling timeout. It's important that we clear the previous timeout, as
             // we're about to lose its handle.
             clearTimeout(this.poll);
-            this.poll = setTimeout(() => this.connect(url), this.RETRY_INTERVAL);
+            this.poll = setTimeout(() => this.connect(url), this.retryInterval);
         });
 
         this.ws.addEventListener("message", event => {
             this.listeners["message"] && this.listeners["message"](event);
         });
 
-        this.poll = setTimeout(() => this.connect(url), this.RETRY_INTERVAL);
+        this.poll = setTimeout(() => this.connect(url), this.retryInterval);
     }
 
     send(what) {
@@ -453,7 +453,7 @@ class App {
         const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
         if (this.previousSettingsJson != settingsJson) {
             if (this.connection.isConnected()) {
-                this.connection.send("setttings.json");
+                this.connection.send("settings.json");
                 this.connection.send(settingsJson);
             }
             this.previousSettingsJson = settingsJson;

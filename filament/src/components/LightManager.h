@@ -191,6 +191,8 @@ public:
         return mManager[i].spotParams;
     }
 
+    float getSpotLightInnerCone(Instance i) const noexcept;
+
     float getCosOuterSquared(Instance i) const noexcept {
         return getSpotParams(i).cosOuterSquared;
     }

@@ -27,6 +27,8 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
+#include "private/backend/MetalPlatform.h"
+
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
 #include <Metal/Metal.h>
@@ -56,27 +58,8 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         mContext(new MetalContext) {
     mContext->driver = this;
 
-#if !defined(IOS)
-    const bool forceIntegrated =
-            NSProcessInfo.processInfo.environment[@"FILAMENT_FORCE_INTEGRATED_GPU"] != nil;
-    if (forceIntegrated) {
-        // Find the first low power device, which is likely the integrated GPU.
-        NSArray<id<MTLDevice>>* const devices = MTLCopyAllDevices();
-        for (id<MTLDevice> device in devices) {
-            if (device.isLowPower) {
-                mContext->device = device;
-                break;
-            }
-        }
-    } else
-#endif
-    {
-        mContext->device = MTLCreateSystemDefaultDevice();
-    }
-
-    utils::slog.i << "Selected physical device '"
-                  << [mContext->device.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
-                  << utils::io::endl;
+    mContext->device = mPlatform.createDevice();
+    assert_invariant(mContext->device);
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // macOS 10.15+ / iOS 13+.
@@ -102,8 +85,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     }
 #endif
 
-    mContext->commandQueue = [mContext->device newCommandQueue];
-    mContext->commandQueue.label = @"Filament";
+    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);

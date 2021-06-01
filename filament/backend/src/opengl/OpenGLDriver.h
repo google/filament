@@ -21,6 +21,8 @@
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 
+#include "backend/TargetBufferInfo.h"
+
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 
@@ -382,7 +384,8 @@ private:
         return mSamplerBindings;
     }
 
-    static GLsizei getAttachments(std::array<GLenum, 6>& attachments,
+    using AttachmentArray = std::array<GLenum, backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
+    static GLsizei getAttachments(AttachmentArray& attachments,
             GLRenderTarget const* rt, backend::TargetBufferFlags buffers) noexcept;
 
     backend::RasterState mRasterState;

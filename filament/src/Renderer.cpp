@@ -256,12 +256,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
-    FRenderTarget* currentRenderTarget = upcast(view.getRenderTarget());
-    if (mPreviousRenderTargets.find(currentRenderTarget) == mPreviousRenderTargets.end()) {
-        mPreviousRenderTargets.insert(currentRenderTarget);
-        initializeClearFlags();
-    }
-
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
     // start froxelization immediately, it has no dependencies
@@ -306,15 +300,40 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         view.renderShadowMaps(fg, engine, driver, pass);
     }
 
-    const TargetBufferFlags discardedFlags = mDiscardedFlags;
-    const TargetBufferFlags clearFlags = mClearFlags;
+    // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
+    // recorded in the list of targets already rendered into -- this ensures that
+    // initializeClearFlags() is called only once for the default RenderTarget.
+    auto& previousRenderTargets = mPreviousRenderTargets;
+    FRenderTarget* const currentRenderTarget = upcast(view.getRenderTarget());
+    if (UTILS_LIKELY(
+            previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
+        previousRenderTargets.insert(currentRenderTarget);
+        initializeClearFlags();
+    }
+
     const float4 clearColor = mClearOptions.clearColor;
+    const TargetBufferFlags clearFlags = mClearFlags;
+    const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
+    TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
+
+    if (currentRenderTarget) {
+        // For custom RenderTarget, we look at each attachment flag and if they have their
+        // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
+        // "+1" to the count for the DEPTH attachment (we don't have stencil for the public RenderTarget)
+        for (size_t i = 0; i < RenderTarget::MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1; i++) {
+            auto attachment = currentRenderTarget->getAttachment((RenderTarget::AttachmentPoint)i);
+            if (attachment.texture && any(attachment.texture->getUsage() &
+                    (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
+                keepOverrideEndFlags |= backend::getTargetBufferFlagsAt(i);
+            }
+        }
+    }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
     // however, it's implemented as part of executing a render pass on the current render target,
     // and that happens for each View. So we need to disable clearing after the 1st View has
     // been processed.
-    mDiscardedFlags &= ~TargetBufferFlags::COLOR;
+    mDiscardStartFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
     Handle<HwRenderTarget> viewRenderTarget;
@@ -327,9 +346,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .clearColor = clearColor,
                     .samples = 0,
                     .clearFlags = clearFlags,
-                    .discardStart = discardedFlags
+                    .discardStart = discardStartFlags,
+                    .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
-
 
     const bool blendModeTranslucent = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
     const bool hasCustomRenderTarget = viewRenderTarget != mRenderTarget;
@@ -931,7 +950,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
-    initializeClearFlags();
     mPreviousRenderTargets.clear();
 
     mBeginFrameInternal = {};
@@ -1133,9 +1151,9 @@ void FRenderer::getRenderTarget(FView const& view,
 void FRenderer::initializeClearFlags() {
     // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
     // across views (clear implies discard)
-    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+                          TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                         | TargetBufferFlags::DEPTH_AND_STENCIL;
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;

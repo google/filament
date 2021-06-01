@@ -1065,6 +1065,14 @@ public class LightManager {
         return nIsShadowCaster(mNativeObject, i);
     }
 
+    public float getOuterConeAngle(@EntityInstance int i) {
+        return nGetOuterConeAngle(mNativeObject, i);
+    }
+
+    public float getInnerConeAngle(@EntityInstance int i) {
+        return nGetInnerConeAngle(mNativeObject, i);
+    }
+
     public long getNativeObject() {
         return mNativeObject;
     }
@@ -1118,4 +1126,6 @@ public class LightManager {
     private static native float nGetSunHaloFalloff(long nativeLightManager, int i);
     private static native void nSetShadowCaster(long nativeLightManager, int i, boolean shadowCaster);
     private static native boolean nIsShadowCaster(long nativeLightManager, int i);
+    private static native float nGetOuterConeAngle(long nativeLightManager, int i);
+    private static native float nGetInnerConeAngle(long nativeLightManager, int i);
 }

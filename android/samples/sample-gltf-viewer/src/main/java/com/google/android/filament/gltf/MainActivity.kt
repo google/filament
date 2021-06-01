@@ -115,11 +115,11 @@ class MainActivity : Activity() {
         val scene = modelViewer.scene
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
-            scene.indirectLight = KtxLoader.createIndirectLight(engine, it)
+            scene.indirectLight = KTXLoader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
-            scene.skybox = KtxLoader.createSkybox(engine, it)
+            scene.skybox = KTXLoader.createSkybox(engine, it)
         }
     }
 
@@ -153,6 +153,18 @@ class MainActivity : Activity() {
             modelViewer.destroyModel()
             modelViewer.loadModelGlb(message.buffer)
             modelViewer.transformToUnitCube()
+        }
+    }
+
+    private suspend fun loadHdr(message: RemoteServer.ReceivedMessage) {
+        withContext(Dispatchers.Main) {
+            val texture = HDRLoader.createTexture(modelViewer.engine, message.buffer)
+            if (texture == null) {
+                setStatusText("Could not decode HDR file.")
+            } else {
+                // TODO: Add Java bindings for IBLPrefilterContext and use them here.
+                setStatusText("Successfully decoded HDR file.")
+            }
         }
     }
 
@@ -266,6 +278,8 @@ class MainActivity : Activity() {
         CoroutineScope(Dispatchers.IO).launch {
             if (message.label.endsWith(".zip")) {
                 loadZip(message)
+            } else if (message.label.endsWith(".hdr")) {
+                loadHdr(message)
             } else {
                 loadGlb(message)
             }

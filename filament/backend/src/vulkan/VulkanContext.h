@@ -56,6 +56,7 @@ struct VulkanRenderPass {
     VkRenderPass renderPass;
     uint32_t subpassMask;
     int currentSubpass;
+    VulkanTexture* depthFeedback;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
@@ -74,6 +75,7 @@ struct VulkanContext {
     bool debugMarkersSupported;
     bool debugUtilsSupported;
     bool portabilitySubsetSupported;
+    bool maintenanceSupported[3];
     VulkanPipelineCache::RasterState rasterState;
     VulkanSurfaceContext* currentSurface;
     VulkanRenderPass currentRenderPass;
