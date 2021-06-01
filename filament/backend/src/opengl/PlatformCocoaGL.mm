@@ -78,56 +78,56 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     // -[NSView setPostsBoundsChangedNotifications:]
     dispatch_async(dispatch_get_main_queue(), ^(void) {
         NSView* strongView = weakView;
-		NSMutableArray* strongObservers = weakObservers;
+        NSMutableArray* strongObservers = weakObservers;
         if ((weakView == nil) || (weakObservers == nil)) {
-			return;
-		}
-		@synchronized (strongObservers) {
-			this->currentBounds = [strongView convertRectToBacking: strongView.bounds];
-			this->currentWindowFrame = strongView.window.frame;
+            return;
+        }
+        @synchronized (strongObservers) {
+            this->currentBounds = [strongView convertRectToBacking: strongView.bounds];
+            this->currentWindowFrame = strongView.window.frame;
 
-			id<NSObject> observer = [NSNotificationCenter.defaultCenter
-				addObserverForName: NSWindowDidResizeNotification
-				object: strongView.window
-				queue: nil
-				usingBlock: notificationHandler];
-			[strongObservers addObject: observer];
-			observer = [NSNotificationCenter.defaultCenter
-				addObserverForName: NSWindowDidMoveNotification
-				object: strongView.window
-				queue: nil
-				usingBlock: notificationHandler];
-		   [strongObservers addObject: observer];
+            id<NSObject> observer = [NSNotificationCenter.defaultCenter
+                addObserverForName: NSWindowDidResizeNotification
+                object: strongView.window
+                queue: nil
+                usingBlock: notificationHandler];
+            [strongObservers addObject: observer];
+            observer = [NSNotificationCenter.defaultCenter
+                addObserverForName: NSWindowDidMoveNotification
+                object: strongView.window
+                queue: nil
+                usingBlock: notificationHandler];
+           [strongObservers addObject: observer];
 
-			NSView* aView = strongView;
-			while (aView != nil) {
-				aView.postsFrameChangedNotifications = YES;
-				aView.postsBoundsChangedNotifications = YES;
-				observer = [NSNotificationCenter.defaultCenter
-					addObserverForName: NSViewFrameDidChangeNotification
-					object: aView
-					queue: nil
-					usingBlock: notificationHandler];
-				[strongObservers addObject: observer];
-				observer = [NSNotificationCenter.defaultCenter
-					addObserverForName: NSViewBoundsDidChangeNotification
-					object: aView
-					queue: nil
-					usingBlock: notificationHandler];
-				[strongObservers addObject: observer];
-				
-				aView = aView.superview;
-			}
-		}
+            NSView* aView = strongView;
+            while (aView != nil) {
+                aView.postsFrameChangedNotifications = YES;
+                aView.postsBoundsChangedNotifications = YES;
+                observer = [NSNotificationCenter.defaultCenter
+                    addObserverForName: NSViewFrameDidChangeNotification
+                    object: aView
+                    queue: nil
+                    usingBlock: notificationHandler];
+                [strongObservers addObject: observer];
+                observer = [NSNotificationCenter.defaultCenter
+                    addObserverForName: NSViewBoundsDidChangeNotification
+                    object: aView
+                    queue: nil
+                    usingBlock: notificationHandler];
+                [strongObservers addObject: observer];
+                
+                aView = aView.superview;
+            }
+        }
     });
 }
 
 CocoaGLSwapChain::~CocoaGLSwapChain() noexcept {
-	@synchronized (observers) {
-		for (id<NSObject> observer in observers) {
-			 [NSNotificationCenter.defaultCenter removeObserver: observer];
-		}
-	}
+    @synchronized (observers) {
+        for (id<NSObject> observer in observers) {
+             [NSNotificationCenter.defaultCenter removeObserver: observer];
+        }
+    }
 }
 
 PlatformCocoaGL::PlatformCocoaGL()
