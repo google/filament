@@ -15,9 +15,10 @@
  */
 
 #include <utils/ostream.h>
-
-#include <string>
 #include <utils/compiler.h>
+
+#include <algorithm>
+#include <string>
 
 namespace utils {
 
@@ -25,18 +26,12 @@ namespace io {
 
 ostream::~ostream() = default;
 
-ostream::Buffer::Buffer() noexcept {
-    constexpr size_t initialSize = 1024;
-    buffer = (char*) malloc(initialSize);
-    assert(buffer);
-    // Set the first byte to 0 as this buffer might be used as a C string.
-    buffer[0] = 0;
-    curr = buffer;
-    capacity = initialSize;
-    size = initialSize;
-}
+// don't allocate any memory before we actually use the log because one of these is created
+// per thread.
+ostream::Buffer::Buffer() noexcept = default;
 
 ostream::Buffer::~Buffer() noexcept {
+    // note: on Android pre r14, thread_local destructors are not called
     free(buffer);
 }
 
@@ -50,9 +45,13 @@ void ostream::Buffer::advance(ssize_t n) noexcept {
 }
 
 UTILS_NOINLINE
-void ostream::Buffer::resize(size_t newSize) noexcept {
+void ostream::Buffer::reserve(size_t newSize) noexcept {
     size_t offset = curr - buffer;
-    buffer = (char*) realloc(buffer, newSize);
+    if (buffer == nullptr) {
+        buffer = (char*)malloc(newSize);
+    } else {
+        buffer = (char*)realloc(buffer, newSize);
+    }
     assert(buffer);
     capacity = newSize;
     curr = buffer + offset;
@@ -61,6 +60,12 @@ void ostream::Buffer::resize(size_t newSize) noexcept {
 
 UTILS_NOINLINE
 void ostream::Buffer::reset() noexcept {
+    // aggressively shrink the buffer
+    if (capacity > 1024) {
+        free(buffer);
+        buffer = (char*)malloc(1024);
+        capacity = 1024;
+    }
     curr = buffer;
     size = capacity;
 }
@@ -84,13 +89,10 @@ const char* ostream::getFormat(ostream::type t) const noexcept {
 
 void ostream::growBufferIfNeeded(size_t s) noexcept {
     Buffer& buf = getBuffer();
-    const size_t used = buf.curr - buf.buffer;  // space currently used in buffer
     if (UTILS_UNLIKELY(buf.size < s)) {
-        size_t newSize = buf.capacity * 2;
-        while (UTILS_UNLIKELY((newSize - used) < s)) {
-            newSize *= 2;
-        }
-        buf.resize(newSize);
+        size_t used = buf.curr - buf.buffer;
+        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
+        buf.reserve(newCapacity);
         assert(buf.size >= s);
     }
 }
