@@ -3,14 +3,21 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.2 (currently main branch)
+## v1.10.3 (currently main branch)
+
+## v1.10.2
 
 - gltfio: added support for `KHR_materials_ior`.
 
 ## v1.10.1
 
-- engine: Attachments of custom RendereTargets are not systematically discarded
-- engine: New API to duplicate a `MaterialInstance`
+- engine: Add `getPlatform` API to Engine.
+- engine: Add a new cone angles API to `LightManager`.
+- engine: Attachments of custom RendereTargets are not systematically discarded.
+- engine: Fix a crash when using custom rendertargets.
+- engine: New API to duplicate a `MaterialInstance`.
+- filagui: fix support for custom images in ImGuiHelper.
+- java: Add bindings for HDRLoader.
 
 ## v1.10.0
 
