@@ -58,7 +58,7 @@ public:
     /**
      * Attachment identifiers
      */
-    enum AttachmentPoint {
+    enum class AttachmentPoint : uint8_t {
         COLOR0 = 0,          //!< identifies the 1st color attachment
         COLOR1 = 1,          //!< identifies the 2nd color attachment
         COLOR2 = 2,          //!< identifies the 3rd color attachment
