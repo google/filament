@@ -479,7 +479,7 @@ void LightManager::setFalloff(Instance i, float radius) noexcept {
 }
 
 float LightManager::getFalloff(Instance i) const noexcept {
-    return upcast(this)->getSquaredFalloffInv(i);
+    return upcast(this)->getFalloff(i);
 }
 
 void LightManager::setSpotLightCone(Instance i, float inner, float outer) noexcept {
