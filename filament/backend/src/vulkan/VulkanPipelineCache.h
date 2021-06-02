@@ -176,15 +176,25 @@ private:
     // the previous call to getOrCreatePipeline.
     struct PipelineKey {
         VkShaderModule shaders[SHADER_MODULE_COUNT]; // 16 bytes
-        RasterState rasterState; // 124 bytes
-        VkPrimitiveTopology topology : 16; // 2 bytes
-        uint16_t subpassIndex; // 2 bytes
-        VkRenderPass renderPass; // 8 bytes
+        RasterState rasterState;                     // 124 bytes
+        VkPrimitiveTopology topology;                // 4 bytes
+        VkRenderPass renderPass;                     // 8 bytes
+        uint16_t subpassIndex;                       // 2 bytes
+        uint16_t padding0;                           // 2 bytes
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
-        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 192 bytes
+        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
+        uint32_t padding1;                                                          // 4 bytes
     };
 
-    static_assert(sizeof(PipelineKey) == 600, "PipelineKey must not have any padding.");
+    static_assert(sizeof(VkVertexInputBindingDescription) == 12);
+
+    static_assert(offsetof(PipelineKey, rasterState)      == 16);
+    static_assert(offsetof(PipelineKey, topology)         == 140);
+    static_assert(offsetof(PipelineKey, renderPass)       == 144);
+    static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
+    static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
+    static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
+    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
 
     static_assert(std::is_trivially_copyable<PipelineKey>::value,
             "PipelineKey must be a POD for fast hashing.");
