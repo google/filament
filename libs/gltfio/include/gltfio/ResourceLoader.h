@@ -70,7 +70,14 @@ class ResourceLoader {
 public:
     using BufferDescriptor = filament::backend::BufferDescriptor;
 
+    /**
+    * Creates an resource loader for the given configuration, which specifies the Filament engine.
+    */
     static ResourceLoader* create(const ResourceConfiguration& config);
+
+    /**
+    * Frees the resource loader.
+    */
     static void destroy(ResourceLoader** loader);
 
     /**

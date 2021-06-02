@@ -89,6 +89,26 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     return defaultNodeName;
 }
 
+FAssetLoader::~FAssetLoader() {
+    delete mMaterials;
+}
+
+void FAssetLoader::destroyAsset(const FFilamentAsset* asset) {
+    delete asset;
+}
+
+size_t FAssetLoader::getMaterialsCount() const noexcept {
+    return mMaterials->getMaterialsCount();
+}
+
+utils::NameComponentManager* FAssetLoader::getNames() const noexcept {
+    return mNameManager;
+}
+
+const filament::Material* const* FAssetLoader::getMaterials() const noexcept {
+    return mMaterials->getMaterials();
+}
+
 FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_invalid };
     cgltf_data* sourceAsset;

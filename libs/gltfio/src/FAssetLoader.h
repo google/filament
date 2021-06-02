@@ -57,6 +57,8 @@ struct FAssetLoader : public AssetLoader {
         mEngine(config.engine),
         mDefaultNodeName(config.defaultNodeName) {}
 
+    ~FAssetLoader();
+
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
@@ -66,25 +68,10 @@ struct FAssetLoader : public AssetLoader {
     bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
         size_t numAssets);
 
-    ~FAssetLoader() {
-        delete mMaterials;
-    }
-
-    void destroyAsset(const FFilamentAsset* asset) {
-        delete asset;
-    }
-
-    size_t getMaterialsCount() const noexcept {
-        return mMaterials->getMaterialsCount();
-    }
-
-    utils::NameComponentManager* getNames() const noexcept {
-        return mNameManager;
-    }
-
-    const filament::Material* const* getMaterials() const noexcept {
-        return mMaterials->getMaterials();
-    }
+    void destroyAsset(const FFilamentAsset* asset);
+    size_t getMaterialsCount() const noexcept;
+    utils::NameComponentManager* getNames() const noexcept;
+    const filament::Material* const* getMaterials() const noexcept;
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
     FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
