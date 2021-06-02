@@ -33,7 +33,6 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/ThreadLocal.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
