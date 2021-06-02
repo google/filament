@@ -90,6 +90,7 @@ target_link_libraries(${TARGET} PUBLIC tsl)
 if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC log)
     target_link_libraries(${TARGET} PRIVATE dl)
+    target_link_libraries(${TARGET} PUBLIC android)
 endif()
 
 if (WIN32)

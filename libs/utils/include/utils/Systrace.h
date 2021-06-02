@@ -125,74 +125,107 @@ public:
     static void enable(uint32_t tags) noexcept;
     static void disable(uint32_t tags) noexcept;
 
-    inline void asyncBegin(uint32_t tag, const char* name, int32_t cookie) noexcept {
-        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            async_begin_body(mMarkerFd, mPid, name, cookie);
-        }
-    }
-
-    inline void asyncEnd(uint32_t tag, const char* name, int32_t cookie) noexcept {
-        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            async_end_body(mMarkerFd, mPid, name, cookie);
-        }
-    }
-
-    inline void value(uint32_t tag, const char* name, int32_t value) noexcept {
-        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            int_body(mMarkerFd, mPid, name, value);
-        }
-    }
-
-    inline void value(uint32_t tag, const char* name, int64_t value) noexcept {
-        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            int64_body(mMarkerFd, mPid, name, value);
-        }
-    }
 
     inline void traceBegin(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            begin_body(mMarkerFd, mPid, name);
+            beginSection(this, name);
         }
     }
 
     inline void traceEnd(uint32_t tag) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            const char END_TAG = 'E';
-            write(mMarkerFd, &END_TAG, 1);
+            endSection(this);
+        }
+    }
+
+    inline void asyncBegin(uint32_t tag, const char* name, int32_t cookie) noexcept {
+        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            beginAsyncSection(this, name, cookie);
+        }
+    }
+
+    inline void asyncEnd(uint32_t tag, const char* name, int32_t cookie) noexcept {
+        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            endAsyncSection(this, name, cookie);
+        }
+    }
+
+    inline void value(uint32_t tag, const char* name, int32_t value) noexcept {
+        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            setCounter(this, name, value);
+        }
+    }
+
+    inline void value(uint32_t tag, const char* name, int64_t value) noexcept {
+        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            setCounter(this, name, value);
         }
     }
 
 private:
     friend class ScopedTrace;
 
-    static inline void init() noexcept {
-        if (UTILS_UNLIKELY(!std::atomic_load_explicit(&sIsTracingReady, std::memory_order_acquire))) {
-            setup();
-        }
-    }
+    // whether tracing is supported at all by the platform
+
+    using ATrace_isEnabled_t          = bool (*)(void);
+    using ATrace_beginSection_t       = void (*)(const char* sectionName);
+    using ATrace_endSection_t         = void (*)(void);
+    using ATrace_beginAsyncSection_t  = void (*)(const char* sectionName, int32_t cookie);
+    using ATrace_endAsyncSection_t    = void (*)(const char* sectionName, int32_t cookie);
+    using ATrace_setCounter_t         = void (*)(const char* counterName, int64_t counterValue);
+
+    struct GlobalState {
+        bool isTracingAvailable;
+        std::atomic<uint32_t> isTracingEnabled;
+        int markerFd;
+
+        ATrace_isEnabled_t ATrace_isEnabled;
+        ATrace_beginSection_t ATrace_beginSection;
+        ATrace_endSection_t ATrace_endSection;
+        ATrace_beginAsyncSection_t ATrace_beginAsyncSection;
+        ATrace_endAsyncSection_t ATrace_endAsyncSection;
+        ATrace_setCounter_t ATrace_setCounter;
+
+        void (*beginSection)(Systrace* that, const char* name);
+        void (*endSection)(Systrace* that);
+        void (*beginAsyncSection)(Systrace* that, const char* name, int32_t cookie);
+        void (*endAsyncSection)(Systrace* that, const char* name, int32_t cookie);
+        void (*setCounter)(Systrace* that, const char* name, int64_t value);
+    };
+
+    static GlobalState sGlobalState;
+
+
+    // per-instance versions for better performance
+    ATrace_isEnabled_t ATrace_isEnabled;
+    ATrace_beginSection_t ATrace_beginSection;
+    ATrace_endSection_t ATrace_endSection;
+    ATrace_beginAsyncSection_t ATrace_beginAsyncSection;
+    ATrace_endAsyncSection_t ATrace_endAsyncSection;
+    ATrace_setCounter_t ATrace_setCounter;
+
+    void (*beginSection)(Systrace* that, const char* name);
+    void (*endSection)(Systrace* that);
+    void (*beginAsyncSection)(Systrace* that, const char* name, int32_t cookie);
+    void (*endAsyncSection)(Systrace* that, const char* name, int32_t cookie);
+    void (*setCounter)(Systrace* that, const char* name, int64_t value);
 
     void init(uint32_t tag) noexcept;
 
-    static std::atomic_bool sIsTracingReady;
-    static int sMarkerFd;
-    static bool sIsTracingAvailable;
-    static std::atomic<uint32_t> sIsTracingEnabled;
-
     // cached values for faster access, no need to be initialized
-    int mMarkerFd;
-    int mPid;
     bool mIsTracingEnabled;
+    int mMarkerFd = -1;
+    pid_t mPid;
 
     static void setup() noexcept;
     static void init_once() noexcept;
+    static bool isTracingEnabled(uint32_t tag) noexcept;
 
     static void begin_body(int fd, int pid, const char* name) noexcept;
+    static void end_body(int fd, int pid) noexcept;
     static void async_begin_body(int fd, int pid, const char* name, int32_t cookie) noexcept;
     static void async_end_body(int fd, int pid, const char* name, int32_t cookie) noexcept;
-    static void int_body(int fd, int pid, const char* name, int32_t value) noexcept;
     static void int64_body(int fd, int pid, const char* name, int64_t value) noexcept;
-
-    static bool isTracingEnabled(uint32_t tag) noexcept;
 };
 
 // ------------------------------------------------------------------------------------------------
