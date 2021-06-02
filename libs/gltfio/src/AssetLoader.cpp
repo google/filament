@@ -16,9 +16,10 @@
 
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
-#include <gltfio/MaterialProvider.h>
 
+#include "FAssetLoader.h"
 #include "FFilamentAsset.h"
+#include "FFilamentInstance.h"
 #include "GltfEnums.h"
 
 #include <filament/Box.h>
@@ -87,78 +88,6 @@ static const char* getNodeName(const cgltf_node* node, const char* defaultNodeNa
     if (node->camera && node->camera->name) return node->camera->name;
     return defaultNodeName;
 }
-
-struct FAssetLoader : public AssetLoader {
-    FAssetLoader(const AssetConfiguration& config) :
-            mEntityManager(config.entities ? *config.entities : EntityManager::get()),
-            mRenderableManager(config.engine->getRenderableManager()),
-            mNameManager(config.names),
-            mTransformManager(config.engine->getTransformManager()),
-            mMaterials(config.materials),
-            mEngine(config.engine),
-            mDefaultNodeName(config.defaultNodeName) {}
-
-    FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
-    FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
-    FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
-        FilamentInstance** instances, size_t numInstances);
-    FilamentInstance* createInstance(FFilamentAsset* primary);
-
-    bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
-            size_t numAssets);
-
-    ~FAssetLoader() {
-        delete mMaterials;
-    }
-
-    void destroyAsset(const FFilamentAsset* asset) {
-        delete asset;
-    }
-
-    size_t getMaterialsCount() const noexcept {
-        return mMaterials->getMaterialsCount();
-    }
-
-    NameComponentManager* getNames() const noexcept {
-        return mNameManager;
-    }
-
-    const Material* const* getMaterials() const noexcept {
-        return mMaterials->getMaterials();
-    }
-
-    void createAsset(const cgltf_data* srcAsset, size_t numInstances);
-    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
-    void createEntity(const cgltf_node* node, Entity parent, bool enableLight,
-            FFilamentInstance* instance);
-    void createRenderable(const cgltf_node* node, Entity entity, const char* name);
-    bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
-            const char* name);
-    void createLight(const cgltf_light* light, Entity entity);
-    void createCamera(const cgltf_camera* camera, Entity entity);
-    MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
-            bool vertexColor);
-    void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
-            const cgltf_texture* srcTexture, bool srgb);
-    bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
-
-    static LightManager::Type getLightType(const cgltf_light_type type);
-
-    EntityManager& mEntityManager;
-    RenderableManager& mRenderableManager;
-    NameComponentManager* mNameManager;
-    TransformManager& mTransformManager;
-    MaterialProvider* mMaterials;
-    Engine* mEngine;
-
-    // Transient state used only for the asset currently being loaded:
-    FFilamentAsset* mResult;
-    const char* mDefaultNodeName;
-    bool mError = false;
-    bool mDiagnosticsEnabled = false;
-};
-
-FILAMENT_UPCAST(AssetLoader)
 
 FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_invalid };
