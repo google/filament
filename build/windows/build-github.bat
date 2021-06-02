@@ -111,6 +111,7 @@ cmake ..\.. ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
+    -D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING ^
     || exit /b
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
