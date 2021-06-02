@@ -417,7 +417,7 @@ int main(int argc, char** argv) {
         configuration.recomputeBoundingBoxes = app.recomputeAabb;
         configuration.normalizeSkinningWeights = true;
         if (!app.resourceLoader) {
-            app.resourceLoader = new gltfio::ResourceLoader(configuration);
+            app.resourceLoader = gltfio::ResourceLoader::create(configuration);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
 

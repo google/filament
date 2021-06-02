@@ -28,7 +28,7 @@ set(SRCS
         src/FilamentAsset.cpp
         src/FFilamentInstance.h
         src/FilamentInstance.cpp
-		src/FResourceLoader.cpp
+		src/FResourceLoader.h
         src/GltfEnums.h
         src/MaterialProvider.cpp
         src/MorphHelper.h

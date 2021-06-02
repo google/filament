@@ -70,8 +70,8 @@ class ResourceLoader {
 public:
     using BufferDescriptor = filament::backend::BufferDescriptor;
 
-    ResourceLoader(const ResourceConfiguration& config);
-    ~ResourceLoader();
+    static ResourceLoader* create(const ResourceConfiguration& config);
+    static void destroy(ResourceLoader** loader);
 
     /**
      * Feeds the binary content of an external resource into the loader's URI cache.
@@ -145,17 +145,19 @@ public:
      */
     void asyncCancelLoad();
 
-private:
-    bool loadResources(FFilamentAsset* asset, bool async);
-    void applySparseData(FFilamentAsset* asset) const;
-    void normalizeSkinningWeights(FFilamentAsset* asset) const;
-    void updateBoundingBoxes(FFilamentAsset* asset) const;
-    AssetPool* mPool;
-    struct Impl;
-    Impl* pImpl;
+    /*! \cond PRIVATE */
+protected:
+    ResourceLoader() noexcept = default;
+    ~ResourceLoader() = default;
+
+public:
+    ResourceLoader(ResourceLoader const&) = delete;
+    ResourceLoader(ResourceLoader&&) = delete;
+    ResourceLoader& operator=(ResourceLoader const&) = delete;
+    ResourceLoader& operator=(ResourceLoader&&) = delete;
+    /*! \endcond */
 };
 
 } // namespace gltfio
 
 #endif // GLTFIO_RESOURCELOADER_H
-
