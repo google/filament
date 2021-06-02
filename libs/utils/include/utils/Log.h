@@ -19,7 +19,6 @@
 
 #include <string>
 
-#include <utils/ThreadLocal.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h> // ssize_t is a POSIX type.
 
