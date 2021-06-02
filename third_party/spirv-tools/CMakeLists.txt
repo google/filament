@@ -94,7 +94,10 @@ endif(SPIRV_BUILD_COMPRESSION)
 
 option(SPIRV_BUILD_FUZZER "Build spirv-fuzz" OFF)
 
-option(SPIRV_WERROR "Enable error on warning" ON)
+# Filament specific changes
+# option(SPIRV_WERROR "Enable error on warning" ON)
+set(SPIRV_WERROR OFF)
+# End Filament specific changes
 if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
   set(COMPILER_IS_LIKE_GNU TRUE)
 endif()
