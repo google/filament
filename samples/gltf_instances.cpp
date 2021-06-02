@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
         configuration.normalizeSkinningWeights = true;
         configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {
-            app.resourceLoader = new gltfio::ResourceLoader(configuration);
+            app.resourceLoader = gltfio::ResourceLoader::create(configuration);
         }
         app.resourceLoader->asyncBeginLoad(app.asset);
 
@@ -261,6 +261,7 @@ int main(int argc, char** argv) {
         delete app.materials;
         delete app.names;
 
+        ResourceLoader::destroy(&app.resourceLoader);
         AssetLoader::destroy(&app.loader);
     };
 

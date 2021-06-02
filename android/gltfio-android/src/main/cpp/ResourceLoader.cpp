@@ -37,7 +37,7 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nCreateResourceLoader(JNIEnv*, jclass,
         jlong nativeEngine, jboolean normalizeSkinningWeights, jboolean recomputeBoundingBoxes) {
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) new ResourceLoader({ engine, {}, (bool) normalizeSkinningWeights,
+    return (jlong) ResourceLoader::create({ engine, {}, (bool) normalizeSkinningWeights,
             (bool) recomputeBoundingBoxes });
 }
 
@@ -45,7 +45,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_ResourceLoader_nDestroyResourceLoader(JNIEnv*, jclass,
         jlong nativeLoader) {
     ResourceLoader* loader = (ResourceLoader*) nativeLoader;
-    delete loader;
+    ResourceLoader::destroy(&loader);
 }
 
 extern "C" JNIEXPORT void JNICALL
