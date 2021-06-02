@@ -28,6 +28,7 @@
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/Range.h>
+#include <utils/Systrace.h>
 #include <utils/Zip2Iterator.h>
 
 #include <algorithm>
@@ -49,6 +50,8 @@ FScene::~FScene() noexcept = default;
 void FScene::prepare(const mat4f& worldOriginTransform) {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
+
+    SYSTRACE_CALL();
 
     FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();

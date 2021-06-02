@@ -253,8 +253,13 @@ void JobSystem::wake() noexcept {
     lock.lock();
     // this empty critical section is needed -- it guarantees that notifiy_all() happens
     // after the condition variables are set.
-    lock.unlock();
+
+    // We signal the condition inside the lock (which is not required), because this seems to
+    // yield to better scheduling on Android. When we signal outside the critical section,
+    // it looks like this thread gives its time slice to the waking thread and just sits there
+    // being runnable, but not running.
     mWaiterCondition.notify_all();
+    lock.unlock();
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
