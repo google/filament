@@ -873,10 +873,13 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         baseTangents[slot.vertexBuffer] = slot.bufferIndex;
     }
 
-    // Create a job description for each primitive.
+    // Create a job description for each triangle-based primitive.
     using Params = TangentsJob::Params;
     std::vector<Params> jobParams;
     for (auto pair : asset->mPrimitives) {
+        if (UTILS_UNLIKELY(pair.first->type != cgltf_primitive_type_triangles)) {
+            continue;
+        }
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
