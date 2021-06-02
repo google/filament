@@ -39,6 +39,7 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
     markDirtyDescriptor();
     markDirtyPipeline();
     mDescriptorKey = {};
+    mPipelineKey = {};
 
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;

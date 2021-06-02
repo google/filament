@@ -77,13 +77,15 @@ public:
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
     // Note that several fields are unused (sType etc) so we could shrink this by avoiding the Vk
     // structures. However it's super convenient just to use standard Vulkan structs here.
-    struct alignas(8) RasterState {
+    #pragma pack(push, 1)
+    struct UTILS_PACKED RasterState {
         VkPipelineRasterizationStateCreateInfo rasterization;
         VkPipelineColorBlendAttachmentState blending;
         VkPipelineDepthStencilStateCreateInfo depthStencil;
         VkPipelineMultisampleStateCreateInfo multisampling;
         uint32_t colorTargetCount;
     };
+    #pragma pack(pop)
     static_assert(std::is_pod<RasterState>::value, "RasterState must be a POD for fast hashing.");
 
     // Upon construction, the pipeCache initializes some internal state but does not make any Vulkan
