@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
+#include <utils/Systrace.h>
 
 #include <limits>
 
@@ -1061,6 +1062,8 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
 template<typename Casters, typename Receivers>
 void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
         Casters casters, Receivers receivers) noexcept {
+    SYSTRACE_CALL();
+
     using State = FRenderableManager::Visibility;
     FScene::RenderableSoa const& UTILS_RESTRICT soa = scene.getRenderableData();
     float3 const* const UTILS_RESTRICT worldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
