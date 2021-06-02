@@ -20,6 +20,7 @@
 #include <utils/debug.h>
 
 #if defined(ANDROID)
+    #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "opengl/PlatformEGLAndroid.h"
     #endif
@@ -82,6 +83,15 @@ Platform::~Platform() noexcept = default;
 DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
+
+#if defined(ANDROID)
+    char scratch[PROP_VALUE_MAX + 1];
+    int length = __system_property_get("debug.filament.backend", scratch);
+    if (length > 0) {
+        *backend = Backend(atoi(scratch));
+    }
+#endif
+
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
     }
