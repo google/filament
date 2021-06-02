@@ -602,6 +602,7 @@ int main(int argc, char** argv) {
         delete app.materials;
         delete app.names;
 
+        ResourceLoader::destroy(&app.resourceLoader);
         AssetLoader::destroy(&app.assetLoader);
     };
 
