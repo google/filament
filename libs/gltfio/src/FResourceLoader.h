@@ -28,16 +28,16 @@
 #include "upcast.h"
 
 namespace filament {
-    class Engine;
+class Engine;
 }
 
 namespace gltfio {
-    class AssetPool;
-    struct FFilamentAsset;
-    struct TextureSlot;
-    struct TextureCacheEntry;
+class AssetPool;
+struct FFilamentAsset;
+struct TextureSlot;
+struct TextureCacheEntry;
 
-struct FResourceLoader: public ResourceLoader {
+struct FResourceLoader : public ResourceLoader {
     FResourceLoader(const ResourceConfiguration& config) {
         mGltfPath = std::string(config.gltfPath ? config.gltfPath : "");
         mEngine = config.engine;

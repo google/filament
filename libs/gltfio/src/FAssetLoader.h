@@ -31,13 +31,13 @@
 #include "upcast.h"
 
 namespace filament {
-    class MaterialInstance;
-    class RenderableManager;
-    class TransformManager;
+class MaterialInstance;
+class RenderableManager;
+class TransformManager;
 }
 
 namespace utils {
-    class NameComponentManager;
+class NameComponentManager;
 }
 
 namespace gltfio {
@@ -62,11 +62,12 @@ struct FAssetLoader : public AssetLoader {
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
-        FilamentInstance** instances, size_t numInstances);
+            FilamentInstance** instances, size_t numInstances);
+
     FilamentInstance* createInstance(FFilamentAsset* primary);
 
     bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
-        size_t numAssets);
+            size_t numAssets);
 
     void destroyAsset(const FFilamentAsset* asset);
     size_t getMaterialsCount() const noexcept;
@@ -76,16 +77,20 @@ struct FAssetLoader : public AssetLoader {
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
     FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
     void createEntity(const cgltf_node* node, utils::Entity parent, bool enableLight,
-        FFilamentInstance* instance);
+            FFilamentInstance* instance);
+
     void createRenderable(const cgltf_node* node, utils::Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
-        const char* name);
+            const char* name);
+
     void createLight(const cgltf_light* light, utils::Entity entity);
     void createCamera(const cgltf_camera* camera, utils::Entity entity);
     filament::MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
-        bool vertexColor);
+            bool vertexColor);
+
     void addTextureBinding(filament::MaterialInstance* materialInstance, const char* parameterName,
-        const cgltf_texture* srcTexture, bool srgb);
+            const cgltf_texture* srcTexture, bool srgb);
+
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
 
     static filament::LightManager::Type getLightType(const cgltf_light_type type);

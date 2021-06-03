@@ -55,8 +55,8 @@
 #endif
 
 namespace utils {
-    class NameComponentManager;
-    class EntityManager;
+class NameComponentManager;
+class EntityManager;
 }
 
 namespace gltfio {
