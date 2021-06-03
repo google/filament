@@ -23,12 +23,12 @@ set(SRCS
         src/DependencyGraph.h
         src/DracoCache.h
         src/DracoCache.cpp
-		src/FAssetLoader.h
+        src/FAssetLoader.h
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
         src/FFilamentInstance.h
         src/FilamentInstance.cpp
-		src/FResourceLoader.h
+        src/FResourceLoader.h
         src/GltfEnums.h
         src/MaterialProvider.cpp
         src/MorphHelper.h
