@@ -133,6 +133,10 @@ Light getLight(const uint index) {
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
     light.NoL = saturate(dot(shading_normal, light.l));
     light.worldPosition = positionFalloff.xyz;
+    light.castsShadows = false;
+    light.contactShadows = false;
+    light.shadowIndex = 0u;
+    light.shadowLayer = 0u;
 
     uint type = floatBitsToUint(scaleOffsetShadowType.w);
     if (type == LIGHT_TYPE_SPOT) {
