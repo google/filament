@@ -39,7 +39,7 @@ static void loadSymbol(T*& pfn, const char *symbol) noexcept {
 
 ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::get() noexcept {
     // declaring this thread local, will ensure it's destroyed with the calling thread
-    static UTILS_DECLARE_TLS(ExternalStreamManagerAndroid) instance;
+    static thread_local ExternalStreamManagerAndroid instance;
     return instance;
 }
 

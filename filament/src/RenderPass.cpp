@@ -183,7 +183,12 @@ void RenderPass::execute(const char* name,
 }
 
 void RenderPass::executeCommands(const char* name) const noexcept {
-    DriverApi& driver = mEngine.getDriverApi();
+    // this is a good time to flush the CommandStream, because we're about to potentially
+    // output a lot of commands. This guarantees here that we have at least
+    // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
+    FEngine& engine = mEngine;
+    engine.flush();
+    DriverApi& driver = engine.getDriverApi();
     RenderPass::recordDriverCommands(driver, mCommands.begin(), mCommands.end());
 }
 

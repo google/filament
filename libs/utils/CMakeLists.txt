@@ -33,7 +33,6 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/ThreadLocal.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
@@ -91,6 +90,7 @@ target_link_libraries(${TARGET} PUBLIC tsl)
 if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC log)
     target_link_libraries(${TARGET} PRIVATE dl)
+    target_link_libraries(${TARGET} PUBLIC android)
 endif()
 
 if (WIN32)

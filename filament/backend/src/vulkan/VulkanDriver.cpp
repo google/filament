@@ -1645,7 +1645,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const VulkanRenderTarget* rt = mCurrentRenderTarget;
 
     mContext.rasterState.depthStencil = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = (VkBool32) rasterState.depthWrite,
         .depthCompareOp = getCompareOp(rasterState.depthFunc),
@@ -1654,7 +1653,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     };
 
     mContext.rasterState.multisampling = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = (VkSampleCountFlagBits) rt->getSamples(),
         .alphaToCoverageEnable = rasterState.alphaToCoverage,
     };
@@ -1670,7 +1668,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
     };
 
-    VkPipelineRasterizationStateCreateInfo& vkraster = mContext.rasterState.rasterization;
+    auto& vkraster = mContext.rasterState.rasterization;
     vkraster.cullMode = getCullMode(rasterState.culling);
     vkraster.frontFace = getFrontFace(rasterState.inverseFrontFaces);
     vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? VK_TRUE : VK_FALSE;

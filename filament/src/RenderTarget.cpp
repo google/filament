@@ -45,29 +45,29 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
-    mImpl->mAttachments[pt].texture = upcast(texture);
+    mImpl->mAttachments[(size_t)pt].texture = upcast(texture);
     return *this;
 }
 
 RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
-    mImpl->mAttachments[pt].mipLevel = level;
+    mImpl->mAttachments[(size_t)pt].mipLevel = level;
     return *this;
 }
 
 RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace face) noexcept {
-    mImpl->mAttachments[pt].face = face;
+    mImpl->mAttachments[(size_t)pt].face = face;
     return *this;
 }
 
 RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t layer) noexcept {
-    mImpl->mAttachments[pt].layer = layer;
+    mImpl->mAttachments[(size_t)pt].layer = layer;
     return *this;
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
-    const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR0];
-    const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];
+    const FRenderTarget::Attachment& color = mImpl->mAttachments[(size_t)AttachmentPoint::COLOR0];
+    const FRenderTarget::Attachment& depth = mImpl->mAttachments[(size_t)AttachmentPoint::DEPTH];
     if (!ASSERT_PRECONDITION_NON_FATAL(color.texture, "COLOR0 attachment not set")) {
         return nullptr;
     }
@@ -128,7 +128,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
     TargetBufferInfo dinfo{};
 
     auto setAttachment = [this](TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
-        Attachment const& attachment = mAttachments[attachmentPoint];
+        Attachment const& attachment = mAttachments[(size_t)attachmentPoint];
         auto t = upcast(attachment.texture);
         info.handle = t->getHwHandle();
         info.level  = attachment.mipLevel;
@@ -145,9 +145,9 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
             setAttachment(mrt[i], (AttachmentPoint)i);
         }
     }
-    if (mAttachments[DEPTH].texture) {
+    if (mAttachments[(size_t)AttachmentPoint::DEPTH].texture) {
         mAttachmentMask |= TargetBufferFlags::DEPTH;
-        setAttachment(dinfo, DEPTH);
+        setAttachment(dinfo, AttachmentPoint::DEPTH);
     }
 
     FEngine::DriverApi& driver = engine.getDriverApi();

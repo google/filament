@@ -470,6 +470,7 @@ struct ParallelForJobData {
     }
 
     void parallelWithJobs(JobSystem& js, JobSystem::Job* parent) noexcept {
+        assert(parent);
 
         // We first split about the number of threads we have, and only then we split the rest
         // in a single thread (but execute the final cut in new jobs, see parallel() below),

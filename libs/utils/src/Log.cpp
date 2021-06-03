@@ -30,6 +30,21 @@ namespace utils {
 
 namespace io {
 
+class LogStream : public ostream {
+public:
+
+    enum Priority {
+        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO
+    };
+
+    explicit LogStream(Priority p) noexcept : mPriority(p) {}
+
+    ostream& flush() noexcept override;
+
+private:
+    Priority mPriority;
+};
+
 ostream& LogStream::flush() noexcept {
     Buffer& buf = getBuffer();
 #if ANDROID
@@ -71,7 +86,7 @@ static LogStream cinfo(LogStream::Priority::LOG_INFO);
 } // namespace io
 
 
-const Loggers slog = {
+Loggers const slog = {
         io::cout,   // debug
         io::cerr,   // error
         io::cwarn,  // warning

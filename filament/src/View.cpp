@@ -743,6 +743,7 @@ void FView::prepareVisibleRenderables(JobSystem& js,
 
 void FView::cullRenderables(JobSystem& js,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
+    SYSTRACE_CALL();
 
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
     float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
