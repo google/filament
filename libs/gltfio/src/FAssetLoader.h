@@ -49,13 +49,13 @@ struct Primitive;
 
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
-        mEntityManager(config.entities ? *config.entities : utils::EntityManager::get()),
-        mRenderableManager(config.engine->getRenderableManager()),
-        mNameManager(config.names),
-        mTransformManager(config.engine->getTransformManager()),
-        mMaterials(config.materials),
-        mEngine(config.engine),
-        mDefaultNodeName(config.defaultNodeName) {}
+            mEntityManager(config.entities ? *config.entities : utils::EntityManager::get()),
+            mRenderableManager(config.engine->getRenderableManager()),
+            mNameManager(config.names),
+            mTransformManager(config.engine->getTransformManager()),
+            mMaterials(config.materials),
+            mEngine(config.engine),
+            mDefaultNodeName(config.defaultNodeName) {}
 
     ~FAssetLoader();
 
