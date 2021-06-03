@@ -33,11 +33,10 @@ size_t CyclicBarrier::getWaitingThreadCount() const noexcept {
 }
 
 void CyclicBarrier::reset() noexcept {
-    std::unique_lock<Mutex> guard(m_lock);
+    std::lock_guard<Mutex> guard(m_lock);
     m_state = State::TRAP;
     m_trapped_threads = 0;
     m_released_threads = 0;
-    guard.unlock(); // avoid threads to lock again immediately
     m_cv.notify_all();
 }
 
@@ -57,7 +56,6 @@ void CyclicBarrier::await() noexcept {
         // wait for all previously trapped threads to be released
         m_cv.wait(guard, [this]{ return m_released_threads == 0; });
         m_state = State::TRAP;
-        guard.unlock(); // avoid threads to lock again immediately
         m_cv.notify_all();
     } else {
         ++m_trapped_threads;
@@ -66,7 +64,6 @@ void CyclicBarrier::await() noexcept {
             // no more threads to be released, we need to notify the last one which is
             // waiting for the m_released_threads queue to become empty and will switch the
             // state back to State::TRAP.
-            guard.unlock(); // avoid threads to lock again immediately
             m_cv.notify_all();
         }
     }

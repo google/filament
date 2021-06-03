@@ -41,13 +41,13 @@ CommandBufferQueue::~CommandBufferQueue() {
 }
 
 void CommandBufferQueue::requestExit() {
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::lock_guard<utils::Mutex> lock(mLock);
     mExitRequested = EXIT_REQUESTED;
     mCondition.notify_one();
 }
 
 bool CommandBufferQueue::isExitRequested() const {
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::lock_guard<utils::Mutex> lock(mLock);
     ASSERT_PRECONDITION( mExitRequested == 0 || mExitRequested == EXIT_REQUESTED,
             "mExitRequested is corrupted (value = 0x%08x)!", mExitRequested);
     return (bool)mExitRequested;
@@ -100,14 +100,8 @@ void CommandBufferQueue::flush() noexcept {
     }
 #endif
 
-    if (UTILS_LIKELY(mFreeSpace >= requiredSize)) {
-        // ideally (and usually) we don't have to wait, this is the common case, so special case
-        // the unlock-before-notify, optimization.
-        lock.unlock();
-        mCondition.notify_one();
-    } else {
-        // unfortunately, there is not enough space left, we'll have to wait.
-        mCondition.notify_one(); // too bad there isn't a notify-and-wait
+    mCondition.notify_one();
+    if (UTILS_LIKELY(mFreeSpace < requiredSize)) {
         SYSTRACE_NAME("waiting: CircularBuffer::flush()");
         mCondition.wait(lock, [this, requiredSize]() -> bool {
             return mFreeSpace >= requiredSize;
@@ -131,9 +125,8 @@ std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() con
 }
 
 void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Slice const& buffer) {
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::lock_guard<utils::Mutex> lock(mLock);
     mFreeSpace += uintptr_t(buffer.end) - uintptr_t(buffer.begin);
-    lock.unlock();
     mCondition.notify_one();
 }
 

@@ -116,9 +116,8 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
 
 UTILS_NOINLINE
 void FFence::FenceSignal::signal(State s) noexcept {
-    std::unique_lock<utils::Mutex> lock(FFence::sLock);
+    std::lock_guard<utils::Mutex> lock(FFence::sLock);
     mState = s;
-    lock.unlock();
     FFence::sCondition.notify_all();
 }
 
