@@ -98,8 +98,8 @@ TimerQueryFence::~TimerQueryFence() {
     if (mThread.joinable()) {
         std::unique_lock<utils::Mutex> lock(mLock);
         mExitRequested = true;
-        lock.unlock();
         mCondition.notify_one();
+        lock.unlock();
         mThread.join();
     }
 }
@@ -107,7 +107,6 @@ TimerQueryFence::~TimerQueryFence() {
 void TimerQueryFence::enqueue(TimerQueryFence::Job&& job) {
     std::unique_lock<utils::Mutex> lock(mLock);
     mQueue.push_back(std::forward<Job>(job));
-    lock.unlock();
     mCondition.notify_one();
 }
 

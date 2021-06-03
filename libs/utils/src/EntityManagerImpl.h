@@ -138,7 +138,7 @@ public:
     }
 
     utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
-        std::unique_lock<Mutex> lock(mListenerLock);
+        std::lock_guard<Mutex> lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
         utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
         result.resize(result.capacity()); // unfortunately this memset()

@@ -190,8 +190,8 @@ bool VulkanCommands::flush() {
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     cmdfence->status.store(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
-    lock.unlock();
     cmdfence->condition.notify_all();
+    lock.unlock();
 
     assert_invariant(result == VK_SUCCESS);
 

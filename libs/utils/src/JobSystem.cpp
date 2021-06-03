@@ -193,9 +193,8 @@ void JobSystem::decRef(Job const* job) noexcept {
 
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
-    { std::lock_guard<Mutex> lock(mWaiterLock); }
+    std::lock_guard<Mutex> lock(mWaiterLock);
     mWaiterCondition.notify_all();
-
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
@@ -249,17 +248,10 @@ void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
 }
 
 void JobSystem::wake() noexcept {
-    Mutex& lock = mWaiterLock;
-    lock.lock();
+    std::lock_guard<Mutex> lock(mWaiterLock);
     // this empty critical section is needed -- it guarantees that notifiy_all() happens
     // after the condition variables are set.
-
-    // We signal the condition inside the lock (which is not required), because this seems to
-    // yield to better scheduling on Android. When we signal outside the critical section,
-    // it looks like this thread gives its time slice to the waking thread and just sits there
-    // being runnable, but not running.
     mWaiterCondition.notify_all();
-    lock.unlock();
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
