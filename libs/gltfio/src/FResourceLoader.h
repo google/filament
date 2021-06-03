@@ -47,6 +47,29 @@ struct FResourceLoader: public ResourceLoader {
 
     ~FResourceLoader();
 
+    void addResourceData(const char* uri, BufferDescriptor&& buffer);
+    bool hasResourceData(const char* uri) const;
+    void evictResourceData();
+    bool loadResources(FilamentAsset* asset);
+    bool asyncBeginLoad(FilamentAsset* asset);
+    float asyncGetLoadProgress() const;
+    void asyncUpdateLoad();
+    void asyncCancelLoad();
+
+    bool loadResources(FFilamentAsset* asset, bool async);
+    void applySparseData(FFilamentAsset* asset) const;
+    void normalizeSkinningWeights(FFilamentAsset* asset) const;
+    void updateBoundingBoxes(FFilamentAsset* asset) const;
+
+    void computeTangents(FFilamentAsset* asset);
+    bool createTextures(bool async);
+    void cancelTextureDecoding();
+    void addTextureCacheEntry(const TextureSlot& tb);
+    void bindTextureToMaterial(const TextureSlot& tb);
+    void decodeSingleTexture();
+    void uploadPendingTextures();
+    void releasePendingTextures();
+
     filament::Engine* mEngine;
     bool mNormalizeSkinningWeights;
     bool mRecomputeBoundingBoxes;
@@ -72,29 +95,6 @@ struct FResourceLoader: public ResourceLoader {
     int mNumDecoderTasksFinished;
     utils::JobSystem::Job* mDecoderRootJob = nullptr;
     FFilamentAsset* mCurrentAsset = nullptr;
-
-    void addResourceData(const char* uri, BufferDescriptor&& buffer);
-    bool hasResourceData(const char* uri) const;
-    void evictResourceData();
-    bool loadResources(FilamentAsset* asset);
-    bool asyncBeginLoad(FilamentAsset* asset);
-    float asyncGetLoadProgress() const;
-    void asyncUpdateLoad();
-    void asyncCancelLoad();
-
-    bool loadResources(FFilamentAsset* asset, bool async);
-    void applySparseData(FFilamentAsset* asset) const;
-    void normalizeSkinningWeights(FFilamentAsset* asset) const;
-    void updateBoundingBoxes(FFilamentAsset* asset) const;
-
-    void computeTangents(FFilamentAsset* asset);
-    bool createTextures(bool async);
-    void cancelTextureDecoding();
-    void addTextureCacheEntry(const TextureSlot& tb);
-    void bindTextureToMaterial(const TextureSlot& tb);
-    void decodeSingleTexture();
-    void uploadPendingTextures();
-    void releasePendingTextures();
 };
 
 FILAMENT_UPCAST(ResourceLoader)
