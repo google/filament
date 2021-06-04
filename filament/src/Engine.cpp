@@ -388,14 +388,10 @@ void FEngine::gc() {
     auto *parent = js.createJob();
     auto em = std::ref(mEntityManager);
 
-    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em),
-            JobSystem::DONT_SIGNAL);
+    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em));
+    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em));
+    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em));
+    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em));
 
     js.runAndWait(parent);
 }

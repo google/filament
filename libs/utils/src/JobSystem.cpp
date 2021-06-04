@@ -247,11 +247,20 @@ void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
     }
 }
 
-void JobSystem::wake() noexcept {
+void JobSystem::wakeAll() noexcept {
+    HEAVY_SYSTRACE_CALL();
     std::lock_guard<Mutex> lock(mWaiterLock);
-    // this empty critical section is needed -- it guarantees that notifiy_all() happens
-    // after the condition variables are set.
+    // this empty critical section is needed -- it guarantees that notify_all() happens
+    // after the condition's variables are set.
     mWaiterCondition.notify_all();
+}
+
+void JobSystem::wakeOne() noexcept {
+    HEAVY_SYSTRACE_CALL();
+    std::lock_guard<Mutex> lock(mWaiterLock);
+    // this empty critical section is needed -- it guarantees that notify_one() happens
+    // after the condition's variables are set.
+    mWaiterCondition.notify_one();
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
@@ -380,7 +389,7 @@ void JobSystem::finish(Job* job) noexcept {
 
     // wake-up all threads that could potentially be waiting on this job finishing
     if (notify) {
-        wake();
+        wakeAll();
     }
 }
 
@@ -428,10 +437,10 @@ void JobSystem::release(JobSystem::Job*& job) noexcept {
 }
 
 void JobSystem::signal() noexcept {
-    wake();
+    wakeAll();
 }
 
-void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
+void JobSystem::run(Job*& job) noexcept {
     HEAVY_SYSTRACE_CALL();
 
     ThreadState& state(getState());
@@ -446,19 +455,15 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
     HEAVY_SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs + 1);
 
     // wake-up a thread if needed...
-    if (!(flags & DONT_SIGNAL)) {
-        // wake-up multiple queues because there could be multiple jobs queued
-        // especially if DONT_SIGNAL was used
-        wake();
-    }
+    wakeOne();
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
     job = nullptr;
 }
 
-JobSystem::Job* JobSystem::runAndRetain(JobSystem::Job* job, uint32_t flags) noexcept {
+JobSystem::Job* JobSystem::runAndRetain(Job* job) noexcept {
     JobSystem::Job* retained = retain(job);
-    run(job, flags);
+    run(job);
     return retained;
 }
 

@@ -592,7 +592,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
         auto *parent = js.createJob();
         for (size_t i = 0; i < GROUP_COUNT; i++) {
             js.run(jobs::createJob(js, parent, std::cref(process),
-                    lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT, i, GROUP_COUNT), JobSystem::DONT_SIGNAL);
+                    lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT, i, GROUP_COUNT));
         }
         js.runAndWait(parent);
     } else {

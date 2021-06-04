@@ -253,11 +253,10 @@ public:
      *
      * The job can't be used after this call.
      */
-    enum runFlags { DONT_SIGNAL = 0x1 };
-    void run(Job*& job, uint32_t flags = 0) noexcept;
-    void run(Job*&& job, uint32_t flags = 0) noexcept { // allows run(createJob(...));
+    void run(Job*& job) noexcept;
+    void run(Job*&& job) noexcept { // allows run(createJob(...));
         Job* p = job;
-        run(p, flags);
+        run(p);
     }
 
     void signal() noexcept;
@@ -268,7 +267,7 @@ public:
      *
      * This job MUST BE waited on with wait(), or released with release().
      */
-    Job* runAndRetain(Job* job, uint32_t flags = 0) noexcept;
+    Job* runAndRetain(Job* job) noexcept;
 
     /*
      * Wait on a job and destroys it.
@@ -381,7 +380,8 @@ private:
     }
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
-    void wake() noexcept;
+    void wakeAll() noexcept;
+    void wakeOne() noexcept;
 
     // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
@@ -506,7 +506,7 @@ struct ParallelForJobData {
 
             // All good, execute the right side, but don't signal it,
             // so it's more likely to be executed next on the same thread
-            js.run(r, JobSystem::DONT_SIGNAL);
+            js.run(r);
         } else {
 execute:
             // we're done splitting, do the real work here!
@@ -542,7 +542,7 @@ private:
             if (UTILS_UNLIKELY(!job)) {
                 goto finish; // oops, no more job available
             }
-            js.run(job, JobSystem::DONT_SIGNAL);
+            js.run(job);
             curr += c;
         }
     finish:
