@@ -66,7 +66,7 @@ void CubemapUtils::process(
                 auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
                         parallelJobTask, jobs::CountSplitter<64, 8>());
                 // not need to signal here, since we're just scheduling work
-                js.run(job, JobSystem::DONT_SIGNAL);
+                js.run(job);
             } else {
                 // if we have a per-thread STATE, we can't parallel_for()
                 parallelJobTask(0, dim);
@@ -74,7 +74,7 @@ void CubemapUtils::process(
         };
 
         // not need to signal here, since we're just scheduling work
-        js.run(jobs::createJob(js, parent, perFaceJob, std::ref(js), parent), JobSystem::DONT_SIGNAL);
+        js.run(jobs::createJob(js, parent, perFaceJob, std::ref(js), parent));
     }
 
     // wait for all our threads to finish

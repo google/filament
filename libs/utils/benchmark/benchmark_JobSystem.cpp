@@ -51,7 +51,7 @@ static void BM_JobSystemAsChildren4k(benchmark::State& state) {
         for (auto _ : state) {
             auto root = js.create(nullptr, &emptyJob);
             for (size_t i = 0; i < 4095; i++) {
-                js.run(js.create(root, &emptyJob), JobSystem::DONT_SIGNAL);
+                js.run(js.create(root, &emptyJob));
             }
             js.runAndWait(root);
         }
