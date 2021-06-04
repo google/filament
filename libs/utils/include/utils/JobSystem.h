@@ -472,15 +472,8 @@ struct ParallelForJobData {
     void parallelWithJobs(JobSystem& js, JobSystem::Job* parent) noexcept {
         assert(parent);
 
-        // We first split about the number of threads we have, and only then we split the rest
-        // in a single thread (but execute the final cut in new jobs, see parallel() below),
-        // this way we save a lot of copies of JobData and miss-predicted branches
-        if (splits == js.getParallelSplitCount()) {
-            parallel(js, parent);
-            return;
-        }
-
         // this branch is often miss-predicted (it both sides happen 50% of the calls)
+right_side:
         if (splitter.split(splits, count)) {
             const size_type lc = count / 2;
             JobData ld(start, lc, splits + uint8_t(1), functor, splitter);
@@ -494,19 +487,13 @@ struct ParallelForJobData {
             // of job creation failure -- rare, but still.
             js.run(l);
 
-            const size_type rc = count - lc;
-            JobData rd(start + lc, rc, splits + uint8_t(1), functor, splitter);
-            JobSystem::Job* r = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(rd));
-            if (UTILS_UNLIKELY(r == nullptr)) {
-                // couldn't allocate right side job, execute it right now
-                start += lc;
-                count = rc;
-                goto execute;
-            }
+            // don't spawn a job for the right side, just reuse us -- spawning jobs is more
+            // costly than we'd like.
+            start += lc;
+            count -= lc;
+            ++splits;
+            goto right_side;
 
-            // All good, execute the right side, but don't signal it,
-            // so it's more likely to be executed next on the same thread
-            js.run(r);
         } else {
 execute:
             // we're done splitting, do the real work here!
@@ -515,43 +502,6 @@ execute:
     }
 
 private:
-    void parallel(JobSystem& js, JobSystem::Job* parent) noexcept {
-
-        // figure out how many splits we need
-        size_type c = count;
-        uint8_t   s = splits;
-        while (splitter.split(s, c)) {
-            c /= 2u;
-            ++s;
-        }
-
-        // then linearly create all jobs with number of elements required by the splitter
-        JobSystem::Job* job = nullptr;
-        auto& func = functor;
-        size_type const first = start;
-        size_type const end = first + count;
-        size_type curr = first;
-
-        while (curr + 2u * c < end) {
-            // this creates jobs from the end of the buffer because the WorkStealingDequeue
-            // is a LIFO, this could help streaming to the d-cache.
-            const size_type pos = end - (curr - first) - c;
-            job = js.createJob(parent, [func, pos, c](JobSystem&, JobSystem::Job*) {
-                func(pos, c);
-            });
-            if (UTILS_UNLIKELY(!job)) {
-                goto finish; // oops, no more job available
-            }
-            js.run(job);
-            curr += c;
-        }
-    finish:
-        assert(end >= curr);
-        assert(end - curr >= c);
-        js.signal();
-        functor(start, end - curr);
-    }
-
     size_type start;            // 4
     size_type count;            // 4
     Functor functor;            // ?
