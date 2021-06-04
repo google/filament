@@ -66,7 +66,7 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
 {
 #ifdef ANDROID
     char property[PROP_VALUE_MAX];
-    __system_property_get("filament.perfcounters", property);
+    __system_property_get("debug.filament.perfcounters", property);
     mUsePerformanceCounter = bool(atoi(property));
 #endif
 }
