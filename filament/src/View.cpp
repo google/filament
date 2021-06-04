@@ -759,10 +759,12 @@ void FView::cullRenderables(JobSystem& js,
                 worldAABBExtent + index, c, bit);
     };
 
-    // launch the computation on multiple threads
-    auto *job = jobs::parallel_for(js, nullptr, 0, (uint32_t)renderableData.size(),
-            std::ref(functor), jobs::CountSplitter<Culler::MODULO * Culler::MIN_LOOP_COUNT_HINT, 8>());
-    js.runAndWait(job);
+    // Note: we can't use jobs::parallel_for() here because Culler::intersects() must process
+    //       multiples of eight primitives.
+    // Moreover, even with a large number of primitives, the overhead of the JobSystem is too
+    // large compared to the run time of Culler::intersects, e.g.: ~100us for 4000 primitives
+    // on Pixel4.
+    functor(0, renderableData.size());
 }
 
 void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
