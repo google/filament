@@ -26,13 +26,14 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 
 #include <utils/JobSystem.h>
 
-#include <cmath>
-#include <random>
-
 #include <utils/compiler.h>
 #include <utils/memalign.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+
+#include <random>
+
+#include <math.h>
 
 #if !defined(WIN32)
 #    include <pthread.h>
@@ -122,20 +123,20 @@ JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreads
             // since we assumed HT, always round-up to an even number of cores (to play it safe)
             hwThreads = (hwThreads + 1) / 2;
         }
-        // make sure we have at least one thread in the thread pool
-        hwThreads = std::max(2, hwThreads);
         // one of the thread will be the user thread
         threadPoolCount = hwThreads - 1;
     }
+    // make sure we have at least one thread in the thread pool
+    threadPoolCount = std::max(1, threadPoolCount);
+    // and also limit the pool to 32 threads
     threadPoolCount = std::min(UTILS_HAS_THREADING ? 32 : 0, threadPoolCount);
 
     mThreadStates = aligned_vector<ThreadState>(threadPoolCount + adoptableThreadsCount);
     mThreadCount = uint16_t(threadPoolCount);
     mParallelSplitCount = (uint8_t)std::ceil((std::log2f(threadPoolCount + adoptableThreadsCount)));
 
-    // this is a pity these are not compile-time checks (C++17 supports it apparently)
-    assert(mExitRequested.is_lock_free());
-    assert(Job().runningJobCount.is_lock_free());
+    static_assert(std::atomic<bool>::is_always_lock_free);
+    static_assert(std::atomic<uint16_t>::is_always_lock_free);
 
     std::random_device rd;
     const size_t hardwareThreadCount = mThreadCount;
