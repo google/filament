@@ -169,12 +169,9 @@ public:
     // the caller must ensure the object will outlive the Job
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T* data) noexcept {
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                (*static_cast<T**>(user)->*method)(js, job);
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
+            (*static_cast<T**>(user)->*method)(js, job);
+        });
         if (job) {
             job->storage[0] = data;
         }
@@ -185,18 +182,14 @@ public:
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T data) noexcept {
         static_assert(sizeof(data) <= sizeof(Job::storage), "user data too large");
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                T* that = static_cast<T*>(user);
-                (that->*method)(js, job);
-                that->~T();
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
+            T* that = static_cast<T*>(user);
+            (that->*method)(js, job);
+            that->~T();
+        });
         if (job) {
             new(job->storage) T(std::move(data));
         }
-        assert(job);
         return job;
     }
 
@@ -204,14 +197,11 @@ public:
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
         static_assert(sizeof(functor) <= sizeof(Job::storage), "functor too large");
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                T& that = *static_cast<T*>(user);
-                that(js, job);
-                that.~T();
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job){
+            T& that = *static_cast<T*>(user);
+            that(js, job);
+            that.~T();
+        });
         if (job) {
             new(job->storage) T(std::move(functor));
         }
