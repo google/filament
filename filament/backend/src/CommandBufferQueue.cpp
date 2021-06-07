@@ -21,6 +21,7 @@
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
+#include "private/backend/BackendUtils.h"
 #include "private/backend/CommandStream.h"
 
 using namespace utils;

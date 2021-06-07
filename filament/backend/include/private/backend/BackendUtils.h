@@ -18,6 +18,10 @@
 
 #include <stddef.h>
 
+#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
+#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
+#endif
+
 namespace filament {
 namespace backend {
 

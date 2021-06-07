@@ -19,6 +19,8 @@
 
 #include <utils/Allocator.h>
 
+#include "private/backend/BackendUtils.h"
+
 #ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
 #    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 2
 #endif
@@ -26,10 +28,6 @@
 #ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
 #    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 1
 #endif
-
-#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
-#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
-#endif 
 
 namespace filament {
 
