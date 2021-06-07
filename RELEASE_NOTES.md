@@ -7,7 +7,13 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.2
 
+- Vulkan: validation and diagnostic improvements
+- engine: improvements for scenes with many renderables.
 - gltfio: added support for `KHR_materials_ior`.
+- java: Add bindings for `IBLPrefilterContext`.
+- java: add `KTXLoader.getSphericalHarmonics` JNI binding
+- libimage: fix, respect sRGB option for compressed formats.
+- sample-gltf-viewer: fix lifetime cycle for RemoteServer.
 
 ## v1.10.1
 
