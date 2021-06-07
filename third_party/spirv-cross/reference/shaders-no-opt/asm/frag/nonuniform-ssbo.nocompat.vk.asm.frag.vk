@@ -1,0 +1,24 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(set = 0, binding = 3, std430) buffer SSBO
+{
+    uint counter;
+    vec4 v[];
+} ssbos[];
+
+layout(location = 0) flat in int vIndex;
+layout(location = 0) out vec4 FragColor;
+
+void main()
+{
+    int i = vIndex;
+    int _42 = i + 60;
+    int _45 = i + 70;
+    ssbos[nonuniformEXT(_42)].v[_45] = vec4(20.0);
+    int _48 = i + 100;
+    uint _49 = atomicAdd(ssbos[nonuniformEXT(_48)].counter, 100u);
+    int _51 = i;
+    FragColor.z += float(int(uint(ssbos[nonuniformEXT(_51)].v.length())));
+}
+

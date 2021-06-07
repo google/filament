@@ -19,7 +19,7 @@ produces a binary material package that contains shader code and associated meta
 information, see the official document describing the <a href="https://google.github.io/filament/Materials.md.html">Filament Material System</a>.</p>
 <p>Let's try out <code>matc</code>. Create the following file in your favorite text editor and call it
 <code>plastic.mat</code>.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>material {
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>material {
     name : Lit,
     shadingModel : lit,
     parameters : [
@@ -42,7 +42,7 @@ fragment {
 </pre></div>
 
 <p>Next, invoke <code>matc</code> as follows.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>matc -a opengl -p mobile -o plastic.filamat plastic.mat
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>matc -a opengl -p mobile -o plastic.filamat plastic.mat
 </pre></div>
 
 <p>You should now have a material archive in your working directory, which we'll use later in the
@@ -51,7 +51,7 @@ tutorial.</p>
 <p>Next we'll use Filament's <code>cmgen</code> tool to consume a HDR environment map in latlong format, and
 produce two cubemap files: a mipmapped IBL and a blurry skybox.</p>
 <p>Download <a href="//github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr">pillars_2k.hdr</a>, then invoke the following command in your terminal.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>cmgen -x pillars_2k --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 pillars_2k.hdr
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>cmgen -x pillars_2k --format<span style="color: #666666">=</span>ktx --size<span style="color: #666666">=256</span> --extract-blur<span style="color: #666666">=0</span>.1 pillars_2k.hdr
 </pre></div>
 
 <p>You should now have a <code>pillars_2k</code> folder containing a couple KTX files for the IBL and skybox, as
@@ -59,7 +59,7 @@ well as a text file with spherical harmonics coefficients. You can discard the t
 IBL KTX contains these coefficients in its metadata.</p>
 <h2>Create JavaScript</h2>
 <p>Next, create <code>redball.js</code> with the following content.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;pillars_2k&#39;</span>;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;pillars_2k&#39;</span>;
 <span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> sky_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> filamat_url <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;plastic.filamat&#39;</span>
@@ -126,7 +126,7 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
 new set of assets. We also added some animation to the camera.</p>
 <p>Next let's create a material instance from the package that we built at the beginning the tutorial.
 Replace the <strong>create material</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> material <span style="color: #666666">=</span> engine.createMaterial(filamat_url);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> material <span style="color: #666666">=</span> engine.createMaterial(filamat_url);
 <span style="color: #008000; font-weight: bold">const</span> matinstance <span style="color: #666666">=</span> material.createInstance();
 
 <span style="color: #008000; font-weight: bold">const</span> red <span style="color: #666666">=</span> [<span style="color: #666666">0.8</span>, <span style="color: #666666">0.0</span>, <span style="color: #666666">0.0</span>];
@@ -147,7 +147,7 @@ as quaternions.</li>
 </ul>
 <p>Let's go ahead use these arrays to build the vertex buffer and index buffer. Replace <strong>create
 sphere</strong> with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> renderable <span style="color: #666666">=</span> Filament.EntityManager.get().create();
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> renderable <span style="color: #666666">=</span> Filament.EntityManager.get().create();
 scene.addEntity(renderable);
 
 <span style="color: #008000; font-weight: bold">const</span> icosphere <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.IcoSphere(<span style="color: #666666">5</span>);
@@ -183,7 +183,7 @@ did in the first tutorial.</p>
 <p>In this section we will create some directional light sources, as well as an image-based light (IBL)
 defined by one of the KTX files we built at the start of the demo. First, replace the <strong>create
 lights</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> sunlight <span style="color: #666666">=</span> Filament.EntityManager.get().create();
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> sunlight <span style="color: #666666">=</span> Filament.EntityManager.get().create();
 scene.addEntity(sunlight);
 Filament.LightManager.Builder(LightType.SUN)
   .color([<span style="color: #666666">0.98</span>, <span style="color: #666666">0.92</span>, <span style="color: #666666">0.89</span>])
@@ -206,7 +206,7 @@ Filament.LightManager.Builder(LightType.DIRECTIONAL)
 parameters because Filament will automatically draw a disk into the skybox.</p>
 <p>Next we need to create an <code>IndirectLight</code> object from the KTX IBL. One way of doing this is the
 following (don't type this out, there's an easier way).</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> format <span style="color: #666666">=</span> Filament.PixelDataFormat.RGB;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> format <span style="color: #666666">=</span> Filament.PixelDataFormat.RGB;
 <span style="color: #008000; font-weight: bold">const</span> datatype <span style="color: #666666">=</span> Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
 <span style="color: #408080; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
@@ -243,7 +243,7 @@ scene.setIndirectLight(indirectLight);
 
 <p>Filament provides a JavaScript utility to make this simpler,
 simply replace the <strong>create IBL</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> indirectLight <span style="color: #666666">=</span> engine.createIblFromKtx(ibl_url);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> indirectLight <span style="color: #666666">=</span> engine.createIblFromKtx(ibl_url);
 indirectLight.setIntensity(<span style="color: #666666">50000</span>);
 scene.setIndirectLight(indirectLight);
 </pre></div>
@@ -252,7 +252,7 @@ scene.setIndirectLight(indirectLight);
 <p>At this point you can run the demo and you should see a red plastic ball against a black background.
 Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[sky_url]);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[sky_url]);
 <span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.KtxBundle(sky_package);
 <span style="color: #008000; font-weight: bold">const</span> skytex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
@@ -269,7 +269,7 @@ skytex.setImageCube(engine, <span style="color: #666666">0</span>, pixelbuffer);
 
 <p>Filament provides a Javascript utility to make this easier.
 Replace <strong>create skybox</strong> with the following.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> skybox <span style="color: #666666">=</span> engine.createSkyFromKtx(sky_url);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> skybox <span style="color: #666666">=</span> engine.createSkyFromKtx(sky_url);
 scene.setSkybox(skybox);
 </pre></div>
 

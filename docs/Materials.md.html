@@ -93,7 +93,7 @@ in table [standardProperties].
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 **postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
-**ior**                 | Index of refraction for refractive objects
+**ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
 **transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
 **absorption**          | Absorption factor for refractive objects
 **microThickness**      | Thickness of the thin layer of refractive objects
@@ -146,7 +146,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 
 !!! Note: About `ior` and `reflectance`
     The index of refraction (IOR) and the reflectance represent the same physical attribute,
-    therefore they don't need to be both specified. Typically, only the reflectance is specified
+    therefore they don't need to be both specified. Typically, only the reflectance is specified,
     and the IOR is deduced automatically. When only the IOR is specified, the reflectance is then
     deduced automatically. It is possible to specify both, in which case their values are kept
     as-is, which can lead to physically impossible materials, however, this might be desirable
@@ -507,7 +507,8 @@ this option for more information.
 The `ior` property only affects non-metallic surfaces. This property can be used to control the
 index of refraction and the specular intensity of materials. The `ior` property is intended to
 be used with refractive (transmissive) materials, which are enabled when the `refractionMode` is
-set to `cubemap` or `screenspace`.
+set to `cubemap` or `screenspace`. It can also be used on non-refractive objects as an alternative
+to setting the reflectance.
 
 The index of refraction (or refractive index) of a material is a dimensionless number that describes
 how fast light travels through that material. The higher the number, the slower light travels

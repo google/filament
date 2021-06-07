@@ -246,6 +246,8 @@ io::ostream& operator<<(io::ostream& out, CullingMode mode) {
 io::ostream& operator<<(io::ostream& out, SamplerType type) {
     switch (type) {
         CASE(SamplerType, SAMPLER_2D)
+        CASE(SamplerType, SAMPLER_2D_ARRAY)
+        CASE(SamplerType, SAMPLER_3D)
         CASE(SamplerType, SAMPLER_CUBEMAP)
         CASE(SamplerType, SAMPLER_EXTERNAL)
     }
@@ -418,12 +420,14 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
 
 io::ostream& operator<<(io::ostream& out, TextureUsage usage) {
     switch (usage) {
+        CASE(TextureUsage, NONE)
         CASE(TextureUsage, DEFAULT)
         CASE(TextureUsage, COLOR_ATTACHMENT)
         CASE(TextureUsage, DEPTH_ATTACHMENT)
         CASE(TextureUsage, STENCIL_ATTACHMENT)
         CASE(TextureUsage, UPLOADABLE)
         CASE(TextureUsage, SAMPLEABLE)
+        CASE(TextureUsage, SUBPASS_INPUT)
     }
     return out;
 }
@@ -487,6 +491,25 @@ io::ostream& operator<<(io::ostream& out, SamplerCompareFunc func) {
         CASE(SamplerCompareFunc, NE)
         CASE(SamplerCompareFunc, A)
         CASE(SamplerCompareFunc, N)
+    }
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, BufferObjectBinding binding) {
+    switch (binding) {
+        CASE(BufferObjectBinding, VERTEX)
+    }
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, TextureSwizzle swizzle) {
+    switch (swizzle) {
+        CASE(TextureSwizzle, SUBSTITUTE_ZERO)
+        CASE(TextureSwizzle, SUBSTITUTE_ONE)
+        CASE(TextureSwizzle, CHANNEL_0)
+        CASE(TextureSwizzle, CHANNEL_1)
+        CASE(TextureSwizzle, CHANNEL_2)
+        CASE(TextureSwizzle, CHANNEL_3)
     }
     return out;
 }
@@ -606,10 +629,10 @@ io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     return out;
 }
 
-io::ostream& operator<<(io::ostream& out, BufferObjectBinding wrap) {
-    switch (wrap) {
-        CASE(BufferObjectBinding, VERTEX)
-    }
+UTILS_PRIVATE
+io::ostream& operator<<(io::ostream& out, MRT const& mrt) {
+    // TODO: implement decoding of enum
+    out << "MRT{...}";
     return out;
 }
 

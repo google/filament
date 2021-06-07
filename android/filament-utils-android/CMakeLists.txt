@@ -32,6 +32,7 @@ add_library(filament-utils-jni SHARED
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
         src/main/cpp/HDRLoader.cpp
+        src/main/cpp/IBLPrefilterContext.cpp
         src/main/cpp/Utils.cpp
         src/main/cpp/Manipulator.cpp
         src/main/cpp/RemoteServer.cpp

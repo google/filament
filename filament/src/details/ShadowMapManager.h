@@ -31,6 +31,8 @@
 
 #include "fg2/FrameGraph.h"
 
+#include <utils/FixedCapacityVector.h>
+
 #include <math/vec3.h>
 
 #include <array>
@@ -173,8 +175,14 @@ private:
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
     float mTextureZResolution = 1.0f / (1u << 16u);
 
-    std::vector<ShadowMapEntry> mCascadeShadowMaps;
-    std::vector<ShadowMapEntry> mSpotShadowMaps;
+    utils::FixedCapacityVector<ShadowMapEntry> mCascadeShadowMaps{
+            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+                    CONFIG_MAX_SHADOW_CASCADES) };
+
+    utils::FixedCapacityVector<ShadowMapEntry> mSpotShadowMaps{
+            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+                    CONFIG_MAX_SHADOW_CASTING_SPOTS) };
+
     backend::RenderPassParams mRenderPassParams;
 
     std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASCADES> mCascadeShadowMapCache;

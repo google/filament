@@ -55,16 +55,11 @@ struct X11Functions {
 Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
-        "VK_KHR_surface",
 #ifdef FILAMENT_SUPPORTS_XCB
         "VK_KHR_xcb_surface",
 #endif
 #ifdef FILAMENT_SUPPORTS_XLIB
         "VK_KHR_xlib_surface",
-#endif
-        "VK_KHR_get_physical_device_properties2",
-#if VK_ENABLE_VALIDATION
-        "VK_EXT_debug_utils",
 #endif
     };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions,

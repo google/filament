@@ -98,10 +98,13 @@ public:
 
     // Creates new descriptor sets if necessary and binds them using vkCmdBindDescriptorSets.
     // Returns false if descriptor set allocation fails.
-    bool bindDescriptors(VulkanCommands& commands) noexcept;
+    bool bindDescriptors(VkCommandBuffer cmdbuffer) noexcept;
 
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
-    void bindPipeline(VulkanCommands& commands) noexcept;
+    void bindPipeline(VkCommandBuffer cmdbuffer) noexcept;
+
+    // Sets up a new scissor rect if it has been dirtied.
+    void bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept;
 
     // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgramBundle(const ProgramBundle& bundle) noexcept;
@@ -203,9 +206,9 @@ private:
     using DescriptorMap = tsl::robin_map<DescriptorKey, DescriptorBundle, DescHashFn, DescEqual>;
 
     struct CmdBufferState {
-        // Weak references to the currently bound pipeline and descriptor sets.
         PipelineVal* currentPipeline = nullptr;
         DescriptorBundle* currentDescriptorBundle = nullptr;
+        VkRect2D scissor = {};
     };
 
     // If bind is set to true, vkCmdBindDescriptorSets is required.

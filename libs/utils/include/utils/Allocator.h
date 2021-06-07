@@ -164,14 +164,6 @@ public:
         free(p);
     }
 
-    // Allocators can't be copied
-    HeapAllocator(const HeapAllocator& rhs) = delete;
-    HeapAllocator& operator=(const HeapAllocator& rhs) = delete;
-
-    // Allocators can be moved
-    HeapAllocator(HeapAllocator&& rhs) noexcept = default;
-    HeapAllocator& operator=(HeapAllocator&& rhs) noexcept = default;
-
     ~HeapAllocator() noexcept = default;
 
     void swap(HeapAllocator& rhs) noexcept { }
@@ -346,7 +338,7 @@ public:
         mFreeList.push(p);
     }
 
-    size_t getSize() const noexcept { return ELEMENT_SIZE; }
+    constexpr size_t getSize() const noexcept { return ELEMENT_SIZE; }
 
     PoolAllocator(void* begin, void* end) noexcept
         : mFreeList(begin, end, ELEMENT_SIZE, ALIGNMENT, OFFSET) {

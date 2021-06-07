@@ -239,11 +239,11 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         width, height, depth, usage, metalTexture);
 }
 
-void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
+void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
     mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
 }
 
-void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
 }
@@ -680,7 +680,7 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto* vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     auto* bufferObject = handle_cast<MetalBufferObject>(mHandleMap, boh);
@@ -740,7 +740,7 @@ void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     texture->externalImage.set((CVPixelBufferRef) image);
 }
 
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
     auto texture = handle_cast<MetalTexture>(mHandleMap, th);
     texture->externalImage.set((CVPixelBufferRef) image, plane);
 }
@@ -885,37 +885,37 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
     swapChain->releaseDrawable();
 }
 
-void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
+void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
     mContext->uniformState[index] = UniformBufferState {
-        .bound = true,
+        .offset = 0,
         .ubh = ubh,
-        .offset = 0
+        .bound = true
     };
 }
 
-void MetalDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
-        size_t offset, size_t size) {
+void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+        uint32_t offset, uint32_t size) {
     mContext->uniformState[index] = UniformBufferState {
-        .bound = true,
+        .offset = offset,
         .ubh = ubh,
-        .offset = offset
+        .bound = true
     };
 }
 
-void MetalDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
+void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     mContext->samplerBindings[index] = sb;
 }
 
-void MetalDriver::insertEventMarker(const char* string, size_t len) {
+void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
 
 }
 
-void MetalDriver::pushGroupMarker(const char* string, size_t len) {
+void MetalDriver::pushGroupMarker(const char* string, uint32_t len) {
     mContext->groupMarkers.push(string);
 }
 
-void MetalDriver::popGroupMarker(int dummy) {
+void MetalDriver::popGroupMarker(int) {
     assert_invariant(!mContext->groupMarkers.empty());
     mContext->groupMarkers.pop();
 }

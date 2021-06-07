@@ -78,14 +78,14 @@ struct main0_in
 };
 
 static inline __attribute__((always_inline))
-void write_deeper_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3> (&colors))
+void write_deeper_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3>& colors)
 {
     outTransModel[1].y = ubo.lodBias;
     color = colors[2];
 }
 
 static inline __attribute__((always_inline))
-void write_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3> (&colors), thread float3& inNormal)
+void write_in_function(thread float4x4& outTransModel, constant UBO& ubo, thread float4& color, thread spvUnsafeArray<float4, 3>& colors, thread float3& inNormal)
 {
     outTransModel[2] = float4(inNormal, 1.0);
     write_deeper_in_function(outTransModel, ubo, color, colors);

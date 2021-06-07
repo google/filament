@@ -46,6 +46,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <cmath>
 #include <vector>
 
 #define CGLTF_IMPLEMENTATION
@@ -926,17 +927,17 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .doubleSided = !!inputMat->double_sided,
         .unlit = !!inputMat->unlit,
         .hasVertexColors = vertexColor,
-        .hasBaseColorTexture = !!baseColorTexture.texture,
-        .hasNormalTexture = !!inputMat->normal_texture.texture,
-        .hasOcclusionTexture = !!inputMat->occlusion_texture.texture,
-        .hasEmissiveTexture = !!inputMat->emissive_texture.texture,
+        .hasBaseColorTexture = baseColorTexture.texture != nullptr,
+        .hasNormalTexture = inputMat->normal_texture.texture != nullptr,
+        .hasOcclusionTexture = inputMat->occlusion_texture.texture != nullptr,
+        .hasEmissiveTexture = inputMat->emissive_texture.texture != nullptr,
         .enableDiagnostics = mDiagnosticsEnabled,
         .baseColorUV = (uint8_t) baseColorTexture.texcoord,
-        .hasClearCoatTexture = !!ccConfig.clearcoat_texture.texture,
+        .hasClearCoatTexture = ccConfig.clearcoat_texture.texture != nullptr,
         .clearCoatUV = (uint8_t) ccConfig.clearcoat_texture.texcoord,
-        .hasClearCoatRoughnessTexture = !!ccConfig.clearcoat_roughness_texture.texture,
+        .hasClearCoatRoughnessTexture = ccConfig.clearcoat_roughness_texture.texture != nullptr,
         .clearCoatRoughnessUV = (uint8_t) ccConfig.clearcoat_roughness_texture.texcoord,
-        .hasClearCoatNormalTexture = !!ccConfig.clearcoat_normal_texture.texture,
+        .hasClearCoatNormalTexture = ccConfig.clearcoat_normal_texture.texture != nullptr,
         .clearCoatNormalUV = (uint8_t) ccConfig.clearcoat_normal_texture.texcoord,
         .hasClearCoat = !!inputMat->has_clearcoat,
         .hasTransmission = !!inputMat->has_transmission,
@@ -944,13 +945,14 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
-        .hasTransmissionTexture = !!trConfig.transmission_texture.texture,
+        .hasTransmissionTexture = trConfig.transmission_texture.texture != nullptr,
         .transmissionUV = (uint8_t) trConfig.transmission_texture.texcoord,
-        .hasSheenColorTexture = !!shConfig.sheen_color_texture.texture,
+        .hasSheenColorTexture = shConfig.sheen_color_texture.texture != nullptr,
         .sheenColorUV = (uint8_t) shConfig.sheen_color_texture.texcoord,
-        .hasSheenRoughnessTexture = !!shConfig.sheen_roughness_texture.texture,
+        .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
         .sheenRoughnessUV = (uint8_t) shConfig.sheen_roughness_texture.texcoord,
         .hasSheen = !!inputMat->has_sheen,
+        .hasIOR = !!inputMat->has_ior
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -966,7 +968,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             matkey.specularGlossinessUV = (uint8_t) metallicRoughnessTexture.texcoord;
         }
     } else {
-        matkey.hasMetallicRoughnessTexture = !!metallicRoughnessTexture.texture;
+        matkey.hasMetallicRoughnessTexture = metallicRoughnessTexture.texture != nullptr;
         matkey.metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord;
     }
 
@@ -1133,6 +1135,20 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
                 mi->setParameter("transmissionUvMatrix", uvmat);
             }
+        }
+    }
+
+    // IOR can be implemented as either IOR or reflectance because of ubershaders
+    if (matkey.hasIOR) {
+        if (mi->getMaterial()->hasParameter("ior")) {
+            mi->setParameter("ior", inputMat->ior.ior);
+        }
+        if (mi->getMaterial()->hasParameter("reflectance")) {
+            float ior = inputMat->ior.ior;
+            float f0 = (ior - 1.0f) / (ior + 1.0f);
+            f0 *= f0;
+            float reflectance = std::sqrt(f0 / 0.16f);
+            mi->setParameter("reflectance", reflectance);
         }
     }
 

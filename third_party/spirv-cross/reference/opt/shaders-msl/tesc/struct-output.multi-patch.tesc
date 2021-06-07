@@ -28,7 +28,7 @@ kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], devic
     device main0_out* gl_out = &spvOut[gl_GlobalInvocationID.x - gl_GlobalInvocationID.x % 3];
     device main0_in* gl_in = &spvIn[min(gl_GlobalInvocationID.x / 3, spvIndirectParams[1] - 1) * spvIndirectParams[0]];
     uint gl_InvocationID = gl_GlobalInvocationID.x % 3;
-    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 3, spvIndirectParams[1]);
+    uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 3, spvIndirectParams[1] - 1);
     float _15 = float(gl_InvocationID);
     int _18 = gl_InvocationID + 1;
     float _19 = float(_18);

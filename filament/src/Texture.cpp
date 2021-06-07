@@ -23,13 +23,15 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/Texture.h>
+
 #include <ibl/Cubemap.h>
 #include <ibl/CubemapIBL.h>
 #include <ibl/CubemapUtils.h>
 #include <ibl/Image.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
-#include <filament/Texture.h>
 
 using namespace utils;
 
@@ -538,7 +540,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     auto generateMipmaps = [](JobSystem& js,
-            std::vector<Cubemap>& levels, std::vector<Image>& images) {
+            FixedCapacityVector<Cubemap>& levels, FixedCapacityVector<Image>& images) {
         Image temp;
         const Cubemap& base(levels[0]);
         size_t dim = base.getDimensions();
@@ -629,10 +631,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
      * Create the mipmap chain
      */
 
-    std::vector<Image> images;
-    std::vector<Cubemap> levels;
-    images.reserve(getLevels());
-    levels.reserve(getLevels());
+    auto images = FixedCapacityVector<Image>::with_capacity(getLevels());
+    auto levels = FixedCapacityVector<Cubemap>::with_capacity(getLevels());
 
     images.push_back(std::move(temp));
     levels.push_back(std::move(cml));
@@ -657,7 +657,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
-        CubemapIBL::roughnessFilter(js, dst, levels, linearRoughness, numSamples, mirror, true);
+        CubemapIBL::roughnessFilter(js, dst, { levels.begin(), uint32_t(levels.size()) },
+                linearRoughness, numSamples, mirror, true);
 
         Texture::PixelBufferDescriptor pbd(image.getData(), image.getSize(),
                 Texture::PixelBufferDescriptor::PixelDataFormat::RGB,

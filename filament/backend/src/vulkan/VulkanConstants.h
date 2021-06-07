@@ -18,9 +18,9 @@
 #define TNT_FILAMENT_DRIVER_VULKANCONSTANTS_H
 
 #define FILAMENT_VULKAN_VERBOSE 0
+#define FILAMENT_VULKAN_DUMP_API 0
 
-// In debug builds, we enable validation layers and set up a debug callback if the extension is
-// available. Caution: the debug callback causes a null pointer dereference with optimized builds.
+// In debug builds, we enable validation layers and set up a debug callback.
 //
 // To enable validation layers in Android, also be sure to set the jniLibs property in the gradle
 // file for your app by adding the following lines into the "android" section. This copies the

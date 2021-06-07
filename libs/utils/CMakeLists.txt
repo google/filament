@@ -22,6 +22,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
@@ -137,6 +138,7 @@ set(TEST_SRCS
         test/test_CString.cpp
         test/test_CyclicBarrier.cpp
         test/test_Entity.cpp
+        test/test_FixedCapacityVector.cpp
         test/test_JobSystem.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp

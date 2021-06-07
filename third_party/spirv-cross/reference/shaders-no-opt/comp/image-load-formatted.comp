@@ -1,0 +1,12 @@
+#version 450
+#extension GL_EXT_shader_image_load_formatted : require
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(binding = 0) uniform image2D img;
+
+void main()
+{
+    vec4 v = imageLoad(img, ivec2(gl_GlobalInvocationID.xy));
+    imageStore(img, ivec2(gl_GlobalInvocationID.xy), v + vec4(1.0));
+}
+

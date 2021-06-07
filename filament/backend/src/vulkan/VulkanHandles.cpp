@@ -105,7 +105,7 @@ static VulkanAttachment createAttachment(VulkanAttachment spec) {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-// Note that the attachment structs are unused in this case in favor of VulkanSurfaceContext.
+// Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
         mContext(context), mOffscreen(false), mSamples(1) {}
 
@@ -198,146 +198,13 @@ VulkanRenderTarget::~VulkanRenderTarget() {
     }
 }
 
-// Primary SwapChain constructor. (not headless)
-VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VkSurfaceKHR vksurface) {
-    surfaceContext.suboptimal = false;
-    surfaceContext.surface = vksurface;
-    surfaceContext.firstRenderPass = true;
-    getPresentationQueue(context, surfaceContext);
-    createSwapChain(context, surfaceContext);
-}
-
-// Headless SwapChain constructor. (does not create a VkSwapChainKHR)
-VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_t height) {
-    surfaceContext.surface = VK_NULL_HANDLE;
-    getHeadlessQueue(context, surfaceContext);
-
-    surfaceContext.surfaceFormat.format = VK_FORMAT_R8G8B8A8_UNORM;
-    surfaceContext.swapchain = VK_NULL_HANDLE;
-
-    // Somewhat arbitrarily, headless rendering is double-buffered.
-    surfaceContext.attachments.resize(2);
-
-    for (size_t i = 0; i < surfaceContext.attachments.size(); ++i) {
-        VkImage image;
-        VkImageCreateInfo iCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = surfaceContext.surfaceFormat.format,
-            .extent = {
-                .width = width,
-                .height = height,
-                .depth = 1,
-            },
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-        };
-        assert_invariant(iCreateInfo.extent.width > 0);
-        assert_invariant(iCreateInfo.extent.height > 0);
-        vkCreateImage(context.device, &iCreateInfo, VKALLOC, &image);
-
-        VkMemoryRequirements memReqs = {};
-        vkGetImageMemoryRequirements(context.device, image, &memReqs);
-        VkMemoryAllocateInfo allocInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memReqs.size,
-            .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-        };
-        VkDeviceMemory imageMemory;
-        vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
-        vkBindImageMemory(context.device, image, imageMemory, 0);
-
-        surfaceContext.attachments[i] = {
-            .format = surfaceContext.surfaceFormat.format, .image = image,
-            .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
-        };
-        VkImageViewCreateInfo ivCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = surfaceContext.surfaceFormat.format,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .levelCount = 1,
-                .layerCount = 1,
-            }
-        };
-        vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                    &surfaceContext.attachments[i].view);
-
-        VkImageMemoryBarrier barrier {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .levelCount = 1,
-                .layerCount = 1,
-            },
-        };
-        vkCmdPipelineBarrier(context.commands->get().cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                &barrier);
-    }
-
-    surfaceContext.surfaceCapabilities.currentExtent.width = width;
-    surfaceContext.surfaceCapabilities.currentExtent.height = height;
-
-    surfaceContext.clientSize.width = width;
-    surfaceContext.clientSize.height = height;
-
-    surfaceContext.imageAvailable = VK_NULL_HANDLE;
-
-    createFinalDepthBuffer(context, surfaceContext, context.finalDepthFormat);
-}
-
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
-    // For the backbuffer, there are corner cases where the platform's surface resolution does not
-    // match what Filament expects, so we need to make an appropriate transformation (e.g. create a
-    // VkSurfaceKHR on a high DPI display, then move it to a low DPI display).
-    if (!mOffscreen) {
-        const VkExtent2D platformSize = mContext.currentSurface->surfaceCapabilities.currentExtent;
-        const VkExtent2D clientSize = mContext.currentSurface->clientSize;
-
-        // Because these types of coordinates are pixel-addressable, we purposefully use integer
-        // math and rely on left-to-right evaluation.
-        bounds->offset.x = bounds->offset.x * platformSize.width / clientSize.width;
-        bounds->offset.y = bounds->offset.y * platformSize.height / clientSize.height;
-        bounds->extent.width = bounds->extent.width * platformSize.width / clientSize.width;
-        bounds->extent.height = bounds->extent.height * platformSize.height / clientSize.height;
-    }
     const auto& extent = getExtent();
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
-    // For the backbuffer, we must check if platform size and client size differ, then scale
-    // appropriately. Note the +2 correction factor. This prevents the platform from lerping pixels
-    // along the edge of the viewport with pixels that live outside the viewport. Luckily this
-    // correction factor only applies in obscure conditions (e.g. after dragging a high-DPI window
-    // to a low-DPI display).
-    if (!mOffscreen) {
-        const VkExtent2D platformSize = mContext.currentSurface->surfaceCapabilities.currentExtent;
-        const VkExtent2D clientSize = mContext.currentSurface->clientSize;
-        if (platformSize.width != clientSize.width) {
-            const float xscale = float(platformSize.width + 2) / float(clientSize.width);
-            bounds->x *= xscale;
-            bounds->width *= xscale;
-        }
-        if (platformSize.height != clientSize.height) {
-            const float yscale = float(platformSize.height + 2) / float(clientSize.height);
-            bounds->y *= yscale;
-            bounds->height *= yscale;
-        }
-    }
     flipVertically(bounds, getExtent().height);
 }
 
@@ -345,7 +212,7 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
     if (mOffscreen) {
         return {width, height};
     }
-    return mContext.currentSurface->surfaceCapabilities.currentExtent;
+    return mContext.currentSurface->clientSize;
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(int target) const {
@@ -416,17 +283,18 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
     mDisposer.acquire(this);
 
-    // Ensure that the copy finishes before the next draw call.
+    // First, ensure that the copy finishes before the next draw call.
+    // Second, in case the user decides to upload another chunk (without ever using the first one)
+    // we need to ensure that this upload completes first.
 
-    // NOTE: ideally dstAccessMask would be VK_ACCESS_UNIFORM_READ_BIT and dstStageMask would be
-    // VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, but this
+    // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
     // seems to be insufficient on Mali devices. To work around this we are using a more
-    // aggressive VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT barrier.
+    // aggressive ALL_GRAPHICS_BIT barrier.
 
     VkBufferMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .buffer = mGpuBuffer,
@@ -435,7 +303,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
 
     vkCmdPipelineBarrier(cmdbuffer,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
             0, 0, nullptr, 1, &barrier, 0, nullptr);
 }
 

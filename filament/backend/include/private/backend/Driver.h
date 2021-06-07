@@ -106,24 +106,14 @@ public:
 
 #if !defined(NDEBUG)
 
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
-
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferDescriptor const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CullingMode mode);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ElementType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelBufferDescriptor const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataFormat format);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TargetBufferFlags f);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::RenderPassParams const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerFormat format);
@@ -136,7 +126,21 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Shade
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureCubemapFace face);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureFormat format);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Viewport const& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
+
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::BufferDescriptor& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PixelBufferDescriptor& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::MRT& mrt);
+
 #endif
 
 #endif // TNT_FILAMENT_DRIVER_DRIVER_H

@@ -48,6 +48,7 @@ namespace ktx {
     PixelDataFormat toPixelDataFormat(const KtxInfo& info);
     bool isCompressed(const KtxInfo& info);
     TextureFormat toTextureFormat(const KtxInfo& info);
+    TextureFormat toSrgbTextureFormat(TextureFormat tex);
 
     /**
      * Creates a Texture object from a KTX file and populates all of its faces and miplevels.
@@ -69,12 +70,7 @@ namespace ktx {
 
         auto texformat = toTextureFormat(ktxinfo);
         if (srgb) {
-            if (texformat == Texture::InternalFormat::RGB8) {
-                texformat = Texture::InternalFormat::SRGB8;
-            }
-            if (texformat == Texture::InternalFormat::RGBA8) {
-                texformat = Texture::InternalFormat::SRGB8_A8;
-            }
+            texformat = toSrgbTextureFormat(texformat);
         }
 
         Texture* texture = Texture::Builder()
@@ -237,6 +233,67 @@ namespace ktx {
 
     inline bool isCompressed(const KtxInfo& info) {
         return info.glFormat == 0;
+    }
+
+    inline TextureFormat toSrgbTextureFormat(TextureFormat format) {
+        switch(format) {
+            // Non-compressed
+            case Texture::InternalFormat::RGB8:
+                return Texture::InternalFormat::SRGB8;
+            case Texture::InternalFormat::RGBA8:
+                return Texture::InternalFormat::SRGB8_A8;
+
+            // ASTC
+            case Texture::InternalFormat::RGBA_ASTC_4x4:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_4x4;
+            case Texture::InternalFormat::RGBA_ASTC_5x4:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x4;
+            case Texture::InternalFormat::RGBA_ASTC_5x5:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_5x5;
+            case Texture::InternalFormat::RGBA_ASTC_6x5:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x5;
+            case Texture::InternalFormat::RGBA_ASTC_6x6:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_6x6;
+            case Texture::InternalFormat::RGBA_ASTC_8x5:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x5;
+            case Texture::InternalFormat::RGBA_ASTC_8x6:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x6;
+            case Texture::InternalFormat::RGBA_ASTC_8x8:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_8x8;
+            case Texture::InternalFormat::RGBA_ASTC_10x5:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x5;
+            case Texture::InternalFormat::RGBA_ASTC_10x6:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x6;
+            case Texture::InternalFormat::RGBA_ASTC_10x8:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x8;
+            case Texture::InternalFormat::RGBA_ASTC_10x10:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_10x10;
+            case Texture::InternalFormat::RGBA_ASTC_12x10:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x10;
+            case Texture::InternalFormat::RGBA_ASTC_12x12:
+                return Texture::InternalFormat::SRGB8_ALPHA8_ASTC_12x12;
+
+            // ETC2
+            case Texture::InternalFormat::ETC2_RGB8:
+                return Texture::InternalFormat::ETC2_SRGB8;
+            case Texture::InternalFormat::ETC2_RGB8_A1:
+                return Texture::InternalFormat::ETC2_SRGB8_A1;
+            case Texture::InternalFormat::ETC2_EAC_RGBA8:
+                return Texture::InternalFormat::ETC2_EAC_SRGBA8;
+
+            // DXT
+            case Texture::InternalFormat::DXT1_RGB:
+                return Texture::InternalFormat::DXT1_SRGB;
+            case Texture::InternalFormat::DXT1_RGBA:
+                return Texture::InternalFormat::DXT1_SRGBA;
+            case Texture::InternalFormat::DXT3_RGBA:
+                return Texture::InternalFormat::DXT3_SRGBA;
+            case Texture::InternalFormat::DXT5_RGBA:
+                return Texture::InternalFormat::DXT5_SRGBA;
+
+            default:
+                return format;
+        }
     }
 
     inline TextureFormat toTextureFormat(const KtxInfo& info) {

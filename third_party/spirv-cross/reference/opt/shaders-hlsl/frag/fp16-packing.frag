@@ -15,21 +15,21 @@ struct SPIRV_Cross_Output
     uint FP16Out : SV_Target1;
 };
 
-uint SPIRV_Cross_packHalf2x16(float2 value)
+uint spvPackHalf2x16(float2 value)
 {
     uint2 Packed = f32tof16(value);
     return Packed.x | (Packed.y << 16);
 }
 
-float2 SPIRV_Cross_unpackHalf2x16(uint value)
+float2 spvUnpackHalf2x16(uint value)
 {
     return f16tof32(uint2(value & 0xffff, value >> 16));
 }
 
 void frag_main()
 {
-    FP32Out = SPIRV_Cross_unpackHalf2x16(FP16);
-    FP16Out = SPIRV_Cross_packHalf2x16(FP32);
+    FP32Out = spvUnpackHalf2x16(FP16);
+    FP16Out = spvPackHalf2x16(FP32);
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

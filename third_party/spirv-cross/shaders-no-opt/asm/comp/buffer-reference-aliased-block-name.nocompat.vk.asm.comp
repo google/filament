@@ -1,0 +1,110 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 59
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_EXT_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+               OpExecutionMode %main LocalSize 64 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpName %main "main"
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "ro"
+               OpMemberName %Registers 1 "rw"
+               OpMemberName %Registers 2 "wo"
+               OpName %RO "Alias"
+               OpMemberName %RO 0 "v"
+               OpName %RW "Alias"
+               OpMemberName %RW 0 "v"
+               OpName %WO "Alias"
+               OpMemberName %WO 0 "v"
+               OpName %registers "registers"
+               OpName %gl_GlobalInvocationID "gl_GlobalInvocationID"
+               OpMemberDecorate %Registers 0 Offset 0
+               OpMemberDecorate %Registers 1 Offset 8
+               OpMemberDecorate %Registers 2 Offset 16
+               OpDecorate %Registers Block
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpMemberDecorate %RO 0 NonWritable
+               OpMemberDecorate %RO 0 Offset 0
+               OpDecorate %RO Block
+               OpDecorate %_runtimearr_v4float_0 ArrayStride 16
+               OpMemberDecorate %RW 0 Restrict
+               OpMemberDecorate %RW 0 Offset 0
+               OpDecorate %RW Block
+               OpDecorate %_runtimearr_v4float_1 ArrayStride 16
+               OpMemberDecorate %WO 0 Coherent
+               OpMemberDecorate %WO 0 NonReadable
+               OpMemberDecorate %WO 0 Offset 0
+               OpDecorate %WO Block
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_RO PhysicalStorageBuffer
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_RW PhysicalStorageBuffer
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_WO PhysicalStorageBuffer
+  %Registers = OpTypeStruct %_ptr_PhysicalStorageBuffer_RO %_ptr_PhysicalStorageBuffer_RW %_ptr_PhysicalStorageBuffer_WO
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+         %RO = OpTypeStruct %_runtimearr_v4float
+%_ptr_PhysicalStorageBuffer_RO = OpTypePointer PhysicalStorageBuffer %RO
+%_runtimearr_v4float_0 = OpTypeRuntimeArray %v4float
+         %RW = OpTypeStruct %_runtimearr_v4float_0
+%_ptr_PhysicalStorageBuffer_RW = OpTypePointer PhysicalStorageBuffer %RW
+%_runtimearr_v4float_1 = OpTypeRuntimeArray %v4float
+         %WO = OpTypeStruct %_runtimearr_v4float_1
+%_ptr_PhysicalStorageBuffer_WO = OpTypePointer PhysicalStorageBuffer %WO
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+  %registers = OpVariable %_ptr_PushConstant_Registers PushConstant
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_RW = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_RW
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_RO = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_RO
+%_ptr_PhysicalStorageBuffer_v4float = OpTypePointer PhysicalStorageBuffer %v4float
+      %int_2 = OpConstant %int 2
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_WO = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_WO
+    %uint_64 = OpConstant %uint 64
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_64 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %23 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_RW %registers %int_1
+         %24 = OpLoad %_ptr_PhysicalStorageBuffer_RW %23
+         %32 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %33 = OpLoad %uint %32
+         %35 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_RO %registers %int_0
+         %36 = OpLoad %_ptr_PhysicalStorageBuffer_RO %35
+         %37 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %38 = OpLoad %uint %37
+         %40 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %36 %int_0 %38
+         %41 = OpLoad %v4float %40 Aligned 16
+         %42 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %24 %int_0 %33
+               OpStore %42 %41 Aligned 16
+         %45 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_WO %registers %int_2
+         %46 = OpLoad %_ptr_PhysicalStorageBuffer_WO %45
+         %47 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %48 = OpLoad %uint %47
+         %49 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_RO %registers %int_0
+         %50 = OpLoad %_ptr_PhysicalStorageBuffer_RO %49
+         %51 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %52 = OpLoad %uint %51
+         %53 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %50 %int_0 %52
+         %54 = OpLoad %v4float %53 Aligned 16
+         %55 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %46 %int_0 %48
+               OpStore %55 %54 Aligned 16
+               OpReturn
+               OpFunctionEnd

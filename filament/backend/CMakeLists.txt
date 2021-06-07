@@ -165,6 +165,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
+            src/vulkan/VulkanSwapChain.cpp
+            src/vulkan/VulkanSwapChain.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp
