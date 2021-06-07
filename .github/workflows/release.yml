@@ -100,7 +100,7 @@ jobs:
         run: |
           echo "${APK_KEYSTORE_BASE64}" > filament.jks.base64
           base64 --decode filament.jks.base64 > filament.jks
-          BUILD_TOOLS_VERSION=30.0.3
+          BUILD_TOOLS_VERSION=$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
           APKSIGNER=${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/apksigner
           IN_FILE="out/sample-gltf-viewer-release.apk"
           OUT_FILE="out/filament-gltf-viewer-${TAG}-android.apk"
