@@ -108,7 +108,7 @@ public:
 
     ~FixedCapacityVector() noexcept {
         destroy(begin(), end());
-        allocator().deallocate(data(), size());
+        allocator().deallocate(data(), capacity());
     }
 
     FixedCapacityVector& operator=(FixedCapacityVector const& rhs) {
