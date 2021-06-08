@@ -37,6 +37,8 @@
 #define VK_ENABLE_VALIDATION 1
 #endif
 
+#define VK_REPORT_STALLS 0
+
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr struct VkAllocationCallbacks* VKALLOC = nullptr;
@@ -45,12 +47,24 @@ constexpr struct VkAllocationCallbacks* VKALLOC = nullptr;
 constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 
-// We choose a capacity of 3 because this matches the needs of triple-buffering.
-constexpr static const int VK_MAX_COMMAND_BUFFERS = 3;
+// Maximum number of VkCommandBuffer handles managed simultaneously by VulkanCommands.
+//
+// This includes the "current" command buffer that is being written into, as well as any command
+// buffers that have been submitted but have not yet finished rendering. Note that Filament can
+// issue multiple commit calls in a single frame, and that we use a triple buffered swap chain on
+// some platforms.
+constexpr static const int VK_MAX_COMMAND_BUFFERS = 10;
 
-// Maximum number of command buffer flush events that can occur before an unused pipeline is removed
-// from the cache. If this number is low, VkPipeline construction will occur frequently, which can
+// Number of command buffer submissions that should occur before an unused pipeline is removed
+// from the cache.
+//
+// If this number is low, VkPipeline construction will occur frequently, which can
 // be extremely slow. If this number is high, the memory footprint will be large.
-constexpr static const int VK_MAX_PIPELINE_AGE = 5;
+constexpr static const int VK_MAX_PIPELINE_AGE = 10;
+
+// VulkanPipelineCache does not track which command buffers contain references to which pipelines,
+// instead it simply waits for at least VK_MAX_COMMAND_BUFFERS submissions to occur before
+// destroying any unused pipeline object.
+static_assert(VK_MAX_PIPELINE_AGE >= VK_MAX_COMMAND_BUFFERS);
 
 #endif
