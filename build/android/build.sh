@@ -59,5 +59,11 @@ if [[ "$TARGET" == "presubmit" ]]; then
   ANDROID_ABIS="-q arm64-v8a,x86"
 fi
 
+# Build the Android sample-gltf-viewer APK during release.
+BUILD_SAMPLES=
+if [[ "$TARGET" == "release" ]]; then
+    BUILD_SAMPLES="-k sample-gltf-viewer"
+fi
+
 pushd `dirname $0`/../.. > /dev/null
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android $ANDROID_ABIS -c $BUILD_SAMPLES $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
