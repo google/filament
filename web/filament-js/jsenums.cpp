@@ -72,7 +72,7 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("MORPH_TANGENTS_3", MORPH_TANGENTS_3);
 
 enum_<BufferObject::BindingType>("BufferObject$BindingType")
-    .value("VERTEX_BINDING", BufferObject::BindingType::VERTEX);
+    .value("VERTEX", BufferObject::BindingType::VERTEX);
 
 enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
     .value("BYTE", VertexBuffer::AttributeType::BYTE)
