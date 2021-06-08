@@ -737,7 +737,7 @@ export enum IndexBuffer$IndexType {
 }
 
 export enum BufferObject$BindingType {
-    VERTEX_BINDING,
+    VERTEX,
 }
 
 export enum LightManager$Type {
@@ -990,10 +990,6 @@ export enum VertexAttribute {
     MORPH_TANGENTS_1 = CUSTOM5,
     MORPH_TANGENTS_2 = CUSTOM6,
     MORPH_TANGENTS_3 = CUSTOM7,
-}
-
-export enum BufferObject$BindingType {
-    VERTEX,
 }
 
 export enum VertexBuffer$AttributeType {
