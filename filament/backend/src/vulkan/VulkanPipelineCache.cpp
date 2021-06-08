@@ -682,7 +682,6 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
 
     // Evict any pipelines that have not been used in a while.
     // Any pipeline older than VK_MAX_COMMAND_BUFFERS can be safely destroyed.
-    static_assert(VK_MAX_PIPELINE_AGE >= VK_MAX_COMMAND_BUFFERS);
     using ConstPipeIterator = decltype(mPipelines)::const_iterator;
     for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
         if (iter.value().age > VK_MAX_PIPELINE_AGE) {

@@ -89,6 +89,11 @@ VulkanCommandBuffer const& VulkanCommands::get() {
     // It occurs only when Filament invokes commit() or endFrame() a large number of times without
     // presenting the swap chain or waiting on a fence.
     while (mAvailableCount == 0) {
+#if VK_REPORT_STALLS
+        slog.i  << "VulkanCommands has stalled. "
+                << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
+                << io::endl;
+#endif
         wait();
         gc();
     }
