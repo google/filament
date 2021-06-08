@@ -304,15 +304,16 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
 
     // Populate the Depth Attachment.
     if (hasDepth) {
-        bool clear = any(config.clear & TargetBufferFlags::DEPTH);
-        bool discard = any(config.discardStart & TargetBufferFlags::DEPTH);
+        const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
+        const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
+        const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
         depthAttachmentRef.layout = config.depthLayout;
         depthAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discard ? kDontCare : kKeep),
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
+            .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = config.depthLayout,
