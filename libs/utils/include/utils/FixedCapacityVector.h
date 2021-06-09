@@ -276,7 +276,7 @@ public:
     UTILS_NOINLINE
     void reserve(size_type c) {
         if (c > capacity()) {
-            FixedCapacityVector t(c, allocator());
+            FixedCapacityVector t(construct_with_capacity, c, allocator());
             t.mSize = size();
             std::uninitialized_move(begin(), end(), t.begin());
             this->swap(t);
