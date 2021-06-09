@@ -24,6 +24,7 @@ import android.view.*
 import android.view.GestureDetector
 import android.widget.TextView
 import android.widget.Toast
+import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.*
@@ -59,6 +60,8 @@ class MainActivity : Activity() {
     private var statusText: String? = null
     private var latestDownload: String? = null
     private val automation = AutomationEngine()
+    private var loadStartTime = 0L
+    private var loadStartFence: Fence? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +83,7 @@ class MainActivity : Activity() {
             true
         }
 
-        createRenderables()
+        createDefaultRenderables()
         createIndirectLight()
 
         setStatusText("To load a new model, go to the above URL on your host machine.")
@@ -101,7 +104,7 @@ class MainActivity : Activity() {
         remoteServer = RemoteServer(8082)
     }
 
-    private fun createRenderables() {
+    private fun createDefaultRenderables() {
         val buffer = assets.open("models/scene.gltf").use { input ->
             val bytes = ByteArray(input.available())
             input.read(bytes)
@@ -155,6 +158,8 @@ class MainActivity : Activity() {
             modelViewer.destroyModel()
             modelViewer.loadModelGlb(message.buffer)
             modelViewer.transformToUnitCube()
+            loadStartTime = System.nanoTime()
+            loadStartFence = modelViewer.engine.createFence()
         }
     }
 
@@ -273,6 +278,8 @@ class MainActivity : Activity() {
                 }
             }
             modelViewer.transformToUnitCube()
+            loadStartTime = System.nanoTime()
+            loadStartFence = modelViewer.engine.createFence()
         }
     }
 
@@ -321,6 +328,16 @@ class MainActivity : Activity() {
         override fun doFrame(frameTimeNanos: Long) {
             choreographer.postFrameCallback(this)
 
+            loadStartFence?.let {
+                if (it.wait(Fence.Mode.FLUSH, 0) == Fence.FenceStatus.CONDITION_SATISFIED) {
+                    val end = System.nanoTime()
+                    val total = (end - loadStartTime) / 1_000_000
+                    Log.i(TAG, "The Filament backend took ${total} ms to load the model geometry.")
+                    modelViewer.engine.destroyFence(it)
+                    loadStartFence = null
+                }
+            }
+
             modelViewer.animator?.apply {
                 if (animationCount > 0) {
                     val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
@@ -354,11 +371,11 @@ class MainActivity : Activity() {
         }
     }
 
-    // Just for testing purposes, this releases the model and reloads it.
+    // Just for testing purposes, this releases the current model and reloads the default model.
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent?): Boolean {
             modelViewer.destroyModel()
-            createRenderables()
+            createDefaultRenderables()
             return super.onDoubleTap(e)
         }
     }
