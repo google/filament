@@ -80,7 +80,7 @@ struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes);
-    std::vector<VulkanBuffer*> buffers;
+    utils::FixedCapacityVector<VulkanBuffer*> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {

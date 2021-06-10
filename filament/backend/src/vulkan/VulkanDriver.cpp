@@ -28,12 +28,15 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/trap.h>
+#include <utils/FixedCapacityVector.h>
 
 #ifndef NDEBUG
 #include <set>
 #endif
 
 using namespace bluevk;
+
+using utils::FixedCapacityVector;
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -129,11 +132,13 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 #endif
     };
 
+    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
+
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
+    FixedCapacityVector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-    std::vector<const char*> enabledLayers;
+    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (const auto& desired : DESIRED_LAYERS) {
         for (const VkLayerProperties& layer : availableLayers) {
             const utils::CString availableLayer(layer.layerName);
@@ -267,8 +272,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
+    const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 };
     mContext.finalDepthFormat = findSupportedFormat(mContext,
-        { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 },
+        utils::Slice<VkFormat>(formats, formats + 2),
         VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
     // For diagnostic purposes, print useful information about available depth formats.

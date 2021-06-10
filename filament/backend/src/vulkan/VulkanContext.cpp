@@ -27,12 +27,15 @@
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>
+#include <utils/FixedCapacityVector.h>
 
 #ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
 #define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
 #endif
 
 using namespace bluevk;
+
+using utils::FixedCapacityVector;
 
 namespace filament {
 namespace backend {
@@ -42,7 +45,7 @@ void selectPhysicalDevice(VulkanContext& context) {
     VkResult result = vkEnumeratePhysicalDevices(context.instance, &physicalDeviceCount, nullptr);
     ASSERT_POSTCONDITION(result == VK_SUCCESS && physicalDeviceCount > 0,
             "vkEnumeratePhysicalDevices count error.");
-    std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
+    FixedCapacityVector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
     result = vkEnumeratePhysicalDevices(context.instance, &physicalDeviceCount,
             physicalDevices.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEnumeratePhysicalDevices error.");
@@ -70,7 +73,7 @@ void selectPhysicalDevice(VulkanContext& context) {
         if (queueFamiliesCount == 0) {
             continue;
         }
-        std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
+        FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount,
                 queueFamiliesProperties.data());
         context.graphicsQueueFamilyIndex = 0xffff;
@@ -91,7 +94,7 @@ void selectPhysicalDevice(VulkanContext& context) {
                 &extensionCount, nullptr);
         ASSERT_POSTCONDITION(result == VK_SUCCESS,
                 "vkEnumerateDeviceExtensionProperties count error.");
-        std::vector<VkExtensionProperties> extensions(extensionCount);
+        FixedCapacityVector<VkExtensionProperties> extensions(extensionCount);
         result = vkEnumerateDeviceExtensionProperties(physicalDevice, /*pLayerName = */ nullptr,
                 &extensionCount, extensions.data());
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEnumerateDeviceExtensionProperties error.");
@@ -175,9 +178,9 @@ void createLogicalDevice(VulkanContext& context) {
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
     const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
-    std::vector<const char*> deviceExtensionNames = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    };
+    FixedCapacityVector<const char*> deviceExtensionNames;
+    deviceExtensionNames.reserve(6);
+    deviceExtensionNames.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     if (context.debugMarkersSupported && !context.debugUtilsSupported) {
         deviceExtensionNames.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
@@ -296,7 +299,7 @@ uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) 
 
 VulkanAttachment& getSwapChainAttachment(VulkanContext& context) {
     VulkanSwapChain& surface = *context.currentSurface;
-    return surface.attachments[surface.currentSwapIndex];
+    return surface.color[surface.currentSwapIndex];
 }
 
 void waitForIdle(VulkanContext& context) {
@@ -308,7 +311,7 @@ void waitForIdle(VulkanContext& context) {
     context.commands->wait();
 }
 
-VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
+VkFormat findSupportedFormat(VulkanContext& context, utils::Slice<VkFormat> candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features) {
     for (VkFormat format : candidates) {
         VkFormatProperties props;
