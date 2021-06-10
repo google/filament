@@ -37,25 +37,27 @@ void VulkanDisposer::removeReference(Key resource) noexcept {
         return;
     }
     assert_invariant(mDisposables[resource].refcount > 0);
-    if (--mDisposables[resource].refcount == 0) {
-        mGraveyard.emplace_back(std::move(mDisposables[resource]));
-        mDisposables.erase(resource);
-    }
+    --mDisposables[resource].refcount;
 }
 
 void VulkanDisposer::acquire(Key resource) noexcept {
     // It's fine to "acquire" a non-managed resource, it's just a no-op.
-    if (resource == nullptr || mDisposables.find(resource) == mDisposables.end()) {
+    if (resource == nullptr) {
         return;
     }
-    assert_invariant(mDisposables[resource].refcount > 0 && mDisposables[resource].refcount < 65535);
+    auto iter = mDisposables.find(resource);
+    if (iter == mDisposables.end()) {
+        return;
+    }
+    Disposable& disposable = iter.value();
+    assert_invariant(disposable.refcount > 0 && disposable.refcount < 65535);
 
     // If an auto-decrement is already in place, do not increase the ref count.
-    if (mDisposables[resource].remainingFrames == 0) {
-        ++mDisposables[resource].refcount;
+    if (disposable.remainingFrames == 0) {
+        ++disposable.refcount;
     }
 
-    mDisposables[resource].remainingFrames = FRAMES_BEFORE_EVICTION;
+    disposable.remainingFrames = FRAMES_BEFORE_EVICTION;
 }
 
 void VulkanDisposer::gc() noexcept {
@@ -63,7 +65,7 @@ void VulkanDisposer::gc() noexcept {
     // If any of these reaches zero, decrement its reference count.
     for (auto iter = mDisposables.begin(); iter != mDisposables.end(); ++iter) {
         Disposable& disposable = iter.value();
-        if (disposable.remainingFrames > 0) {
+        if (disposable.refcount > 0 && disposable.remainingFrames > 0) {
             if (--disposable.remainingFrames == 0) {
                 removeReference(iter.key());
             }
@@ -71,21 +73,26 @@ void VulkanDisposer::gc() noexcept {
     }
 
     // Next, destroy all resources with a zero refcount.
-    for (auto& ptr : mGraveyard) {
-        ptr.destructor();
+    decltype(mDisposables) disposables;
+    for (auto iter : mDisposables) {
+        Disposable& disposable = iter.second;
+        if (disposable.refcount == 0) {
+            disposable.destructor();
+        } else {
+            disposables.insert({iter.first, disposable});
+        }
     }
-    mGraveyard.clear();
+    disposables.swap(mDisposables);
 }
 
 void VulkanDisposer::reset() noexcept {
 #ifndef NDEBUG
     utils::slog.i << mDisposables.size() << " disposables are outstanding." << utils::io::endl;
 #endif
-    for (auto iter = mDisposables.begin(); iter != mDisposables.end(); ++iter) {
-        mGraveyard.emplace_back(std::move(iter.value()));
+    for (auto iter : mDisposables) {
+        iter.second.destructor();
     }
     mDisposables.clear();
-    gc();
 }
 
 } // namespace filament
