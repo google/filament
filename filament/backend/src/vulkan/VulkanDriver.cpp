@@ -26,6 +26,7 @@
 
 #include <utils/Panic.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/trap.h>
 
 #ifndef NDEBUG
@@ -100,6 +101,19 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Load Vulkan entry points.
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
+    // Determine if the VK_EXT_debug_utils instance extension is available.
+    mContext.debugUtilsSupported = false;
+    uint32_t availableExtsCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, nullptr);
+    utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, availableExts.data());
+    for  (const auto& extProps : availableExts) {
+        if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+            mContext.debugUtilsSupported = true;
+            break;
+        }
+    }
+
     VkInstanceCreateInfo instanceCreateInfo = {};
 
     bool validationFeaturesSupported = false;
@@ -136,7 +150,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         // Check if VK_EXT_validation_features is supported.
         uint32_t availableExtsCount = 0;
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
-        std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
+        std::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
         for  (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
@@ -156,9 +170,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 #endif // VK_ENABLE_VALIDATION
 
-    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 4
-    // instance extensions here in the common code. So that's a max of 6.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 6;
+    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
+    // instance extensions here in the common code. So that's a max of 7.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 7;
     const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
     uint32_t enabledExtensionCount = 0;
 
@@ -168,13 +182,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 #if VK_ENABLE_VALIDATION
 #if defined(ANDROID)
     ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
-#else
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
 #endif
     if (validationFeaturesSupported) {
         ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
     }
 #endif
+    if (mContext.debugUtilsSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+    }
 
     // Request platform-specific extensions.
     for (uint32_t i = 0; i < requiredExtensionCount; ++i) {
@@ -211,13 +226,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
             vkCreateDebugReportCallbackEXT;
 
 #if VK_ENABLE_VALIDATION
-
-    // We require the VK_EXT_debug_utils instance extension on all non-Android platforms when
-    // validation is enabled.
-    #ifndef ANDROID
-    mContext.debugUtilsSupported = true;
-    #endif
-
     if (mContext.debugUtilsSupported) {
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
