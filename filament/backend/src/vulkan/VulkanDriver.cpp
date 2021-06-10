@@ -396,7 +396,7 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
 void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
-            mStagePool, mDisposer, size, usage);
+            mStagePool, size, usage);
     mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
         destruct_handle<VulkanUniformBuffer>(mHandleMap, ubh);
     });
@@ -429,7 +429,7 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffe
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
         BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            mDisposer, bufferCount, attributeCount, elementCount, attributes);
+            bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -446,7 +446,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
         ElementType elementType, uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
-            mDisposer, elementSize, indexCount);
+            elementSize, indexCount);
     mDisposer.createDisposable(indexBuffer, [this, ibh] () {
         destruct_handle<VulkanIndexBuffer>(mHandleMap, ibh);
     });
@@ -462,7 +462,7 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType) {
     auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh, mContext, mStagePool,
-            mDisposer, byteCount);
+            byteCount);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
        destruct_handle<VulkanBufferObject>(mHandleMap, boh);
     });
@@ -841,15 +841,17 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
-    ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
+    auto ib = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
+    ib->buffer->loadFromCpu(p.buffer, byteOffset, p.size);
+    mDisposer.acquire(ib);
     scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
-    auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
-    bo.buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    auto bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    bo->buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    mDisposer.acquire(bo);
     scheduleDestroy(std::move(bd));
 }
 
@@ -966,8 +968,9 @@ bool VulkanDriver::canGenerateMipmaps() {
 
 void VulkanDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
     if (data.size > 0) {
-        auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+        auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
+        mDisposer.acquire(buffer);
         scheduleDestroy(std::move(data));
     }
 }

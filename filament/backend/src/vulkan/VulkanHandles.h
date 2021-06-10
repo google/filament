@@ -77,33 +77,33 @@ private:
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer {
-    VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+    VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes);
     std::vector<VulkanBuffer*> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
-    VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+    VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
             indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-            buffer(new VulkanBuffer(context, stagePool, disposer, this,
+            buffer(new VulkanBuffer(context, stagePool,
                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
     const VkIndexType indexType;
     const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
-    VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool, VulkanDisposer& disposer,
+    VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
             uint32_t byteCount) : HwBufferObject(byteCount),
-            buffer(new VulkanBuffer(context, stagePool, disposer, this,
+            buffer(new VulkanBuffer(context, stagePool,
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, byteCount)) {}
     const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
     VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-            VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage);
+            uint32_t numBytes, backend::BufferUsage usage);
     ~VulkanUniformBuffer();
     void loadFromCpu(const void* cpuData, uint32_t numBytes);
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
@@ -111,7 +111,6 @@ struct VulkanUniformBuffer : public HwUniformBuffer {
 private:
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
-    VulkanDisposer& mDisposer;
     VkBuffer mGpuBuffer;
     VmaAllocation mGpuMemory;
 };
