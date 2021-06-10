@@ -150,7 +150,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         // Check if VK_EXT_validation_features is supported.
         uint32_t availableExtsCount = 0;
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
-        std::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
+        utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
         for  (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
