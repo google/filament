@@ -156,6 +156,9 @@ struct FAssetLoader : public AssetLoader {
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
+
+    // Weak reference to the largest dummy buffer so far in the current loading phase.
+    BufferObject* mDummyBufferObject;
 };
 
 FILAMENT_UPCAST(AssetLoader)
@@ -265,6 +268,7 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     #endif
 
     mResult = new FFilamentAsset(mEngine, mNameManager, &mEntityManager, srcAsset);
+    mDummyBufferObject = nullptr;
 
     // If there is no default scene specified, then the default is the first one.
     // It is not an error for a glTF file to have zero scenes.
@@ -785,14 +789,16 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     if (needsDummyData) {
-        uint32_t size = sizeof(ubyte4) * vertexCount;
-        BufferObject* bufferObject = BufferObject::Builder().size(size).build(*mEngine);
-        mResult->mBufferObjects.push_back(bufferObject);
-        uint32_t* dummyData = (uint32_t*) malloc(size);
-        memset(dummyData, 0xff, size);
-        VertexBuffer::BufferDescriptor bd(dummyData, size, FREE_CALLBACK);
-        bufferObject->setBuffer(*mEngine, std::move(bd));
-        vertices->setBufferObjectAt(*mEngine, slot, bufferObject);
+        const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
+        if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
+            mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(*mEngine);
+            mResult->mBufferObjects.push_back(mDummyBufferObject);
+            uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
+            memset(dummyData, 0xff, requiredSize);
+            VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
+            mDummyBufferObject->setBuffer(*mEngine, std::move(bd));
+        }
+        vertices->setBufferObjectAt(*mEngine, slot, mDummyBufferObject);
     }
 
     return true;
