@@ -32,10 +32,10 @@
 #pragma clang diagnostic pop
 
 #include <utils/Condition.h>
+#include <utils/Slice.h>
 #include <utils/Mutex.h>
 
 #include <memory>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -103,7 +103,7 @@ void createLogicalDevice(VulkanContext& context);
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VulkanAttachment& getSwapChainAttachment(VulkanContext& context);
 void waitForIdle(VulkanContext& context);
-VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
+VkFormat findSupportedFormat(VulkanContext& context, utils::Slice<VkFormat> candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features);
 VkImageLayout getTextureLayout(TextureUsage usage);
 void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);

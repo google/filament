@@ -16,6 +16,7 @@
 
 #include "VulkanSwapChain.h"
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 using namespace bluevk;
@@ -26,7 +27,7 @@ namespace backend {
 
 bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
-        currentSwapIndex = (currentSwapIndex + 1) % attachments.size();
+        currentSwapIndex = (currentSwapIndex + 1) % color.size();
         return true;
     }
 
@@ -155,7 +156,7 @@ void VulkanSwapChain::create() {
         vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
                 &surfaceFormatsCount, nullptr);
 
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatsCount);
+        FixedCapacityVector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatsCount);
         vkGetPhysicalDeviceSurfaceFormatsKHR(context.physicalDevice, surface,
                 &surfaceFormatsCount, surfaceFormats.data());
 
@@ -208,12 +209,13 @@ void VulkanSwapChain::create() {
     uint32_t imageCount;
     result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, nullptr);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR count error.");
-    attachments.resize(imageCount);
-    std::vector<VkImage> images(imageCount);
+    color.reserve(imageCount);
+    color.resize(imageCount);
+    FixedCapacityVector<VkImage> images(imageCount);
     result = vkGetSwapchainImagesKHR(context.device, swapchain, &imageCount, images.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetSwapchainImagesKHR error.");
     for (size_t i = 0; i < images.size(); ++i) {
-        attachments[i] = {
+        color[i] = {
             .format = surfaceFormat.format,
             .image = images[i],
             .view = {},
@@ -242,7 +244,7 @@ void VulkanSwapChain::create() {
     for (size_t i = 0; i < images.size(); ++i) {
         ivCreateInfo.image = images[i];
         result = bluevk::vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                &attachments[i].view);
+                &color[i].view);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateImageView error.");
     }
 
@@ -255,7 +257,7 @@ void VulkanSwapChain::create() {
 void VulkanSwapChain::destroy() {
     waitForIdle(context);
     const VkDevice device = context.device;
-    for (VulkanAttachment& swapContext : attachments) {
+    for (VulkanAttachment& swapContext : color) {
 
         // If this is headless, then we own the image and need to explicitly destroy it.
         if (!swapchain) {
@@ -285,7 +287,7 @@ void VulkanSwapChain::makePresentable() {
     if (headlessQueue) {
         return;
     }
-    VulkanAttachment& swapContext = attachments[currentSwapIndex];
+    VulkanAttachment& swapContext = color[currentSwapIndex];
     VkImageMemoryBarrier barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -331,7 +333,7 @@ static void getHeadlessQueue(VulkanContext& context, VulkanSwapChain& sc) {
 static void getPresentationQueue(VulkanContext& context, VulkanSwapChain& sc) {
     uint32_t queueFamiliesCount;
     vkGetPhysicalDeviceQueueFamilyProperties(context.physicalDevice, &queueFamiliesCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
+    FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
     vkGetPhysicalDeviceQueueFamilyProperties(context.physicalDevice, &queueFamiliesCount,
             queueFamiliesProperties.data());
     uint32_t presentQueueFamilyIndex = 0xffff;
@@ -399,9 +401,9 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     swapchain = VK_NULL_HANDLE;
 
     // Somewhat arbitrarily, headless rendering is double-buffered.
-    attachments.resize(2);
+    color.resize(2);
 
-    for (size_t i = 0; i < attachments.size(); ++i) {
+    for (size_t i = 0; i < color.size(); ++i) {
         VkImage image;
         VkImageCreateInfo iCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -434,7 +436,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
         vkAllocateMemory(context.device, &allocInfo, VKALLOC, &imageMemory);
         vkBindImageMemory(context.device, image, imageMemory, 0);
 
-        attachments[i] = {
+        color[i] = {
             .format = surfaceFormat.format, .image = image,
             .view = {}, .memory = imageMemory, .texture = {}, .layout = VK_IMAGE_LAYOUT_GENERAL
         };
@@ -450,7 +452,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
             }
         };
         vkCreateImageView(context.device, &ivCreateInfo, VKALLOC,
-                    &attachments[i].view);
+                    &color[i].view);
 
         VkImageMemoryBarrier barrier {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,

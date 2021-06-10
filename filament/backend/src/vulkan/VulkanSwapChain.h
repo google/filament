@@ -20,6 +20,8 @@
 #include "VulkanContext.h"
 #include "VulkanDriver.h"
 
+#include <utils/FixedCapacityVector.h>
+
 namespace filament {
 namespace backend {
 
@@ -40,8 +42,12 @@ struct VulkanSwapChain : public HwSwapChain {
     VkExtent2D clientSize;
     VkQueue presentQueue;
     VkQueue headlessQueue;
-    std::vector<VulkanAttachment> attachments;
     uint32_t currentSwapIndex;
+
+    // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
+    // in a swap chain.
+    utils::FixedCapacityVector<VulkanAttachment> color;
+    VulkanAttachment depth;
 
     // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
     // submission.
@@ -50,7 +56,6 @@ struct VulkanSwapChain : public HwSwapChain {
     // This is true after the swap chain image has been acquired, but before it has been presented.
     bool acquired;
 
-    VulkanAttachment depth;
     bool suboptimal;
     bool firstRenderPass;
 };
