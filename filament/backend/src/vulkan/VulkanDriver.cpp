@@ -410,8 +410,8 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
         // Decrement the refcount of the uniform buffer, but schedule it for destruction a few
         // frames in the future. To be safe, we need to assume that the current command buffer is
         // still using it somewhere.
-        mDisposer.removeReference(buffer);
         mDisposer.acquire(buffer);
+        mDisposer.removeReference(buffer);
     }
 }
 
