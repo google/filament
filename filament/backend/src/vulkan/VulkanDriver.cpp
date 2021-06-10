@@ -1078,6 +1078,18 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
+    // Assign a label to the framebuffer for debugging purposes.
+    if (UTILS_UNLIKELY(mContext.debugUtilsSupported) && !mContext.currentDebugMarker.empty()) {
+        const VkDebugUtilsObjectNameInfoEXT info = {
+            VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            nullptr,
+            VK_OBJECT_TYPE_FRAMEBUFFER,
+            reinterpret_cast<uint64_t>(vkfb),
+            mContext.currentDebugMarker.c_str(),
+        };
+        vkSetDebugUtilsObjectNameEXT(mContext.device, &info);
+    }
+
     // The current command buffer now owns a reference to the render target and its attachments.
     mDisposer.acquire(rt);
     mDisposer.acquire(depth.texture);
@@ -1364,6 +1376,7 @@ void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
             .color = {0, 1, 0, 1},
         };
         vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+        mContext.currentDebugMarker = string;
     } else if (mContext.debugMarkersSupported) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
@@ -1377,6 +1390,7 @@ void VulkanDriver::popGroupMarker(int) {
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
         vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
+        mContext.currentDebugMarker.clear();
     } else if (mContext.debugMarkersSupported) {
         vkCmdDebugMarkerEndEXT(cmdbuffer);
     }
