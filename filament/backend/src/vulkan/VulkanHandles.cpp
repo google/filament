@@ -249,14 +249,14 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
+        uint8_t bufferCount, uint8_t attributeCount,
         uint32_t elementCount, AttributeArray const& attribs) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
         buffers(bufferCount) {}
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool), mDisposer(disposer) {
+        uint32_t numBytes, backend::BufferUsage usage)
+        : mContext(context), mStagePool(stagePool) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -281,7 +281,6 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
 
     VkBufferCopy region { .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-    mDisposer.acquire(this);
 
     // First, ensure that the copy finishes before the next draw call.
     // Second, in case the user decides to upload another chunk (without ever using the first one)

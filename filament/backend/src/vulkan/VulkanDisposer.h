@@ -20,7 +20,6 @@
 #include <tsl/robin_map.h>
 
 #include <functional>
-#include <memory>
 #include <vector>
 
 namespace filament {
