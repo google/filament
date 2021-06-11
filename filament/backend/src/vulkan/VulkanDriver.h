@@ -31,9 +31,9 @@
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <unordered_map>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -81,7 +81,7 @@ private:
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = std::vector<uint8_t>;
+    using Blob = utils::FixedCapacityVector<uint8_t>;
     using HandleMap = std::unordered_map<HandleBase::HandleId, Blob>;
     HandleMap mHandleMap;
     std::mutex mHandleMapMutex;
@@ -90,7 +90,7 @@ private:
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = Blob(sizeof(Dp));
+        mHandleMap[mNextId] = Blob(sizeof(Dp), 0);
         return Handle<B>(mNextId++);
     }
 
