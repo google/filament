@@ -179,7 +179,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
+        .memoryTypeIndex = context.selectMemoryType(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
     error = vkAllocateMemory(context.device, &allocInfo, nullptr, &mTextureImageMemory);
@@ -216,7 +216,8 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
         transitionImageLayout(mContext.commands->get().cmdbuffer, mTextureImage,
-                VK_IMAGE_LAYOUT_UNDEFINED, getTextureLayout(usage), 0, layers, levels, mAspect);
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                mContext.getTextureLayout(usage), 0, layers, levels, mAspect);
     }
 }
 
@@ -313,7 +314,7 @@ void VulkanTexture::updateWithCopyBuffer(const PixelBufferDescriptor& hostData, 
             nullptr, miplevel);
 
     transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            getTextureLayout(usage), miplevel, 1, 1, mAspect);
+            mContext.getTextureLayout(usage), miplevel, 1, 1, mAspect);
 }
 
 void VulkanTexture::updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
@@ -350,7 +351,7 @@ void VulkanTexture::updateWithBlitImage(const PixelBufferDescriptor& hostData, u
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionImageLayout(cmdbuffer, mTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            getTextureLayout(usage), miplevel, 1, 1, mAspect);
+            mContext.getTextureLayout(usage), miplevel, 1, 1, mAspect);
 }
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
@@ -384,7 +385,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
             &faceOffsets, miplevel);
 
     transitionImageLayout(cmdbuffer, mTextureImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, getTextureLayout(usage), miplevel, 6,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mContext.getTextureLayout(usage), miplevel, 6,
             1, mAspect);
 }
 

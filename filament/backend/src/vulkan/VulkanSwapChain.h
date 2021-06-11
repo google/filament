@@ -34,6 +34,7 @@ struct VulkanSwapChain : public HwSwapChain {
     void destroy();
     void makePresentable();
     bool hasResized() const;
+    VulkanAttachment& getColor() { return color[currentSwapIndex]; }
 
     VulkanContext& context;
     VkSurfaceKHR surface;

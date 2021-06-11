@@ -75,7 +75,7 @@ static void createFinalDepthBuffer(VulkanContext& context, VulkanSwapChain& surf
     VkMemoryAllocateInfo allocInfo {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
+        .memoryTypeIndex = context.selectMemoryType(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     };
     error = bluevk::vkAllocateMemory(context.device, &allocInfo, nullptr,
@@ -255,7 +255,8 @@ void VulkanSwapChain::create() {
 }
 
 void VulkanSwapChain::destroy() {
-    waitForIdle(context);
+    context.commands->flush();
+    context.commands->wait();
     const VkDevice device = context.device;
     for (VulkanAttachment& swapContext : color) {
 
@@ -429,7 +430,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
         VkMemoryAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = memReqs.size,
-            .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
+            .memoryTypeIndex = context.selectMemoryType(memReqs.memoryTypeBits,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
         };
         VkDeviceMemory imageMemory;

@@ -257,14 +257,12 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Initialize the following fields: physicalDevice, physicalDeviceProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
-    selectPhysicalDevice(mContext);
+    mContext.selectPhysicalDevice();
 
-    // Initialize device and graphicsQueue.
-    createLogicalDevice(mContext);
+    // Initialize device, graphicsQueue, and command buffer manager.
+    mContext.createLogicalDevice();
 
-    mContext.commands = new VulkanCommands(mContext.device, mContext.graphicsQueueFamilyIndex);
-
-    createEmptyTexture(mContext, mStagePool);
+    mContext.createEmptyTexture(mStagePool);
 
     mContext.commands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mContext.device);
@@ -273,7 +271,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
     const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 };
-    mContext.finalDepthFormat = findSupportedFormat(mContext,
+    mContext.finalDepthFormat = mContext.findSupportedFormat(
         utils::Slice<VkFormat>(formats, formats + 2),
         VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
@@ -1446,15 +1444,15 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(mContext, memReqs.memoryTypeBits,
+        .memoryTypeIndex = mContext.selectMemoryType(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
 
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
-    // TODO: replace waitForIdle with an image barrier.
-    waitForIdle(mContext);
+    mContext.commands->flush();
+    mContext.commands->wait();
 
     // Transition the staging image layout.
 
@@ -1536,7 +1534,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = srcTexture ? getTextureLayout(srcTexture->usage) : present,
+            .newLayout = srcTexture ? mContext.getTextureLayout(srcTexture->usage) : present,
             .subresources = srcRange,
             .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
             .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1809,7 +1807,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             samplers[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->getPrimaryImageView(),
-                .imageLayout = getTextureLayout(texture->usage)
+                .imageLayout = mContext.getTextureLayout(texture->usage)
             };
 
             if (mContext.currentRenderPass.depthFeedback == texture) {

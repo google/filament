@@ -72,6 +72,14 @@ struct VulkanRenderPass {
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
+    void selectPhysicalDevice();
+    void createLogicalDevice();
+    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
+    VkFormat findSupportedFormat(utils::Slice<VkFormat> candidates, VkImageTiling tiling,
+            VkFormatFeatureFlags features);
+    VkImageLayout getTextureLayout(TextureUsage usage) const;
+    void createEmptyTexture(VulkanStagePool& stagePool);
+
     VkInstance instance;
     VkPhysicalDevice physicalDevice;
     VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -96,17 +104,6 @@ struct VulkanContext {
     VulkanCommands* commands = nullptr;
     std::string currentDebugMarker;
 };
-
-void selectPhysicalDevice(VulkanContext& context);
-void createLogicalDevice(VulkanContext& context);
-
-uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
-VulkanAttachment& getSwapChainAttachment(VulkanContext& context);
-void waitForIdle(VulkanContext& context);
-VkFormat findSupportedFormat(VulkanContext& context, utils::Slice<VkFormat> candidates,
-        VkImageTiling tiling, VkFormatFeatureFlags features);
-VkImageLayout getTextureLayout(TextureUsage usage);
-void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);
 
 } // namespace filament
 } // namespace backend
