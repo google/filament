@@ -29,10 +29,6 @@
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
 
-#ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-#define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
-#endif
-
 using namespace bluevk;
 
 using utils::FixedCapacityVector;
@@ -99,7 +95,6 @@ void selectPhysicalDevice(VulkanContext& context) {
                 &extensionCount, extensions.data());
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEnumerateDeviceExtensionProperties error.");
         bool supportsSwapchain = false;
-        context.debugMarkersSupported = false;
         for (uint32_t k = 0; k < extensionCount; ++k) {
             if (!strcmp(extensions[k].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
                 supportsSwapchain = true;

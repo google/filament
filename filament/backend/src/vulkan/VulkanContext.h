@@ -82,10 +82,10 @@ struct VulkanContext {
     VulkanTimestamps timestamps;
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
-    bool debugMarkersSupported;
-    bool debugUtilsSupported;
-    bool portabilitySubsetSupported;
-    bool maintenanceSupported[3];
+    bool debugMarkersSupported = false;
+    bool debugUtilsSupported = false;
+    bool portabilitySubsetSupported = false;
+    bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSurface;
     VulkanRenderPass currentRenderPass;
