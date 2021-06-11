@@ -275,6 +275,37 @@ void VulkanContext::createLogicalDevice() {
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);
 
+    const uint32_t memTypeBits = UINT32_MAX;
+
+    // Create a GPU memory pool for VkBuffer objects that ignores the bufferImageGranularity field
+    // in VkPhysicalDeviceLimits. We have observed that honoring bufferImageGranularity can cause
+    // the allocator to slow to a crawl.
+    uint32_t memTypeIndex = UINT32_MAX;
+    const VmaAllocationCreateInfo gpuInfo = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
+    UTILS_UNUSED_IN_RELEASE VkResult res = vmaFindMemoryTypeIndex(allocator, memTypeBits, &gpuInfo,
+            &memTypeIndex);
+    assert_invariant(res == VK_SUCCESS && memTypeIndex != UINT32_MAX);
+    const VmaPoolCreateInfo gpuPoolInfo {
+        .memoryTypeIndex = memTypeIndex,
+        .flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT,
+        .blockSize = VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB * 1024 * 1024,
+    };
+    res = vmaCreatePool(allocator, &gpuPoolInfo, &vmaPoolGPU);
+    assert_invariant(res == VK_SUCCESS);
+
+    // Next, create a similar pool but for CPU mappable memory (typically used as a staging area).
+    memTypeIndex = UINT32_MAX;
+    const VmaAllocationCreateInfo cpuInfo = { .usage = VMA_MEMORY_USAGE_CPU_ONLY };
+    res = vmaFindMemoryTypeIndex(allocator, memTypeBits, &cpuInfo, &memTypeIndex);
+    assert_invariant(res == VK_SUCCESS && memTypeIndex != UINT32_MAX);
+    const VmaPoolCreateInfo cpuPoolInfo {
+        .memoryTypeIndex = memTypeIndex,
+        .flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT,
+        .blockSize = VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB * 1024 * 1024,
+    };
+    res = vmaCreatePool(allocator, &cpuPoolInfo, &vmaPoolCPU);
+    assert_invariant(res == VK_SUCCESS);
+
     commands = new VulkanCommands(device, graphicsQueueFamilyIndex);
 }
 
