@@ -252,7 +252,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         uint8_t bufferCount, uint8_t attributeCount,
         uint32_t elementCount, AttributeArray const& attribs) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
-        buffers(bufferCount) {}
+        buffers(bufferCount, nullptr) {}
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         uint32_t numBytes, backend::BufferUsage usage)
