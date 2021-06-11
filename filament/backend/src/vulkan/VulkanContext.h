@@ -100,6 +100,8 @@ struct VulkanContext {
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;
+    VmaPool vmaPoolGPU;
+    VmaPool vmaPoolCPU;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
     std::string currentDebugMarker;

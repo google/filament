@@ -47,6 +47,9 @@ constexpr struct VkAllocationCallbacks* VKALLOC = nullptr;
 constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
 
+// Controls the block size for the VkBuffer pools that we use for vertex buffers.
+constexpr static const uint64_t VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB = 128;
+
 // Maximum number of VkCommandBuffer handles managed simultaneously by VulkanCommands.
 //
 // This includes the "current" command buffer that is being written into, as well as any command
