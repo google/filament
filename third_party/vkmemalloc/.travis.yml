@@ -1,7 +1,7 @@
 language: cpp
 sudo: required
 os: linux
-dist: trusty
+dist: bionic
 
 branches:
   only:
@@ -12,24 +12,22 @@ compiler:
   - gcc
 
 before_script:
-  - sudo apt-get install 
+  - sudo apt-get install
+  - eval "${MATRIX_EVAL}"
 
 install:
-  - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz?Human=true -O premake-5.0.0-alpha11-linux.tar.gz
-  - tar -xzvf premake-5.0.0-alpha11-linux.tar.gz
   - sudo apt-get -qq update
   - sudo apt-get install -y libassimp-dev libglm-dev graphviz libxcb-dri3-0 libxcb-present0 libpciaccess0 cmake libpng-dev libxcb-dri3-dev libx11-dev libx11-xcb-dev libmirclient-dev libwayland-dev libxrandr-dev
   - export VK_VERSION=1.2.131.1
-  - wget -O vulkansdk-linux-x86_64-$VK_VERSION.tar.gz https://sdk.lunarg.com/sdk/download/$VK_VERSION/linux/vulkansdk-linux-x86_64-$VK_VERSION.tar.gz
+  - wget -O vulkansdk-linux-x86_64-$VK_VERSION.tar.gz https://sdk.lunarg.com/sdk/download/$VK_VERSION/linux/vulkansdk-linux-x86_64-$VK_VERSION.tar.gz?Human=true
   - tar zxf vulkansdk-linux-x86_64-$VK_VERSION.tar.gz
   - export VULKAN_SDK=$TRAVIS_BUILD_DIR/$VK_VERSION/x86_64
 
 script:
-  - cd premake
-  - ../premake5 gmake
-  - cd ../build
-  - make config=debug_linux-x64
-  - cd ..
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make
 
 notifications:
   email:
