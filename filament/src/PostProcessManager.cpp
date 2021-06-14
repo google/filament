@@ -2140,13 +2140,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto& ppBlit = fg.addPass<PostProcessScaling>("blit scaling",
+    auto& ppBlit = fg.addPass<PostProcessScaling>("opaque blit",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
                 // we currently have no use for this case, so we just assert. This is better for now to trap
                 // cases that we might not intend.
                 assert_invariant(inputDesc.samples <= 1);
+
+                data.output = builder.declareRenderPass(
+                        builder.createTexture("opaque blit output", outDesc));
 
                 // FIXME: here we use sample() instead of read() because this forces the
                 //      backend to use a texture (instead of a renderbuffer). We need this because
@@ -2155,23 +2158,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 //      (we do this only when the texture does not request multisampling, since
                 //      these are not sampleable).
                 data.input = (inputDesc.samples > 1) ? builder.read(input) : builder.sample(input);
-                data.output = builder.createTexture("scaled output", outDesc);
-                data.output = builder.declareRenderPass(data.output);
+
+                // We use a RenderPass for the source here, instead of just creating a render
+                // target from data.input in the execute closure, because data.input may refer to
+                // an imported render target and in this case data.input won't resolve to an actual
+                // HwTexture handle. Using a RenderPass works because data.input will resolve
+                // to the actual imported render target and will have the correct viewport.
+                builder.declareRenderPass("opaque blit input", {
+                        .attachments = { .color = { data.input }}});
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                auto inDesc = resources.getDescriptor(data.input);
-                auto in = resources.getTexture(data.input);
-                auto out = resources.getRenderPassInfo();
-
-                auto inRt = driver.createRenderTarget(TargetBufferFlags::COLOR,
-                        inDesc.width, inDesc.height, 1, { in }, {}, {});
-
+                auto out = resources.getRenderPassInfo(0);
+                auto in = resources.getRenderPassInfo(1);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, out.params.viewport,
-                        inRt, { 0, 0, inDesc.width, inDesc.height },
+                        in.target, in.params.viewport,
                         filter);
-
-                driver.destroyRenderTarget(inRt);
             });
 
     // we rely on automatic culling of unused render passes
@@ -2279,6 +2281,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 auto inDesc = resources.getDescriptor(data.input);
                 auto in = resources.getTexture(data.input);
                 auto out = resources.getRenderPassInfo();
+
+                assert_invariant(in);
 
                 Handle<HwRenderTarget> inRt;
                 if (data.usage == FrameGraphTexture::Usage::COLOR_ATTACHMENT) {
