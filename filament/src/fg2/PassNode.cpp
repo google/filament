@@ -194,8 +194,6 @@ void RenderPassNode::resolve() noexcept {
             rt.descriptor.viewport.height = height;
         }
 
-        rt.backend.params.clearColor = rt.descriptor.clearColor;
-
         /*
          * Handle the special imported render target
          * To do this we check the first color attachment for an ImportedRenderTarget
@@ -222,6 +220,7 @@ void RenderPassNode::resolve() noexcept {
             rt.backend.params.flags.discardEnd &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
         }
 
+        rt.backend.params.clearColor = rt.descriptor.clearColor;
         rt.backend.params.flags.clear = rt.descriptor.clearFlags & rt.targetBufferFlags;
         rt.backend.params.viewport = rt.descriptor.viewport;
     }
