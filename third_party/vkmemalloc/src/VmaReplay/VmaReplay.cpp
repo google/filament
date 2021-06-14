@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1089,7 +1089,7 @@ private:
         Extension_VK_EXT_memory_budget,
         Extension_VK_AMD_device_coherent_memory,
         Macro_VMA_DEBUG_ALWAYS_DEDICATED_MEMORY,
-        Macro_VMA_DEBUG_ALIGNMENT,
+        Macro_VMA_MIN_ALIGNMENT,
         Macro_VMA_DEBUG_MARGIN,
         Macro_VMA_DEBUG_INITIALIZE_ALLOCATIONS,
         Macro_VMA_DEBUG_DETECT_CORRUPTION,
@@ -1237,8 +1237,8 @@ bool ConfigurationParser::Parse(LineSplit& lineSplit)
                 const StrRange subOptionName = csvSplit.GetRange(1);
                 if(StrRangeEq(subOptionName, "VMA_DEBUG_ALWAYS_DEDICATED_MEMORY"))
                     SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_ALWAYS_DEDICATED_MEMORY, csvSplit.GetRange(2));
-                else if(StrRangeEq(subOptionName, "VMA_DEBUG_ALIGNMENT"))
-                    SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_ALIGNMENT, csvSplit.GetRange(2));
+                else if(StrRangeEq(subOptionName, "VMA_MIN_ALIGNMENT") || StrRangeEq(subOptionName, "VMA_DEBUG_ALIGNMENT"))
+                    SetOption(currLineNumber, OPTION::Macro_VMA_MIN_ALIGNMENT, csvSplit.GetRange(2));
                 else if(StrRangeEq(subOptionName, "VMA_DEBUG_MARGIN"))
                     SetOption(currLineNumber, OPTION::Macro_VMA_DEBUG_MARGIN, csvSplit.GetRange(2));
                 else if(StrRangeEq(subOptionName, "VMA_DEBUG_INITIALIZE_ALLOCATIONS"))
@@ -3683,7 +3683,8 @@ void Player::ExecuteResizeAllocation(size_t lineNumber, const CsvSplit& csvSplit
                 const auto it = m_Allocations.find(origPtr);
                 if(it != m_Allocations.end())
                 {
-                    vmaResizeAllocation(m_Allocator, it->second.allocation, newSize);
+                    // Do nothing - the function was deprecated and has been removed.
+                    //vmaResizeAllocation(m_Allocator, it->second.allocation, newSize);
                     UpdateMemStats();
                 }
                 else

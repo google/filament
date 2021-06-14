@@ -1,2 +1,13 @@
-build/
+/bin/*
 
+/build/*
+!/build/src/
+/build/src/*
+!/build/src/Release/
+/build/src/Release/*
+!/build/src/Release/VmaSample.exe
+!/build/src/VmaReplay/
+/build/src/VmaReplay/*
+!/build/src/VmaReplay/Release/
+/build/src/VmaReplay/Release/*
+!/build/src/VmaReplay/Release/VmaReplay.exe
