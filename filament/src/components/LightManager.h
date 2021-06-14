@@ -187,6 +187,10 @@ public:
         return mManager[i].squaredFallOffInv;
     }
 
+    float getFalloff(Instance i) const noexcept {
+        return getRadius(i);
+    }
+
     SpotParams const& getSpotParams(Instance i) const noexcept {
         return mManager[i].spotParams;
     }

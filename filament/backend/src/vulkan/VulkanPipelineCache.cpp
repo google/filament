@@ -39,6 +39,7 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
     markDirtyDescriptor();
     markDirtyPipeline();
     mDescriptorKey = {};
+    mPipelineKey = {};
 
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;
@@ -82,8 +83,9 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
         return false;
     }
     if (bind) {
-        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0,
-                VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors, 0, nullptr);
+        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                mPipelineLayout, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT, descriptors,
+                0, nullptr);
     }
     return true;
 }
@@ -373,11 +375,57 @@ bool VulkanPipelineCache::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     pipelineCreateInfo.pStages = shaderStages;
     pipelineCreateInfo.pVertexInputState = &vertexInputState;
     pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-    pipelineCreateInfo.pRasterizationState = &mPipelineKey.rasterState.rasterization;
+
+    VkPipelineRasterizationStateCreateInfo vkRaster = {};
+    vkRaster.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    pipelineCreateInfo.pRasterizationState = &vkRaster;
+
+    VkPipelineMultisampleStateCreateInfo vkMs = {};
+    vkMs.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    pipelineCreateInfo.pMultisampleState = &vkMs;
+
+    VkPipelineDepthStencilStateCreateInfo vkDs = {};
+    vkDs.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    vkDs.front = vkDs.back = {
+            .failOp = VK_STENCIL_OP_KEEP,
+            .passOp = VK_STENCIL_OP_KEEP,
+            .depthFailOp = VK_STENCIL_OP_KEEP,
+            .compareOp = VK_COMPARE_OP_ALWAYS,
+            .compareMask = 0u,
+            .writeMask = 0u,
+            .reference = 0u,
+    };
+    pipelineCreateInfo.pDepthStencilState = &vkDs;
+
+    const auto& raster = mPipelineKey.rasterState;
+
+    vkRaster.depthClampEnable = raster.rasterization.depthClampEnable;
+    vkRaster.rasterizerDiscardEnable = raster.rasterization.rasterizerDiscardEnable;
+    vkRaster.polygonMode = raster.rasterization.polygonMode;
+    vkRaster.cullMode = raster.rasterization.cullMode;
+    vkRaster.frontFace = raster.rasterization.frontFace;
+    vkRaster.depthBiasEnable = raster.rasterization.depthBiasEnable;
+    vkRaster.depthBiasConstantFactor = raster.rasterization.depthBiasConstantFactor;
+    vkRaster.depthBiasClamp = raster.rasterization.depthBiasClamp;
+    vkRaster.depthBiasSlopeFactor = raster.rasterization.depthBiasSlopeFactor;
+    vkRaster.lineWidth = raster.rasterization.lineWidth;
+
+    vkMs.rasterizationSamples = raster.multisampling.rasterizationSamples;
+    vkMs.sampleShadingEnable = raster.multisampling.sampleShadingEnable;
+    vkMs.minSampleShading = raster.multisampling.minSampleShading;
+    vkMs.alphaToCoverageEnable = raster.multisampling.alphaToCoverageEnable;
+    vkMs.alphaToOneEnable = raster.multisampling.alphaToOneEnable;
+
+    vkDs.depthTestEnable = raster.depthStencil.depthTestEnable;
+    vkDs.depthWriteEnable = raster.depthStencil.depthWriteEnable;
+    vkDs.depthCompareOp = raster.depthStencil.depthCompareOp;
+    vkDs.depthBoundsTestEnable = raster.depthStencil.depthBoundsTestEnable;
+    vkDs.stencilTestEnable = raster.depthStencil.stencilTestEnable;
+    vkDs.minDepthBounds = raster.depthStencil.minDepthBounds;
+    vkDs.maxDepthBounds = raster.depthStencil.maxDepthBounds;
+
     pipelineCreateInfo.pColorBlendState = &colorBlendState;
-    pipelineCreateInfo.pMultisampleState = &mPipelineKey.rasterState.multisampling;
     pipelineCreateInfo.pViewportState = &viewportState;
-    pipelineCreateInfo.pDepthStencilState = &mPipelineKey.rasterState.depthStencil;
     pipelineCreateInfo.pDynamicState = &dynamicState;
 
     // Filament assumes consistent blend state across all color attachments.
@@ -423,32 +471,51 @@ void VulkanPipelineCache::bindProgramBundle(const ProgramBundle& bundle) noexcep
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
-    VkPipelineRasterizationStateCreateInfo& raster0 = mPipelineKey.rasterState.rasterization;
-    const VkPipelineRasterizationStateCreateInfo& raster1 = rasterState.rasterization;
-    VkPipelineColorBlendAttachmentState& blend0 = mPipelineKey.rasterState.blending;
-    const VkPipelineColorBlendAttachmentState& blend1 = rasterState.blending;
-    VkPipelineDepthStencilStateCreateInfo& ds0 = mPipelineKey.rasterState.depthStencil;
-    const VkPipelineDepthStencilStateCreateInfo& ds1 = rasterState.depthStencil;
-    VkPipelineMultisampleStateCreateInfo& ms0 = mPipelineKey.rasterState.multisampling;
-    const VkPipelineMultisampleStateCreateInfo& ms1 = rasterState.multisampling;
-    if (
-            mPipelineKey.rasterState.colorTargetCount != rasterState.colorTargetCount ||
-            raster0.polygonMode != raster1.polygonMode ||
-            raster0.cullMode != raster1.cullMode ||
-            raster0.frontFace != raster1.frontFace ||
-            raster0.rasterizerDiscardEnable != raster1.rasterizerDiscardEnable ||
-            raster0.depthBiasEnable != raster1.depthBiasEnable ||
-            raster0.depthBiasConstantFactor != raster1.depthBiasConstantFactor ||
-            raster0.depthBiasSlopeFactor != raster1.depthBiasSlopeFactor ||
-            blend0.colorWriteMask != blend1.colorWriteMask ||
-            blend0.blendEnable != blend1.blendEnable ||
-            ds0.depthTestEnable != ds1.depthTestEnable ||
-            ds0.depthWriteEnable != ds1.depthWriteEnable ||
-            ds0.depthCompareOp != ds1.depthCompareOp ||
-            ds0.stencilTestEnable != ds1.stencilTestEnable ||
-            ms0.rasterizationSamples != ms1.rasterizationSamples ||
-            ms0.alphaToCoverageEnable != ms1.alphaToCoverageEnable
-    ) {
+    auto& raster0 = mPipelineKey.rasterState.rasterization;
+    const auto& raster1 = rasterState.rasterization;
+    auto& blend0 = mPipelineKey.rasterState.blending;
+    const auto& blend1 = rasterState.blending;
+    auto& ds0 = mPipelineKey.rasterState.depthStencil;
+    const auto& ds1 = rasterState.depthStencil;
+    auto& ms0 = mPipelineKey.rasterState.multisampling;
+    const auto& ms1 = rasterState.multisampling;
+    if (UTILS_UNLIKELY(
+        raster0.depthClampEnable != raster1.depthClampEnable ||
+        raster0.rasterizerDiscardEnable != raster1.rasterizerDiscardEnable ||
+        raster0.polygonMode != raster1.polygonMode ||
+        raster0.cullMode != raster1.cullMode ||
+        raster0.frontFace != raster1.frontFace ||
+        raster0.depthBiasEnable != raster1.depthBiasEnable ||
+        raster0.depthBiasConstantFactor != raster1.depthBiasConstantFactor ||
+        raster0.depthBiasClamp != raster1.depthBiasClamp ||
+        raster0.depthBiasSlopeFactor != raster1.depthBiasSlopeFactor ||
+        raster0.lineWidth != raster1.lineWidth ||
+
+        blend0.blendEnable != blend1.blendEnable ||
+        blend0.srcColorBlendFactor != blend1.srcColorBlendFactor ||
+        blend0.dstColorBlendFactor != blend1.dstColorBlendFactor ||
+        blend0.colorBlendOp != blend1.colorBlendOp ||
+        blend0.srcAlphaBlendFactor != blend1.srcAlphaBlendFactor ||
+        blend0.dstAlphaBlendFactor != blend1.dstAlphaBlendFactor ||
+        blend0.alphaBlendOp != blend1.alphaBlendOp ||
+        blend0.colorWriteMask != blend1.colorWriteMask ||
+
+        ds0.depthTestEnable != ds1.depthTestEnable ||
+        ds0.depthWriteEnable != ds1.depthWriteEnable ||
+        ds0.depthCompareOp != ds1.depthCompareOp ||
+        ds0.depthBoundsTestEnable != ds1.depthBoundsTestEnable ||
+        ds0.stencilTestEnable != ds1.stencilTestEnable ||
+        ds0.minDepthBounds != ds1.minDepthBounds ||
+        ds0.maxDepthBounds != ds1.maxDepthBounds ||
+
+        ms0.rasterizationSamples != ms1.rasterizationSamples ||
+        ms0.sampleShadingEnable != ms1.sampleShadingEnable ||
+        ms0.minSampleShading != ms1.minSampleShading ||
+        ms0.alphaToCoverageEnable != ms1.alphaToCoverageEnable ||
+        ms0.alphaToOneEnable != ms1.alphaToOneEnable ||
+
+        mPipelineKey.rasterState.colorTargetCount != rasterState.colorTargetCount
+    )) {
         markDirtyPipeline();
         mPipelineKey.rasterState = rasterState;
     }
@@ -825,47 +892,35 @@ bool VulkanPipelineCache::DescEqual::operator()(const VulkanPipelineCache::Descr
 }
 
 static VulkanPipelineCache::RasterState createDefaultRasterState() {
-    VkPipelineRasterizationStateCreateInfo rasterization = {};
-    rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization.cullMode = VK_CULL_MODE_NONE;
-    rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterization.depthClampEnable = VK_FALSE;
-    rasterization.rasterizerDiscardEnable = VK_FALSE;
-    rasterization.depthBiasEnable = VK_FALSE;
-    rasterization.depthBiasConstantFactor = 0.0f;
-    rasterization.depthBiasClamp = 0.0f; // 0 is a special value that disables clamping
-    rasterization.depthBiasSlopeFactor = 0.0f;
-    rasterization.lineWidth = 1.0f;
-
-    VkPipelineColorBlendAttachmentState blending = {};
-    blending.colorWriteMask = 0xf;
-    blending.blendEnable = VK_FALSE;
-
-    VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.back.failOp = VK_STENCIL_OP_KEEP;
-    depthStencil.back.passOp = VK_STENCIL_OP_KEEP;
-    depthStencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
-    depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = depthStencil.back;
-
-    VkPipelineMultisampleStateCreateInfo multisampling = {};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.pSampleMask = nullptr;
-    multisampling.alphaToCoverageEnable = true;
-
     return VulkanPipelineCache::RasterState {
-        rasterization,
-        blending,
-        depthStencil,
-        multisampling,
-        1,
+        .rasterization = {
+            .depthClampEnable = VK_FALSE,
+            .rasterizerDiscardEnable = VK_FALSE,
+            .polygonMode = VK_POLYGON_MODE_FILL,
+            .cullMode = VK_CULL_MODE_NONE,
+            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+            .depthBiasEnable = VK_FALSE,
+            .depthBiasConstantFactor = 0.0f,
+            .depthBiasClamp = 0.0f,
+            .depthBiasSlopeFactor = 0.0f,
+            .lineWidth = 1.0f,
+        },
+        .blending = {
+            .blendEnable = VK_FALSE,
+            .colorWriteMask = 0xf,
+        },
+        .depthStencil = {
+            .depthTestEnable = VK_TRUE,
+            .depthWriteEnable = VK_TRUE,
+            .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+            .depthBoundsTestEnable = VK_FALSE,
+            .stencilTestEnable = VK_FALSE,
+        },
+        .multisampling = {
+            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+            .alphaToCoverageEnable = true,
+        },
+        .colorTargetCount = 1,
     };
 }
 

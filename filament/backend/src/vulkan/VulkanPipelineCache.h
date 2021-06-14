@@ -29,6 +29,7 @@
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
+#include <type_traits>
 #include <vector>
 
 #include "VulkanCommands.h"
@@ -75,16 +76,43 @@ public:
     };
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
-    // Note that several fields are unused (sType etc) so we could shrink this by avoiding the Vk
-    // structures. However it's super convenient just to use standard Vulkan structs here.
-    struct alignas(8) RasterState {
-        VkPipelineRasterizationStateCreateInfo rasterization;
-        VkPipelineColorBlendAttachmentState blending;
-        VkPipelineDepthStencilStateCreateInfo depthStencil;
-        VkPipelineMultisampleStateCreateInfo multisampling;
+    struct RasterState {
+        struct {
+            VkBool32                                   depthClampEnable;
+            VkBool32                                   rasterizerDiscardEnable;
+            VkPolygonMode                              polygonMode;
+            VkCullModeFlags                            cullMode;
+            VkFrontFace                                frontFace;
+            VkBool32                                   depthBiasEnable;
+            float                                      depthBiasConstantFactor;
+            float                                      depthBiasClamp;
+            float                                      depthBiasSlopeFactor;
+            float                                      lineWidth;
+        } rasterization;                              // 40 bytes
+        VkPipelineColorBlendAttachmentState blending; // 32 bytes
+        struct {
+            VkBool32                                  depthTestEnable;
+            VkBool32                                  depthWriteEnable;
+            VkCompareOp                               depthCompareOp;
+            VkBool32                                  depthBoundsTestEnable;
+            VkBool32                                  stencilTestEnable;
+            float                                     minDepthBounds;
+            float                                     maxDepthBounds;
+        } depthStencil;                               // 28 bytes
+        struct {
+            VkSampleCountFlagBits                    rasterizationSamples;
+            VkBool32                                 sampleShadingEnable;
+            float                                    minSampleShading;
+            VkBool32                                 alphaToCoverageEnable;
+            VkBool32                                 alphaToOneEnable;
+        } multisampling;                             // 20 bytes
         uint32_t colorTargetCount;
     };
-    static_assert(std::is_pod<RasterState>::value, "RasterState must be a POD for fast hashing.");
+
+    static_assert(std::is_trivially_copyable<RasterState>::value,
+            "RasterState must be a POD for fast hashing.");
+
+    static_assert(sizeof(RasterState) == 124, "RasterState must not have any padding.");
 
     // Upon construction, the pipeCache initializes some internal state but does not make any Vulkan
     // calls. On destruction it will free any cached Vulkan objects that haven't already been freed.
@@ -146,19 +174,30 @@ private:
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
-    #pragma pack(push, 1)
-    struct UTILS_PACKED PipelineKey {
-        VkShaderModule shaders[SHADER_MODULE_COUNT]; // 8*2 bytes
-        RasterState rasterState; // 248 bytes
-        VkRenderPass renderPass; // 8 bytes
-        VkPrimitiveTopology topology : 16; // 2 bytes
-        uint16_t subpassIndex; // 2 bytes
-        VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 16*5 bytes
-        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 12*5 bytes
+    struct PipelineKey {
+        VkShaderModule shaders[SHADER_MODULE_COUNT]; // 16 bytes
+        RasterState rasterState;                     // 124 bytes
+        VkPrimitiveTopology topology;                // 4 bytes
+        VkRenderPass renderPass;                     // 8 bytes
+        uint16_t subpassIndex;                       // 2 bytes
+        uint16_t padding0;                           // 2 bytes
+        VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 256 bytes
+        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      // 192 bytes
+        uint32_t padding1;                                                          // 4 bytes
     };
-    #pragma pack(pop)
 
-    static_assert(std::is_pod<PipelineKey>::value, "PipelineKey must be a POD for fast hashing.");
+    static_assert(sizeof(VkVertexInputBindingDescription) == 12);
+
+    static_assert(offsetof(PipelineKey, rasterState)      == 16);
+    static_assert(offsetof(PipelineKey, topology)         == 140);
+    static_assert(offsetof(PipelineKey, renderPass)       == 144);
+    static_assert(offsetof(PipelineKey, subpassIndex)     == 152);
+    static_assert(offsetof(PipelineKey, vertexAttributes) == 156);
+    static_assert(offsetof(PipelineKey, vertexBuffers)    == 412);
+    static_assert(sizeof(PipelineKey) == 608, "PipelineKey must not have any padding.");
+
+    static_assert(std::is_trivially_copyable<PipelineKey>::value,
+            "PipelineKey must be a POD for fast hashing.");
 
     using PipelineHashFn = utils::hash::MurmurHashFn<PipelineKey>;
 
@@ -179,7 +218,7 @@ private:
     };
     #pragma pack(pop)
 
-    static_assert(std::is_pod<DescriptorKey>::value, "DescriptorKey must be a POD.");
+    static_assert(std::is_trivially_copyable<DescriptorKey>::value, "DescriptorKey must be a POD.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 

@@ -59,6 +59,8 @@ public:
 class MRT {
 public:
     static constexpr uint8_t MIN_SUPPORTED_RENDER_TARGET_COUNT = 4u;
+
+    // When updating this, make sure to also take care of RenderTarget.java
     static constexpr uint8_t MAX_SUPPORTED_RENDER_TARGET_COUNT = 8u;
 
 private:

@@ -3,7 +3,15 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.3 (currently main branch)
+## v1.10.4 (currently main branch)
+
+## v1.10.3
+
+- android: use `debug.filament.backend` system property to select the desired backend.
+- engine: fix `LightManager::getFalloff`.
+- gltfio: fix crash with non-triangles.
+- macOS: fix main thread checker warnings with OpenGL.
+- vulkan: fix crash on Windows machines with NVIDIA GPUs.
 
 ## v1.10.2
 
