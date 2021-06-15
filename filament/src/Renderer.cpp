@@ -314,6 +314,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const float4 clearColor = mClearOptions.clearColor;
     const TargetBufferFlags clearFlags = mClearFlags;
     const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
+    TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
     if (currentRenderTarget) {
@@ -346,7 +347,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .clearColor = clearColor,
                     .samples = 0,
                     .clearFlags = clearFlags,
-                    .discardStart = discardStartFlags,
+                    .keepOverrideStart = keepOverrideStartFlags,
                     .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
 
@@ -724,6 +725,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphId<FrameGraphTexture> structure;
         float4 clearColor{};
+        TargetBufferFlags clearFlags{};
     };
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
@@ -732,7 +734,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 Blackboard& blackboard = fg.getBlackboard();
                 TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
-                data.clearColor = config.clearColor;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
@@ -803,17 +804,25 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 }
 
-                // FIXME: do we actually need these reads here? it means "preserve" these attachments
+                // We set a "read" constraint on these attachments here because we need to preserve them
+                // when the color pass happens in several passes (e.g. with SSR)
                 data.color = builder.read(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags });
+
+                // Note: when/if data.color refers to an imported render target, the clear state
+                // is always overridden with the values from the imported target -- however,
+                // in the case of SSR we don't want this behavior for the translucent pass, so
+                // we just use the clear state we want directly (in the execute closure).
+                data.clearColor = config.clearColor;
+                data.clearFlags = clearColorFlags | clearDepthFlags;
 
                 blackboard["depth"] = data.depth;
             },
@@ -842,6 +851,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;
+                out.params.flags.clear = data.clearFlags;
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;

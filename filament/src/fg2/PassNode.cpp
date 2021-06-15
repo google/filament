@@ -204,25 +204,21 @@ void RenderPassNode::resolve() noexcept {
             rt.imported = true;
 
             // override the values we just calculated with the actual values from the imported target
-            rt.targetBufferFlags = pImportedRenderTarget->importedDesc.attachments;
-            rt.descriptor.viewport = pImportedRenderTarget->importedDesc.viewport;
+            rt.targetBufferFlags     = pImportedRenderTarget->importedDesc.attachments;
+            rt.descriptor.viewport   = pImportedRenderTarget->importedDesc.viewport;
             rt.descriptor.clearColor = pImportedRenderTarget->importedDesc.clearColor;
-            rt.descriptor.samples = pImportedRenderTarget->importedDesc.samples;
             rt.descriptor.clearFlags = pImportedRenderTarget->importedDesc.clearFlags;
-            rt.descriptor.discardStart = pImportedRenderTarget->importedDesc.discardStart;
-
-            rt.backend.target = pImportedRenderTarget->target;
-
-            // discard start is also taken from the imported target
-            rt.backend.params.flags.discardStart = rt.descriptor.discardStart & rt.targetBufferFlags;
+            rt.descriptor.samples    = pImportedRenderTarget->importedDesc.samples;
+            rt.backend.target        = pImportedRenderTarget->target;
 
             // but don't discard attachments the imported target tells us to keep
-            rt.backend.params.flags.discardEnd &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
+            rt.backend.params.flags.discardStart &= ~pImportedRenderTarget->importedDesc.keepOverrideStart;
+            rt.backend.params.flags.discardEnd   &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
         }
 
+        rt.backend.params.viewport = rt.descriptor.viewport;
         rt.backend.params.clearColor = rt.descriptor.clearColor;
         rt.backend.params.flags.clear = rt.descriptor.clearFlags & rt.targetBufferFlags;
-        rt.backend.params.viewport = rt.descriptor.viewport;
     }
 }
 
