@@ -102,20 +102,25 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTXLoader");
     if (ktxloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod ktxMethods[] = {
-        {"nCreateKTXTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
-        {"nCreateIndirectLight", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
-        {"nCreateSkybox", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
-        {"nGetSphericalHarmonics", "(Ljava/nio/Buffer;I[F)Z", reinterpret_cast<void*>(nGetSphericalHarmonics)},
+        {strdup("nCreateKTXTexture"), strdup("(JLjava/nio/Buffer;IZ)J"), reinterpret_cast<void*>(nCreateKTXTexture)},
+        {strdup("nCreateIndirectLight"), strdup("(JLjava/nio/Buffer;IZ)J"), reinterpret_cast<void*>(nCreateIndirectLight)},
+        {strdup("nCreateSkybox"), strdup("(JLjava/nio/Buffer;IZ)J"), reinterpret_cast<void*>(nCreateSkybox)},
+        {strdup("nGetSphericalHarmonics"), strdup("(Ljava/nio/Buffer;I[F)Z"), reinterpret_cast<void*>(nGetSphericalHarmonics)},
     };
     rc = env->RegisterNatives(ktxloaderClass, ktxMethods, sizeof(ktxMethods) / sizeof(JNINativeMethod));
+    free(ktxMethods[0].name); free(ktxMethods[0].signature);
+    free(ktxMethods[1].name); free(ktxMethods[1].signature);
+    free(ktxMethods[2].name); free(ktxMethods[2].signature);
+    free(ktxMethods[3].name); free(ktxMethods[3].signature);
     if (rc != JNI_OK) return rc;
 
     // HDRLoader
     jclass hdrloaderClass = env->FindClass("com/google/android/filament/utils/HDRLoader");
     if (hdrloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod hdrMethods[] = {
-        {"nCreateHDRTexture", "(JLjava/nio/Buffer;II)J", reinterpret_cast<void*>(nCreateHDRTexture)},
+        {strdup("nCreateHDRTexture"), strdup("(JLjava/nio/Buffer;II)J"), reinterpret_cast<void*>(nCreateHDRTexture)},
     };
+    free(hdrMethods[0].name); free(hdrMethods[0].signature);
     rc = env->RegisterNatives(hdrloaderClass, hdrMethods, sizeof(hdrMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
 
