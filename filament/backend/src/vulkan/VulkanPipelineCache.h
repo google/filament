@@ -34,6 +34,10 @@
 
 #include "VulkanCommands.h"
 
+VK_DEFINE_HANDLE(VmaAllocator)
+VK_DEFINE_HANDLE(VmaAllocation)
+VK_DEFINE_HANDLE(VmaPool)
+
 namespace filament {
 namespace backend {
 
@@ -118,7 +122,7 @@ public:
     // calls. On destruction it will free any cached Vulkan objects that haven't already been freed.
     VulkanPipelineCache();
     ~VulkanPipelineCache();
-    void setDevice(VkDevice device) { mDevice = device; }
+    void setDevice(VkDevice device, VmaAllocator allocator);
 
     // Clients should initialize their copy of the raster state using this method. They can then
     // mutate their copy and pass it back through bindRasterState().
@@ -265,7 +269,8 @@ private:
     VkDescriptorPool createDescriptorPool(uint32_t size) const;
     void growDescriptorPool() noexcept;
 
-    VkDevice mDevice = nullptr;
+    VkDevice mDevice = VK_NULL_HANDLE;
+    VmaAllocator mAllocator = VK_NULL_HANDLE;
     const RasterState mDefaultRasterState;
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
@@ -309,6 +314,9 @@ private:
     VkWriteDescriptorSet mDummySamplerWriteInfo = {};
     VkDescriptorImageInfo mDummyTargetInfo = {};
     VkWriteDescriptorSet mDummyTargetWriteInfo = {};
+
+    VkBuffer mDummyBuffer;
+    VmaAllocation mDummyMemory;
 };
 
 } // namespace filament

@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-#include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundef"
-#pragma clang diagnostic ignored "-Wunused-variable"
-#include "vk_mem_alloc.h"
-#pragma clang diagnostic pop
-
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
+#include "VulkanMemory.h"
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>
