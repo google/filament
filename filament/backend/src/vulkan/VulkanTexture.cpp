@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "VulkanMemory.h"
 #include "VulkanTexture.h"
 
 #include "DataReshaper.h"
