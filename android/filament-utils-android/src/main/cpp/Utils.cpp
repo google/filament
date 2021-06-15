@@ -102,10 +102,10 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTXLoader");
     if (ktxloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod ktxMethods[] = {
-        {"nCreateKTXTexture", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
-        {"nCreateIndirectLight", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
-        {"nCreateSkybox", "(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
-        {"nGetSphericalHarmonics", "(Ljava/nio/Buffer;I[F)Z", reinterpret_cast<void*>(nGetSphericalHarmonics)},
+        {(char*)"nCreateKTXTexture", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},
+        {(char*)"nCreateIndirectLight", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateIndirectLight)},
+        {(char*)"nCreateSkybox", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateSkybox)},
+        {(char*)"nGetSphericalHarmonics", (char*)"(Ljava/nio/Buffer;I[F)Z", reinterpret_cast<void*>(nGetSphericalHarmonics)},
     };
     rc = env->RegisterNatives(ktxloaderClass, ktxMethods, sizeof(ktxMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
@@ -114,7 +114,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     jclass hdrloaderClass = env->FindClass("com/google/android/filament/utils/HDRLoader");
     if (hdrloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod hdrMethods[] = {
-        {"nCreateHDRTexture", "(JLjava/nio/Buffer;II)J", reinterpret_cast<void*>(nCreateHDRTexture)},
+        {(char*)"nCreateHDRTexture", (char*)"(JLjava/nio/Buffer;II)J", reinterpret_cast<void*>(nCreateHDRTexture)},
     };
     rc = env->RegisterNatives(hdrloaderClass, hdrMethods, sizeof(hdrMethods) / sizeof(JNINativeMethod));
     if (rc != JNI_OK) return rc;
