@@ -58,7 +58,7 @@ struct FrameGraphRenderPass {
         math::float4 clearColor{};
         uint8_t samples = 0; // # of samples (0 = unset, default)
         backend::TargetBufferFlags clearFlags{};
-        backend::TargetBufferFlags discardStart{};
+        backend::TargetBufferFlags keepOverrideStart{};
         backend::TargetBufferFlags keepOverrideEnd{};
     };
 
