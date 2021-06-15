@@ -760,11 +760,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color) {
-                    if (view.isSkyboxVisible()) {
-                        // if the skybox is visible, then we don't need to clear at all
-                        clearColorFlags &= ~TargetBufferFlags::COLOR;
-                    }
-
+                    // FIXME: this works only when the viewport is full
+                    //  if (view.isSkyboxVisible()) {
+                    //      // if the skybox is visible, then we don't need to clear at all
+                    //      clearColorFlags &= ~TargetBufferFlags::COLOR;
+                    //  }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
