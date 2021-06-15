@@ -402,6 +402,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     swapchain = VK_NULL_HANDLE;
 
     // Somewhat arbitrarily, headless rendering is double-buffered.
+    color.reserve(2);
     color.resize(2);
 
     for (size_t i = 0; i < color.size(); ++i) {
