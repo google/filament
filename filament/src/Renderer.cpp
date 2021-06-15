@@ -732,7 +732,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
                 Blackboard& blackboard = fg.getBlackboard();
-                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
+                TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
@@ -760,15 +760,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color) {
-                    // we're allocating a new buffer, so its content is undefined and we might need
-                    // to clear it.
-
-                    if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
-                        // if the View is going to be blended in, then always clear to transparent
-                        clearColorFlags |= TargetBufferFlags::COLOR;
-                        data.clearColor = {};
-                    }
-
                     if (view.isSkyboxVisible()) {
                         // if the skybox is visible, then we don't need to clear at all
                         clearColorFlags &= ~TargetBufferFlags::COLOR;
@@ -817,10 +808,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                         .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags });
 
-                // Note: when/if data.color refers to an imported render target, the clear state
-                // is always overridden with the values from the imported target -- however,
-                // in the case of SSR we don't want this behavior for the translucent pass, so
-                // we just use the clear state we want directly (in the execute closure).
                 data.clearColor = config.clearColor;
                 data.clearFlags = clearColorFlags | clearDepthFlags;
 
@@ -852,6 +839,14 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 out.params.clearColor = data.clearColor;
                 out.params.flags.clear = data.clearFlags;
+                if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
+                    if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
+                        // if the buffer is discarded (e.g. it's new) and we're blending,
+                        // then clear it to transparent
+                        out.params.flags.clear |= TargetBufferFlags::COLOR;
+                        out.params.clearColor = {};
+                    }
+                }
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;

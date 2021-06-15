@@ -55,9 +55,9 @@ struct FrameGraphRenderPass {
     struct ImportDescriptor {
         backend::TargetBufferFlags attachments = backend::TargetBufferFlags::COLOR0;
         Viewport viewport{};
-        math::float4 clearColor{};
-        uint8_t samples = 0; // # of samples (0 = unset, default)
-        backend::TargetBufferFlags clearFlags{};
+        math::float4 clearColor{};  // this overrides Descriptor::clearColor
+        uint8_t samples = 0;        // # of samples (0 = unset, default)
+        backend::TargetBufferFlags clearFlags{}; // this overrides Descriptor::clearFlags
         backend::TargetBufferFlags keepOverrideStart{};
         backend::TargetBufferFlags keepOverrideEnd{};
     };
