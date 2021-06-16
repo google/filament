@@ -156,7 +156,9 @@ Light getLight(const uint index) {
  * The result of the lighting computations is accumulated in the color
  * parameter, as linear HDR RGB.
  */
-void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
+void evaluatePunctualLights(const MaterialInputs material,
+        const PixelParams pixel, inout vec3 color) {
+
     // Fetch the light information stored in the froxel that contains the
     // current fragment
     FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord()));
@@ -197,6 +199,11 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
             continue;
         }
 #endif
+
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+        color.rgb += customSurfaceShading(material, pixel, light, visibility);
+#else
         color.rgb += surfaceShading(pixel, light, visibility);
+#endif
     }
 }

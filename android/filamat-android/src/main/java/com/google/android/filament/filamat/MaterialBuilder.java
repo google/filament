@@ -392,6 +392,12 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder customSurfaceShading(boolean customSurfaceShading) {
+        nMaterialBuilderCustomSurfaceShading(mNativeObject, customSurfaceShading);
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder multiBounceAmbientOcclusion(boolean multiBounceAO) {
         nMaterialBuilderMultiBounceAmbientOcclusion(mNativeObject, multiBounceAO);
         return this;
@@ -556,6 +562,8 @@ public class MaterialBuilder {
     private static native void nMaterialBuilderClearCoatIorChange(long mNativeObject,
             boolean clearCoatIorChange);
     private static native void nMaterialBuilderFlipUV(long nativeBuilder, boolean flipUV);
+    private static native void nMaterialBuilderCustomSurfaceShading(long nativeBuilder,
+            boolean customSurfaceShading);
     private static native void nMaterialBuilderMultiBounceAmbientOcclusion(long nativeBuilder,
             boolean multiBounceAO);
     private static native void nMaterialBuilderSpecularAmbientOcclusion(long nativeBuilder,

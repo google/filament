@@ -68,7 +68,7 @@ The lit model is Filament's standard material model. This physically-based shadi
 designed after to offer good interoperability with other common tools and engines such as _Unity 5_,
 _Unreal Engine 4_, _Substance Designer_ or _Marmoset Toolbag_.
 
-This material model can be used to describe a large number of non-metallic surfaces (_dielectrics_)
+This material model can be used to describe many non-metallic surfaces (_dielectrics_)
 or metallic surfaces (_conductors_).
 
 The appearance of a material using the standard model is controlled using the properties described
@@ -1682,6 +1682,26 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Shading: customSurfaceShading
+
+Type
+:    `bool`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Enables custom surface shading when set to true. When surface shading is enabled, the fragment
+     shader must provide an extra function that will be invoked for every light in the scene that
+     may influence the current fragment. Please refer to the Custom surface shading section below
+     for more information.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    customSurfaceShading : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ## Vertex block
 
 The vertex block is optional and can be used to control the vertex shading stage of the material.
@@ -1868,6 +1888,165 @@ struct MaterialInputs {
     float microThickness;       // default: 0.0, not available with refractionType "solid"
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Custom surface shading
+
+When `customSurfaceShading` is set to `true` in the material block, the fragment block **must**
+declare and implement the `surfaceShading` function:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // prepare material inputs
+    }
+
+    vec3 surfaceShading(
+        const MaterialInputs materialInputs,
+        const ShadingData shadingData,
+        const LightData lightData
+    ) {
+        return vec3(1.0); // output of custom lighting
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This function will be invoked for every light (directional, spot or point) in the scene that may
+influence the current fragment. The `surfaceShading` is invoked with 3 sets of data:
+
+- `MaterialInputs`, as described in the Material fragment inputs section and prepared in the
+  `material` function explained above
+- `ShadingData`, a structure containing values derived from `MaterialInputs` (see below)
+- `LightData`, a structure containing values specific to the light being currently
+   evaluated (see below)
+
+The `surfaceShading` function must return an RGB color in linear sRGB. Alpha blending and alpha
+masking are handled outside of this function and must therefore be ignored.
+
+!!! Note: About shadowed fragments
+    The `surfaceShading` function is invoked even when a fragment is known to be fully in the shadow
+    of the current light (`lightData.NdotL <= 0.0` or `lightData.visibility <= 0.0`). This gives
+    more flexibility to the `surfaceShading` function as it provides a simple way to handle constant
+    ambient lighting for instance.
+
+!!! Warning: Shading models
+    Custom surface shading only works with the `lit` shading model. Attempting to use any other
+    model will result in an error.
+
+#### Shading data structure
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+struct ShadingData {
+    // The material's diffuse color, as derived from baseColor and metallic.
+    // This color is pre-multiplied by alpha and in the linear sRGB color space.
+    vec3  diffuseColor;
+
+    // The material's specular color, as derived from baseColor and metallic.
+    // This color is pre-multiplied by alpha and in the linear sRGB color space.
+    vec3  f0;
+
+    // The perceptual roughness it the roughness value set in MaterialInputs,
+    // with extra processing:
+    // - Clamped to safe values
+    // - Filtered if specularAntiAliasing is enabled
+    // This value is between 0.0 and 1.0.
+    float perceptualRoughness;
+
+    // The roughness value expected by BRDFs. This value is the square of
+    // perceptualRoughness. This value is between 0.0 and 1.0.
+    float roughness;
+};
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#### Light data structure
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+struct LightData {
+    // The color (.rgb) and pre-exposed intensity (.w) of the light.
+    // The color is an RGB value in the linear sRGB color space.
+    // The pre-exposed intensity is the intensity of the light multiplied by
+    // the camera's exposure value.
+    vec4  colorIntensity;
+
+    // The normalized light vector, in world space (direction from the
+    // current fragment's position to the light).
+    vec3  l;
+
+    // The dot product of the shading normal (with normal mapping applied)
+    // and the light vector. This value is equal to the result of
+    // saturate(dot(getWorldSpaceNormal(), lightData.l)).
+    // This value is always between 0.0 and 1.0. When the value is <= 0.0,
+    // the current fragment is not visible from the light and lighting
+    // computations can be skipped.
+    float NdotL;
+
+    // The position of the light in world space.
+    vec3  worldPosition;
+
+    // Attenuation of the light based on the distance from the current
+    // fragment to the light in world space. This value between 0.0 and 1.0
+    // is computed differently for each type of light (it's always 1.0 for
+    // directional lights).
+    float attenuation;
+
+    // Visibility factor computed from shadow maps or other occlusion data
+    // specific to the light being evaluated. This value is between 0.0 and
+    // 1.0.
+    float visibility;
+};
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#### Example
+
+The material below shows how to use custom surface shading to implement a simplified toon shader:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+material {
+    name : Toon,
+    shadingModel : lit,
+    parameters : [
+        {
+            type : float3,
+            name : baseColor
+        }
+    ],
+    customSurfaceShading : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+    }
+
+    vec3 surfaceShading(
+            const MaterialInputs materialInputs,
+            const ShadingData shadingData,
+            const LightData lightData
+    ) {
+        // Number of visible shade transitions
+        const float shades = 5.0;
+        // Ambient intensity
+        const float ambient = 0.1;
+
+        float toon = max(ceil(lightData.NdotL * shades) / shades, ambient);
+
+        // Shadowing and attenuation
+        toon *= lightData.visibility * lightData.attenuation;
+
+        // Color and intensity
+        vec3 light = lightData.colorIntensity.rgb * lightData.colorIntensity.w;
+
+        return shadingData.diffuseColor * light * toon;
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The result can be seen in figure [toonShading].
+
+![Figure [toonShading]: simple toon shading implemented with custom
+surface shading](images/screenshot_toon_shading.png)
+
 
 ## Shader public APIs
 

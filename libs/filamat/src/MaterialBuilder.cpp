@@ -344,6 +344,11 @@ MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::customSurfaceShading(bool customSurfaceShading) noexcept {
+    mCustomSurfaceShading = customSurfaceShading;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::multiBounceAmbientOcclusion(bool multiBounceAO) noexcept {
     mMultiBounceAO = multiBounceAO;
     mMultiBounceAOSet = true;
@@ -467,6 +472,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.refractionMode = mRefractionMode;
     info.refractionType = mRefractionType;
     info.quality = mShaderQuality;
+    info.hasCustomSurfaceShading = mCustomSurfaceShading;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -533,7 +539,8 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
+            mCustomSurfaceShading);
     return result;
 #else
     return true;
@@ -901,15 +908,19 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
         return Package::invalidPackage();
     }
 
+    if (mCustomSurfaceShading && mShading != Shading::LIT) {
+        utils::slog.e << "Error: customSurfaceShading can only be used with lit materials."
+                      << utils::io::endl;
+        return Package::invalidPackage();
+    }
+
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
     MaterialInfo info;
     prepareToBuild(info);
 
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
-    if (!checkLiteRequirements() ||
-        !findAllProperties() ||
-        !runSemanticAnalysis()) {
+    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
     }
