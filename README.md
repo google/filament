@@ -131,6 +131,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Clustered forward renderer
 - Cook-Torrance microfacet specular BRDF
 - Lambertian diffuse BRDF
+- Custom lighting/surface shading
 - HDR/linear lighting
 - Metallic workflow
 - Clear coat
