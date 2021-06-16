@@ -75,7 +75,7 @@ public:
 
     // generate the shader's code for the lit shading model
     utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderType type,
-            filament::Variant variant, filament::Shading shading) const;
+            filament::Variant variant, filament::Shading shading, bool customSurfaceShading) const;
 
     // generate the shader's code for the unlit shading model
     utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderType type,

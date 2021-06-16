@@ -405,6 +405,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateDefine(fs, getShadingDefine(material.shading), true);
     generateMaterialDefines(fs, cg, mProperties, mDefines);
 
+    cg.generateDefine(fs, "MATERIAL_HAS_CUSTOM_SURFACE_SHADING", material.hasCustomSurfaceShading);
+
     cg.generateShaderInputs(fs, ShaderType::FRAGMENT, material.requiredAttributes, interpolation);
 
     // custom material variables
@@ -450,7 +452,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     } else {
         appendShader(fs, mMaterialCode, mMaterialLineOffset);
         if (material.isLit) {
-            cg.generateShaderLit(fs, ShaderType::FRAGMENT, variant, material.shading);
+            cg.generateShaderLit(fs, ShaderType::FRAGMENT, variant, material.shading,
+                    material.hasCustomSurfaceShading);
         } else {
             cg.generateShaderUnlit(fs, ShaderType::FRAGMENT, variant, material.hasShadowMultiplier);
         }

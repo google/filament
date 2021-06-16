@@ -53,24 +53,13 @@ GLSLangCleaner::~GLSLangCleaner() {
 
 bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel model,
         MaterialBuilder::MaterialDomain materialDomain,
-        MaterialBuilder::TargetApi targetApi) const noexcept {
+        MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading) const noexcept {
 
     // Parse to check syntax and semantic.
     const char* shaderCString = shaderCode.c_str();
 
     TShader tShader(EShLanguage::EShLangFragment);
     tShader.setStrings(&shaderCString, 1);
-
-    auto getMaterialFunctionName = [](MaterialBuilder::MaterialDomain domain) {
-        switch(domain) {
-            case MaterialBuilder::MaterialDomain::SURFACE:
-                return "material";
-
-            case MaterialBuilder::MaterialDomain::POST_PROCESS:
-                return "postProcess";
-        }
-    };
-    const char* materialFunctionName = getMaterialFunctionName(materialDomain);
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
@@ -81,6 +70,16 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
         utils::slog.e << tShader.getInfoLog() << utils::io::flush;
         return false;
     }
+
+    auto getMaterialFunctionName = [](MaterialBuilder::MaterialDomain domain) {
+        switch (domain) {
+            case MaterialBuilder::MaterialDomain::SURFACE:
+                return "material";
+            case MaterialBuilder::MaterialDomain::POST_PROCESS:
+                return "postProcess";
+        }
+    };
+    const char* materialFunctionName = getMaterialFunctionName(materialDomain);
 
     TIntermNode* root = tShader.getIntermediate()->getTreeRoot();
     // Check there is a material function definition in this shader.
@@ -97,9 +96,9 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
         return true;
     }
 
-    // Check there is a prepareMaterial function defintion in this shader.
-    TIntermAggregate* prepareMaterialNode = ASTUtils::getFunctionByNameOnly("prepareMaterial",
-            *root);
+    // Check there is a prepareMaterial function definition in this shader.
+    TIntermAggregate* prepareMaterialNode =
+            ASTUtils::getFunctionByNameOnly("prepareMaterial", *root);
     if (prepareMaterialNode == nullptr) {
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << utils::io::endl;
@@ -113,6 +112,16 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: prepareMaterial() is not called" << utils::io::endl;
         return false;
+    }
+
+    if (hasCustomSurfaceShading) {
+        materialFctNode = ASTUtils::getFunctionByNameOnly("surfaceShading", *root);
+        if (materialFctNode == nullptr) {
+            utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+            utils::slog.e << "ERROR: Unable to find surfaceShading() function"
+                          << utils::io::endl;
+            return false;
+        }
     }
 
     return true;

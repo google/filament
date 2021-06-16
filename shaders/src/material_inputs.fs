@@ -3,7 +3,7 @@
 #if !defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     #define MATERIAL_CAN_SKIP_LIGHTING
 #endif
-#elif defined(SHADING_MODEL_SUBSURFACE)
+#elif defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
     // Cannot skip lighting
 #else
     #define MATERIAL_CAN_SKIP_LIGHTING
@@ -176,3 +176,23 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #endif
 }
+
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+/** @public-api */
+struct LightData {
+    vec4  colorIntensity;
+    vec3  l;
+    float NdotL;
+    vec3  worldPosition;
+    float attenuation;
+    float visibility;
+};
+
+/** @public-api */
+struct ShadingData {
+    vec3  diffuseColor;
+    float perceptualRoughness;
+    vec3  f0;
+    float roughness;
+};
+#endif

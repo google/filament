@@ -580,6 +580,11 @@ static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue
     return true;
 }
 
+static bool processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.customSurfaceShading(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processSpecularAmbientOcclusion(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::SpecularAmbientOcclusion> strToEnum {
             { "none",        MaterialBuilder::SpecularAmbientOcclusion::NONE },
@@ -730,6 +735,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["framebufferFetch"]              = { &processFramebufferFetch, Type::BOOL };
     mParameters["outputs"]                       = { &processOutputs, Type::ARRAY };
     mParameters["quality"]                       = { &processQuality, Type::STRING };
+    mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

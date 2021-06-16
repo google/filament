@@ -449,6 +449,26 @@ public:
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
 
     /**
+     * Enable / disable custom surface shading. Custom surface shading requires the LIT
+     * shading model. In addition, the following function must be defined in the fragment
+     * block:
+     *
+     * ~~~~~
+     * vec3 surfaceShading(const MaterialInputs materialInputs,
+     *         const ShadingData shadingData, const LightData lightData) {
+     *
+     *     return vec3(1.0); // Compute surface shading with custom BRDF, etc.
+     * }
+     * ~~~~~
+     *
+     * This function is invoked once per light. Please refer to the materials documentation
+     * for more information about the different parameters.
+     *
+     * @param customSurfaceShading Enables or disables custom surface shading
+     */
+    MaterialBuilder& customSurfaceShading(bool customSurfaceShading) noexcept;
+
+    /**
      * Specifies desktop vs mobile; works in concert with TargetApi to determine the shader models
      * (used to generate code) and final output representations (spirv and/or text).
      */
@@ -695,6 +715,8 @@ private:
 
     SpecularAmbientOcclusion mSpecularAO = SpecularAmbientOcclusion::NONE;
     bool mSpecularAOSet = false;
+
+    bool mCustomSurfaceShading = false;
 
     bool mEnableFramebufferFetch = false;
 

@@ -729,6 +729,45 @@ TEST_F(MaterialCompiler, Arrays) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, CustomSurfaceShadingRequiresLit) {
+    filamat::MaterialBuilder builder;
+    builder.customSurfaceShading(true);
+    builder.shading(filament::Shading::UNLIT);
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomSurfaceShadingRequiresFunction) {
+    filamat::MaterialBuilder builder;
+    builder.customSurfaceShading(true);
+    builder.shading(filament::Shading::LIT);
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_FALSE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, CustomSurfaceShadingHasFunction) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+
+        vec3 surfaceShading(
+                const MaterialInputs materialInputs,
+                const ShadingData shadingData,
+                const LightData lightData
+        ) {
+            return vec3(1.0);
+        }
+    )");
+
+    filamat::MaterialBuilder builder;
+    builder.customSurfaceShading(true);
+    builder.shading(filament::Shading::LIT);
+    builder.material(shaderCode.c_str());
+    filamat::Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

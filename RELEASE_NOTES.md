@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.5 (currently main branch)
 
+- engine: User materials can now provide custom lighting/surface shading, please consult
+  the [materials documentation](https://google.github.io/filament/Materials.html) for details.
+
 ## v1.10.4
 
 ## v1.10.3

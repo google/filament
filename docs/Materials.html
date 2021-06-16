@@ -100,11 +100,13 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.28&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.29&nbsp; </span>Shading: customSurfaceShading</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&nbsp; </span>prepareMaterial function</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&nbsp; </span>Material fragment inputs</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/customsurfaceshading" class="level3"><span class="tocNumber">4.4.3&nbsp; </span>Custom surface shading</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis" class="level2"><span class="tocNumber">4.5&nbsp; </span>Shader public APIs</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/types" class="level3"><span class="tocNumber">4.5.1&nbsp; </span>Types</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/shaderpublicapis/math" class="level3"><span class="tocNumber">4.5.2&nbsp; </span>Math</a><br>
@@ -218,7 +220,7 @@ designed after to offer good interoperability with other common tools and engine
 
 </p><p>
 
-This material model can be used to describe a large number of non-metallic surfaces (<em class="underscore">dielectrics</em>)
+This material model can be used to describe many non-metallic surfaces (<em class="underscore">dielectrics</em>)
 or metallic surfaces (<em class="underscore">conductors</em>).
 
 </p><p>
@@ -2102,6 +2104,22 @@ particularly visible under the hose.</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingThreshold : 0.1</span>
 <span class="line">}</span></code></pre>
+<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.29">&nbsp;</a><h3>Shading: customSurfaceShading</h3>
+<p>
+
+
+</p><dl><dt>Type</dt><dd><p>     <code>bool</code>
+
+</p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
+
+</p></dd><dt>Description</dt><dd><p>     Enables custom surface shading when set to true. When surface shading is enabled, the fragment
+     shader must provide an extra function that will be invoked for every light in the scene that
+     may influence the current fragment. Please refer to the <a href="#customsurfaceshading">Custom surface shading</a> section below
+     for more information.
+
+</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    customSurfaceShading : true</span>
+<span class="line">}</span></code></pre>
 <a class="target" name="vertexblock">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock">&nbsp;</a><a class="target" name="toc4.3">&nbsp;</a><h2>Vertex block</h2>
 <p>
 
@@ -2294,6 +2312,177 @@ plastic with bump mapping:
 <span class="line">    <span class="hljs-type">float</span> ior;                  <span class="hljs-comment">// default: 1.5</span></span>
 <span class="line">    <span class="hljs-type">float</span> microThickness;       <span class="hljs-comment">// default: 0.0, not available with refractionType "solid"</span></span>
 <span class="line">}</span></code></pre>
+<a class="target" name="customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/customsurfaceshading">&nbsp;</a><a class="target" name="toc4.4.3">&nbsp;</a><h3>Custom surface shading</h3>
+<p>
+
+
+When <code>customSurfaceShading</code> is set to <code>true</code> in the material block, the fragment block <strong class="asterisk">must</strong>
+declare and implement the <code>surfaceShading</code> function:
+
+</p><pre class="listing tilde"><code><span class="line">fragment {</span>
+<span class="line">    <span class="hljs-type">void</span> material(<span class="hljs-keyword">inout</span> MaterialInputs material) {</span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        <span class="hljs-comment">// prepare material inputs</span></span>
+<span class="line">    }</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-type">vec3</span> surfaceShading(</span>
+<span class="line">        <span class="hljs-keyword">const</span> MaterialInputs materialInputs,</span>
+<span class="line">        <span class="hljs-keyword">const</span> ShadingData shadingData,</span>
+<span class="line">        <span class="hljs-keyword">const</span> LightData lightData</span>
+<span class="line">    ) {</span>
+<span class="line">        <span class="hljs-keyword">return</span> <span class="hljs-type">vec3</span>(<span class="hljs-number">1.0</span>); <span class="hljs-comment">// output of custom lighting</span></span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><p>
+
+This function will be invoked for every light (directional, spot or point) in the scene that may
+influence the current fragment. The <code>surfaceShading</code> is invoked with 3 sets of data:
+
+</p><p>
+
+</p><ul>
+<li class="minus"><code>MaterialInputs</code>, as described in the <a href="#materialfragmentinputs">Material fragment inputs</a> section and prepared in the
+  <code>material</code> function explained above
+</li>
+<li class="minus"><code>ShadingData</code>, a structure containing values derived from <code>MaterialInputs</code> (see below)
+</li>
+<li class="minus"><code>LightData</code>, a structure containing values specific to the light being currently
+   evaluated (see below)</li></ul>
+
+<p></p><p>
+
+The <code>surfaceShading</code> function must return an RGB color in linear sRGB. Alpha blending and alpha
+masking are handled outside of this function and must therefore be ignored.
+
+</p><p>
+
+</p><div class="admonition note"><div class="admonition-title"> About shadowed fragments</div>
+
+<p></p><p>
+
+    The <code>surfaceShading</code> function is invoked even when a fragment is known to be fully in the shadow
+    of the current light (<code>lightData.NdotL &lt;= 0.0</code> or <code>lightData.visibility &lt;= 0.0</code>). This gives
+    more flexibility to the <code>surfaceShading</code> function as it provides a simple way to handle constant
+    ambient lighting for instance.</p></div>
+
+<p></p><p>
+
+</p><div class="admonition warning"><div class="admonition-title"> Shading models</div>
+
+<p></p><p>
+
+    Custom surface shading only works with the <code>lit</code> shading model. Attempting to use any other
+    model will result in an error.</p></div>
+
+<p></p>
+<a class="target" name="shadingdatastructure">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/customsurfaceshading/shadingdatastructure">&nbsp;</a><a class="target" name="toc4.4.3.1">&nbsp;</a><h4>Shading data structure</h4>
+<pre class="listing tilde"><code><span class="line">struct ShadingData {</span>
+<span class="line">    <span class="hljs-comment">// The material's diffuse color, as derived from baseColor and metallic.</span></span>
+<span class="line">    <span class="hljs-comment">// This color is pre-multiplied by alpha and in the linear sRGB color space.</span></span>
+<span class="line">    <span class="hljs-type">vec3</span>  diffuseColor;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The material's specular color, as derived from baseColor and metallic.</span></span>
+<span class="line">    <span class="hljs-comment">// This color is pre-multiplied by alpha and in the linear sRGB color space.</span></span>
+<span class="line">    <span class="hljs-type">vec3</span>  f0;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The perceptual roughness it the roughness value set in MaterialInputs,</span></span>
+<span class="line">    <span class="hljs-comment">// with extra processing:</span></span>
+<span class="line">    <span class="hljs-comment">// - Clamped to safe values</span></span>
+<span class="line">    <span class="hljs-comment">// - Filtered if specularAntiAliasing is enabled</span></span>
+<span class="line">    <span class="hljs-comment">// This value is between 0.0 and 1.0.</span></span>
+<span class="line">    <span class="hljs-type">float</span> perceptualRoughness;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The roughness value expected by BRDFs. This value is the square of</span></span>
+<span class="line">    <span class="hljs-comment">// perceptualRoughness. This value is between 0.0 and 1.0.</span></span>
+<span class="line">    <span class="hljs-type">float</span> roughness;</span>
+<span class="line">};</span></code></pre>
+<a class="target" name="lightdatastructure">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/customsurfaceshading/lightdatastructure">&nbsp;</a><a class="target" name="toc4.4.3.2">&nbsp;</a><h4>Light data structure</h4>
+<pre class="listing tilde"><code><span class="line">struct LightData {</span>
+<span class="line">    <span class="hljs-comment">// The color (.rgb) and pre-exposed intensity (.w) of the light.</span></span>
+<span class="line">    <span class="hljs-comment">// The color is an RGB value in the linear sRGB color space.</span></span>
+<span class="line">    <span class="hljs-comment">// The pre-exposed intensity is the intensity of the light multiplied by</span></span>
+<span class="line">    <span class="hljs-comment">// the camera's exposure value.</span></span>
+<span class="line">    <span class="hljs-type">vec4</span>  colorIntensity;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The normalized light vector, in world space (direction from the</span></span>
+<span class="line">    <span class="hljs-comment">// current fragment's position to the light).</span></span>
+<span class="line">    <span class="hljs-type">vec3</span>  l;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The dot product of the shading normal (with normal mapping applied)</span></span>
+<span class="line">    <span class="hljs-comment">// and the light vector. This value is equal to the result of</span></span>
+<span class="line">    <span class="hljs-comment">// saturate(dot(getWorldSpaceNormal(), lightData.l)).</span></span>
+<span class="line">    <span class="hljs-comment">// This value is always between 0.0 and 1.0. When the value is &lt;= 0.0,</span></span>
+<span class="line">    <span class="hljs-comment">// the current fragment is not visible from the light and lighting</span></span>
+<span class="line">    <span class="hljs-comment">// computations can be skipped.</span></span>
+<span class="line">    <span class="hljs-type">float</span> NdotL;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// The position of the light in world space.</span></span>
+<span class="line">    <span class="hljs-type">vec3</span>  worldPosition;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// Attenuation of the light based on the distance from the current</span></span>
+<span class="line">    <span class="hljs-comment">// fragment to the light in world space. This value between 0.0 and 1.0</span></span>
+<span class="line">    <span class="hljs-comment">// is computed differently for each type of light (it's always 1.0 for</span></span>
+<span class="line">    <span class="hljs-comment">// directional lights).</span></span>
+<span class="line">    <span class="hljs-type">float</span> attenuation;</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// Visibility factor computed from shadow maps or other occlusion data</span></span>
+<span class="line">    <span class="hljs-comment">// specific to the light being evaluated. This value is between 0.0 and</span></span>
+<span class="line">    <span class="hljs-comment">// 1.0.</span></span>
+<span class="line">    <span class="hljs-type">float</span> visibility;</span>
+<span class="line">};</span></code></pre>
+<a class="target" name="example">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock/customsurfaceshading/example">&nbsp;</a><a class="target" name="toc4.4.3.3">&nbsp;</a><h4>Example</h4>
+<p>
+
+
+The material below shows how to use custom surface shading to implement a simplified toon shader:
+
+</p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    name : Toon,</span>
+<span class="line">    shadingModel : lit,</span>
+<span class="line">    parameters : [</span>
+<span class="line">        {</span>
+<span class="line">            type : float3,</span>
+<span class="line">            name : baseColor</span>
+<span class="line">        }</span>
+<span class="line">    ],</span>
+<span class="line">    customSurfaceShading : <span class="hljs-literal">true</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">fragment {</span>
+<span class="line">    <span class="hljs-type">void</span> material(<span class="hljs-keyword">inout</span> MaterialInputs material) {</span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        material.baseColor.rgb = materialParams.baseColor;</span>
+<span class="line">    }</span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-type">vec3</span> surfaceShading(</span>
+<span class="line">            <span class="hljs-keyword">const</span> MaterialInputs materialInputs,</span>
+<span class="line">            <span class="hljs-keyword">const</span> ShadingData shadingData,</span>
+<span class="line">            <span class="hljs-keyword">const</span> LightData lightData</span>
+<span class="line">    ) {</span>
+<span class="line">        <span class="hljs-comment">// Number of visible shade transitions</span></span>
+<span class="line">        <span class="hljs-keyword">const</span> <span class="hljs-type">float</span> shades = <span class="hljs-number">5.0</span>;</span>
+<span class="line">        <span class="hljs-comment">// Ambient intensity</span></span>
+<span class="line">        <span class="hljs-keyword">const</span> <span class="hljs-type">float</span> ambient = <span class="hljs-number">0.1</span>;</span>
+<span class="line"></span>
+<span class="line">        <span class="hljs-type">float</span> toon = <span class="hljs-built_in">max</span>(<span class="hljs-built_in">ceil</span>(lightData.NdotL * shades) / shades, ambient);</span>
+<span class="line"></span>
+<span class="line">        <span class="hljs-comment">// Shadowing and attenuation</span></span>
+<span class="line">        toon *= lightData.visibility * lightData.attenuation;</span>
+<span class="line"></span>
+<span class="line">        <span class="hljs-comment">// Color and intensity</span></span>
+<span class="line">        <span class="hljs-type">vec3</span> light = lightData.colorIntensity.rgb * lightData.colorIntensity.w;</span>
+<span class="line"></span>
+<span class="line">        <span class="hljs-keyword">return</span> shadingData.diffuseColor * light * toon;</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre><p>
+
+The result can be seen in <a href="#figure_toonshading">figure&nbsp;40</a>.
+
+</p><p>
+
+</p><center><div class="image" style=""><a href="images/screenshot_toon_shading.png" target="_blank"><img class="markdeep" src="images/screenshot_toon_shading.png"></a><div class="imagecaption"><a class="target" name="figure_toonshading">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;40:</b> simple toon shading implemented with custom
+surface shading</div></div></center>
+
+<p></p>
 <a class="target" name="shaderpublicapis">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2>Shader public APIs</h2>
 
 <a class="target" name="types">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/types">&nbsp;</a><a class="target" name="toc4.5.1">&nbsp;</a><h3>Types</h3>

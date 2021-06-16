@@ -561,7 +561,7 @@ io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderType type
 }
 
 io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
-        filament::Variant variant, filament::Shading shading) const {
+        filament::Variant variant, filament::Shading shading, bool customSurfaceShading) const {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_LIGHTING_FS_DATA;
@@ -576,7 +576,11 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
                 break;
             case Shading::SPECULAR_GLOSSINESS:
             case Shading::LIT:
-                out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
+                if (customSurfaceShading) {
+                    out << SHADERS_SHADING_LIT_CUSTOM_FS_DATA;
+                } else {
+                    out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
+                }
                 break;
             case Shading::SUBSURFACE:
                 out << SHADERS_SHADING_MODEL_SUBSURFACE_FS_DATA;
