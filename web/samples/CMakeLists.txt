@@ -78,7 +78,7 @@ set(ETC_NORMALS_ARGS "--kernel=NORMALS;--linear;--compression=etc_rgb8_normalxyz
 
 add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx" "")
 add_ktxfiles("assets/models/monkey/albedo.png" "albedo_astc.ktx" "--compression=astc_fast_ldr_4x4")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
+add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc_srgb.ktx" "--compression=s3tc_rgb_dxt1")
 add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx" "--kernel=NORMALS;--linear")
 add_ktxfiles("assets/models/monkey/normal.png" "normal_etc.ktx" "${ETC_NORMALS_ARGS}")
 add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
