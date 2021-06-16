@@ -129,7 +129,6 @@ public:
 
     // supported extensions detected at runtime
     struct {
-        bool WEBGL_texture_compression_s3tc = false;
         bool EXT_texture_compression_etc2 = false;
         bool EXT_texture_filter_anisotropic = false;
         bool QCOM_tiled_rendering = false;
@@ -142,11 +141,14 @@ public:
         bool EXT_multisampled_render_to_texture2 = false;
         bool KHR_debug = false;
         bool EXT_texture_sRGB = false;
-        bool EXT_texture_compression_s3tc_srgb = false;
         bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
         bool EXT_clip_control = false;
         bool GOOGLE_cpp_style_line_directive = false;
+        bool EXT_texture_compression_s3tc = false;
+        bool EXT_texture_compression_s3tc_srgb = false;
+        bool WEBGL_texture_compression_s3tc = false;
+        bool WEBGL_texture_compression_s3tc_srgb = false;
     } ext;
 
     struct {

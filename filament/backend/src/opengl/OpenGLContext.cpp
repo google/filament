@@ -255,13 +255,15 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.EXT_multisampled_render_to_texture2 = hasExtension(exts, "GL_EXT_multisampled_render_to_texture2");
     ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
     ext.EXT_texture_compression_etc2 = true;
-    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     ext.EXT_texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
     ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
     ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.QCOM_tiled_rendering = hasExtension(exts, "GL_QCOM_tiled_rendering");
+    ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
+    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
     ext.WEBGL_texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
+    ext.WEBGL_texture_compression_s3tc_srgb = hasExtension(exts, "WEBGL_compressed_texture_s3tc_srgb");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
@@ -281,7 +283,8 @@ void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet cons
     ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
     ext.KHR_debug = major >= 4 && minor >= 3;
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
-    ext.WEBGL_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
+    ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
+    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
