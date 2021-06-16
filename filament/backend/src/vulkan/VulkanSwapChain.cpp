@@ -307,7 +307,8 @@ void VulkanSwapChain::makePresentable() {
 #ifdef ANDROID
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
-        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        // If nothing was rendered, then the layout was never transitioned to COLOR_ATTACHMENT_OPTIMAL.
+        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
         .newLayout = swapContext.layout,

@@ -46,6 +46,7 @@ BackendTest::~BackendTest() {
     if (sBackend == Backend::OPENGL) {
         return;
     }
+    flushAndWait();
     driver->terminate();
     delete driver;
 }
@@ -67,6 +68,15 @@ void BackendTest::executeCommands() {
             commandBufferQueue.releaseBuffer(item);
         }
     }
+}
+
+void BackendTest::flushAndWait(uint64_t timeout) {
+    auto& api = getDriverApi();
+    auto fence = api.createFence();
+    api.finish();
+    executeCommands();
+    api.wait(fence, timeout);
+    api.destroyFence(fence);
 }
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {
