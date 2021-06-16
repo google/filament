@@ -25,7 +25,7 @@ formats. First copy over the PNG files from the <a href="https://github.com/goog
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic"># Create mipmaps for base color and two compressed variants.</span>
 mipgen albedo.png albedo.ktx
 mipgen --compression<span style="color: #666666">=</span>astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
-mipgen --compression<span style="color: #666666">=</span>s3tc_rgb_dxt1 albedo.png albedo_s3tc.ktx
+mipgen --compression<span style="color: #666666">=</span>s3tc_rgb_dxt1 albedo.png albedo_s3tc_srgb.ktx
 
 <span style="color: #408080; font-style: italic"># Create mipmaps for the normal map and a compressed variant.</span>
 mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear normal.png normal.ktx
