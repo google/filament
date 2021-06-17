@@ -353,6 +353,10 @@ public:
     PoolAllocator(const PoolAllocator& rhs) = delete;
     PoolAllocator& operator=(const PoolAllocator& rhs) = delete;
 
+    // Allocators can be moved
+    PoolAllocator(PoolAllocator&& rhs) = default;
+    PoolAllocator& operator=(PoolAllocator&& rhs) = default;
+
     PoolAllocator() noexcept = default;
     ~PoolAllocator() noexcept = default;
 

@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: User materials can now provide custom lighting/surface shading, please consult
   the [materials documentation](https://google.github.io/filament/Materials.html) for details.
+- android: AAR libraries now properly include their ProGuard rules.
 - engine: `Backend::DEFAULT` now selects the most appropriate backend for the platform, rather than
   always `OPENGL`. On Android the default is `OPENGL`, on Apple platforms the default is `METAL` and
   on all other platforms that default is `VULKAN`.

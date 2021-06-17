@@ -294,30 +294,34 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 // For reference on a 64-bits machine:
-//    GLFence                   :  8
-//    GLIndexBuffer             : 12        moderate
-//    GLSamplerGroup            : 16        moderate
-// -- less than 16 bytes
+//    GLSync                    :  8
+//    GLFence                   : 16
+//    GLSamplerGroup            : 16        few
+// -- less than or equal 16 bytes
 
-//    GLRenderPrimitive         : 40        many
-//    GLTexture                 : 44        moderate
-//    OpenGLProgram             : 40        moderate
-//    GLRenderTarget            : 56        few
-// -- less than 64 bytes
+//    GLIndexBuffer             : 24        moderate
+//    GLUniformBuffer           : 32        many
+//    GLRenderPrimitive         : 56        many
+//    OpenGLProgram             : 56        moderate
+// -- less than or equal 64 bytes
 
+//    GLTexture                 : 80        moderate
+//    GLRenderTarget            : 200       few
 //    GLVertexBuffer            : 208       moderate
-//    GLStream                  : 120       few
-//    GLUniformBuffer           : 128       many
+//    GLStream                  : 176       few
 // -- less than or equal to 208 bytes
 
 
 OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
-        : mPool0(area.begin(),
-                  pointermath::add(area.begin(), (1 * area.getSize()) / 16)),
-          mPool1( pointermath::add(area.begin(), (1 * area.getSize()) / 16),
-                  pointermath::add(area.begin(), (6 * area.getSize()) / 16)),
-          mPool2( pointermath::add(area.begin(), (6 * area.getSize()) / 16),
-                  area.end()) {
+{
+    // TODO: we probably need a better way to set the size of these pools
+    const size_t unit = area.getSize() / 32;
+    const size_t offsetPool1 =      unit;
+    const size_t offsetPool2 = 16 * unit;
+    char* const p = (char*)area.begin();
+    mPool0 = PoolAllocator<16, 16>(p, p + offsetPool1);
+    mPool1 = PoolAllocator<64, 32>(p + offsetPool1, p + offsetPool2);
+    mPool2 = PoolAllocator<208, 32>(p + offsetPool2, area.end());
 
 #if 0
     // this is useful for development, but too verbose even for debug builds
@@ -833,20 +837,16 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     GLRenderTarget::GL::RenderBuffer const* pRenderBuffer = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
-            resolveFlags = TargetBufferFlags::COLOR0;
-            pRenderBuffer = &rt->gl.color[0];
-            break;
         case GL_COLOR_ATTACHMENT1:
-            resolveFlags = TargetBufferFlags::COLOR1;
-            pRenderBuffer = &rt->gl.color[1];
-            break;
         case GL_COLOR_ATTACHMENT2:
-            resolveFlags = TargetBufferFlags::COLOR2;
-            pRenderBuffer = &rt->gl.color[2];
-            break;
         case GL_COLOR_ATTACHMENT3:
-            resolveFlags = TargetBufferFlags::COLOR3;
-            pRenderBuffer = &rt->gl.color[3];
+        case GL_COLOR_ATTACHMENT4:
+        case GL_COLOR_ATTACHMENT5:
+        case GL_COLOR_ATTACHMENT6:
+        case GL_COLOR_ATTACHMENT7:
+            static_assert(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT == 8);
+            resolveFlags = getTargetBufferFlagsAt(attachment - GL_COLOR_ATTACHMENT0);
+            pRenderBuffer = &rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
             break;
         case GL_DEPTH_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;

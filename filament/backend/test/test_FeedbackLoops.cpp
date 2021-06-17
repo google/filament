@@ -250,6 +250,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);
+        api.destroyTexture(texture);
         for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
 
