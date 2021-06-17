@@ -191,9 +191,12 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setDoubleSided(config->doubleSided);
     mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
 
+    #if !GLTFIO_LITE
+
+    // Initially, assume that the clear coat texture can be honored.  This is changed to false when
+    // running into a sampler count limitation. TODO: check if these constraints can now be relaxed.
     bool clearCoatNeedsTexture = true;
 
-    #if !GLTFIO_LITE
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);
     mi->setParameter("metallicRoughnessUvMatrix", identity);
@@ -229,6 +232,14 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
         }
     }
+    #else
+
+    // In the GLTFIO_LITE configuration we do not support UV matrices, clear coat, sheen, specular
+    // glossiness, or transmission. For more details, see `gltflite.mat.in`. To configure a custom
+    // set of features, create your own MaterialProvider class, perhaps using UbershaderLoader as a
+    // starting point.
+    const bool clearCoatNeedsTexture = false;
+
     #endif
 
     TextureSampler sampler;
