@@ -284,11 +284,11 @@ public class View {
      *
      * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
      * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
-     *              maximum is 12. This value together with resolution influences the spread of the
+     *              maximum is 11. This value together with resolution influences the spread of the
      *              blur effect. This value can be silently reduced to accommodate the original
      *              image size.
-     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
-     *              the maximum is lower of the original resolution and 4096. This parameter is
+     * resolution:  Resolution of bloom's vertical axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 2048. This parameter is
      *              silently clamped to the minimum and maximum.
      *              It is highly recommended that this value be smaller than the target resolution
      *              after dynamic resolution is applied (horizontally and vertically).
@@ -329,7 +329,7 @@ public class View {
         public float strength = 0.10f;
 
         /**
-         * Resolution of minor axis (2^levels to 4096)
+         * Resolution of minor axis (2^levels to 2048)
          */
         public int resolution = 360;
 
@@ -339,7 +339,7 @@ public class View {
         public float anamorphism = 1.0f;
 
         /**
-         * Number of blur levels (3 to 12)
+         * Number of blur levels (3 to 11)
          */
         public int levels = 6;
 

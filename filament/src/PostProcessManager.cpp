@@ -1375,24 +1375,32 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
-    // Figure out a good size for the bloom buffer. We pick the major axis lower
-    // power of two, and scale the minor axis accordingly taking dynamic scaling into account.
+    // Figure out a good size for the bloom buffer.
     auto const& desc = fg.getDescriptor(input);
-    uint32_t width = desc.width / scale.x;
-    uint32_t height = desc.height / scale.y;
-    if (bloomOptions.anamorphism >= 1.0) {
-        height *= bloomOptions.anamorphism;
-    } else if (bloomOptions.anamorphism < 1.0) {
-        width *= 1.0f / std::max(bloomOptions.anamorphism, 1.0f / 4096.0f);
+
+    // width and height after dynamic resolution upscaling
+    const float aspect = (desc.width * scale.y) / (desc.height * scale.x);
+
+    // compute the desired bloom buffer size
+    float bloomHeight = bloomOptions.resolution;
+    float bloomWidth  = bloomHeight * aspect;
+
+    // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
+    // to scaling up) so that the amount of blooming doesn't decrease. However, the resolution
+    // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
+    // BloomOptions::levels.
+    if (bloomOptions.anamorphism >= 1.0f) {
+        bloomWidth *= 1.0 / bloomOptions.anamorphism;
+    } else {
+        bloomHeight *= bloomOptions.anamorphism;
     }
-    uint32_t& major = width > height ? width : height;
-    uint32_t& minor = width < height ? width : height;
-    uint32_t newMinor = clamp(bloomOptions.resolution,
-            1u << bloomOptions.levels, std::min(minor, 1u << kMaxBloomLevels));
-    major = major * uint64_t(newMinor) / minor;
-    minor = newMinor;
+
+    // convert back to integer width/height
+    const uint32_t width  = std::max(1.0f, std::floor(bloomWidth));
+    const uint32_t height = std::max(1.0f, std::floor(bloomHeight));
 
     // we might need to adjust the max # of levels
+    const uint32_t major = std::max(bloomWidth,  bloomHeight);
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
     bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
     bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
