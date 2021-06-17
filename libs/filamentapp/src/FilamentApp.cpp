@@ -522,8 +522,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         windowFlags |= SDL_WINDOW_HIDDEN;
     }
 
-    mBackend = config.backend;
-
     // Even if we're in headless mode, we still need to create a window, otherwise SDL will not poll
     // events.
     mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
@@ -540,7 +538,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mFilamentApp->mEngine = Engine::create(config.backend);
 
         // get the resolved backend
-        config.backend = mFilamentApp->mEngine->getBackend();
+        mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 
         void* nativeWindow = ::getNativeWindow(mWindow);
         void* nativeSwapChain = nativeWindow;
