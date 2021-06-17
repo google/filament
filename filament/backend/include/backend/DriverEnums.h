@@ -61,9 +61,9 @@ static constexpr size_t CONFIG_BINDING_COUNT = 8;
  */
 enum class Backend : uint8_t {
     DEFAULT = 0,  //!< Automatically selects an appropriate driver for the platform.
-    OPENGL = 1,   //!< Selects the OpenGL driver (which supports OpenGL ES as well).
-    VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it.
-    METAL = 3,    //!< Selects the Metal driver if the platform supports it.
+    OPENGL = 1,   //!< Selects the OpenGL/ES driver (default on Android)
+    VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it (default on Linux/Windows)
+    METAL = 3,    //!< Selects the Metal driver if the platform supports it (default on MacOS/iOS).
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
