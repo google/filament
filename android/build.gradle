@@ -161,8 +161,9 @@ subprojects {
                 ndk {
                     abiFilters(*rootProject.ext.abis)
                 }
-            }
 
+                consumerProguardFiles '../proguard-rules.pro'
+            }
 
             externalNativeBuild {
                 cmake {

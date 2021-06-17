@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: User materials can now provide custom lighting/surface shading, please consult
   the [materials documentation](https://google.github.io/filament/Materials.html) for details.
+- android: AAR libraries now properly include their ProGuard rules.
 
 ## v1.10.4
 
