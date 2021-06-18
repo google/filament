@@ -40,7 +40,7 @@ Program& Program::diagnostics(utils::CString&& name, uint8_t variant) noexcept {
 }
 
 Program& Program::shader(Program::Shader shader, void const* data, size_t size) noexcept {
-    std::vector<uint8_t> blob(size);
+    ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);
     return *this;
@@ -54,8 +54,9 @@ Program& Program::setUniformBlock(size_t bindingPoint, utils::CString uniformBlo
 Program& Program::setSamplerGroup(size_t bindingPoint,
         const Program::Sampler* samplers, size_t count) noexcept {
     auto& samplerList = mSamplerGroups[bindingPoint];
-    samplerList.clear();
-    samplerList.insert(samplerList.begin(), samplers, samplers + count);
+    samplerList.reserve(count);
+    samplerList.resize(count);
+    std::copy_n(samplers, count, samplerList.data());
     mHasSamplers = true;
     return *this;
 }
