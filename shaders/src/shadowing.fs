@@ -304,23 +304,26 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 // VSM
 //------------------------------------------------------------------------------
 
-highp float linstep(const highp float a, const highp float b, const highp float v) {
-    return clamp((v - a) / (b - a), 0.0, 1.0);
+float linstep(const float min, const float max, const float v) {
+    // we could use smoothstep() too
+    return clamp((v - min) / (max - min), 0.0, 1.0);
 }
 
-highp float reduceLightBleed(const highp float pMax, const highp float amount) {
+float reduceLightBleed(const float pMax, const float amount) {
+    // Remove the [0, amount] tail and linearly rescale (amount, 1].
     return linstep(amount, 1.0, pMax);
 }
 
-highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
-        const highp float minVariance, const highp float lightBleedReduction) {
+float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
+        const highp float minVariance, const float lightBleedReduction) {
     // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
 
     highp float variance = moments.y - (moments.x * moments.x);
     variance = max(variance, minVariance);
 
     highp float d = mean - moments.x;
-    highp float pMax = variance / (variance + d * d);
+    float pMax = variance / (variance + d * d);
+
     pMax = reduceLightBleed(pMax, lightBleedReduction);
 
     return mean <= moments.x ? 1.0 : pMax;
@@ -335,7 +338,10 @@ highp float chebyshevUpperBound(const highp vec2 moments, const highp float mean
  * space. The output is a filtered visibility factor that can be used to multiply
  * the light intensity.
  */
-float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec3 shadowPosition) {
+
+// PCF sampling
+float shadow(const mediump sampler2DArrayShadow shadowMap,
+        const uint layer, vec3 shadowPosition) {
     vec2 size = vec2(textureSize(shadowMap, 0));
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
@@ -349,20 +355,23 @@ float shadow(const mediump sampler2DArrayShadow shadowMap, const uint layer, vec
 #endif
 }
 
-highp float shadowVsm(const highp sampler2DArray shadowMap, const uint layer,
-        const highp vec3 shadowPosition) {
+// VSM sampling
+float shadow(const mediump sampler2DArray shadowMap,
+        const uint layer, const highp vec3 shadowPosition) {
+    // note: shadowPosition.z is in linear light space normalized to [0, 1]
+    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
+    //  see: computeLightSpacePosition() in common_shadowing.fs
+
+    // Read the shadow map with all available filtering
     highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
     highp float depth = shadowPosition.z;
 
-    // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
-    // value from the depth texture (which is never greater than 1.0) with a greater-than-one
-    // comparison value (which is possible with floating-point formats).
-    depth = min(depth, 1.0f);
+    // EVSM depth warping
+    depth = depth * 2.0 - 1.0;
+    depth = exp(frameUniforms.vsmExponent * depth);
 
-    // TODO: bias and lightBleedReduction should be uniforms
-    const float bias = 0.01;
-    const float lightBleedReduction = 0.2;
-
-    const float minVariance = bias * 0.001;
+    highp float depthScale = frameUniforms.vsmDepthScale * depth;
+    highp float minVariance = depthScale * depthScale;
+    float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
     return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
 }

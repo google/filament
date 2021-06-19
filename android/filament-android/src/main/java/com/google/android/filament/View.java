@@ -687,20 +687,44 @@ public class View {
     /**
      * View-level options for VSM shadowing.
      *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
      * @see View#setVsmShadowOptions
      */
     public static class VsmShadowOptions {
         /**
          * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
          * than 0, mipmaps will automatically be generated each frame for all lights.
+         * This implies mipmapping below.
          *
          * <p>
          * The number of anisotropic samples = 2 ^ vsmAnisotropy.
          * </p>
          *
-         * <strong>Warning: This API is still experimental and subject to change.</strong>
          */
         public int anisotropy = 0;
+
+        /**
+         * Whether to generate mipmaps for all VSM shadow maps.
+         */
+        public boolean mipmapping = false;
+
+        /**
+         * EVSM exponent
+         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
+         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
+         */
+        public float exponent = 5.54f;
+
+        /**
+         * VSM minimum variance scale, must be positive.
+         */
+        public float minVarianceScale = 1.0f;
+
+        /**
+         * VSM light bleeding reduction amount, between 0 and 1.
+         */
+        public float lightBleedReduction = 0.2f;
     }
 
     /**
@@ -1308,7 +1332,8 @@ public class View {
      */
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
-        nSetVsmShadowOptions(getNativeObject(), options.anisotropy);
+        nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
+                options.exponent, options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1522,7 +1547,7 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

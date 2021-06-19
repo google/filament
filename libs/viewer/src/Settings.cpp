@@ -222,6 +222,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         CHECK_KEY(tok);
         if (0 == compare(tok, jsonChunk, "anisotropy")) {
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
+        } else if (0 == compare(tok, jsonChunk, "mipmapping")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
+        } else if (0 == compare(tok, jsonChunk, "exponent")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->exponent);
+        } else if (0 == compare(tok, jsonChunk, "minVarianceScale")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minVarianceScale);
+        } else if (0 == compare(tok, jsonChunk, "lightBleedReduction")) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lightBleedReduction);
         } else {
             slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1275,7 +1283,11 @@ static std::ostream& operator<<(std::ostream& out, const DynamicLightingSettings
 
 static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
-        << "\"anisotropy\": " << int(in.anisotropy) << "\n"
+        << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
+        << "\"mipmapping\": " << int(in.mipmapping) << ",\n"
+        << "\"exponent\": " << int(in.exponent) << ",\n"
+        << "\"minVarianceScale\": " << int(in.minVarianceScale) << ",\n"
+        << "\"lightBleedReduction\": " << int(in.lightBleedReduction) << "\n"
         << "}";
 }
 
