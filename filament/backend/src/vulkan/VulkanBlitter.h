@@ -29,7 +29,7 @@ class VulkanSamplerCache;
 
 struct VulkanProgram;
 // struct VulkanRenderPrimitive;
-struct VulkanVertexBuffer;
+// struct VulkanVertexBuffer;
 struct VulkanUniformBuffer;
 
 class VulkanBlitter {
