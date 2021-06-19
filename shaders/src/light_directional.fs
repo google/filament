@@ -45,11 +45,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
-#if defined(HAS_VSM)
-            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#else
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#endif
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
             if (objectUniforms.screenSpaceContactShadows != 0u) {

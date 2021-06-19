@@ -242,15 +242,17 @@ public class LightManager {
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         public float constantBias = 0.05f;
 
         /** Amount by which the maximum sampling error is scaled. The resulting value is used
          * to move the shadow away from the fragment normal. Should be 1.0.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         public float normalBias = 0.4f;
 
-        /** Distance from the camera after which shadows are clipped. this is used to clip
+        /** Distance from the camera after which shadows are clipped. This is used to clip
          * shadows that are too far and wouldn't contribute to the scene much, improving
          * performance and quality. This value is always positive.
          * Use 0.0f to use the camera far distance.

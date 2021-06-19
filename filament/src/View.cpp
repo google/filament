@@ -690,14 +690,43 @@ void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) cons
 }
 
 void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
-    mShadowMapManager.prepareShadow(texture, *this);
+    uint8_t anisotropy = 0;
+    SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
+    if (hasVsm()) {
+        auto const& vsmShadowOptions = mVsmShadowOptions;
+        anisotropy = vsmShadowOptions.anisotropy;
+        if (anisotropy > 0 || vsmShadowOptions.mipmapping) {
+            filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
+        }
+    }
+
+    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, {
+            texture, {
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = filterMin,
+                    .anisotropyLog2 = anisotropy,
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE, // ignored for VSM
+                    .compareFunc = SamplerCompareFunc::GE                  // ignored for VSM
+            }});
+}
+
+void FView::prepareShadowMap() const noexcept {
+    auto const& vsmShadowOptions = mVsmShadowOptions;
+    // fp16: max 5.54f, fp32: max 42.0
+    float vsmExponent = vsmShadowOptions.exponent;
+    float vsmDepthScale = vsmShadowOptions.minVarianceScale * 0.01f * vsmExponent;
+    float vsmLightBleedReduction = vsmShadowOptions.lightBleedReduction;
+    mPerViewUb.setUniform(offsetof(PerViewUib, vsmExponent),            vsmExponent);
+    mPerViewUb.setUniform(offsetof(PerViewUib, vsmDepthScale),          vsmDepthScale);
+    mPerViewUb.setUniform(offsetof(PerViewUib, vsmLightBleedReduction), vsmLightBleedReduction);
 }
 
 void FView::cleanupRenderPasses() const noexcept {
     auto& samplerGroup = mPerViewSb;
-    samplerGroup.setSampler(PerViewSib::SSAO, {}, {});
-    samplerGroup.setSampler(PerViewSib::SSR, {}, {});
-    samplerGroup.setSampler(PerViewSib::STRUCTURE, {}, {});
+    samplerGroup.clearSampler(PerViewSib::SSAO);
+    samplerGroup.clearSampler(PerViewSib::SSR);
+    samplerGroup.clearSampler(PerViewSib::STRUCTURE);
+    samplerGroup.clearSampler(PerViewSib::SHADOW_MAP);
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {

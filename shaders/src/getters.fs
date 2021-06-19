@@ -141,6 +141,7 @@ highp vec3 getCascadeLightSpacePosition(uint cascade) {
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.
     if (cascade == 0u) {
+        // Note: this branch may cause issues with derivatives
         return getLightSpacePosition();
     }
 

@@ -345,6 +345,7 @@ public:
     /**
      * View-level options for VSM Shadowing.
      * @see setVsmShadowOptions()
+     * @warning This API is still experimental and subject to change.
      */
     struct VsmShadowOptions {
         /**
@@ -352,10 +353,30 @@ public:
          * than 0, mipmaps will automatically be generated each frame for all lights.
          *
          * The number of anisotropic samples = 2 ^ vsmAnisotropy.
-         *
-         * @warning This API is still experimental and subject to change.
          */
         uint8_t anisotropy = 0;
+
+        /**
+         * Whether to generate mipmaps for all VSM shadow maps.
+         */
+        bool mipmapping = false;
+
+        /**
+         * EVSM exponent.
+         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
+         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
+         */
+        float exponent = 5.54f;
+
+        /**
+         * VSM minimum variance scale, must be positive.
+         */
+        float minVarianceScale = 0.5f;
+
+        /**
+         * VSM light bleeding reduction amount, between 0 and 1.
+         */
+         float lightBleedReduction = 0.15f;
     };
 
     /**

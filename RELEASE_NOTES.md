@@ -4,6 +4,7 @@ This file contains one line summaries of commits that are worthy of mentioning i
 A new header is inserted each time a *tag* is created.
 
 ## v1.10.6 (currently main branch)
+- engine: Use exponential VSM and improve VSM user settings [⚠️ **Recompile Materials for VSM**].
 
 ## v1.10.5
 

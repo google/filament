@@ -21,20 +21,30 @@ void main() {
 #if defined(HAS_VSM)
     // For VSM, we use the linear light space Z coordinate as the depth metric, which works for both
     // directional and spot lights.
-    // We negate it, because we're using a right-handed coordinate system (-Z points forward).
-    highp float depth = -mulMat4x4Float3(frameUniforms.viewFromWorldMatrix, vertex_worldPosition).z;
+    // The value is guaranteed to be between [0, -zfar] by construction of viewFromWorldMatrix,
+    // (see ShadowMap.cpp).
+    highp float z = (frameUniforms.viewFromWorldMatrix * vec4(vertex_worldPosition, 1.0)).z;
 
-    // Scale by cameraFar to help prevent a floating point overflow below when squaring the depth.
-    depth /= abs(frameUniforms.cameraFar);
+    // rescale the depth between [0, 1]
+    highp float depth = -z / abs(frameUniforms.cameraFar);
 
+    // We use positive only EVSM which helps a lot with light bleeding.
+    depth = depth * 2.0 - 1.0;
+    depth = exp(frameUniforms.vsmExponent * depth);
+
+    // computes the moments
+    // See GPU Gems 3
+    // https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-8-summed-area-variance-shadow-maps
+    highp vec2 moments;
+
+    // the first moment is just the depth (average)
+    moments.x = depth;
+
+    // compute the 2nd moment over the pixel extents.
     highp float dx = dFdx(depth);
     highp float dy = dFdy(depth);
+    moments.y = depth * depth + 0.25 * (dx * dx + dy * dy);
 
-    // Output the first and second depth moments.
-    // The first moment is mean depth.
-    // The second moment is mean depth squared.
-    // These values are retrieved when sampling the shadow map to compute variance.
-    highp float bias = 0.25 * (dx * dx + dy * dy);
-    fragColor = vec4(depth, depth * depth + bias, 0.0, 0.0);
+    fragColor = vec4(moments, 0.0, 0.0);
 #endif
 }
