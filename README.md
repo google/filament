@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.10.4'
+    implementation 'com.google.android.filament:filament-android:1.10.5'
 }
 ```
 
@@ -63,7 +63,7 @@ A much smaller alternative to `filamat-android` that can only generate OpenGL sh
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.10.4'
+pod 'Filament', '~> 1.10.5'
 ```
 
 ### Snapshots
