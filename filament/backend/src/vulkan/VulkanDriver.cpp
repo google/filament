@@ -26,13 +26,17 @@
 
 #include <utils/Panic.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/trap.h>
+#include <utils/FixedCapacityVector.h>
 
 #ifndef NDEBUG
 #include <set>
 #endif
 
 using namespace bluevk;
+
+using utils::FixedCapacityVector;
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -100,6 +104,19 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Load Vulkan entry points.
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
+    // Determine if the VK_EXT_debug_utils instance extension is available.
+    mContext.debugUtilsSupported = false;
+    uint32_t availableExtsCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, nullptr);
+    utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, availableExts.data());
+    for  (const auto& extProps : availableExts) {
+        if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+            mContext.debugUtilsSupported = true;
+            break;
+        }
+    }
+
     VkInstanceCreateInfo instanceCreateInfo = {};
 
     bool validationFeaturesSupported = false;
@@ -115,11 +132,13 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 #endif
     };
 
+    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
+
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
+    FixedCapacityVector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-    std::vector<const char*> enabledLayers;
+    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (const auto& desired : DESIRED_LAYERS) {
         for (const VkLayerProperties& layer : availableLayers) {
             const utils::CString availableLayer(layer.layerName);
@@ -136,7 +155,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         // Check if VK_EXT_validation_features is supported.
         uint32_t availableExtsCount = 0;
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
-        std::vector<VkExtensionProperties> availableExts(availableExtsCount); // TODO: use FixedCapacityVector
+        utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
         vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
         for  (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
@@ -156,9 +175,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     }
 #endif // VK_ENABLE_VALIDATION
 
-    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 4
-    // instance extensions here in the common code. So that's a max of 6.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 6;
+    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
+    // instance extensions here in the common code. So that's a max of 7.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 7;
     const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
     uint32_t enabledExtensionCount = 0;
 
@@ -168,13 +187,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 #if VK_ENABLE_VALIDATION
 #if defined(ANDROID)
     ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
-#else
-    ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
 #endif
     if (validationFeaturesSupported) {
         ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_validation_features";
     }
 #endif
+    if (mContext.debugUtilsSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_utils";
+    }
 
     // Request platform-specific extensions.
     for (uint32_t i = 0; i < requiredExtensionCount; ++i) {
@@ -211,13 +231,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
             vkCreateDebugReportCallbackEXT;
 
 #if VK_ENABLE_VALIDATION
-
-    // We require the VK_EXT_debug_utils instance extension on all non-Android platforms when
-    // validation is enabled.
-    #ifndef ANDROID
-    mContext.debugUtilsSupported = true;
-    #endif
-
     if (mContext.debugUtilsSupported) {
         VkDebugUtilsMessengerCreateInfoEXT createInfo = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
@@ -244,14 +257,12 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Initialize the following fields: physicalDevice, physicalDeviceProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
-    selectPhysicalDevice(mContext);
+    mContext.selectPhysicalDevice();
 
-    // Initialize device and graphicsQueue.
-    createLogicalDevice(mContext);
+    // Initialize device, graphicsQueue, and command buffer manager.
+    mContext.createLogicalDevice();
 
-    mContext.commands = new VulkanCommands(mContext.device, mContext.graphicsQueueFamilyIndex);
-
-    createEmptyTexture(mContext, mStagePool);
+    mContext.createEmptyTexture(mStagePool);
 
     mContext.commands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mContext.device);
@@ -259,8 +270,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
-    mContext.finalDepthFormat = findSupportedFormat(mContext,
-        { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 },
+    const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 };
+    mContext.finalDepthFormat = mContext.findSupportedFormat(
+        utils::Slice<VkFormat>(formats, formats + 2),
         VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
     // For diagnostic purposes, print useful information about available depth formats.
@@ -320,7 +332,10 @@ void VulkanDriver::terminate() {
     mFramebufferCache.reset();
     mSamplerCache.reset();
 
+    vmaDestroyPool(mContext.allocator, mContext.vmaPoolGPU);
+    vmaDestroyPool(mContext.allocator, mContext.vmaPoolCPU);
     vmaDestroyAllocator(mContext.allocator);
+
     vkDestroyQueryPool(mContext.device, mContext.timestamps.pool, VKALLOC);
     vkDestroyCommandPool(mContext.device, mContext.commandPool, VKALLOC);
     vkDestroyDevice(mContext.device, VKALLOC);
@@ -388,7 +403,7 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
 void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
-            mStagePool, mDisposer, size, usage);
+            mStagePool, size, usage);
     mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
         destruct_handle<VulkanUniformBuffer>(mHandleMap, ubh);
     });
@@ -402,8 +417,8 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
         // Decrement the refcount of the uniform buffer, but schedule it for destruction a few
         // frames in the future. To be safe, we need to assume that the current command buffer is
         // still using it somewhere.
-        mDisposer.removeReference(buffer);
         mDisposer.acquire(buffer);
+        mDisposer.removeReference(buffer);
     }
 }
 
@@ -421,7 +436,7 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffe
         uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
         BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
-            mDisposer, bufferCount, attributeCount, elementCount, attributes);
+            bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
         destruct_handle<VulkanVertexBuffer>(mHandleMap, vbh);
     });
@@ -438,7 +453,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
         ElementType elementType, uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
-            mDisposer, elementSize, indexCount);
+            elementSize, indexCount);
     mDisposer.createDisposable(indexBuffer, [this, ibh] () {
         destruct_handle<VulkanIndexBuffer>(mHandleMap, ibh);
     });
@@ -454,7 +469,7 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType) {
     auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh, mContext, mStagePool,
-            mDisposer, byteCount);
+            byteCount);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
        destruct_handle<VulkanBufferObject>(mHandleMap, boh);
     });
@@ -833,15 +848,17 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
-    ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
+    auto ib = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
+    ib->buffer->loadFromCpu(p.buffer, byteOffset, p.size);
+    mDisposer.acquire(ib);
     scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
-    auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
-    bo.buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    auto bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    bo->buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    mDisposer.acquire(bo);
     scheduleDestroy(std::move(bd));
 }
 
@@ -958,8 +975,9 @@ bool VulkanDriver::canGenerateMipmaps() {
 
 void VulkanDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
     if (data.size > 0) {
-        auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+        auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
+        mDisposer.acquire(buffer);
         scheduleDestroy(std::move(data));
     }
 }
@@ -1069,6 +1087,18 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         assert_invariant(fbkey.depth);
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
+
+    // Assign a label to the framebuffer for debugging purposes.
+    if (UTILS_UNLIKELY(mContext.debugUtilsSupported) && !mContext.currentDebugMarker.empty()) {
+        const VkDebugUtilsObjectNameInfoEXT info = {
+            VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            nullptr,
+            VK_OBJECT_TYPE_FRAMEBUFFER,
+            reinterpret_cast<uint64_t>(vkfb),
+            mContext.currentDebugMarker.c_str(),
+        };
+        vkSetDebugUtilsObjectNameEXT(mContext.device, &info);
+    }
 
     // The current command buffer now owns a reference to the render target and its attachments.
     mDisposer.acquire(rt);
@@ -1356,6 +1386,7 @@ void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
             .color = {0, 1, 0, 1},
         };
         vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+        mContext.currentDebugMarker = string;
     } else if (mContext.debugMarkersSupported) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {};
         markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
@@ -1369,6 +1400,7 @@ void VulkanDriver::popGroupMarker(int) {
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
         vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
+        mContext.currentDebugMarker.clear();
     } else if (mContext.debugMarkersSupported) {
         vkCmdDebugMarkerEndEXT(cmdbuffer);
     }
@@ -1415,15 +1447,15 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(mContext, memReqs.memoryTypeBits,
+        .memoryTypeIndex = mContext.selectMemoryType(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
 
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
-    // TODO: replace waitForIdle with an image barrier.
-    waitForIdle(mContext);
+    mContext.commands->flush();
+    mContext.commands->wait();
 
     // Transition the staging image layout.
 
@@ -1505,7 +1537,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = srcTexture ? getTextureLayout(srcTexture->usage) : present,
+            .newLayout = srcTexture ? mContext.getTextureLayout(srcTexture->usage) : present,
             .subresources = srcRange,
             .srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
             .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1778,7 +1810,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             samplers[bindingPoint] = {
                 .sampler = vksampler,
                 .imageView = texture->getPrimaryImageView(),
-                .imageLayout = getTextureLayout(texture->usage)
+                .imageLayout = mContext.getTextureLayout(texture->usage)
             };
 
             if (mContext.currentRenderPass.depthFeedback == texture) {

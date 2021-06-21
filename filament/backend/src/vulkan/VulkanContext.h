@@ -32,10 +32,10 @@
 #pragma clang diagnostic pop
 
 #include <utils/Condition.h>
+#include <utils/Slice.h>
 #include <utils/Mutex.h>
 
 #include <memory>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -72,6 +72,14 @@ struct VulkanRenderPass {
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
+    void selectPhysicalDevice();
+    void createLogicalDevice();
+    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
+    VkFormat findSupportedFormat(utils::Slice<VkFormat> candidates, VkImageTiling tiling,
+            VkFormatFeatureFlags features);
+    VkImageLayout getTextureLayout(TextureUsage usage) const;
+    void createEmptyTexture(VulkanStagePool& stagePool);
+
     VkInstance instance;
     VkPhysicalDevice physicalDevice;
     VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -82,30 +90,22 @@ struct VulkanContext {
     VulkanTimestamps timestamps;
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
-    bool debugMarkersSupported;
-    bool debugUtilsSupported;
-    bool portabilitySubsetSupported;
-    bool maintenanceSupported[3];
+    bool debugMarkersSupported = false;
+    bool debugUtilsSupported = false;
+    bool portabilitySubsetSupported = false;
+    bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
     VulkanSwapChain* currentSurface;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;
+    VmaPool vmaPoolGPU;
+    VmaPool vmaPoolCPU;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
+    std::string currentDebugMarker;
 };
-
-void selectPhysicalDevice(VulkanContext& context);
-void createLogicalDevice(VulkanContext& context);
-
-uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
-VulkanAttachment& getSwapChainAttachment(VulkanContext& context);
-void waitForIdle(VulkanContext& context);
-VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
-        VkImageTiling tiling, VkFormatFeatureFlags features);
-VkImageLayout getTextureLayout(TextureUsage usage);
-void createEmptyTexture(VulkanContext& context, VulkanStagePool& stagePool);
 
 } // namespace filament
 } // namespace backend

@@ -3,7 +3,14 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.4 (currently main branch)
+## v1.10.5 (currently main branch)
+
+## v1.10.4
+
+- engine: improvements to internal job system.
+- Vulkan: performance improvements on Mali.
+- gltfio: improvements to load time for large models.
+- WebGL: remove bogus stride argument, fix `BindingType` TypeScript definition.
 
 ## v1.10.3
 

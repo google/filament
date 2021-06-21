@@ -440,18 +440,18 @@ Filament.loadClassExtensions = function() {
         this._positions(this.posPointer, stride);
     };
 
-    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer, stride = 0) {
+    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.t16Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t16Pointer);
-        this._triangles16(this.t16Pointer, stride);
+        this._triangles16(this.t16Pointer);
     };
 
-    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer, stride = 0) {
+    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.t32Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t32Pointer);
-        this._triangles32(this.t32Pointer, stride);
+        this._triangles32(this.t32Pointer);
     };
 
     Filament.SurfaceOrientation$Builder.prototype.build = function() {

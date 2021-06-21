@@ -88,7 +88,7 @@ VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
 }
 
-static VulkanAttachment createAttachment(VulkanAttachment spec) {
+static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachment spec) {
     if (spec.texture == nullptr) {
         return spec;
     }
@@ -98,7 +98,7 @@ static VulkanAttachment createAttachment(VulkanAttachment spec) {
         .view = {},
         .memory = {},
         .texture = spec.texture,
-        .layout = getTextureLayout(spec.texture->usage),
+        .layout = context.getTextureLayout(spec.texture->usage),
         .level = spec.level,
         .layer = spec.layer
     };
@@ -118,7 +118,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     // miplevel and array layer.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
-        mColor[index] = createAttachment(spec);
+        mColor[index] = createAttachment(context, spec);
         VulkanTexture* texture = spec.texture;
         if (texture == nullptr) {
             continue;
@@ -130,7 +130,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     // For the depth attachment, create (or fetch from cache) a VkImageView that selects a specific
     // miplevel and array layer.
     const VulkanAttachment& depthSpec = depthStencil[0];
-    mDepth = createAttachment(depthSpec);
+    mDepth = createAttachment(context, depthSpec);
     VulkanTexture* depthTexture = mDepth.texture;
     if (depthTexture) {
         mDepth.view = depthTexture->getImageView(mDepth.level, mDepth.layer,
@@ -152,7 +152,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         if (texture && texture->samples == 1) {
             VulkanTexture* msTexture = new VulkanTexture(context, texture->target, level,
                     texture->format, samples, width, height, depth, texture->usage, stagePool);
-            mMsaaAttachments[index] = createAttachment({ .texture = msTexture });
+            mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
             mMsaaAttachments[index].view = msTexture->getImageView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT);
         }
         if (texture && texture->samples > 1) {
@@ -173,7 +173,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     // Create sidecar MSAA texture for the depth attachment.
     VulkanTexture* msTexture = new VulkanTexture(context, depthTexture->target, level,
             depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
-    mMsaaDepthAttachment = createAttachment({
+    mMsaaDepthAttachment = createAttachment(context, {
         .format = {},
         .image = {},
         .view = {},
@@ -216,7 +216,7 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
 }
 
 VulkanAttachment VulkanRenderTarget::getColor(int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : getSwapChainAttachment(mContext);
+    return (mOffscreen || target > 0) ? mColor[target] : mContext.currentSurface->getColor();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
@@ -249,14 +249,14 @@ int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const 
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanDisposer& disposer,  uint8_t bufferCount, uint8_t attributeCount,
+        uint8_t bufferCount, uint8_t attributeCount,
         uint32_t elementCount, AttributeArray const& attribs) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
-        buffers(bufferCount) {}
+        buffers(bufferCount, nullptr) {}
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanDisposer& disposer, uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool), mDisposer(disposer) {
+        uint32_t numBytes, backend::BufferUsage usage)
+        : mContext(context), mStagePool(stagePool) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -281,7 +281,6 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
 
     VkBufferCopy region { .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-    mDisposer.acquire(this);
 
     // First, ensure that the copy finishes before the next draw call.
     // Second, in case the user decides to upload another chunk (without ever using the first one)

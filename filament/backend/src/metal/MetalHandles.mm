@@ -887,7 +887,7 @@ void MetalFence::encode() {
         [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
                 uint64_t value) {
             if (auto s = weakState.lock()) {
-                std::unique_lock<std::mutex> guard(s->mutex);
+                std::lock_guard<std::mutex> guard(s->mutex);
                 s->status = FenceStatus::CONDITION_SATISFIED;
                 s->cv.notify_all();
             }

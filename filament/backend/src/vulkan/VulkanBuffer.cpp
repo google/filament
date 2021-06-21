@@ -24,18 +24,15 @@ namespace filament {
 namespace backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanDisposer& disposer, VulkanDisposer::Key key, VkBufferUsageFlags usage,
-        uint32_t numBytes) : mContext(context), mStagePool(stagePool), mDisposer(disposer),
-        mDisposerKey(key) {
+        VkBufferUsageFlags usage, uint32_t numBytes) : mContext(context), mStagePool(stagePool) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = numBytes,
         .usage = usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT
     };
-    VmaAllocationCreateInfo allocInfo {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY
-    };
+
+    VmaAllocationCreateInfo allocInfo { .pool = context.vmaPoolGPU };
     vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
 }
 
@@ -56,7 +53,6 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
 
     VkBufferCopy region { .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-    mDisposer.acquire(mDisposerKey);
 
     // Firstly, ensure that the copy finishes before the next draw call.
     // Secondly, in case the user decides to upload another chunk (without ever using the first one)

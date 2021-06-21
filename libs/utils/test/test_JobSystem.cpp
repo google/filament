@@ -208,7 +208,7 @@ TEST(JobSystem, JobSystemParallelChildren) {
     JobSystem::Job* root = js.createJob<User, &User::func>(nullptr, &j);
     for (int i=0 ; i<256 ; i++) {
         JobSystem::Job* job = js.createJob<User, &User::func>(root, &j);
-        js.run(job, JobSystem::DONT_SIGNAL);
+        js.run(job);
     }
     js.runAndWait(root);
 

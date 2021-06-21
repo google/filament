@@ -20,16 +20,13 @@
 #include <tsl/robin_map.h>
 
 #include <functional>
-#include <memory>
-#include <vector>
 
 namespace filament {
 namespace backend {
 
 // VulkanDisposer tracks resources (such as textures or vertex buffers) that need deferred
-// destruction due to potential use by one or more reference holders. An example of a reference
-// holder is an active Vulkan command buffer. Resources are represented with void* to allow callers
-// to use any type of handle.
+// destruction due to potential use by a Vulkan command buffer. Resources are represented with void*
+// to allow callers to use any type of handle.
 class VulkanDisposer {
 public:
     using Key = const void*;
@@ -37,14 +34,14 @@ public:
     // Adds the given resource to the disposer and sets its reference count to 1.
     void createDisposable(Key resource, std::function<void()> destructor) noexcept;
 
-    // Decrements the reference count and moves it to the graveyard if it becomes 0.
+    // Decrements the reference count.
     void removeReference(Key resource) noexcept;
 
     // Increments the reference count and auto-decrements it after FRAMES_BEFORE_EVICTION frames.
-    // This is helpful when the current command buffer has a reference to the resource.
+    // This is used to indicate that the current command buffer has a reference to the resource.
     void acquire(Key resource) noexcept;
 
-    // Invokes the destructor function for each disposable in the graveyard.
+    // Invokes the destructor function for each disposable with a 0 refcount.
     void gc() noexcept;
 
     // Invokes the destructor function for all disposables, regardless of reference count.
@@ -57,7 +54,6 @@ private:
         std::function<void()> destructor = []() {};
     };
     tsl::robin_map<Key, Disposable> mDisposables;
-    std::vector<Disposable> mGraveyard;
 };
 
 } // namespace filament

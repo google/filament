@@ -118,11 +118,11 @@ RenderPass::Command* RenderPass::appendCommands(CommandTypeFlags const commandTy
                 cameraPosition, cameraForwardVector);
     };
 
-    auto *jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
-            std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 8>());
-
-    { // scope for systrace
-        SYSTRACE_NAME("jobCommandsParallel");
+    if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
+        work(vr.first, vr.size());
+    } else {
+        auto* jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
+                std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 4>());
         js.runAndWait(jobCommandsParallel);
     }
 

@@ -170,7 +170,7 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
         transitionImageLayout(cmdbuffer, transitionHelper({
             .image = src.image,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = getTextureLayout(src.texture->usage),
+            .newLayout = mContext.getTextureLayout(src.texture->usage),
             .subresources = srcRange
         }));
     } else if (!mContext.currentSurface->headlessQueue) {
@@ -184,8 +184,9 @@ void VulkanBlitter::blitFast(VkImageAspectFlags aspect, VkFilter filter,
 
     // Determine the desired texture layout for the destination while ensuring that the default
     // render target is supported, which has no associated texture.
-    const VkImageLayout desiredLayout = dst.texture ? getTextureLayout(dst.texture->usage) :
-            getSwapChainAttachment(mContext).layout;
+    const VkImageLayout desiredLayout = dst.texture ?
+            mContext.getTextureLayout(dst.texture->usage) :
+            mContext.currentSurface->getColor().layout;
 
     transitionImageLayout(cmdbuffer, transitionHelper({
         .image = dst.image,

@@ -174,6 +174,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mCameraManager(*this),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(std::this_thread::get_id())
@@ -184,6 +185,14 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
+}
+
+uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
+    // 1 thread for the user, 1 thread for the backend
+    int threadCount = std::thread::hardware_concurrency() - 2;
+    // make sure we have at least 1 thread though
+    threadCount = std::max(1, threadCount);
+    return threadCount;
 }
 
 /*
@@ -388,14 +397,10 @@ void FEngine::gc() {
     auto *parent = js.createJob();
     auto em = std::ref(mEntityManager);
 
-    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em),
-            JobSystem::DONT_SIGNAL);
+    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em));
+    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em));
+    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em));
+    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em));
 
     js.runAndWait(parent);
 }
