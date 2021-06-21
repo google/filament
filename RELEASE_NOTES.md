@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.4
 
+- engine: improvements to internal job system.
+- Vulkan: performance improvements on Mali.
+- gltfio: improvements to load time for large models.
+- WebGL: remove bogus stride argument, fix `BindingType` TypeScript definition.
+
 ## v1.10.3
 
 - android: use `debug.filament.backend` system property to select the desired backend.
