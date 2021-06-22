@@ -417,6 +417,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
 
     mPipelineCache.bindSamplers(samplers);
 
+    auto previousUbo = mPipelineCache.getUniformBufferBinding(0);
     mPipelineCache.bindUniformBuffer(0, mParamsBuffer->getGpuBuffer());
 
     if (!mPipelineCache.bindDescriptors(cmdbuffer)) {
@@ -455,6 +456,8 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | // <== For Mali
             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             0, 1, &barrier, 0, nullptr, 0, nullptr);
+
+    mPipelineCache.bindUniformBuffer(0, previousUbo.buffer, previousUbo.offset, previousUbo.size);
 }
 
 } // namespace filament
