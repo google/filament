@@ -281,7 +281,7 @@ if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders)
+    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)

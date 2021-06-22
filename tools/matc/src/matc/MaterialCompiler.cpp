@@ -36,6 +36,8 @@
 
 #include "sca/builtinResource.h"
 
+#include <smolv.h>
+
 using namespace utils;
 using namespace filamat;
 using namespace std::placeholders;
@@ -269,7 +271,8 @@ bool MaterialCompiler::run(const Config& config) {
     if (config.rawShaderMode()) {
         const std::string extension = materialFilePath.getExtension();
         glslang::InitializeProcess();
-        bool success = compileRawShader(buffer.get(), size, config.getOutput(), extension.c_str());
+        bool success = compileRawShader(buffer.get(), size, config.isDebug(), config.getOutput(),
+                extension.c_str());
         glslang::FinalizeProcess();
         return success;
     }
@@ -453,7 +456,7 @@ bool MaterialCompiler::parseMaterial(const char* buffer, size_t size,
     return true;
 }
 
-bool MaterialCompiler::compileRawShader(const char* glsl, size_t size,
+bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDebug,
         Config::Output* output, const char* ext) const noexcept {
     using namespace glslang;
     using namespace filament::backend;
@@ -505,7 +508,14 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size,
         return false;
     }
 
-    output->write((const uint8_t*) spirv.data(), sizeof(uint32_t) * spirv.size());
+    const uint32_t flags = isDebug ? 0 : smolv::kEncodeFlagStripDebugInfo;
+
+    smolv::ByteArray compressed;
+    if (!smolv::Encode(spirv.data(), spirv.size() * 4, compressed, flags)) {
+        utils::slog.e << "Error with SPIRV compression" << utils::io::endl;
+    }
+
+    output->write(compressed.data(), compressed.size());
     output->close();
 
     return true;
