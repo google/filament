@@ -18,13 +18,17 @@
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+
+#include <smolv.h>
 
 #include "generated/vkshaders/vkshaders.h"
 
 #define FILAMENT_VULKAN_CHECK_BLIT_FORMAT 0
 
 using namespace bluevk;
+using namespace utils;
 
 namespace filament {
 namespace backend {
@@ -226,22 +230,25 @@ void VulkanBlitter::lazyInit() noexcept {
     }
     assert_invariant(mContext.device);
 
-    VkShaderModuleCreateInfo moduleInfo = {};
-    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    VkResult result;
+    auto decode = [device = mContext.device](const uint8_t* compressed, int compressedSize) {
+        const size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
+        FixedCapacityVector<uint8_t> spirv(spirvSize);
+        smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize);
 
-    VkShaderModule vertexShader;
-    moduleInfo.codeSize = VKSHADERS_BLITDEPTHVS_SIZE;
-    moduleInfo.pCode = (uint32_t*) VKSHADERS_BLITDEPTHVS_DATA;
-    result = vkCreateShaderModule(mContext.device, &moduleInfo, VKALLOC, &vertexShader);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create vertex shader for blit.");
+        VkShaderModuleCreateInfo moduleInfo = {};
+        moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        moduleInfo.codeSize = spirvSize;
+        moduleInfo.pCode = (uint32_t*) spirv.data();
 
-    VkShaderModule fragmentShader;
-    moduleInfo.codeSize = VKSHADERS_BLITDEPTHFS_SIZE;
-    moduleInfo.pCode = (uint32_t*) VKSHADERS_BLITDEPTHFS_DATA;
-    result = vkCreateShaderModule(mContext.device, &moduleInfo, VKALLOC, &fragmentShader);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create fragment shader for blit.");
+        VkShaderModule result = VK_NULL_HANDLE;
+        vkCreateShaderModule(device, &moduleInfo, VKALLOC, &result);
+        assert_invariant(result);
 
+        return result;
+    };
+
+    VkShaderModule vertexShader = decode(VKSHADERS_BLITDEPTHVS_DATA, VKSHADERS_BLITDEPTHVS_SIZE);
+    VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
     mDepthResolveProgram = new VulkanProgram(mContext, vertexShader, fragmentShader);
 
     static const float kTriangleVertices[] = {
