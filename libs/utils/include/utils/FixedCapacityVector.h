@@ -46,11 +46,11 @@ namespace utils {
  * An empty vector with a given capacity is created with
  *   FixedCapacityVector<T>::with_capacity( capacity );
  *
- * NOTE: One important difference betwen std::vector and FixedCapacityVector is that the former
- * performs default construction when the user constructs a non-empty vector or does a resize.
- * For example, std::vector<int>(4) constructs 4 zeros but FixedCapacityVector<int>(4) allocates
- * 4 uninitialized values. However, zero initialization is easily achieved by passing in the
- * optional value argument, e.g. FixedCapacityVector<int>(4, 0).
+ * NOTE: When passing an initial size into the FixedCapacityVector constructor, default construction
+ * of the elements is skipped when their construction is trivial. This behavior is different from
+ * std::vector. e.g., std::vector<int>(4) constructs 4 zeros while FixedCapacityVector<int>(4)
+ * allocates 4 uninitialized values. Note that zero initialization is easily achieved by passing in
+ * the optional value argument, e.g. FixedCapacityVector<int>(4, 0) or foo.resize(4, 0).
  */
 template<typename T, typename A = std::allocator<T>, bool CapacityCheck = true>
 class UTILS_PUBLIC FixedCapacityVector {
