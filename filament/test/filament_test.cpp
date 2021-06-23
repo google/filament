@@ -33,7 +33,7 @@
 #include <filament/Engine.h>
 
 #include <private/filament/UniformInterfaceBlock.h>
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
 #include "details/Allocators.h"

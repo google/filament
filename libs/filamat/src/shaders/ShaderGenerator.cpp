@@ -16,19 +16,17 @@
 
 #include "ShaderGenerator.h"
 
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SibGenerator.h>
-#include <private/filament/UibGenerator.h>
 #include <private/filament/Variant.h>
 
 #include <utils/CString.h>
 
 #include "filamat/MaterialBuilder.h"
 #include "CodeGenerator.h"
+#include "../UibGenerator.h"
 
 using namespace filament;
 using namespace filament::backend;

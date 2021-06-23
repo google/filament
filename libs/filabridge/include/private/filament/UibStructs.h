@@ -14,29 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILABRIDGE_UIBGENERATOR_H
-#define TNT_FILABRIDGE_UIBGENERATOR_H
+#ifndef TNT_FILABRIDGE_UIBSTRUCTS_H
+#define TNT_FILABRIDGE_UIBSTRUCTS_H
 
 #include <math/mat4.h>
 #include <math/vec4.h>
 
 #include <private/filament/EngineEnums.h>
 
+#include <utils/CString.h>
+
+/*
+ * Here we define all the UBOs known by filament as C structs. It is used by filament to
+ * fill the uniform values and get the interface block names. It is also used by filabridge to
+ * get the interface block names.
+ */
+
 namespace filament {
-
-class UniformInterfaceBlock;
-
-class UibGenerator {
-public:
-    static UniformInterfaceBlock const& getPerViewUib() noexcept;
-    static UniformInterfaceBlock const& getPerRenderableUib() noexcept;
-    static UniformInterfaceBlock const& getLightsUib() noexcept;
-    static UniformInterfaceBlock const& getShadowUib() noexcept;
-    static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
-    static UniformInterfaceBlock const& getFroxelRecordUib() noexcept;
-    // When adding an UBO here, make sure to also update
-    //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
-};
 
 /*
  * These structures are only used to call offsetof() and make it easy to visualize the UBO.
@@ -45,9 +39,7 @@ public:
  */
 
 struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
-    static const UniformInterfaceBlock& getUib() noexcept {
-        return UibGenerator::getPerViewUib();
-    }
+    static constexpr utils::StaticString _name{ "FrameUniforms" };
     filament::math::mat4f viewFromWorldMatrix;
     filament::math::mat4f worldFromViewMatrix;
     filament::math::mat4f clipFromViewMatrix;
@@ -145,6 +137,7 @@ static_assert(sizeof(PerViewUib) == sizeof(filament::math::float4) * 128,
 
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 struct alignas(256) PerRenderableUib {
+    static constexpr utils::StaticString _name{ "ObjectUniforms" };
     filament::math::mat4f worldFromModelMatrix;
     filament::math::mat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
     alignas(16) filament::math::float4 morphWeights;
@@ -154,11 +147,10 @@ struct alignas(256) PerRenderableUib {
     uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
     float padding0;
 };
+static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
 
 struct LightsUib {
-    static const UniformInterfaceBlock& getUib() noexcept {
-        return UibGenerator::getLightsUib();
-    }
+    static constexpr utils::StaticString _name{ "LightsUniforms" };
     filament::math::float4 positionFalloff;   // { float3(pos), 1/falloff^2 }
     filament::math::float4 colorIntensity;    // { float3(col), intensity }
     filament::math::float4 directionIES;      // { float3(dir), IES index }
@@ -170,31 +162,29 @@ static_assert(sizeof(LightsUib) == 64, "the actual UBO is an array of 256 mat4")
 
 // UBO for punctual (spot light) shadows.
 struct ShadowUib {
-    static const UniformInterfaceBlock& getUib() noexcept {
-        return UibGenerator::getShadowUib();
-    }
-
+    static constexpr utils::StaticString _name{ "ShadowUniforms" };
     filament::math::mat4f spotLightFromWorldMatrix[CONFIG_MAX_SHADOW_CASTING_SPOTS];
     filament::math::float4 directionShadowBias[CONFIG_MAX_SHADOW_CASTING_SPOTS]; // light direction, normal bias
 };
 
 // UBO froxel record buffer.
 struct FroxelRecordUib {
-    static const UniformInterfaceBlock& getUib() noexcept {
-        return UibGenerator::getFroxelRecordUib();
-    }
-
+    static constexpr utils::StaticString _name{ "FroxelRecordUniforms" };
     filament::math::uint4 records[1024];
 };
 
 // This is not the UBO proper, but just an element of a bone array.
 struct PerRenderableUibBone {
+    static constexpr utils::StaticString _name{ "BonesUniforms" };
     filament::math::quatf q = { 1, 0, 0, 0 };
     filament::math::float4 t = {};
     filament::math::float4 s = { 1, 1, 1, 0 };
     filament::math::float4 ns = { 1, 1, 1, 0 };
 };
 
+static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
+        "Bones exceed max UBO size");
+
 } // namespace filament
 
-#endif // TNT_FILABRIDGE_UIBGENERATOR_H
+#endif // TNT_FILABRIDGE_UIBSTRUCTS_H

@@ -13,7 +13,6 @@ set(SRCS
         src/SamplerBindingMap.cpp
         src/SamplerInterfaceBlock.cpp
         src/UniformInterfaceBlock.cpp
-        src/UibGenerator.cpp
         src/SibGenerator.cpp
 )
 

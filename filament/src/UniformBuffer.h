@@ -200,9 +200,6 @@ private:
 
     inline bool isLocalStorage() const noexcept { return mBuffer == mStorage; }
 
-    // TODO: we need a better way to calculate this local storage.
-    // Probably the better thing to do would be to use a special allocator.
-    // Local storage is limited by the total size of a handle (128 byte for GL)
     char mStorage[96];
     void *mBuffer = nullptr;
     uint32_t mSize = 0;

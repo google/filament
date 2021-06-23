@@ -19,7 +19,7 @@
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 
 #include "details/Engine.h"
 #include "details/IndirectLight.h"

@@ -31,6 +31,8 @@
 
 #include "fg2/FrameGraph.h"
 
+#include "TypedUniformBuffer.h"
+
 #include <utils/FixedCapacityVector.h>
 
 #include <math/vec3.h>
@@ -67,7 +69,8 @@ public:
 
     // Updates all of the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowTechnique update(FEngine& engine, FView& view, UniformBuffer& perViewUb, UniformBuffer& shadowUb,
+    ShadowTechnique update(FEngine& engine, FView& view,
+            TypedUniformBuffer<PerViewUib>& perViewUb, TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all of the shadow maps.
@@ -93,9 +96,11 @@ private:
         uint8_t levels = 0;
     } mTextureRequirements;
 
-    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view, UniformBuffer& perViewUb,
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view,
+            TypedUniformBuffer<PerViewUib>& perViewUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view, UniformBuffer& shadowUb,
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
+            TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
     static void fillWithDebugPattern(backend::DriverApi& driverApi,
             backend::Handle<backend::HwTexture> texture, size_t dimensions) noexcept;

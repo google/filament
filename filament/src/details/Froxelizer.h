@@ -122,12 +122,12 @@ public:
     void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
 
-    void updateUniforms(UniformBuffer& u) {
-        u.setUniform(offsetof(PerViewUib, zParams), mParamsZ);
-        u.setUniform(offsetof(PerViewUib, fParams), mParamsF.yz);
-        u.setUniform(offsetof(PerViewUib, fParamsX), mParamsF.x);
-        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
-        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
+    void updateUniforms(PerViewUib& s) {
+        s.zParams = mParamsZ;
+        s.fParams = mParamsF.yz;
+        s.fParamsX = mParamsF.x;
+        s.oneOverFroxelDimensionX = mOneOverDimension.x;
+        s.oneOverFroxelDimensionY = mOneOverDimension.y;
     }
 
     // send froxel data to GPU
