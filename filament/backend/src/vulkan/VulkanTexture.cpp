@@ -402,7 +402,18 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
     getImageView(mPrimaryViewRange);
 }
 
-VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool force2D) {
+VkImageView VulkanTexture::getAttachmentView(int singleLevel, int singleLayer,
+        VkImageAspectFlags aspect) {
+    return getImageView({
+        .aspectMask = aspect,
+        .baseMipLevel = uint32_t(singleLevel),
+        .levelCount = uint32_t(1),
+        .baseArrayLayer = uint32_t(singleLayer),
+        .layerCount = uint32_t(1),
+    }, true);
+}
+
+VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool isAttachment) {
     auto iter = mCachedImageViews.find(range);
     if (iter != mCachedImageViews.end()) {
         return iter->second;
@@ -412,9 +423,9 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool forc
         .pNext = nullptr,
         .flags = 0,
         .image = mTextureImage,
-        .viewType = force2D ? VK_IMAGE_VIEW_TYPE_2D : mViewType,
+        .viewType = isAttachment ? VK_IMAGE_VIEW_TYPE_2D : mViewType,
         .format = mVkFormat,
-        .components = mSwizzle,
+        .components = isAttachment ? (VkComponentMapping{}) : mSwizzle,
         .subresourceRange = range
     };
     VkImageView imageView;

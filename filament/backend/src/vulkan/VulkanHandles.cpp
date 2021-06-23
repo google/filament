@@ -130,7 +130,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         if (texture == nullptr) {
             continue;
         }
-        mColor[index].view = texture->getImageView(spec.level, spec.layer,
+        mColor[index].view = texture->getAttachmentView(spec.level, spec.layer,
                 VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
@@ -140,7 +140,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     mDepth = createAttachment(context, depthSpec);
     VulkanTexture* depthTexture = mDepth.texture;
     if (depthTexture) {
-        mDepth.view = depthTexture->getImageView(mDepth.level, mDepth.layer,
+        mDepth.view = depthTexture->getAttachmentView(mDepth.level, mDepth.layer,
                 VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 
@@ -160,7 +160,8 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             VulkanTexture* msTexture = new VulkanTexture(context, texture->target, level,
                     texture->format, samples, width, height, depth, texture->usage, stagePool);
             mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
-            mMsaaAttachments[index].view = msTexture->getImageView(0, 0, VK_IMAGE_ASPECT_COLOR_BIT);
+            mMsaaAttachments[index].view = msTexture->getAttachmentView(0, 0,
+                    VK_IMAGE_ASPECT_COLOR_BIT);
         }
         if (texture && texture->samples > 1) {
             mMsaaAttachments[index] = mColor[index];
@@ -190,7 +191,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         .level = depthSpec.level,
         .layer = depthSpec.layer,
     });
-    mMsaaDepthAttachment.view = msTexture->getImageView(depthSpec.level, depthSpec.layer,
+    mMsaaDepthAttachment.view = msTexture->getAttachmentView(depthSpec.level, depthSpec.layer,
             VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 

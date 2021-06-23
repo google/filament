@@ -42,26 +42,19 @@ struct VulkanTexture : public HwTexture {
     // Sets the min/max range of miplevels in the primary image view.
     void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
 
-    // Gets or creates a cached VkImageView for a range of miplevels and array layers.
-    // If force2D is true, this always returns an image view that has type = VK_IMAGE_VIEW_TYPE_2D,
-    // regardless of the type of the primary image view.
-    VkImageView getImageView(VkImageSubresourceRange range, bool force2D = false);
-
-    // Convenient "single subresource" overload for the above method.
-    VkImageView getImageView(int singleLevel, int singleLayer, VkImageAspectFlags aspect) {
-        return getImageView({
-            .aspectMask = aspect,
-            .baseMipLevel = uint32_t(singleLevel),
-            .levelCount = uint32_t(1),
-            .baseArrayLayer = uint32_t(singleLayer),
-            .layerCount = uint32_t(1),
-        }, true);
-    }
+    // Gets or creates a cached VkImageView for a single subresource that can be used as a render
+    // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D
+    // and the identity swizzle.
+    VkImageView getAttachmentView(int singleLevel, int singleLayer, VkImageAspectFlags aspect);
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
 
 private:
+    // Gets or creates a cached VkImageView for a range of miplevels and array layers.
+    // If isAttachment is true, this always returns a 2D image view without swizzle.
+    VkImageView getImageView(VkImageSubresourceRange range, bool isAttachment = false);
+
     // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
     // height define a subregion within the miplevel.
     void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
