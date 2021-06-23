@@ -85,6 +85,13 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     }
 #endif
 
+    // Round requested sample counts down to the nearest device-supported sample count.
+    auto& sc = mContext->sampleCountLookup;
+    sc[0] = 1;
+    for (uint32_t s = 1; s < sc.size(); s++) {
+        sc[s] = [mContext->device supportsTextureSampleCount:s] ? s : sc[s - 1];
+    }
+
     mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
@@ -200,6 +207,10 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
@@ -209,6 +220,10 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
             width, height, depth, usage, r, g, b, a);
 }
@@ -264,6 +279,9 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, backend::MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
     MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{ nil }};
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
