@@ -190,6 +190,7 @@ Here are a few screenshots of applications that use Filament in production:
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
   - [x] KHR_materials_transmission
