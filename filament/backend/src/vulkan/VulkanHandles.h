@@ -72,7 +72,7 @@ private:
     VulkanAttachment mDepth = {};
     VulkanContext& mContext;
     const bool mOffscreen;
-    const uint8_t mSamples;
+    uint8_t mSamples;
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
 };

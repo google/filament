@@ -16,8 +16,9 @@
 
 #include "VulkanUtility.h"
 
-#include <utils/Panic.h>
+#include <utils/algorithm.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include "private/backend/BackendUtils.h"
 
@@ -526,6 +527,30 @@ bool equivalent(const VkRect2D& a, const VkRect2D& b) {
 
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b) {
     return a.height == b.height && a.width == b.width;
+}
+
+bool isDepthFormat(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_X8_D24_UNORM_PACK32:
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static uint32_t mostSignificantBit(uint32_t x) { return 1ul << (31ul - utils::clz(x)); }
+
+uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
+    assert_invariant(utils::popcount(sampleCount) == 1);
+    if (sampleCount & mask) {
+        return sampleCount;
+    }
+    return mostSignificantBit((sampleCount - 1) & mask);
 }
 
 } // namespace filament

@@ -148,6 +148,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         return;
     }
 
+    // Constrain the sample count according to both kinds of sample count masks obtained from
+    // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
+    const auto& limits = context.physicalDeviceProperties.limits;
+    mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
+            limits.framebufferColorSampleCounts);
+
     // The sidecar textures need to have only 1 miplevel and 1 array slice.
     const int level = 1;
     const int depth = 1;
