@@ -23,7 +23,7 @@
 
 #include "FrameInfo.h"
 #include "FrameHistory.h"
-#include "UniformBuffer.h"
+#include "TypedUniformBuffer.h"
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
@@ -422,9 +422,9 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    UniformBuffer& getViewUniforms() const { return mPerViewUb; }
+    auto& getViewUniforms() const { return mPerViewUb; }
+    auto& getShadowUniforms() const { return mShadowUb; }
     backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
-    UniformBuffer& getShadowUniforms() const { return mShadowUb; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -517,8 +517,8 @@ private:
 
     RenderQuality mRenderQuality;
 
-    mutable UniformBuffer mPerViewUb;
-    mutable UniformBuffer mShadowUb;
+    mutable TypedUniformBuffer<PerViewUib> mPerViewUb;
+    mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     mutable backend::SamplerGroup mPerViewSb;
 
     mutable FrameHistory mFrameHistory{};

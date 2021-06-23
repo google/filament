@@ -26,7 +26,7 @@
 #include <backend/DriverEnums.h>
 
 #include <private/filament/SibGenerator.h>
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -374,16 +374,15 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey)
 
     Program pb = getProgramBuilderWithVariants(variantKey, vertexVariantKey, fragmentVariantKey);
     pb
-        .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
-        .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
-        .setUniformBlock(BindingPoints::SHADOW, UibGenerator::getShadowUib().getName())
-        .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
-        .setUniformBlock(BindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib().getName())
+        .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
+        .setUniformBlock(BindingPoints::PER_RENDERABLE, PerRenderableUib::_name)
+        .setUniformBlock(BindingPoints::LIGHTS, LightsUib::_name)
+        .setUniformBlock(BindingPoints::SHADOW, ShadowUib::_name)
+        .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     if (Variant(variantKey).hasSkinningOrMorphing()) {
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES,
-                UibGenerator::getPerRenderableBonesUib().getName());
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
     }
 
     addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variantKey), mSamplerBindings);
@@ -396,9 +395,8 @@ Handle<HwProgram> FMaterial::getPostProcessProgramSlow(uint8_t variantKey)
     const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variantKey, variantKey, variantKey);
-    pb
-            .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
-            .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+    pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
+      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 

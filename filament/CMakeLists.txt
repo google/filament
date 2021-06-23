@@ -108,6 +108,7 @@ set(PRIVATE_HDRS
         src/RenderPass.h
         src/ResourceAllocator.h
         src/ToneMapping.h
+        src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h

@@ -25,7 +25,7 @@
 // NOTE: We only need Renderer.h here because the definition of some FRenderer methods are here
 #include "details/Renderer.h"
 
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>

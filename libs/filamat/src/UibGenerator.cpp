@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "private/filament/UibGenerator.h"
+#include "UibGenerator.h"
+#include "private/filament/UibStructs.h"
 
 #include "private/filament/UniformInterfaceBlock.h"
 
@@ -25,19 +26,13 @@ namespace filament {
 
 using namespace backend;
 
-static_assert(sizeof(PerRenderableUib) % 256 == 0,
-        "sizeof(Transform) should be a multiple of 256");
-
-static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
-        "Bones exceed max UBO size");
-
 static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
         "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
 UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
-            .name("FrameUniforms")
+            .name(PerViewUib::_name)
             // transforms
             .add("viewFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromViewMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
@@ -121,7 +116,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
 UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
-            .name("ObjectUniforms")
+            .name(PerRenderableUib::_name)
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("worldFromModelNormalMatrix", 1, UniformInterfaceBlock::Type::MAT3, Precision::HIGH)
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
@@ -135,7 +130,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
 
 UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
-            .name("LightsUniforms")
+            .name(LightsUib::_name)
             .add("lights", CONFIG_MAX_LIGHT_COUNT, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .build();
     return uib;
@@ -143,7 +138,7 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 
 UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
-            .name("ShadowUniforms")
+            .name(ShadowUib::_name)
             .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .build();
@@ -152,7 +147,7 @@ UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
 
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
-            .name("BonesUniforms")
+            .name(PerRenderableUibBone::_name)
             .add("bones", CONFIG_MAX_BONE_COUNT * 4, UniformInterfaceBlock::Type::FLOAT4, Precision::MEDIUM)
             .build();
     return uib;
@@ -160,7 +155,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
 
 UniformInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
-            .name("FroxelRecordUniforms")
+            .name(FroxelRecordUib::_name)
             .add("records", 1024, UniformInterfaceBlock::Type::UINT4, Precision::HIGH)
             .build();
     return uib;

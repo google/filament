@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_POSTPROCESS_MANAGER_H
 #define TNT_FILAMENT_POSTPROCESS_MANAGER_H
 
-#include "UniformBuffer.h"
-
 #include "private/backend/DriverApiForward.h"
 
 #include "FrameHistory.h"
@@ -27,6 +25,8 @@
 #include <fg2/FrameGraphResources.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/PipelineState.h>
+
 #include <filament/View.h>
 
 #include <utils/CString.h>
