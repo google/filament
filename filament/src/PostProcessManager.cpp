@@ -1875,7 +1875,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 }
                 if (bloomOptions.lensFlare && flare) {
                     data.flare = builder.sample(flare);
-                    data.starburst = builder.sample(starburst);
+                    if (starburst) {
+                        data.starburst = builder.sample(starburst);
+                    }
                 }
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
