@@ -1621,7 +1621,7 @@ void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y,
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
-    assert_invariant(mContext.currentRenderPass.renderPass == nullptr);
+    assert_invariant(mContext.currentRenderPass.renderPass == VK_NULL_HANDLE);
 
     if (mContext.currentRenderPass.renderPass) {
         utils::slog.e << "Blits cannot be invoked inside a render pass." << utils::io::endl;
