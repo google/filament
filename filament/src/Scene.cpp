@@ -47,7 +47,7 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(const mat4f& worldOriginTransform) {
+void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
@@ -119,12 +119,17 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
             // compute the world AABB so we can perform culling
             const Box worldAABB = rigidTransform(rcm.getAABB(ri), worldTransform);
 
+            auto visibility = rcm.getVisibility(ri);
+            if (shadowReceiversAreCasters && visibility.receiveShadows) {
+                visibility.castShadows = true;
+            }
+
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
                     ri,                       // RENDERABLE_INSTANCE
                     worldTransform,           // WORLD_TRANSFORM
                     reversedWindingOrder,     // REVERSED_WINDING_ORDER
-                    rcm.getVisibility(ri),    // VISIBILITY_STATE
+                    visibility,               // VISIBILITY_STATE
                     rcm.getBonesUbh(ri),      // BONES_UBH
                     worldAABB.center,         // WORLD_AABB_CENTER
                     0,                        // VISIBLE_MASK
