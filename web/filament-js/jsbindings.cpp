@@ -1804,6 +1804,9 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
     }), allow_raw_pointers())
+    .function("getExtras", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
+        return std::string(self->getExtras(entity));
+    }), allow_raw_pointers())
     .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
