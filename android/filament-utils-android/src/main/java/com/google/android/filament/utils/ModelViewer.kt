@@ -110,7 +110,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.scene = scene
         view.camera = camera
 
-        assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
+        assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
 
         // Always add a direct light source since it is required for shadowing.

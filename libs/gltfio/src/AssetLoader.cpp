@@ -1284,4 +1284,8 @@ const Material* const* AssetLoader::getMaterials() const noexcept {
     return upcast(this)->getMaterials();
 }
 
+MaterialProvider* AssetLoader::getMaterialProvider() const noexcept {
+    return upcast(this)->mMaterials;
+}
+
 } // namespace gltfio

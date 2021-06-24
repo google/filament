@@ -222,6 +222,8 @@ public:
 
     utils::NameComponentManager* getNames() const noexcept;
 
+    MaterialProvider* getMaterialProvider() const noexcept;
+
     /*! \cond PRIVATE */
 protected:
     AssetLoader() noexcept = default;
