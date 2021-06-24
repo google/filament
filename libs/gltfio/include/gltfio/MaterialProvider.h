@@ -101,11 +101,6 @@ inline uint8_t getNumUvSets(const UvMap& uvmap) {
     });
 };
 
-enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
-};
-
 /**
  * \class MaterialProvider MaterialProvider.h gltfio/MaterialProvider.h
  * \brief Interface to a provider of glTF materials (has two implementations).
@@ -125,11 +120,6 @@ enum MaterialSource {
 class MaterialProvider {
 public:
     virtual ~MaterialProvider() {}
-
-    /**
-     * Returns the type of material provider (generator or ubershader).
-     */
-    virtual MaterialSource getSource() const noexcept = 0;
 
     /**
      * Creates or fetches a compiled Filament material, then creates an instance from it.
@@ -159,6 +149,14 @@ public:
      * clients to take ownership of the cache if desired.
      */
     virtual void destroyMaterials() = 0;
+
+    /**
+     * Returns true if the presence of the given vertex attribute is required.
+     *
+     * Some types of providers (e.g. ubershader) require dummy attribute values
+     * if the glTF model does not provide them.
+     */
+    virtual bool needsDummyData(filament::VertexAttribute attrib) const noexcept = 0;
 };
 
 void constrainMaterial(MaterialKey* key, UvMap* uvmap);

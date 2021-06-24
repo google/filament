@@ -754,40 +754,44 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     vbb.vertexCount(vertexCount);
 
-    // If an ubershader is used, then we provide a single dummy buffer for all unfulfilled vertex
-    // requirements. The color data should be a sequence of normalized UBYTE4, so dummy UVs are
-    // USHORT2 to make the sizes match.
+    // We provide a single dummy buffer (filled with 0xff) for all unfulfilled vertex requirements.
+    // The color data should be a sequence of normalized UBYTE4, so dummy UVs are USHORT2 to make
+    // the sizes match.
     bool needsDummyData = false;
-    if (mMaterials->getSource() == LOAD_UBERSHADERS) {
-        if (!hasUv0) {
-            needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
-            vbb.normalized(VertexAttribute::UV0);
-        }
-        if (!hasUv1) {
-            needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
-            vbb.normalized(VertexAttribute::UV1);
-        }
-        if (!hasVertexColor) {
-            needsDummyData = true;
-            vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
-            vbb.normalized(VertexAttribute::COLOR);
-        }
-    } else {
-        int numUvSets = getNumUvSets(uvmap);
-        if (!hasUv0 && numUvSets > 0) {
-            needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
-            vbb.normalized(VertexAttribute::UV0);
-            slog.w << "Missing UV0 data in " << name << io::endl;
-        }
-        if (!hasUv1 && numUvSets > 1) {
-            needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
-            vbb.normalized(VertexAttribute::UV1);
-            slog.w << "Missing UV1 data in " << name << io::endl;
-        }
+
+    if (mMaterials->needsDummyData(VertexAttribute::UV0) && !hasUv0) {
+        needsDummyData = true;
+        hasUv0 = true;
+        vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+        vbb.normalized(VertexAttribute::UV0);
+    }
+
+    if (mMaterials->needsDummyData(VertexAttribute::UV1) && !hasUv1) {
+        hasUv1 = true;
+        needsDummyData = true;
+        vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+        vbb.normalized(VertexAttribute::UV1);
+    }
+
+    if (mMaterials->needsDummyData(VertexAttribute::COLOR) && !hasVertexColor) {
+        needsDummyData = true;
+        vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
+        vbb.normalized(VertexAttribute::COLOR);
+    }
+
+    int numUvSets = getNumUvSets(uvmap);
+    if (!hasUv0 && numUvSets > 0) {
+        needsDummyData = true;
+        vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+        vbb.normalized(VertexAttribute::UV0);
+        slog.w << "Missing UV0 data in " << name << io::endl;
+    }
+
+    if (!hasUv1 && numUvSets > 1) {
+        needsDummyData = true;
+        vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+        vbb.normalized(VertexAttribute::UV1);
+        slog.w << "Missing UV1 data in " << name << io::endl;
     }
 
     vbb.bufferCount(needsDummyData ? slot + 1 : slot);
