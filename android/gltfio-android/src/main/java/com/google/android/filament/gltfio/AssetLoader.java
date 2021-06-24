@@ -45,7 +45,7 @@ import java.nio.Buffer;
  *
  *     ...
  *
- *     assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
+ *     assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
  *
  *     filamentAsset = assets.open("models/lucy.gltf").use { input -&gt;
  *         val bytes = ByteArray(input.available())
@@ -85,23 +85,22 @@ public class AssetLoader {
      * {@link FilamentAsset}.
      *
      * @param engine the engine that the loader should pass to builder objects
-     * @param generator specifies if materials should be generated or loaded from a pre-built set
+     * @param provider an object that provides Filament materials corresponding to glTF materials
      * @param entities the EntityManager that should be used to create entities
      */
-    public AssetLoader(@NonNull Engine engine, @NonNull MaterialProvider generator,
+    public AssetLoader(@NonNull Engine engine, @NonNull MaterialProvider provider,
             @NonNull EntityManager entities) {
 
         long nativeEngine = engine.getNativeObject();
-        long nativeMaterials = generator.getNativeObject();
         long nativeEntities = entities.getNativeObject();
-        mNativeObject = nCreateAssetLoader(nativeEngine, nativeMaterials, nativeEntities);
+        mNativeObject = nCreateAssetLoader(nativeEngine, provider, nativeEntities);
 
         if (mNativeObject == 0) {
             throw new IllegalStateException("Unable to parse glTF asset.");
         }
 
         mEngine = engine;
-        mMaterialCache = generator;
+        mMaterialCache = provider;
     }
 
     /**
@@ -198,7 +197,7 @@ public class AssetLoader {
         asset.clearNativeObject();
     }
 
-    private static native long nCreateAssetLoader(long nativeEngine, long nativeGenerator,
+    private static native long nCreateAssetLoader(long nativeEngine, Object provider,
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
     private static native long nCreateAssetFromBinary(long nativeLoader, Buffer buffer, int remaining);

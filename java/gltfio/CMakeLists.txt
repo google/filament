@@ -44,7 +44,9 @@ set(JNI_SOURCE_FILES
     ${GLTFIO_DIR}/src/main/cpp/AssetLoader.cpp
     ${GLTFIO_DIR}/src/main/cpp/FilamentAsset.cpp
     ${GLTFIO_DIR}/src/main/cpp/FilamentInstance.cpp
-    ${GLTFIO_DIR}/src/main/cpp/MaterialProvider.cpp
+    ${GLTFIO_DIR}/src/main/cpp/MaterialKey.cpp
+    ${GLTFIO_DIR}/src/main/cpp/MaterialKey.h
+    ${GLTFIO_DIR}/src/main/cpp/UbershaderLoader.cpp
     ${GLTFIO_DIR}/src/main/cpp/ResourceLoader.cpp
     ${COMMON_DIR}/CallbackUtils.cpp
     ${COMMON_DIR}/NioUtils.cpp
