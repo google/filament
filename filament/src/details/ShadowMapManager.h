@@ -85,9 +85,8 @@ public:
 private:
 
     struct ShadowLayout {
+        LightManager::ShadowOptions const* options = nullptr;
         uint8_t layer = 0;
-        uint32_t size = 0;
-        uint8_t vsmSamples = 1;
     };
 
     struct TextureRequirements {

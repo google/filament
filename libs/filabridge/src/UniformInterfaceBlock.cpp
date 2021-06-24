@@ -116,11 +116,19 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
 }
 
 ssize_t UniformInterfaceBlock::getUniformOffset(const char* name, size_t index) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "uniform named \"%s\" not found", name)) {
+    auto const* info = getUniformInfo(name);
+    if (!info) {
         return -1;
     }
-    return mUniformsInfoList[pos->second].getBufferOffset(index);
+    return info->getBufferOffset(index);
+}
+
+UniformInterfaceBlock::UniformInfo const* UniformInterfaceBlock::getUniformInfo(const char* name) const {
+    auto const& pos = mInfoMap.find(name);
+    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "uniform named \"%s\" not found", name)) {
+        return nullptr;
+    }
+    return &mUniformsInfoList[pos->second];
 }
 
 

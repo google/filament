@@ -133,6 +133,11 @@ public:
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
 
+    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
+            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
+
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
@@ -155,11 +160,6 @@ private:
     FrameGraphId<FrameGraphTexture> bilateralBlurPass(
             FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
             backend::TextureFormat format, BilateralPassConfig config) noexcept;
-
-    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
@@ -219,8 +219,6 @@ private:
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
     backend::Handle<backend::HwTexture> mStarburstTexture;
-
-    size_t mSeparableGaussianBlurKernelStorageSize = 0;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 

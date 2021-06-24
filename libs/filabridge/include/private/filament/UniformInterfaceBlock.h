@@ -111,6 +111,8 @@ public:
     // negative value if name doesn't exist or Panic if exceptions are enabled
     ssize_t getUniformOffset(const char* name, size_t index) const;
 
+    UniformInfo const* getUniformInfo(const char* name) const;
+
     bool hasUniform(const char* name) const noexcept {
         return mInfoMap.find(name) != mInfoMap.end();
     }
