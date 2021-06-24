@@ -620,6 +620,7 @@ export class gltfio$FilamentAsset {
 }
 
 export class gltfio$FilamentInstance {
+    public getAsset(): gltfio$FilamentAsset;
     public getEntities(): Vector<Entity>;
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;

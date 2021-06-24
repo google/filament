@@ -1810,11 +1810,11 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("releaseSourceData", &FilamentAsset::releaseSourceData);
 
 class_<FilamentInstance>("gltfio$FilamentInstance")
+    .function("getAsset", &FilamentInstance::getAsset, allow_raw_pointers())
     .function("getEntities", EMBIND_LAMBDA(EntityVector, (FilamentInstance* self), {
         const utils::Entity* ptr = self->getEntities();
         return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
-
     .function("getRoot", &FilamentInstance::getRoot)
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
