@@ -149,10 +149,11 @@ public class AssetLoader {
         if (nativeAsset == 0) {
             return null;
         }
+        FilamentAsset asset = new FilamentAsset(mEngine, nativeAsset);
         for (int i = 0; i < nativeInstances.length; i++) {
-            instances[i] = new FilamentInstance(nativeInstances[i]);
+            instances[i] = new FilamentInstance(asset, nativeInstances[i]);
         }
-        return new FilamentAsset(mEngine, nativeAsset);
+        return asset;
     }
 
     /**
@@ -178,7 +179,7 @@ public class AssetLoader {
         if (nativeInstance == 0) {
             return null;
         }
-        return new FilamentInstance(nativeInstance);
+        return new FilamentInstance(asset, nativeInstance);
     }
 
     /**

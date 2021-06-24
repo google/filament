@@ -28,10 +28,12 @@ import com.google.android.filament.Entity;
  * @see AssetLoader
  */
 public class FilamentInstance {
+    private FilamentAsset mAsset;
     private long mNativeObject;
     private Animator mAnimator;
 
-    FilamentInstance(long nativeObject) {
+    FilamentInstance(FilamentAsset asset, long nativeObject) {
+        mAsset = asset;
         mNativeObject = nativeObject;
         mAnimator = null;
     }
@@ -44,6 +46,11 @@ public class FilamentInstance {
     @SuppressWarnings("unused")
     void clearNativeObject() {
         mNativeObject = 0;
+    }
+
+    @SuppressWarnings("unused")
+    public @NonNull FilamentAsset getAsset() {
+        return mAsset;
     }
 
     /**

@@ -41,6 +41,10 @@ Animator* FFilamentInstance::getAnimator() noexcept {
     return animator;
 }
 
+FilamentAsset* FilamentInstance::getAsset() const noexcept {
+    return upcast(this)->owner;
+}
+
 size_t FilamentInstance::getEntityCount() const noexcept {
     return upcast(this)->entities.size();
 }
