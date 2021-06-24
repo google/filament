@@ -1284,7 +1284,7 @@ static std::ostream& operator<<(std::ostream& out, const DynamicLightingSettings
 static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
-        << "\"mipmapping\": " << int(in.mipmapping) << ",\n"
+        << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
         << "\"exponent\": " << int(in.exponent) << ",\n"
         << "\"minVarianceScale\": " << int(in.minVarianceScale) << ",\n"
         << "\"lightBleedReduction\": " << int(in.lightBleedReduction) << "\n"
