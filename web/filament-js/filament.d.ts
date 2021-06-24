@@ -613,6 +613,7 @@ export class gltfio$FilamentAsset {
     public getResourceUris(): Vector<string>;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
+    public getExtras(entity: Entity): string;
     public getAnimator(): gltfio$Animator;
     public getWireframe(): Entity;
     public getEngine(): Engine;

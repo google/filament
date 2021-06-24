@@ -39,15 +39,13 @@
 #include <math/vec4.h>
 
 #include <utils/EntityManager.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Systrace.h>
 
 #include <tsl/robin_map.h>
-
-#include <cmath>
-#include <vector>
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -175,7 +173,7 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t
     return mResult;
 }
 
-FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes) {
+FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_t byteCount) {
 
     // The cgltf library handles GLB efficiently by pointing all buffer views into the source data.
     // However, we wish our API to be simple and safe, allowing clients to free up their source blob
@@ -184,11 +182,12 @@ FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32
     // asset, asking cgltf to parse the copy. This allows us to free it at the correct time (i.e.
     // after all GPU uploads have completed). Although it incurs a copy, the added safety of this
     // API seems worthwhile.
-    std::vector<uint8_t> glbdata(bytes, bytes + nbytes);
+    utils::FixedCapacityVector<uint8_t> glbdata(byteCount);
+    std::copy_n(bytes, byteCount, glbdata.data());
 
     cgltf_options options { cgltf_file_type_glb };
     cgltf_data* sourceAsset;
-    cgltf_result result = cgltf_parse(&options, glbdata.data(), nbytes, &sourceAsset);
+    cgltf_result result = cgltf_parse(&options, glbdata.data(), byteCount, &sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glb file." << io::endl;
         return nullptr;
@@ -200,7 +199,7 @@ FFilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32
     return mResult;
 }
 
-FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
+FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
         FilamentInstance** instances, size_t numInstances) {
     ASSERT_PRECONDITION(numInstances > 0, "Instance count must be 1 or more.");
 
@@ -211,10 +210,11 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
     // Clients can free up their source blob immediately, but cgltf has pointers into the data that
     // need to stay valid. Therefore we create a copy of the source blob and stash it inside the
     // asset.
-    std::vector<uint8_t> glbdata(bytes, bytes + numBytes);
+    utils::FixedCapacityVector<uint8_t> glbdata(byteCount);
+    std::copy_n(bytes, byteCount, glbdata.data());
 
     cgltf_data* sourceAsset;
-    cgltf_result result = cgltf_parse(&options, glbdata.data(), numBytes, &sourceAsset);
+    cgltf_result result = cgltf_parse(&options, glbdata.data(), byteCount, &sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glTF file." << io::endl;
         return nullptr;
@@ -280,6 +280,13 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     // Create a single root node with an identity transform as a convenience to the client.
     mResult->mRoot = mEntityManager.create();
     mTransformManager.create(mResult->mRoot);
+
+    // Check if the asset has an extras string.
+    const cgltf_asset& asset = srcAsset->asset;
+    const cgltf_size extras_size = asset.extras.end_offset - asset.extras.start_offset;
+    if (extras_size > 1) {
+        mResult->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
+    }
 
     if (numInstances == 0) {
         // For each scene root, recursively create all entities.
@@ -363,6 +370,14 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
 
     auto parentTransform = mTransformManager.getInstance(parent);
     mTransformManager.create(entity, parentTransform, localTransform);
+
+    // Check if this node has an extras string.
+    const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
+    if (extras_size > 0) {
+        const cgltf_data* srcAsset = mResult->mSourceAsset->hierarchy;
+        mResult->mNodeExtras[entity] = CString(
+                srcAsset->json + node->extras.start_offset, extras_size);
+    }
 
     // Update the asset's entity list and private node mapping.
     mResult->mEntities.push_back(entity);
