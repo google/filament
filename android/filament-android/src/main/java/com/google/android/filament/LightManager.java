@@ -326,6 +326,18 @@ public class LightManager {
          */
         @IntRange(from = 1)
         public int vsmMsaaSamples = 1;
+
+        /**
+         * Standard deviation of the VSM blur. Zero do disable.
+         * The maximum value is 21, which corresponds to a gaussian blur filter width
+         * of 125 pixels. The relation between the filter width and the standard deviation
+         * is roughly: stddev = (kernelWidth + 1) / 6.
+         * Some common values for blurStandardDeviation:
+         *  3x3 gaussian : 0.6667
+         *  5x5 gaussian : 1.0
+         *  9x9 gaussian : 1.6667
+         */
+        public float blurStandardDeviation = 0.0f;
     }
 
     public static class ShadowCascades {
@@ -454,7 +466,8 @@ public class LightManager {
                     options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
                     options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
                     options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
-                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples);
+                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
+                    options.blurStandardDeviation);
             return this;
         }
 
@@ -1088,7 +1101,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurStandardDeviation);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

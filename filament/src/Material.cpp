@@ -344,11 +344,7 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
         utils::StaticString const& name) const noexcept {
-    auto const& list = mUniformInterfaceBlock.getUniformInfoList();
-    auto p = std::find_if(list.begin(), list.end(), [&](auto const& e) {
-        return e.name == name;
-    });
-    return p == list.end() ? nullptr : &static_cast<UniformInterfaceBlock::UniformInfo const&>(*p);
+    return mUniformInterfaceBlock.getUniformInfo(name.c_str());
 }
 
 Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
