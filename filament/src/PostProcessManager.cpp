@@ -1055,6 +1055,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
+                    driver.setMinMaxLevels(inOutColor, level, level);
+                    driver.setMinMaxLevels(inOutCoc, level, level);
                     mi->setParameter("mip", uint32_t(level));
                     mi->setParameter("weightScale", 0.5f / float(1u<<level));   // FIXME: halfres?
                     mi->commit(driver);
@@ -1062,6 +1064,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     driver.draw(pipeline, fullScreenRenderPrimitive);
                     driver.endRenderPass();
                 }
+                driver.setMinMaxLevels(inOutColor, 0, mipmapCount - 1u);
+                driver.setMinMaxLevels(inOutCoc, 0, mipmapCount - 1u);
             });
 
     /*
