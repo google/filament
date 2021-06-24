@@ -33,22 +33,24 @@ namespace {
 
 class MaterialGenerator : public MaterialProvider {
 public:
-    explicit MaterialGenerator(filament::Engine* engine, bool optimizeShaders);
+    explicit MaterialGenerator(Engine* engine, bool optimizeShaders);
     ~MaterialGenerator() override;
 
-    MaterialSource getSource() const noexcept override { return GENERATE_SHADERS; }
-
-    filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label) override;
 
     size_t getMaterialsCount() const noexcept override;
-    const filament::Material* const* getMaterials() const noexcept override;
+    const Material* const* getMaterials() const noexcept override;
     void destroyMaterials() override;
 
-    using HashFn = utils::hash::MurmurHashFn<MaterialKey>;
-    tsl::robin_map<MaterialKey, filament::Material*, HashFn> mCache;
-    std::vector<filament::Material*> mMaterials;
-    filament::Engine* const mEngine;
+    bool needsDummyData(VertexAttribute attrib) const noexcept override {
+        return false;
+    }
+
+    using HashFn = hash::MurmurHashFn<MaterialKey>;
+    tsl::robin_map<MaterialKey, Material*, HashFn> mCache;
+    std::vector<Material*> mMaterials;
+    Engine* const mEngine;
     const bool mOptimizeShaders;
 };
 

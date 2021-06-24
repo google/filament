@@ -65,6 +65,11 @@ using namespace filament::viewer;
 using namespace gltfio;
 using namespace utils;
 
+enum MaterialSource {
+    GENERATE_SHADERS,
+    LOAD_UBERSHADERS,
+};
+
 struct App {
     Engine* engine;
     SimpleViewer* viewer;
