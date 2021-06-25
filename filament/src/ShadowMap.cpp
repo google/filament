@@ -53,7 +53,6 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
-    debugRegistry.registerProperty("d.shadowmap.checkerboard", &engine.debug.shadowmap.checkerboard);
     if (ENABLE_LISPSM) {
         debugRegistry.registerProperty("d.shadowmap.lispsm", &engine.debug.shadowmap.lispsm);
         debugRegistry.registerProperty("d.shadowmap.dzn", &engine.debug.shadowmap.dzn);

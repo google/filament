@@ -420,7 +420,6 @@ public:
         struct {
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
-            bool checkerboard = false;
             bool lispsm = true;
             bool visualize_cascades = false;
             bool tightly_bound_scene = true;
