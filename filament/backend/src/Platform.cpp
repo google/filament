@@ -93,7 +93,9 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
 #endif
 
     if (*backend == Backend::DEFAULT) {
-#if defined(ANDROID)
+#if defined(__EMSCRIPTEN__)
+        *backend = Backend::OPENGL;
+#elif defined(ANDROID)
         *backend = Backend::OPENGL;
 #elif defined(IOS) || defined(__APPLE__)
         *backend = Backend::METAL;
