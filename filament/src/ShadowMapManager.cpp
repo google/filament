@@ -120,6 +120,10 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         passes.emplace_back(&map, pass);
     }
 
+    const float vsmMoment2 = std::numeric_limits<math::half>::max();
+    const float vsmMoment1 = std::sqrt(vsmMoment2);
+    const float4 vsmClearColor{ vsmMoment1, vsmMoment2, 0.0f, 0.0f };
+
     assert_invariant(passes.size() <= textureRequirements.layers);
 
     // -------------------------------------------------------------------------------------------
@@ -202,7 +206,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         renderTargetDesc.clearFlags =
                                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         // we need to clear the shadow map with the max EVSM moments
-                        renderTargetDesc.clearColor = { 256.0f, 65536.f, 0.0f, 0.0f };
+                        renderTargetDesc.clearColor = vsmClearColor;
                         renderTargetDesc.samples = options->vsm.msaaSamples;
 
                         if (blur) {
@@ -213,7 +217,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                                     .attachments = {
                                             .color = { data.tempBlurSrc },
                                             .depth = depth },
-                                    .clearColor = { 256.0f, 65536.f, 256.0f, 65536.f },
+                                    .clearColor = vsmClearColor,
                                     .samples = options->vsm.msaaSamples,
                                     .clearFlags = TargetBufferFlags::COLOR
                                                   | TargetBufferFlags::DEPTH
@@ -294,8 +298,9 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
             // So generate the mipmaps for each layer
             if (textureRequirements.levels > 1) {
                 for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
-                    const bool finalize = textureRequirements.levels - 2;
-                    shadows = ppm.vsmMipmapPass(fg, shadows, layer, level, finalize);
+                    const bool finalize = level == textureRequirements.levels - 2;
+                    shadows = ppm.vsmMipmapPass(fg, shadows, layer, level,
+                            vsmClearColor, finalize);
                 }
             }
         }

@@ -189,7 +189,7 @@ public:
      * Control the quality / performance of the shadow map associated to this light
      */
     struct ShadowOptions {
-        /** Size of the shadow map in texels. Must be a power-of-two. */
+        /** Size of the shadow map in texels. Must be a power-of-two and larger or equal to 8. */
         uint32_t mapSize = 1024;
 
         /**

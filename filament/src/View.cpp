@@ -708,7 +708,7 @@ void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noe
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = filterMin,
-                    .anisotropyLog2 = anisotropy,
+                    .anisotropyLog2 = anisotropy,                          // ignored for PCF
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE, // ignored for VSM
                     .compareFunc = SamplerCompareFunc::GE                  // ignored for VSM
             }});

@@ -131,7 +131,8 @@ public:
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor, bool finalize) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
