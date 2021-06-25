@@ -688,7 +688,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
         mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
         ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
-        ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurStandardDeviation, 0.0, 21.0f);
+        ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
 
         // These are not very useful in practice (defaults are good), but we keep them here for debugging
         //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);

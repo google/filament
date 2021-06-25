@@ -165,7 +165,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    const bool blur = view.hasVsm() && options->vsm.blurStandardDeviation > 0.0f;
+                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
 
                     FrameGraphRenderPass::Descriptor renderTargetDesc{};
 
@@ -234,7 +234,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         auto const& data, DriverApi& driver) mutable {
 
                     const auto& options = layout.options;
-                    const bool blur = view.hasVsm() && options->vsm.blurStandardDeviation > 0.0f;
+                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
 
                     // TODO: camera is already set inside 'pass', we could get it from there
                     FCamera const& camera = map->getShadowMap().getCamera();
@@ -277,9 +277,10 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
         // now emit the blurring passes
         if (view.hasVsm()) {
-            const float sigma = options->vsm.blurStandardDeviation;
-            if (sigma > 0.0f) {
-                size_t kernelWidth = std::ceil(((sigma * 6.0f - 1.0f) - 5.0f) / 4.0f);
+            const float blurWidth = options->vsm.blurWidth;
+            if (blurWidth > 0.0f) {
+                const float sigma = (blurWidth + 1.0f) / 6.0f;
+                size_t kernelWidth = std::ceil((blurWidth - 5.0f) / 4.0f);
                 kernelWidth = kernelWidth * 4 + 5;
                 const float ratio = (kernelWidth + 1.0f) / sigma;
                 ppm.gaussianBlurPass(fg,
