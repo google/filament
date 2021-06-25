@@ -101,8 +101,6 @@ private:
     ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
             TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    static void fillWithDebugPattern(backend::DriverApi& driverApi,
-            backend::Handle<backend::HwTexture> texture, size_t dimensions) noexcept;
 
     void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 
