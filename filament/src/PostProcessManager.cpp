@@ -757,7 +757,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 data.temp = builder.sample(data.temp);
                 data.temp = builder.declareRenderPass(data.temp);
 
-                data.out = builder.createSubresource(output, "Blurred texture mip",{ .level = dstLevel, .layer = layer });
+                data.out = builder.createSubresource(output, "Blurred texture mip",
+                        { .level = dstLevel, .layer = layer });
                 data.out = builder.declareRenderPass(data.out);
             },
             [=](FrameGraphResources const& resources,
@@ -2320,7 +2321,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept {
+        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+        math::float4 clearColor, bool finalize) noexcept {
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -2337,7 +2339,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass(name, {
                     .attachments = { .color = { out }},
-                    .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f },
+                    .clearColor = clearColor,
                     .clearFlags = TargetBufferFlags::COLOR
                 });
             },
@@ -2355,6 +2357,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 driver.setMinMaxLevels(in, level, level);
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
+
+                // When generating shadow map mip levels, we want to preserve the 1 texel border.
+                // (note clearing never respects the scissor in filament)
+                PipelineState pipeline(material.getPipelineState());
+                pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
+
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", in, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -2363,12 +2371,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 mi->setParameter("level", uint32_t(level));
                 mi->setParameter("layer", uint32_t(layer));
                 mi->setParameter("uvscale", 1.0f / dim);
+                mi->commit(driver);
+                mi->use(driver);
 
-                // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                auto vpWidth = (uint32_t) std::max(0, dim - 2);
-                out.params.viewport = { 1, 1, vpWidth, vpWidth };
-
-                commitAndRender(out, material, driver);
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive());
+                driver.endRenderPass();
 
                 if (finalize) {
                    driver.setMinMaxLevels(in, 0, level);

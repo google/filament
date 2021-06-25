@@ -221,10 +221,7 @@ public:
         return getShadowParams(i).options;
     }
 
-    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
-        ShadowParams& params = mManager[i].shadowParams;
-        params.options = options;
-    }
+    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
 
 private:
     friend class FScene;

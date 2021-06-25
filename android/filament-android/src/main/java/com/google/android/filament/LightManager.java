@@ -188,7 +188,7 @@ public class LightManager {
      * Control the quality / performance of the shadow map associated to this light
      */
     public static class ShadowOptions {
-        /** Size of the shadow map in texels. Must be a power-of-two. */
+        /** Size of the shadow map in texels. Must be a power-of-two and larger or equal to 8. */
         public int mapSize = 1024;
 
         /**
