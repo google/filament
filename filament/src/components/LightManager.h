@@ -222,7 +222,8 @@ public:
     }
 
     void setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
-        static_cast<ShadowParams&>(mManager[i].shadowParams).options = options;
+        ShadowParams& params = mManager[i].shadowParams;
+        params.options = options;
     }
 
 private:

@@ -172,19 +172,24 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         lightType.lightCaster = builder->mCastLight;
 
         ShadowParams& shadowParams = manager[i].shadowParams;
-        shadowParams.options.mapSize = clamp(builder->mShadowOptions.mapSize, 0u, 2048u);
-        shadowParams.options.shadowCascades = clamp<uint8_t>(builder->mShadowOptions.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
-        shadowParams.options.constantBias = clamp(builder->mShadowOptions.constantBias, 0.0f, 2.0f);
-        shadowParams.options.normalBias = clamp(builder->mShadowOptions.normalBias, 0.0f, 3.0f);
-        shadowParams.options.shadowFar = std::max(builder->mShadowOptions.shadowFar, 0.0f);
-        shadowParams.options.shadowNearHint = std::max(builder->mShadowOptions.shadowNearHint, 0.0f);
-        shadowParams.options.shadowFarHint = std::max(builder->mShadowOptions.shadowFarHint, 0.0f);
-        shadowParams.options.stable = builder->mShadowOptions.stable;
-        shadowParams.options.polygonOffsetConstant = builder->mShadowOptions.polygonOffsetConstant;
-        shadowParams.options.polygonOffsetSlope = builder->mShadowOptions.polygonOffsetSlope;
-        shadowParams.options.screenSpaceContactShadows = builder->mShadowOptions.screenSpaceContactShadows;
-        shadowParams.options.stepCount = builder->mShadowOptions.stepCount;
-        shadowParams.options.maxShadowDistance = builder->mShadowOptions.maxShadowDistance;
+        shadowParams.options = builder->mShadowOptions;
+
+        // validate all shadow options
+        shadowParams.options.mapSize = clamp(shadowParams.options.mapSize, 0u, 2048u);
+        shadowParams.options.shadowCascades = clamp<uint8_t>(shadowParams.options.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
+        shadowParams.options.constantBias = clamp(shadowParams.options.constantBias, 0.0f, 2.0f);
+        shadowParams.options.normalBias = clamp(shadowParams.options.normalBias, 0.0f, 3.0f);
+        shadowParams.options.shadowFar = std::max(shadowParams.options.shadowFar, 0.0f);
+        shadowParams.options.shadowNearHint = std::max(shadowParams.options.shadowNearHint, 0.0f);
+        shadowParams.options.shadowFarHint = std::max(shadowParams.options.shadowFarHint, 0.0f);
+        shadowParams.options.stable = shadowParams.options.stable;
+        shadowParams.options.polygonOffsetConstant = shadowParams.options.polygonOffsetConstant;
+        shadowParams.options.polygonOffsetSlope = shadowParams.options.polygonOffsetSlope;
+        shadowParams.options.screenSpaceContactShadows = shadowParams.options.screenSpaceContactShadows;
+        shadowParams.options.stepCount = shadowParams.options.stepCount;
+        shadowParams.options.maxShadowDistance = shadowParams.options.maxShadowDistance;
+        shadowParams.options.vsm.msaaSamples = std::max(uint8_t(0), shadowParams.options.vsm.msaaSamples);
+        shadowParams.options.vsm.blurWidth = std::max(0.0f, shadowParams.options.vsm.blurWidth);
 
         // set default values by calling the setters
         setLocalPosition(i, builder->mPosition);

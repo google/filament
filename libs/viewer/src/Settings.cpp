@@ -729,8 +729,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "msaaSamples") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->msaaSamples);
-        } else if (compare(tok, jsonChunk, "blurStandardDeviation") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->blurStandardDeviation);
+        } else if (compare(tok, jsonChunk, "blurWidth") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->blurWidth);
         } else {
             slog.w << "Invalid shadow options VSM key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1171,7 +1171,7 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
     return out << "{\n"
         << "\"vsm\": {\n"
         << "\"msaaSamples\": " << int(in.vsm.msaaSamples) << ",\n"
-        << "\"blurStandardDeviation\": " << in.vsm.blurStandardDeviation << "\n"
+        << "\"blurWidth\": " << in.vsm.blurWidth << "\n"
         << "},\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
         << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
