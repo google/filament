@@ -96,10 +96,6 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         if (!map.hasVisibleShadows()) {
             continue;
         }
-        const uint8_t layer = map.getLayout().layer;
-        assert_invariant(layer < MAX_SHADOW_LAYERS);
-        assert_invariant(layer < textureRequirements.layers);
-
         map.getShadowMap().render(driver, view.getVisibleDirectionalShadowCasters(), pass, view);
         passes.emplace_back(&map, pass);
     }
@@ -110,10 +106,6 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
         if (!map.hasVisibleShadows()) {
             continue;
         }
-        const uint8_t layer = map.getLayout().layer;
-        assert_invariant(layer < textureRequirements.layers);
-        assert_invariant(layer < MAX_SHADOW_LAYERS);
-
         pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_RENDERABLE_N(i));
         map.getShadowMap().render(driver, view.getVisibleSpotShadowCasters(), pass, view);
         pass.clearVisibilityMask();

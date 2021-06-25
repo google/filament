@@ -751,7 +751,9 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
+        if (compare(tok, jsonChunk, "mapSize") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->mapSize);
+        } else if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
         } else if (compare(tok, jsonChunk, "shadowCascades") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowCascades);
@@ -1173,6 +1175,7 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
         << "\"msaaSamples\": " << int(in.vsm.msaaSamples) << ",\n"
         << "\"blurWidth\": " << in.vsm.blurWidth << "\n"
         << "},\n"
+        << "\"mapSize\": " << in.mapSize << ",\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
         << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
         << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"
@@ -1288,9 +1291,9 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
-        << "\"exponent\": " << int(in.exponent) << ",\n"
-        << "\"minVarianceScale\": " << int(in.minVarianceScale) << ",\n"
-        << "\"lightBleedReduction\": " << int(in.lightBleedReduction) << "\n"
+        << "\"exponent\": " << in.exponent << ",\n"
+        << "\"minVarianceScale\": " << in.minVarianceScale << ",\n"
+        << "\"lightBleedReduction\": " << in.lightBleedReduction << "\n"
         << "}";
 }
 

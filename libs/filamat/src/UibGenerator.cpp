@@ -104,7 +104,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT2)
 
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
 
