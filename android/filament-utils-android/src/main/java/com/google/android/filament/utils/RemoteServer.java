@@ -81,6 +81,16 @@ public class RemoteServer {
         return message;
     }
 
+    /*
+     * Destroys the native WebSocket server and frees up the port.
+     *
+     * This might need to be done explicitly (as opposed to waiting for gc) to free up the port.
+     */
+    public void close() {
+        nDestroy(mNativeObject);
+        mNativeObject = 0;
+    }
+
     @Override
     protected void finalize() throws Throwable {
         nDestroy(mNativeObject);

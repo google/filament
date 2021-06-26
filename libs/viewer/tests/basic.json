@@ -2,7 +2,6 @@
     {
         "name": "view",
         "base": {
-            "view.dof.focusDistance": 0.1,
             "view.sampleCount": 1,
             "view.taa.enabled": false
         },
@@ -11,6 +10,12 @@
             "view.ssao.enabled": [ false, true ],
             "view.bloom.enabled": [ false, true ],
             "view.dof.enabled": [ false, true ]
+        }
+    },
+    {
+        "name": "viewer",
+        "base": {
+            "viewer.cameraFocusDistance": 0.1
         }
     },
     {

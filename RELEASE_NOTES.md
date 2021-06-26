@@ -3,11 +3,153 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## Next release (main branch)
+## v1.10.6 (currently main branch)
+
+- engine: Use exponential VSM and improve VSM user settings [⚠️ **Recompile Materials for VSM**].
+- engine: Optional blurring of VSM shadowmaps
+- OpenGL: Increase OpenGL backend handle arena from 2 to 4 MiB
+
+## v1.10.5
+
+- engine: User materials can now provide custom lighting/surface shading, please consult
+  the [materials documentation](https://google.github.io/filament/Materials.html) for details.
+- android: AAR libraries now properly include their ProGuard rules.
+- engine: `Backend::DEFAULT` now selects the most appropriate backend for the platform, rather than
+  always `OPENGL`. On Android the default is `OPENGL`, on Apple platforms the default is `METAL` and
+  on all other platforms that default is `VULKAN`.
+
+## v1.10.4
+
+- engine: improvements to internal job system.
+- Vulkan: performance improvements on Mali.
+- gltfio: improvements to load time for large models.
+- WebGL: remove bogus stride argument, fix `BindingType` TypeScript definition.
+
+## v1.10.3
+
+- android: use `debug.filament.backend` system property to select the desired backend.
+- engine: fix `LightManager::getFalloff`.
+- gltfio: fix crash with non-triangles.
+- macOS: fix main thread checker warnings with OpenGL.
+- vulkan: fix crash on Windows machines with NVIDIA GPUs.
+
+## v1.10.2
+
+- Vulkan: validation and diagnostic improvements
+- engine: improvements for scenes with many renderables.
+- gltfio: added support for `KHR_materials_ior`.
+- java: Add bindings for `IBLPrefilterContext`.
+- java: add `KTXLoader.getSphericalHarmonics` JNI binding
+- libimage: fix, respect sRGB option for compressed formats.
+- sample-gltf-viewer: fix lifetime cycle for RemoteServer.
+
+## v1.10.1
+
+- engine: Add `getPlatform` API to Engine.
+- engine: Add a new cone angles API to `LightManager`.
+- engine: Attachments of custom RendereTargets are not systematically discarded.
+- engine: Fix a crash when using custom rendertargets.
+- engine: New API to duplicate a `MaterialInstance`.
+- filagui: fix support for custom images in ImGuiHelper.
+- java: Add bindings for HDRLoader.
+
+## v1.10.0
+
+- engine: User materials can now use 9 samplers instead of 8 [⚠️ **Material breakage**].
+- engine: Remove `populateTangentQuaternions`  [⚠️ **API change**].
+- engine: Deprecate `Stream::Builder::stream(intptr_t)` [⚠️ **API Change**].
+- engine: Remove deprecated APIs: `Camera::setScaling`, `Engine::destroy(Camera*)`,
+  `Engine::createCamera`, `Renderer::beginFrame(SwapChain*, uint64_t,
+  backend::FrameScheduledCallback, void*)`, and `View::setShadowsEnabled` [⚠️ **API Change**].
+- engine: Remove `focusDistance` from `View::BloomOptions` [⚠️ **API Change**].
+- engine: Add a `FILAMENT_SUPPORTS_OPENGL` CMake option to enable/disable OpenGL support.
+- Vulkan: fixes and improvements for large scenes.
+- gltfio: fix morphing bugs uncovered by MorphStressTest.
+- Java: add API for `Texture::Builder::import()`.
+- WebGL: Fix a potential INVALID_OPERATION.
+
+## v1.9.25
+
+- NEW API: Screen-space lens flare effect.
+- engine: Fix several memory leaks in the GL backend.
+- Vulkan: General bug fixes and improvements.
+- Vulkan: Fix some problems seen on Mali devices.
+- ios: Fix VSM shadows not working.
+- webgl: Fix black screen seen with some samples.
+
+## v1.9.24
+
+- engine: Fix memory leaks in OpenGL driver.
+- engine: new experimental tone mapper, `EVILS` (name will most likely change).
+- engine: Improvements to Vulkan backend.
+- engine: Fix incorrect units documented for `LightManager.getIntensity`.
+- engine: fix high quality upsampling for SSAO.
+- engine: implement accurate normal reconstruction for SSAO.
+- engine: improve LOW and HIGH quality levels for SSAO.
+- libs: improvements to `libiblprefilter`.
+- materials: New `quality` property.
+- samples: Add new gltf-viewer iOS sample.
+- samples: clear the background in lightbulb sample.
+
+## v1.9.23
+
+- Vulkan: various fixes.
+- android: fix crash seen using VSM with MSAA on Adreno devices.
+- engine: Add `Engine::getEntityManager()`.
+- engine: Fix desktop crash seen with some GPU drivers.
+- engine: improve importance sampling.
+- gltfio: robustness improvements for Draco meshes.
+- libs: Add new Transcoder API for C++ clients (part of `libgeometry`).
+- libs: New `iblprefilter` library to compute IBL pre-integration on the GPU using filament.
+- materials: Fix documentation for `getNormalizedViewportCoord`.
+- samples: fix rendertarget sample crash on launch.
+
+## v1.9.22
+
+- NEW API: `Renderer::renderStandaloneView()` is a new method that can be used outside of
+  beginFrame/endFrame on Views that have a RenderTarget associated. This can be used as a
+  pseudo-compute API.
+- Vulkan: bug fixes and improvements.
+- engine: RenderTarget API can now use MRT.
+- sample-gltf-viewer: improvements for reading zip files.
+- sample-gltf-viewer: enable contact-shadows functionality in mobile gltf-viewer.
+- windows: fix build error in filament_framegraph_test.
+
+## v1.9.21
+
+- JavaScript: add missing TextureSampler bindings.
+- Metal: Fix texture swizzling crash with older Nvidia GPUs.
+- Vulkan: fix image layout validation error on Android.
+- android: fix MSAA w/ multisampled_render_to_texture on Mali.
+- engine: better anisotropic filtering with various drivers.
+- gltfio: Use BufferObject API, simplify MorphHelper.
+- gltfio: honor stride in normalizeSkinningWeights.
+- samples: Add web component demo.
+
+## v1.9.20
+
+- Android: Fix VSM.
+- engine: Introduce BufferObject API.
+- engine: Add new isTextureSwizzleSupported API on Texture.
+- engine: Add support to Metal and Vulkan backends for texture swizzling.
+- engine: Add new DoF settings (native/half res, gather kernel ring counts, CoC radius clamp).
+- engine: DoF quality and performance improvements.
+- engine: Fix high-quality upsampling issue with SSAO.
+- Java: Expose `TransformManager.getParent(int)`.
+- samples: Add Metal and Vulkan backend support to Suzanne sample.
+- WebGL: expose fitIntoUnitCube to JS.
+- WebGL: support for multiple `<canvas>` elements.
 
 ## v1.9.19
 
+- engine: Fix Metal bug when setGeometryAt is called multiple times.
+- engine: Improvements to DoF.
+- engine: Fix RenderTarget NPE when depth is not present.
+- engine: Improvements to Camera APIs. Move focus distance from DofOptions to Camera.
 - engine: VSM shadows now support `shadowMultiplier`.
+- java: Expose severla MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
+  should have been public.
+- java: fix bug with Texture::setImage buffer size calculation.
 
 ## v1.9.18
 

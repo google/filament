@@ -8,12 +8,6 @@
 #
 # The default is release
 
-NDK_VERSION="ndk;22.0.7026061"
-ANDROID_NDK_VERSION=22
-
-# Exclude Vulkan from CI builds for Android. (It is enabled for other platforms.)
-EXCLUDE_VULKAN=-v
-
 echo "This script is intended to run in a CI environment and may modify your current environment."
 echo "Please refer to BUILDING.md for more information."
 
@@ -50,20 +44,12 @@ elif [[ "$LC_UNAME" == "darwin" ]]; then
 fi
 source `dirname $0`/../common/build-common.sh
 
-# For continuous builds, do not exclude Vulkan.
-if [[ "$TARGET" == "continuous" ]]; then
-    EXCLUDE_VULKAN=
-fi
+# Unless explicitly specified, NDK version will be set to match exactly the required one
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
-# Only update and install the NDK if necessary, as this can be slow
-ndk_side_by_side="${ANDROID_HOME}/ndk/"
-if [[ -d $ndk_side_by_side ]]; then
-    ndk_version=`ls ${ndk_side_by_side} | sort -V | tail -n 1 | cut -f 1 -d "."`
-    if [[ ${ndk_version} -lt ${ANDROID_NDK_VERSION} ]]; then
-        ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
-    fi
-else
-    ${ANDROID_HOME}/tools/bin/sdkmanager "${NDK_VERSION}" > /dev/null
+# Install the required NDK version specifically (if not present)
+if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
+    ${ANDROID_HOME}/tools/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
 fi
 
 # Only build 1 32 bit and 1 64 bit target during presubmit to cut down build times
@@ -73,5 +59,11 @@ if [[ "$TARGET" == "presubmit" ]]; then
   ANDROID_ABIS="-q arm64-v8a,x86"
 fi
 
+# Build the Android sample-gltf-viewer APK during release.
+BUILD_SAMPLES=
+if [[ "$TARGET" == "release" ]]; then
+    BUILD_SAMPLES="-k sample-gltf-viewer"
+fi
+
 pushd `dirname $0`/../.. > /dev/null
-./build.sh -p android $EXCLUDE_VULKAN $ANDROID_ABIS -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android $ANDROID_ABIS -c $BUILD_SAMPLES $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE

@@ -2877,7 +2877,7 @@ float exposureSettings(float aperture, float shutterSpeed, float sensitivity) {
 
 // Computes the exposure normalization factor from
 // the camera's EV100
-float exposure(ev100) {
+float exposure(float ev100) {
     return 1.0 / (pow(2.0, ev100) * 1.2);
 }
 

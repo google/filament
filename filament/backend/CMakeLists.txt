@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(filament C ASM)
 
 set(TARGET backend)
@@ -55,7 +55,7 @@ set(PRIVATE_HDRS
 # OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-if (NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
+if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
     list(APPEND SRCS
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
@@ -115,7 +115,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
-            src/metal/PlatformMetal.mm
+            src/metal/MetalPlatform.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
@@ -138,12 +138,13 @@ endif()
 # See root CMakeLists.txt for platforms that support Vulkan
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
-            src/vulkan/VulkanBinder.cpp
-            src/vulkan/VulkanBinder.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
+            src/vulkan/VulkanCommands.cpp
+            src/vulkan/VulkanCommands.h
+            src/vulkan/VulkanConstants.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
             src/vulkan/VulkanDisposer.cpp
@@ -155,13 +156,20 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
+            src/vulkan/VulkanMemory.h
             src/vulkan/VulkanMemory.cpp
+            src/vulkan/VulkanPipelineCache.cpp
+            src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
+            src/vulkan/VulkanSwapChain.cpp
+            src/vulkan/VulkanSwapChain.h
+            src/vulkan/VulkanTexture.cpp
+            src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp
             src/vulkan/VulkanUtility.h
     )
@@ -227,8 +235,8 @@ function(build_vkshader SOURCE TARGET_PATH)
             DEPENDS matc ${SOURCE_PATH}
             COMMENT "Building SPIR-V")
 endfunction()
-build_vkshader("BlitColor.vs" "BlitColorVs.spv")
-build_vkshader("BlitColor.fs" "BlitColorFs.spv")
+build_vkshader("BlitDepth.vs" "BlitDepthVs.spv")
+build_vkshader("BlitDepth.fs" "BlitDepthFs.spv")
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
@@ -250,7 +258,10 @@ add_library(vkshaders STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
 # ==================================================================================================
 
 if (ANDROID)
-    target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
+    if (FILAMENT_SUPPORTS_OPENGL)
+        target_link_libraries(${TARGET} PUBLIC GLESv3 EGL)
+    endif()
+    target_link_libraries(${TARGET} PUBLIC android)
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
@@ -265,12 +276,12 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 
 # Android, iOS, and WebGL do not use bluegl.
-if(NOT IOS AND NOT ANDROID AND NOT WEBGL)
+if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders)
+    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)

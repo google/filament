@@ -39,7 +39,7 @@
 namespace utils {
 
 class JobSystem {
-    static constexpr size_t MAX_JOB_COUNT = 4096;
+    static constexpr size_t MAX_JOB_COUNT = 16384;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
 
@@ -169,12 +169,9 @@ public:
     // the caller must ensure the object will outlive the Job
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T* data) noexcept {
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                (*static_cast<T**>(user)->*method)(js, job);
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
+            (*static_cast<T**>(user)->*method)(js, job);
+        });
         if (job) {
             job->storage[0] = data;
         }
@@ -185,14 +182,11 @@ public:
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T data) noexcept {
         static_assert(sizeof(data) <= sizeof(Job::storage), "user data too large");
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                T* that = static_cast<T*>(user);
-                (that->*method)(js, job);
-                that->~T();
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
+            T* that = static_cast<T*>(user);
+            (that->*method)(js, job);
+            that->~T();
+        });
         if (job) {
             new(job->storage) T(std::move(data));
         }
@@ -203,14 +197,11 @@ public:
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
         static_assert(sizeof(functor) <= sizeof(Job::storage), "functor too large");
-        struct stub {
-            static void call(void* user, JobSystem& js, Job* job) noexcept {
-                T& that = *static_cast<T*>(user);
-                that(js, job);
-                that.~T();
-            }
-        };
-        Job* job = create(parent, &stub::call);
+        Job* job = create(parent, [](void* user, JobSystem& js, Job* job){
+            T& that = *static_cast<T*>(user);
+            that(js, job);
+            that.~T();
+        });
         if (job) {
             new(job->storage) T(std::move(functor));
         }
@@ -252,11 +243,10 @@ public:
      *
      * The job can't be used after this call.
      */
-    enum runFlags { DONT_SIGNAL = 0x1 };
-    void run(Job*& job, uint32_t flags = 0) noexcept;
-    void run(Job*&& job, uint32_t flags = 0) noexcept { // allows run(createJob(...));
+    void run(Job*& job) noexcept;
+    void run(Job*&& job) noexcept { // allows run(createJob(...));
         Job* p = job;
-        run(p, flags);
+        run(p);
     }
 
     void signal() noexcept;
@@ -267,7 +257,7 @@ public:
      *
      * This job MUST BE waited on with wait(), or released with release().
      */
-    Job* runAndRetain(Job* job, uint32_t flags = 0) noexcept;
+    Job* runAndRetain(Job* job) noexcept;
 
     /*
      * Wait on a job and destroys it.
@@ -361,6 +351,7 @@ private:
     void finish(Job* job) noexcept;
 
     void put(WorkQueue& workQueue, Job* job) noexcept {
+        assert(job);
         size_t index = job - mJobStorageBase;
         assert(index >= 0 && index < MAX_JOB_COUNT);
         workQueue.push(uint16_t(index + 1));
@@ -379,7 +370,8 @@ private:
     }
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
-    void wake() noexcept;
+    void wakeAll() noexcept;
+    void wakeOne() noexcept;
 
     // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
@@ -468,16 +460,10 @@ struct ParallelForJobData {
     }
 
     void parallelWithJobs(JobSystem& js, JobSystem::Job* parent) noexcept {
-
-        // We first split about the number of threads we have, and only then we split the rest
-        // in a single thread (but execute the final cut in new jobs, see parallel() below),
-        // this way we save a lot of copies of JobData and miss-predicted branches
-        if (splits == js.getParallelSplitCount()) {
-            parallel(js, parent);
-            return;
-        }
+        assert(parent);
 
         // this branch is often miss-predicted (it both sides happen 50% of the calls)
+right_side:
         if (splitter.split(splits, count)) {
             const size_type lc = count / 2;
             JobData ld(start, lc, splits + uint8_t(1), functor, splitter);
@@ -491,19 +477,13 @@ struct ParallelForJobData {
             // of job creation failure -- rare, but still.
             js.run(l);
 
-            const size_type rc = count - lc;
-            JobData rd(start + lc, rc, splits + uint8_t(1), functor, splitter);
-            JobSystem::Job* r = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(rd));
-            if (UTILS_UNLIKELY(r == nullptr)) {
-                // couldn't allocate right side job, execute it right now
-                start += lc;
-                count = rc;
-                goto execute;
-            }
+            // don't spawn a job for the right side, just reuse us -- spawning jobs is more
+            // costly than we'd like.
+            start += lc;
+            count -= lc;
+            ++splits;
+            goto right_side;
 
-            // All good, execute the right side, but don't signal it,
-            // so it's more likely to be executed next on the same thread
-            js.run(r, JobSystem::DONT_SIGNAL);
         } else {
 execute:
             // we're done splitting, do the real work here!
@@ -512,43 +492,6 @@ execute:
     }
 
 private:
-    void parallel(JobSystem& js, JobSystem::Job* parent) noexcept {
-
-        // figure out how many splits we need
-        size_type c = count;
-        uint8_t   s = splits;
-        while (splitter.split(s, c)) {
-            c /= 2u;
-            ++s;
-        }
-
-        // then linearly create all jobs with number of elements required by the splitter
-        JobSystem::Job* job = nullptr;
-        auto& func = functor;
-        size_type const first = start;
-        size_type const end = first + count;
-        size_type curr = first;
-
-        while (curr + 2u * c < end) {
-            // this creates jobs from the end of the buffer because the WorkStealingDequeue
-            // is a LIFO, this could help streaming to the d-cache.
-            const size_type pos = end - (curr - first) - c;
-            job = js.createJob(parent, [func, pos, c](JobSystem&, JobSystem::Job*) {
-                func(pos, c);
-            });
-            if (UTILS_UNLIKELY(!job)) {
-                goto finish; // oops, no more job available
-            }
-            js.run(job, JobSystem::DONT_SIGNAL);
-            curr += c;
-        }
-    finish:
-        assert(end >= curr);
-        assert(end - curr >= c);
-        js.signal();
-        functor(start, end - curr);
-    }
-
     size_type start;            // 4
     size_type count;            // 4
     Functor functor;            // ?

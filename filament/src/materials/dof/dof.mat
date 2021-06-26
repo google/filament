@@ -132,7 +132,7 @@ float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
     // median pass. With round() below + noise, most gaps are handled by the median pass,
     // and the quality is much better overall.
 
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
     // on mobile, the mip level is not used in computations in the shader,
     // so we just let the texture unit pick the the "nearest" mipmap level.
 #else
@@ -156,7 +156,7 @@ float sampleWeight(const float coc, const float mip) {
     // The high resolution pixel radius is sqrt(2) * 0.5.
     // x2 to scale to 1/4 res, x 2^mip for the current mip.
     // ^2 for the area.
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
     const float pixelRadiusSquared = 2.0;   // (sqrt(2) * 0.5 * 2.0)^2
 #else
     float pixelRadiusSquared = 2.0 * pow(2.0, mip);     // 2^(mip+1)
@@ -166,7 +166,7 @@ float sampleWeight(const float coc, const float mip) {
 
 float intersection(const float border, const float absCoc, const float mip) {
     // there is very little visible difference, so use the cheaper version on mobile
-#if defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
     return saturate((absCoc - border) + 0.5);
 #else
     return saturate((absCoc - border) * pow(0.5, mip) + 0.5);
@@ -195,15 +195,16 @@ highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
  * "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
  */
 
-// Qualcomm drivers don't seem to support precision qualifiers on member of a structure,
-// they are simply ignored.
+// Adreno drivers don't seem to support precision qualifiers on member of a structure,
+// they are simply ignored. On the other hand, Mali drivers don't seem to honor the precision
+// qualifier around a struct -- so we need to do both.
 precision highp float;
 
 struct Bucket {
-    vec4 c;     // accumulated, weighted color
-    float cw;   // accumulated weight
-    float o;    // # of miss for the ring
-    float coc;  // accumulated, weighted coc
+    highp vec4 c;     // accumulated, weighted color
+    highp float cw;   // accumulated weight
+    float o;          // # of miss for the ring
+    float coc;        // accumulated, weighted coc
 };
 
 precision mediump float;
@@ -315,34 +316,8 @@ void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2
 void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
         const highp vec2 center, const vec2 offset,
         const float radius, const float border, const float mip, const bool first) {
-    // The code below is equivalent (without hole filling) to:
-    //  accumulateBackground(curr, prev, diaphragm(center,  offset), radius, border, mip, first);
-    //  accumulateBackground(curr, prev, diaphragm(center, -offset), radius, border, mip, first);
-    //  return;
-    // We use the technique used by Jimenez for the foreground applied to the background, where
-    // we "guess" the missing background information from neighboring pixels. In several papers it's
-    // not deemed useful for the background, however, it does improve the blur quality a lot very
-    // shallow DoF, i.e. when a moderately blurred background sits over a strongly blured one.
-    Sample tap0;
-    Sample tap1;
-
-    highp vec2 pos0 = diaphragm(center,  offset);
-    tap0.coc = textureLod(materialParams_coc, pos0, mip).r;
-
-    highp vec2 pos1 = diaphragm(center, -offset);
-    tap1.coc = textureLod(materialParams_coc, pos1, mip).r;
-
-    float coc = min(tap0.coc, tap1.coc);
-    tap0.coc     =
-    tap1.coc     = coc;
-    tap0.inLayer =
-    tap1.inLayer = isBackground(coc);
-
-    tap0.s = textureLod(materialParams_color, pos0, mip);
-    accumulate(curr, prev, tap0, radius, border, mip, first);
-
-    tap1.s = textureLod(materialParams_color, pos1, mip);
-    accumulate(curr, prev, tap1, radius, border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center,  offset), radius, border, mip, first);
+    accumulateBackground(curr, prev, diaphragm(center, -offset), radius, border, mip, first);
 }
 
 void accumulateBackgroundCenter(inout Bucket prev,
@@ -596,7 +571,7 @@ void backgroundTile(inout vec4 background, inout float bgOpacity,
 
     float kernelArea = sampleWeight(kernelSize * ((ringCountGather + 0.5) / ringCountGather), mip);
     bgOpacity = saturate(prev.cw * rcp(kernelArea));
-#if !defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
     bgOpacity *= smoothstep(MAX_IN_FOCUS_COC, 2.0, kernelSize);
 #endif
     background = prev.c * (rcpOrZeroHighp(prev.cw) * bgOpacity);
@@ -623,7 +598,7 @@ void postProcess(inout PostProcessInputs postProcess) {
 
 #if KERNEL_USE_NOISE
     // A good random generator is essential, this one is okay.
-    vec2 fragCoords = gl_FragCoord.xy;
+    highp vec2 fragCoords = gl_FragCoord.xy;
     float randomAngle = random(fragCoords) * (2.0 * PI);
     float random01 = random(fragCoords * vec2(5099.0, 3499.0)); // large primes seem to work ok
     noiseState.randomUniformDiskRadius = 0.5 * sqrt(random01);

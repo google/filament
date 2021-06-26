@@ -367,7 +367,6 @@ value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOpti
     .field("quality", &filament::View::AmbientOcclusionOptions::quality);
 
 value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
-    .field("focusDistance", &filament::View::DepthOfFieldOptions::focusDistance)
     .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)
     .field("maxApertureDiameter", &filament::View::DepthOfFieldOptions::maxApertureDiameter)
     .field("enabled", &filament::View::DepthOfFieldOptions::enabled)
@@ -388,7 +387,16 @@ value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("threshold", &filament::View::BloomOptions::threshold)
     .field("enabled", &filament::View::BloomOptions::enabled)
     .field("blendMode", &filament::View::BloomOptions::blendMode)
-    .field("highlight", &filament::View::BloomOptions::highlight);
+    .field("highlight", &filament::View::BloomOptions::highlight)
+    .field("lensFlare", &filament::View::BloomOptions::lensFlare)
+    .field("starburst", &filament::View::BloomOptions::starburst)
+    .field("chromaticAberration", &filament::View::BloomOptions::chromaticAberration)
+    .field("ghostCount", &filament::View::BloomOptions::ghostCount)
+    .field("ghostSpacing", &filament::View::BloomOptions::ghostSpacing)
+    .field("ghostThreshold", &filament::View::BloomOptions::ghostThreshold)
+    .field("haloThickness", &filament::View::BloomOptions::haloThickness)
+    .field("haloRadius", &filament::View::BloomOptions::haloRadius)
+    .field("haloThreshold", &filament::View::BloomOptions::haloThreshold);
 
 // TODO: add support for dirt texture in BloomOptions.
 // Note that simply including the field in the above list causes binding errors for nullptr.
@@ -512,6 +520,12 @@ class_<Engine>("Engine")
         return &engine->getRenderableManager();
     }), allow_raw_pointers())
 
+    /// getEntityManager ::method::
+    /// ::retval:: an instance of [utils::EntityManager]
+    .function("getEntityManager", EMBIND_LAMBDA(utils::EntityManager*, (Engine* engine), {
+        return &engine->getEntityManager();
+    }), allow_raw_pointers())
+
     /// createSwapChain ::method::
     /// ::retval:: an instance of [SwapChain]
     .function("createSwapChain", (SwapChain* (*)(Engine*)) []
@@ -627,6 +641,7 @@ class_<SwapChain>("SwapChain");
 /// See also the [Engine] methods `createRenderer` and `destroyRenderer`.
 class_<Renderer>("Renderer")
     .function("renderView", &Renderer::render, allow_raw_pointers())
+    .function("renderStandaloneView", &Renderer::renderStandaloneView, allow_raw_pointers())
     /// render ::method:: requests rendering for a single frame on the given [View]
     /// swapChain ::argument:: the [SwapChain] corresponding to the canvas
     /// view ::argument:: the [View] corresponding to the canvas
@@ -1296,7 +1311,9 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setDepthCulling", &MaterialInstance::setDepthCulling);
 
 class_<TextureSampler>("TextureSampler")
-    .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();
+    .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()
+    .function("setAnisotropy", &TextureSampler::setAnisotropy)
+    .function("setCompareMode", &TextureSampler::setCompareMode);
 
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
@@ -1787,17 +1804,20 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
         return std::string(self->getName(entity));
     }), allow_raw_pointers())
+    .function("getExtras", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
+        return std::string(self->getExtras(entity));
+    }), allow_raw_pointers())
     .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
     .function("getWireframe", &FilamentAsset::getWireframe)
     .function("getEngine", &FilamentAsset::getEngine, allow_raw_pointers())
     .function("releaseSourceData", &FilamentAsset::releaseSourceData);
 
 class_<FilamentInstance>("gltfio$FilamentInstance")
+    .function("getAsset", &FilamentInstance::getAsset, allow_raw_pointers())
     .function("getEntities", EMBIND_LAMBDA(EntityVector, (FilamentInstance* self), {
         const utils::Entity* ptr = self->getEntities();
         return EntityVector(ptr, ptr + self->getEntityCount());
     }), allow_raw_pointers())
-
     .function("getRoot", &FilamentInstance::getRoot)
     .function("getAnimator", &FilamentInstance::getAnimator, allow_raw_pointers());
 
@@ -1902,6 +1922,14 @@ class_<SimpleViewer>("SimpleViewer")
     .function("keyDownEvent", &SimpleViewer::keyDownEvent)
     .function("keyUpEvent", &SimpleViewer::keyUpEvent)
     .function("keyPressEvent", &SimpleViewer::keyPressEvent);
+
+function("fitIntoUnitCube", EMBIND_LAMBDA(flatmat4, (Aabb box, float zoffset), {
+    return flatmat4 { fitIntoUnitCube(box, zoffset) };
+}));
+
+function("multiplyMatrices", EMBIND_LAMBDA(flatmat4, (flatmat4 a, flatmat4 b), {
+    return flatmat4 { a.m * b.m };
+}));
 
 } // EMSCRIPTEN_BINDINGS
 

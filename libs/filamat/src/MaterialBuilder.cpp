@@ -262,6 +262,11 @@ MaterialBuilder& MaterialBuilder::refractionType(RefractionType refractionType) 
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::quality(ShaderQuality quality) noexcept {
+    mShaderQuality = quality;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -336,6 +341,11 @@ MaterialBuilder& MaterialBuilder::clearCoatIorChange(bool clearCoatIorChange) no
 
 MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
     mFlipUV = flipUV;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::customSurfaceShading(bool customSurfaceShading) noexcept {
+    mCustomSurfaceShading = customSurfaceShading;
     return *this;
 }
 
@@ -461,6 +471,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAOSet = mSpecularAOSet;
     info.refractionMode = mRefractionMode;
     info.refractionType = mRefractionType;
+    info.quality = mShaderQuality;
+    info.hasCustomSurfaceShading = mCustomSurfaceShading;
 }
 
 bool MaterialBuilder::findProperties(filament::backend::ShaderType type,
@@ -527,7 +539,8 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, mSemanticCodeGenParams, mProperties);
-    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mMaterialDomain, targetApi,
+            mCustomSurfaceShading);
     return result;
 #else
     return true;
@@ -895,15 +908,19 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
         return Package::invalidPackage();
     }
 
+    if (mCustomSurfaceShading && mShading != Shading::LIT) {
+        utils::slog.e << "Error: customSurfaceShading can only be used with lit materials."
+                      << utils::io::endl;
+        return Package::invalidPackage();
+    }
+
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
     MaterialInfo info;
     prepareToBuild(info);
 
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
-    if (!checkLiteRequirements() ||
-        !findAllProperties() ||
-        !runSemanticAnalysis()) {
+    if (!checkLiteRequirements() || !findAllProperties() || !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
     }

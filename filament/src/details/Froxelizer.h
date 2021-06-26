@@ -17,19 +17,15 @@
 #ifndef TNT_FILAMENT_DETAILS_FROXEL_H
 #define TNT_FILAMENT_DETAILS_FROXEL_H
 
-#include "UniformBuffer.h"
-
 #include "details/Allocators.h"
 #include "details/Scene.h"
 #include "details/Engine.h"
-
-#include <backend/Handle.h>
 
 #include "GPUBuffer.h"
 
 #include <filament/Viewport.h>
 
-#include <private/filament/UibGenerator.h>
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 #include <utils/bitset.h>
@@ -37,8 +33,6 @@
 
 #include <math/mat4.h>
 #include <math/vec4.h>
-
-#include <vector>
 
 namespace filament {
 
@@ -94,7 +88,9 @@ public:
     void terminate(backend::DriverApi& driverApi) noexcept;
 
     // gpu buffer containing records. valid after construction.
-    GPUBuffer const& getRecordBuffer() const noexcept { return mRecordsBuffer; }
+    backend::Handle<backend::HwUniformBuffer> getRecordBuffer() const noexcept {
+        return mRecordsBuffer;
+    }
 
     // gpu buffer containing froxels. valid after construction.
     GPUBuffer const& getFroxelBuffer() const noexcept { return mFroxelBuffer; }
@@ -126,12 +122,12 @@ public:
     void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
 
-    void updateUniforms(UniformBuffer& u) {
-        u.setUniform(offsetof(PerViewUib, zParams), mParamsZ);
-        u.setUniform(offsetof(PerViewUib, fParams), mParamsF.yz);
-        u.setUniform(offsetof(PerViewUib, fParamsX), mParamsF.x);
-        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
-        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
+    void updateUniforms(PerViewUib& s) {
+        s.zParams = mParamsZ;
+        s.fParams = mParamsF.yz;
+        s.fParamsX = mParamsF.x;
+        s.oneOverFroxelDimensionX = mOneOverDimension.x;
+        s.oneOverFroxelDimensionY = mOneOverDimension.y;
     }
 
     // send froxel data to GPU
@@ -192,8 +188,8 @@ private:
 
     using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX>;
 
-    void setViewport(Viewport const& viewport) noexcept;
-    void setProjection(const math::mat4f& projection, float near, float far) noexcept;
+    inline void setViewport(Viewport const& viewport) noexcept;
+    inline void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
@@ -232,7 +228,7 @@ private:
     utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
 
     // max 32 KiB  (actual: resolution dependant)
-    utils::Slice<RecordBufferType> mRecordBufferUser;   //  64 KiB
+    utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB
     utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/ 256 lights
 
     uint16_t mFroxelCountX = 0;
@@ -247,7 +243,7 @@ private:
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
     math::float2 mOneOverDimension = {};
-    GPUBuffer mRecordsBuffer;
+    backend::UniformBufferHandle mRecordsBuffer;
     GPUBuffer mFroxelBuffer;
 
     // needed for update()

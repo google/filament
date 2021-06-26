@@ -58,7 +58,7 @@ struct PixelParams {
     float etaIR;
     float transmission;
     float uThickness;
-    vec3 absorption;
+    vec3  absorption;
 #endif
 };
 

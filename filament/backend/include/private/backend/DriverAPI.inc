@@ -168,8 +168,7 @@ DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
         backend::AttributeArray, attributes,
-        backend::BufferUsage, usage,
-        bool, bufferObjectsEnabled)
+        backend::BufferUsage, usage)
 
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
@@ -216,10 +215,10 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         backend::TextureUsage, usage)
 
 DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
-        size_t, size)
+        uint32_t, size)
 
 DECL_DRIVER_API_R_N(backend::UniformBufferHandle, createUniformBuffer,
-        size_t, size,
+        uint32_t, size,
         backend::BufferUsage, usage)
 
 DECL_DRIVER_API_R_0(backend::RenderPrimitiveHandle, createRenderPrimitive)
@@ -298,7 +297,7 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatMipmappable, backend::Texture
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetFormatSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, areFeedbackLoopsSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
@@ -311,15 +310,9 @@ DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncH
  * -----------------------
  */
 
-DECL_DRIVER_API_N(updateVertexBuffer,
-        backend::VertexBufferHandle, vbh,
-        size_t, index,
-        backend::BufferDescriptor&&, data,
-        uint32_t, byteOffset)
-
 DECL_DRIVER_API_N(setVertexBufferObject,
         backend::VertexBufferHandle, vbh,
-        size_t, index,
+        uint32_t, index,
         backend::BufferObjectHandle, bufferObject)
 
 DECL_DRIVER_API_N(updateIndexBuffer,
@@ -381,7 +374,7 @@ DECL_DRIVER_API_N(setExternalImage,
 DECL_DRIVER_API_N(setExternalImagePlane,
         backend::TextureHandle, th,
         void*, image,
-        size_t, plane)
+        uint32_t, plane)
 
 DECL_DRIVER_API_N(setExternalStream,
         backend::TextureHandle, th,
@@ -433,26 +426,26 @@ DECL_DRIVER_API_N(commit,
  */
 
 DECL_DRIVER_API_N(bindUniformBuffer,
-        size_t, index,
+        uint32_t, index,
         backend::UniformBufferHandle, ubh)
 
 DECL_DRIVER_API_N(bindUniformBufferRange,
-        size_t, index,
+        uint32_t, index,
         backend::UniformBufferHandle, ubh,
-        size_t, offset,
-        size_t, size)
+        uint32_t, offset,
+        uint32_t, size)
 
 DECL_DRIVER_API_N(bindSamplers,
-        size_t, index,
+        uint32_t, index,
         backend::SamplerGroupHandle, sbh)
 
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string,
-        size_t, len = 0)
+        uint32_t, len = 0)
 
 DECL_DRIVER_API_N(pushGroupMarker,
         const char*, string,
-        size_t, len = 0)
+        uint32_t, len = 0)
 
 DECL_DRIVER_API_0(popGroupMarker)
 

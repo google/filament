@@ -8,7 +8,7 @@ verify_ssl = true
 [packages]
 jsbeautifier = "*"
 mistletoe = "*"
-Pygments = "*"
+Pygments = ">=2.7.4"
 
 [requires]
 python_version = "3.9"

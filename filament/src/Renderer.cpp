@@ -155,6 +155,31 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
+void FRenderer::renderStandaloneView(FView const* view) {
+    SYSTRACE_CALL();
+
+    using namespace std::chrono;
+
+    ASSERT_PRECONDITION(view->getRenderTarget(),
+            "View \"%s\" must have a RenderTarget associated", view->getName());
+
+    if (UTILS_LIKELY(view->getScene())) {
+        mPreviousRenderTargets.clear();
+        mFrameId++;
+
+        // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
+        FEngine& engine = getEngine();
+        engine.prepare();
+
+        FEngine::DriverApi& driver = engine.getDriverApi();
+        driver.beginFrame(steady_clock::now().time_since_epoch().count(), mFrameId);
+
+        renderInternal(view);
+
+        driver.endFrame(mFrameId);
+    }
+}
+
 void FRenderer::render(FView const* view) {
     SYSTRACE_CALL();
 
@@ -166,24 +191,28 @@ void FRenderer::render(FView const* view) {
     }
 
     if (UTILS_LIKELY(view && view->getScene())) {
-        // per-renderpass data
-        ArenaScope rootArena(mPerRenderPassArena);
-
-        FEngine& engine = mEngine;
-        JobSystem& js = engine.getJobSystem();
-
-        // create a root job so no other job can escape
-        auto *rootJob = js.setRootJob(js.createJob());
-
-        // execute the render pass
-        renderJob(rootArena, const_cast<FView&>(*view));
-
-        // make sure to flush the command buffer
-        engine.flush();
-
-        // and wait for all jobs to finish as a safety (this should be a no-op)
-        js.runAndWait(rootJob);
+        renderInternal(view);
     }
+}
+
+void FRenderer::renderInternal(FView const* view) {
+    // per-renderpass data
+    ArenaScope rootArena(mPerRenderPassArena);
+
+    FEngine& engine = mEngine;
+    JobSystem& js = engine.getJobSystem();
+
+    // create a root job so no other job can escape
+    auto *rootJob = js.setRootJob(js.createJob());
+
+    // execute the render pass
+    renderJob(rootArena, const_cast<FView&>(*view));
+
+    // make sure to flush the command buffer
+    engine.flush();
+
+    // and wait for all jobs to finish as a safety (this should be a no-op)
+    js.runAndWait(rootJob);
 }
 
 void FRenderer::renderJob(ArenaScope& arena, FView& view) {
@@ -227,17 +256,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
-    FRenderTarget* currentRenderTarget = upcast(view.getRenderTarget());
-    if (mPreviousRenderTargets.find(currentRenderTarget) == mPreviousRenderTargets.end()) {
-        mPreviousRenderTargets.insert(currentRenderTarget);
-        initializeClearFlags();
-    }
-
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
     // start froxelization immediately, it has no dependencies
-    JobSystem::Job* jobFroxelize = js.runAndRetain(js.createJob(nullptr,
-            [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+    JobSystem::Job* jobFroxelize = nullptr;
+    if (view.hasDynamicLighting()) {
+        jobFroxelize = js.runAndRetain(js.createJob(nullptr,
+                [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
+    }
 
     /*
      * Allocate command buffer
@@ -274,15 +300,41 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         view.renderShadowMaps(fg, engine, driver, pass);
     }
 
-    const TargetBufferFlags discardedFlags = mDiscardedFlags;
-    const TargetBufferFlags clearFlags = mClearFlags;
+    // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
+    // recorded in the list of targets already rendered into -- this ensures that
+    // initializeClearFlags() is called only once for the default RenderTarget.
+    auto& previousRenderTargets = mPreviousRenderTargets;
+    FRenderTarget* const currentRenderTarget = upcast(view.getRenderTarget());
+    if (UTILS_LIKELY(
+            previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
+        previousRenderTargets.insert(currentRenderTarget);
+        initializeClearFlags();
+    }
+
     const float4 clearColor = mClearOptions.clearColor;
+    const TargetBufferFlags clearFlags = mClearFlags;
+    const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
+    TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
+    TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
+
+    if (currentRenderTarget) {
+        // For custom RenderTarget, we look at each attachment flag and if they have their
+        // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
+        // "+1" to the count for the DEPTH attachment (we don't have stencil for the public RenderTarget)
+        for (size_t i = 0; i < RenderTarget::MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1; i++) {
+            auto attachment = currentRenderTarget->getAttachment((RenderTarget::AttachmentPoint)i);
+            if (attachment.texture && any(attachment.texture->getUsage() &
+                    (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
+                keepOverrideEndFlags |= backend::getTargetBufferFlagsAt(i);
+            }
+        }
+    }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
     // however, it's implemented as part of executing a render pass on the current render target,
     // and that happens for each View. So we need to disable clearing after the 1st View has
     // been processed.
-    mDiscardedFlags &= ~TargetBufferFlags::COLOR;
+    mDiscardStartFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
     Handle<HwRenderTarget> viewRenderTarget;
@@ -295,9 +347,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .clearColor = clearColor,
                     .samples = 0,
                     .clearFlags = clearFlags,
-                    .discardStart = discardedFlags
+                    .keepOverrideStart = keepOverrideStartFlags,
+                    .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
-
 
     const bool blendModeTranslucent = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
     const bool hasCustomRenderTarget = viewRenderTarget != mRenderTarget;
@@ -305,7 +357,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool blending = !hasCustomRenderTarget && blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
-    const bool needsAlphaChannel = mSwapChain->isTransparent() || blendModeTranslucent;
+    const bool needsAlphaChannel = (mSwapChain ? mSwapChain->isTransparent() : false) || blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     const ColorPassConfig config{
@@ -406,12 +458,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // prepare color grading as subpass material
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
-                            view.getColorGrading(),
+                            view.getColorGrading(), colorGradingConfig,
                             view.getVignetteOptions(),
-                            colorGradingConfig.fxaa,
-                            colorGradingConfig.dithering,
-                            config.svp.width,
-                            config.svp.height);
+                            config.svp.width, config.svp.height);
                 }
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
@@ -468,19 +517,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (dofOptions.enabled) {
             input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
         }
+
+        if (bloomOptions.enabled) {
+            // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
+            // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
+            ppm.bloom(fg, input, TextureFormat::R11F_G11F_B10F, bloomOptions, scale);
+        }
+
         if (colorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input,
-                        view.getColorGrading(),
-                        colorGradingConfig.ldrFormat,
-                        colorGradingConfig.translucent,
-                        colorGradingConfig.fxaa,
-                        scale, bloomOptions, vignetteOptions,
-                        colorGradingConfig.dithering);
+                input = ppm.colorGrading(fg, input, scale,
+                        view.getColorGrading(), colorGradingConfig,
+                        bloomOptions, vignetteOptions);
             }
         }
         if (fxaa) {
-            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat, !colorGrading || needsAlphaChannel);
+            input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat,
+                    !colorGrading || needsAlphaChannel);
         }
         if (scaled) {
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
@@ -672,15 +725,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphId<FrameGraphTexture> structure;
         float4 clearColor{};
+        TargetBufferFlags clearFlags{};
     };
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
                 Blackboard& blackboard = fg.getBlackboard();
-                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
+                TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
-                data.clearColor = config.clearColor;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
@@ -707,20 +760,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color) {
-                    // we're allocating a new buffer, so its content is undefined and we might need
-                    // to clear it.
-
-                    if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
-                        // if the View is going to be blended in, then always clear to transparent
-                        clearColorFlags |= TargetBufferFlags::COLOR;
-                        data.clearColor = {};
-                    }
-
-                    if (view.isSkyboxVisible()) {
-                        // if the skybox is visible, then we don't need to clear at all
-                        clearColorFlags &= ~TargetBufferFlags::COLOR;
-                    }
-
+                    // FIXME: this works only when the viewport is full
+                    //  if (view.isSkyboxVisible()) {
+                    //      // if the skybox is visible, then we don't need to clear at all
+                    //      clearColorFlags &= ~TargetBufferFlags::COLOR;
+                    //  }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
@@ -751,17 +795,21 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 }
 
-                // FIXME: do we actually need these reads here? it means "preserve" these attachments
+                // We set a "read" constraint on these attachments here because we need to preserve them
+                // when the color pass happens in several passes (e.g. with SSR)
                 data.color = builder.read(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags });
+
+                data.clearColor = config.clearColor;
+                data.clearFlags = clearColorFlags | clearDepthFlags;
 
                 blackboard["depth"] = data.depth;
             },
@@ -790,12 +838,21 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;
+                out.params.flags.clear = data.clearFlags;
+                if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
+                    if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
+                        // if the buffer is discarded (e.g. it's new) and we're blending,
+                        // then clear it to transparent
+                        out.params.flags.clear |= TargetBufferFlags::COLOR;
+                        out.params.clearColor = {};
+                    }
+                }
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());
-                    ppm.colorGradingSubpass(driver, colorGradingConfig.translucent);
+                    ppm.colorGradingSubpass(driver, colorGradingConfig);
                 } else {
                     driver.beginRenderPass(out.target, out.params);
                     pass.executeCommands(resources.getPassName());
@@ -865,8 +922,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     mSwapChain->makeCurrent(driver);
 }
 
-bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameScheduledCallback callback, void* user) {
+bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
     SYSTRACE_CALL();
@@ -899,7 +955,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     float l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
-    initializeClearFlags();
     mPreviousRenderTargets.clear();
 
     mBeginFrameInternal = {};
@@ -922,9 +977,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = getEngine();
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        if (callback) {
-            driver.setFrameScheduledCallback(swapChain->getHwHandle(), callback, user);
-        }
         driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
@@ -1104,9 +1156,9 @@ void FRenderer::getRenderTarget(FView const& view,
 void FRenderer::initializeClearFlags() {
     // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
     // across views (clear implies discard)
-    mDiscardedFlags = ((mClearOptions.discard || mClearOptions.clear) ?
-              TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-            | TargetBufferFlags::DEPTH_AND_STENCIL;
+    mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
+                          TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+                         | TargetBufferFlags::DEPTH_AND_STENCIL;
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;
@@ -1125,12 +1177,7 @@ void Renderer::render(View const* view) {
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, nullptr, nullptr);
-}
-
-bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano,
-        backend::FrameScheduledCallback callback, void* user) {
-    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano, callback, user);
+    return upcast(this)->beginFrame(upcast(swapChain), vsyncSteadyClockTimeNano);
 }
 
 void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
@@ -1172,6 +1219,10 @@ void Renderer::setFrameRateOptions(FrameRateOptions const& options) noexcept {
 
 void Renderer::setClearOptions(const ClearOptions& options) {
     upcast(this)->setClearOptions(options);
+}
+
+void Renderer::renderStandaloneView(View const* view) {
+    upcast(this)->renderStandaloneView(upcast(view));
 }
 
 } // namespace filament

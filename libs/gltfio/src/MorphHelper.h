@@ -24,13 +24,14 @@
 #include <vector>
 
 struct cgltf_node;
+struct cgltf_mesh;
 struct cgltf_primitive;
 
 namespace gltfio {
 
 /**
- * Internal class that partitions lists of morph weights and maintains a cache of VertexBuffer
- * objects for each partition. This allows gltfio to support up to 255 morph targets.
+ * Internal class that partitions lists of morph weights and maintains a cache of BufferObject
+ * instances. This allows gltfio to support up to 255 morph targets.
  *
  * Each partition is associated with an unordered set of 4 (or fewer) morph target indices, which
  * we call the "primary indices" for that time slice.
@@ -48,41 +49,30 @@ public:
      */
     void applyWeights(Entity targetEntity, float const* weights, size_t count) noexcept;
 
-    /**
-     * Disables or enables writes to renderables.
-     *
-     * This allows the MorphHelper cache to be primed without actually affecting any renderables.
-     */
-    void disableWrites(bool disabled) noexcept { mWritesDisabled = disabled; }
-
 private:
-    struct GltfPrimitive {
-        filament::VertexBuffer* vertices;
-        filament::IndexBuffer* indices;
-        filament::RenderableManager::PrimitiveType type;
+    struct GltfTarget {
+        filament::BufferObject* bufferObject;
+        int morphTargetIndex;
+        cgltf_attribute_type type;
     };
 
-    struct Permutation {
-        filament::math::ubyte4 primaryIndices;
-        std::vector<GltfPrimitive> primitives;
-        bool owner;
+    struct GltfPrimitive {
+        filament::VertexBuffer* vertexBuffer;
+        uint8_t positions[4];
+        uint8_t tangents[4];
+        std::vector<GltfTarget> targets; // TODO: flatten this?
     };
 
     struct TableEntry {
-        std::vector<Permutation> permutations;
-        const cgltf_node* sourceNode;
+        std::vector<GltfPrimitive> primitives; // TODO: flatten this?
     };
 
-    void addPermutation(Entity targetEntity, filament::math::ubyte4 primaryIndices);
-
-    filament::VertexBuffer* createVertexBuffer(const cgltf_primitive& prim, const UvMap& uvmap,
-            filament::math::ubyte4 primaryIndices);
+    void addPrimitive(cgltf_mesh const* mesh, int primitiveIndex, TableEntry* entry);
 
     std::vector<float> mPartiallySortedWeights;
     tsl::robin_map<Entity, TableEntry> mMorphTable;
     const FFilamentAsset* mAsset;
     const FFilamentInstance* mInstance;
-    bool mWritesDisabled = false;
 };
 
 } // namespace gltfio

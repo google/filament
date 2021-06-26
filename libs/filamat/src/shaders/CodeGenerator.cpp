@@ -18,8 +18,12 @@
 
 #include "generated/shaders.h"
 
+#include <utils/sstream.h>
+
 #include <cctype>
 #include <iomanip>
+
+#include <assert.h>
 
 namespace filamat {
 
@@ -74,14 +78,36 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
     if (mTargetApi == TargetApi::METAL) {
         out << "#define TARGET_METAL_ENVIRONMENT\n";
     }
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_ES_30) {
+        out << "#define TARGET_GLES_ENVIRONMENT\n";
+    }
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+        out << "#define TARGET_GL_ENVIRONMENT\n";
+    }
+
+    out << '\n';
     if (mTargetLanguage == TargetLanguage::SPIRV) {
-        out << "#define TARGET_LANGUAGE_SPIRV\n";
+        out << "#define FILAMENT_VULKAN_SEMANTICS\n";
+    }
+    if (mTargetLanguage == TargetLanguage::GLSL) {
+        out << "#define FILAMENT_OPENGL_SEMANTICS\n";
+    }
+
+    out << '\n';
+    if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::METAL ||
+        (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41)) {
+        out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
     Precision defaultPrecision = getDefaultPrecision(type);
     const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
+    if (mShaderModel == ShaderModel::GL_ES_30) {
+        out << "precision lowp sampler2DArray;\n";
+        out << "precision lowp sampler3D;\n";
+    }
 
     out << SHADERS_COMMON_TYPES_FS_DATA;
 
@@ -232,7 +258,7 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
     out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
-    out << "LAYOUT_LOCATION(" << index << ") out " << typeString <<
+    out << "layout(location=" << index << ") out " << typeString <<
         " output_" << name.c_str() << ";\n";
 
     return out;
@@ -439,6 +465,36 @@ io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
     return out;
 }
 
+io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQuality quality) const {
+    out << "#define FILAMENT_QUALITY_LOW    0\n";
+    out << "#define FILAMENT_QUALITY_NORMAL 1\n";
+    out << "#define FILAMENT_QUALITY_HIGH   2\n";
+
+    switch (quality) {
+        case ShaderQuality::DEFAULT:
+            switch (mShaderModel) {
+                default:                        goto quality_normal;
+                case ShaderModel::GL_CORE_41:   goto quality_high;
+                case ShaderModel::GL_ES_30:     goto quality_low;
+            }
+        case ShaderQuality::LOW:
+        quality_low:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_LOW\n";
+            break;
+        case ShaderQuality::NORMAL:
+        default:
+        quality_normal:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_NORMAL\n";
+            break;
+        case ShaderQuality::HIGH:
+        quality_high:
+            out << "#define FILAMENT_QUALITY FILAMENT_QUALITY_HIGH\n";
+            break;
+    }
+
+    return out;
+}
+
 io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) const {
     out << SHADERS_COMMON_MATH_FS_DATA;
     out << SHADERS_COMMON_SHADOWING_FS_DATA;
@@ -505,7 +561,7 @@ io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderType type
 }
 
 io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
-        filament::Variant variant, filament::Shading shading) const {
+        filament::Variant variant, filament::Shading shading, bool customSurfaceShading) const {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_LIGHTING_FS_DATA;
@@ -520,7 +576,11 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
                 break;
             case Shading::SPECULAR_GLOSSINESS:
             case Shading::LIT:
-                out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
+                if (customSurfaceShading) {
+                    out << SHADERS_SHADING_LIT_CUSTOM_FS_DATA;
+                } else {
+                    out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
+                }
                 break;
             case Shading::SUBSURFACE:
                 out << SHADERS_SHADING_MODEL_SUBSURFACE_FS_DATA;

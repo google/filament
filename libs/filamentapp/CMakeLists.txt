@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(filamentapp C ASM)
 
 if (FILAMENT_SKIP_SAMPLES)
@@ -41,6 +41,7 @@ set(SRCS
 set(LIBS
         assimp
         filament
+        filament-iblprefilter
         sdl2
         stb
         math

@@ -55,21 +55,25 @@ struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount{};               //   4
     uint8_t bufferCount{};                //   1
     uint8_t attributeCount{};             //   1
-    bool bufferObjectsEnabled{};          //   1
+    bool padding{};                       //   1
     uint8_t bufferObjectsVersion{};       //   1 -> total struct is 136 bytes
 
     HwVertexBuffer() noexcept = default;
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-            AttributeArray const& attributes, bool bufferObjectsEnabled) noexcept
+            AttributeArray const& attributes) noexcept
             : attributes(attributes),
               vertexCount(elementCount),
               bufferCount(bufferCount),
-              attributeCount(attributeCount),
-              bufferObjectsEnabled(bufferObjectsEnabled) {
+              attributeCount(attributeCount) {
     }
 };
 
-struct HwBufferObject : public HwBase {};
+struct HwBufferObject : public HwBase {
+    uint32_t byteCount{};
+
+    HwBufferObject() noexcept = default;
+    HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
+};
 
 struct HwIndexBuffer : public HwBase {
     uint32_t count{};
@@ -191,6 +195,9 @@ protected:
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
     void scheduleRelease(AcquiredImage&& image) noexcept;
+
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+    void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
 private:
     std::mutex mPurgeLock;

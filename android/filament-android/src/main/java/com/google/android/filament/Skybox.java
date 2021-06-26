@@ -51,11 +51,7 @@ import static com.google.android.filament.Colors.LinearColor;
 public class Skybox {
     private long mNativeObject;
 
-    public Skybox(Engine engine, long nativeSkybox) {
-        mNativeObject = nativeSkybox;
-    }
-
-    Skybox(long nativeSkybox) {
+    public Skybox(long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 
@@ -113,10 +109,11 @@ public class Skybox {
         }
 
         /**
-         * Sets the <code>Skybox</code> intensity when no {@link IndirectLight} is set
+         * Sets the <code>Skybox</code> intensity when no {@link IndirectLight} is set on the
+         * {@link Scene}.
          *
-         * <p>This call is ignored when an  {@link IndirectLight} is set, otherwise it is used in
-         * its place.</p>
+         * <p>This call is ignored when an {@link IndirectLight} is set on the {@link Scene}, and
+         * the intensity of the {@link IndirectLight} is used instead.</p>
          *
          * @param envIntensity  Scale factor applied to the skybox texel values such that
          *                      the result is in <i>lux</i>, or <i>lumen/m^2</i> (default = 30000)

@@ -3,9 +3,9 @@
 # version of clang we want to use
 GITHUB_CLANG_VERSION=8
 # version of CMake to use instead of the default one
-CMAKE_VERSION=3.13.4
+CMAKE_VERSION=3.19.5
 # version of ninja to use
-NINJA_VERSION=1.8.2
+NINJA_VERSION=1.10.2
 
 # Steps for GitHub Workflows
 if [[ "$GITHUB_WORKFLOW" ]]; then

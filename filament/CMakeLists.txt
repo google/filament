@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(filament C ASM)
 
 set(TARGET filament)
@@ -66,7 +66,7 @@ set(SRCS
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
         src/PostProcessManager.cpp
-        src/FrameGraphRenderPass.cpp
+        src/RenderPass.cpp
         src/RenderPrimitive.cpp
         src/RenderTarget.cpp
         src/Renderer.cpp
@@ -108,6 +108,7 @@ set(PRIVATE_HDRS
         src/RenderPass.h
         src/ResourceAllocator.h
         src/ToneMapping.h
+        src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
@@ -170,6 +171,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofDilate.mat
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofMedian.mat
+        src/materials/flare/flare.mat
         src/materials/blitLow.mat
         src/materials/blitMedium.mat
         src/materials/blitHigh.mat
@@ -255,7 +257,6 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
-        DEPENDS ../shaders/src/bloom.fs
         APPEND
 )
 
@@ -363,7 +364,6 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 target_link_libraries(${TARGET} PUBLIC backend)
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
-target_link_libraries(${TARGET} PUBLIC geometry) # TODO: remove this dependency after deprecating VertexBuffer::populateTangentQuaternions
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl-lite)

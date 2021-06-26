@@ -453,16 +453,20 @@ void FilamentApp::loadIBL(const Config& config) {
             return;
         }
 
-        if (!iblPath.isDirectory()) {
-            std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
-            return;
-        }
-
         mIBL = std::make_unique<IBL>(*mEngine);
-        if (!mIBL->loadFromDirectory(iblPath)) {
-            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-            mIBL.reset(nullptr);
-            return;
+
+        if (!iblPath.isDirectory()) {
+            if (!mIBL->loadFromEquirect(iblPath)) {
+                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+                mIBL.reset(nullptr);
+                return;
+            }
+        } else {
+            if (!mIBL->loadFromDirectory(iblPath)) {
+                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+                mIBL.reset(nullptr);
+                return;
+            }
         }
     }
 }
@@ -518,8 +522,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         windowFlags |= SDL_WINDOW_HIDDEN;
     }
 
-    mBackend = config.backend;
-
     // Even if we're in headless mode, we still need to create a window, otherwise SDL will not poll
     // events.
     mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
@@ -534,6 +536,9 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
         mFilamentApp->mEngine = Engine::create(config.backend);
+
+        // get the resolved backend
+        mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 
         void* nativeWindow = ::getNativeWindow(mWindow);
         void* nativeSwapChain = nativeWindow;

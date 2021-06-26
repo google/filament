@@ -2,7 +2,7 @@
 // Directional light evaluation
 //------------------------------------------------------------------------------
 
-#if !defined(TARGET_MOBILE)
+#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
 #define SUN_AS_AREA_LIGHT
 #endif
 
@@ -45,11 +45,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
-#if defined(HAS_VSM)
-            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#else
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#endif
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
             if (objectUniforms.screenSpaceContactShadows != 0u) {
@@ -71,5 +67,9 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL <= 0.0) return;
 #endif
 
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+    color.rgb += customSurfaceShading(material, pixel, light, visibility);
+#else
     color.rgb += surfaceShading(pixel, light, visibility);
+#endif
 }

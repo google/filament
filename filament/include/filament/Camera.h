@@ -252,9 +252,6 @@ public:
      */
     void setScaling(math::double2 scaling) noexcept;
 
-    [[deprecated]]
-    void setScaling(math::double4 const& scaling) noexcept;
-
     /**
      * Sets an additional matrix that shifts the projection matrix.
      * By default, this is an identity matrix.
@@ -439,7 +436,7 @@ public:
 
     /**
      * Sets the camera focus distance. This is used by the Depth-of-field PostProcessing effect.
-     * @param distance Distnace from the camera to the plane of focus in world units.
+     * @param distance Distance from the camera to the plane of focus in world units.
      *                 Must be positive and larger than the near clipping plane.
      */
     void setFocusDistance(float distance) noexcept;

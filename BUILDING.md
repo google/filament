@@ -4,9 +4,9 @@
 
 To build Filament, you must first install the following tools:
 
-- CMake 3.10 (or more recent)
+- CMake 3.19 (or more recent)
 - clang 7.0 (or more recent)
-- [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
+- [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 To build the Java based components of the project you can optionally install (recommended):
 
@@ -17,9 +17,9 @@ section below.
 
 To build Filament for Android you must also install the following:
 
-- Android Studio 4.1.0 or more recent
+- Android Studio 4.2.0 or more recent
 - Android SDK
-- Android NDK "side-by-side" 22.0 or higher
+- Android NDK "side-by-side" 22.1 or higher
 
 ### Environment variables
 
@@ -84,6 +84,7 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_ENABLE_JAVA`:          Compile Java projects: requires a JDK and the JAVA_HOME env var
 - `FILAMENT_ENABLE_LTO`:           Enable link-time optimizations if supported by the compiler
 - `FILAMENT_BUILD_FILAMAT`:        Build filamat and JNI buildings
+- `FILAMENT_SUPPORTS_OPENGL`:      Include the OpenGL backend
 - `FILAMENT_SUPPORTS_METAL`:       Include the Metal backend
 - `FILAMENT_SUPPORTS_VULKAN`:      Include the Vulkan backend
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
@@ -375,7 +376,7 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/2.0.12.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/2.0.23.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 python ./emsdk.py install latest
 python ./emsdk.py activate latest

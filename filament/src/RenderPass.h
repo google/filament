@@ -220,6 +220,8 @@ public:
         uint8_t reserved = {};                                          // 1 byte
     };
 
+    static_assert(sizeof(PrimitiveInfo) == sizeof(void*) + 16);
+
     struct alignas(8) Command {     // 32 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 24 bytes
@@ -230,6 +232,9 @@ public:
             return ptr;
         }
     };
+
+    static_assert(sizeof(Command) == 32);
+
     static_assert(std::is_trivially_destructible<Command>::value,
             "Command isn't trivially destructible");
 
@@ -297,9 +302,9 @@ public:
 private:
     friend class FRenderer;
 
-    // on 64-bits systems, we process batches of 4 (64 bytes) cache-lines, or 8 (32 bytes) commands
-    // on 32-bits systems, we process batches of 8 (32 bytes) cache-lines, or 8 (32 bytes) commands
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 16;
+    // on 64-bits systems, we process batches of 256 (64 bytes) cache-lines, or 512 (32 bytes) commands
+    // on 32-bits systems, we process batches of 512 (32 bytes) cache-lines, or 512 (32 bytes) commands
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 512;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 

@@ -48,18 +48,22 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16; // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT = 16;          // Matches the Adreno Vulkan driver.
+static constexpr size_t MAX_VERTEX_BUFFER_COUNT = 16;    // Max number of bound buffer objects.
 
-static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 6;
-static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 6;
+static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
+        "The number of buffer objects that can be attached to a VertexBuffer must be "
+        "less than or equal to the maximum number of vertex attributes.");
+
+static constexpr size_t CONFIG_BINDING_COUNT = 8;
 
 /**
  * Selects which driver a particular Engine should use.
  */
 enum class Backend : uint8_t {
     DEFAULT = 0,  //!< Automatically selects an appropriate driver for the platform.
-    OPENGL = 1,   //!< Selects the OpenGL driver (which supports OpenGL ES as well).
-    VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it.
-    METAL = 3,    //!< Selects the Metal driver if the platform supports it.
+    OPENGL = 1,   //!< Selects the OpenGL/ES driver (default on Android)
+    VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it (default on Linux/Windows)
+    METAL = 3,    //!< Selects the Metal driver if the platform supports it (default on MacOS/iOS).
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
@@ -81,22 +85,37 @@ static constexpr const char* backendToString(backend::Backend backend) {
 /**
  * Bitmask for selecting render buffers
  */
-enum class TargetBufferFlags : uint8_t {
+enum class TargetBufferFlags : uint32_t {
     NONE = 0x0u,                            //!< No buffer selected.
-    COLOR0 = 0x1u,                          //!< Color buffer selected.
-    COLOR1 = 0x2u,                          //!< Color buffer selected.
-    COLOR2 = 0x4u,                          //!< Color buffer selected.
-    COLOR3 = 0x8u,                          //!< Color buffer selected.
+    COLOR0 = 0x00000001u,                   //!< Color buffer selected.
+    COLOR1 = 0x00000002u,                   //!< Color buffer selected.
+    COLOR2 = 0x00000004u,                   //!< Color buffer selected.
+    COLOR3 = 0x00000008u,                   //!< Color buffer selected.
+    COLOR4 = 0x00000010u,                   //!< Color buffer selected.
+    COLOR5 = 0x00000020u,                   //!< Color buffer selected.
+    COLOR6 = 0x00000040u,                   //!< Color buffer selected.
+    COLOR7 = 0x00000080u,                   //!< Color buffer selected.
+
     COLOR = COLOR0,                         //!< \deprecated
-    COLOR_ALL = COLOR0 | COLOR1 | COLOR2 | COLOR3,
-    DEPTH = 0x10u,                          //!< Depth buffer selected.
-    STENCIL = 0x20u,                        //!< Stencil buffer selected.
+    COLOR_ALL = COLOR0 | COLOR1 | COLOR2 | COLOR3 | COLOR4 | COLOR5 | COLOR6 | COLOR7,
+    DEPTH   = 0x10000000u,                  //!< Depth buffer selected.
+    STENCIL = 0x20000000u,                  //!< Stencil buffer selected.
     DEPTH_AND_STENCIL = DEPTH | STENCIL,    //!< depth and stencil buffer selected.
     ALL = COLOR_ALL | DEPTH | STENCIL       //!< Color, depth and stencil buffer selected.
 };
 
-inline TargetBufferFlags getMRTColorFlag(size_t index) noexcept {
-    return TargetBufferFlags(1u << index);
+inline TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
+    if (index == 0u) return TargetBufferFlags::COLOR0;
+    if (index == 1u) return TargetBufferFlags::COLOR1;
+    if (index == 2u) return TargetBufferFlags::COLOR2;
+    if (index == 3u) return TargetBufferFlags::COLOR3;
+    if (index == 4u) return TargetBufferFlags::COLOR4;
+    if (index == 5u) return TargetBufferFlags::COLOR5;
+    if (index == 6u) return TargetBufferFlags::COLOR6;
+    if (index == 7u) return TargetBufferFlags::COLOR7;
+    if (index == 8u) return TargetBufferFlags::DEPTH;
+    if (index == 9u) return TargetBufferFlags::STENCIL;
+    return TargetBufferFlags::NONE;
 }
 
 /**

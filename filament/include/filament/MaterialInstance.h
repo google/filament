@@ -62,6 +62,17 @@ public:
     >::type;
 
     /**
+     * Creates a new MaterialInstance using another MaterialInstance as a template for initialization.
+     * The new MaterialInstance is an instance of the same Material of the template instance and
+     * must be destroyed just like any other MaterialInstance.
+     *
+     * @param other A MaterialInstance to use as a template for initializing a new instance
+     * @param name  A name for the new MaterialInstance or nullptr to use the template's name
+     * @return      A new MaterialInstance
+     */
+    static MaterialInstance* duplicate(MaterialInstance const* other, const char* name = nullptr) noexcept;
+
+    /**
      * @return the Material associated with this instance
      */
     Material const* getMaterial() const noexcept;

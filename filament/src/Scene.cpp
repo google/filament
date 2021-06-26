@@ -19,7 +19,7 @@
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
@@ -28,6 +28,7 @@
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/Range.h>
+#include <utils/Systrace.h>
 #include <utils/Zip2Iterator.h>
 
 #include <algorithm>
@@ -46,9 +47,11 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(const mat4f& worldOriginTransform) {
+void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
+
+    SYSTRACE_CALL();
 
     FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();
@@ -116,12 +119,17 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
             // compute the world AABB so we can perform culling
             const Box worldAABB = rigidTransform(rcm.getAABB(ri), worldTransform);
 
+            auto visibility = rcm.getVisibility(ri);
+            if (shadowReceiversAreCasters && visibility.receiveShadows) {
+                visibility.castShadows = true;
+            }
+
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
                     ri,                       // RENDERABLE_INSTANCE
                     worldTransform,           // WORLD_TRANSFORM
                     reversedWindingOrder,     // REVERSED_WINDING_ORDER
-                    rcm.getVisibility(ri),    // VISIBILITY_STATE
+                    visibility,               // VISIBILITY_STATE
                     rcm.getBonesUbh(ri),      // BONES_UBH
                     worldAABB.center,         // WORLD_AABB_CENTER
                     0,                        // VISIBLE_MASK
@@ -164,14 +172,14 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     // some elements past the end of the array will be accessed by SIMD code, we need to make
     // sure the data is valid enough as not to produce errors such as divide-by-zero
     // (e.g. in computeLightRanges())
-    for (size_t i = lightData.size(), e = (lightData.size() + 3u) & ~3u; i < e; i++) {
+    for (size_t i = lightData.size(), e = lightDataCapacity; i < e; i++) {
         new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
     }
 
     // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
     // unused scene elements between the end of the array and the rounded-up count.
     if (UTILS_HAS_SANITIZE_MEMORY) {
-        for (size_t i = sceneData.size(), e = (sceneData.size() + 0xFu) & ~0xFu; i < e; i++) {
+        for (size_t i = sceneData.size(), e = renderableDataCapacity; i < e; i++) {
             sceneData.data<LAYERS>()[i] = 0;
             sceneData.data<VISIBLE_MASK>()[i] = 0;
             sceneData.data<VISIBILITY_STATE>()[i] = {};
@@ -256,7 +264,8 @@ void FScene::terminate(FEngine& engine) {
     mRenderableViewUbh.clear();
 }
 
-void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena, backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept {
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena,
+        backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();
@@ -273,6 +282,9 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     ArenaScope arena(rootArena.getAllocator());
     size_t const size = lightData.size();
+    // number of point/spot lights
+    size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
+    assert_invariant(positionalLightCount);
 
     // always allocate at least 4 entries, because the vectorized loops below rely on that
     float* const UTILS_RESTRICT distances = arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
@@ -289,9 +301,6 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     // drop excess lights
     lightData.resize(std::min(size, CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
-
-    // number of point/spot lights
-    size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
 
     // compute the light ranges (needed when building light trees)
     float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();

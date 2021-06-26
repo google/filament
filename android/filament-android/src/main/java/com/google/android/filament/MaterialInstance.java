@@ -64,6 +64,22 @@ public class MaterialInstance {
         mNativeMaterial = nGetMaterial(mNativeObject);
     }
 
+    /**
+     * Creates a new {@link #MaterialInstance} using another {@link #MaterialInstance} as a template for initialization.
+     * The new {@link #MaterialInstance} is an instance of the same {@link Material} of the template instance and
+     * must be destroyed just like any other {@link #MaterialInstance}.
+     *
+     * @param other A {@link #MaterialInstance} to use as a template for initializing a new instance
+     * @param name  A name for the new {@link #MaterialInstance} or nullptr to use the template's name
+     * @return      A new {@link #MaterialInstance}
+     */
+    @NonNull
+    public static MaterialInstance duplicate(@NonNull MaterialInstance other, String name) {
+        long nativeInstance = nDuplicate(other.mNativeObject, name);
+        if (nativeInstance == 0) throw new IllegalStateException("Couldn't duplicate MaterialInstance");
+        return new MaterialInstance(other.mMaterial, nativeInstance);
+    }
+
     /** @return the {@link Material} associated with this instance */
     @NonNull
     public Material getMaterial() {
@@ -238,18 +254,13 @@ public class MaterialInstance {
      * @param name   name of the parameter array as defined by this Material
      * @param type   the number of components for each individual parameter
      * @param v      array of values to set to the named parameter array
-     * @param offset the number of elements to skip
+     * @param offset the number of elements in <code>v</code> to skip
      * @param count  the number of elements in the parameter array to set
      *
      * <p>For example, to set a parameter array of 4 bool4s:
      * <pre>{@code
      *     boolean[] a = new boolean[4 * 4];
      *     instance.setParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 0, 4);
-     * }</pre>
-     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
-     * <pre>{@code
-     *     boolean[] a = new boolean[4 * 3];
-     *     instance.setParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 1, 3);
      * }</pre>
      * </p>
      */
@@ -265,18 +276,13 @@ public class MaterialInstance {
      * @param name   name of the parameter array as defined by this Material
      * @param type   the number of components for each individual parameter
      * @param v      array of values to set to the named parameter array
-     * @param offset the number of elements to skip
+     * @param offset the number of elements in <code>v</code> to skip
      * @param count  the number of elements in the parameter array to set
      *
      * <p>For example, to set a parameter array of 4 int4s:
      * <pre>{@code
      *     int[] a = new int[4 * 4];
      *     instance.setParameter("param", MaterialInstance.IntElement.INT4, a, 0, 4);
-     * }</pre>
-     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
-     * <pre>{@code
-     *     int[] a = new int[4 * 3];
-     *     instance.setParameter("param", MaterialInstance.IntElement.INT4, a, 1, 3);
      * }</pre>
      * </p>
      */
@@ -292,18 +298,13 @@ public class MaterialInstance {
      * @param name   name of the parameter array as defined by this Material
      * @param type   the number of components for each individual parameter
      * @param v      array of values to set to the named parameter array
-     * @param offset the number of elements to skip
+     * @param offset the number of elements in <code>v</code> to skip
      * @param count  the number of elements in the parameter array to set
      *
      * <p>For example, to set a parameter array of 4 float4s:
      * <pre>{@code
      *     float[] a = new float[4 * 4];
      *     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 0, 4);
-     * }</pre>
-     * To only set the last 3 elements, specify an offset of 1 and a count of 3:
-     * <pre>{@code
-     *     float[] a = new float[4 * 3];
-     *     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 1, 3);
      * }</pre>
      * </p>
      */
@@ -554,4 +555,6 @@ public class MaterialInstance {
 
     private static native String nGetName(long nativeMaterialInstance);
     private static native long nGetMaterial(long nativeMaterialInstance);
+
+    private static native long nDuplicate(long otherNativeMaterialInstance, String name);
 }

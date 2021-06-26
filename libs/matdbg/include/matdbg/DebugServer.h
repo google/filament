@@ -28,6 +28,8 @@ class CivetServer;
 namespace filament {
 namespace matdbg {
 
+using MaterialKey = uint32_t;
+
 /**
  * Server-side material debugger.
  *
@@ -41,10 +43,16 @@ public:
     ~DebugServer();
 
     /**
-     * Notifies the debugger that the given material package is being loaded into the engine.
+     * Notifies the debugger that the given material package is being loaded into the engine
+     * and returns a unique identifier for the material.
      */
-    void addMaterial(const utils::CString& name, const void* data, size_t size,
+    MaterialKey addMaterial(const utils::CString& name, const void* data, size_t size,
             void* userdata = nullptr);
+
+    /**
+     * Notifies the debugger that the given material has been deleted.
+     */
+    void removeMaterial(MaterialKey key);
 
     using EditCallback = void(*)(void* userdata, const utils::CString& name, const void*, size_t);
     using QueryCallback = void(*)(void* userdata, uint64_t* variants);
@@ -64,8 +72,6 @@ public:
     bool isReady() const { return mServer; }
 
 private:
-    using MaterialKey = uint32_t;
-
     struct MaterialRecord {
         void* userdata;
         const uint8_t* package;

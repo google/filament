@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.9.18'
+    implementation 'com.google.android.filament:filament-android:1.10.4'
 }
 ```
 
@@ -63,7 +63,7 @@ A much smaller alternative to `filamat-android` that can only generate OpenGL sh
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.9.18'
+pod 'Filament', '~> 1.10.4'
 ```
 
 ### Snapshots
@@ -131,6 +131,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Clustered forward renderer
 - Cook-Torrance microfacet specular BRDF
 - Lambertian diffuse BRDF
+- Custom lighting/surface shading
 - HDR/linear lighting
 - Metallic workflow
 - Clear coat
@@ -142,6 +143,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Physically-based camera (shutter speed, sensitivity and aperture)
 - Physical light units
 - Point lights, spot lights and directional light
+- Specular anti-aliasing
 - Spot and directional light shadows
 - Cascaded shadows
 - VSM or PCF shadows
@@ -149,13 +151,17 @@ Here are a few screenshots of applications that use Filament in production:
 - Screen-space ambient occlusion
 - Screen-space refraction
 - Global fog
+- Dynamic resolution
+
+### Post processing
+
 - HDR bloom
 - Depth of field bokeh
 - Multiple tone mappers: ACES, filmic, etc.
 - Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
   contrast, saturation, etc.
-- TAA, FXAA, MSAA and specular anti-aliasing
-- Dynamic resolution
+- TAA, FXAA, MSAA
+- Screen-space lens flares
 
 ### glTF 2.0
 
@@ -184,6 +190,7 @@ Here are a few screenshots of applications that use Filament in production:
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
   - [x] KHR_materials_transmission

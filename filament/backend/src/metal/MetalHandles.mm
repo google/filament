@@ -266,35 +266,18 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
-MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes,
-            bool bufferObjectsEnabled)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes, bufferObjectsEnabled) {
-    buffers.reserve(bufferCount);
+MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
+        : HwBufferObject(byteCount), buffer(std::make_unique<MetalBuffer>(context, byteCount)) {}
 
-    for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
-        // Calculate buffer size.
-        uint32_t size = 0;
-        for (auto const& item : attributes) {
-            if (item.buffer == bufferIndex) {
-                uint32_t end = item.offset + vertexCount * item.stride;
-                size = std::max(size, end);
-            }
-        }
-
-        MetalBuffer* buffer = nullptr;
-        if (size > 0) {
-            buffer = new MetalBuffer(context, size);
-        }
-        buffers.push_back(buffer);
-    }
+void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
+    assert_invariant(byteOffset + size <= byteCount);
+    buffer->copyIntoBuffer(data, size);
 }
 
-MetalVertexBuffer::~MetalVertexBuffer() {
-    for (auto* b : buffers) {
-        delete b;
-    }
-    buffers.clear();
+MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
+            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
+    buffers.resize(bufferCount);
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount)
@@ -310,10 +293,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     const size_t attributeCount = vertexBuffer->attributes.size();
 
-    buffers.clear();
-    buffers.reserve(attributeCount);
-    offsets.clear();
-    offsets.reserve(attributeCount);
     vertexDescription = {};
 
     // Each attribute gets its own vertex buffer.
@@ -339,9 +318,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
             };
             continue;
         }
-
-        buffers.push_back(vertexBuffer->buffers[attribute.buffer]);
-        offsets.push_back(attribute.offset);
 
         vertexDescription.attributes[attributeIndex] = {
                 .format = getMetalFormat(attribute.type,
@@ -526,7 +502,10 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             a == TextureSwizzle::CHANNEL_3;
     // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
     // TODO: implement swizzling for external textures.
-    if (!isDefaultSwizzle && texture) {
+    if (!isDefaultSwizzle && texture && context.supportsTextureSwizzling) {
+        // Even though we've already checked context.supportsTextureSwizzling, we still need to
+        // guard these calls with @availability, otherwise the API usage will generate compiler
+        // warnings.
         if (@available(macOS 10.15, iOS 13, *)) {
             NSUInteger slices = texture.arrayLength;
             if (texture.textureType == MTLTextureTypeCube ||
@@ -722,13 +701,13 @@ void MetalTexture::updateLodRange(uint32_t level) {
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, Attachment colorAttachments[MRT::TARGET_COUNT], Attachment depthAttachment) :
+        uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
     // If we were given a single-sampled texture but the samples parameter is > 1, we create
     // multisampled sidecar textures and do a resolve automatically.
     const bool msaaResolve = samples > 1;
 
-    for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (!colorAttachments[i]) {
             continue;
         }
@@ -769,7 +748,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 
     const auto discardFlags = params.flags.discardEnd;
 
-    for (size_t i = 0; i < MRT::TARGET_COUNT; i++) {
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         Attachment attachment = getDrawColorAttachment(i);
         if (!attachment) {
             continue;
@@ -778,8 +757,9 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.colorAttachments[i].texture = attachment.texture;
         descriptor.colorAttachments[i].level = attachment.level;
         descriptor.colorAttachments[i].slice = attachment.layer;
-        descriptor.colorAttachments[i].loadAction = getLoadAction(params, getMRTColorFlag(i));
-        descriptor.colorAttachments[i].storeAction = getStoreAction(params, getMRTColorFlag(i));
+        descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
+        descriptor.colorAttachments[i].storeAction = getStoreAction(params,
+                getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
                 params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
@@ -791,7 +771,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.colorAttachments[i].texture = multisampledColor[i];
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
-            const bool discard = any(discardFlags & getMRTColorFlag(i));
+            const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.texture;
                 descriptor.colorAttachments[i].resolveLevel = attachment.level;
@@ -828,7 +808,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
-    assert_invariant(index < MRT::TARGET_COUNT);
+    assert_invariant(index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentDrawSwapChain);
@@ -838,7 +818,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t i
 }
 
 MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t index) {
-    assert_invariant(index < MRT::TARGET_COUNT);
+    assert_invariant(index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentReadSwapChain);
@@ -907,7 +887,7 @@ void MetalFence::encode() {
         [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
                 uint64_t value) {
             if (auto s = weakState.lock()) {
-                std::unique_lock<std::mutex> guard(s->mutex);
+                std::lock_guard<std::mutex> guard(s->mutex);
                 s->status = FenceStatus::CONDITION_SATISFIED;
                 s->cv.notify_all();
             }

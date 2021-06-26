@@ -96,6 +96,20 @@ jobs:
       - name: Run build script
         run: |
           cd build/android && printf "y" | ./build.sh release
+      - name: Sign sample-gltf-viewer
+        run: |
+          echo "${APK_KEYSTORE_BASE64}" > filament.jks.base64
+          base64 --decode filament.jks.base64 > filament.jks
+          BUILD_TOOLS_VERSION=$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
+          APKSIGNER=${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/apksigner
+          IN_FILE="out/sample-gltf-viewer-release.apk"
+          OUT_FILE="out/filament-gltf-viewer-${TAG}-android.apk"
+          ${APKSIGNER} sign --ks filament.jks --key-pass=pass:${APK_KEYSTORE_PASS} --ks-pass=pass:${APK_KEYSTORE_PASS} --in ${IN_FILE} --out ${OUT_FILE}
+          rm "${IN_FILE}"
+        env:
+          TAG: ${{ steps.git_ref.outputs.tag }}
+          APK_KEYSTORE_BASE64: ${{ secrets.APK_KEYSTORE_BASE64 }}
+          APK_KEYSTORE_PASS: ${{ secrets.APK_KEYSTORE_PASS }}
       - name: Upload release assets
         run: |
           pip3 install setuptools
@@ -107,7 +121,7 @@ jobs:
           mv out/gltfio-android-lite-release.aar out/gltfio-${TAG}-lite-android.aar
           mv out/filament-utils-android-release.aar out/filament-utils-${TAG}-android.aar
           mv out/filament-utils-android-lite-release.aar out/filament-utils-${TAG}-lite-android.aar
-          python3 build/common/upload-assets.py ${TAG} out/*.aar
+          python3 build/common/upload-assets.py ${TAG} out/*.aar out/*.apk
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
           GITHUB_API_KEY: ${{ secrets.GITHUB_API_KEY }}

@@ -65,6 +65,7 @@ class MainActivity : Activity() {
     private lateinit var view1: View
     private lateinit var view2: View
     private lateinit var view3: View
+    private lateinit var view4: View
     // We need skybox to set the background color
     private lateinit var skybox: Skybox
     // Should be pretty obvious :)
@@ -119,16 +120,20 @@ class MainActivity : Activity() {
         view1 = engine.createView()
         view2 = engine.createView()
         view3 = engine.createView()
+        view4 = engine.createView()
 
         view0.setName("view0");
         view1.setName("view1");
         view2.setName("view2");
         view3.setName("view3");
+        view4.setName("view4");
+
+        view4.blendMode = View.BlendMode.TRANSLUCENT;
 
         skybox =  Skybox.Builder().build(engine);
         scene.skybox = skybox
 
-        camera = engine.createCamera()
+        camera = engine.createCamera(engine.entityManager.create())
     }
 
     private fun setupViews() {
@@ -136,11 +141,13 @@ class MainActivity : Activity() {
         view1.camera = camera
         view2.camera = camera
         view3.camera = camera
+        view4.camera = camera
 
         view0.scene = scene
         view1.scene = scene
         view2.scene = scene
         view3.scene = scene
+        view4.scene = scene
     }
 
     private fun setupScene() {
@@ -373,15 +380,17 @@ class MainActivity : Activity() {
         engine.destroyView(view1)
         engine.destroyView(view2)
         engine.destroyView(view3)
+        engine.destroyView(view4)
         engine.destroySkybox(skybox)
         engine.destroyScene(scene)
-        engine.destroyCamera(camera)
+        engine.destroyCameraComponent(camera.entity)
 
         // Engine.destroyEntity() destroys Filament related resources only
         // (components), not the entity itself
         val entityManager = EntityManager.get()
         entityManager.destroy(light)
         entityManager.destroy(renderable)
+        entityManager.destroy(camera.entity)
 
         // Destroying the engine will free up any resource you may have forgotten
         // to destroy, but it's recommended to do the cleanup properly
@@ -409,6 +418,9 @@ class MainActivity : Activity() {
 
                     skybox.setColor(0.0f, 0.0f, 1.0f, 1.0f);
                     renderer.render(view3)
+
+                    skybox.setColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    renderer.render(view4)
 
                     renderer.endFrame()
                 }
@@ -442,6 +454,7 @@ class MainActivity : Activity() {
             view1.viewport = Viewport(width / 2, 0,          width / 2, height / 2)
             view2.viewport = Viewport(0,         height / 2, width / 2, height / 2)
             view3.viewport = Viewport(width / 2, height / 2, width / 2, height / 2)
+            view4.viewport = Viewport(width / 4, height / 4, width / 2, height / 2)
         }
     }
 

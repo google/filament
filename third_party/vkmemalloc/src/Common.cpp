@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -176,5 +176,153 @@ void SaveFile(const wchar_t* filePath, const void* data, size_t dataSize)
     else
         assert(0);
 }
+
+std::wstring SizeToStr(size_t size)
+{
+    if(size == 0)
+        return L"0";
+    wchar_t result[32];
+    double size2 = (double)size;
+    if (size2 >= 1024.0*1024.0*1024.0*1024.0)
+    {
+        swprintf_s(result, L"%.2f TB", size2 / (1024.0*1024.0*1024.0*1024.0));
+    }
+    else if (size2 >= 1024.0*1024.0*1024.0)
+    {
+        swprintf_s(result, L"%.2f GB", size2 / (1024.0*1024.0*1024.0));
+    }
+    else if (size2 >= 1024.0*1024.0)
+    {
+        swprintf_s(result, L"%.2f MB", size2 / (1024.0*1024.0));
+    }
+    else if (size2 >= 1024.0)
+    {
+        swprintf_s(result, L"%.2f KB", size2 / 1024.0);
+    }
+    else
+        swprintf_s(result, L"%llu B", size);
+    return result;
+}
+
+bool ConvertCharsToUnicode(std::wstring *outStr, const std::string &s, unsigned codePage)
+{
+    if (s.empty())
+    {
+        outStr->clear();
+        return true;
+    }
+
+    // Phase 1 - Get buffer size.
+    const int size = MultiByteToWideChar(codePage, 0, s.data(), (int)s.length(), NULL, 0);
+    if (size == 0)
+    {
+        outStr->clear();
+        return false;
+    }
+
+    // Phase 2 - Do conversion.
+    std::unique_ptr<wchar_t[]> buf(new wchar_t[(size_t)size]);
+    int result = MultiByteToWideChar(codePage, 0, s.data(), (int)s.length(), buf.get(), size);
+    if (result == 0)
+    {
+        outStr->clear();
+        return false;
+    }
+
+    outStr->assign(buf.get(), (size_t)size);
+    return true;
+}
+
+bool ConvertCharsToUnicode(std::wstring *outStr, const char *s, size_t sCharCount, unsigned codePage)
+{
+    if (sCharCount == 0)
+    {
+        outStr->clear();
+        return true;
+    }
+
+    assert(sCharCount <= (size_t)INT_MAX);
+
+    // Phase 1 - Get buffer size.
+    int size = MultiByteToWideChar(codePage, 0, s, (int)sCharCount, NULL, 0);
+    if (size == 0)
+    {
+        outStr->clear();
+        return false;
+    }
+
+    // Phase 2 - Do conversion.
+    std::unique_ptr<wchar_t[]> buf(new wchar_t[(size_t)size]);
+    int result = MultiByteToWideChar(codePage, 0, s, (int)sCharCount, buf.get(), size);
+    if (result == 0)
+    {
+        outStr->clear();
+        return false;
+    }
+
+    outStr->assign(buf.get(), (size_t)size);
+    return true;
+}
+
+const wchar_t* PhysicalDeviceTypeToStr(VkPhysicalDeviceType type)
+{
+    // Skipping common prefix VK_PHYSICAL_DEVICE_TYPE_
+    static const wchar_t* const VALUES[] = {
+        L"OTHER",
+        L"INTEGRATED_GPU",
+        L"DISCRETE_GPU",
+        L"VIRTUAL_GPU",
+        L"CPU",
+    };
+    return (uint32_t)type < _countof(VALUES) ? VALUES[(uint32_t)type] : L"";
+}
+
+const wchar_t* VendorIDToStr(uint32_t vendorID)
+{
+    switch(vendorID)
+    {
+    // Skipping common prefix VK_VENDOR_ID_ for these:
+    case 0x10001: return L"VIV";
+    case 0x10002: return L"VSI";
+    case 0x10003: return L"KAZAN";
+    case 0x10004: return L"CODEPLAY";
+    case 0x10005: return L"MESA";
+    case 0x10006: return L"POCL";
+    // Others...
+    case VENDOR_ID_AMD: return L"AMD";
+    case VENDOR_ID_NVIDIA: return L"NVIDIA";
+    case VENDOR_ID_INTEL: return L"Intel";
+    case 0x1010: return L"ImgTec";
+    case 0x13B5: return L"ARM";
+    case 0x5143: return L"Qualcomm";
+    }
+    return L"";
+}
+
+#if VMA_VULKAN_VERSION >= 1002000
+const wchar_t* DriverIDToStr(VkDriverId driverID)
+{
+    // Skipping common prefix VK_DRIVER_ID_
+    static const wchar_t* const VALUES[] = {
+        L"",
+        L"AMD_PROPRIETARY",
+        L"AMD_OPEN_SOURCE",
+        L"MESA_RADV",
+        L"NVIDIA_PROPRIETARY",
+        L"INTEL_PROPRIETARY_WINDOWS",
+        L"INTEL_OPEN_SOURCE_MESA",
+        L"IMAGINATION_PROPRIETARY",
+        L"QUALCOMM_PROPRIETARY",
+        L"ARM_PROPRIETARY",
+        L"GOOGLE_SWIFTSHADER",
+        L"GGP_PROPRIETARY",
+        L"BROADCOM_PROPRIETARY",
+        L"MESA_LLVMPIPE",
+        L"MOLTENVK",
+    };
+    return (uint32_t)driverID < _countof(VALUES) ? VALUES[(uint32_t)driverID] : L"";
+}
+#endif // #if VMA_VULKAN_VERSION >= 1002000
+
 
 #endif // #ifdef _WIN32

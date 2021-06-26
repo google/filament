@@ -1,0 +1,57 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Codeplay; 0
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+               ;OpCapability VariablePointers
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               ;OpExtension "SPV_KHR_variable_pointers"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %22 "main" %gl_WorkGroupID
+               OpSource OpenCL_C 120
+               OpDecorate %15 SpecId 0
+               ;OpDecorate %16 SpecId 1
+               OpDecorate %17 SpecId 2
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 Block
+               OpDecorate %gl_WorkGroupID BuiltIn WorkgroupId
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+               OpDecorate %20 DescriptorSet 0
+               OpDecorate %20 Binding 0
+               OpDecorate %21 DescriptorSet 0
+               OpDecorate %21 Binding 1
+      %float = OpTypeFloat 32
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+%_runtimearr_float = OpTypeRuntimeArray %float
+  %_struct_4 = OpTypeStruct %_runtimearr_float
+%_ptr_StorageBuffer__struct_4 = OpTypePointer StorageBuffer %_struct_4
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%_ptr_Input_uint = OpTypePointer Input %uint
+%_ptr_Private_v3uint = OpTypePointer Private %v3uint
+     %uint_0 = OpConstant %uint 0
+%gl_WorkGroupID = OpVariable %_ptr_Input_v3uint Input
+         %15 = OpSpecConstant %uint 1
+         %16 = OpConstant %uint 2
+         %17 = OpSpecConstant %uint 3
+%gl_WorkGroupSize = OpSpecConstantComposite %v3uint %15 %16 %17
+         %19 = OpVariable %_ptr_Private_v3uint Private %gl_WorkGroupSize
+         %20 = OpVariable %_ptr_StorageBuffer__struct_4 StorageBuffer
+         %21 = OpVariable %_ptr_StorageBuffer__struct_4 StorageBuffer
+         %22 = OpFunction %void None %8
+         %23 = OpLabel
+         %24 = OpAccessChain %_ptr_Input_uint %gl_WorkGroupID %uint_0
+         %25 = OpLoad %uint %24
+         %26 = OpAccessChain %_ptr_StorageBuffer_float %21 %uint_0 %25
+         %27 = OpLoad %float %26
+         %28 = OpAccessChain %_ptr_StorageBuffer_float %20 %uint_0 %25
+         %29 = OpLoad %float %28
+         %30 = OpFAdd %float %27 %29
+               OpStore %28 %30
+               OpReturn
+               OpFunctionEnd

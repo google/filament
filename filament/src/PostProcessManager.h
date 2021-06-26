@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_POSTPROCESS_MANAGER_H
 #define TNT_FILAMENT_POSTPROCESS_MANAGER_H
 
-#include "UniformBuffer.h"
-
 #include "private/backend/DriverApiForward.h"
 
 #include "FrameHistory.h"
@@ -27,6 +25,8 @@
 #include <fg2/FrameGraphResources.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/PipelineState.h>
+
 #include <filament/View.h>
 
 #include <utils/CString.h>
@@ -83,17 +83,24 @@ public:
             const View::DepthOfFieldOptions& dofOptions, bool translucent,
             const CameraInfo& cameraInfo, math::float2 scale) noexcept;
 
-    // Color grading, tone mapping, etc.
+    // Bloom
+    FrameGraphId<FrameGraphTexture> bloom(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+
+    // Color grading, tone mapping, dithering and bloom
+    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, math::float2 scale,
+            const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
+            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions) noexcept;
+
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
-            View::VignetteOptions vignetteOptions, bool fxaa, bool dithering,
+            ColorGradingConfig const& colorGradingConfig,
+            View::VignetteOptions vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
 
-    void colorGradingSubpass(backend::DriverApi& driver, bool translucent) noexcept;
-
-    FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, const FColorGrading* colorGrading,
-            backend::TextureFormat outFormat, bool translucent, bool fxaa, math::float2 scale,
-            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions, bool dithering) noexcept;
+    void colorGradingSubpass(backend::DriverApi& driver,
+            ColorGradingConfig const& colorGradingConfig) noexcept;
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
@@ -124,7 +131,13 @@ public:
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept;
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor, bool finalize) noexcept;
+
+    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
+            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
+            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
@@ -149,16 +162,7 @@ private:
             FrameGraph& fg, FrameGraphId<FrameGraphTexture> input, math::int2 axis, float zf,
             backend::TextureFormat format, BilateralPassConfig config) noexcept;
 
-    FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-            FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
-            bool reinhard, size_t kernelWidth, float sigma = 6.0f) noexcept;
-
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
-
-    FrameGraphId<FrameGraphTexture> bloomPassPingPong(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
 
@@ -215,13 +219,11 @@ private:
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
-
-    size_t mSeparableGaussianBlurKernelStorageSize = 0;
+    backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
-    bool mDisableFeedbackLoops;
 };
 
 

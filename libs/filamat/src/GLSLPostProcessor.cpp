@@ -346,7 +346,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
         if (tShader.getStage() == EShLangFragment && glslOptions.es) {
             for (auto i : config.glsl.subpassInputToColorLocation) {
-                glslCompiler.remap_ext_framebuffer_fetch(i.first, i.second);
+                glslCompiler.remap_ext_framebuffer_fetch(i.first, i.second, true);
             }
         }
 

@@ -128,6 +128,7 @@ public class Scene {
     /**
      * @deprecated See {@link #removeEntity(int)}
      */
+    @Deprecated
     public void remove(@Entity int entity) {
         removeEntity(entity);
     }

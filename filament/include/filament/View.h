@@ -152,13 +152,23 @@ public:
         Texture* dirt = nullptr;                //!< user provided dirt texture
         float dirtStrength = 0.2f;              //!< strength of the dirt texture
         float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
-        uint32_t resolution = 360;              //!< resolution of minor axis (2^levels to 4096)
+        uint32_t resolution = 360;              //!< resolution of vertical axis (2^levels to 2048)
         float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
-        uint8_t levels = 6;                     //!< number of blur levels (3 to 12)
+        uint8_t levels = 6;                     //!< number of blur levels (3 to 11)
         BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
         bool threshold = true;                  //!< whether to threshold the source
         bool enabled = false;                   //!< enable or disable bloom
         float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]
+
+        bool lensFlare = false;                 //!< enable screen-space lens flare
+        bool starburst = true;                  //!< enable starburst effect on lens flare
+        float chromaticAberration = 0.005f;     //!< amount of chromatic aberration
+        uint8_t ghostCount = 4;                 //!< number of flare "ghosts"
+        float ghostSpacing = 0.6f;              //!< spacing of the ghost in screen units [0, 1[
+        float ghostThreshold = 10.0f;           //!< hdr threshold for the ghosts
+        float haloThickness = 0.1f;             //!< thickness of halo in vertical screen units, 0 to disable
+        float haloRadius = 0.4f;                //!< radius of halo in vertical screen units [0, 0.5]
+        float haloThreshold = 10.0f;            //!< hdr threshold for the halo
     };
 
     /**
@@ -191,7 +201,6 @@ public:
             NONE = 0,
             MEDIAN = 2
         };
-        float focusDistance = 10.0f;        //!< @deprecated use Camera::setFocusDistance() instead
         float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
         float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
         bool enabled = false;               //!< enable or disable depth of field effect
@@ -336,6 +345,7 @@ public:
     /**
      * View-level options for VSM Shadowing.
      * @see setVsmShadowOptions()
+     * @warning This API is still experimental and subject to change.
      */
     struct VsmShadowOptions {
         /**
@@ -343,10 +353,30 @@ public:
          * than 0, mipmaps will automatically be generated each frame for all lights.
          *
          * The number of anisotropic samples = 2 ^ vsmAnisotropy.
-         *
-         * @warning This API is still experimental and subject to change.
          */
         uint8_t anisotropy = 0;
+
+        /**
+         * Whether to generate mipmaps for all VSM shadow maps.
+         */
+        bool mipmapping = false;
+
+        /**
+         * EVSM exponent.
+         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
+         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
+         */
+        float exponent = 5.54f;
+
+        /**
+         * VSM minimum variance scale, must be positive.
+         */
+        float minVarianceScale = 0.5f;
+
+        /**
+         * VSM light bleeding reduction amount, between 0 and 1.
+         */
+         float lightBleedReduction = 0.15f;
     };
 
     /**
@@ -514,15 +544,6 @@ public:
      *      RenderableManager::Builder::castShadows(),
      */
     void setShadowingEnabled(bool enabled) noexcept;
-
-    /**
-     * Enables or disables shadow mapping. Enabled by default.
-     * @deprecated use setShadowingEnabled
-     */
-    UTILS_DEPRECATED
-    void setShadowsEnabled(bool enabled) noexcept {
-        setShadowingEnabled(enabled);
-    }
 
     /**
      * @return whether shadowing is enabled

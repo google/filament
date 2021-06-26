@@ -72,7 +72,7 @@ public class BufferObject {
         /**
          * The binding type for this buffer object. (defaults to VERTEX)
          *
-         * @param BindingType Distinguishes between SSBO, VBO, etc. For now this must be VERTEX.
+         * @param bindingType Distinguishes between SSBO, VBO, etc. For now this must be VERTEX.
          * @return A reference to this Builder for chaining calls.
          */
         @NonNull

@@ -284,11 +284,11 @@ public class View {
      *
      * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
      * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
-     *              maximum is 12. This value together with resolution influences the spread of the
+     *              maximum is 11. This value together with resolution influences the spread of the
      *              blur effect. This value can be silently reduced to accommodate the original
      *              image size.
-     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
-     *              the maximum is lower of the original resolution and 4096. This parameter is
+     * resolution:  Resolution of bloom's vertical axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 2048. This parameter is
      *              silently clamped to the minimum and maximum.
      *              It is highly recommended that this value be smaller than the target resolution
      *              after dynamic resolution is applied (horizontally and vertically).
@@ -329,7 +329,7 @@ public class View {
         public float strength = 0.10f;
 
         /**
-         * Resolution of minor axis (2^levels to 4096)
+         * Resolution of minor axis (2^levels to 2048)
          */
         public int resolution = 360;
 
@@ -339,7 +339,7 @@ public class View {
         public float anamorphism = 1.0f;
 
         /**
-         * Number of blur levels (3 to 12)
+         * Number of blur levels (3 to 11)
          */
         public int levels = 6;
 
@@ -363,6 +363,52 @@ public class View {
          * minimum value is 10.0.
          */
         public float highlight = 1000.0f;
+
+
+        /**
+         * enable screen-space lens flare
+         */
+        public boolean lensFlare = false;
+
+        /**
+         * enable starburst effect on lens flare
+         */
+        public boolean starburst = true;
+
+        /**
+         * amount of chromatic aberration
+         */
+        public float chromaticAberration = 0.005f;
+
+        /**
+         * number of flare "ghosts"
+         */
+        public int ghostCount = 4;
+
+        /**
+         * spacing of the ghost in screen units [0, 1[
+         */
+        public float ghostSpacing = 0.6f;
+
+        /**
+         * hdr threshold for the ghosts
+         */
+        public float ghostThreshold = 10.0f;
+
+        /**
+         * thickness of halo in vertical screen units, 0 to disable
+         */
+        public float haloThickness = 0.1f;
+
+        /**
+         * radius of halo in vertical screen units [0, 0.5]
+         */
+        public float haloRadius = 0.4f;
+
+        /**
+         * hdr threshold for the halo
+         */
+        public float haloThreshold = 10.0f;
     }
 
     /**
@@ -435,14 +481,6 @@ public class View {
             NONE,
             MEDIAN
         }
-
-        /**
-         * focus distance in world units
-         *
-         * @deprecated use {@link Camera#setFocusDistance(float)}
-         */
-        @Deprecated
-        public float focusDistance = 10.0f;
 
         /**
          * circle of confusion scale factor (amount of blur)
@@ -649,20 +687,44 @@ public class View {
     /**
      * View-level options for VSM shadowing.
      *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
      * @see View#setVsmShadowOptions
      */
     public static class VsmShadowOptions {
         /**
          * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
          * than 0, mipmaps will automatically be generated each frame for all lights.
+         * This implies mipmapping below.
          *
          * <p>
          * The number of anisotropic samples = 2 ^ vsmAnisotropy.
          * </p>
          *
-         * <strong>Warning: This API is still experimental and subject to change.</strong>
          */
         public int anisotropy = 0;
+
+        /**
+         * Whether to generate mipmaps for all VSM shadow maps.
+         */
+        public boolean mipmapping = false;
+
+        /**
+         * EVSM exponent
+         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
+         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
+         */
+        public float exponent = 5.54f;
+
+        /**
+         * VSM minimum variance scale, must be positive.
+         */
+        public float minVarianceScale = 1.0f;
+
+        /**
+         * VSM light bleeding reduction amount, between 0 and 1.
+         */
+        public float lightBleedReduction = 0.2f;
     }
 
     /**
@@ -891,16 +953,6 @@ public class View {
      */
     public void setShadowingEnabled(boolean enabled) {
         nSetShadowingEnabled(getNativeObject(), enabled);
-    }
-
-    /**
-     * Enables or disables shadow mapping. Enabled by default.
-     *
-     * @deprecated Use {@link #setShadowingEnabled}
-     */
-    @Deprecated
-    public void setShadowsEnabled(boolean enabled) {
-        setShadowingEnabled(enabled);
     }
 
     /**
@@ -1280,7 +1332,8 @@ public class View {
      */
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
-        nSetVsmShadowOptions(getNativeObject(), options.anisotropy);
+        nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
+                options.exponent, options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1357,7 +1410,10 @@ public class View {
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
                 options.anamorphism, options.levels, options.blendingMode.ordinal(),
-                options.threshold, options.enabled, options.highlight);
+                options.threshold, options.enabled, options.highlight,
+                options.lensFlare, options.starburst, options.chromaticAberration,
+                options.ghostCount, options.ghostSpacing, options.ghostThreshold,
+                options.haloThickness, options.haloRadius, options.haloThreshold);
     }
 
     /**
@@ -1442,7 +1498,7 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.focusDistance, options.cocScale,
+        nSetDepthOfFieldOptions(getNativeObject(), options.cocScale,
                 options.maxApertureDiameter, options.enabled, options.filter.ordinal(),
                 options.nativeResolution, options.foregroundRingCount, options.backgroundRingCount,
                 options.fastGatherRingCount, options.maxForegroundCOC, options.maxBackgroundCOC);
@@ -1491,7 +1547,7 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
@@ -1501,10 +1557,11 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
-    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight);
+    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
+            boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float focusDistance, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
+    private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);

@@ -17,15 +17,19 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/Image.h>
 
+#include "GltfEnums.h"
 #include "FFilamentAsset.h"
 #include "TangentsJob.h"
 #include "upcast.h"
 
+#include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
+
+#include <geometry/Transcoder.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -41,7 +45,7 @@
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID)
+#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS)
 #define USE_FILESYSTEM 0
 #else
 #define USE_FILESYSTEM 1
@@ -51,6 +55,9 @@
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
+
+using filament::geometry::Transcoder;
+using filament::geometry::ComponentType;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
@@ -87,7 +94,7 @@ struct ResourceLoader::Impl {
     std::string mGltfPath;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
-    // This is used on platforms without traditional file systems, such as Android and WebGL.
+    // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
     UriDataCache mUriDataCache;
 
     // The two texture caches are populated while textures are being decoded, and they are no longer
@@ -184,6 +191,33 @@ static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count
     }
 }
 
+static ComponentType getComponentType(const cgltf_accessor* accessor) {
+    switch (accessor->component_type) {
+        case cgltf_component_type_r_8: return ComponentType::BYTE;
+        case cgltf_component_type_r_8u: return ComponentType::UBYTE;
+        case cgltf_component_type_r_16: return ComponentType::SHORT;
+        case cgltf_component_type_r_16u: return ComponentType::USHORT;
+        default:
+            // This should be unreachable because other types do not require conversion.
+            assert_invariant(false);
+            return {};
+    }
+}
+
+static void convertToFloats(float* dest, const cgltf_accessor* accessor) {
+    const uint32_t dim = cgltf_num_components(accessor->type);
+    const size_t floatsSize = accessor->count * sizeof(float) * dim;
+    Transcoder transcode({
+        .componentType = getComponentType(accessor),
+        .normalized = bool(accessor->normalized),
+        .componentCount = dim,
+        .inputStrideBytes = uint32_t(accessor->stride)
+    });
+    auto bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+    const uint8_t* source = computeBindingOffset(accessor) + bufferData;
+    transcode(dest, source, accessor->count);
+}
+
 static void decodeDracoMeshes(FFilamentAsset* asset) {
     DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
 
@@ -199,25 +233,30 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
     };
 
     // Go through every primitive and check if it has a Draco mesh.
-    for (auto pair : asset->mPrimitives) {
+    for (auto& pair : asset->mPrimitives) {
         const cgltf_primitive* prim = pair.first;
-        VertexBuffer* vb = pair.second;
         if (!prim->has_draco_mesh_compression) {
             continue;
         }
 
         const cgltf_draco_mesh_compression& draco = prim->draco_mesh_compression;
 
+        // If an error occurs, we can simply set the primitive's associated VertexBuffer to null.
+        // This does not cause a leak because it is a weak reference.
+        auto& vertexBuffer = pair.second;
+
         // Check if we have already decoded this mesh.
         DracoMesh* mesh = dracoCache->findOrCreateMesh(draco.buffer_view);
         if (!mesh) {
-            slog.w << "Cannot decompress mesh, Draco decoding error." << io::endl;
+            slog.e << "Cannot decompress mesh, Draco decoding error." << io::endl;
+            vertexBuffer = nullptr;
             continue;
         }
 
         // Copy over the decompressed data, converting the data type if necessary.
-        if (prim->indices) {
-            mesh->getFaceIndices(prim->indices);
+        if (prim->indices && !mesh->getFaceIndices(prim->indices)) {
+            vertexBuffer = nullptr;
+            continue;
         }
 
         // Go through each attribute in the decompressed mesh.
@@ -236,7 +275,10 @@ static void decodeDracoMeshes(FFilamentAsset* asset) {
             }
 
             // Copy over the decompressed data, converting the data type if necessary.
-            mesh->getVertexAttributes(id, accessor);
+            if (!mesh->getVertexAttributes(id, accessor)) {
+                vertexBuffer = nullptr;
+                break;
+            }
         }
     }
 }
@@ -431,8 +473,22 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         const uint8_t* data = computeBindingOffset(accessor) + bufferData;
         const uint32_t size = computeBindingSize(accessor);
         if (slot.vertexBuffer) {
-            VertexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
-            slot.vertexBuffer->setBufferAt(engine, slot.bufferIndex, std::move(bd));
+            if (requiresConversion(accessor->type, accessor->component_type)) {
+                const size_t dim = cgltf_num_components(accessor->type);
+                const size_t floatsSize = accessor->count * sizeof(float) * dim;
+                float* floatsData = (float*) malloc(floatsSize);
+                convertToFloats(floatsData, accessor);
+                BufferObject* bo = BufferObject::Builder().size(floatsSize).build(engine);
+                asset->mBufferObjects.push_back(bo);
+                bo->setBuffer(engine, BufferDescriptor(floatsData, floatsSize, FREE_CALLBACK));
+                slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                continue;
+            }
+            BufferObject* bo = BufferObject::Builder().size(size).build(engine);
+            asset->mBufferObjects.push_back(bo);
+            bo->setBuffer(engine, BufferDescriptor(data, size,
+                    uploadCallback, uploadUserdata(asset)));
+            slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
         }
         assert(slot.indexBuffer);
@@ -817,10 +873,13 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         baseTangents[slot.vertexBuffer] = slot.bufferIndex;
     }
 
-    // Create a job description for each primitive.
+    // Create a job description for each triangle-based primitive.
     using Params = TangentsJob::Params;
     std::vector<Params> jobParams;
     for (auto pair : asset->mPrimitives) {
+        if (UTILS_UNLIKELY(pair.first->type != cgltf_primitive_type_triangles)) {
+            continue;
+        }
         VertexBuffer* vb = pair.second;
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
@@ -846,9 +905,12 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Finally, upload quaternions to the GPU from the main thread.
     for (Params& params : jobParams) {
-        VertexBuffer::BufferDescriptor bd(params.out.results,
-                params.out.vertexCount * sizeof(short4), FREE_CALLBACK);
-        params.context.vb->setBufferAt(*mEngine, params.context.slot, std::move(bd));
+        BufferObject* bo = BufferObject::Builder()
+                .size(params.out.vertexCount * sizeof(short4)).build(*mEngine);
+        asset->mBufferObjects.push_back(bo);
+        bo->setBuffer(*mEngine, BufferDescriptor(
+                params.out.results, bo->getByteCount(), FREE_CALLBACK));
+        params.context.vb->setBufferObjectAt(*mEngine, params.context.slot, bo);
     }
 }
 
@@ -868,8 +930,10 @@ void ResourceLoader::applySparseData(FFilamentAsset* asset) const {
         cgltf_size numBytes = sizeof(float) * numFloats;
         float* generated = (float*) malloc(numBytes);
         cgltf_accessor_unpack_floats(accessor, generated, numFloats);
-        VertexBuffer::BufferDescriptor bd(generated, numBytes, FREE_CALLBACK);
-        slot.vertexBuffer->setBufferAt(*pImpl->mEngine, slot.bufferIndex, std::move(bd));
+        BufferObject* bo = BufferObject::Builder().size(numBytes).build(*asset->mEngine);
+        asset->mBufferObjects.push_back(bo);
+        bo->setBuffer(*pImpl->mEngine, BufferDescriptor(generated, numBytes, FREE_CALLBACK));
+        slot.vertexBuffer->setBufferObjectAt(*pImpl->mEngine, slot.bufferIndex, bo);
     }
 }
 
@@ -880,11 +944,11 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
             return;
         }
         uint8_t* bytes = (uint8_t*) data->buffer_view->buffer->data;
-        float4* floats = (float4*) (bytes + data->offset + data->buffer_view->offset);
-        for (cgltf_size i = 0; i < data->count; ++i) {
-            float4 weights = floats[i];
-            float sum = weights.x + weights.y + weights.z + weights.w;
-            floats[i] = weights / sum;
+        bytes += data->offset + data->buffer_view->offset;
+        for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
+            float4* weights = (float4*) bytes;
+            const float sum = weights->x + weights->y + weights->z + weights->w;
+            *weights /= sum;
         }
     };
     const cgltf_data* gltf = asset->mSourceAsset->hierarchy;

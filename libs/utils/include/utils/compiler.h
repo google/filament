@@ -158,14 +158,9 @@
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900
-#       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
+#   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
 #elif __has_feature(cxx_thread_local)
-#   ifdef ANDROID
-#       // Android NDK lies about supporting cxx_thread_local
-#       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
-#   else // ANDROID
-#       define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
-#   endif // ANDROID
+#   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 1
 #else
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
 #endif

@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_DRIVER_ANDROID_VIRTUAL_MACHINE_ENV_H
 
 #include <utils/compiler.h>
-#include <utils/ThreadLocal.h>
 #include <utils/debug.h>
 
 #include <jni.h>
@@ -31,8 +30,7 @@ public:
 
     static VirtualMachineEnv& get() noexcept {
         // declaring this thread local, will ensure it's destroyed with the calling thread
-        static UTILS_DECLARE_TLS(VirtualMachineEnv)
-        instance;
+        static thread_local VirtualMachineEnv instance;
         return instance;
     }
 

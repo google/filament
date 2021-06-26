@@ -60,6 +60,7 @@
 namespace filament {
 namespace matdbg {
 class DebugServer;
+using MaterialKey = uint32_t;
 } // namespace matdbg
 } // namespace filament
 #endif
@@ -209,6 +210,10 @@ public:
         return mBackend;
     }
 
+    Platform* getPlatform() const noexcept {
+        return mPlatform;
+    }
+
     ResourceAllocator& getResourceAllocator() noexcept {
         assert_invariant(mResourceAllocator);
         return *mResourceAllocator;
@@ -239,7 +244,8 @@ public:
     void createLight(const LightManager::Builder& builder, utils::Entity entity);
 
     FRenderer* createRenderer() noexcept;
-    FMaterialInstance* createMaterialInstance(const FMaterial* material, const char* name) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material,
+            const FMaterialInstance* other, const char* name) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -275,6 +281,17 @@ public:
 
     // flush the current buffer
     void flush();
+
+    // flush the current buffer based on some heuristics
+    void flushIfNeeded() {
+        auto counter = mFlushCounter + 1;
+        if (UTILS_LIKELY(counter < 128)) {
+            mFlushCounter = counter;
+        } else {
+            mFlushCounter = 0;
+            flush();
+        }
+    }
 
     /**
      * Processes the platform's event queue when called from the platform's event-handling thread.
@@ -369,11 +386,13 @@ private:
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;
     DriverApi mCommandStream;
+    uint32_t mFlushCounter = 0;
 
     LinearAllocatorArena mPerRenderPassAllocator;
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
+    static uint32_t getJobSystemThreadPoolSize() noexcept;
 
     std::default_random_engine mRandomEngine;
 
@@ -401,7 +420,6 @@ public:
         struct {
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
-            bool checkerboard = false;
             bool lispsm = true;
             bool visualize_cascades = false;
             bool tightly_bound_scene = true;

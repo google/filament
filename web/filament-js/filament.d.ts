@@ -102,7 +102,6 @@ export interface View$AmbientOcclusionOptions {
 }
 
 export interface View$DepthOfFieldOptions {
-    focusDistance?: number;
     cocScale?: number;
     maxApertureDiameter?: number;
     enabled?: boolean;
@@ -142,6 +141,9 @@ export interface View$VignetteOptions {
     color?: float3;
     enabled?: boolean;
 }
+
+export function fitIntoUnitCube(box: Aabb): mat4;
+export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
 // Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 export class driver$PixelBufferDescriptor {
@@ -194,6 +196,8 @@ export class TransformManager$Instance {
 
 export class TextureSampler {
     constructor(minfilter: MinFilter, magfilter: MagFilter, wrapmode: WrapMode);
+    public setAnisotropy(value: number): void;
+    public setCompareMode(mode: CompareMode, func: CompareFunc): void;
 }
 
 export class MaterialInstance {
@@ -609,6 +613,7 @@ export class gltfio$FilamentAsset {
     public getResourceUris(): Vector<string>;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
+    public getExtras(entity: Entity): string;
     public getAnimator(): gltfio$Animator;
     public getWireframe(): Entity;
     public getEngine(): Engine;
@@ -616,6 +621,7 @@ export class gltfio$FilamentAsset {
 }
 
 export class gltfio$FilamentInstance {
+    public getAsset(): gltfio$FilamentAsset;
     public getEntities(): Vector<Entity>;
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
@@ -677,7 +683,7 @@ export enum ColorGrading$ToneMapping {
     ACES_LEGACY,
     ACES,
     FILMIC,
-    UCHIMURA,
+    EVILS,
     REINHARD,
     DISPLAY_RANGE,
 }
@@ -733,7 +739,7 @@ export enum IndexBuffer$IndexType {
 }
 
 export enum BufferObject$BindingType {
-    VERTEX_BINDING,
+    VERTEX,
 }
 
 export enum LightManager$Type {
@@ -756,6 +762,22 @@ export enum MinFilter {
     LINEAR_MIPMAP_NEAREST,
     NEAREST_MIPMAP_LINEAR,
     LINEAR_MIPMAP_LINEAR,
+}
+
+export enum CompareMode {
+    NONE,
+    COMPARE_TO_TEXTURE,
+}
+
+export enum CompareFunc {
+    LESS_EQUAL,
+    GREATER_EQUAL,
+    LESS,
+    GREATER,
+    EQUAL,
+    NOT_EQUAL,
+    ALWAYS,
+    NEVER,
 }
 
 export enum CullingMode {
@@ -970,10 +992,6 @@ export enum VertexAttribute {
     MORPH_TANGENTS_1 = CUSTOM5,
     MORPH_TANGENTS_2 = CUSTOM6,
     MORPH_TANGENTS_3 = CUSTOM7,
-}
-
-export enum BufferObject$BindingType {
-    VERTEX,
 }
 
 export enum VertexBuffer$AttributeType {

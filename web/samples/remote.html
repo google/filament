@@ -26,7 +26,7 @@ body {
     height: 100%;
 }
 
-.status-area {
+.connection-settings {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -34,10 +34,31 @@ body {
     height: 100%;
     max-width: 640px;
     max-height: 32px;
-    background: burlywood;
+    background: rgb(189, 189, 189);
     border: solid 2px black;
     border-bottom: none;
     font-size: 12px;
+}
+
+.connection-settings input {
+    font-family: "Open Sans";
+    background-color: rgb(240, 240, 240);
+    border: solid 2px black;
+    outline: none;
+    text-align: center;
+    height: 20px;
+    width: 120px;
+}
+.connection-settings input:invalid { background-color: #ff9090; }
+
+.connection-settings .connect-to-label {
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.connection-settings .port-label {
+    display: inline-block;
+    margin-left: 7px;
 }
 
 canvas {
@@ -67,8 +88,7 @@ canvas {
 }
 
 .dropbox-area p { text-align: center; }
-.instructions-area p { margin: 4px; }
-.instructions-area { margin-bottom: 12px; }
+.instructions-area { margin-top: 12px; }
 a { text-decoration: none; }
 a:visited { color: rgb(26, 65, 78); }
 .bad { background: lightcoral; }
@@ -78,15 +98,14 @@ a:visited { color: rgb(26, 65, 78); }
 
 <body>
 <div class="container">
-<div id="status" class="status-area">Disconnected</div>
-<canvas id="webgl2-canvas"></canvas>
-<div id="dropbox" class="dropbox-area">
-    <div>
-        <p>Drop a <b>glb</b> or a <b>zip</b> file here.</p>
-    </div>
+<div class="connection-settings">
+    <label class="connect-to-label">Connect to</label>
+    <input id="connection-url" type="text" value="localhost" />
+    <label class="port-label">: 8082</label>
 </div>
+<canvas id="webgl2-canvas"></canvas>
+<div id="dropbox" class="dropbox-area"><p>Disconnected.</p></div>
 <div id="instructions" class="instructions-area">
-    <p><code>adb forward tcp:8082 tcp:8082</code></p>
     <button id="copyButton">Copy adb command to clipboard</button>
 </div>
 </div>
@@ -106,14 +125,112 @@ document.getElementById("copyButton").addEventListener("click", () => {
 
 Filament.init([], () => window.app = new App() );
 
+const debounce = (callback, delay) => {
+    let timeout;
+    return () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(callback, delay);
+    };
+};
+
+/**
+ * Manages a WebSocket connection. If connection fails, continuously tries to reconnect.
+ * This class mantains the invariant that at most one socket connection is open at any given time.
+ */
+class Connection {
+    constructor() {
+        this.retryInterval = 3000;
+        this.poll = null;
+        this.connectionOpen = false;
+        this.listeners = {};
+    }
+
+    /**
+     * Attempt to connect to url through a WebSocket. The url should be a valid WebSocket URL,
+     * using either the ws:// or ws:// scheme. Calling 'connect' cancels any previous connection
+     * attempts.
+     * If the connection succeeds, the 'open' event is fired.
+     * If the connection fails or is closed, the 'close' event is fired. A connection will be
+     * continuously re-attempted until either the connection succeeds, or 'disconnect' is called.
+     */
+    connect(url) {
+        this.disconnect();
+
+        const websocket = this.ws = new WebSocket(url);
+
+        this.ws.addEventListener("open", () => {
+            if (websocket.ignoreEvents) {
+                return;
+            }
+            clearTimeout(this.poll);
+            this.connectionOpen = true;
+            this.listeners["open"] && this.listeners["open"]();
+        });
+
+        this.ws.addEventListener("close", () => {
+            if (websocket.ignoreEvents) {
+                return;
+            }
+            if (this.connectionOpen) {
+                this.connectionOpen = false;
+                this.listeners["close"] && this.listeners["close"]();
+            }
+            // Reset the polling timeout. It's important that we clear the previous timeout, as
+            // we're about to lose its handle.
+            clearTimeout(this.poll);
+            this.poll = setTimeout(() => this.connect(url), this.retryInterval);
+        });
+
+        this.ws.addEventListener("message", event => {
+            this.listeners["message"] && this.listeners["message"](event);
+        });
+
+        this.poll = setTimeout(() => this.connect(url), this.retryInterval);
+    }
+
+    send(what) {
+        if (!this.ws || !this.connectionOpen) {
+            return;
+        }
+        this.ws.send(what);
+    }
+
+    /**
+     * Immediately disconnects a WebSocket or cancels any connection attempt. If a connection was
+     * active, the 'close' event is fired.
+     */
+    disconnect() {
+        // Calling ws.close() causes the 'close' event to fire. We set a flag to ensure the listener
+        // callbacks return immediately, without any further action.
+        if (this.ws) {
+            this.ws.ignoreEvents = true;
+            this.ws.close();
+        }
+        this.ws = null;
+        if (this.connectionOpen) {
+            this.connectionOpen = false;
+            this.listeners['close'] && this.listeners['close']();
+        }
+        clearTimeout(this.poll);
+    }
+
+    isConnected() {
+        return this.connectionOpen;
+    }
+
+    addEventListener(type, listener) {
+        this.listeners[type] = listener;
+    }
+}
+
+
 class App {
     constructor(canvas) {
-        this.websocket = null;
-        this.pollForServer = null;
+        this.connection = new Connection();
         this.pendingFile = null;
 
+        this.connectionUrl = document.getElementById("connection-url");
         this.dropbox = document.getElementById("dropbox");
-        this.status = document.getElementById("status");
         this.canvas = document.getElementsByTagName("canvas")[0];
 
         const engine = this.engine = Filament.Engine.create(this.canvas);
@@ -126,6 +243,9 @@ class App {
         this.camera = engine.createCamera(Filament.EntityManager.get().create());
         this.serializer = new Filament.JsonSerializer();
         this.previousSettingsJson = "";
+
+        this.urlRegex =
+            /^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$|localhost$/;
 
         view.setScene(scene);
         view.setCamera(this.camera);
@@ -197,37 +317,76 @@ class App {
             const file = event.dataTransfer.items[0].getAsFile();
             const is_glb = file.name.match(/\.(glb)$/i);
             const is_zip = file.name.match(/\.(zip)$/i);
-            if (!is_glb && !is_zip) return;
+            const is_hdr = file.name.match(/\.(hdr)$/i);
+            if (!is_glb && !is_zip && !is_hdr) return;
             const files = event.dataTransfer.files;
             ([...files]).forEach(upload);
         }, false);
 
-        this.startSocket();
+        const url = this.connectionUrl;
+
+        // The pattern attribute only serves as a visual indication that the inputted URL is valid.
+        // We'll check the URL against the regex inside of startConnection.
+        url.pattern = this.urlRegex.source;
+        url.addEventListener("input", debounce(this.startConnection.bind(this), 1000));
+
+        const connectionUrlString = localStorage.getItem("connectionUrlString");
+        if (connectionUrlString) {
+            url.value = connectionUrlString;
+        }
+
+        this.startConnection();
         window.requestAnimationFrame(this.render);
     }
 
     uploadFile(file) {
-        const connection = this.websocket;
-        if (connection && connection.readyState == connection.OPEN) {
+        if (this.connection.isConnected()) {
             console.info(`Uploading ${file.name}`);
-            connection.send(file.name);
-            connection.send(file);
+            file.arrayBuffer().then(buffer => {
+                this.connection.send(file.name);
+                this.connection.send(buffer);
+            });
         } else {
             this.pendingFile = file;
         }
     }
 
     updateDom() {
-        this.status.innerHTML = this.websocket ? "Connected" : "Disconnected";
-        this.status.style.backgroundColor = this.websocket ? "#45d48d" : "burlywood";
+        const instructions = document.getElementById("instructions");
+        if (this.connection.isConnected()) {
+            instructions.style.visibility = "hidden";
+            this.dropbox.innerHTML = `<div>
+                <p>Connected.</p>
+                <p>Drop a <b>glb</b>, <b>zip</b>, or <b>hdr</b> file here.</p>
+            </div>`;
+        } else {
+            instructions.style.visibility = "visible";
+            this.dropbox.innerHTML = `<div>
+                <p>Disconnected.</p>
+                <p>Ensure app is active and port forwarding is enabled.</p>
+                <p><b>adb forward tcp:8082 tcp:8082</b></p>
+            </div>`;
+        }
     }
 
-    startSocket() {
-        const ws = new WebSocket("ws://localhost:8082");
+    startConnection() {
+        const urlInput = this.connectionUrl.value;
+        if (!urlInput.match(this.urlRegex)) {
+            // This is an invalid URL. We'll stop trying to connect for now, and try again upon
+            // the next edit to the url input.
+            console.info(`Invalid URL: ${urlInput}`);
+            this.connection.disconnect();
+            return;
+        }
 
-        ws.addEventListener("open", () => {
-            clearTimeout(this.pollForServer);
-            this.websocket = ws;
+        // Given a valid URL, we'll save it in local storage to persist it even if the user reloads
+        // the page.
+        localStorage.setItem("connectionUrlString", urlInput);
+
+        const url = `ws://${urlInput}:8082`;
+
+        this.connection.connect(url);
+        this.connection.addEventListener("open", () => {
             this.updateDom();
             this.previousSettingsJson = "";
             if (this.pendingFile) {
@@ -235,14 +394,10 @@ class App {
                 this.pendingFile = null;
             }
         });
-
-        ws.addEventListener("close", (e) => {
-            this.websocket = null;
-            this.pollForServer = setTimeout(() => this.startSocket(), 3000);
+        this.connection.addEventListener("close", () => {
             this.updateDom();
         });
-
-        ws.addEventListener("message", event => {
+        this.connection.addEventListener("message", (event) => {
             if (!event.data) return;
             let commands = [];
             try {
@@ -260,8 +415,6 @@ class App {
     }
 
     render() {
-        const connection = this.websocket;
-
         // Process only a single mouse button event to ensure that ImGui detects a touch event
         // even when a down-up pair occurs between consecutive frames.
         let mouseButton = this.mouseButton;
@@ -274,7 +427,7 @@ class App {
                 mouseWheel, this.mouseButton && this.mouseButton.ctrlKey);
 
         // If there's no connection, let Filament clear the canvas, but do not render the UI view.
-        if (!connection) {
+        if (!this.connection.isConnected()) {
             this.renderer.beginFrame(this.swapChain);
             this.renderer.renderView(this.view);
             this.renderer.endFrame();
@@ -290,9 +443,9 @@ class App {
         // Check if the user has changed any settings.
         const settingsJson = this.serializer.writeJson(this.simpleViewer.getSettings()).slice();
         if (this.previousSettingsJson != settingsJson) {
-            if (connection && connection.readyState == connection.OPEN) {
-                connection.send("setttings.json");
-                connection.send(settingsJson);
+            if (this.connection.isConnected()) {
+                this.connection.send("settings.json");
+                this.connection.send(settingsJson);
             }
             this.previousSettingsJson = settingsJson;
         }

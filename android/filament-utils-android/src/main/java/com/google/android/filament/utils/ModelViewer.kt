@@ -27,9 +27,8 @@ import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
 import java.nio.Buffer
 
-private const val kNearPlane = 0.5
-private const val kFarPlane = 10000.0
-private const val kFovDegrees = 45.0
+private const val kNearPlane = 0.05     // 5 cm
+private const val kFarPlane = 1000.0    // 1 km
 private const val kAperture = 16f
 private const val kShutterSpeed = 1f / 125f
 private const val kSensitivity = 100f
@@ -73,6 +72,12 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     var normalizeSkinningWeights = true
     var recomputeBoundingBoxes = false
 
+    var cameraFocalLength = 28f
+        set(value) {
+            field = value
+            updateCameraProjection()
+        }
+
     val scene: Scene
     val view: View
     val camera: Camera
@@ -100,7 +105,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     init {
         renderer = engine.createRenderer()
         scene = engine.createScene()
-        camera = engine.createCamera().apply { setExposure(kAperture, kShutterSpeed, kSensitivity) }
+        camera = engine.createCamera(engine.entityManager.create()).apply { setExposure(kAperture, kShutterSpeed, kSensitivity) }
         view = engine.createView()
         view.scene = scene
         view.camera = camera
@@ -171,12 +176,17 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      *
      * The given callback is triggered for each requested resource.
      */
-    fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer) {
+    fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer?) {
         destroyModel()
         asset = assetLoader.createAssetFromJson(buffer)
         asset?.let { asset ->
             for (uri in asset.resourceUris) {
-                resourceLoader.addResourceData(uri, callback(uri))
+                val resourceBuffer = callback(uri)
+                if (resourceBuffer == null) {
+                    this.asset = null
+                    return
+                }
+                resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.asyncBeginLoad(asset)
             animator = asset.animator
@@ -262,9 +272,14 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     private fun populateScene(asset: FilamentAsset) {
+        val rcm = engine.renderableManager
         var count = 0
         val popRenderables = {count = asset.popRenderables(readyRenderables); count != 0}
         while (popRenderables()) {
+            for (i in 0..count-1) {
+                val ri = rcm.getInstance(readyRenderables[i])
+                rcm.setScreenSpaceContactShadows(ri, true)
+            }
             scene.addEntities(readyRenderables.take(count).toIntArray())
         }
         scene.addEntities(asset.lightEntities)
@@ -284,7 +299,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
                 engine.destroyRenderer(renderer)
                 engine.destroyView(this@ModelViewer.view)
                 engine.destroyScene(scene)
-                engine.destroyCamera(camera)
+                engine.destroyCameraComponent(camera.entity)
+                EntityManager.get().destroy(camera.entity)
 
                 EntityManager.get().destroy(light)
 
@@ -323,6 +339,13 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         }
     }
 
+    private fun updateCameraProjection() {
+        val width = view.viewport.width
+        val height = view.viewport.height
+        val aspect = width.toDouble() / height.toDouble()
+        camera.setLensProjection(cameraFocalLength.toDouble(), aspect, kNearPlane, kFarPlane)
+    }
+
     inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { engine.destroySwapChain(it) }
@@ -342,9 +365,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
         override fun onResized(width: Int, height: Int) {
             view.viewport = Viewport(0, 0, width, height)
-            val aspect = width.toDouble() / height.toDouble()
-            camera.setProjection(kFovDegrees, aspect, kNearPlane, kFarPlane, Camera.Fov.VERTICAL)
             cameraManipulator.setViewport(width, height)
+            updateCameraProjection()
         }
     }
 

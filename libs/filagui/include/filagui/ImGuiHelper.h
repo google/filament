@@ -25,6 +25,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
@@ -47,7 +48,8 @@ public:
     using Callback = std::function<void(filament::Engine*, filament::View*)>;
 
     // The constructor creates its own Scene and places it in the given View.
-    ImGuiHelper(filament::Engine* engine, filament::View* view, const utils::Path& fontPath);
+    ImGuiHelper(filament::Engine* engine, filament::View* view, const utils::Path& fontPath,
+            ImGuiContext* imGuiContext = nullptr);
     ~ImGuiHelper();
 
     // Informs ImGui of the current display size, as well as a scaling factor when scissoring.
@@ -90,6 +92,7 @@ public:
       filament::Texture* mTexture = nullptr;
       bool mHasSynced = false;
       ImGuiContext* mImGuiContext;
+      filament::TextureSampler mSampler;
 };
 
 } // namespace filagui

@@ -29,7 +29,7 @@ struct Config {
     std::string dirt;
     float scale = 1.0f;
     bool splitView = false;
-    filament::Engine::Backend backend = filament::Engine::Backend::OPENGL;
+    mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
     filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
     bool headless = false;

@@ -1,9 +1,9 @@
-struct UBO_1_1
+struct UBO_1
 {
     float4 v[64];
 };
 
-ConstantBuffer<UBO_1_1> ubos[] : register(b0, space2);
+ConstantBuffer<UBO_1> ubos[] : register(b0, space2);
 ByteAddressBuffer ssbos[] : register(t0, space3);
 Texture2D<float4> uSamplers[] : register(t0, space0);
 SamplerState uSamps[] : register(s0, space1);

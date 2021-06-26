@@ -84,8 +84,9 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const math::mat4f& worldOriginTransform);
-    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept;
+    void prepare(const math::mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena,
+            backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept;
 
 
     filament::backend::Handle<backend::HwUniformBuffer> getRenderableUBO() const noexcept {

@@ -134,7 +134,7 @@ git commit --amend -C HEAD
 ####################################################################################################
 
 git checkout main
-git branch --track "${NEW_RC_BRANCH}"
+git branch "${NEW_RC_BRANCH}"
 
 ####################################################################################################
 # Delete the old release candidate branch
@@ -154,7 +154,7 @@ if [[ "${PUSH_CHANGES}" == "true" ]]; then
     git push origin --delete "${RC_BRANCH}"
 
     # Push the new rc branch
-    git push origin "${NEW_RC_BRANCH}"
+    git push origin -u "${NEW_RC_BRANCH}"
 else
     echo ""
     echo "Done."
@@ -164,7 +164,7 @@ else
     echo "---------------------------------------------------------"
     echo "git push origin release"
     echo "git push origin --delete ${RC_BRANCH}"
-    echo "git push origin ${NEW_RC_BRANCH}"
+    echo "git push origin -u ${NEW_RC_BRANCH}"
     echo "---------------------------------------------------------"
     echo "Or, to undo everything:"
     echo "---------------------------------------------------------"

@@ -39,6 +39,10 @@ public:
     TargetBufferInfo(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
             : handle(h), level(level), layer(layer) { }
 
+    explicit TargetBufferInfo(TextureCubemapFace face) noexcept : face(face) {}
+
+    explicit TargetBufferInfo(uint16_t layer) noexcept : layer(layer) {}
+
     // texture to be used as render target
     Handle<HwTexture> handle;
     // level to be used
@@ -54,13 +58,20 @@ public:
 
 class MRT {
 public:
-    static constexpr int TARGET_COUNT = 4;
+    static constexpr uint8_t MIN_SUPPORTED_RENDER_TARGET_COUNT = 4u;
+
+    // When updating this, make sure to also take care of RenderTarget.java
+    static constexpr uint8_t MAX_SUPPORTED_RENDER_TARGET_COUNT = 8u;
 
 private:
-    TargetBufferInfo mInfos[TARGET_COUNT];
+    TargetBufferInfo mInfos[MAX_SUPPORTED_RENDER_TARGET_COUNT];
 
 public:
-    TargetBufferInfo operator[](size_t i) const noexcept {
+    TargetBufferInfo const& operator[](size_t i) const noexcept {
+        return mInfos[i];
+    }
+
+    TargetBufferInfo& operator[](size_t i) noexcept {
         return mInfos[i];
     }
 

@@ -68,8 +68,8 @@ public:
     };
 
     enum class TargetLanguage {
-        GLSL,
-        SPIRV
+        GLSL,           // GLSL with OpenGL semantics
+        SPIRV           // GLSL with Vulkan semantics
     };
 
     enum class Optimization {
@@ -191,6 +191,7 @@ public:
     using RefractionMode = filament::RefractionMode;
     using RefractionType = filament::RefractionType;
 
+    using ShaderQuality = filament::ShaderQuality;
     using BlendingMode = filament::BlendingMode;
     using Shading = filament::Shading;
     using Interpolation = filament::Interpolation;
@@ -343,6 +344,9 @@ public:
      */
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
 
+
+    MaterialBuilder& quality(ShaderQuality quality) noexcept;
+
     //! Set the blending mode for this material.
     MaterialBuilder& blending(BlendingMode blending) noexcept;
 
@@ -443,6 +447,26 @@ public:
 
     //! Specifies how transparent objects should be rendered (default is DEFAULT).
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
+
+    /**
+     * Enable / disable custom surface shading. Custom surface shading requires the LIT
+     * shading model. In addition, the following function must be defined in the fragment
+     * block:
+     *
+     * ~~~~~
+     * vec3 surfaceShading(const MaterialInputs materialInputs,
+     *         const ShadingData shadingData, const LightData lightData) {
+     *
+     *     return vec3(1.0); // Compute surface shading with custom BRDF, etc.
+     * }
+     * ~~~~~
+     *
+     * This function is invoked once per light. Please refer to the materials documentation
+     * for more information about the different parameters.
+     *
+     * @param customSurfaceShading Enables or disables custom surface shading
+     */
+    MaterialBuilder& customSurfaceShading(bool customSurfaceShading) noexcept;
 
     /**
      * Specifies desktop vs mobile; works in concert with TargetApi to determine the shader models
@@ -562,9 +586,9 @@ public:
     using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
     using OutputList = std::vector<Output>;
 
-    static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::TARGET_COUNT;
+    static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
     static constexpr size_t MAX_DEPTH_OUTPUT = 1;
-    static_assert(MAX_COLOR_OUTPUT == 4,
+    static_assert(MAX_COLOR_OUTPUT == 8,
             "When updating MRT::TARGET_COUNT, manually update post_process_inputs.fs"
             " and post_process.fs");
 
@@ -652,6 +676,7 @@ private:
     VariableList mVariables;
     OutputList mOutputs;
 
+    ShaderQuality mShaderQuality = ShaderQuality::DEFAULT;
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
     BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
@@ -690,6 +715,8 @@ private:
 
     SpecularAmbientOcclusion mSpecularAO = SpecularAmbientOcclusion::NONE;
     bool mSpecularAOSet = false;
+
+    bool mCustomSurfaceShading = false;
 
     bool mEnableFramebufferFetch = false;
 

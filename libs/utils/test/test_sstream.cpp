@@ -94,7 +94,7 @@ TEST(sstream, Formatting) {
     {
         sstream ss;
         ss << (bool) true;
-        EXPECT_STREQ("1", ss.c_str());
+        EXPECT_STREQ("true", ss.c_str());
     }
     {
         sstream ss;

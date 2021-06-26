@@ -31,6 +31,10 @@
 
 #include "fg2/FrameGraph.h"
 
+#include "TypedUniformBuffer.h"
+
+#include <utils/FixedCapacityVector.h>
+
 #include <math/vec3.h>
 
 #include <array>
@@ -65,27 +69,24 @@ public:
 
     // Updates all of the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowTechnique update(FEngine& engine, FView& view, UniformBuffer& perViewUb, UniformBuffer& shadowUb,
+    ShadowTechnique update(FEngine& engine, FView& view,
+            TypedUniformBuffer<PerViewUib>& perViewUb, TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all of the shadow maps.
     void render(FrameGraph& fg, FEngine& engine, FView& view, backend::DriverApi& driver,
             RenderPass& pass) noexcept;
 
-    // Prepares the shadow sampler.
-    void prepareShadow(backend::Handle<backend::HwTexture> texture, FView const& view)
-        const noexcept;
-
     const ShadowMap* getCascadeShadowMap(size_t c) const noexcept {
+        assert_invariant(c < mCascadeShadowMapCache.size());
         return mCascadeShadowMapCache[c].get();
     }
 
 private:
 
     struct ShadowLayout {
+        LightManager::ShadowOptions const* options = nullptr;
         uint8_t layer = 0;
-        uint32_t size = 0;
-        uint8_t vsmSamples = 1;
     };
 
     struct TextureRequirements {
@@ -94,26 +95,26 @@ private:
         uint8_t levels = 0;
     } mTextureRequirements;
 
-    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view, UniformBuffer& perViewUb,
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view,
+            TypedUniformBuffer<PerViewUib>& perViewUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view, UniformBuffer& shadowUb,
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
+            TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
-    static void fillWithDebugPattern(backend::DriverApi& driverApi,
-            backend::Handle<backend::HwTexture> texture, size_t dimensions) noexcept;
 
     void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 
     class ShadowMapEntry {
     public:
         ShadowMapEntry() = default;
-        ShadowMapEntry(ShadowMap* shadowMap, const size_t light) :
+        ShadowMapEntry(ShadowMap* shadowMap, size_t light) :
                 mShadowMap(shadowMap),
-                mLightIndex(light),
-                mLayout({}) {}
+                mLightIndex(light) {
+        }
 
         explicit operator bool() const { return mShadowMap != nullptr; }
 
-        ShadowMap* getShadowMap() const { return mShadowMap; }
+        ShadowMap& getShadowMap() const { return *mShadowMap; }
         size_t getLightIndex() const { return mLightIndex; }
         const ShadowLayout& getLayout() const { return mLayout; }
         bool hasVisibleShadows() const { return mHasVisibleShadows; }
@@ -123,8 +124,8 @@ private:
 
     private:
         ShadowMap* mShadowMap = nullptr;
-        size_t mLightIndex = 0;
         ShadowLayout mLayout = {};
+        size_t mLightIndex = 0; // TODO: does this need to be size_t?
         bool mHasVisibleShadows = false;
     };
 
@@ -133,7 +134,7 @@ private:
         constexpr static size_t SPLIT_COUNT = CONFIG_MAX_SHADOW_CASCADES + 1;
 
         struct Params {
-            math::mat4f proj = {};
+            math::mat4f proj;
             float near = 0.0f;
             float far = 0.0f;
             size_t cascadeCount = 1;
@@ -148,8 +149,8 @@ private:
             }
         };
 
-        CascadeSplits() : CascadeSplits(Params {}) {}
-        explicit CascadeSplits(Params p);
+        CascadeSplits() noexcept : CascadeSplits(Params{}) {}
+        explicit CascadeSplits(Params const& params) noexcept;
 
         // Split positions in world-space.
         const float* beginWs() const { return mSplitsWs; }
@@ -163,9 +164,10 @@ private:
         float mSplitsWs[SPLIT_COUNT];
         float mSplitsCs[SPLIT_COUNT];
         size_t mSplitCount;
+    };
 
-    } mCascadeSplits;
     CascadeSplits::Params mCascadeSplitParams;
+    CascadeSplits mCascadeSplits;
 
     // 16-bits seems enough.
     // TODO: make it an option.
@@ -173,9 +175,13 @@ private:
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
     float mTextureZResolution = 1.0f / (1u << 16u);
 
-    std::vector<ShadowMapEntry> mCascadeShadowMaps;
-    std::vector<ShadowMapEntry> mSpotShadowMaps;
-    backend::RenderPassParams mRenderPassParams;
+    utils::FixedCapacityVector<ShadowMapEntry> mCascadeShadowMaps{
+            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+                    CONFIG_MAX_SHADOW_CASCADES) };
+
+    utils::FixedCapacityVector<ShadowMapEntry> mSpotShadowMaps{
+            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+                    CONFIG_MAX_SHADOW_CASTING_SPOTS) };
 
     std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASCADES> mCascadeShadowMapCache;
     std::array<std::unique_ptr<ShadowMap>, CONFIG_MAX_SHADOW_CASTING_SPOTS> mSpotShadowMapCache;

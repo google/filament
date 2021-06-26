@@ -292,6 +292,13 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderFlipUV(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderCustomSurfaceShading(JNIEnv*,
+        jclass, jlong nativeBuilder, jboolean customSurfaceShading) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->customSurfaceShading(customSurfaceShading);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMultiBounceAmbientOcclusion(
         JNIEnv*, jclass, jlong nativeBuilder, jboolean multiBounceAO) {
     auto builder = (MaterialBuilder*) nativeBuilder;

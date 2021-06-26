@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 project(filabridge)
 
 set(TARGET         filabridge)
@@ -13,7 +13,6 @@ set(SRCS
         src/SamplerBindingMap.cpp
         src/SamplerInterfaceBlock.cpp
         src/UniformInterfaceBlock.cpp
-        src/UibGenerator.cpp
         src/SibGenerator.cpp
 )
 

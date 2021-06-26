@@ -23,8 +23,6 @@ import androidx.annotation.NonNull;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Texture;
 
-import java.lang.reflect.Method;
-
 public final class TextureHelper {
     // Keep in sync with Texture.cpp
     private static final int BITMAP_CONFIG_ALPHA_8    = 0;

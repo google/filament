@@ -21,6 +21,8 @@
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 
+#include "backend/TargetBufferInfo.h"
+
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 
@@ -31,7 +33,7 @@
 #include <set>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
-#    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
+#    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 4
 #endif
 
 namespace filament {
@@ -70,6 +72,8 @@ public:
     };
 
     struct GLBufferObject : public backend::HwBufferObject {
+        using HwBufferObject::HwBufferObject;
+        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
         struct {
             GLuint id = 0;
         } gl;
@@ -190,7 +194,7 @@ public:
                 uint8_t level = 0; // level when attached to a texture
             };
             // field ordering to optimize size on 64-bits
-            RenderBuffer color[4];
+            RenderBuffer color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;
@@ -241,7 +245,6 @@ private:
 
 #include "private/backend/DriverAPI.inc"
 
-
     // Memory management...
 
     class HandleAllocator {
@@ -251,8 +254,22 @@ private:
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit HandleAllocator(const utils::HeapArea& area);
-        void* alloc(size_t size, size_t alignment, size_t extra = 0) noexcept;
-        void free(void* p, size_t size) noexcept;
+
+        // this is in fact always called with a constexpr size argument
+        inline void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
+            assert_invariant(size <= mPool2.getSize());
+            if (size <= mPool0.getSize()) return mPool0.alloc(size, 16, extra);
+            if (size <= mPool1.getSize()) return mPool1.alloc(size, 32, extra);
+            if (size <= mPool2.getSize()) return mPool2.alloc(size, 32, extra);
+            return nullptr;
+        }
+
+        // this is in fact always called with a constexpr size argument
+        inline void free(void* p, size_t size) noexcept {
+            if (size <= mPool0.getSize()) { mPool0.free(p); return; }
+            if (size <= mPool1.getSize()) { mPool1.free(p); return; }
+            if (size <= mPool2.getSize()) { mPool2.free(p); return; }
+        }
     };
 
     // the arenas for handle allocation needs to be thread-safe
@@ -268,6 +285,7 @@ private:
     HandleArena mHandleArena;
 
     backend::HandleBase::HandleId allocateHandle(size_t size) noexcept;
+    backend::HandleBase::HandleId allocateHandle(void* addr) noexcept;
 
     template<typename D, typename ... ARGS>
     backend::Handle<D> initHandle(ARGS&& ... args) noexcept;
@@ -356,6 +374,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
+           void bindSampler(GLuint unit, backend::SamplerParams params) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };
@@ -376,11 +395,12 @@ private:
         return pos->second;
     }
 
-    const std::array<backend::HwSamplerGroup*, backend::Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
+    const std::array<backend::HwSamplerGroup*, backend::Program::BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
-    static GLsizei getAttachments(std::array<GLenum, 6>& attachments,
+    using AttachmentArray = std::array<GLenum, backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
+    static GLsizei getAttachments(AttachmentArray& attachments,
             GLRenderTarget const* rt, backend::TargetBufferFlags buffers) noexcept;
 
     backend::RasterState mRasterState;
@@ -397,7 +417,7 @@ private:
     void setViewportScissor(backend::Viewport const& viewportScissor) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<backend::HwSamplerGroup*, backend::Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 8 pointers
+    std::array<backend::HwSamplerGroup*, backend::Program::BINDING_COUNT> mSamplerBindings = {};   // 8 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

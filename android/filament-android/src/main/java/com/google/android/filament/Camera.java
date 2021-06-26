@@ -29,7 +29,7 @@ import androidx.annotation.Size;
  *
  * In Filament, Camera is a component that must be associated with an entity. To do so,
  * use {@link Engine#createCamera(int)}. A Camera component is destroyed using
- * {@link Engine#destroyCamera(Camera)}.
+ * {@link Engine#destroyCameraComponent(int Entity)} ()}.
  *
  * <pre>
  *  Camera myCamera = engine.createCamera(myCameraEntity);
@@ -37,7 +37,7 @@ import androidx.annotation.Size;
  *  myCamera.lookAt(0, 1.60, 1,
  *                  0, 0, 0,
  *                  0, 1, 0);
- *  engine.destroyCamera(myCamera);
+ *  engine.destroyCameraComponent(myCameraEntity);
  * </pre>
  *
  *
@@ -121,6 +121,9 @@ import androidx.annotation.Size;
 public class Camera {
     private long mNativeObject;
 
+    @Entity
+    private final int mEntity;
+
     /**
      * Denotes the projection type used by this camera.
      * @see #setProjection
@@ -143,8 +146,9 @@ public class Camera {
         HORIZONTAL
     }
 
-    Camera(long nativeCamera) {
+    Camera(long nativeCamera, @Entity int entity) {
         mNativeObject = nativeCamera;
+        mEntity = entity;
     }
 
     /**
@@ -428,6 +432,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance to the near plane
      * @return Distance to the near plane
      */
     public float getNear() {
@@ -435,6 +440,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance to the far plane
      * @return Distance to the far plane
      */
     public float getCullingFar() {
@@ -631,6 +637,7 @@ public class Camera {
     }
 
     /**
+     * Gets the aperture in f-stops
      * @return Aperture in f-stops
      */
     public float getAperture() {
@@ -638,6 +645,7 @@ public class Camera {
     }
 
     /**
+     * Gets the shutter speed in seconds
      * @return Shutter speed in seconds
      */
     public float getShutterSpeed() {
@@ -645,6 +653,7 @@ public class Camera {
     }
 
     /**
+     * Gets the focal length in meters
      * @return focal length in meters [m]
      */
     public double getFocalLength() {
@@ -661,6 +670,7 @@ public class Camera {
     }
 
     /**
+     * Gets the distance from the camera to the focus plane in world units
      * @return Distance from the camera to the focus plane in world units
      */
     public float getFocusDistance() {
@@ -668,10 +678,20 @@ public class Camera {
     }
 
     /**
+     * Gets the sensitivity in ISO
      * @return Sensitivity in ISO
      */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());
+    }
+
+    /**
+     * Gets the entity representing this Camera
+     * @return the entity this Camera component is attached to
+     */
+    @Entity
+    public int getEntity() {
+        return mEntity;
     }
 
     /**

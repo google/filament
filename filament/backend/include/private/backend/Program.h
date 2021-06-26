@@ -18,13 +18,13 @@
 #define TNT_FILAMENT_DRIVER_PROGRAM_H
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
 #include <utils/Log.h>
 
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -33,8 +33,7 @@ class Program {
 public:
 
     static constexpr size_t SHADER_TYPE_COUNT = 2;
-    static constexpr size_t UNIFORM_BINDING_COUNT = CONFIG_UNIFORM_BINDING_COUNT;
-    static constexpr size_t SAMPLER_BINDING_COUNT = CONFIG_SAMPLER_BINDING_COUNT;
+    static constexpr size_t BINDING_COUNT = CONFIG_BINDING_COUNT;
 
     enum class Shader : uint8_t {
         VERTEX = 0,
@@ -47,8 +46,8 @@ public:
         bool strict = false;        // if true, this sampler must always have a bound texture
     };
 
-    using SamplerGroupInfo = std::array<std::vector<Sampler>, SAMPLER_BINDING_COUNT>;
-    using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
+    using SamplerGroupInfo = std::array<utils::FixedCapacityVector<Sampler>, BINDING_COUNT>;
+    using UniformBlockInfo = std::array<utils::CString, BINDING_COUNT>;
 
     Program() noexcept;
     Program(const Program& rhs) = delete;
@@ -86,7 +85,8 @@ public:
         return shader(Shader::FRAGMENT, data, size);
     }
 
-    std::array<std::vector<uint8_t>, SHADER_TYPE_COUNT> const& getShadersSource() const noexcept {
+    using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
+    std::array<ShaderBlob, SHADER_TYPE_COUNT> const& getShadersSource() const noexcept {
         return mShadersSource;
     }
 
@@ -108,7 +108,7 @@ private:
     // FIXME: none of these fields should be public as this is a public API
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
-    std::array<std::vector<uint8_t>, SHADER_TYPE_COUNT> mShadersSource;
+    std::array<ShaderBlob, SHADER_TYPE_COUNT> mShadersSource;
     utils::CString mName;
     bool mHasSamplers = false;
     uint8_t mVariant;

@@ -42,6 +42,7 @@ class UTILS_PRIVATE CodeGenerator {
     using ShaderType = filament::backend::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
     using TargetLanguage = MaterialBuilder::TargetLanguage;
+    using ShaderQuality = MaterialBuilder::ShaderQuality;
 public:
     CodeGenerator(filament::backend::ShaderModel shaderModel,
             TargetApi targetApi, TargetLanguage targetLanguage) noexcept
@@ -74,7 +75,7 @@ public:
 
     // generate the shader's code for the lit shading model
     utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderType type,
-            filament::Variant variant, filament::Shading shading) const;
+            filament::Variant variant, filament::Shading shading, bool customSurfaceShading) const;
 
     // generate the shader's code for the unlit shading model
     utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderType type,
@@ -113,6 +114,8 @@ public:
     // generate material properties getters
     utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
             MaterialBuilder::Property property, bool isSet) const;
+
+    utils::io::sstream& generateQualityDefine(utils::io::sstream& out, ShaderQuality quality) const;
 
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value) const;
     utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;

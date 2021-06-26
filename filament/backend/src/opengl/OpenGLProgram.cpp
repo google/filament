@@ -25,7 +25,7 @@
 
 #include <private/backend/BackendUtils.h>
 
-#include <cctype>
+#include <ctype.h>
 
 namespace filament {
 
@@ -59,15 +59,15 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             auto shader = shadersSource[i];
             GLint const length = (GLint)shader.size();
 
-#ifndef NDEBUG
-            // If usages of the Google-style line directive are present, remove them, as some
-            // drivers don't allow the quotation marks.
-            if (requestsGoogleLineDirectivesExtension((const char*) shader.data(), length)) {
-                auto temp = shader;
-                removeGoogleLineDirectives((char*) temp.data(), length);    // length is unaffected
-                shader = std::move(temp);
+            if (!gl->getContext().ext.GOOGLE_cpp_style_line_directive) {
+                // If usages of the Google-style line directive are present, remove them, as some
+                // drivers don't allow the quotation marks.
+                if (requestsGoogleLineDirectivesExtension((const char*)shader.data(), length)) {
+                    auto temp = shader;
+                    removeGoogleLineDirectives((char*)temp.data(), length); // length is unaffected
+                    shader = std::move(temp);
+                }
             }
-#endif
 
             const char * const source = (const char*)shader.data();
 
@@ -77,7 +77,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
             if (UTILS_UNLIKELY(status != GL_TRUE)) {
-                logCompilationError(slog.e, shaderId, source);
+                logCompilationError(slog.e, type,
+                        programBuilder.getName().c_str_safe(), shaderId, source);
                 glDeleteShader(shaderId);
                 return;
             }
@@ -101,13 +102,11 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         glGetProgramiv(program, GL_LINK_STATUS, &status);
         if (UTILS_UNLIKELY(status != GL_TRUE)) {
-            char error[512];
-            glGetProgramInfoLog(program, sizeof(error), nullptr, error);
-
-            slog.e << "LINKING: " << error << io::endl;
+            logProgramLinkError(slog.e, programBuilder.getName().c_str_safe(), program);
             glDeleteProgram(program);
             return;
         }
+
         this->gl.program = program;
 
         // Associate each UniformBlock in the program to a known binding.
@@ -195,11 +194,14 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     }
 }
 
-void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
+void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
     using GLTexture = OpenGLDriver::GLTexture;
 
     // cache a few member variable locally, outside of the loop
-    auto const& UTILS_RESTRICT samplerBindings = gl->getSamplerBindings();
+    OpenGLContext& glc = gld->getContext();
+    const bool anisotropyWorkaround = glc.ext.EXT_texture_filter_anisotropic &&
+                                      glc.bugs.texture_filter_anisotropic_broken_on_sampler;
+    auto const& UTILS_RESTRICT samplerBindings = gld->getSamplerBindings();
     auto const& UTILS_RESTRICT indicesRun = mIndicesRuns;
     auto const& UTILS_RESTRICT blockInfos = mBlockInfos;
 
@@ -222,27 +224,49 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
                 continue;
             }
 
-            const GLTexture* const UTILS_RESTRICT t = gl->handle_cast<const GLTexture*>(th);
+            const GLTexture* const UTILS_RESTRICT t = gld->handle_cast<const GLTexture*>(th);
             if (UTILS_UNLIKELY(t->gl.fence)) {
                 glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
                 glDeleteSync(t->gl.fence);
                 t->gl.fence = nullptr;
             }
 
-            gl->bindTexture(tmu, t);
+            gld->bindTexture(tmu, t);
+            gld->bindSampler(tmu, samplers[index].s);
 
-            GLuint sampler = gl->getSampler(samplers[index].s);
-            gl->getContext().bindSampler(tmu, sampler);
+#if defined(GL_EXT_texture_filter_anisotropic)
+            if (UTILS_UNLIKELY(anisotropyWorkaround)) {
+                // Driver claims to support anisotropic filtering, but it fails when set on
+                // the sampler, we have to set it on the texture instead.
+                // The texture is already bound here.
+                SamplerParams params = samplers[index].s;
+                GLfloat anisotropy = float(1u << params.anisotropyLog2);
+                glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                        std::min(glc.gets.max_anisotropy, anisotropy));
+            }
+#endif
         }
     }
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void UTILS_NOINLINE OpenGLProgram::logCompilationError(
-        io::ostream& out, GLuint shaderId, char const* source) noexcept {
-    char error[512];
+UTILS_NOINLINE
+void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shaderType,
+        const char* name, GLuint shaderId, char const* source) noexcept {
+
+    auto to_string = [](Program::Shader type) -> const char* {
+        switch (type) {
+            case Program::Shader::VERTEX:       return "vertex";
+            case Program::Shader::FRAGMENT:     return "fragment";
+        }
+    };
+
+    char error[1024];
     glGetShaderInfoLog(shaderId, sizeof(error), nullptr, error);
-    out << "COMPILE ERROR: " << io::endl << error << io::endl;
+
+    out << "Compilation error in " << to_string(shaderType) << " shader \"" << name << "\":\n"
+        << "\"" << error << "\""
+        << io::endl;
 
     size_t lc = 1;
     char* shader = strdup(source);
@@ -258,6 +282,16 @@ void UTILS_NOINLINE OpenGLProgram::logCompilationError(
     }
 
     free(shader);
+}
+
+UTILS_NOINLINE
+void OpenGLProgram::logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
+    char error[1024];
+    glGetProgramInfoLog(program, sizeof(error), nullptr, error);
+
+    out << "Link error in \"" << name << "\":\n"
+        << "\"" << error << "\""
+        << io::endl;
 }
 
 } // namespace filament

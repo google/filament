@@ -42,7 +42,7 @@ using namespace filament::math;
 namespace filament {
 namespace viewer {
 
-filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
+filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset) {
     using namespace filament::math;
     auto minpt = bounds.min;
     auto maxpt = bounds.max;
@@ -51,7 +51,7 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
     maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
     float scaleFactor = 2.0f / maxExtent;
     float3 center = (minpt + maxpt) / 2.0f;
-    center.z += 4.0f / scaleFactor;
+    center.z += zoffset / scaleFactor;
     return mat4f::scaling(float3(scaleFactor)) * mat4f::translation(-center);
 }
 
@@ -151,7 +151,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0Uchimura\0Reinhard\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
 
         if (ImGui::CollapsingHeader("White balance")) {
@@ -348,7 +348,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
         if (scale) {
             auto& tcm = mEngine->getTransformManager();
             auto root = tcm.getInstance(mAsset->getRoot());
-            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
+            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox(), 4);
             tcm.setTransform(root, transform);
         }
 
@@ -384,10 +384,12 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
         float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        mSettings.lighting.sunlightDirection = d;
-        mSettings.lighting.sunlightColor = c.rgb;
-        mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
-        updateIndirectLight();
+        if (!std::isnan(d.x * d.y * d.z)) {
+            mSettings.lighting.sunlightDirection = d;
+            mSettings.lighting.sunlightColor = c.rgb;
+            mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
+            updateIndirectLight();
+        }
     }
 }
 
@@ -598,9 +600,14 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
 
-        bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
-        ImGui::Checkbox("Dithering", &dither);
-        enableDithering(dither);
+        ImGui::Checkbox("Post-processing", &mSettings.view.postProcessingEnabled);
+        ImGui::Indent();
+            bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
+            ImGui::Checkbox("Dithering", &dither);
+            enableDithering(dither);
+            ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
+            ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
+        ImGui::Unindent();
 
         bool msaa = mSettings.view.sampleCount != 1;
         ImGui::Checkbox("MSAA 4x", &msaa);
@@ -619,7 +626,6 @@ void SimpleViewer::updateUserInterface() {
         enableFxaa(fxaa);
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
-        ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
 
         if (ImGui::CollapsingHeader("SSAO Options")) {
             auto& ssao = mSettings.view.ssao;
@@ -663,6 +669,10 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
         ImGui::Checkbox("Enable shadows", &light.enableShadows);
+        int mapSize = light.shadowOptions.mapSize;
+        ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
+        light.shadowOptions.mapSize = mapSize;
+
 
         bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
@@ -677,6 +687,13 @@ void SimpleViewer::updateUserInterface() {
         snprintf(label, 32, "%d", 1 << vsmAnisotropy);
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
         mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
+        ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
+        ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+
+        // These are not very useful in practice (defaults are good), but we keep them here for debugging
+        //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
+        //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
+        //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
 
         int shadowCascades = light.shadowOptions.shadowCascades;
         ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
@@ -723,11 +740,8 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::Indent();
 
-        // We do not yet support focal length in remote mode (i.e. when mAsset is null)
-        if (mAsset) {
-            ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
-                    16.0f, 90.0f);
-        }
+        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
+                16.0f, 90.0f);
 
         bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
         int dofRingCount = mSettings.view.dof.fastGatherRingCount;
@@ -739,7 +753,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
         ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
         ImGui::Checkbox("DoF", &mSettings.view.dof.enabled);
-        ImGui::SliderFloat("Focus distance", &mSettings.view.dof.focusDistance, 0.0f, 30.0f);
+        ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
         ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
         ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
         ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
@@ -763,6 +777,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::ColorEdit3("Color##vignetteColor", &mSettings.view.vignette.color.r);
         }
 
+        // We do not yet support camera selection in the remote UI. To support this feature, we
+        // would need to send a message from DebugServer to the WebSockets client.
         if (mAsset != nullptr) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
@@ -826,6 +842,8 @@ void SimpleViewer::updateUserInterface() {
             ImGui::Unindent();
         }
 
+        // We do not yet support animation selection in the remote UI. To support this feature, we
+        // would need to send a message from DebugServer to the WebSockets client.
         if (mAnimator && mAnimator->getAnimationCount() > 0 &&
                 ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();

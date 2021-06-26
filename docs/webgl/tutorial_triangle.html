@@ -16,7 +16,7 @@ subsequent code blocks.</p>
 <h2>Start your project</h2>
 <p>First, create a text file called <code>triangle.html</code> and fill it with the following HTML. This creates
 a mobile-friendly page with a full-screen canvas.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #BC7A00">&lt;!DOCTYPE html&gt;</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #BC7A00">&lt;!DOCTYPE html&gt;</span>
 &lt;<span style="color: #008000; font-weight: bold">html</span> <span style="color: #7D9029">lang</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;en&quot;</span>&gt;
 &lt;<span style="color: #008000; font-weight: bold">head</span>&gt;
     &lt;<span style="color: #008000; font-weight: bold">title</span>&gt;Filament Tutorial&lt;/<span style="color: #008000; font-weight: bold">title</span>&gt;
@@ -48,7 +48,7 @@ a mobile-friendly page with a full-screen canvas.</p>
 <li><code>triangle.js</code> will contain your application code.</li>
 </ul>
 <p>Go ahead and create <code>triangle.js</code> with the following content.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">class</span> App {
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">class</span> App {
   constructor() {
     <span style="color: #408080; font-style: italic">// TODO: create entities</span>
     <span style="color: #008000; font-weight: bold">this</span>.render <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
@@ -81,7 +81,7 @@ that define a PBR material. We'll learn more about material packages in the next
 <h2>Spawn a local server</h2>
 <p>Because of CORS restrictions, your web app cannot fetch the material package directly from the
 file system. One way around this is to create a temporary server using Python or node:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>python3 -m http.server     <span style="color: #408080; font-style: italic"># Python 3</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>python3 -m http.server     <span style="color: #408080; font-style: italic"># Python 3</span>
 python -m SimpleHTTPServer <span style="color: #408080; font-style: italic"># Python 2.7</span>
 npx http-server -p <span style="color: #666666">8000</span>    <span style="color: #408080; font-style: italic"># nodejs</span>
 </pre></div>
@@ -93,7 +93,7 @@ with the correct MIME type.</p>
 <h2>Create the Engine and Scene</h2>
 <p>We now have a basic skeleton that can respond to paint and resize events. Let's start adding
 Filament objects to the app. Insert the following code into the top of the app constructor.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">this</span>.canvas <span style="color: #666666">=</span> <span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>];
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.canvas <span style="color: #666666">=</span> <span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>];
 <span style="color: #008000; font-weight: bold">const</span> engine <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine <span style="color: #666666">=</span> Filament.Engine.create(<span style="color: #008000; font-weight: bold">this</span>.canvas);
 </pre></div>
 
@@ -102,7 +102,7 @@ canvas in order to create a WebGL 2.0 context in its contructor.</p>
 <p>The engine is a factory for many Filament entities, including <code>Scene</code>, which is a flat container of
 entities. Let's go ahead and create a scene, then add a blank entity called <code>triangle</code> into the
 scene.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">this</span>.scene <span style="color: #666666">=</span> engine.createScene();
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.scene <span style="color: #666666">=</span> engine.createScene();
 <span style="color: #008000; font-weight: bold">this</span>.triangle <span style="color: #666666">=</span> Filament.EntityManager.get().create();
 <span style="color: #008000; font-weight: bold">this</span>.scene.addEntity(<span style="color: #008000; font-weight: bold">this</span>.triangle);
 </pre></div>
@@ -114,7 +114,7 @@ calls.</p>
 <h2>Construct typed arrays</h2>
 <p>Next we'll create two typed arrays: a positions array with XY coordinates for each vertex, and a
 colors array with a 32-bit word for each vertex.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> TRIANGLE_POSITIONS <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Float32Array([
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> TRIANGLE_POSITIONS <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Float32Array([
     <span style="color: #666666">1</span>, <span style="color: #666666">0</span>,
     <span style="color: #008000">Math</span>.cos(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">2</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>), <span style="color: #008000">Math</span>.sin(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">2</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>),
     <span style="color: #008000">Math</span>.cos(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">4</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>), <span style="color: #008000">Math</span>.sin(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">4</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>),
@@ -124,7 +124,7 @@ colors array with a 32-bit word for each vertex.</p>
 </pre></div>
 
 <p>Next we'll use the positions and colors buffers to create a single <code>VertexBuffer</code> object.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> VertexAttribute <span style="color: #666666">=</span> Filament.VertexAttribute;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> VertexAttribute <span style="color: #666666">=</span> Filament.VertexAttribute;
 <span style="color: #008000; font-weight: bold">const</span> AttributeType <span style="color: #666666">=</span> Filament.VertexBuffer$AttributeType;
 <span style="color: #008000; font-weight: bold">this</span>.vb <span style="color: #666666">=</span> Filament.VertexBuffer.Builder()
     .vertexCount(<span style="color: #666666">3</span>)
@@ -149,7 +149,7 @@ attribute. Alternatively, we could have interleaved or concatenated these attrib
 buffer slot.</p>
 <p>Next we'll construct an index buffer. The index buffer for our triangle is trivial: it simply holds
 the integers 0,1,2.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">this</span>.ib <span style="color: #666666">=</span> Filament.IndexBuffer.Builder()
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.ib <span style="color: #666666">=</span> Filament.IndexBuffer.Builder()
     .indexCount(<span style="color: #666666">3</span>)
     .bufferType(Filament.IndexBuffer$IndexType.USHORT)
     .build(engine);
@@ -167,7 +167,7 @@ parameters, and they can be bound to renderables. We'll learn more about materia
 next tutorial.</p>
 <p>After extracting the material instance, we can finally create a renderable component for the
 triangle by setting up a bounding box and passing in the vertex and index buffers.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> mat <span style="color: #666666">=</span> engine.createMaterial(<span style="color: #BA2121">&#39;triangle.filamat&#39;</span>);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> mat <span style="color: #666666">=</span> engine.createMaterial(<span style="color: #BA2121">&#39;triangle.filamat&#39;</span>);
 <span style="color: #008000; font-weight: bold">const</span> matinst <span style="color: #666666">=</span> mat.getDefaultInstance();
 Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)
     .boundingBox({ center<span style="color: #666666">:</span> [<span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>], halfExtent<span style="color: #666666">:</span> [<span style="color: #666666">1</span>, <span style="color: #666666">1</span>, <span style="color: #666666">1</span>] })
@@ -178,7 +178,7 @@ Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)
 
 <p>Next let's wrap up the initialization routine by creating the swap chain, renderer, camera, and
 view.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> engine.createSwapChain();
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> engine.createSwapChain();
 <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> engine.createRenderer();
 <span style="color: #008000; font-weight: bold">this</span>.camera <span style="color: #666666">=</span> engine.createCamera(Filament.EntityManager.get().create());
 <span style="color: #008000; font-weight: bold">this</span>.view <span style="color: #666666">=</span> engine.createView();
@@ -197,7 +197,7 @@ However the canvas is still blank!</p>
 <h2>Render and resize handlers</h2>
 <p>Recall that our App class has a skeletal render method, which the browser calls every time it needs
 to repaint. Often this is 60 times a second.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>render() {
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>render() {
     <span style="color: #408080; font-style: italic">// TODO: render scene</span>
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
 }
@@ -205,7 +205,7 @@ to repaint. Often this is 60 times a second.</p>
 
 <p>Let's flesh this out by rotating the triangle and invoking the Filament renderer. Add the following
 code to the top of the render method.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #408080; font-style: italic">// Rotate the triangle.</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic">// Rotate the triangle.</span>
 <span style="color: #008000; font-weight: bold">const</span> radians <span style="color: #666666">=</span> <span style="color: #008000">Date</span>.now() <span style="color: #666666">/</span> <span style="color: #666666">1000</span>;
 <span style="color: #008000; font-weight: bold">const</span> transform <span style="color: #666666">=</span> mat4.fromRotation(mat4.create(), radians, [<span style="color: #666666">0</span>, <span style="color: #666666">0</span>, <span style="color: #666666">1</span>]);
 <span style="color: #008000; font-weight: bold">const</span> tcm <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.getTransformManager();
@@ -225,7 +225,7 @@ that it wants to skip a frame, hence the <code>if</code> statement.</p>
 <p>One last step. Add the following code to the resize method. This adjusts the resolution of the
 rendering surface when the window size changes, taking <code>devicePixelRatio</code> into account for high-DPI
 displays. It also adjusts the camera frustum accordingly.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> dpr <span style="color: #666666">=</span> <span style="color: #008000">window</span>.devicePixelRatio;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> dpr <span style="color: #666666">=</span> <span style="color: #008000">window</span>.devicePixelRatio;
 <span style="color: #008000; font-weight: bold">const</span> width <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.canvas.width <span style="color: #666666">=</span> <span style="color: #008000">window</span>.innerWidth <span style="color: #666666">*</span> dpr;
 <span style="color: #008000; font-weight: bold">const</span> height <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.canvas.height <span style="color: #666666">=</span> <span style="color: #008000">window</span>.innerHeight <span style="color: #666666">*</span> dpr;
 <span style="color: #008000; font-weight: bold">this</span>.view.setViewport([<span style="color: #666666">0</span>, <span style="color: #666666">0</span>, width, height]);

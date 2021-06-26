@@ -11,7 +11,7 @@
 </style>
 
 **Vulkan Backend**
-          *Last updated: 2 April 2019*
+          *Last updated: 11 June 2021*
 
 ![](../../docs/images/filament_logo.png)
 
@@ -29,10 +29,6 @@ a set of **handle types**.
 The driver is responsible for implementing all `DriverAPI` entry points, as well as managing a
 single `VkDevice` and `VkInstance`.
 
-One of the handle types is the **swap chain**. This is a significant component because it owns the
-command buffers that we use to issue draw calls to Vulkan. We allow applications to create multiple
-swap chain objects, but in practice the swap chain is basically a singleton.
-
 ************************************************************************************************
 *                                                                                              *
 *   .---------------------------------------.                                                  *
@@ -47,19 +43,19 @@ swap chain objects, but in practice the swap chain is basically a singleton.
 *                      v                                              v                        *
 *   .----------------------------------------.     .---------------------------------------.   *
 *  |                                          |   |                                         |  *
-*  |       VulkanDriver : DriverBase          |   |   VulkanSurfaceContext : HwSwapChain    |  *
+*  |       VulkanDriver : DriverBase          |   |     VulkanSwapChain : HwSwapChain       |  *
 *  |                                          |   |                                         |  *
 *  |------------------------------------------|   |-----------------------------------------|  *
 *  |                                          |   |                                         |  *
 *  |    Helpers            VulkanContext      |   |    SwapContext       SwapContext        |  *
 *  |  .--------------.    .---------------.   |   |   .----------------+----------------.   |  *
-*  |  | Binder       |   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
+*  |  | PipelineCache|   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
 *  |  +--------------+   | VkInstance      |  |   |  | VkImageView     | VkImageView     |  |  *
-*  |  | Disposer     |   |                 |  |   |  |                 |                 |  |  *
-*  |  +--------------+   +-----------------+  |   |  +-----------------+-----------------+  |  *
-*  |  | FboCache     |   | VkCommandBuffer |  |   |  | VkCommandBuffer | VkCommandBuffer |  |  *
-*  |  +--------------+   | VkFence         |  |   |  | VkFence         | VkFence         |  |  *
-*  |  | SamplerCache |    '---------------'   |   |   '----------------+----------------'   |  *
+*  |  | Disposer     |   | VulkanCommands  |  |   |  |                 |                 |  |  *
+*  |  +--------------+    '---------------'   |   |   '----------------+----------------'   |  *
+*  |  | FboCache     |                        |   |                                         |  *
+*  |  +--------------+                        |   |                                         |  *
+*  |  | SamplerCache |                        |   |                                         |  *
 *  |  +--------------+                        |   |                                         |  *
 *  |  | StagePool    |                        |    '---------------------------------------'   *
 *  |  '--------------'                        |                                                *
@@ -85,12 +81,8 @@ which has an extremely low-level API.
 
 ## Command buffers
 
-We persist one `VkCommandBuffer` for each element in the swap context. This allows us to
-populate command buffer "A" while the GPU is busy consuming command buffer "B".
-
-Note that we can receive DriverAPI requests before the SwapChain has been created. One typical
-example is uploading texture data. For these types of operations, we use a secondary "work" command
-buffer.
+The `VulkanCommands` class creates command buffers on the fly and maintains a chain of semaphores
+to ensure that submitted command buffers are executed serially.
 
 ## Handle types
 
@@ -108,8 +100,7 @@ VulkanRenderTarget
 : Descends from `HwRenderTarget`, contains references to `VkImage` objects.
 
 VulkanSwapChain
-: Descends from `HwSwapChain`, owns `VulkanSurfaceContext` which has a reference to `VkSurfaceKHR`
-  and `VkSwapchainKHR`.
+: Descends from `HwSwapChain`, has a reference to `VkSurfaceKHR` and `VkSwapchainKHR`.
 
 VulkanVertexBuffer
 : Descends from `HwVertexBuffer`, owns a set of `VkBuffer`.
@@ -124,7 +115,7 @@ VulkanSamplerGroup
 : Descends from `HwSamplerGroup`, does not own Vk objects.
 
 VulkanTexture
-: Descends from `HwTexture`, owns a `VkImage` and `VkImageLayout`.
+: Descends from `HwTexture`, owns a `VkImage` and a set of `VkImageLayout`.
 
 VulkanRenderPrimitive
 : Descends from `HwRenderPrimitive`, does not own Vk objects.
@@ -138,7 +129,7 @@ between `VulkanIndexBuffer` and `VulkanVertexBuffer`.
 they do follow a common set of conventions. For example, most of them implement a `gc()` method
 that is called once per frame to free unused objects.
 
-VulkanBinder
+VulkanPipelineCache
 : Cache of VkDescriptorSet and VkPipeline.
 
 VulkanDisposer
@@ -161,29 +152,19 @@ no subfolders. All backend-specific types and functions live directly in the `fi
 namespace, and we simply prefix our names with "Vulkan" when necessary to avoid ambiguation with
 OpenGL.
 
-# VulkanBinder
+# VulkanPipelineCache
 
 Uniforms, samplers, and shaders are not directly bindable in Vulkan; instead they are bound through
-indirection layers called *pipelines* and *descriptor sets*. The `VulkanBinder` class allows
+indirection layers called *pipelines* and *descriptor sets*. The `VulkanPipelineCache` class allows
 the driver to call methods that are conceptually simple like `bindUniformBuffer`, even though no
 such function exists in the low-level Vulkan API.
 
-Although it is actually just another cache manager, `VulkanBinder` has a fairly rich set of public
-methods. See its header file for details.
+Although it is actually just another cache manager, `VulkanPipelineCache` has a fairly rich set of
+public methods. See its header file for details.
 
-In the interest of simplicity, the binder never mutates descriptor sets (see
-`vkUpdateDescriptorSets`) except upon creation. Doing so would either require the use of
-synchronization primitives, or require double-buffering for all descriptors.
-
-!!! Note
-    Our approach to descriptor sets is similar to what Unreal does, but different from bgfx, which
-    calls vkUpdateDescriptorSets on every frame in order to point them to a new range within a
-    monolithic UBO. To avoid synchronization issues, bgfx creates a separate descriptor pool for
-    each element of the swap chain.
-
-The binder also manages the *layout objects*, which constrain the number of uniform buffers and
-samplers that can be bound simultaneously (see `VkDescriptorSetLayout` and `VkPipelineLayout`). Here
-we take advantage of Filament's opinionated shading model in order to keep things simple, which
+The pipeline cache also manages the *layout objects*, which constrain the number of uniform buffers
+and samplers that can be bound simultaneously (see `VkDescriptorSetLayout` and `VkPipelineLayout`).
+Here we take advantage of Filament's opinionated shading model in order to keep things simple, which
 allows us to create only one layout for the entire lifetime of the app.
 
 # Memory Allocation
@@ -216,26 +197,16 @@ the BlueVK header, which in turn includes the Vulkan headers.
 
 Here we list some of the most significant issues and to-be-done items for the Vulkan backend.
 
-- We are breaking external synchronization rules with `VkFence`
-    - Try replacing this with a query API for timestamps
-- Fix "too many descriptor sets" (see bistro model)
-    - Consider a bgfx-like approach that grabs from a pool and does `vkUpdateDescriptorSets` before every draw call
 - Improve the UBO strategy
     - Currently we use staging buffers and perform lots of copies (host-to-host, then host-to-device)
     - Consider an approach similar to MetalDriver, which effectively implements double-buffering using a pool of shared mem buffers
 - Consider using subpasses for the depth prepass
-- EndRenderPass is missing an image barrier
-- We need to do more performance analysis
-    - We don't have great stress tests, but we should at least:
-        1. Try sponza on a Pixel 2
-        2. Capture a systrace
-        3. Compare with GL
 - We lazily create pipeline objects
         1. This is notoriously slow in Vulkan
         2. We do lots of state hashing for this
         3. Vulkan has special pipeline cache objects that we aren't using yet, but...
         4. It might be better to enhance our driver API to allow a priori construction
-- We have no automated tests
+- We need more automated testing
 - We don't *quite* have feature parity with the OpenGL backend
     - No support for streaming camera texture yet
         - This is possible, even in Android O, just haven't gotten around to it yet

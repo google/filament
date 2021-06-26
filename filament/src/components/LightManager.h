@@ -187,9 +187,15 @@ public:
         return mManager[i].squaredFallOffInv;
     }
 
+    float getFalloff(Instance i) const noexcept {
+        return getRadius(i);
+    }
+
     SpotParams const& getSpotParams(Instance i) const noexcept {
         return mManager[i].spotParams;
     }
+
+    float getSpotLightInnerCone(Instance i) const noexcept;
 
     float getCosOuterSquared(Instance i) const noexcept {
         return getSpotParams(i).cosOuterSquared;
@@ -215,9 +221,7 @@ public:
         return getShadowParams(i).options;
     }
 
-    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
-        static_cast<ShadowParams&>(mManager[i].shadowParams).options = options;
-    }
+    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
 
 private:
     friend class FScene;

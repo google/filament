@@ -16,6 +16,7 @@
 
 #include "vulkan/PlatformVkLinux.h"
 
+#include "VulkanConstants.h"
 #include "VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
@@ -29,10 +30,6 @@ using namespace bluevk;
 namespace filament {
 
 using namespace backend;
-
-// All vkCreate* functions take an optional allocator. For now we select the default allocator by
-// passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
-constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 static constexpr const char* LIBRARY_X11 = "libX11.so.6";
 
@@ -58,16 +55,11 @@ struct X11Functions {
 Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
-        "VK_KHR_surface",
 #ifdef FILAMENT_SUPPORTS_XCB
         "VK_KHR_xcb_surface",
 #endif
 #ifdef FILAMENT_SUPPORTS_XLIB
         "VK_KHR_xlib_surface",
-#endif
-        "VK_KHR_get_physical_device_properties2",
-#if VK_ENABLE_VALIDATION
-        "VK_EXT_debug_utils",
 #endif
     };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions,

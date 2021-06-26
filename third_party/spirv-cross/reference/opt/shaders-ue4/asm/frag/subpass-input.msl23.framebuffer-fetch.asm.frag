@@ -197,9 +197,10 @@ struct main0_out
     float4 out_var_SV_Target0 [[color(0)]];
 };
 
-fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], float4 _RESERVED_IDENTIFIER_FIXUP_gl_LastFragData [[color(0)]], texture2d<float> ShadowDepthTexture [[texture(0)]], sampler ShadowDepthTextureSampler [[sampler(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant type_View& View [[buffer(0)]], constant type_Globals& _Globals [[buffer(1)]], float4 _RESERVED_IDENTIFIER_FIXUP_gl_LastFragData [[color(0)]], texture2d<float> ShadowDepthTexture [[texture(0)]], sampler ShadowDepthTextureSampler [[sampler(0)]], float4 gl_FragCoord [[position]], uint gl_SampleID [[sample_id]])
 {
     main0_out out = {};
+    gl_FragCoord.xy += get_sample_position(gl_SampleID) - 0.5;
     float4 _67 = _RESERVED_IDENTIFIER_FIXUP_gl_LastFragData;
     float _68 = _67.w;
     float4 _82 = _Globals.ScreenToShadowMatrix * float4((((gl_FragCoord.xy * View.View_BufferSizeAndInvSize.zw) - View.View_ScreenPositionScaleBias.wz) / View.View_ScreenPositionScaleBias.xy) * float2(_68), _68, 1.0);

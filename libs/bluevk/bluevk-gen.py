@@ -18,7 +18,9 @@
 Generates C++ code that binds Vulkan entry points at run time and provides enum-to-string
 conversion operators. By default this fetches the latest vk.xml from github; note that
 the XML needs to be consistent with the Vulkan headers that live in bluevk/include/vulkan,
-which are obtained from KhronosGroup/Vulkan-Headers.
+which are obtained from:
+
+https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/master/include/vulkan/vulkan_core.h
 
 If the XML file is inconsistent with the checked-in header files, compile errors can result
 such as missing enumeration values, or "type not found" errors.
@@ -70,6 +72,8 @@ HEADER_FILE_TEMPLATE = COPYRIGHT_HEADER + '''
 #ifndef TNT_FILAMENT_BLUEVK_H
 #define TNT_FILAMENT_BLUEVK_H
 
+#define VK_ENABLE_BETA_EXTENSIONS
+
 // BlueVK dynamically loads all function pointers, so it cannot allow function prototypes, which
 // would assume static linking for Vulkan entry points.
 #if defined(VULKAN_H_) && !defined(VK_NO_PROTOTYPES)
@@ -84,6 +88,8 @@ HEADER_FILE_TEMPLATE = COPYRIGHT_HEADER + '''
     #endif
     #include <vulkan/vulkan.h>
 #endif
+
+#include <utils/unwindows.h>
 
 namespace bluevk {
 
@@ -208,9 +214,11 @@ def consumeXML(spec):
     provisional_types = set([
         'VkFullScreenExclusiveEXT',
         'VkStencilFaceFlagBits',
+        'VkAccessFlagBits2KHR',
         'VkExternalSemaphoreHandleTypeFlagBits',
         'VkSwapchainImageUsageFlagBitsANDROID',
         'VkSurfaceCounterFlagBitsEXT',
+        'VkPipelineStageFlagBits2KHR',
     ])
     for ext in spec.findall('extensions/extension'):
         if ext.get('platform') == 'provisional':

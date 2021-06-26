@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 #define TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 
-#include "VulkanBinder.h"
+#include "VulkanPipelineCache.h"
 #include "VulkanBlitter.h"
 #include "VulkanDisposer.h"
 #include "VulkanContext.h"
@@ -31,9 +31,9 @@
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <unordered_map>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -49,9 +49,7 @@ public:
 
 private:
 
-#ifndef NDEBUG
-    void debugCommand(const char* methodName) override;
-#endif
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
     inline VulkanDriver(backend::VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
@@ -83,7 +81,7 @@ private:
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = std::vector<uint8_t>;
+    using Blob = utils::FixedCapacityVector<uint8_t>;
     using HandleMap = std::unordered_map<HandleBase::HandleId, Blob>;
     HandleMap mHandleMap;
     std::mutex mHandleMapMutex;
@@ -92,7 +90,7 @@ private:
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = Blob(sizeof(Dp));
+        mHandleMap[mNextId] = Blob(sizeof(Dp), 0);
         return Handle<B>(mNextId++);
     }
 
@@ -147,16 +145,17 @@ private:
     }
 
     void refreshSwapChain();
+    void collectGarbage();
 
     VulkanContext mContext = {};
-    VulkanBinder mBinder;
-    VulkanBlitter mBlitter;
+    VulkanPipelineCache mPipelineCache;
     VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
+    VulkanBlitter mBlitter;
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
-    VulkanSamplerGroup* mSamplerBindings[VulkanBinder::SAMPLER_BINDING_COUNT] = {};
+    VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 };

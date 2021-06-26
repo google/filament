@@ -18,10 +18,11 @@
 #define TNT_FILAMENT_FG2_GRAPH_H
 
 #include <utils/ostream.h>
+#include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/debug.h>
 
 #include <vector>
-#include <utils/CString.h>
 
 namespace filament {
 
@@ -126,8 +127,8 @@ public:
         const NodeID mId;           // unique id
     };
 
-    using EdgeContainer = std::vector<Edge*>;
-    using NodeContainer = std::vector<Node*>;
+    using EdgeContainer = utils::FixedCapacityVector<Edge*, std::allocator<Edge*>, false>;
+    using NodeContainer = utils::FixedCapacityVector<Node*, std::allocator<Node*>, false>;
 
     /**
      * Removes all edges and nodes from the graph.

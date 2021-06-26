@@ -188,7 +188,7 @@ public class LightManager {
      * Control the quality / performance of the shadow map associated to this light
      */
     public static class ShadowOptions {
-        /** Size of the shadow map in texels. Must be a power-of-two. */
+        /** Size of the shadow map in texels. Must be a power-of-two and larger or equal to 8. */
         public int mapSize = 1024;
 
         /**
@@ -242,15 +242,17 @@ public class LightManager {
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         public float constantBias = 0.05f;
 
         /** Amount by which the maximum sampling error is scaled. The resulting value is used
          * to move the shadow away from the fragment normal. Should be 1.0.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         public float normalBias = 0.4f;
 
-        /** Distance from the camera after which shadows are clipped. this is used to clip
+        /** Distance from the camera after which shadows are clipped. This is used to clip
          * shadows that are too far and wouldn't contribute to the scene much, improving
          * performance and quality. This value is always positive.
          * Use 0.0f to use the camera far distance.
@@ -324,6 +326,12 @@ public class LightManager {
          */
         @IntRange(from = 1)
         public int vsmMsaaSamples = 1;
+
+        /**
+         * Blur width for the VSM blur. Zero do disable.
+         * The maximum value is 125.
+         */
+        public float blurWidth = 0.0f;
     }
 
     public static class ShadowCascades {
@@ -452,7 +460,8 @@ public class LightManager {
                     options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
                     options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
                     options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
-                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples);
+                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
+                    options.blurWidth);
             return this;
         }
 
@@ -1065,6 +1074,14 @@ public class LightManager {
         return nIsShadowCaster(mNativeObject, i);
     }
 
+    public float getOuterConeAngle(@EntityInstance int i) {
+        return nGetOuterConeAngle(mNativeObject, i);
+    }
+
+    public float getInnerConeAngle(@EntityInstance int i) {
+        return nGetInnerConeAngle(mNativeObject, i);
+    }
+
     public long getNativeObject() {
         return mNativeObject;
     }
@@ -1078,7 +1095,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);
@@ -1118,4 +1135,6 @@ public class LightManager {
     private static native float nGetSunHaloFalloff(long nativeLightManager, int i);
     private static native void nSetShadowCaster(long nativeLightManager, int i, boolean shadowCaster);
     private static native boolean nIsShadowCaster(long nativeLightManager, int i);
+    private static native float nGetOuterConeAngle(long nativeLightManager, int i);
+    private static native float nGetInnerConeAngle(long nativeLightManager, int i);
 }

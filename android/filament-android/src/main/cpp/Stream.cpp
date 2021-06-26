@@ -102,7 +102,10 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Stream_nBuilderStream(JNIEnv*, jclass,
         jlong nativeStreamBuilder, jlong externalTextureId) {
     StreamBuilder* builder = (StreamBuilder*) nativeStreamBuilder;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     builder->builder()->stream(externalTextureId);
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT void JNICALL

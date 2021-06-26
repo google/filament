@@ -4366,7 +4366,7 @@ L_{max} &amp;= 2^{EV_{100}} \times 1.2
 <span class="line"></span>
 <span class="line"><span class="hljs-comment">// Computes the exposure normalization factor from</span></span>
 <span class="line"><span class="hljs-comment">// the camera's EV100</span></span>
-<span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">exposure</span><span class="hljs-params">(ev100)</span> </span>{</span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">exposure</span><span class="hljs-params">(<span class="hljs-keyword">float</span> ev100)</span> </span>{</span>
 <span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-number">1.0</span> / (<span class="hljs-built_in">pow</span>(<span class="hljs-number">2.0</span>, ev100) * <span class="hljs-number">1.2</span>);</span>
 <span class="line">}</span>
 <span class="line"></span>

@@ -27,6 +27,8 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
+#include "private/backend/MetalPlatform.h"
+
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
 #include <Metal/Metal.h>
@@ -55,9 +57,42 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         mPlatform(*platform),
         mContext(new MetalContext) {
     mContext->driver = this;
-    mContext->device = MTLCreateSystemDefaultDevice();
-    mContext->commandQueue = [mContext->device newCommandQueue];
-    mContext->commandQueue.label = @"Filament";
+
+    mContext->device = mPlatform.createDevice();
+    assert_invariant(mContext->device);
+
+    // In order to support texture swizzling, the GPU needs to support it and the system be running
+    // macOS 10.15+ / iOS 13+.
+    mContext->supportsTextureSwizzling = false;
+    if (@available(macOS 10.15, iOS 13, *)) {
+#if defined(IOS)
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
+#else
+        mContext->supportsTextureSwizzling =
+                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
+#endif
+    }
+
+    mContext->maxColorRenderTargets = 4;
+#if defined(IOS)
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#else
+    if ([mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v1]) {
+        mContext->maxColorRenderTargets = 8;
+    }
+#endif
+
+    // Round requested sample counts down to the nearest device-supported sample count.
+    auto& sc = mContext->sampleCountLookup;
+    sc[0] = 1;
+    for (uint32_t s = 1; s < sc.size(); s++) {
+        sc[s] = [mContext->device supportsTextureSampleCount:s] ? s : sc[s - 1];
+    }
+
+    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
@@ -89,16 +124,6 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext->timerQueryImpl;
     delete mContext;
 }
-
-#define METAL_DEBUG_COMMANDS 0
-#if !defined(NDEBUG)
-void MetalDriver::debugCommand(const char *methodName) {
-#if METAL_DEBUG_COMMANDS
-    utils::slog.d << methodName << utils::io::endl;
-#endif
-}
-#endif
-
 
 void MetalDriver::tick(int) {
 }
@@ -135,7 +160,9 @@ void MetalDriver::endFrame(uint32_t frameId) {
     mContext->bufferPool->gc();
 
     // If we acquired a drawable for this frame, ensure that we release it here.
-    mContext->currentDrawSwapChain->releaseDrawable();
+    if (mContext->currentDrawSwapChain) {
+        mContext->currentDrawSwapChain->releaseDrawable();
+    }
 
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 
@@ -160,10 +187,10 @@ void MetalDriver::finish(int) {
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
-        BufferUsage usage, bool bufferObjectsEnabled) {
+        BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes, bufferObjectsEnabled);
+            attributeCount, vertexCount, attributes);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
@@ -174,12 +201,16 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType) {
-    // TODO
+    construct_handle<MetalBufferObject>(mHandleMap, boh, *mContext, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
@@ -189,6 +220,10 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+
     construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
             width, height, depth, usage, r, g, b, a);
 }
@@ -219,11 +254,11 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         width, height, depth, usage, metalTexture);
 }
 
-void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
+void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
     mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
 }
 
-void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
         BufferUsage usage) {
     construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
 }
@@ -244,13 +279,16 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, backend::MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
+    // Clamp sample count to what the device supports.
+    auto& sc = mContext->sampleCountLookup;
+    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    MetalRenderTarget::Attachment colorAttachments[4] = {{ 0 }};
-    for (size_t i = 0; i < 4; i++) {
+    MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{ nil }};
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& buffer = color[i];
         if (!buffer.handle) {
-            ASSERT_POSTCONDITION(none(targetBufferFlags & getMRTColorFlag(i)),
-                    "The COLOR%d flag was specified, but no color texture provided.", i);
+            ASSERT_POSTCONDITION(none(targetBufferFlags & getTargetBufferFlagsAt(i)),
+                    "The COLOR%u flag was specified, but no color texture provided.", i);
             continue;
         }
 
@@ -263,7 +301,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         colorAttachments[i].layer = color[i].layer;
     }
 
-    MetalRenderTarget::Attachment depthAttachment = { 0 };
+    MetalRenderTarget::Attachment depthAttachment = { nil };
     if (depth.handle) {
         auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
@@ -327,8 +365,7 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
-    // TODO
-    return {};
+    return alloc_handle<MetalBufferObject, HwBufferObject>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
@@ -411,7 +448,7 @@ void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
-        // TODO
+        destruct_handle<MetalBufferObject>(mHandleMap, boh);
     }
 }
 
@@ -567,11 +604,7 @@ bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
-    if (@available(macOS 10.15, iOS 13, *)) {
-        return true;
-    } else {
-        return false;
-    }
+    return mContext->supportsTextureSwizzling;
 }
 
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
@@ -641,21 +674,13 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
-bool MetalDriver::areFeedbackLoopsSupported() {
-    return true;
-}
-
 math::float2 MetalDriver::getClipSpaceParams() {
     // z-coordinate of clip-space is in [0,w]
     return math::float2{ -0.5f, 0.5f };
 }
 
-void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
-        BufferDescriptor&& data, uint32_t byteOffset) {
-    assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
-    auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
-    vb->buffers[index]->copyIntoBuffer(data.buffer, data.size);
-    scheduleDestroy(std::move(data));
+uint8_t MetalDriver::getMaxDrawBuffers() {
+    return std::min(mContext->maxColorRenderTargets, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -668,12 +693,18 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
-    // TODO
+    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    bo->updateBuffer(data.buffer, data.size, byteOffset);
+    scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, size_t index,
+void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
-    // TODO
+    auto* vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
+    auto* bufferObject = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    assert_invariant(index < vertexBuffer->buffers.size());
+    assert_invariant(bufferObject->getBuffer());
+    vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
 void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
@@ -727,7 +758,7 @@ void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     texture->externalImage.set((CVPixelBufferRef) image);
 }
 
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, size_t plane) {
+void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
     auto texture = handle_cast<MetalTexture>(mHandleMap, th);
     texture->externalImage.set((CVPixelBufferRef) image, plane);
 }
@@ -872,37 +903,37 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
     swapChain->releaseDrawable();
 }
 
-void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
+void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
     mContext->uniformState[index] = UniformBufferState {
-        .bound = true,
+        .offset = 0,
         .ubh = ubh,
-        .offset = 0
+        .bound = true
     };
 }
 
-void MetalDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
-        size_t offset, size_t size) {
+void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+        uint32_t offset, uint32_t size) {
     mContext->uniformState[index] = UniformBufferState {
-        .bound = true,
+        .offset = offset,
         .ubh = ubh,
-        .offset = offset
+        .bound = true
     };
 }
 
-void MetalDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
+void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     mContext->samplerBindings[index] = sb;
 }
 
-void MetalDriver::insertEventMarker(const char* string, size_t len) {
+void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
 
 }
 
-void MetalDriver::pushGroupMarker(const char* string, size_t len) {
+void MetalDriver::pushGroupMarker(const char* string, uint32_t len) {
     mContext->groupMarkers.push(string);
 }
 
-void MetalDriver::popGroupMarker(int dummy) {
+void MetalDriver::popGroupMarker(int) {
     assert_invariant(!mContext->groupMarkers.empty());
     mContext->groupMarkers.pop();
 }
@@ -1137,8 +1168,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     ASSERT_PRECONDITION(program->isValid, "Attempting to draw with an invalid Metal program.");
 
     // Pipeline state
-    MTLPixelFormat colorPixelFormat[4] = { MTLPixelFormatInvalid };
-    for (size_t i = 0; i < 4; i++) {
+    MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
         if (!attachment) {
             continue;
@@ -1158,7 +1189,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             colorPixelFormat[0],
             colorPixelFormat[1],
             colorPixelFormat[2],
-            colorPixelFormat[3]
+            colorPixelFormat[3],
+            colorPixelFormat[4],
+            colorPixelFormat[5],
+            colorPixelFormat[6],
+            colorPixelFormat[7]
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),
@@ -1218,8 +1253,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     //  must be intersected with viewport (see OpenGLDriver.cpp for implementation details)
 
     // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
+    MetalBuffer* uniformsToBind[Program::BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             MetalUniformBuffer* uniform, uint32_t index) {
@@ -1228,7 +1263,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
             0, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT, uniformsToBind, offsets,
-            Program::UNIFORM_BINDING_COUNT);
+            Program::BINDING_COUNT);
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -1289,9 +1324,28 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                      withRange:samplerRange];
 
     // Bind the vertex buffers.
+
+    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT];
+    size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT];
+    size_t bufferIndex = 0;
+
+    auto vb = primitive->vertexBuffer;
+    for (uint32_t attributeIndex = 0; attributeIndex < vb->attributes.size(); attributeIndex++) {
+        const auto& attribute = vb->attributes[attributeIndex];
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            continue;
+        }
+
+        assert_invariant(vb->buffers[attribute.buffer]);
+        buffers[bufferIndex] = vb->buffers[attribute.buffer];
+        vertexBufferOffsets[bufferIndex] = attribute.offset;
+        bufferIndex++;
+    }
+
+    const auto bufferCount = bufferIndex;
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            VERTEX_BUFFER_START, MetalBuffer::Stage::VERTEX, primitive->buffers.data(),
-            primitive->offsets.data(), primitive->buffers.size());
+            VERTEX_BUFFER_START, MetalBuffer::Stage::VERTEX, buffers,
+            vertexBufferOffsets, bufferCount);
 
     // Bind the zero buffer, used for missing vertex attributes.
     static const char bytes[16] = { 0 };
@@ -1357,7 +1411,7 @@ void MetalDriver::enumerateSamplerGroups(
 
 void MetalDriver::enumerateBoundUniformBuffers(
         const std::function<void(const UniformBufferState&, MetalUniformBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < Program::BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;

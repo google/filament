@@ -27,7 +27,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 10;
+static constexpr size_t MATERIAL_VERSION = 11;
 
 /**
  * Supported shading models
@@ -46,6 +46,16 @@ enum class Shading : uint8_t {
 enum class Interpolation : uint8_t {
     SMOOTH,                 //!< default, smooth interpolation
     FLAT                    //!< flat interpolation
+};
+
+/**
+ * Shader quality, affect some global quality parameters
+ */
+enum class ShaderQuality : int8_t {
+    DEFAULT = -1,   // LOW on mobile, HIGH on desktop
+    LOW     = 0,    // enable optimizations that can slightly affect correctness
+    NORMAL  = 1,    // normal quality, correctness honored
+    HIGH    = 2     // higher quality (e.g. better upscaling, etc...)
 };
 
 /**

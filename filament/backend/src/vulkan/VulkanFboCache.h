@@ -39,25 +39,25 @@ public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
-        VkImageLayout colorLayout[MRT::TARGET_COUNT];  // 16 bytes
-        VkFormat colorFormat[MRT::TARGET_COUNT]; // 16 bytes
+        VkImageLayout colorLayout[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];  // 32 bytes
+        VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkImageLayout depthLayout;  // 4 bytes
         VkFormat depthFormat; // 4 bytes
-        TargetBufferFlags clear : 8; // 1 byte
-        TargetBufferFlags discardStart : 8; // 1 byte
-        TargetBufferFlags discardEnd : 8; // 1 byte
+        TargetBufferFlags clear; // 4 bytes
+        TargetBufferFlags discardStart; // 4 bytes
+        TargetBufferFlags discardEnd; // 4 bytes
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t subpassMask; // 1 bytes
-        uint16_t padding; // 2 bytes
+        uint8_t padding; // 1 bytes
     };
     struct RenderPassVal {
         VkRenderPass handle;
         uint32_t timestamp;
     };
-    static_assert(sizeof(TargetBufferFlags) == 1, "TargetBufferFlags has unexpected size.");
+    static_assert(sizeof(TargetBufferFlags) == 4, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 48, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 88, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;
@@ -72,8 +72,8 @@ public:
         uint16_t height; // 2 bytes
         uint16_t layers; // 2 bytes
         uint16_t samples; // 2 bytes
-        VkImageView color[MRT::TARGET_COUNT]; // 32 bytes
-        VkImageView resolve[MRT::TARGET_COUNT]; // 32 bytes
+        VkImageView color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
+        VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
         VkImageView depth; // 8 bytes
     };
     struct FboVal {
@@ -82,7 +82,7 @@ public:
     };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
     static_assert(sizeof(VkImageView) == 8, "VkImageView has unexpected size.");
-    static_assert(sizeof(FboKey) == 88, "FboKey has unexpected size.");
+    static_assert(sizeof(FboKey) == 152, "FboKey has unexpected size.");
     using FboKeyHashFn = utils::hash::MurmurHashFn<FboKey>;
     struct FboKeyEqualFn {
         bool operator()(const FboKey& k1, const FboKey& k2) const;
@@ -109,12 +109,6 @@ private:
     tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq> mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;
-
-    // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
-    // is evicted from the cache. Ideally this constant is greater than or equal to the number of
-    // elements in the swap chain. Since we use triple buffering on some platforms, we've chosen an
-    // eviction time of 3.
-    static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 };
 
 } // namespace filament

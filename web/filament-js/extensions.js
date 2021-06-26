@@ -76,6 +76,7 @@ Filament.loadClassExtensions = function() {
 
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
+        ctx.getExtension('WEBGL_compressed_texture_s3tc_srgb');
         ctx.getExtension('WEBGL_compressed_texture_astc');
         ctx.getExtension('WEBGL_compressed_texture_etc');
 
@@ -256,10 +257,9 @@ Filament.loadClassExtensions = function() {
 
     /// setDepthOfFieldOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
-    /// focusDistance, cocScale, maxApertureDiameter, enabled.
+    /// cocScale, maxApertureDiameter, enabled.
     Filament.View.prototype.setDepthOfFieldOptions = function(overrides) {
         const options = {
-            focusDistance: 10.0,
             cocScale: 1.0,
             maxApertureDiameter: 0.01,
             enabled: false
@@ -275,7 +275,6 @@ Filament.loadClassExtensions = function() {
     Filament.View.prototype.setBloomOptions = function(overrides) {
         const options = {
             dirtStrength: 0.2,
-            highlight: 1000.0,
             strength: 0.10,
             resolution: 360,
             anamorphism: 1.0,
@@ -283,6 +282,16 @@ Filament.loadClassExtensions = function() {
             blendMode: Filament.View$BloomOptions$BlendMode.ADD,
             threshold: true,
             enabled: false,
+            highlight: 1000.0,
+            lensFlare: false,
+            starburst: true,
+            chromaticAberration: 0.005,
+            ghostCount: 4,
+            ghostSpacing: 0.6,
+            ghostThreshold: 10.0,
+            haloThickness: 0.1,
+            haloRadius: 0.4,
+            haloThreshold: 10.0,
             dirt: null
         };
         Object.assign(options, overrides);
@@ -432,18 +441,18 @@ Filament.loadClassExtensions = function() {
         this._positions(this.posPointer, stride);
     };
 
-    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer, stride = 0) {
+    Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.t16Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t16Pointer);
-        this._triangles16(this.t16Pointer, stride);
+        this._triangles16(this.t16Pointer);
     };
 
-    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer, stride = 0) {
+    Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.t32Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t32Pointer);
-        this._triangles32(this.t32Pointer, stride);
+        this._triangles32(this.t32Pointer);
     };
 
     Filament.SurfaceOrientation$Builder.prototype.build = function() {

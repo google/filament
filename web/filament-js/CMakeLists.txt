@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 
 project(filament-js)
 
@@ -47,7 +47,7 @@ target_link_libraries(filament-js PRIVATE filament math utils image filameshio g
 # artifacts that it needs.
 
 set(RESOURCES )
-foreach (RESOURCE package.json README.md filament.d.ts)
+foreach (RESOURCE package.json README.md filament.d.ts filament-viewer.js)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/${RESOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE}

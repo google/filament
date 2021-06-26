@@ -73,11 +73,7 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
 public class Texture {
     private long mNativeObject;
 
-    Texture(long nativeTexture) {
-        mNativeObject = nativeTexture;
-    }
-
-    public Texture(Engine engine, long nativeTexture) {
+    public Texture(long nativeTexture) {
         mNativeObject = nativeTexture;
     }
 
@@ -509,12 +505,15 @@ public class Texture {
                 case RGBA_INTEGER:
                     n = 4;
                     break;
+
+                default: throw new IllegalStateException("unsupported format enum");
             }
 
             int bpp = n;
             switch (type) {
                 case UBYTE:
                 case BYTE:
+                case COMPRESSED:
                     // nothing to do
                     break;
                 case USHORT:
@@ -530,6 +529,9 @@ public class Texture {
                 case UINT_10F_11F_11F_REV:
                     // Special case, format must be RGB and uses 4 bytes
                     bpp = 4;
+                    break;
+                case USHORT_565:
+                    bpp = 2;
                     break;
             }
 
@@ -686,6 +688,26 @@ public class Texture {
         @NonNull
         public Builder swizzle(@NonNull Swizzle r, @NonNull Swizzle g, @NonNull Swizzle b, @NonNull Swizzle a) {
             nBuilderSwizzle(mNativeBuilder, r.ordinal(), g.ordinal(), b.ordinal(), a.ordinal());
+            return this;
+        }
+
+        /**
+         * Specify a native texture to import as a Filament texture.
+         * <p>
+         * The texture id is backend-specific:
+         * <ul>
+         *   <li> OpenGL: GLuint texture ID </li>
+         * </ul>
+         * </p>
+         *
+         *
+         * @param id a backend specific texture identifier
+         *
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder importTexture(long id) {
+            nBuilderImportTexture(mNativeBuilder, id);
             return this;
         }
 
@@ -893,7 +915,7 @@ public class Texture {
      * @param level     Level to set the image for. Must be less than {@link #getLevels()}.
      * @param xoffset   x-offset in texel of the region to modify
      * @param yoffset   y-offset in texel of the region to modify
-     * @param yoffset   z-offset in texel of the region to modify
+     * @param zoffset   z-offset in texel of the region to modify
      * @param width     width in texel of the region to modify
      * @param height    height in texel of the region to modify
      * @param depth     depth in texel or index of the region to modify
@@ -1161,6 +1183,7 @@ public class Texture {
     private static native void nBuilderFormat(long nativeBuilder, int format);
     private static native void nBuilderUsage(long nativeBuilder, int flags);
     private static native void nBuilderSwizzle(long nativeBuilder, int r, int g, int b, int a);
+    private static native void nBuilderImportTexture(long nativeBuilder, long id);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);

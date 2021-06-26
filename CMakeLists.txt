@@ -1,7 +1,7 @@
 # ==================================================================================================
 # CMake
 # ==================================================================================================
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.19)
 
 # ==================================================================================================
 # Project declaration
@@ -25,6 +25,10 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
+set(FILAMENT_NDK_VERSION "" CACHE STRING
+    "Android NDK version or version prefix to be used when building for Android."
+)
+
 set(FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB "2" CACHE STRING
     "Per render pass arena size. Must be roughly 1 MB larger than FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB, default 2."
 )
@@ -37,8 +41,8 @@ set(FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB "1" CACHE STRING
     "Size of the command-stream buffer. As a rule of thumb use the same value as FILAMENT_PER_FRRAME_COMMANDS_SIZE_IN_MB, default 1."
 )
 
-set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "2" CACHE STRING
-    "Size of the OpenGL handle arena, default 2."
+set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "4" CACHE STRING
+    "Size of the OpenGL handle arena, default 4."
 )
 
 # ==================================================================================================
@@ -365,6 +369,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebIn
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTNT_DEV")
 endif()
 
+# By default, build with support for OpenGL on all platforms.
+option(FILAMENT_SUPPORTS_OPENGL "Include the OpenGL backend" ON)
+if (FILAMENT_SUPPORTS_OPENGL)
+    add_definitions(-DFILAMENT_SUPPORTS_OPENGL)
+endif()
+
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
 if (WIN32 OR WEBGL OR IOS)
@@ -420,9 +430,9 @@ endif()
 
 set(MATC_API_FLAGS )
 
-# TODO: Add a flag to build Filament without support for OpenGL.
-set(MATC_API_FLAGS ${MATC_API_FLAGS} -a opengl)
-
+if (FILAMENT_SUPPORTS_OPENGL)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a opengl)
+endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a vulkan)
 endif()
@@ -449,11 +459,15 @@ if (NOT DIST_ARCH)
     if (CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
         set(DIST_ARCH "universal")
     else()
-        if (NOT CMAKE_OSX_ARCHITECTURES STREQUAL "")
+        if (NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
             set(DIST_ARCH "${CMAKE_OSX_ARCHITECTURES}")
         endif()
     endif()
+
 endif()
+# On Windows machines, the host processor is set to 'AMD64', which we'll interpret as x86_64.
+string(TOLOWER "${DIST_ARCH}" DIST_ARCH)
+string(REPLACE "amd64" "x86_64" DIST_ARCH "${DIST_ARCH}")
 if (NOT DIST_DIR)
     set(DIST_DIR "${DIST_ARCH}")
 endif()
@@ -583,6 +597,7 @@ add_subdirectory(${LIBRARIES}/filameshio)
 add_subdirectory(${LIBRARIES}/geometry)
 add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
+add_subdirectory(${LIBRARIES}/iblprefilter)
 add_subdirectory(${LIBRARIES}/image)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/mathio)
@@ -634,7 +649,9 @@ if (WEBGL)
 endif()
 
 if (IS_HOST_PLATFORM)
-    add_subdirectory(${LIBRARIES}/bluegl)
+    if (FILAMENT_SUPPORTS_OPENGL)
+        add_subdirectory(${LIBRARIES}/bluegl)
+    endif()
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/imageio)
 

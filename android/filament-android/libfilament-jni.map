@@ -2,6 +2,7 @@ LIBFILAMENT {
   global:
     Java_com_google_android_filament_*;
     JNI*;
+    *filament*BufferObject*;
     *filament*Camera*;
     *filament*Color*;
     *filament*Exposure*;
@@ -12,6 +13,7 @@ LIBFILAMENT {
     *filament*IndirectLight*;
     *filament*LightManager*;
     *filament*Renderer*;
+    *filament*RenderTarget*;
     *filament*Scene*;
     *filament*Transform*;
     *filament*Material*;

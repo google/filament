@@ -78,7 +78,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     hdr[3] = 1.0 / (1.0 + max3(s00.rgb));
 
     vec4 d;
-#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
 #else
     d[0] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;

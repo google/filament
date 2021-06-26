@@ -31,6 +31,10 @@ public class EntityManager {
     private EntityManager() {
     }
 
+    EntityManager(long nativeEntityManager) {
+        mNativeObject = nativeEntityManager;
+    }
+
     @NonNull
     public static EntityManager get() {
         return Holder.INSTANCE;

@@ -129,6 +129,13 @@ Java_com_google_android_filament_Texture_nBuilderSwizzle(JNIEnv *, jclass ,
             (Texture::Swizzle)r, (Texture::Swizzle)g, (Texture::Swizzle)b, (Texture::Swizzle)a);
 }
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderImportTexture(JNIEnv*, jclass, jlong nativeBuilder, jlong id) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->import((intptr_t)id);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeEngine) {

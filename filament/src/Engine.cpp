@@ -174,6 +174,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mCameraManager(*this),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
+        mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(std::this_thread::get_id())
@@ -184,6 +185,14 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
 
     slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
+}
+
+uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
+    // 1 thread for the user, 1 thread for the backend
+    int threadCount = std::thread::hardware_concurrency() - 2;
+    // make sure we have at least 1 thread though
+    threadCount = std::max(1, threadCount);
+    return threadCount;
 }
 
 /*
@@ -388,14 +397,10 @@ void FEngine::gc() {
     auto *parent = js.createJob();
     auto em = std::ref(mEntityManager);
 
-    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em),
-            JobSystem::DONT_SIGNAL);
-    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em),
-            JobSystem::DONT_SIGNAL);
+    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em));
+    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em));
+    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em));
+    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em));
 
     js.runAndWait(parent);
 }
@@ -602,8 +607,8 @@ FRenderer* FEngine::createRenderer() noexcept {
 }
 
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
-        const char* name) noexcept {
-    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
+        const FMaterialInstance* other, const char* name) noexcept {
+    FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name);
     if (p) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
@@ -824,7 +829,7 @@ void FEngine::destroy(Entity e) {
 
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations
-    if (size > 1024) {
+    if (size > 65536) {
         return nullptr;
     }
     return getDriverApi().allocate(size, alignment);
@@ -897,6 +902,10 @@ const Material* Engine::getDefaultMaterial() const noexcept {
 
 Backend Engine::getBackend() const noexcept {
     return upcast(this)->getBackend();
+}
+
+Platform* Engine::getPlatform() const noexcept {
+    return upcast(this)->getPlatform();
 }
 
 Renderer* Engine::createRenderer() noexcept {
@@ -1007,6 +1016,10 @@ void Engine::flushAndWait() {
     upcast(this)->flushAndWait();
 }
 
+utils::EntityManager& Engine::getEntityManager() noexcept {
+    return upcast(this)->getEntityManager();
+}
+
 RenderableManager& Engine::getRenderableManager() noexcept {
     return upcast(this)->getRenderableManager();
 }
@@ -1037,16 +1050,6 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
-}
-
-Camera* Engine::createCamera() noexcept {
-    return createCamera(upcast(this)->getEntityManager().create());
-}
-
-void Engine::destroy(const Camera* camera) {
-    Entity e = camera->getEntity();
-    destroyCameraComponent(e);
-    upcast(this)->getEntityManager().destroy(e);
 }
 
 } // namespace filament

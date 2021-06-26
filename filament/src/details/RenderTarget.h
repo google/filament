@@ -55,14 +55,17 @@ public:
         return mAttachmentMask;
     }
 
+    uint8_t getSupportedColorAttachmentsCount() const noexcept {
+        return mSupportedColorAttachmentsCount;
+    }
+
 private:
     friend class RenderTarget;
-
-    static HwHandle createHandle(FEngine& engine, const Builder& builder);
-
-    Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
-    const HwHandle mHandle;
+    static constexpr size_t ATTACHMENT_COUNT = MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT + 1u;
+    Attachment mAttachments[ATTACHMENT_COUNT];
+    HwHandle mHandle{};
     backend::TargetBufferFlags mAttachmentMask = {};
+    const uint8_t mSupportedColorAttachmentsCount;
 };
 
 FILAMENT_UPCAST(RenderTarget)

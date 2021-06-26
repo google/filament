@@ -26,6 +26,8 @@
 #include <utils/EntityInstance.h>
 #include <utils/SingleInstanceComponentManager.h>
 
+#include <functional>
+
 namespace utils {
 
 class EntityManager;
@@ -37,8 +39,7 @@ public:
     explicit SafeString(const char* str) noexcept : mCStr(strdup(str)) { }
     SafeString(SafeString&& rhs) noexcept : mCStr(rhs.mCStr) { rhs.mCStr = nullptr; }
     SafeString& operator=(SafeString&& rhs) noexcept {
-        mCStr = rhs.mCStr;
-        rhs.mCStr = nullptr;
+        std::swap(mCStr, rhs.mCStr);
         return *this;
     }
     ~SafeString() { free((void*)mCStr); }

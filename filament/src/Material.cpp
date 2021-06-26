@@ -26,7 +26,7 @@
 #include <backend/DriverEnums.h>
 
 #include <private/filament/SibGenerator.h>
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -124,18 +124,7 @@ Material* Material::Builder::build(Engine& engine) {
 
     mImpl->mMaterialParser = materialParser;
 
-    Material* result = upcast(engine).createMaterial(*this);
-
-#if FILAMENT_ENABLE_MATDBG
-    matdbg::DebugServer* server = upcast(engine).debug.server;
-    if (server) {
-        CString name;
-        materialParser->getName(&name);
-        server->addMaterial(name, mImpl->mPayload, mImpl->mSize, result);
-    }
-#endif
-
-    return result;
+    return upcast(engine).createMaterial(*this);
 }
 
 static void addSamplerGroup(Program& pb, uint8_t bindingPoint, SamplerInterfaceBlock const& sib,
@@ -173,6 +162,15 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     UTILS_UNUSED_IN_RELEASE bool uibOK = parser->getUIB(&mUniformInterfaceBlock);
     assert_invariant(uibOK);
+
+#if FILAMENT_ENABLE_MATDBG
+    // Register the material with matdbg.
+    matdbg::DebugServer* server = upcast(engine).debug.server;
+    if (UTILS_UNLIKELY(server)) {
+        auto details = builder.mImpl;
+        mDebuggerId = server->addMaterial(mName, details->mPayload, details->mSize, this);
+    }
+#endif
 
     // Older materials will not have a subpass chunk; this should not be an error.
     if (!parser->getSubpasses(&mSubpassInfo)) {
@@ -317,12 +315,21 @@ FMaterial::~FMaterial() noexcept {
 }
 
 void FMaterial::terminate(FEngine& engine) {
+
+#if FILAMENT_ENABLE_MATDBG
+    // Unregister the material with matdbg.
+    matdbg::DebugServer* server = upcast(mEngine).debug.server;
+    if (UTILS_UNLIKELY(server)) {
+        server->removeMaterial(mDebuggerId);
+    }
+#endif
+
     destroyPrograms(engine);
     mDefaultInstance.terminate(engine);
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return mEngine.createMaterialInstance(this, name);
+    return FMaterialInstance::duplicate(&mDefaultInstance, name);
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
@@ -337,11 +344,7 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 
 UniformInterfaceBlock::UniformInfo const* FMaterial::reflect(
         utils::StaticString const& name) const noexcept {
-    auto const& list = mUniformInterfaceBlock.getUniformInfoList();
-    auto p = std::find_if(list.begin(), list.end(), [&](auto const& e) {
-        return e.name == name;
-    });
-    return p == list.end() ? nullptr : &static_cast<UniformInterfaceBlock::UniformInfo const&>(*p);
+    return mUniformInterfaceBlock.getUniformInfo(name.c_str());
 }
 
 Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
@@ -367,15 +370,15 @@ Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey)
 
     Program pb = getProgramBuilderWithVariants(variantKey, vertexVariantKey, fragmentVariantKey);
     pb
-        .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
-        .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
-        .setUniformBlock(BindingPoints::SHADOW, UibGenerator::getShadowUib().getName())
-        .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
+        .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
+        .setUniformBlock(BindingPoints::PER_RENDERABLE, PerRenderableUib::_name)
+        .setUniformBlock(BindingPoints::LIGHTS, LightsUib::_name)
+        .setUniformBlock(BindingPoints::SHADOW, ShadowUib::_name)
+        .setUniformBlock(BindingPoints::FROXEL_RECORDS, FroxelRecordUib::_name)
         .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     if (Variant(variantKey).hasSkinningOrMorphing()) {
-        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES,
-                UibGenerator::getPerRenderableBonesUib().getName());
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES, PerRenderableUibBone::_name);
     }
 
     addSamplerGroup(pb, BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(variantKey), mSamplerBindings);
@@ -388,9 +391,8 @@ Handle<HwProgram> FMaterial::getPostProcessProgramSlow(uint8_t variantKey)
     const noexcept {
 
     Program pb = getProgramBuilderWithVariants(variantKey, variantKey, variantKey);
-    pb
-            .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
-            .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+    pb.setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::_name)
+      .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
 
     addSamplerGroup(pb, BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 

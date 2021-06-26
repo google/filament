@@ -82,8 +82,8 @@ public:
     constexpr StaticString() noexcept = default;
 
     // initialization from a string literal
-    template <size_t N>
-    StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
+    template<size_t N>
+    constexpr StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
         : mString(other),
           mLength(size_type(N - 1)),
           mHash(computeHash(other)) {

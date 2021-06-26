@@ -71,18 +71,14 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.diffuseColor = computeDiffuseColor(baseColor, metallic);
     pixel.f0 = specularColor;
 #elif !defined(SHADING_MODEL_CLOTH)
-#if defined(HAS_REFRACTION) && (!defined(MATERIAL_HAS_REFLECTANCE) && defined(MATERIAL_HAS_IOR))
-    pixel.diffuseColor = baseColor.rgb;
-    // If refraction is enabled, and reflectance is not set in the material, but ior is,
-    // then use it -- othterwise proceed as usual.
-    pixel.f0 = vec3(iorToF0(material.ior, 1.0));
-#else
     pixel.diffuseColor = computeDiffuseColor(baseColor, material.metallic);
+#if !defined(SHADING_MODEL_SUBSURFACE) && (!defined(MATERIAL_HAS_REFLECTANCE) && defined(MATERIAL_HAS_IOR))
+    float reflectance = iorToF0(max(1.0, material.ior), 1.0);
+#else
     // Assumes an interface from air to an IOR of 1.5 for dielectrics
     float reflectance = computeDielectricF0(material.reflectance);
-    pixel.f0 = computeF0(baseColor, material.metallic, reflectance);
 #endif
-
+    pixel.f0 = computeF0(baseColor, material.metallic, reflectance);
 #else
     pixel.diffuseColor = baseColor.rgb;
     pixel.f0 = material.sheenColor;
@@ -91,6 +87,7 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
 #endif
 #endif
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
 #if defined(HAS_REFRACTION)
     // Air's Index of refraction is 1.000277 at STP but everybody uses 1.0
     const float airIor = 1.0;
@@ -124,6 +121,7 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.uThickness = max(0.0, material.microThickness);
 #else
     pixel.uThickness = 0.0;
+#endif
 #endif
 #endif
 }
@@ -283,7 +281,7 @@ vec4 evaluateLights(const MaterialInputs material) {
 #endif
 
 #if defined(HAS_DYNAMIC_LIGHTING)
-    evaluatePunctualLights(pixel, color);
+    evaluatePunctualLights(material, pixel, color);
 #endif
 
 #if defined(BLEND_MODE_FADE) && !defined(SHADING_MODEL_UNLIT)

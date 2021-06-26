@@ -64,7 +64,9 @@ App::~App() {
     engine->destroy(renderer);
     engine->destroy(scene);
     engine->destroy(view);
-    engine->destroy(camera);
+    Entity c = camera->getEntity();
+    engine->destroyCameraComponent(c);
+    EntityManager::get().destroy(c);
     engine->destroy(swapChain);
     engine->destroy(&engine);
 }
@@ -78,7 +80,8 @@ void App::setupFilament() {
     swapChain = engine->createSwapChain(nativeLayer);
     renderer = engine->createRenderer();
     scene = engine->createScene();
-    camera = engine->createCamera();
+    Entity c = EntityManager::get().create();
+    camera = engine->createCamera(c);
     cameraManipulator.setCamera(camera);
     cameraManipulator.setViewport(width, height);
     cameraManipulator.lookAt(filament::math::double3(0, 0, 3), filament::math::double3(0, 0, 0));

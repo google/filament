@@ -24,9 +24,22 @@
 namespace filament {
 namespace backend {
 
+struct VulkanLayoutTransition {
+    VkImage image;
+    VkImageLayout oldLayout;
+    VkImageLayout newLayout;
+    VkImageSubresourceRange subresources;
+    VkPipelineStageFlags srcStage;
+    VkAccessFlags srcAccessMask;
+    VkPipelineStageFlags dstStage;
+    VkAccessFlags dstAccessMask;
+};
+
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
-VkFormat getVkFormat(ElementType type, bool normalized);
+VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
 VkFormat getVkFormat(TextureFormat format);
+VkFormat getVkFormat(PixelDataFormat format, PixelDataType type);
+VkFormat getVkFormatLinear(VkFormat format);
 uint32_t getBytesPerPixel(TextureFormat format);
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
@@ -34,6 +47,11 @@ VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
+void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
+bool equivalent(const VkRect2D& a, const VkRect2D& b);
+bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
+bool isDepthFormat(VkFormat format);
+uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
 } // namespace filament
 } // namespace backend

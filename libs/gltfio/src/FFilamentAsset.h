@@ -32,6 +32,8 @@
 
 #include <math/mat4.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/CString.h>
 #include <utils/Entity.h>
 
 #include <cgltf.h>
@@ -94,7 +96,9 @@ struct Primitive {
     filament::VertexBuffer* vertices = nullptr;
     filament::IndexBuffer* indices = nullptr;
     filament::Aabb aabb; // object-space bounding box
-    UvMap uvmap; // small mapping from each glTF UV set to either UV0 or UV1
+    UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
+    uint8_t morphPositions[4] = {};  // Buffer indices for MORPH_POSITION_0, MORPH_POSITION_1 etc.
+    uint8_t morphTangents[4] = {};   // Buffer indices for MORPH_TANGENTS_0, MORPH_TANGENTS_1, etc.
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
@@ -178,6 +182,8 @@ struct FFilamentAsset : public FilamentAsset {
 
     const char* getName(utils::Entity entity) const noexcept;
 
+    const char* getExtras(utils::Entity entity) const noexcept;
+
     utils::Entity getFirstEntityByName(const char* name) noexcept;
 
     size_t getEntitiesByName(const char* name, utils::Entity* entities,
@@ -229,6 +235,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<utils::Entity> mCameraEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
+    std::vector<filament::BufferObject*> mBufferObjects;
     std::vector<filament::IndexBuffer*> mIndexBuffers;
     std::vector<filament::Texture*> mTextures;
     filament::Aabb mBoundingBox;
@@ -240,6 +247,8 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
+    tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
+    utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};
@@ -251,7 +260,7 @@ struct FFilamentAsset : public FilamentAsset {
         ~SourceAsset() { cgltf_free(hierarchy); }
         cgltf_data* hierarchy;
         DracoCache dracoCache;
-        std::vector<uint8_t> glbData;
+        utils::FixedCapacityVector<uint8_t> glbData;
     };
 
     // We used shared ownership for the raw cgltf data in order to permit ResourceLoader to

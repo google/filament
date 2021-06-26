@@ -1,0 +1,114 @@
+material {
+    name : generateKernel,
+    parameters : [
+        {
+            type : uint2,
+            name : size,
+            precision: high
+        },
+        {
+            type : float,
+            name : sampleCount,
+        },
+        {
+            type : float,
+            name : oneOverLevelsMinusOne,
+        }
+    ],
+    outputs : [
+        {
+            name : weight,
+            target : color,
+            type : float4
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV * vec2(materialParams.size);
+    }
+}
+
+fragment {
+
+void dummy() {}
+
+// we default to highp in this shader
+precision highp float;
+
+float log4(const float x) {
+    return log2(x) * 0.5;
+}
+
+vec2 hammersley(const uint index, const float sampleCount) {
+    float invNumSamples = 1.0 / sampleCount;
+    const float tof = 0.5 / float(0x80000000U);
+    uint bits = index;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return vec2(float(index) * invNumSamples, float(bits) * tof);
+}
+
+float DistributionGGX(const float NoH, const float a) {
+    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
+    float f = (a - 1.0) * ((a + 1.0) * (NoH * NoH)) + 1.0;
+    return (a * a) / (PI * f * f);
+}
+
+vec3 hemisphereImportanceSampleDggx(const vec2 u, const float a) { // pdf = D(a) * cosTheta
+    float phi = 2.0 * PI * u.x;
+    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
+    float cosTheta2 = (1.0 - u.y) / (1.0 + (a + 1.0) * ((a - 1.0) * u.y));
+    float cosTheta = sqrt(cosTheta2);
+    float sinTheta = sqrt(1.0 - cosTheta2);
+    return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+}
+
+vec4 computeWeight(const uint index, const float roughness) {
+    float sampleCount = materialParams.sampleCount;
+    vec2 u = hammersley(index, sampleCount);
+    vec3 H = hemisphereImportanceSampleDggx(u, roughness);
+    float NoH = H.z;
+    float NoH2 = H.z * H.z;
+    float NoL = saturate(2.0 * NoH2 - 1.0);
+    vec3 L = vec3(2.0 * NoH * H.x, 2.0 * NoH * H.y, NoL);
+    float pdf = DistributionGGX(NoH, roughness) * 0.25;
+    float invOmegaS = sampleCount * pdf;
+    float l = -log4(invOmegaS);
+    return vec4(L, l);
+}
+
+float lodToPerceptualRoughness(const float lod) {
+    // Inverse perceptualRoughness-to-LOD mapping:
+    // The LOD-to-perceptualRoughness mapping is a quadratic fit for
+    // log2(perceptualRoughness)+iblMaxMipLevel when iblMaxMipLevel is 4.
+    // We found empirically that this mapping works very well for a 256 cubemap with 5 levels used,
+    // but also scales well for other iblMaxMipLevel values.
+    const float a = 2.0f;
+    const float b = -1.0f;
+    return (lod != 0.0) ? saturate((sqrt(a * a + 4.0 * b * lod) - a) / (2.0 * b)) : 0.0;
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    vec2 uv = variable_vertex.xy; // interpolated at pixel's center
+
+    float lod = floor(uv.x);
+    uint index = uint(uv.y);
+
+    float perceptualRoughness = lodToPerceptualRoughness(saturate(lod * materialParams.oneOverLevelsMinusOne));
+    float roughness = perceptualRoughness * perceptualRoughness;
+
+    postProcess.weight = computeWeight(index, roughness);
+}
+
+}

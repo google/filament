@@ -37,12 +37,25 @@
 
 #include <stdint.h>
 
+// Command debugging off. debugging virtuals are not called.
+// This is automatically enabled in DEBUG builds.
+#define FILAMENT_DEBUG_COMMANDS_NONE         0x0
+// Command debugging enabled. No logging by default.
+#define FILAMENT_DEBUG_COMMANDS_ENABLE       0x1
+// Command debugging enabled. Every command logged to slog.d
+#define FILAMENT_DEBUG_COMMANDS_LOG          0x2
+// Command debugging enabled. Every command logged to systrace
+#define FILAMENT_DEBUG_COMMANDS_SYSTRACE     0x4
+
+#define FILAMENT_DEBUG_COMMANDS              FILAMENT_DEBUG_COMMANDS_NONE
+
 namespace filament {
 namespace backend {
 
 template<typename T>
 class ConcreteDispatcher;
 class Dispatcher;
+class CommandStream;
 
 class Driver {
 public:
@@ -64,9 +77,9 @@ public:
     // the default implementation simply calls fn
     virtual void execute(std::function<void(void)> fn) noexcept;
 
-#ifndef NDEBUG
-    virtual void debugCommand(const char* methodName) {}
-#endif
+    // This is called on debug build, or when enabled manually on the backend thread side.
+    virtual void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept = 0;
+    virtual void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept = 0;
 
     /*
      * Asynchronous calls here only to provide a type to CommandStream. They must be non-virtual
@@ -93,24 +106,14 @@ public:
 
 #if !defined(NDEBUG)
 
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
-
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferDescriptor const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CullingMode mode);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ElementType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelBufferDescriptor const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataFormat format);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TargetBufferFlags f);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::RenderPassParams const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerFormat format);
@@ -123,7 +126,21 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Shade
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureCubemapFace face);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureFormat format);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Viewport const& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
+
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::BufferDescriptor& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PixelBufferDescriptor& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::MRT& mrt);
+
 #endif
 
 #endif // TNT_FILAMENT_DRIVER_DRIVER_H
