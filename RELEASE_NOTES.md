@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Use exponential VSM and improve VSM user settings [⚠️ **Recompile Materials for VSM**].
 - engine: Optional blurring of VSM shadowmaps
+- OpenGL: Increase OpenGL backend handle arena from 2 to 4 MiB
 
 ## v1.10.5
 
