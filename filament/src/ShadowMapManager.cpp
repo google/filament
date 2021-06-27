@@ -82,6 +82,8 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     constexpr size_t MAX_SHADOW_LAYERS =
             CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
 
+    const TextureFormat vsmTextureFormat = TextureFormat::RG16F;
+
     // make a copy here, because it's a very small structure
     const TextureRequirements textureRequirements = mTextureRequirements;
     assert_invariant(textureRequirements.layers <= MAX_SHADOW_LAYERS);
@@ -131,7 +133,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         .depth = textureRequirements.layers,
                         .levels = textureRequirements.levels,
                         .type = SamplerType::SAMPLER_2D_ARRAY,
-                        .format = view.hasVsm() ? TextureFormat::RG16F : mTextureFormat
+                        .format = view.hasVsm() ? vsmTextureFormat : mTextureFormat
                 });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) { });
@@ -173,8 +175,10 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         // a default count of 1 because we're using "magic resolve" (sample count is
                         // set on the render target).
                         // When rendering VSM shadow maps, we still need a depth texture for sorting.
+                        // We specify the sample count here because we don't need automatic resolve.
                         auto depth = builder.createTexture("Temporary VSM Depth Texture", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
+                                .samples = options->vsm.msaaSamples,
                                 .type = SamplerType::SAMPLER_2D,
                                 .format = mTextureFormat,
                         });
@@ -184,7 +188,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                         data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
                                 .type = SamplerType::SAMPLER_2D,
-                                .format = TextureFormat::RG16F
+                                .format = vsmTextureFormat
                         });
 
                         depth = builder.write(depth,
