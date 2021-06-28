@@ -24,18 +24,14 @@
 
 #include <backend/DriverEnums.h>
 
-#include <bluevk/BlueVK.h>
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundef"
-#include "vk_mem_alloc.h"
-#pragma clang diagnostic pop
-
 #include <utils/Condition.h>
 #include <utils/Slice.h>
 #include <utils/Mutex.h>
 
 #include <memory>
+
+VK_DEFINE_HANDLE(VmaAllocator)
+VK_DEFINE_HANDLE(VmaPool)
 
 namespace filament {
 namespace backend {

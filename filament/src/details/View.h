@@ -333,7 +333,9 @@ public:
 
     void setBloomOptions(BloomOptions options) noexcept {
         options.dirtStrength = math::saturate(options.dirtStrength);
-        options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(12));
+        options.levels = math::clamp(options.levels, uint8_t(3), uint8_t(11));
+        options.resolution = math::clamp(options.resolution, 1u << options.levels, 2048u);
+        options.anamorphism = math::clamp(options.anamorphism, 1.0f/32.0f, 32.0f);
         options.highlight = std::max(10.0f, options.highlight);
         mBloomOptions = options;
     }

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "vulkan/VulkanBuffer.h"
+#include "VulkanBuffer.h"
+#include "VulkanMemory.h"
 
 #include <utils/Panic.h>
 

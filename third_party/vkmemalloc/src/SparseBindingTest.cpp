@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -532,6 +532,8 @@ SparseBindingImage::~SparseBindingImage()
 
 void TestSparseBinding()
 {
+    wprintf(L"TESTING SPARSE BINDING:\n");
+
     struct ImageInfo
     {
         std::unique_ptr<BaseImage> image;
@@ -545,7 +547,7 @@ void TestSparseBinding()
 
     RandomNumberGenerator rand(4652467);
 
-    for(uint32_t i = 0; i < frameCount; ++i)
+    for(uint32_t frameIndex = 0; frameIndex < frameCount; ++frameIndex)
     {
         // Bump frame index.
         ++g_FrameIndex;
@@ -560,11 +562,11 @@ void TestSparseBinding()
         images.push_back(std::move(imageInfo));
 
         // Delete all images that expired.
-        for(size_t i = images.size(); i--; )
+        for(size_t imageIndex = images.size(); imageIndex--; )
         {
-            if(g_FrameIndex >= images[i].endFrame)
+            if(g_FrameIndex >= images[imageIndex].endFrame)
             {
-                images.erase(images.begin() + i);
+                images.erase(images.begin() + imageIndex);
             }
         }
     }
@@ -588,6 +590,8 @@ void TestSparseBinding()
 
     // Free remaining images.
     images.clear();
+
+    wprintf(L"Done.\n");
 }
 
 #endif // #ifdef _WIN32

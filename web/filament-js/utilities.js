@@ -316,6 +316,7 @@ Filament.getSupportedFormats = function() {
     let ctx = document.createElement('canvas').getContext('webgl2', options);
     const result = {
         s3tc: false,
+        s3tc_srgb: false,
         astc: false,
         etc: false,
     }
@@ -324,6 +325,8 @@ Filament.getSupportedFormats = function() {
         let ext = exts[i];
         if (ext == "WEBGL_compressed_texture_s3tc") {
             result.s3tc = true;
+        } else if (ext == "WEBGL_compressed_texture_s3tc_srgb") {
+            result.s3tc_srgb = true;
         } else if (ext == "WEBGL_compressed_texture_astc") {
             result.astc = true;
         } else if (ext == "WEBGL_compressed_texture_etc") {

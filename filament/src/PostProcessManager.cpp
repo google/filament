@@ -1375,24 +1375,32 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
-    // Figure out a good size for the bloom buffer. We pick the major axis lower
-    // power of two, and scale the minor axis accordingly taking dynamic scaling into account.
+    // Figure out a good size for the bloom buffer.
     auto const& desc = fg.getDescriptor(input);
-    uint32_t width = desc.width / scale.x;
-    uint32_t height = desc.height / scale.y;
-    if (bloomOptions.anamorphism >= 1.0) {
-        height *= bloomOptions.anamorphism;
-    } else if (bloomOptions.anamorphism < 1.0) {
-        width *= 1.0f / std::max(bloomOptions.anamorphism, 1.0f / 4096.0f);
+
+    // width and height after dynamic resolution upscaling
+    const float aspect = (desc.width * scale.y) / (desc.height * scale.x);
+
+    // compute the desired bloom buffer size
+    float bloomHeight = bloomOptions.resolution;
+    float bloomWidth  = bloomHeight * aspect;
+
+    // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
+    // to scaling up) so that the amount of blooming doesn't decrease. However, the resolution
+    // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
+    // BloomOptions::levels.
+    if (bloomOptions.anamorphism >= 1.0f) {
+        bloomWidth *= 1.0 / bloomOptions.anamorphism;
+    } else {
+        bloomHeight *= bloomOptions.anamorphism;
     }
-    uint32_t& major = width > height ? width : height;
-    uint32_t& minor = width < height ? width : height;
-    uint32_t newMinor = clamp(bloomOptions.resolution,
-            1u << bloomOptions.levels, std::min(minor, 1u << kMaxBloomLevels));
-    major = major * uint64_t(newMinor) / minor;
-    minor = newMinor;
+
+    // convert back to integer width/height
+    const uint32_t width  = std::max(1.0f, std::floor(bloomWidth));
+    const uint32_t height = std::max(1.0f, std::floor(bloomHeight));
 
     // we might need to adjust the max # of levels
+    const uint32_t major = std::max(bloomWidth,  bloomHeight);
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
     bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
     bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
@@ -2140,13 +2148,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto& ppBlit = fg.addPass<PostProcessScaling>("blit scaling",
+    auto& ppBlit = fg.addPass<PostProcessScaling>("opaque blit",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& inputDesc = fg.getDescriptor(input);
 
                 // we currently have no use for this case, so we just assert. This is better for now to trap
                 // cases that we might not intend.
                 assert_invariant(inputDesc.samples <= 1);
+
+                data.output = builder.declareRenderPass(
+                        builder.createTexture("opaque blit output", outDesc));
 
                 // FIXME: here we use sample() instead of read() because this forces the
                 //      backend to use a texture (instead of a renderbuffer). We need this because
@@ -2155,23 +2166,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 //      (we do this only when the texture does not request multisampling, since
                 //      these are not sampleable).
                 data.input = (inputDesc.samples > 1) ? builder.read(input) : builder.sample(input);
-                data.output = builder.createTexture("scaled output", outDesc);
-                data.output = builder.declareRenderPass(data.output);
+
+                // We use a RenderPass for the source here, instead of just creating a render
+                // target from data.input in the execute closure, because data.input may refer to
+                // an imported render target and in this case data.input won't resolve to an actual
+                // HwTexture handle. Using a RenderPass works because data.input will resolve
+                // to the actual imported render target and will have the correct viewport.
+                builder.declareRenderPass("opaque blit input", {
+                        .attachments = { .color = { data.input }}});
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                auto inDesc = resources.getDescriptor(data.input);
-                auto in = resources.getTexture(data.input);
-                auto out = resources.getRenderPassInfo();
-
-                auto inRt = driver.createRenderTarget(TargetBufferFlags::COLOR,
-                        inDesc.width, inDesc.height, 1, { in }, {}, {});
-
+                auto out = resources.getRenderPassInfo(0);
+                auto in = resources.getRenderPassInfo(1);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, out.params.viewport,
-                        inRt, { 0, 0, inDesc.width, inDesc.height },
+                        in.target, in.params.viewport,
                         filter);
-
-                driver.destroyRenderTarget(inRt);
             });
 
     // we rely on automatic culling of unused render passes
@@ -2279,6 +2289,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 auto inDesc = resources.getDescriptor(data.input);
                 auto in = resources.getTexture(data.input);
                 auto out = resources.getRenderPassInfo();
+
+                assert_invariant(in);
 
                 Handle<HwRenderTarget> inRt;
                 if (data.usage == FrameGraphTexture::Usage::COLOR_ATTACHMENT) {

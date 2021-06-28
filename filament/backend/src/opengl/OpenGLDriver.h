@@ -194,7 +194,7 @@ public:
                 uint8_t level = 0; // level when attached to a texture
             };
             // field ordering to optimize size on 64-bits
-            RenderBuffer color[4];
+            RenderBuffer color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;

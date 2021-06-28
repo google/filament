@@ -47,7 +47,11 @@ void main() {
 static std::string fullscreenFs = R"(#version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
-layout(location = 0) uniform sampler2D tex;
+
+// Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
+// This parameter is ignored for other backends.
+layout(location = 0, set = 1) uniform sampler2D tex;
+
 uniform Params {
     highp float fbWidth;
     highp float fbHeight;
@@ -144,7 +148,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
-            slog.i << "Level " << level << ": " <<
+            slog.i << "Level " << int(level) << ": " <<
                     (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
             renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
                     kTexWidth >> level, kTexHeight >> level, 1, { texture, level, 0 }, {}, {});
@@ -246,6 +250,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);
+        api.destroyTexture(texture);
         for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
 

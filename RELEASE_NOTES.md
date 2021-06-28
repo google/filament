@@ -3,7 +3,22 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.5 (currently main branch)
+## v1.10.6 (currently main branch)
+
+## v1.10.5
+
+- android: AAR libraries now properly include their ProGuard rules.
+- engine: User materials can now provide custom lighting/surface shading, please consult
+  the [materials documentation](https://google.github.io/filament/Materials.html) for details.
+- engine: `Backend::DEFAULT` now selects the most appropriate backend for the platform, rather than
+  always `OPENGL`. On Android the default is `OPENGL`, on Apple platforms the default is `METAL` and
+  on all other platforms that default is `VULKAN`.
+- engine: Fix a potential memory corruption when using more than 4 render targets.
+- engine: Fix a possible crash when bloom is enabled.
+- engine: Fix and refactor support for S3TC + SRGB with OpenGL.
+- engine: Fix automatic clearing of rendertargets.
+- engine: Fix imported render target discard and clear flags.
+- engine: Fix opaque blit with imported render targets.
 
 ## v1.10.4
 

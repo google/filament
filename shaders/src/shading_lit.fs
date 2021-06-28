@@ -281,7 +281,7 @@ vec4 evaluateLights(const MaterialInputs material) {
 #endif
 
 #if defined(HAS_DYNAMIC_LIGHTING)
-    evaluatePunctualLights(pixel, color);
+    evaluatePunctualLights(material, pixel, color);
 #endif
 
 #if defined(BLEND_MODE_FADE) && !defined(SHADING_MODEL_UNLIT)

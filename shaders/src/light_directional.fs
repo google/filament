@@ -71,5 +71,9 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL <= 0.0) return;
 #endif
 
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+    color.rgb += customSurfaceShading(material, pixel, light, visibility);
+#else
     color.rgb += surfaceShading(pixel, light, visibility);
+#endif
 }

@@ -307,7 +307,8 @@ void VulkanSwapChain::makePresentable() {
 #ifdef ANDROID
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
-        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        // If nothing was rendered, then the layout was never transitioned to COLOR_ATTACHMENT_OPTIMAL.
+        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
         .newLayout = swapContext.layout,
@@ -402,6 +403,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext& context, uint32_t width, uint32_
     swapchain = VK_NULL_HANDLE;
 
     // Somewhat arbitrarily, headless rendering is double-buffered.
+    color.reserve(2);
     color.resize(2);
 
     for (size_t i = 0; i < color.size(); ++i) {

@@ -26,7 +26,7 @@ formats. First copy over the PNG files from the [monkey folder], then do:
 # Create mipmaps for base color and two compressed variants.
 mipgen albedo.png albedo.ktx
 mipgen --compression=astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
-mipgen --compression=s3tc_rgb_dxt1 albedo.png albedo_s3tc.ktx
+mipgen --compression=s3tc_rgb_dxt1 albedo.png albedo_s3tc_srgb.ktx
 
 # Create mipmaps for the normal map and a compressed variant.
 mipgen --strip-alpha --kernel=NORMALS --linear normal.png normal.ktx
@@ -194,7 +194,7 @@ variants for the other textures. The uncompressed variants (empty string) are al
 last resort. Go ahead and replace the **declare asset URLs** comment with the following snippet.
 
 ```js {fragment="declare asset URLs"}
-const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc');
+const albedo_suffix = Filament.getSupportedFormatSuffix('astc s3tc_srgb');
 const texture_suffix = Filament.getSupportedFormatSuffix('etc');
 
 const environ = 'venetian_crossroads_2k'

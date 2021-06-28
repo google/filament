@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "vulkan/VulkanMemory.h"
 #include "vulkan/VulkanPipelineCache.h"
 
 #include <utils/Log.h>
@@ -72,6 +73,29 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
 
 VulkanPipelineCache::~VulkanPipelineCache() {
     destroyCache();
+}
+
+void VulkanPipelineCache::setDevice(VkDevice device, VmaAllocator allocator) {
+    assert_invariant(mDevice == VK_NULL_HANDLE);
+    mDevice = device;
+    mAllocator = allocator;
+
+    // Next, create a small dummy UBO. Filament's fixed-sized binding arrays are nice because they
+    // allow us to track only 1 VkPipelineLayout object. However, we occasionally need to clear
+    // out an unused descriptor set slot. Since Vulkan does not allow specifying VK_NULL_HANDLE
+    // without the robustness2 extension, we are forced to clear out unused UBO slots using a dummy
+    // resource.
+
+    VkBufferCreateInfo bufferInfo {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = 16,
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    };
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
+    vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &mDummyBuffer, &mDummyMemory, nullptr);
+
+    mDummyBufferInfo.buffer = mDummyBuffer;
+    mDummyBufferInfo.range = bufferInfo.size;
 }
 
 bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
@@ -181,9 +205,6 @@ void VulkanPipelineCache::getOrCreateDescriptors(
     // especially crucial after a texture has been destroyed. Since core Vulkan does not allow
     // specifying VK_NULL_HANDLE without the robustness2 extension, we are forced to use dummy
     // resources for this.
-    mDummyBufferInfo.buffer = mDescriptorKey.uniformBuffers[0];
-    mDummyBufferInfo.offset = mDescriptorKey.uniformBufferOffsets[0];
-    mDummyBufferInfo.range = mDescriptorKey.uniformBufferSizes[0];
     mDummySamplerInfo.imageLayout = mDummyTargetInfo.imageLayout;
     mDummySamplerInfo.imageView = mDummyImageView;
     mDummyTargetInfo.imageView = mDummyImageView;
@@ -236,6 +257,7 @@ void VulkanPipelineCache::getOrCreateDescriptors(
         } else {
             writeInfo = mDummyBufferWriteInfo;
         }
+        assert_invariant(writeInfo.pBufferInfo->buffer);
         writeInfo.dstSet = descriptorBundle->handles[0];
         writeInfo.dstBinding = binding;
     }
@@ -643,6 +665,9 @@ void VulkanPipelineCache::destroyCache() noexcept {
         vkDestroySampler(mDevice, mDummySamplerInfo.sampler, VKALLOC);
         mDummySamplerInfo.sampler = VK_NULL_HANDLE;
     }
+    vmaDestroyBuffer(mAllocator, mDummyBuffer, mDummyMemory);
+    mDummyBuffer = VK_NULL_HANDLE;
+    mDummyMemory = VK_NULL_HANDLE;
 }
 
 void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) {

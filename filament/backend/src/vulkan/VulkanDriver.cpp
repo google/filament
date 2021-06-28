@@ -19,16 +19,16 @@
 #include "CommandStreamDispatcher.h"
 #include "DataReshaper.h"
 #include "VulkanBuffer.h"
+#include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
+#include "VulkanMemory.h"
 #include "VulkanPlatform.h"
-#include "VulkanCommands.h"
 
-#include <utils/Panic.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Panic.h>
 #include <utils/trap.h>
-#include <utils/FixedCapacityVector.h>
 
 #ifndef NDEBUG
 #include <set>
@@ -265,7 +265,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     mContext.createEmptyTexture(mStagePool);
 
     mContext.commands->setObserver(&mPipelineCache);
-    mPipelineCache.setDevice(mContext.device);
+    mPipelineCache.setDevice(mContext.device, mContext.allocator);
     mPipelineCache.setDummyTexture(mContext.emptyTexture->getPrimaryImageView());
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
@@ -1605,8 +1605,11 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     }
 
     vkUnmapMemory(device, stagingMemory);
-    vkFreeMemory(device, stagingMemory, nullptr);
-    vkDestroyImage(device, stagingImage, nullptr);
+
+    mDisposer.createDisposable((void*)stagingImage, [=] () {
+        vkDestroyImage(device, stagingImage, nullptr);
+        vkFreeMemory(device, stagingMemory, nullptr);
+    });
 
     scheduleDestroy(std::move(pbd));
 }

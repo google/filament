@@ -76,6 +76,7 @@ Filament.loadClassExtensions = function() {
 
         // Enable all desired extensions by calling getExtension on each one.
         ctx.getExtension('WEBGL_compressed_texture_s3tc');
+        ctx.getExtension('WEBGL_compressed_texture_s3tc_srgb');
         ctx.getExtension('WEBGL_compressed_texture_astc');
         ctx.getExtension('WEBGL_compressed_texture_etc');
 

@@ -600,9 +600,14 @@ void SimpleViewer::updateUserInterface() {
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Indent();
 
-        bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
-        ImGui::Checkbox("Dithering", &dither);
-        enableDithering(dither);
+        ImGui::Checkbox("Post-processing", &mSettings.view.postProcessingEnabled);
+        ImGui::Indent();
+            bool dither = mSettings.view.dithering == Dithering::TEMPORAL;
+            ImGui::Checkbox("Dithering", &dither);
+            enableDithering(dither);
+            ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
+            ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
+        ImGui::Unindent();
 
         bool msaa = mSettings.view.sampleCount != 1;
         ImGui::Checkbox("MSAA 4x", &msaa);
@@ -621,8 +626,6 @@ void SimpleViewer::updateUserInterface() {
         enableFxaa(fxaa);
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
-        ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
-        ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
 
         if (ImGui::CollapsingHeader("SSAO Options")) {
             auto& ssao = mSettings.view.ssao;

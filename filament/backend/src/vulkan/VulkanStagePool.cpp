@@ -17,6 +17,7 @@
 #include "VulkanStagePool.h"
 
 #include "VulkanConstants.h"
+#include "VulkanMemory.h"
 #include "VulkanUtility.h"
 
 #include <utils/Panic.h>

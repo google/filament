@@ -314,6 +314,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const float4 clearColor = mClearOptions.clearColor;
     const TargetBufferFlags clearFlags = mClearFlags;
     const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
+    TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
     if (currentRenderTarget) {
@@ -346,7 +347,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .clearColor = clearColor,
                     .samples = 0,
                     .clearFlags = clearFlags,
-                    .discardStart = discardStartFlags,
+                    .keepOverrideStart = keepOverrideStartFlags,
                     .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
 
@@ -724,15 +725,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> ssr;
         FrameGraphId<FrameGraphTexture> structure;
         float4 clearColor{};
+        TargetBufferFlags clearFlags{};
     };
 
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
                 Blackboard& blackboard = fg.getBlackboard();
-                TargetBufferFlags clearDepthFlags = TargetBufferFlags::NONE;
+                TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
-                data.clearColor = config.clearColor;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
@@ -759,20 +760,11 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 }
 
                 if (!data.color) {
-                    // we're allocating a new buffer, so its content is undefined and we might need
-                    // to clear it.
-
-                    if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
-                        // if the View is going to be blended in, then always clear to transparent
-                        clearColorFlags |= TargetBufferFlags::COLOR;
-                        data.clearColor = {};
-                    }
-
-                    if (view.isSkyboxVisible()) {
-                        // if the skybox is visible, then we don't need to clear at all
-                        clearColorFlags &= ~TargetBufferFlags::COLOR;
-                    }
-
+                    // FIXME: this works only when the viewport is full
+                    //  if (view.isSkyboxVisible()) {
+                    //      // if the skybox is visible, then we don't need to clear at all
+                    //      clearColorFlags &= ~TargetBufferFlags::COLOR;
+                    //  }
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
@@ -803,17 +795,21 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 }
 
-                // FIXME: do we actually need these reads here? it means "preserve" these attachments
+                // We set a "read" constraint on these attachments here because we need to preserve them
+                // when the color pass happens in several passes (e.g. with SSR)
                 data.color = builder.read(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output }, .depth = data.depth },
                         .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags });
+
+                data.clearColor = config.clearColor;
+                data.clearFlags = clearColorFlags | clearDepthFlags;
 
                 blackboard["depth"] = data.depth;
             },
@@ -842,6 +838,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;
+                out.params.flags.clear = data.clearFlags;
+                if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
+                    if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
+                        // if the buffer is discarded (e.g. it's new) and we're blending,
+                        // then clear it to transparent
+                        out.params.flags.clear |= TargetBufferFlags::COLOR;
+                        out.params.clearColor = {};
+                    }
+                }
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
