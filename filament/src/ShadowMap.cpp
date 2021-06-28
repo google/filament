@@ -553,8 +553,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes
-        const float vz0 = std::max(0.0f, std::max(zn + dzn, z0));
-        const float vz1 = std::max(0.0f, std::min(zf - dzf, z1));
+        const float vz0 = std::max(0.0f, std::max(std::max(zn, camera.zn + dzn), z0));
+        const float vz1 = std::max(0.0f, std::min(std::min(zf, camera.zf - dzf), z1));
 
         // in the general case, nopt is computed as:
         const float nopt0 = (1.0f / sinLV) * (z0 + std::sqrt(vz0 * vz1));
