@@ -88,6 +88,7 @@ public class AutomationEngine {
         public boolean skyboxEnabled = true;
         public float cameraFocalLength = 28.0f;
         public float cameraFocusDistance = 0.0f;
+        public boolean autoScaleEnabled = true;
     }
 
     /**

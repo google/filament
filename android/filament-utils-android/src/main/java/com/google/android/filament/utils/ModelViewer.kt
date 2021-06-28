@@ -226,6 +226,16 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     /**
+     * Removes the transformation that was set up via transformToUnitCube.
+     */
+    fun clearRootTransform() {
+        asset?.let {
+            val tm = engine.transformManager
+            tm.setTransform(tm.getInstance(it.root), Mat4().toFloatArray())
+        }
+    }
+
+    /**
      * Frees all entities associated with the most recently-loaded model.
      */
     fun destroyModel() {
