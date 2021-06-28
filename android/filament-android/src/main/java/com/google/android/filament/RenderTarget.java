@@ -32,7 +32,7 @@ import androidx.annotation.Nullable;
  */
 public class RenderTarget {
     private long mNativeObject;
-    private static final int ATTACHMENT_COUNT = 5;
+    private static final int ATTACHMENT_COUNT = AttachmentPoint.values().length;
     private final Texture[] mTextures = new Texture[ATTACHMENT_COUNT];
 
     private RenderTarget(long nativeRenderTarget, Builder builder) {
