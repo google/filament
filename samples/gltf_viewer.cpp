@@ -439,6 +439,7 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view, 410);
+        app.viewer->getSettings().viewer.autoScaleEnabled = !app.actualSize;
 
         const bool batchMode = !app.batchFile.empty();
 
@@ -612,8 +613,11 @@ int main(int argc, char** argv) {
     auto animate = [&app](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
 
+        // Optionally fit the model into a unit cube at the origin.
+        app.viewer->updateRootTransform();
+
         // Add renderables to the scene as they become ready.
-        app.viewer->populateScene(app.asset, !app.actualSize);
+        app.viewer->populateScene(app.asset);
 
         app.viewer->applyAnimation(now);
     };

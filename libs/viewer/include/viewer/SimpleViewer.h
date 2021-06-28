@@ -73,18 +73,15 @@ public:
     ~SimpleViewer();
 
     /**
-     * Adds the asset's ready-to-render entities into the scene and optionally transforms the root
-     * node to make it fit into a unit cube at the origin.
+     * Adds the asset's ready-to-render entities into the scene.
      *
      * The viewer does not claim ownership over the asset or its entities. Clients should use
      * AssetLoader and ResourceLoader to load an asset before passing it in.
      *
      * @param asset The asset to view.
-     * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
      * @param instanceToAnimate Optional instance from which to get the animator.
      */
-    void populateScene(FilamentAsset* asset, bool scale,
-            FilamentInstance* instanceToAnimate = nullptr);
+    void populateScene(FilamentAsset* asset, FilamentInstance* instanceToAnimate = nullptr);
 
     /**
      * Removes the current asset from the viewer.
@@ -199,6 +196,11 @@ public:
      * Defaults to 30000.0.
      */
     void setIBLIntensity(float brightness) { mSettings.lighting.iblIntensity = brightness; }
+
+    /**
+     * Updates the transform at the root node according to the autoScaleEnabled setting.
+     */
+    void updateRootTransform();
 
     /**
      * Gets a modifiable reference to stashed state.

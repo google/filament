@@ -136,6 +136,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     const jfieldID skyboxEnabled = env->GetFieldID(klass, "skyboxEnabled", "Z");
     const jfieldID cameraFocalLength = env->GetFieldID(klass, "cameraFocalLength", "F");
     const jfieldID cameraFocusDistance = env->GetFieldID(klass, "cameraFocusDistance", "F");
+    const jfieldID autoScaleEnabled = env->GetFieldID(klass, "autoScaleEnabled", "Z");
 
     env->SetFloatField(result, cameraAperture, options.cameraAperture);
     env->SetFloatField(result, cameraSpeed, options.cameraSpeed);
@@ -145,6 +146,7 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     env->SetBooleanField(result, skyboxEnabled, options.skyboxEnabled);
     env->SetFloatField(result, cameraFocalLength, options.cameraFocalLength);
     env->SetFloatField(result, cameraFocusDistance, options.cameraFocusDistance);
+    env->SetBooleanField(result, autoScaleEnabled, options.autoScaleEnabled);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

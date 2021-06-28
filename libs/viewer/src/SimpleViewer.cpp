@@ -334,8 +334,7 @@ SimpleViewer::~SimpleViewer() {
     delete mImGuiHelper;
 }
 
-void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
-        FilamentInstance* instanceToAnimate) {
+void SimpleViewer::populateScene(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
     if (mAsset != asset) {
         removeAsset();
         mAsset = asset;
@@ -345,13 +344,7 @@ void SimpleViewer::populateScene(FilamentAsset* asset, bool scale,
             return;
         }
         mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
-        if (scale) {
-            auto& tcm = mEngine->getTransformManager();
-            auto root = tcm.getInstance(mAsset->getRoot());
-            filament::math::mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox(), 4);
-            tcm.setTransform(root, transform);
-        }
-
+        updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
     }
 
@@ -391,6 +384,19 @@ void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl,
             updateIndirectLight();
         }
     }
+}
+
+void SimpleViewer::updateRootTransform() {
+    if (mAsset == nullptr) {
+        return;
+    }
+    auto& tcm = mEngine->getTransformManager();
+    auto root = tcm.getInstance(mAsset->getRoot());
+    filament::math::mat4f transform;
+    if (mSettings.viewer.autoScaleEnabled) {
+        transform = fitIntoUnitCube(mAsset->getBoundingBox(), 4);
+    }
+    tcm.setTransform(root, transform);
 }
 
 void SimpleViewer::updateIndirectLight() {
@@ -723,6 +729,10 @@ void SimpleViewer::updateUserInterface() {
 
     if (ImGui::CollapsingHeader("Scene")) {
         ImGui::Indent();
+
+        ImGui::Checkbox("Scale to unit cube", &mSettings.viewer.autoScaleEnabled);
+        updateRootTransform();
+
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
