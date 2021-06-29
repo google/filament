@@ -906,7 +906,7 @@ void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
 }
 
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        LightManager* lm, Scene* scene) {
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene) {
     auto light = lm->getInstance(sunlight);
     if (light) {
         if (settings.enableSunlight) {
@@ -923,6 +923,13 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
     if (ibl) {
         ibl->setIntensity(settings.iblIntensity);
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
+    }
+    for (size_t i = 0; i < sceneLightCount; i++) {
+        auto light = lm->getInstance(sceneLights[i]);
+        if (lm->isSpotLight(light)) {
+            lm->setShadowCaster(light, settings.enableShadows);
+        }
+        lm->setShadowOptions(light, settings.shadowOptions);
     }
 }
 

@@ -62,6 +62,7 @@ class MainActivity : Activity() {
     private val automation = AutomationEngine()
     private var loadStartTime = 0L
     private var loadStartFence: Fence? = null
+    private val viewerContent = AutomationEngine.ViewerContent()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +77,12 @@ class MainActivity : Activity() {
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
 
         modelViewer = ModelViewer(surfaceView)
+        viewerContent.view = modelViewer.view
+        viewerContent.indirectLight = modelViewer.scene.indirectLight
+        viewerContent.sunlight = modelViewer.light
+        viewerContent.lightManager = modelViewer.engine.lightManager
+        viewerContent.scene = modelViewer.scene
+        viewerContent.renderer = modelViewer.renderer
 
         surfaceView.setOnTouchListener { _, event ->
             modelViewer.onTouchEvent(event)
@@ -316,9 +323,8 @@ class MainActivity : Activity() {
 
     fun loadSettings(message: RemoteServer.ReceivedMessage) {
         val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
-        automation.applySettings(json, modelViewer.view, null,
-                modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
-                modelViewer.scene, modelViewer.renderer)
+        viewerContent.assetLights = modelViewer.asset?.lightEntities
+        automation.applySettings(json, viewerContent)
         modelViewer.view.colorGrading = automation.getColorGrading(modelViewer.engine)
         modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
         updateRootTransform()

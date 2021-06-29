@@ -713,11 +713,13 @@ int main(int argc, char** argv) {
             FilamentApp::get().close();
             return;
         }
-        Settings* settings = &app.viewer->getSettings();
-        MaterialInstance* const* materials = app.asset->getMaterialInstances();
-        size_t materialCount = app.asset->getMaterialInstanceCount();
-        app.automationEngine->tick(view, materials, materialCount, renderer,
-                ImGui::GetIO().DeltaTime);
+        AutomationEngine::ViewerContent content = {
+            .view = view,
+            .renderer = renderer,
+            .materials = app.asset->getMaterialInstances(),
+            .materialCount = app.asset->getMaterialInstanceCount(),
+        };
+        app.automationEngine->tick(content, ImGui::GetIO().DeltaTime);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
