@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.7 (currently main branch)
 
+- engine: Spot-light position calculation moved to fragment shader.
+
 ## v1.10.6
 
 - engine: Use exponential VSM and improve VSM user settings [⚠️ **Recompile Materials for VSM**].

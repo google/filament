@@ -79,7 +79,3 @@ LAYOUT_LOCATION(10) out highp vec4 vertex_uv01;
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
 LAYOUT_LOCATION(11) out highp vec4 vertex_lightSpacePosition;
 #endif
-
-#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
-LAYOUT_LOCATION(12) out highp vec4 vertex_spotLightSpacePosition[MAX_SHADOW_CASTING_SPOTS];
-#endif
