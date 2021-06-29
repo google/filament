@@ -18,6 +18,10 @@ material {
         {
             type : float,
             name : weightScale
+        },
+        {
+            type : float2,
+            name : pixelSize
         }
     ],
     variables : [
@@ -42,7 +46,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = postProcess.normalizedUV - materialParams.pixelSize * 0.5;
     }
 }
 
@@ -53,8 +57,7 @@ fragment {
 void dummy(){}
 
 void postProcess(inout PostProcessInputs postProcess) {
-    highp vec2 pixelSize = 1.0 / vec2(textureSize(materialParams_color, materialParams.mip));
-    highp vec2 uv = variable_vertex.xy - pixelSize.xy * 0.5;
+    highp vec2 uv = variable_vertex.xy;
 
     // the source is guaranteed to be a multiple of two, so we now the bilinear weights are 0.25
 
