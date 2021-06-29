@@ -92,15 +92,6 @@ void main() {
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
 
-#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
-    for (uint l = 0u; l < uint(MAX_SHADOW_CASTING_SPOTS); l++) {
-        vec3 dir = shadowUniforms.directionShadowBias[l].xyz;
-        float bias = shadowUniforms.directionShadowBias[l].w;
-        vertex_spotLightSpacePosition[l] = computeLightSpacePosition(vertex_worldPosition,
-                vertex_worldNormal, dir, bias, getSpotLightFromWorldMatrix(l));
-    }
-#endif
-
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
     gl_Position = getPosition();
