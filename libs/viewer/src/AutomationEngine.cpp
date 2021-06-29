@@ -137,23 +137,23 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
-void AutomationEngine::applySettings(const char* json, size_t jsonLength, View* view,
-        MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
-        utils::Entity sunlight, LightManager* lm, Scene* scene, Renderer* renderer) {
+void AutomationEngine::applySettings(const char* json, size_t jsonLength,
+        const ViewerContent& content) {
     JsonSerializer serializer;
     if (!serializer.readJson(json, jsonLength, mSettings)) {
         std::string jsonWithTerminator(json, json + jsonLength);
         slog.e << "Badly formed JSON:\n" << jsonWithTerminator.c_str() << io::endl;
         return;
     }
-    viewer::applySettings(mSettings->view, view);
-    for (size_t i = 0; i < materialCount; i++) {
-        viewer::applySettings(mSettings->material, materials[i]);
+    viewer::applySettings(mSettings->view, content.view);
+    for (size_t i = 0; i < content.materialCount; i++) {
+        viewer::applySettings(mSettings->material, content.materials[i]);
     }
-    viewer::applySettings(mSettings->lighting, ibl, sunlight, lm, scene);
-    Camera* camera = &view->getCamera();
-    Skybox* skybox = scene->getSkybox();
-    viewer::applySettings(mSettings->viewer, camera, skybox, renderer);
+    viewer::applySettings(mSettings->lighting, content.indirectLight, content.sunlight,
+            content.assetLights, content.assetLightCount, content.lightManager, content.scene);
+    Camera* camera = &content.view->getCamera();
+    Skybox* skybox = content.scene->getSkybox();
+    viewer::applySettings(mSettings->viewer, camera, skybox, content.renderer);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
@@ -180,15 +180,14 @@ ViewerOptions AutomationEngine::getViewerOptions() const {
     return mSettings->viewer;
 }
 
-void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size_t materialCount,
-        Renderer* renderer, float deltaTime) {
-    const auto activateTest = [this, view, materials, materialCount]() {
+void AutomationEngine::tick(const ViewerContent& content, float deltaTime) {
+    const auto activateTest = [this, content]() {
         mElapsedTime = 0;
         mElapsedFrames = 0;
         mSpec->get(mCurrentTest, mSettings);
-        viewer::applySettings(mSettings->view, view);
-        for (size_t i = 0; i < materialCount; i++) {
-            viewer::applySettings(mSettings->material, materials[i]);
+        viewer::applySettings(mSettings->view, content.view);
+        for (size_t i = 0; i < content.materialCount; i++) {
+            viewer::applySettings(mSettings->material, content.materials[i]);
         }
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;
@@ -228,7 +227,7 @@ void AutomationEngine::tick(View* view, MaterialInstance* const* materials, size
     }
 
     if (mOptions.exportScreenshots) {
-        exportScreenshot(view, renderer, prefix + ".ppm", isLastTest, this);
+        exportScreenshot(content.view, content.renderer, prefix + ".ppm", isLastTest, this);
     }
 
     if (isLastTest) {

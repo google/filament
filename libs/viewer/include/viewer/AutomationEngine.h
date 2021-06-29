@@ -85,6 +85,22 @@ public:
     };
 
     /**
+     * Collection of Filament objects that can be modified by the automation engine.
+     */
+    struct ViewerContent {
+        View* view;
+        Renderer* renderer;
+        MaterialInstance* const* materials;
+        size_t materialCount;
+        LightManager* lightManager;
+        Scene* scene;
+        IndirectLight* indirectLight;
+        utils::Entity sunlight;
+        utils::Entity* assetLights;
+        size_t assetLightCount;
+    };
+
+    /**
      * Creates an automation engine and places it in an idle state.
      *
      * @param spec     Specifies a set of settings permutations (owned by the client).
@@ -139,14 +155,10 @@ public:
      * This is when settings get applied, screenshots are (optionally) exported, and the internal
      * test counter is potentially incremented.
      *
-     * @param view          The Filament View that automation pushes changes to.
-     * @param materials     An optional set of of materials that can receive parameter tweaks.
-     * @param materialCount The number of items in the materials array.
-     * @param renderer      The Filament Renderer that can be used to take screenshots.
+     * @param content       Contains the Filament View, Materials, and Renderer that get modified.
      * @param deltaTime     The amount of time that has passed since the previous tick in seconds.
      */
-    void tick(View* view, MaterialInstance* const* materials, size_t materialCount,
-            Renderer* renderer, float deltaTime);
+    void tick(const ViewerContent& content, float deltaTime);
 
     /**
      * Mutates a set of client-owned Filament objects according to a JSON string.
@@ -156,10 +168,12 @@ public:
      *
      * This updates the stashed Settings object, then pushes those settings to the given
      * Filament objects. Clients can optionally call getColorGrading() after calling this method.
+     *
+     * @param json       Contains the JSON string with a set of changes that need to be pushed.
+     * @param jsonLength Number of characters in the json string.
+     * @param content    Contains a set of Filament objects that you want to mutate.
      */
-    void applySettings(const char* json, size_t jsonLength, View* view,
-            MaterialInstance* const* materials, size_t materialCount, IndirectLight* ibl,
-            utils::Entity sunlight, LightManager* lm, Scene* scene, Renderer* renderer);
+    void applySettings(const char* json, size_t jsonLength, const ViewerContent& content);
 
     /**
      * Gets a color grading object that corresponds to the latest settings.

@@ -84,7 +84,13 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
         }
     }
     AutomationEngine* automation = (AutomationEngine*) nativeAutomation;
-    automation->tick((View*) view, ptrMaterials, materialCount, (Renderer*) renderer, deltaTime);
+    AutomationEngine::ViewerContent content = {
+        .view = (View*) view,
+        .renderer = (Renderer*) renderer,
+        .materials = ptrMaterials,
+        .materialCount = (size_t) materialCount,
+    };
+    automation->tick(content, deltaTime);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);
         delete[] ptrMaterials;
@@ -94,8 +100,9 @@ Java_com_google_android_filament_utils_AutomationEngine_nTick(JNIEnv* env, jclas
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* env, jclass klass,
         jlong nativeAutomation, jstring json, jlong view, jlongArray materials, jlong nativeIbl,
-        jint lightEntity, jlong nativeLm, jlong scene, jlong renderer) {
+        jint sunlightEntity, jintArray assetLights, jlong nativeLm, jlong scene, jlong renderer) {
     using MaterialPointer = MaterialInstance*;
+
     jsize materialCount = 0;
     jlong* longMaterials = nullptr;
     MaterialPointer* ptrMaterials = nullptr;
@@ -107,16 +114,41 @@ Java_com_google_android_filament_utils_AutomationEngine_nApplySettings(JNIEnv* e
             ptrMaterials[i] = (MaterialPointer) longMaterials[i];
         }
     }
+
+    jsize lightCount = 0;
+    jint* intLights = nullptr;
+    if (assetLights) {
+        lightCount = env->GetArrayLength(assetLights);
+        intLights = env->GetIntArrayElements(assetLights, nullptr);
+    }
+
+    static_assert(sizeof(jint) == sizeof(Entity));
+
     AutomationEngine* automation = (AutomationEngine*) nativeAutomation;
     const char* nativeJson = env->GetStringUTFChars(json, 0);
     size_t jsonLength = env->GetStringUTFLength(json);
-    automation->applySettings(nativeJson, jsonLength, (View*) view, ptrMaterials, materialCount,
-            (IndirectLight*) nativeIbl, (Entity&) lightEntity, (LightManager*) nativeLm,
-            (Scene*) scene, (Renderer*) renderer);
+
+    AutomationEngine::ViewerContent content = {
+        .view = (View*) view,
+        .renderer = (Renderer*) renderer,
+        .materials = ptrMaterials,
+        .materialCount = (size_t) materialCount,
+        .lightManager = (LightManager*) nativeLm,
+        .scene = (Scene*) scene,
+        .indirectLight = (IndirectLight*) nativeIbl,
+        .sunlight = (Entity&) sunlightEntity,
+        .assetLights = (Entity*) intLights,
+        .assetLightCount = (size_t) lightCount,
+    };
+
+    automation->applySettings(nativeJson, jsonLength, content);
     env->ReleaseStringUTFChars(json, nativeJson);
     if (longMaterials) {
         env->ReleaseLongArrayElements(materials, longMaterials, 0);
         delete[] ptrMaterials;
+    }
+    if (intLights) {
+        env->ReleaseIntArrayElements(assetLights, intLights, 0);
     }
 }
 
