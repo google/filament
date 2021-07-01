@@ -20,5 +20,47 @@
 
 #define JAVA_MATERIAL_KEY "com/google/android/filament/gltfio/MaterialProvider$MaterialKey"
 
-void nativeFromJava(JNIEnv* env, gltfio::MaterialKey& dst, jobject src);
-void nativeToJava(JNIEnv* env, gltfio::MaterialKey& src, jobject dst);
+class MaterialKeyHelper {
+public:
+    static MaterialKeyHelper& get();
+
+    void copy(JNIEnv* env, gltfio::MaterialKey& dst, jobject src);
+    void copy(JNIEnv* env, jobject dst, const gltfio::MaterialKey& src);
+
+    void init(JNIEnv* env); // called only from the Java static class constructor
+
+private:
+    jfieldID doubleSided;
+    jfieldID unlit;
+    jfieldID hasVertexColors;
+    jfieldID hasBaseColorTexture;
+    jfieldID hasNormalTexture;
+    jfieldID hasOcclusionTexture;
+    jfieldID hasEmissiveTexture;
+    jfieldID useSpecularGlossiness;
+    jfieldID alphaMode;
+    jfieldID enableDiagnostics;
+    jfieldID hasMetallicRoughnessTexture;
+    jfieldID metallicRoughnessUV;
+    jfieldID baseColorUV;
+    jfieldID hasClearCoatTexture;
+    jfieldID clearCoatUV;
+    jfieldID hasClearCoatRoughnessTexture;
+    jfieldID clearCoatRoughnessUV;
+    jfieldID hasClearCoatNormalTexture;
+    jfieldID clearCoatNormalUV;
+    jfieldID hasClearCoat;
+    jfieldID hasTransmission;
+    jfieldID hasTextureTransforms;
+    jfieldID emissiveUV;
+    jfieldID aoUV;
+    jfieldID normalUV;
+    jfieldID hasTransmissionTexture;
+    jfieldID transmissionUV;
+    jfieldID hasSheenColorTexture;
+    jfieldID sheenColorUV;
+    jfieldID hasSheenRoughnessTexture;
+    jfieldID sheenRoughnessUV;
+    jfieldID hasSheen;
+    jfieldID hasIOR;
+};

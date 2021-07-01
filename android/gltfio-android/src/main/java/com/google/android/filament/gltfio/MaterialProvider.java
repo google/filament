@@ -64,6 +64,12 @@ public interface MaterialProvider {
         public int sheenRoughnessUV;
         public boolean hasSheen;
         public boolean hasIOR;
+
+        public MaterialKey() {}
+        static {
+            nGlobalInit();
+        }
+        private static native void nGlobalInit();
     };
 
     /**
