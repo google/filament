@@ -169,10 +169,23 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetLoader(JNIEnv* env, jclass,
         jlong nativeEngine, jobject provider, jlong nativeEntities) {
     Engine* engine = (Engine*) nativeEngine;
-    MaterialProvider* materials = new JavaMaterialProvider(env, provider);
+    MaterialProvider* materialProvider = nullptr;
+
+    // First check for a fast path that passes a native MaterialProvider into the loader.
+    // This drastically reduces the number of JNI calls while the asset is being loaded.
+    jclass klass = env->GetObjectClass(provider);
+    jmethodID getNativeObject = env->GetMethodID(klass, "getNativeObject", "()J");
+    if (getNativeObject) {
+        materialProvider = (MaterialProvider*) env->CallLongMethod(provider, getNativeObject);
+    }
+
+    if (materialProvider == nullptr) {
+        materialProvider = new JavaMaterialProvider(env, provider);
+    }
+
     EntityManager* entities = (EntityManager*) nativeEntities;
     NameComponentManager* names = new NameComponentManager(*entities);
-    return (jlong) AssetLoader::create({engine, materials, names, entities});
+    return (jlong) AssetLoader::create({engine, materialProvider, names, entities});
 }
 
 extern "C" JNIEXPORT void JNICALL
