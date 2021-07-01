@@ -299,7 +299,8 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
-        const RenderPass& pass, uint32_t width, uint32_t height, float scale) noexcept {
+        RenderPass const& pass, uint32_t width, uint32_t height, float scale) noexcept {
+
 
     // structure pass -- automatically culled if not used, currently used by:
     //    - ssao
@@ -332,7 +333,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::DEPTH
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
                 auto out = resources.getRenderPassInfo();
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
@@ -380,8 +382,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     return depth;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
-        FrameGraph& fg, RenderPass& pass,
+FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         View::AmbientOcclusionOptions options) noexcept {
 

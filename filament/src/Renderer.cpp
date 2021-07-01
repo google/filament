@@ -271,12 +271,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FScene& scene = *view.getScene();
 
-    const size_t commandsSize = FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE;
-    const size_t commandsCount = commandsSize / sizeof(Command);
-    GrowingSlice<Command> commands(
-            arena.allocate<Command>(commandsCount, CACHELINE_SIZE), commandsCount);
+    // Allocate some space for our commands in the per-frame Arena, and use that space as
+    // an Arena for commands. All this space is released when we exit this method.
+    void* const arenaBegin = arena.allocate(FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE, CACHELINE_SIZE);
+    void* const arenaEnd = pointermath::add(arenaBegin, FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE);
+    RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
-    RenderPass pass(engine, commands);
+    RenderPass pass(engine, commandArena);
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())               renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.hasDirectionalLight())        renderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
@@ -390,10 +391,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     CameraInfo cameraInfo = view.getCameraInfo();
 
+    // updatePrimitivesLod must be run before appendCommands and once for each set
+    // of RenderPass::setCamera / RenderPass::setGeometry calls.
+    view.updatePrimitivesLod(engine, cameraInfo,
+            scene.getRenderableData(), view.getVisibleRenderables());
+
     pass.setCamera(cameraInfo);
     pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
-    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), view.getVisibleRenderables());
 
+    // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms", [svp, &view] (DriverApi& driver) {
         CameraInfo cameraInfo = view.getCameraInfo();
         view.prepareCamera(cameraInfo);
@@ -406,13 +412,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Currently it consists of a simple depth pass.
     // This is normally used by SSAO and contact-shadows
 
-    // TODO: this should be a FrameGraph pass to participate to automatic culling
-    pass.newCommandBuffer();
-    pass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-    pass.sortCommands();
+    // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
+    RenderPass structurePass(pass);
+    structurePass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
+    structurePass.sortCommands();
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, pass, svp.width, svp.height, aoOptions.resolution);
+    ppm.structure(fg, structurePass, svp.width, svp.height, aoOptions.resolution);
 
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
     if (taaOptions.enabled) {
@@ -435,14 +441,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (aoOptions.enabled) {
         // we could rely on FrameGraph culling, but this creates unnecessary CPU work
-        ppm.screenSpaceAmbientOcclusion(fg, pass, svp, cameraInfo, aoOptions);
+        ppm.screenSpaceAmbientOcclusion(fg, svp, cameraInfo, aoOptions);
     }
 
     // --------------------------------------------------------------------------------------------
     // Color passes
 
     // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
-    pass.newCommandBuffer();
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 
@@ -478,7 +483,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // the color pass itself + color-grading as subpass if needed
     FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
-            desc, config, colorGradingConfigForColor, pass, view);
+            desc, config, colorGradingConfigForColor, pass.getExecutor(), view);
 
     // the color pass + refraction + color-grading as subpass if needed
     // this cancels the colorPass() call above if refraction is active.
@@ -584,7 +589,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
 
-    recordHighWatermark(pass.getCommandsHighWatermark());
+    //recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
@@ -613,10 +618,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         blackboard.remove("color");
         blackboard.remove("depth");
 
-        RenderPass opaquePass(pass);
-        opaquePass.getCommands().set(
-                const_cast<Command*>(pass.begin()),
-                const_cast<Command*>(refraction));
+        const RenderPass::Executor opaquePass{ pass.getExecutor(pass.begin(), refraction) };
 
         FrameGraphTexture::Descriptor desc = {
                 .width = config.svp.width,
@@ -688,10 +690,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         // ^^^ the actual refraction pass ends above ^^^
 
         // set-up the refraction pass
-        RenderPass translucentPass(pass);
-        translucentPass.getCommands().set(
-                const_cast<Command*>(refraction),
-                const_cast<Command*>(pass.end()));
+        const RenderPass::Executor translucentPass{ pass.getExecutor(refraction, pass.end()) };
 
         config.refractionLodOffset = refractionLodOffset;
         config.clearFlags = TargetBufferFlags::NONE;
@@ -714,7 +713,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass const& pass, FView const& view) const noexcept {
+        RenderPass::Executor const& passExecutor, FView const& view) const noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
@@ -850,15 +849,14 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
+                    // TODO: we should implement this with a RenderPass command
                     driver.beginRenderPass(out.target, out.params);
-                    pass.executeCommands(resources.getPassName());
+                    passExecutor.executeCommands(resources.getPassName());
                     ppm.colorGradingSubpass(driver, colorGradingConfig);
+                    driver.endRenderPass();
                 } else {
-                    driver.beginRenderPass(out.target, out.params);
-                    pass.executeCommands(resources.getPassName());
+                    passExecutor.execute(resources.getPassName(), out.target, out.params);
                 }
-
-                driver.endRenderPass();
 
                 // color pass is typically heavy and we don't have much CPU work left after
                 // this point, so flushing now allows us to start the GPU earlier and reduce

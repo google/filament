@@ -75,7 +75,7 @@ public:
 
     // Renders all of the shadow maps.
     void render(FrameGraph& fg, FEngine& engine, FView& view, backend::DriverApi& driver,
-            RenderPass& pass) noexcept;
+            RenderPass const& pass) noexcept;
 
     const ShadowMap* getCascadeShadowMap(size_t c) const noexcept {
         assert_invariant(c < mCascadeShadowMapCache.size());

@@ -385,6 +385,39 @@ using ThreadSafeObjectPoolAllocator = PoolAllocator<sizeof(T),
 // Areas
 // ------------------------------------------------------------------------------------------------
 
+namespace AreaPolicy {
+
+class StaticArea {
+public:
+    StaticArea() noexcept = default;
+
+    StaticArea(void* b, void* e) noexcept
+            : mBegin(b), mEnd(e) {
+    }
+
+    ~StaticArea() noexcept = default;
+
+    StaticArea(const StaticArea& rhs) = default;
+    StaticArea& operator=(const StaticArea& rhs) = default;
+    StaticArea(StaticArea&& rhs) noexcept = default;
+    StaticArea& operator=(StaticArea&& rhs) noexcept = default;
+
+    void* data() const noexcept { return mBegin; }
+    void* begin() const noexcept { return mBegin; }
+    void* end() const noexcept { return mEnd; }
+    size_t size() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
+
+    friend void swap(StaticArea& lhs, StaticArea& rhs) noexcept {
+        using std::swap;
+        swap(lhs.mBegin, rhs.mBegin);
+        swap(lhs.mEnd, rhs.mEnd);
+    }
+
+private:
+    void* mBegin = nullptr;
+    void* mEnd = nullptr;
+};
+
 class HeapArea {
 public:
     HeapArea() noexcept = default;
@@ -410,7 +443,7 @@ public:
     void* data() const noexcept { return mBegin; }
     void* begin() const noexcept { return mBegin; }
     void* end() const noexcept { return mEnd; }
-    size_t getSize() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
+    size_t size() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
 
     friend void swap(HeapArea& lhs, HeapArea& rhs) noexcept {
         using std::swap;
@@ -423,6 +456,7 @@ private:
     void* mEnd = nullptr;
 };
 
+} // namespace AreaPolicy
 
 // ------------------------------------------------------------------------------------------------
 // Policies
@@ -524,7 +558,8 @@ struct DebugAndHighWatermark : protected HighWatermark, protected Debug {
 // ------------------------------------------------------------------------------------------------
 
 template<typename AllocatorPolicy, typename LockingPolicy,
-        typename TrackingPolicy = TrackingPolicy::Untracked>
+        typename TrackingPolicy = TrackingPolicy::Untracked,
+        typename AreaPolicy = AreaPolicy::HeapArea>
 class Arena {
 public:
 
@@ -536,7 +571,15 @@ public:
             : mArenaName(name),
               mArea(size),
               mAllocator(mArea, std::forward<ARGS>(args) ... ),
-              mListener(name, mArea.data(), size) {
+              mListener(name, mArea.data(), mArea.size()) {
+    }
+
+    template<typename ... ARGS>
+    Arena(const char* name, AreaPolicy&& area, ARGS&& ... args)
+            : mArenaName(name),
+              mArea(std::forward<AreaPolicy>(area)),
+              mAllocator(mArea, std::forward<ARGS>(args) ... ),
+              mListener(name, mArea.data(), mArea.size()) {
     }
 
     // allocate memory from arena with given size and alignment
@@ -616,8 +659,8 @@ public:
     TrackingPolicy& getListener() noexcept { return mListener; }
     TrackingPolicy const& getListener() const noexcept { return mListener; }
 
-    HeapArea& getArea() noexcept { return mArea; }
-    HeapArea const& getArea() const noexcept { return mArea; }
+    AreaPolicy& getArea() noexcept { return mArea; }
+    AreaPolicy const& getArea() const noexcept { return mArea; }
 
     void setListener(TrackingPolicy listener) noexcept {
         std::swap(mListener, listener);
@@ -644,7 +687,7 @@ public:
 
 private:
     char const* mArenaName = nullptr;
-    HeapArea mArea; // We might want to make that a template parameter too eventually.
+    AreaPolicy mArea;
     // note: we should use something like compressed_pair for the members below
     AllocatorPolicy mAllocator;
     LockingPolicy mLock;

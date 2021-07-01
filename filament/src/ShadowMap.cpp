@@ -69,24 +69,23 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, FView::Range const& range, RenderPass& pass,
-        FView& view) noexcept {
+void ShadowMap::render(DriverApi& driver, FView::Range const& range, 
+        RenderPass* const pass, FView& view) noexcept {
     FEngine& engine = mEngine;
 
+    filament::CameraInfo cameraInfo(getCamera());
+
     FScene& scene = *view.getScene();
+    FScene::RenderableSoa& renderableData = scene.getRenderableData();
 
-    FCamera const& camera = getCamera();
-    filament::CameraInfo cameraInfo(camera);
-
-    pass.setCamera(cameraInfo);
-    pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
-
+    pass->setCamera(cameraInfo);
+    pass->setGeometry(renderableData, range, scene.getRenderableUBO());
     // updatePrimitivesLod must be run before appendCommands.
-    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
+    view.updatePrimitivesLod(engine, cameraInfo, renderableData, range);
 
-    pass.newCommandBuffer();
-    pass.appendCommands(RenderPass::SHADOW);
-    pass.sortCommands();
+    pass->overridePolygonOffset(&mPolygonOffset);
+    pass->appendCommands(RenderPass::SHADOW);
+    pass->sortCommands();
 }
 
 mat4f ShadowMap::getLightViewMatrix(float3 position, float3 direction) noexcept {

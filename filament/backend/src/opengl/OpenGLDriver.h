@@ -253,7 +253,7 @@ private:
         utils::PoolAllocator<208, 32>   mPool2;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
-        explicit HandleAllocator(const utils::HeapArea& area);
+        explicit HandleAllocator(const utils::AreaPolicy::HeapArea& area);
 
         // this is in fact always called with a constexpr size argument
         inline void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
