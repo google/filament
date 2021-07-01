@@ -183,7 +183,7 @@ public:
     bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
-            RenderPass& pass) noexcept;
+            RenderPass const& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,

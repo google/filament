@@ -77,7 +77,7 @@ void ShadowMapManager::addSpotShadowMap(size_t lightIndex) noexcept {
 }
 
 void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
-        backend::DriverApi& driver, RenderPass& pass) noexcept {
+        backend::DriverApi& driver, RenderPass const& pass) noexcept {
 
     constexpr size_t MAX_SHADOW_LAYERS =
             CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS;
@@ -88,37 +88,45 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
     const TextureRequirements textureRequirements = mTextureRequirements;
     assert_invariant(textureRequirements.layers <= MAX_SHADOW_LAYERS);
 
-    using ShadowPass = std::pair<const ShadowMapEntry*, RenderPass>;
-    auto passes = utils::FixedCapacityVector<ShadowPass>::with_capacity(MAX_SHADOW_LAYERS);
+    struct ShadowPass {
+        ShadowPass(ShadowMapEntry const* shadowmap, RenderPass const& pass) noexcept
+            : shadowmap(shadowmap), pass(pass) {
+        }
+        ShadowMapEntry const* shadowmap;
+        RenderPass pass;
+    };
+
+    auto passList = utils::FixedCapacityVector<ShadowPass>::with_capacity(MAX_SHADOW_LAYERS);
 
     // These loops fill render passes with appropriate rendering commands for each shadow map.
     // The actual render pass execution is deferred to the frame graph.
     // Directional, cascaded shadowmaps
     for (const auto& map : mCascadeShadowMaps) {
-        if (!map.hasVisibleShadows()) {
+        auto& range = view.getVisibleDirectionalShadowCasters();
+        if (!map.hasVisibleShadows() || range.empty()) {
             continue;
         }
-        map.getShadowMap().render(driver, view.getVisibleDirectionalShadowCasters(), pass, view);
-        passes.emplace_back(&map, pass);
+        auto& entry = passList.emplace_back(&map, pass);
+        map.getShadowMap().render(driver, range, &entry.pass, view);
     }
 
     // Spotlight shadowmaps
     for (size_t i = 0, c = mSpotShadowMaps.size(); i < c; i++) {
         const auto& map = mSpotShadowMaps[i];
-        if (!map.hasVisibleShadows()) {
+        auto& range = view.getVisibleSpotShadowCasters();
+        if (!map.hasVisibleShadows() || range.empty()) {
             continue;
         }
-        pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_RENDERABLE_N(i));
-        map.getShadowMap().render(driver, view.getVisibleSpotShadowCasters(), pass, view);
-        pass.clearVisibilityMask();
-        passes.emplace_back(&map, pass);
+        auto& entry = passList.emplace_back(&map, pass);
+        entry.pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_RENDERABLE_N(i));
+        map.getShadowMap().render(driver, range, &entry.pass, view);
     }
 
     const float vsmMoment2 = std::numeric_limits<math::half>::max();
     const float vsmMoment1 = std::sqrt(vsmMoment2);
     const float4 vsmClearColor{ vsmMoment1, vsmMoment2, 0.0f, 0.0f };
 
-    assert_invariant(passes.size() <= textureRequirements.layers);
+    assert_invariant(passList.size() <= textureRequirements.layers);
 
     // -------------------------------------------------------------------------------------------
 
@@ -151,13 +159,12 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
     auto& ppm = engine.getPostProcessManager();
 
-    for (auto& entry : passes) {
-        auto* map = entry.first;
-        auto& pass = entry.second;
+    for (auto& entry : passList) {
+        if (!entry.shadowmap->hasVisibleShadows()) {
+            continue;
+        }
 
-        if (!map->hasVisibleShadows()) continue;
-
-        ShadowLayout const& layout = map->getLayout();
+        ShadowLayout const& layout = entry.shadowmap->getLayout();
         const auto layer = layout.layer;
         const auto* options = layout.options;
 
@@ -230,14 +237,14 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
                     // finally create the shadowmap render target -- one per layer.
                     data.shadowRt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 },
-                [=, passes = std::move(passes), &view](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) mutable {
+                [=, executor = entry.pass.getExecutor(), &view](FrameGraphResources const& resources,
+                        auto const& data, DriverApi& driver) {
 
                     const auto& options = layout.options;
                     const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
 
                     // TODO: camera is already set inside 'pass', we could get it from there
-                    FCamera const& camera = map->getShadowMap().getCamera();
+                    FCamera const& camera = entry.shadowmap->getShadowMap().getCamera();
                     filament::CameraInfo cameraInfo(camera);
                     view.prepareCamera(cameraInfo);
 
@@ -268,10 +275,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, FView& view,
 
                     rt.params.viewport = viewport;
 
-                    auto polygonOffset = map->getShadowMap().getPolygonOffset();
-                    pass.overridePolygonOffset(&polygonOffset);
-
-                    pass.execute("Shadow Pass", rt.target, rt.params);
+                    executor.execute("Shadow Pass", rt.target, rt.params);
                 });
 
 

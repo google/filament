@@ -312,10 +312,10 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // -- less than or equal to 208 bytes
 
 
-OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
+OpenGLDriver::HandleAllocator::HandleAllocator(const utils::AreaPolicy::HeapArea& area)
 {
     // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.getSize() / 32;
+    const size_t unit = area.size() / 32;
     const size_t offsetPool1 =      unit;
     const size_t offsetPool2 = 16 * unit;
     char* const p = (char*)area.begin();

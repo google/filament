@@ -24,10 +24,10 @@
 #include <fg2/FrameGraphId.h>
 #include <fg2/FrameGraphResources.h>
 
+#include <filament/View.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
-
-#include <filament/View.h>
 
 #include <utils/CString.h>
 
@@ -69,8 +69,7 @@ public:
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
-            RenderPass& pass, filament::Viewport const& svp,
-            CameraInfo const& cameraInfo,
+            filament::Viewport const& svp, const CameraInfo& cameraInfo,
             View::AmbientOcclusionOptions options) noexcept;
 
     // Used in refraction pass
