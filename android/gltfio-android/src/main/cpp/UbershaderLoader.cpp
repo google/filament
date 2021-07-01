@@ -49,15 +49,15 @@ Java_com_google_android_filament_gltfio_UbershaderLoader_nDestroyMaterials(JNIEn
 extern "C" JNIEXPORT long JNICALL
 Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateMaterialInstance(JNIEnv* env, jclass,
         jlong nativeProvider, jobject materialKey, jintArray uvmap, jstring label) {
-    const jclass materialKeyClass = env->FindClass(JAVA_MATERIAL_KEY);
-    MaterialKey key = {};
+    MaterialKey nativeKey = {};
 
-    nativeFromJava(env, key, materialKey);
+    auto& helper = MaterialKeyHelper::get();
+    helper.copy(env, nativeKey, materialKey);
 
     const char* nativeLabel = label ? env->GetStringUTFChars(label, nullptr) : nullptr;
     UvMap nativeUvMap = {};
     auto provider = (MaterialProvider*) nativeProvider;
-    MaterialInstance* instance = provider->createMaterialInstance(&key, &nativeUvMap, nativeLabel);
+    MaterialInstance* instance = provider->createMaterialInstance(&nativeKey, &nativeUvMap, nativeLabel);
 
     // Copy the UvMap results from the native array into the JVM array.
     jint* elements = env->GetIntArrayElements(uvmap, nullptr);
@@ -70,7 +70,7 @@ Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateMaterialInstance
     }
 
     // The config parameter is an in-out parameter so we need to copy the results back to Java.
-    nativeToJava(env, key, materialKey);
+    helper.copy(env, materialKey, nativeKey);
 
     if (label) {
         env->ReleaseStringUTFChars(label, nativeLabel);

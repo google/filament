@@ -91,8 +91,10 @@ public:
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label) override {
         // Create a Java object for the material key and copy the native fields into it.
-        jobject key = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
-        nativeToJava(mEnv, *config, key);
+        jobject javaKey = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
+
+        auto& helper = MaterialKeyHelper::get();
+        helper.copy(mEnv, javaKey, *config);
 
         // Convert the optional label into a Java string.
         jstring stringLabel = label ? mEnv->NewStringUTF(label) : nullptr;
@@ -102,7 +104,7 @@ public:
 
         // Call the Java-based material provider.
         jobject materialInstance = mEnv->CallObjectMethod(mJavaProvider, mCreateMaterialInstance,
-                key, uvMapArray, stringLabel);
+                javaKey, uvMapArray, stringLabel);
 
         // Copy the UvMap results from the JVM array into the native array.
         if (uvmap) {
@@ -114,9 +116,9 @@ public:
         }
 
         // The config parameter is an in-out parameter so we need to copy the results from Java.
-        nativeFromJava(mEnv, *config, key);
+        helper.copy(mEnv, *config, javaKey);
 
-        mEnv->DeleteLocalRef(key);
+        mEnv->DeleteLocalRef(javaKey);
         mEnv->DeleteLocalRef(uvMapArray);
 
         if (stringLabel) {

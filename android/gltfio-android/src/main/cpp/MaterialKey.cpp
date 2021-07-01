@@ -22,82 +22,124 @@
 
 using namespace gltfio;
 
-void nativeFromJava(JNIEnv* env, MaterialKey& dst, jobject src) {
-    const jclass materialKeyClass = env->FindClass(JAVA_MATERIAL_KEY);
-    auto field = [materialKeyClass, env](const char* fieldName, const char* signature) {
-        return env->GetFieldID(materialKeyClass, fieldName, signature);
-    };
-    dst.doubleSided = env->GetBooleanField(src, field("doubleSided", "Z"));
-    dst.unlit = env->GetBooleanField(src, field("unlit", "Z"));
-    dst.hasVertexColors = env->GetBooleanField(src, field("hasVertexColors", "Z"));
-    dst.hasBaseColorTexture = env->GetBooleanField(src, field("hasBaseColorTexture", "Z"));
-    dst.hasNormalTexture = env->GetBooleanField(src, field("hasNormalTexture", "Z"));
-    dst.hasOcclusionTexture = env->GetBooleanField(src, field("hasOcclusionTexture", "Z"));
-    dst.hasEmissiveTexture = env->GetBooleanField(src, field("hasEmissiveTexture", "Z"));
-    dst.useSpecularGlossiness = env->GetBooleanField(src, field("useSpecularGlossiness", "Z"));
-    dst.alphaMode = (AlphaMode) env->GetIntField(src, field("alphaMode", "I"));
-    dst.enableDiagnostics = env->GetBooleanField(src, field("enableDiagnostics", "Z"));
-    dst.hasMetallicRoughnessTexture = env->GetBooleanField(src, field("hasMetallicRoughnessTexture", "Z"));
-    dst.metallicRoughnessUV = env->GetIntField(src, field("metallicRoughnessUV", "I"));
-    dst.baseColorUV = env->GetIntField(src, field("baseColorUV", "I"));
-    dst.hasClearCoatTexture = env->GetBooleanField(src, field("hasClearCoatTexture", "Z"));
-    dst.clearCoatUV = env->GetIntField(src, field("clearCoatUV", "I"));
-    dst.hasClearCoatRoughnessTexture = env->GetBooleanField(src, field("hasClearCoatRoughnessTexture", "Z"));
-    dst.clearCoatRoughnessUV = env->GetIntField(src, field("clearCoatRoughnessUV", "I"));
-    dst.hasClearCoatNormalTexture = env->GetBooleanField(src, field("hasClearCoatNormalTexture", "Z"));
-    dst.clearCoatNormalUV = env->GetIntField(src, field("clearCoatNormalUV", "I"));
-    dst.hasClearCoat = env->GetBooleanField(src, field("hasClearCoat", "Z"));
-    dst.hasTransmission = env->GetBooleanField(src, field("hasTransmission", "Z"));
-    dst.hasTextureTransforms = env->GetBooleanField(src, field("hasTextureTransforms", "Z"));
-    dst.emissiveUV = env->GetIntField(src, field("emissiveUV", "I"));
-    dst.aoUV = env->GetIntField(src, field("aoUV", "I"));
-    dst.normalUV = env->GetIntField(src, field("normalUV", "I"));
-    dst.hasTransmissionTexture = env->GetBooleanField(src, field("hasTransmissionTexture", "Z"));
-    dst.transmissionUV = env->GetIntField(src, field("transmissionUV", "I"));
-    dst.hasSheenColorTexture = env->GetBooleanField(src, field("hasSheenColorTexture", "Z"));
-    dst.sheenColorUV = env->GetIntField(src, field("sheenColorUV", "I"));
-    dst.hasSheenRoughnessTexture = env->GetBooleanField(src, field("hasSheenRoughnessTexture", "Z"));
-    dst.sheenRoughnessUV = env->GetIntField(src, field("sheenRoughnessUV", "I"));
-    dst.hasSheen = env->GetBooleanField(src, field("hasSheen", "Z"));
-    dst.hasIOR = env->GetBooleanField(src, field("hasIOR", "Z"));
+MaterialKeyHelper& MaterialKeyHelper::get() {
+    static MaterialKeyHelper helper;
+    return helper;
 }
 
-void nativeToJava(JNIEnv* env, MaterialKey& src, jobject dst) {
+void MaterialKeyHelper::init(JNIEnv* env) {
     const jclass materialKeyClass = env->FindClass(JAVA_MATERIAL_KEY);
     auto field = [materialKeyClass, env](const char* fieldName, const char* signature) {
         return env->GetFieldID(materialKeyClass, fieldName, signature);
     };
-    env->SetBooleanField(dst, field("doubleSided", "Z"), src.doubleSided);
-    env->SetBooleanField(dst, field("unlit", "Z"), src.unlit);
-    env->SetBooleanField(dst, field("hasVertexColors", "Z"), src.hasVertexColors);
-    env->SetBooleanField(dst, field("hasBaseColorTexture", "Z"), src.hasBaseColorTexture);
-    env->SetBooleanField(dst, field("hasNormalTexture", "Z"), src.hasNormalTexture);
-    env->SetBooleanField(dst, field("hasOcclusionTexture", "Z"), src.hasOcclusionTexture);
-    env->SetBooleanField(dst, field("hasEmissiveTexture", "Z"), src.hasEmissiveTexture);
-    env->SetBooleanField(dst, field("useSpecularGlossiness", "Z"), src.useSpecularGlossiness);
-    env->SetIntField(dst, field("alphaMode", "I"), (int) src.alphaMode);
-    env->SetBooleanField(dst, field("enableDiagnostics", "Z"), src.enableDiagnostics);
-    env->SetBooleanField(dst, field("hasMetallicRoughnessTexture", "Z"), src.hasMetallicRoughnessTexture);
-    env->SetIntField(dst, field("metallicRoughnessUV", "I"), src.metallicRoughnessUV);
-    env->SetIntField(dst, field("baseColorUV", "I"), src.baseColorUV);
-    env->SetBooleanField(dst, field("hasClearCoatTexture", "Z"), src.hasClearCoatTexture);
-    env->SetIntField(dst, field("clearCoatUV", "I"), src.clearCoatUV);
-    env->SetBooleanField(dst, field("hasClearCoatRoughnessTexture", "Z"), src.hasClearCoatRoughnessTexture);
-    env->SetIntField(dst, field("clearCoatRoughnessUV", "I"), src.clearCoatRoughnessUV);
-    env->SetBooleanField(dst, field("hasClearCoatNormalTexture", "Z"), src.hasClearCoatNormalTexture);
-    env->SetIntField(dst, field("clearCoatNormalUV", "I"), src.clearCoatNormalUV);
-    env->SetBooleanField(dst, field("hasClearCoat", "Z"), src.hasClearCoat);
-    env->SetBooleanField(dst, field("hasTransmission", "Z"), src.hasTransmission);
-    env->SetBooleanField(dst, field("hasTextureTransforms", "Z"), src.hasTextureTransforms);
-    env->SetIntField(dst, field("emissiveUV", "I"), src.emissiveUV);
-    env->SetIntField(dst, field("aoUV", "I"), src.aoUV);
-    env->SetIntField(dst, field("normalUV", "I"), src.normalUV);
-    env->SetBooleanField(dst, field("hasTransmissionTexture", "Z"), src.hasTransmissionTexture);
-    env->SetIntField(dst, field("transmissionUV", "I"), src.transmissionUV);
-    env->SetBooleanField(dst, field("hasSheenColorTexture", "Z"), src.hasSheenColorTexture);
-    env->SetIntField(dst, field("sheenColorUV", "I"), src.sheenColorUV);
-    env->SetBooleanField(dst, field("hasSheenRoughnessTexture", "Z"), src.hasSheenRoughnessTexture);
-    env->SetIntField(dst, field("sheenRoughnessUV", "I"), src.sheenRoughnessUV);
-    env->SetBooleanField(dst, field("hasSheen", "Z"), src.hasSheen);
-    env->SetBooleanField(dst, field("hasIOR", "Z"), src.hasIOR);
+    doubleSided = field("doubleSided", "Z");
+    unlit = field("unlit", "Z");
+    hasVertexColors = field("hasVertexColors", "Z");
+    hasBaseColorTexture = field("hasBaseColorTexture", "Z");
+    hasNormalTexture = field("hasNormalTexture", "Z");
+    hasOcclusionTexture = field("hasOcclusionTexture", "Z");
+    hasEmissiveTexture = field("hasEmissiveTexture", "Z");
+    useSpecularGlossiness = field("useSpecularGlossiness", "Z");
+    alphaMode = field("alphaMode", "I");
+    enableDiagnostics = field("enableDiagnostics", "Z");
+    hasMetallicRoughnessTexture = field("hasMetallicRoughnessTexture", "Z");
+    metallicRoughnessUV = field("metallicRoughnessUV", "I");
+    baseColorUV = field("baseColorUV", "I");
+    hasClearCoatTexture = field("hasClearCoatTexture", "Z");
+    clearCoatUV = field("clearCoatUV", "I");
+    hasClearCoatRoughnessTexture = field("hasClearCoatRoughnessTexture", "Z");
+    clearCoatRoughnessUV = field("clearCoatRoughnessUV", "I");
+    hasClearCoatNormalTexture = field("hasClearCoatNormalTexture", "Z");
+    clearCoatNormalUV = field("clearCoatNormalUV", "I");
+    hasClearCoat = field("hasClearCoat", "Z");
+    hasTransmission = field("hasTransmission", "Z");
+    hasTextureTransforms = field("hasTextureTransforms", "Z");
+    emissiveUV = field("emissiveUV", "I");
+    aoUV = field("aoUV", "I");
+    normalUV = field("normalUV", "I");
+    hasTransmissionTexture = field("hasTransmissionTexture", "Z");
+    transmissionUV = field("transmissionUV", "I");
+    hasSheenColorTexture = field("hasSheenColorTexture", "Z");
+    sheenColorUV = field("sheenColorUV", "I");
+    hasSheenRoughnessTexture = field("hasSheenRoughnessTexture", "Z");
+    sheenRoughnessUV = field("sheenRoughnessUV", "I");
+    hasSheen = field("hasSheen", "Z");
+    hasIOR = field("hasIOR", "Z");
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_MaterialProvider_00024MaterialKey_nGlobalInit(JNIEnv* env, jclass) {
+    MaterialKeyHelper::get().init(env);
+}
+
+void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
+    dst.doubleSided = env->GetBooleanField(src, doubleSided);
+    dst.unlit = env->GetBooleanField(src, unlit);
+    dst.hasVertexColors = env->GetBooleanField(src, hasVertexColors);
+    dst.hasBaseColorTexture = env->GetBooleanField(src, hasBaseColorTexture);
+    dst.hasNormalTexture = env->GetBooleanField(src, hasNormalTexture);
+    dst.hasOcclusionTexture = env->GetBooleanField(src, hasOcclusionTexture);
+    dst.hasEmissiveTexture = env->GetBooleanField(src, hasEmissiveTexture);
+    dst.useSpecularGlossiness = env->GetBooleanField(src, useSpecularGlossiness);
+    dst.alphaMode = (AlphaMode) env->GetIntField(src, alphaMode);
+    dst.enableDiagnostics = env->GetBooleanField(src, enableDiagnostics);
+    dst.hasMetallicRoughnessTexture = env->GetBooleanField(src, hasMetallicRoughnessTexture);
+    dst.metallicRoughnessUV = env->GetIntField(src, metallicRoughnessUV);
+    dst.baseColorUV = env->GetIntField(src, baseColorUV);
+    dst.hasClearCoatTexture = env->GetBooleanField(src, hasClearCoatTexture);
+    dst.clearCoatUV = env->GetIntField(src, clearCoatUV);
+    dst.hasClearCoatRoughnessTexture = env->GetBooleanField(src, hasClearCoatRoughnessTexture);
+    dst.clearCoatRoughnessUV = env->GetIntField(src, clearCoatRoughnessUV);
+    dst.hasClearCoatNormalTexture = env->GetBooleanField(src, hasClearCoatNormalTexture);
+    dst.clearCoatNormalUV = env->GetIntField(src, clearCoatNormalUV);
+    dst.hasClearCoat = env->GetBooleanField(src, hasClearCoat);
+    dst.hasTransmission = env->GetBooleanField(src, hasTransmission);
+    dst.hasTextureTransforms = env->GetBooleanField(src, hasTextureTransforms);
+    dst.emissiveUV = env->GetIntField(src, emissiveUV);
+    dst.aoUV = env->GetIntField(src, aoUV);
+    dst.normalUV = env->GetIntField(src, normalUV);
+    dst.hasTransmissionTexture = env->GetBooleanField(src, hasTransmissionTexture);
+    dst.transmissionUV = env->GetIntField(src, transmissionUV);
+    dst.hasSheenColorTexture = env->GetBooleanField(src, hasSheenColorTexture);
+    dst.sheenColorUV = env->GetIntField(src, sheenColorUV);
+    dst.hasSheenRoughnessTexture = env->GetBooleanField(src, hasSheenRoughnessTexture);
+    dst.sheenRoughnessUV = env->GetIntField(src, sheenRoughnessUV);
+    dst.hasSheen = env->GetBooleanField(src, hasSheen);
+    dst.hasIOR = env->GetBooleanField(src, hasIOR);
+}
+
+void MaterialKeyHelper::copy(JNIEnv* env, jobject dst, const MaterialKey& src) {
+    env->SetBooleanField(dst, doubleSided, src.doubleSided);
+    env->SetBooleanField(dst, unlit, src.unlit);
+    env->SetBooleanField(dst, hasVertexColors, src.hasVertexColors);
+    env->SetBooleanField(dst, hasBaseColorTexture, src.hasBaseColorTexture);
+    env->SetBooleanField(dst, hasNormalTexture, src.hasNormalTexture);
+    env->SetBooleanField(dst, hasOcclusionTexture, src.hasOcclusionTexture);
+    env->SetBooleanField(dst, hasEmissiveTexture, src.hasEmissiveTexture);
+    env->SetBooleanField(dst, useSpecularGlossiness, src.useSpecularGlossiness);
+    env->SetIntField(dst, alphaMode, (int) src.alphaMode);
+    env->SetBooleanField(dst, enableDiagnostics, src.enableDiagnostics);
+    env->SetBooleanField(dst, hasMetallicRoughnessTexture, src.hasMetallicRoughnessTexture);
+    env->SetIntField(dst, metallicRoughnessUV, src.metallicRoughnessUV);
+    env->SetIntField(dst, baseColorUV, src.baseColorUV);
+    env->SetBooleanField(dst, hasClearCoatTexture, src.hasClearCoatTexture);
+    env->SetIntField(dst, clearCoatUV, src.clearCoatUV);
+    env->SetBooleanField(dst, hasClearCoatRoughnessTexture, src.hasClearCoatRoughnessTexture);
+    env->SetIntField(dst, clearCoatRoughnessUV, src.clearCoatRoughnessUV);
+    env->SetBooleanField(dst, hasClearCoatNormalTexture, src.hasClearCoatNormalTexture);
+    env->SetIntField(dst, clearCoatNormalUV, src.clearCoatNormalUV);
+    env->SetBooleanField(dst, hasClearCoat, src.hasClearCoat);
+    env->SetBooleanField(dst, hasTransmission, src.hasTransmission);
+    env->SetBooleanField(dst, hasTextureTransforms, src.hasTextureTransforms);
+    env->SetIntField(dst, emissiveUV, src.emissiveUV);
+    env->SetIntField(dst, aoUV, src.aoUV);
+    env->SetIntField(dst, normalUV, src.normalUV);
+    env->SetBooleanField(dst, hasTransmissionTexture, src.hasTransmissionTexture);
+    env->SetIntField(dst, transmissionUV, src.transmissionUV);
+    env->SetBooleanField(dst, hasSheenColorTexture, src.hasSheenColorTexture);
+    env->SetIntField(dst, sheenColorUV, src.sheenColorUV);
+    env->SetBooleanField(dst, hasSheenRoughnessTexture, src.hasSheenRoughnessTexture);
+    env->SetIntField(dst, sheenRoughnessUV, src.sheenRoughnessUV);
+    env->SetBooleanField(dst, hasSheen, src.hasSheen);
+    env->SetBooleanField(dst, hasIOR, src.hasIOR);
 }
