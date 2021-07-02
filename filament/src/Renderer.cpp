@@ -481,6 +481,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto colorGradingConfigForColor = colorGradingConfig;
     colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
 
+    if (colorGradingConfigForColor.asSubpass) {
+        // append colorgrading subpass after refraction pass
+        pass.appendCustomCommand(
+                RenderPass::Pass::REFRACT,
+                RenderPass::CustomCommand::EPILOG,
+                0, [&ppm, &driver, colorGradingConfigForColor](){
+                    ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
+                });
+    }
+
     // the color pass itself + color-grading as subpass if needed
     FrameGraphId<FrameGraphTexture> colorPassOutput = colorPass(fg, "Color Pass",
             desc, config, colorGradingConfigForColor, pass.getExecutor(), view);
@@ -849,14 +859,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (colorGradingConfig.asSubpass) {
                     out.params.subpassMask = 1;
-                    // TODO: we should implement this with a RenderPass command
-                    driver.beginRenderPass(out.target, out.params);
-                    passExecutor.executeCommands(resources.getPassName());
-                    ppm.colorGradingSubpass(driver, colorGradingConfig);
-                    driver.endRenderPass();
-                } else {
-                    passExecutor.execute(resources.getPassName(), out.target, out.params);
                 }
+                passExecutor.execute(resources.getPassName(), out.target, out.params);
 
                 // color pass is typically heavy and we don't have much CPU work left after
                 // this point, so flushing now allows us to start the GPU earlier and reduce

@@ -332,8 +332,6 @@ public:
         void execute(const char* name,
                 backend::Handle<backend::HwRenderTarget> renderTarget,
                 backend::RenderPassParams params) const noexcept;
-
-        void executeCommands(const char* name) const noexcept;
     };
 
     // returns a new executor for this pass
