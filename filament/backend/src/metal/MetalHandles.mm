@@ -654,7 +654,7 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 
     MTLPixelFormat stagingPixelFormat = getMetalFormat(data.format, data.type);
     const bool conversionNecessary =
-            stagingPixelFormat != devicePixelFormat &&
+            stagingPixelFormat != getMetalFormatLinear(devicePixelFormat) &&
             data.type != PixelDataType::COMPRESSED;     // compressed formats should never need conversion
 
     const bool nonBlittableTexture =
@@ -671,7 +671,7 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 
     ASSERT_PRECONDITION(!nonBlittableTexture || !largeUpload,
             "SAMPLER_2D_ARRAY, SAMPLER_3D, and SAMPLER_CUBEMAP texture uploads"
-            "have a max size of %d.", deviceMaxBufferLength);
+            "have a max size of %d bytes.", deviceMaxBufferLength);
 
     if (conversionNecessary || largeUpload) {
         loadWithBlit(level, region, data, shape);
@@ -731,6 +731,23 @@ void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDes
                       bytesPerRow:shape.bytesPerRow
                     bytesPerImage:shape.bytesPerSlice];
 
+    // If we're blitting into an sRGB format, we need to create a linear view of the texture.
+    // Otherwise, the blit will perform an unwanted sRGB conversion.
+    id<MTLTexture> destinationTexture = texture;
+    MTLPixelFormat linearFormat = getMetalFormatLinear(devicePixelFormat);
+    if (linearFormat != devicePixelFormat) {
+        NSUInteger slices = texture.arrayLength;
+        if (texture.textureType == MTLTextureTypeCube ||
+            texture.textureType == MTLTextureTypeCubeArray) {
+            slices *= 6;
+        }
+        NSUInteger mips = texture.mipmapLevelCount;
+        destinationTexture = [texture newTextureViewWithPixelFormat:linearFormat
+                                                               textureType:texture.textureType
+                                                                    levels:NSMakeRange(0, mips)
+                                                                    slices:NSMakeRange(0, slices)];
+    }
+
     MetalBlitter::BlitArgs args;
     args.filter = SamplerMagFilter::NEAREST;
     args.source.level = 0;
@@ -738,7 +755,7 @@ void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDes
     args.destination.level = level;
     args.destination.region = region;
     args.source.color = stagingTexture;
-    args.destination.color = texture;
+    args.destination.color = destinationTexture;
     context.blitter->blit(getPendingCommandBuffer(&context), args);
 }
 

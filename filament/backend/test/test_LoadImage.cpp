@@ -463,6 +463,92 @@ TEST_F(BackendTest, UpdateImage2D) {
     getDriver().purge();
 }
 
+TEST_F(BackendTest, UpdateImageSRGB) {
+    auto& api = getDriverApi();
+    api.startCapture();
+
+    PixelDataFormat pixelFormat = PixelDataFormat::RGB;
+    PixelDataType pixelType = PixelDataType::UBYTE;
+    TextureFormat textureFormat = TextureFormat::SRGB8_A8;
+
+    // Create a platform-specific SwapChain and make it current.
+    auto swapChain = createSwapChain();
+    api.makeCurrent(swapChain, swapChain);
+    auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+
+    // Create a program.
+    std::string fragment = stringReplace("{samplerType}",
+            getSamplerTypeName(textureFormat), fragmentTemplate);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    Program prog = shaderGen.getProgram();
+    Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+    prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    ProgramHandle program = api.createProgram(std::move(prog));
+
+    // Create a texture.
+    Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_2D, 1,
+            textureFormat, 1, 512, 512, 1, TextureUsage::SAMPLEABLE);
+
+    // Create image data.
+    size_t components; int bpp;
+    getPixelInfo(pixelFormat, pixelType, components, bpp);
+    size_t bpl = 512 * 512 * bpp;
+    size_t bufferSize = bpl;
+    void* buffer = calloc(1, bufferSize);
+    PixelBufferDescriptor descriptor(buffer, bufferSize, pixelFormat, pixelType,
+            1, 0, 0, 512, [](void* buffer, size_t size, void* user) {
+                free(buffer);
+            }, nullptr);
+
+    // Add a gradient.
+    uint8_t* pixel = (uint8_t*) buffer;
+    for (int r = 0; r < 512; r++) {
+        for (int c = 0; c < 512; c++) {
+            for (int n = 0; n < components; n++) {
+                *pixel++ = (c / 512.0f) * 255;
+            }
+        }
+    }
+
+    api.update2DImage(texture, 0, 0, 0, 512, 512, std::move(descriptor));
+
+    api.beginFrame(0, 0);
+
+    // Update samplers.
+    SamplerGroup samplers(1);
+    SamplerParams sparams = {};
+    sparams.filterMag = SamplerMagFilter::LINEAR;
+    sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+    samplers.setSampler(0, texture, sparams);
+    auto sgroup = api.createSamplerGroup(samplers.getSize());
+    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+
+    api.bindSamplers(0, sgroup);
+
+    renderTriangle(defaultRenderTarget, swapChain, program);
+
+    static const uint32_t expectedHash = 519370995;
+    readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
+
+    api.flush();
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    api.destroySamplerGroup(sgroup);
+    api.destroyProgram(program);
+    api.destroySwapChain(swapChain);
+    api.destroyRenderTarget(defaultRenderTarget);
+
+    // This ensures all driver commands have finished before exiting the test.
+    api.finish();
+
+    api.stopCapture();
+
+    executeCommands();
+
+    getDriver().purge();
+}
+
 TEST_F(BackendTest, UpdateImage3D) {
     auto& api = getDriverApi();
     api.startCapture();
