@@ -26,6 +26,7 @@ set(SRCS
         src/CommandStream.cpp
         src/Driver.cpp
         src/Handle.cpp
+        src/HandleAllocator.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/Platform.cpp
@@ -43,6 +44,7 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/DriverApiForward.h
+        include/private/backend/HandleAllocator.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h

@@ -131,7 +131,7 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>()),
-          mHandleArena("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
+          mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
           mPlatform(*platform) {
   
@@ -311,18 +311,6 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 //    GLStream                  : 176       few
 // -- less than or equal to 208 bytes
 
-
-OpenGLDriver::HandleAllocator::HandleAllocator(const utils::AreaPolicy::HeapArea& area)
-{
-    // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.size() / 32;
-    const size_t offsetPool1 =      unit;
-    const size_t offsetPool2 = 16 * unit;
-    char* const p = (char*)area.begin();
-    mPool0 = PoolAllocator<16, 16>(p, p + offsetPool1);
-    mPool1 = PoolAllocator<64, 32>(p + offsetPool1, p + offsetPool2);
-    mPool2 = PoolAllocator<208, 32>(p + offsetPool2, area.end());
-
 #if 0
     // this is useful for development, but too verbose even for debug builds
     slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
@@ -337,74 +325,6 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::AreaPolicy::HeapArea
     slog.d << "GLUniformBuffer: " << sizeof(GLUniformBuffer) << io::endl;
     slog.d << "GLStream: " << sizeof(GLStream) << io::endl;
 #endif
-}
-
-// This is not inlined because it's a faire amount of code
-UTILS_NOINLINE
-HandleBase::HandleId OpenGLDriver::allocateHandle(void* addr) noexcept {
-    ASSERT_POSTCONDITION(addr,
-            "OpenGL backend handle arena is full, please increase "
-            "FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB which is currently set to %u MiB.",
-            FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB);
-
-    char* const base = (char *)mHandleArena.getArea().begin();
-    size_t offset = (char*)addr - base;
-    return HandleBase::HandleId(offset >> HandleAllocator::MIN_ALIGNMENT_SHIFT);
-}
-
-// this is inline so that mHandleArena.alloc(size) can be inlined (because size is in fact constexpr)
-// which resolves which pool will be used at compile time.
-UTILS_ALWAYS_INLINE
-HandleBase::HandleId OpenGLDriver::allocateHandle(size_t size) noexcept {
-    return allocateHandle(mHandleArena.alloc(size));
-}
-
-template<typename D, typename ... ARGS>
-backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
-    static_assert(sizeof(D) <= 208, "Handle<> too large");
-    backend::Handle<D> h{ allocateHandle(sizeof(D)) };
-    D* addr = handle_cast<D *>(h);
-    new(addr) D(std::forward<ARGS>(args)...);
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    addr->typeId = typeid(D).name();
-#endif
-    return h;
-}
-
-
-template<typename D, typename B, typename ... ARGS>
-typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-OpenGLDriver::construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
-    assert_invariant(handle);
-    D* addr = handle_cast<D *>(const_cast<Handle<B>&>(handle));
-
-    // currently we implement construct<> with dtor+ctor, we could use operator= also
-    // but all our dtors are trivial, ~D() is actually a noop.
-    addr->~D();
-    new(addr) D(std::forward<ARGS>(args)...);
-
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    addr->typeId = typeid(D).name();
-#endif
-    return addr;
-}
-
-template <typename B, typename D, typename>
-void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
-    // allow to destroy the nullptr, similarly to operator delete
-    if (p) {
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-        if (UTILS_UNLIKELY(p->typeId != typeid(D).name())) {
-            slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
-                   << ", but handle's actual type is " << p->typeId << io::endl;
-            std::terminate();
-        }
-        const_cast<D *>(p)->typeId = "(deleted)";
-#endif
-        p->~D();
-        mHandleArena.free(const_cast<D*>(p), sizeof(D));
-    }
-}
 
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();

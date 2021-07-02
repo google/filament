@@ -21,6 +21,8 @@
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 
+#include "private/backend/HandleAllocator.h"
+
 #include "backend/TargetBufferInfo.h"
 
 #include <utils/compiler.h>
@@ -247,86 +249,39 @@ private:
 
     // Memory management...
 
-    class HandleAllocator {
-        utils::PoolAllocator< 16, 16>   mPool0;
-        utils::PoolAllocator< 64, 32>   mPool1;
-        utils::PoolAllocator<208, 32>   mPool2;
-    public:
-        static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
-        explicit HandleAllocator(const utils::AreaPolicy::HeapArea& area);
-
-        // this is in fact always called with a constexpr size argument
-        inline void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
-            assert_invariant(size <= mPool2.getSize());
-            if (size <= mPool0.getSize()) return mPool0.alloc(size, 16, extra);
-            if (size <= mPool1.getSize()) return mPool1.alloc(size, 32, extra);
-            if (size <= mPool2.getSize()) return mPool2.alloc(size, 32, extra);
-            return nullptr;
-        }
-
-        // this is in fact always called with a constexpr size argument
-        inline void free(void* p, size_t size) noexcept {
-            if (size <= mPool0.getSize()) { mPool0.free(p); return; }
-            if (size <= mPool1.getSize()) { mPool1.free(p); return; }
-            if (size <= mPool2.getSize()) { mPool2.free(p); return; }
-        }
-    };
-
-    // the arenas for handle allocation needs to be thread-safe
-#ifndef NDEBUG
-    using HandleArena = utils::Arena<HandleAllocator,
-            utils::LockingPolicy::SpinLock,
-            utils::TrackingPolicy::Debug>;
-#else
-    using HandleArena = utils::Arena<HandleAllocator,
-            utils::LockingPolicy::SpinLock>;
-#endif
-
-    HandleArena mHandleArena;
-
-    backend::HandleBase::HandleId allocateHandle(size_t size) noexcept;
-    backend::HandleBase::HandleId allocateHandle(void* addr) noexcept;
+    backend::HandleAllocator mHandleAllocator;
 
     template<typename D, typename ... ARGS>
-    backend::Handle<D> initHandle(ARGS&& ... args) noexcept;
+    backend::Handle<D> initHandle(ARGS&& ... args) noexcept {
+        return mHandleAllocator.allocate<D>(std::forward<ARGS>(args) ...);
+    }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-            construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept;
+    construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D, B>(handle, std::forward<ARGS>(args) ...);
+    }
 
     template<typename B, typename D,
             typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
-    void destruct(backend::Handle<B>& handle, D const* p) noexcept;
-
-
-    /*
-     * handle_cast
-     *
-     * casts a Handle<> to a pointer to the data it refers to.
-     */
-
-    template<typename Dp, typename B>
-    inline
-    typename std::enable_if<
-            std::is_pointer<Dp>::value &&
-            std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
-    handle_cast(backend::Handle<B>& handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        char* const base = (char *)mHandleArena.getArea().begin();
-        size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
-        // assert that this handle is even a valid one
-        assert_invariant(base + offset + sizeof(typename std::remove_pointer<Dp>::type) <= (char *)mHandleArena.getArea().end());
-        return static_cast<Dp>(static_cast<void *>(base + offset));
+    void destruct(backend::Handle<B>& handle, D const* p) noexcept {
+        return mHandleAllocator.deallocate(handle, p);
     }
 
     template<typename Dp, typename B>
-    inline
-    typename std::enable_if<
-            std::is_pointer<Dp>::value &&
-            std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
+    typename std::enable_if_t<
+            std::is_pointer_v<Dp> &&
+            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+    handle_cast(backend::Handle<B>& handle) noexcept {
+        return mHandleAllocator.handle_cast<Dp, B>(handle);
+    }
+
+    template<typename Dp, typename B>
+    inline typename std::enable_if_t<
+            std::is_pointer_v<Dp> &&
+            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
     handle_cast(backend::Handle<B> const& handle) noexcept {
-        return handle_cast<Dp>(const_cast<backend::Handle<B>&>(handle));
+        return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
     friend class OpenGLProgram;
