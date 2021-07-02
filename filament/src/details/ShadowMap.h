@@ -38,6 +38,11 @@ class RenderPass;
 class ShadowMap {
 public:
     explicit ShadowMap(FEngine& engine) noexcept;
+
+    // ShadowMap is not copyable for now
+    ShadowMap(ShadowMap const& rhs) = delete;
+    ShadowMap& operator=(ShadowMap const& rhs) = delete;
+
     ~ShadowMap();
 
     struct ShadowMapInfo {
@@ -46,15 +51,15 @@ public:
         float zResolution = 0.0f;
 
         // the dimension of the encompassing texture atlas
-        size_t atlasDimension = 0;
+        uint16_t atlasDimension = 0;
 
         // the dimension of a single shadow map texture within the atlas
         // e.g., for at atlas size of 1024 split into 4 quadrants, textureDimension would be 512
-        size_t textureDimension = 0;
+        uint16_t textureDimension = 0;
 
         // the dimension of the actual shadow map, taking into account the 1 texel border
         // e.g., for a texture dimension of 512, shadowDimension would be 510
-        size_t shadowDimension = 0;
+        uint16_t shadowDimension = 0;
 
         // whether we're using vsm
         bool vsm = false;
@@ -232,23 +237,19 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    FCamera* mCamera = nullptr;
-    FCamera* mDebugCamera = nullptr;
-    math::mat4f mLightSpace;
-    float mTexelSizeWs = 0.0f;
+    FCamera* mCamera = nullptr;                 //  8
+    FCamera* mDebugCamera = nullptr;            //  8
+    math::mat4f mLightSpace;                    // 64
+    float mTexelSizeWs = 0.0f;                  //  4
 
     // set-up in update()
-    ShadowMapInfo mShadowMapInfo;
-    bool mHasVisibleShadows = false;
-    backend::PolygonOffset mPolygonOffset{};
+    ShadowMapInfo mShadowMapInfo;               // 12
+    bool mHasVisibleShadows = false;            //  1
+    backend::PolygonOffset mPolygonOffset{};    //  8
 
-    // use a member here (instead of stack) because we don't want to pay the
-    // initialization of the float3 each time
-    FrustumBoxIntersection mWsClippedShadowReceiverVolume;
-
-    FEngine& mEngine;
-    const bool mClipSpaceFlipped;
-    const bool mTextureSpaceFlipped;
+    FEngine& mEngine;                           //  8
+    const bool mClipSpaceFlipped;               //  1
+    const bool mTextureSpaceFlipped;            //  1
 };
 
 } // namespace filament

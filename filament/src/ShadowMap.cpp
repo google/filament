@@ -229,9 +229,13 @@ void ShadowMap::computeShadowCameraDirectional(
             camera.model * FCamera::inverseProjection(camera.projection),
             cascadeParams.csNearFar);
 
+    // we use aligned_storage<> here to avoid the default initialization of std::array<>
+    std::aligned_storage<sizeof(FrustumBoxIntersection)>::type localStorage;
+    FrustumBoxIntersection& wsClippedShadowReceiverVolume{ reinterpret_cast<FrustumBoxIntersection&>(localStorage) };
+
     // compute the intersection of the shadow receivers volume with the view volume
     // in world space. This returns a set of points on the convex-hull of the intersection.
-    size_t vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
+    size_t vertexCount = intersectFrustumWithBox(wsClippedShadowReceiverVolume,
             wsViewFrustumVertices, wsShadowReceiversVolume);
 
     /*
@@ -255,7 +259,7 @@ void ShadowMap::computeShadowCameraDirectional(
     }
     for (size_t i = 0; i < vertexCount; ++i) {
         // far: figure out farthest shadow receivers
-        float3 v = mat4f::project(MvAtOrigin, mWsClippedShadowReceiverVolume[i]);
+        float3 v = mat4f::project(MvAtOrigin, wsClippedShadowReceiverVolume[i]);
         lsLightFrustumBounds.min.z = std::min(lsLightFrustumBounds.min.z, v.z);
         if (USE_DEPTH_CLAMP) {
             // further tighten to the shadow receiver volume
@@ -298,7 +302,7 @@ void ShadowMap::computeShadowCameraDirectional(
         if (shadowReceiverVolumeBoundingSphere.w < viewVolumeBoundingSphere.w) {
             viewVolumeBoundingSphere.w = 0;
             std::copy_n(wsShadowReceiversVolume.getCorners().data(), 8,
-                    mWsClippedShadowReceiverVolume.data());
+                    wsClippedShadowReceiverVolume.data());
         }
     }
 
@@ -346,7 +350,7 @@ void ShadowMap::computeShadowCameraDirectional(
             LMpMv = L * MpMv;
 
             W = applyLISPSM(Wp, camera, params, LMpMv,
-                    mWsClippedShadowReceiverVolume, vertexCount, dir);
+                    wsClippedShadowReceiverVolume, vertexCount, dir);
         }
 
         /*
@@ -366,7 +370,7 @@ void ShadowMap::computeShadowCameraDirectional(
         if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
             bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
         } else {
-            bounds = compute2DBounds(WLMpMv, mWsClippedShadowReceiverVolume.data(), vertexCount);
+            bounds = compute2DBounds(WLMpMv, wsClippedShadowReceiverVolume.data(), vertexCount);
         }
         lsLightFrustumBounds.min.xy = bounds.min.xy;
         lsLightFrustumBounds.max.xy = bounds.max.xy;
