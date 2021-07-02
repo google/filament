@@ -599,8 +599,7 @@ FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
-    return getMetalFormat(format) != MTLPixelFormatInvalid ||
-           TextureReshaper::canReshapeTextureFormat(format);
+    return MetalTexture::decidePixelFormat(mContext->device, format) != MTLPixelFormatInvalid;
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
@@ -610,46 +609,40 @@ bool MetalDriver::isTextureSwizzleSupported() {
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     // Derived from the Metal 3.0 Feature Set Tables.
     // In order for a format to be mipmappable, it must be color-renderable and filterable.
-    auto isMipmappable = [](TextureFormat format) {
-        switch (format) {
-            // Mipmappable across all devices:
-            case TextureFormat::R8:
-            case TextureFormat::R8_SNORM:
-            case TextureFormat::R16F:
-            case TextureFormat::RG8:
-            case TextureFormat::RG8_SNORM:
-            case TextureFormat::RG16F:
-            case TextureFormat::RGBA8:
-            case TextureFormat::SRGB8_A8:
-            case TextureFormat::RGBA8_SNORM:
-            case TextureFormat::RGB10_A2:
-            case TextureFormat::R11F_G11F_B10F:
-            case TextureFormat::RGBA16F:
-                return true;
+    MTLPixelFormat metalFormat = MetalTexture::decidePixelFormat(mContext->device, format);
+    switch (metalFormat) {
+        // Mipmappable across all devices:
+        case MTLPixelFormatR8Unorm:
+        case MTLPixelFormatR8Snorm:
+        case MTLPixelFormatR16Float:
+        case MTLPixelFormatRG8Unorm:
+        case MTLPixelFormatRG8Snorm:
+        case MTLPixelFormatRG16Float:
+        case MTLPixelFormatRGBA8Unorm:
+        case MTLPixelFormatRGBA8Unorm_sRGB:
+        case MTLPixelFormatRGBA8Snorm:
+        case MTLPixelFormatRGB10A2Unorm:
+        case MTLPixelFormatRG11B10Float:
+        case MTLPixelFormatRGBA16Float:
+            return true;
 
 #if !defined(IOS)
-            // Mipmappable only on desktop:
-            case TextureFormat::R32F:
-            case TextureFormat::RG32F:
-            case TextureFormat::RGBA32F:
-                return true;
+        // Mipmappable only on desktop:
+        case MTLPixelFormatR32Float:
+        case MTLPixelFormatRG32Float:
+        case MTLPixelFormatRGBA32Float:
+            return true;
 #endif
 
 #if defined(IOS)
-            // Mipmappable only on iOS:
-            case TextureFormat::RGB9_E5:
-                return true;
+        // Mipmappable only on iOS:
+        case MTLPixelFormatRGB9E5Float:
+            return true;
 #endif
 
-            default:
-                return false;
-        }
-    };
-
-    // Certain Filament formats aren't natively supported by Metal, but can be reshaped into
-    // supported Formats.
-    TextureReshaper reshaper(format);
-    return isMipmappable(format) || isMipmappable(reshaper.getReshapedFormat());
+        default:
+            return false;
+    }
 }
 
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
@@ -712,7 +705,7 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update2DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load2DImage(level, xoffset, yoffset, width, height, data);
+    tex->loadImage(level, MTLRegionMake2D(xoffset, yoffset, width, height), data);
     scheduleDestroy(std::move(data));
 }
 
@@ -726,7 +719,7 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update3DImage must be called outside of a render pass.");
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load3DImage(level, xoffset, yoffset, zoffset, width, height, depth, data);
+    tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
     scheduleDestroy(std::move(data));
 }
 

@@ -293,6 +293,50 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
     }
 }
 
+// Converts PixelBufferDescriptor format + type pair into a MTLPixelFormat.
+inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type) {
+    if (type == PixelDataType::UINT_2_10_10_10_REV) return MTLPixelFormatRGB10A2Unorm;
+    if (type == PixelDataType::UINT_10F_11F_11F_REV) return MTLPixelFormatRG11B10Float;
+    if (type == PixelDataType::USHORT_565) return MTLPixelFormatB5G6R5Unorm;
+
+    #define CONVERT(FORMAT, TYPE, MTL) \
+    if (PixelDataFormat::FORMAT == format && PixelDataType::TYPE == type)  return MTLPixelFormat ## MTL;
+
+    CONVERT(R, UBYTE, R8Unorm);
+    CONVERT(R, BYTE, R8Snorm);
+    CONVERT(R_INTEGER, UBYTE, R8Uint);
+    CONVERT(R_INTEGER, BYTE, R8Sint);
+    CONVERT(RG, UBYTE, RG8Unorm);
+    CONVERT(RG, BYTE, RG8Snorm);
+    CONVERT(RG_INTEGER, UBYTE, RG8Uint);
+    CONVERT(RG_INTEGER, BYTE, RG8Sint);
+    CONVERT(RGBA, UBYTE, RGBA8Unorm);
+    CONVERT(RGBA, BYTE, RGBA8Snorm);
+    CONVERT(RGBA_INTEGER, UBYTE, RGBA8Uint);
+    CONVERT(RGBA_INTEGER, BYTE, RGBA8Sint);
+    CONVERT(R_INTEGER, USHORT, R16Uint);
+    CONVERT(R_INTEGER, SHORT, R16Sint);
+    CONVERT(R, HALF, R16Float);
+    CONVERT(RG_INTEGER, USHORT, RG16Uint);
+    CONVERT(RG_INTEGER, SHORT, RG16Sint);
+    CONVERT(RG, HALF, RG16Float);
+    CONVERT(RGBA_INTEGER, USHORT, RGBA16Uint);
+    CONVERT(RGBA_INTEGER, SHORT, RGBA16Sint);
+    CONVERT(RGBA, HALF, RGBA16Float);
+    CONVERT(R_INTEGER, UINT, R32Uint);
+    CONVERT(R_INTEGER, INT, R32Sint);
+    CONVERT(R, FLOAT, R32Float);
+    CONVERT(RG_INTEGER, UINT, RG32Uint);
+    CONVERT(RG_INTEGER, INT, RG32Sint);
+    CONVERT(RG, FLOAT, RG32Float);
+    CONVERT(RGBA_INTEGER, UINT, RGBA32Uint);
+    CONVERT(RGBA_INTEGER, INT, RGBA32Sint);
+    CONVERT(RGBA, FLOAT, RGBA32Float);
+    #undef CONVERT
+
+    return MTLPixelFormatInvalid;
+}
+
 constexpr inline MTLTextureType getMetalType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_2D:

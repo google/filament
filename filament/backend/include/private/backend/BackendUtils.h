@@ -16,6 +16,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <backend/PixelBufferDescriptor.h>
+
 #include <stddef.h>
 
 #ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
@@ -58,6 +60,11 @@ size_t getBlockWidth(TextureFormat format) noexcept;
  * returns 0.
  */
 size_t getBlockHeight(TextureFormat format) noexcept;
+
+/**
+ * Reshapes 3-component data into 4-component data.
+ */
+bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped);
 
 } // namespace backend
 } // namespace filament

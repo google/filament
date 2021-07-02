@@ -31,7 +31,6 @@ set(SRCS
         src/Platform.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
-        src/TextureReshaper.cpp
 )
 
 set(PRIVATE_HDRS
@@ -48,7 +47,6 @@ set(PRIVATE_HDRS
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
         src/DriverBase.h
-        src/TextureReshaper.h
 )
 
 # ==================================================================================================
@@ -370,6 +368,7 @@ if (APPLE)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_MRT.cpp
+        test/test_LoadImage.cpp
         )
 
     target_link_libraries(backend_test PRIVATE
