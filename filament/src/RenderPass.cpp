@@ -507,19 +507,15 @@ void RenderPass::Executor::execute(const char* name,
         backend::RenderPassParams params) const noexcept {
     FEngine& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
-    driver.beginRenderPass(renderTarget, params);
-    executeCommands(name);
-    driver.endRenderPass();
-}
 
-void RenderPass::Executor::executeCommands(const char* name) const noexcept {
     // this is a good time to flush the CommandStream, because we're about to potentially
     // output a lot of commands. This guarantees here that we have at least
     // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
-    FEngine& engine = mEngine;
     engine.flush();
-    DriverApi& driver = engine.getDriverApi();
+
+    driver.beginRenderPass(renderTarget, params);
     recordDriverCommands(driver, mBegin, mEnd);
+    driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
