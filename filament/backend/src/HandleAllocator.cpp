@@ -16,10 +16,15 @@
 
 #include "private/backend/HandleAllocator.h"
 
+#include <utils/Panic.h>
+
+#include <stdlib.h>
+
 namespace filament::backend {
 
 using namespace utils;
 
+UTILS_NOINLINE
 HandleAllocator::Allocator::Allocator(AreaPolicy::HeapArea const& area)
         : mArea(area) {
     // TODO: we probably need a better way to set the size of these pools
@@ -32,35 +37,63 @@ HandleAllocator::Allocator::Allocator(AreaPolicy::HeapArea const& area)
     mPool2 = PoolAllocator<208, 16>(p + offsetPool2, area.end());
 }
 
-bool HandleAllocator::Allocator::isPoolAllocation(void* p, size_t size) const noexcept {
-    return (p >= mArea.begin() && (char*)p + size <= (char*)mArea.end());
-}
-
-void* HandleAllocator::Allocator::alloc_slow(size_t size, size_t alignment, size_t extra) noexcept {
-    return nullptr;
-}
-
-void HandleAllocator::Allocator::free_slow(void* p, size_t size) noexcept {
-}
-
 // ------------------------------------------------------------------------------------------------
 
 HandleAllocator::HandleAllocator(const char* name, size_t size) noexcept
     : mHandleArena(name, size) {
 }
 
-void* HandleAllocator::handleToPointer(HandleBase::HandleId id, size_t size) const noexcept {
-    char* const base = (char*)mHandleArena.getArea().begin();
-    size_t offset = id << Allocator::MIN_ALIGNMENT_SHIFT;
-    assert_invariant(mHandleArena.getAllocator().isPoolAllocation(base + offset, size));
-    return static_cast<void*>(base + offset);
+HandleAllocator::~HandleAllocator() {
+    auto& overflowMap = mOverflowMap;
+    if (!overflowMap.empty()) {
+        PANIC_LOG("Not all handles have been freed. Probably leaking memory.");
+        // Free remaining handle memory
+        for (auto& entry : overflowMap) {
+            ::free(entry.second);
+        }
+    }
 }
 
-HandleBase::HandleId HandleAllocator::pointerToHandle(void* p) const noexcept {
-    char* const base = (char*)mHandleArena.getArea().begin();
-    size_t offset = (char*)p - base;
-    return HandleBase::HandleId(offset >> Allocator::MIN_ALIGNMENT_SHIFT);
+UTILS_NOINLINE
+void* HandleAllocator::handleToPointerSlow(HandleBase::HandleId id) const noexcept {
+    auto& overflowMap = mOverflowMap;
+    std::lock_guard lock(mLock);
+    auto pos = overflowMap.find(id);
+    if (pos != overflowMap.end()) {
+        return pos.value();
+    }
+    return nullptr;
 }
 
+HandleBase::HandleId HandleAllocator::allocateHandleSlow(size_t size) noexcept {
+    void* p = ::malloc(size);
+    std::unique_lock lock(mLock);
+    HandleBase::HandleId id = (++mId) | HEAP_HANDLE_FLAG;
+    mOverflowMap.emplace(id, p);
+    lock.unlock();
+
+    if (UTILS_UNLIKELY(id == (HEAP_HANDLE_FLAG|1u))) { // meaning id was zero
+        PANIC_LOG("HandleAllocator arena is full, using slower system heap. Please increase "
+                  "FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB which is currently set to %u MiB.",
+                FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB);
+    }
+    return id;
+}
+
+void HandleAllocator::deallocateHandleSlow(HandleBase::HandleId id, size_t) noexcept {
+    assert_invariant(id & HEAP_HANDLE_FLAG);
+    void* p = nullptr;
+    auto& overflowMap = mOverflowMap;
+
+    std::unique_lock lock(mLock);
+    auto pos = overflowMap.find(id);
+    if (pos != overflowMap.end()) {
+        p = pos.value();
+        overflowMap.erase(pos);
+    }
+    lock.unlock();
+
+    ::free(p);
+}
 
 } // namespace filament::backend
