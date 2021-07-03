@@ -22,6 +22,7 @@
 #include <utils/Allocator.h>
 #include <utils/Log.h>
 #include <utils/compiler.h>
+#include <tsl/robin_map.h>
 
 namespace filament::backend {
 
@@ -32,6 +33,9 @@ class HandleAllocator {
 public:
 
     HandleAllocator(const char* name, size_t size) noexcept;
+    HandleAllocator(HandleAllocator const& rhs) = delete;
+    HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
+    ~HandleAllocator();
 
     /*
      * Constructs a D object and returns a Handle<D>
@@ -126,8 +130,7 @@ public:
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B>& handle) noexcept {
         assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        void* p = handleToPointer(handle.getId(), sizeof(typename std::remove_pointer_t<Dp>));
+        void* const p = handleToPointer(handle.getId());
         return static_cast<Dp>(p);
     }
 
@@ -144,10 +147,10 @@ private:
 
     class Allocator {
         friend class HandleAllocator;
-        const utils::AreaPolicy::HeapArea& mArea;
         utils::PoolAllocator< 16, 16>   mPool0;
         utils::PoolAllocator< 64, 16>   mPool1;
         utils::PoolAllocator<208, 16>   mPool2;
+        UTILS_UNUSED_IN_RELEASE const utils::AreaPolicy::HeapArea& mArea;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit Allocator(const utils::AreaPolicy::HeapArea& area);
@@ -158,24 +161,16 @@ private:
                  if (size <= mPool0.getSize()) p = mPool0.alloc(size, 16, extra);
             else if (size <= mPool1.getSize()) p = mPool1.alloc(size, 16, extra);
             else if (size <= mPool2.getSize()) p = mPool2.alloc(size, 16, extra);
-            return UTILS_LIKELY(p) ? p : alloc_slow(size, alignment, extra);
+            return p;
         }
 
         // this is in fact always called with a constexpr size argument
         inline void free(void* p, size_t size) noexcept {
-            if (UTILS_LIKELY(isPoolAllocation(p, size))) {
-                if (size <= mPool0.getSize()) { mPool0.free(p); return; }
-                if (size <= mPool1.getSize()) { mPool1.free(p); return; }
-                if (size <= mPool2.getSize()) { mPool2.free(p); return; }
-            } else {
-                free_slow(p, size);
-            }
+            assert_invariant(p >= mArea.begin() && (char*)p + size <= (char*)mArea.end());
+            if (size <= mPool0.getSize()) { mPool0.free(p); return; }
+            if (size <= mPool1.getSize()) { mPool1.free(p); return; }
+            if (size <= mPool2.getSize()) { mPool2.free(p); return; }
         }
-
-    private:
-        bool isPoolAllocation(void* p, size_t size) const noexcept;
-        void* alloc_slow(size_t size, size_t alignment, size_t extra) noexcept;
-        void free_slow(void* p, size_t size) noexcept;
     };
 
 
@@ -191,19 +186,61 @@ private:
     // this is inlined because we're always called with a constexpr size
     HandleBase::HandleId allocateHandle(size_t size) noexcept {
         void* p = mHandleArena.alloc(size);
-        return pointerToHandle(p);
+        if (UTILS_LIKELY(p)) {
+            return pointerToHandle(p);
+        } else {
+            return allocateHandleSlow(size);
+        }
     }
 
     // this is inlined because we're always called with a constexpr size
     void deallocateHandle(HandleBase::HandleId id, size_t size) noexcept {
-        void* p = handleToPointer(id, size);
-        mHandleArena.free(p, size);
+        if (UTILS_LIKELY(isPoolHandle(id))) {
+            void* p = handleToPointer(id);
+            mHandleArena.free(p, size);
+        } else {
+            deallocateHandleSlow(id, size);
+        }
     }
 
-    void* handleToPointer(HandleBase::HandleId id, size_t size) const noexcept;
-    HandleBase::HandleId pointerToHandle(void* p) const noexcept;
+    static constexpr uint32_t HEAP_HANDLE_FLAG = 0x80000000u;
+
+    static bool isPoolHandle(HandleBase::HandleId id) noexcept {
+        return (id & HEAP_HANDLE_FLAG) == 0u;
+    }
+
+    HandleBase::HandleId allocateHandleSlow(size_t size) noexcept;
+    void deallocateHandleSlow(HandleBase::HandleId id, size_t size) noexcept;
+
+    // We inline this because it's just 4 instructions in the fast case
+    inline void* handleToPointer(HandleBase::HandleId id) const noexcept {
+        // note: the null handle will end-up returning nullptr b/c it'll be handled as
+        // a non-pool handle.
+        if (UTILS_LIKELY(isPoolHandle(id))) {
+            char* const base = (char*)mHandleArena.getArea().begin();
+            size_t offset = id << Allocator::MIN_ALIGNMENT_SHIFT;
+            return static_cast<void*>(base + offset);
+        }
+        return handleToPointerSlow(id);
+    }
+
+    void* handleToPointerSlow(HandleBase::HandleId id) const noexcept;
+
+    // We inline this because it's just 3 instructions
+    inline HandleBase::HandleId pointerToHandle(void* p) const noexcept {
+        char* const base = (char*)mHandleArena.getArea().begin();
+        size_t offset = (char*)p - base;
+        auto id = HandleBase::HandleId(offset >> Allocator::MIN_ALIGNMENT_SHIFT);
+        assert_invariant((id & HEAP_HANDLE_FLAG) == 0);
+        return id;
+    }
 
     HandleArena mHandleArena;
+
+    // Below is only used when running out of space in the HandleArena
+    mutable utils::Mutex mLock;
+    tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
+    HandleBase::HandleId mId = 0;
 };
 
 } // namespace filament::backend
