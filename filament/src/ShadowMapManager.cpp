@@ -380,8 +380,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
 
     // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
     // The first split position is the near plane; the last split position is the far plane.
-    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages;
-    splitPercentages[0] = 0.0f;
+    std::array<float, CascadeSplits::SPLIT_COUNT> splitPercentages{};
     splitPercentages[cascadeCount] = 1.0f;
     for (size_t i = 1 ; i < cascadeCount; i++) {
         splitPercentages[i] = options.cascadeSplitPositions[i - 1];
