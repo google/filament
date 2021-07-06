@@ -318,4 +318,101 @@ TEST_F(BackendTest, ReadPixels) {
     getDriver().purge();
 }
 
+static bool gReadPixelsFinished = false;
+
+TEST_F(BackendTest, ReadPixelsPerformance) {
+    const size_t renderTargetSize = 2000;
+    const int iterationCount = 100;
+
+    // Create a platform-specific SwapChain and make it current.
+    auto swapChain = getDriverApi().createSwapChainHeadless(renderTargetSize, renderTargetSize, 0);
+    getDriverApi().makeCurrent(swapChain, swapChain);
+
+    // Create a program.
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    Program p = shaderGen.getProgram();
+    auto program = getDriverApi().createProgram(std::move(p));
+
+    // Create a Texture and RenderTarget to render into.
+    auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+    Handle<HwTexture> texture = getDriverApi().createTexture(
+                SamplerType::SAMPLER_2D,            // target
+                1,                                  // levels
+                TextureFormat::RGBA8,               // format
+                1,                                  // samples
+                renderTargetSize,                   // width
+                renderTargetSize,                   // height
+                1,                                  // depth
+                usage);                             // usage
+
+    Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
+            TargetBufferFlags::COLOR,
+            renderTargetSize,                          // width
+            renderTargetSize,                          // height
+            1,                                         // samples
+            TargetBufferInfo(texture, 0),              // color
+            {},                                        // depth
+            {});                                       // stencil
+
+    TrianglePrimitive triangle(getDriverApi());
+
+    RenderPassParams params = {};
+    fullViewport(params);
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.viewport.height = renderTargetSize;
+    params.viewport.width = renderTargetSize;
+
+    void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
+
+    PipelineState state;
+    state.program = program;
+    state.rasterState.colorWrite = true;
+    state.rasterState.depthWrite = false;
+    state.rasterState.depthFunc = RasterState::DepthFunc::A;
+    state.rasterState.culling = CullingMode::NONE;
+
+    for (int iteration = 0; iteration < iterationCount; ++iteration) {
+        gReadPixelsFinished = false;
+
+        if (0 == iteration % 10) {
+            printf("Executing test %d / %d\n", iteration, iterationCount);
+        }
+
+        getDriverApi().makeCurrent(swapChain, swapChain);
+        getDriverApi().beginFrame(0, 0);
+
+        // Render some content, just so we don't read back uninitialized data.
+        getDriverApi().beginRenderPass(renderTarget, params);
+        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().endRenderPass();
+
+        PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
+                PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
+                [](void* buffer, size_t size, void* user) {
+                    gReadPixelsFinished = true;
+        });
+
+        getDriverApi().readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+        getDriverApi().commit(swapChain);
+        getDriverApi().endFrame(0);
+
+        flushAndWait();
+        getDriver().purge();
+
+        ASSERT_TRUE(gReadPixelsFinished);
+    }
+
+    free(buffer);
+
+    getDriverApi().destroyProgram(program);
+    getDriverApi().destroySwapChain(swapChain);
+    getDriverApi().destroyRenderTarget(renderTarget);
+    getDriverApi().destroyTexture(texture);
+    getDriverApi().finish();
+    executeCommands();
+}
+
 } // namespace test
