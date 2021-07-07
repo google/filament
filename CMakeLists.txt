@@ -11,8 +11,6 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
-option(FILAMENT_ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
-
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
@@ -654,10 +652,6 @@ if (IS_HOST_PLATFORM)
     endif()
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/imageio)
-
-    add_subdirectory(${FILAMENT}/java/filamat)
-    add_subdirectory(${FILAMENT}/java/filament)
-    add_subdirectory(${FILAMENT}/java/gltfio)
 
     add_subdirectory(${FILAMENT}/samples)
 
