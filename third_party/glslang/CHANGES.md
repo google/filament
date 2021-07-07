@@ -3,6 +3,45 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 11.5.0 2021-06-23
+
+### Other changes
+* Implement GLSL_EXT_shader_atomic_float2
+* Implement GL_EXT_spirv_intrinsics
+* Fixed SPIR-V remapper not remapping OpExtInst instruction set IDs
+* only declare compatibility gl_ variables in compatibility mode
+* Add support for float spec const vector initialization
+* Implement GL_EXT_subgroup_uniform_control_flow.
+* Fix arrays dimensioned with spec constant sized gl_WorkGroupSize
+* Add support for 64bit integer scalar and vector types to bitCount() builtin
+
+## 11.4.0 2021-04-22
+
+### Other changes
+* Fix to keep source compatible with CMake 3.10.2
+
+## 11.3.0 2021-04-21
+
+### Other changes
+* Added --depfile
+* Added --auto-sampled-textures
+* Now supports InterpolateAt-based functions
+* Supports cross-stage automatic IO mapping
+* Supports GL_EXT_vulkan_glsl_relaxed (-R option)
+
+## 11.2.0 2021-02-18
+
+### Other changes
+* Removed Python requirement when not building with spirv-tools
+* Add support for GL_EXT_shared_memory_block
+* Implement GL_EXT_null_initializer
+* Add CMake support for Fuschia
+
+## 11.1.0 2020-12-07
+
+### Other changes
+* Added ray-tracing extension support
+
 ## 11.0.0 2020-07-20
 
 ### Breaking changes

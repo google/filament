@@ -1123,7 +1123,7 @@ void TBuiltInParseablesHlsl::identifyBuiltIns(int /*version*/, EProfile /*profil
     symbolTable.relateToOperator("reflect",                     EOpReflect);
     symbolTable.relateToOperator("refract",                     EOpRefract);
     symbolTable.relateToOperator("reversebits",                 EOpBitFieldReverse);
-    symbolTable.relateToOperator("round",                       EOpRoundEven);
+    symbolTable.relateToOperator("round",                       EOpRound);
     symbolTable.relateToOperator("rsqrt",                       EOpInverseSqrt);
     symbolTable.relateToOperator("saturate",                    EOpSaturate);
     symbolTable.relateToOperator("sign",                        EOpSign);

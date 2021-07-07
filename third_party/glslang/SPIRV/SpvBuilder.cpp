@@ -621,13 +621,13 @@ Id Builder::makeAccelerationStructureType()
 Id Builder::makeRayQueryType()
 {
     Instruction *type;
-    if (groupedTypes[OpTypeRayQueryProvisionalKHR].size() == 0) {
-        type = new Instruction(getUniqueId(), NoType, OpTypeRayQueryProvisionalKHR);
-        groupedTypes[OpTypeRayQueryProvisionalKHR].push_back(type);
+    if (groupedTypes[OpTypeRayQueryKHR].size() == 0) {
+        type = new Instruction(getUniqueId(), NoType, OpTypeRayQueryKHR);
+        groupedTypes[OpTypeRayQueryKHR].push_back(type);
         constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
         module.mapInstruction(type);
     } else {
-        type = groupedTypes[OpTypeRayQueryProvisionalKHR].back();
+        type = groupedTypes[OpTypeRayQueryKHR].back();
     }
 
     return type->getResultId();
@@ -867,6 +867,30 @@ bool Builder::isSpecConstantOpCode(Op opcode) const
     default:
         return false;
     }
+}
+
+Id Builder::makeNullConstant(Id typeId)
+{
+    Instruction* constant;
+
+    // See if we already made it.
+    Id existing = NoResult;
+    for (int i = 0; i < (int)nullConstants.size(); ++i) {
+        constant = nullConstants[i];
+        if (constant->getTypeId() == typeId)
+            existing = constant->getResultId();
+    }
+
+    if (existing != NoResult)
+        return existing;
+
+    // Make it
+    Instruction* c = new Instruction(getUniqueId(), typeId, OpConstantNull);
+    constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(c));
+    nullConstants.push_back(c);
+    module.mapInstruction(c);
+
+    return c->getResultId();
 }
 
 Id Builder::makeBoolConstant(bool b, bool specConstant)
@@ -1447,17 +1471,10 @@ void Builder::leaveFunction()
 }
 
 // Comments in header
-void Builder::makeDiscard()
+void Builder::makeStatementTerminator(spv::Op opcode, const char *name)
 {
-    buildPoint->addInstruction(std::unique_ptr<Instruction>(new Instruction(OpKill)));
-    createAndSetNoPredecessorBlock("post-discard");
-}
-
-// Comments in header
-void Builder::makeTerminateInvocation()
-{
-    buildPoint->addInstruction(std::unique_ptr<Instruction>(new Instruction(OpTerminateInvocation)));
-    createAndSetNoPredecessorBlock("post-terminate-invocation");
+    buildPoint->addInstruction(std::unique_ptr<Instruction>(new Instruction(opcode)));
+    createAndSetNoPredecessorBlock(name);
 }
 
 // Comments in header
@@ -2526,7 +2543,7 @@ Id Builder::createMatrixConstructor(Decoration precision, const std::vector<Id>&
         int row = 0;
         int col = 0;
 
-        for (int arg = 0; arg < (int)sources.size(); ++arg) {
+        for (int arg = 0; arg < (int)sources.size() && col < numCols; ++arg) {
             Id argComp = sources[arg];
             for (int comp = 0; comp < getNumComponents(sources[arg]); ++comp) {
                 if (getNumComponents(sources[arg]) > 1) {
@@ -2537,6 +2554,10 @@ Id Builder::createMatrixConstructor(Decoration precision, const std::vector<Id>&
                 if (row == numRows) {
                     row = 0;
                     col++;
+                }
+                if (col == numCols) {
+                    // If more components are provided than fit the matrix, discard the rest.
+                    break;
                 }
             }
         }
@@ -2798,8 +2819,9 @@ void Builder::accessChainStore(Id rvalue, Decoration nonUniform, spv::MemoryAcce
 }
 
 // Comments in header
-Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resultType,
-    spv::MemoryAccessMask memoryAccess, spv::Scope scope, unsigned int alignment)
+Id Builder::accessChainLoad(Decoration precision, Decoration l_nonUniform,
+    Decoration r_nonUniform, Id resultType, spv::MemoryAccessMask memoryAccess,
+    spv::Scope scope, unsigned int alignment)
 {
     Id id;
 
@@ -2863,9 +2885,9 @@ Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resu
         // Buffer accesses need the access chain decorated, and this is where
         // loaded image types get decorated. TODO: This should maybe move to
         // createImageTextureFunctionCall.
-        addDecoration(id, nonUniform);
+        addDecoration(id, l_nonUniform);
         id = createLoad(id, precision, memoryAccess, scope, alignment);
-        addDecoration(id, nonUniform);
+        addDecoration(id, r_nonUniform);
     }
 
     // Done, unless there are swizzles to do
@@ -2886,7 +2908,7 @@ Id Builder::accessChainLoad(Decoration precision, Decoration nonUniform, Id resu
     if (accessChain.component != NoResult)
         id = setPrecision(createVectorExtractDynamic(id, resultType, accessChain.component), precision);
 
-    addDecoration(id, nonUniform);
+    addDecoration(id, r_nonUniform);
     return id;
 }
 

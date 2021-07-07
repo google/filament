@@ -31,15 +31,18 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-project(glslang
-    LANGUAGES CXX)
-
 # increase to 3.1 once all major distributions
 # include a version of CMake >= 3.1
 cmake_minimum_required(VERSION 2.8.12)
 if (POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
 endif()
+if(POLICY CMP0054)
+  cmake_policy(SET CMP0054 NEW)
+endif()
+
+project(glslang LANGUAGES CXX)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Enable compile commands database
@@ -186,13 +189,16 @@ elseif(MSVC)
     if(NOT ENABLE_RTTI)
         string(FIND "${CMAKE_CXX_FLAGS}" "/GR" MSVC_HAS_GR)
         if(MSVC_HAS_GR)
-            string(REGEX REPLACE /GR /GR- CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+            string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
         else()
             add_compile_options(/GR-) # Disable RTTI
         endif()
     endif()
     if(ENABLE_EXCEPTIONS)
         add_compile_options(/EHsc) # Enable Exceptions
+	else()
+        string(REGEX REPLACE /EHsc "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}) # Try to remove default /EHsc cxx_flag
+        add_compile_options(/D_HAS_EXCEPTIONS=0)
     endif()
 endif()
 
@@ -234,55 +240,33 @@ if(NOT COMMAND find_host_package)
     endmacro()
 endif()
 
-# CMake needs to find the right version of python, right from the beginning,
-# otherwise, it will find the wrong version and fail later
-find_host_package(PythonInterp 3 REQUIRED)
-
 # Root directory for build-time generated include files
 set(GLSLANG_GENERATED_INCLUDEDIR "${CMAKE_BINARY_DIR}/include")
 
 ################################################################################
 # Build version information generation
 ################################################################################
+include(parse_version.cmake)
 set(GLSLANG_CHANGES_FILE      "${CMAKE_CURRENT_SOURCE_DIR}/CHANGES.md")
-set(GLSLANG_BUILD_INFO_PY     "${CMAKE_CURRENT_SOURCE_DIR}/build_info.py")
 set(GLSLANG_BUILD_INFO_H_TMPL "${CMAKE_CURRENT_SOURCE_DIR}/build_info.h.tmpl")
 set(GLSLANG_BUILD_INFO_H      "${GLSLANG_GENERATED_INCLUDEDIR}/glslang/build_info.h")
 
-# Command to build the build_info.h file
-add_custom_command(
-    OUTPUT  ${GLSLANG_BUILD_INFO_H}
-    COMMAND ${PYTHON_EXECUTABLE} "${GLSLANG_BUILD_INFO_PY}"
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            "-i" ${GLSLANG_BUILD_INFO_H_TMPL}
-            "-o" ${GLSLANG_BUILD_INFO_H}
-    DEPENDS ${GLSLANG_BUILD_INFO_PY}
-            ${GLSLANG_CHANGES_FILE}
-            ${GLSLANG_BUILD_INFO_H_TMPL}
-    COMMENT "Generating ${GLSLANG_BUILD_INFO_H}")
+parse_version(${GLSLANG_CHANGES_FILE} GLSLANG)
 
-# Target to build the build_info.h file
-add_custom_target(glslang-build-info DEPENDS ${GLSLANG_BUILD_INFO_H})
+function(configurate_version)
+    set(major ${GLSLANG_VERSION_MAJOR})
+    set(minor ${GLSLANG_VERSION_MINOR})
+    set(patch ${GLSLANG_VERSION_PATCH})
+    set(flavor ${GLSLANG_VERSION_FLAVOR})
+    configure_file(${GLSLANG_BUILD_INFO_H_TMPL} ${GLSLANG_BUILD_INFO_H} @ONLY)
+endfunction()
 
-# Populate the CMake GLSLANG_VERSION* variables with the build version
-# information.
-execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} "${GLSLANG_BUILD_INFO_PY}"
-            ${CMAKE_CURRENT_SOURCE_DIR} "<major>.<minor>.<patch><-flavor>;<major>;<minor>;<patch>;<flavor>"
-    OUTPUT_VARIABLE "GLSLANG_VERSIONS"
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-list(GET "GLSLANG_VERSIONS" 0 "GLSLANG_VERSION")
-list(GET "GLSLANG_VERSIONS" 1 "GLSLANG_VERSION_MAJOR")
-list(GET "GLSLANG_VERSIONS" 2 "GLSLANG_VERSION_MINOR")
-list(GET "GLSLANG_VERSIONS" 3 "GLSLANG_VERSION_PATCH")
-list(GET "GLSLANG_VERSIONS" 4 "GLSLANG_VERSION_FLAVOR")
-configure_file(${GLSLANG_CHANGES_FILE} "${CMAKE_CURRENT_BINARY_DIR}/CHANGES.md") # Required to re-run cmake on version change
+configurate_version()
 
 # glslang_add_build_info_dependency() adds the glslang-build-info dependency and
 # generated include directories to target.
 function(glslang_add_build_info_dependency target)
     target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${GLSLANG_GENERATED_INCLUDEDIR}>)
-    add_dependencies(${target} glslang-build-info)
 endfunction()
 
 # glslang_only_export_explicit_symbols() makes the symbol visibility hidden by
@@ -316,6 +300,8 @@ else()
 endif()
 
 if(BUILD_EXTERNAL AND IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/External)
+    find_host_package(PythonInterp 3 REQUIRED)
+
     # We depend on these for later projects, so they should come first.
     add_subdirectory(External)
 endif()
