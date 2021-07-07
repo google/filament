@@ -27,7 +27,7 @@ class TransformationReplaceBooleanConstantWithConstantBinary
     : public Transformation {
  public:
   explicit TransformationReplaceBooleanConstantWithConstantBinary(
-      const protobufs::TransformationReplaceBooleanConstantWithConstantBinary&
+      protobufs::TransformationReplaceBooleanConstantWithConstantBinary
           message);
 
   TransformationReplaceBooleanConstantWithConstantBinary(

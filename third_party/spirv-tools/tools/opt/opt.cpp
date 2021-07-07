@@ -79,18 +79,6 @@ std::string GetSizePasses() {
   return GetListOfPassesAsString(optimizer);
 }
 
-std::string GetVulkanToWebGPUPasses() {
-  spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_1);
-  optimizer.RegisterVulkanToWebGPUPasses();
-  return GetListOfPassesAsString(optimizer);
-}
-
-std::string GetWebGPUToVulkanPasses() {
-  spvtools::Optimizer optimizer(SPV_ENV_WEBGPU_0);
-  optimizer.RegisterWebGPUToVulkanPasses();
-  return GetListOfPassesAsString(optimizer);
-}
-
 void PrintUsage(const char* program) {
   std::string target_env_list = spvTargetEnvList(16, 80);
   // NOTE: Please maintain flags in lexicographical order.
@@ -239,10 +227,6 @@ Options (in lexicographical order):)",
                values, providing guarantees that satisfy Vulkan's
                robustBufferAccess rules.)");
   printf(R"(
-  --generate-webgpu-initializers
-               Adds initial values to OpVariable instructions that are missing
-               them, due to their storage type requiring them for WebGPU.)");
-  printf(R"(
   --if-conversion
                Convert if-then-else like assignments into OpSelect.)");
   printf(R"(
@@ -260,11 +244,6 @@ Options (in lexicographical order):)",
                Note this does not guarantee legal code. This option passes the
                option --relax-logical-pointer to the validator.)",
          GetLegalizationPasses().c_str());
-  printf(R"(
-  --legalize-vector-shuffle
-               Converts any usages of 0xFFFFFFFF for the literals in
-               OpVectorShuffle to a literal 0. This is done since 0xFFFFFFFF is
-               forbidden in WebGPU.)");
   printf(R"(
   --local-redundancy-elimination
                Looks for instructions in the same basic block that compute the
@@ -427,6 +406,12 @@ Options (in lexicographical order):)",
                Removes duplicate types, decorations, capabilities and extension
                instructions.)");
   printf(R"(
+  --remove-unused-interface-variables
+               Removes variables referenced on the |OpEntryPoint| instruction 
+               that are not referenced in the entry point function or any function 
+               in its call tree.  Note that this could cause the shader interface 
+               to no longer match other shader stages.)");
+  printf(R"(
   --replace-invalid-opcode
                Replaces instructions whose opcode is valid for shader modules,
                but not for the current shader stage.  To have an effect, all
@@ -462,13 +447,6 @@ Options (in lexicographical order):)",
   --skip-block-layout
                Forwards this option to the validator.  See the validator help
                for details.)");
-  printf(R"(
-  --split-invalid-unreachable
-               Attempts to legalize for WebGPU cases where an unreachable
-               merge-block is also a continue-target by splitting it into two
-               separate blocks. There exist legal, for Vulkan, instances of this
-               pattern that cannot be converted into legal WebGPU, so this
-               conversion may not succeed.)");
   printf(R"(
   --skip-validation
                Will not validate the SPIR-V before optimizing.  If the SPIR-V
@@ -513,38 +491,14 @@ Options (in lexicographical order):)",
                removes them from the vector.  Note this would still leave around
                lots of dead code that a pass of ADCE will be able to remove.)");
   printf(R"(
-  --vulkan-to-webgpu
-               Turns on the prescribed passes for converting from Vulkan to
-               WebGPU and sets the target environment to webgpu0. Other passes
-               may be turned on via additional flags, but such combinations are
-               not tested.
-               Using --target-env with this flag is not allowed.
-
-               This flag is the equivalent of passing in --target-env=webgpu0
-               and specifying the following optimization code names:
-               %s
-
-               NOTE: This flag is a WIP and its behaviour is subject to change.)",
-         GetVulkanToWebGPUPasses().c_str());
-  printf(R"(
-  --webgpu-to-vulkan
-               Turns on the prescribed passes for converting from WebGPU to
-               Vulkan and sets the target environment to vulkan1.1. Other passes
-               may be turned on via additional flags, but such combinations are
-               not tested.
-               Using --target-env with this flag is not allowed.
-
-               This flag is the equivalent of passing in --target-env=vulkan1.1
-               and specifying the following optimization code names:
-               %s
-
-               NOTE: This flag is a WIP and its behaviour is subject to change.)",
-         GetWebGPUToVulkanPasses().c_str());
-  printf(R"(
   --workaround-1209
                Rewrites instructions for which there are known driver bugs to
                avoid triggering those bugs.
                Current workarounds: Avoid OpUnreachable in loops.)");
+  printf(R"(
+  --workgroup-scalar-block-layout
+               Forwards this option to the validator.  See the validator help
+               for details.)");
   printf(R"(
   --wrap-opkill
                Replaces all OpKill instructions in functions that can be called
@@ -714,9 +668,6 @@ OptStatus ParseFlags(int argc, const char** argv,
                      spvtools::ValidatorOptions* validator_options,
                      spvtools::OptimizerOptions* optimizer_options) {
   std::vector<std::string> pass_flags;
-  bool target_env_set = false;
-  bool vulkan_to_webgpu_set = false;
-  bool webgpu_to_vulkan_set = false;
   for (int argi = 1; argi < argc; ++argi) {
     const char* cur_arg = argv[argi];
     if ('-' == cur_arg[0]) {
@@ -781,19 +732,6 @@ OptStatus ParseFlags(int argc, const char** argv,
                                              max_id_bound);
       } else if (0 == strncmp(cur_arg,
                               "--target-env=", sizeof("--target-env=") - 1)) {
-        target_env_set = true;
-        if (vulkan_to_webgpu_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "--vulkan-to-webgpu defines the target environment, "
-                          "so --target-env cannot be set at the same time");
-          return {OPT_STOP, 1};
-        }
-        if (webgpu_to_vulkan_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "--webgpu-to-vulkan defines the target environment, "
-                          "so --target-env cannot be set at the same time");
-          return {OPT_STOP, 1};
-        }
         const auto split_flag = spvtools::utils::SplitFlagArgs(cur_arg);
         const auto target_env_str = split_flag.second.c_str();
         spv_target_env target_env;
@@ -803,42 +741,6 @@ OptStatus ParseFlags(int argc, const char** argv,
           return {OPT_STOP, 1};
         }
         optimizer->SetTargetEnv(target_env);
-      } else if (0 == strcmp(cur_arg, "--vulkan-to-webgpu")) {
-        vulkan_to_webgpu_set = true;
-        if (target_env_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "--vulkan-to-webgpu defines the target environment, "
-                          "so --target-env cannot be set at the same time");
-          return {OPT_STOP, 1};
-        }
-        if (webgpu_to_vulkan_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "Cannot use both --webgpu-to-vulkan and "
-                          "--vulkan-to-webgpu at the same time, invoke twice "
-                          "if you are wanting to go to and from");
-          return {OPT_STOP, 1};
-        }
-
-        optimizer->SetTargetEnv(SPV_ENV_VULKAN_1_1);
-        optimizer->RegisterVulkanToWebGPUPasses();
-      } else if (0 == strcmp(cur_arg, "--webgpu-to-vulkan")) {
-        webgpu_to_vulkan_set = true;
-        if (target_env_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "--webgpu-to-vulkan defines the target environment, "
-                          "so --target-env cannot be set at the same time");
-          return {OPT_STOP, 1};
-        }
-        if (vulkan_to_webgpu_set) {
-          spvtools::Error(opt_diagnostic, nullptr, {},
-                          "Cannot use both --webgpu-to-vulkan and "
-                          "--vulkan-to-webgpu at the same time, invoke twice "
-                          "if you are wanting to go to and from");
-          return {OPT_STOP, 1};
-        }
-
-        optimizer->SetTargetEnv(SPV_ENV_WEBGPU_0);
-        optimizer->RegisterWebGPUToVulkanPasses();
       } else if (0 == strcmp(cur_arg, "--validate-after-all")) {
         optimizer->SetValidateAfterAll(true);
       } else if (0 == strcmp(cur_arg, "--before-hlsl-legalization")) {
@@ -849,6 +751,8 @@ OptStatus ParseFlags(int argc, const char** argv,
         validator_options->SetRelaxBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--scalar-block-layout")) {
         validator_options->SetScalarBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--workgroup-scalar-block-layout")) {
+        validator_options->SetWorkgroupScalarBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--skip-block-layout")) {
         validator_options->SetSkipBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
@@ -909,7 +813,7 @@ int main(int argc, const char** argv) {
   }
 
   std::vector<uint32_t> binary;
-  if (!ReadFile<uint32_t>(in_file, "rb", &binary)) {
+  if (!ReadBinaryFile<uint32_t>(in_file, &binary)) {
     return 1;
   }
 

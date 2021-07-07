@@ -123,6 +123,8 @@ void LocalSingleStoreElimPass::InitExtensionAllowList() {
       "SPV_EXT_fragment_invocation_density",
       "SPV_EXT_physical_storage_buffer",
       "SPV_KHR_terminate_invocation",
+      "SPV_KHR_subgroup_uniform_control_flow",
+      "SPV_KHR_integer_dot_product",
   });
 }
 bool LocalSingleStoreElimPass::ProcessVariable(Instruction* var_inst) {
@@ -174,7 +176,8 @@ bool LocalSingleStoreElimPass::RewriteDebugDeclares(Instruction* store_inst,
         context()->GetDominatorAnalysis(store_block->GetParent());
     for (auto* decl : invisible_decls) {
       if (dominator_analysis->Dominates(store_inst, decl)) {
-        context()->get_debug_info_mgr()->AddDebugValueForDecl(decl, value_id);
+        context()->get_debug_info_mgr()->AddDebugValueForDecl(decl, value_id,
+                                                              decl, store_inst);
         modified = true;
       }
     }

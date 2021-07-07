@@ -61,7 +61,8 @@ TEST(TransformationAddTypeFloatTest, IsApplicable) {
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  // Tests existing 16-bit float type.
+  // The transformation is not applicable because there is already a 16-bit
+  // float type declared in the module.
   transformation = TransformationAddTypeFloat(7, 16);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
@@ -70,6 +71,19 @@ TEST(TransformationAddTypeFloatTest, IsApplicable) {
   transformation = TransformationAddTypeFloat(7, 32);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
+
+  // By default, SPIR-V does not support 64-bit float types.
+  // Below we add such capability, so the test should now pass.
+  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityFloat64);
+  ASSERT_TRUE(TransformationAddTypeFloat(7, 64).IsApplicable(
+      context.get(), transformation_context));
+
+#ifndef NDEBUG
+  // Should not be able to add float type of width different from 16/32/64
+  ASSERT_DEATH(TransformationAddTypeFloat(7, 20).IsApplicable(
+                   context.get(), transformation_context),
+               "Unexpected float type width");
+#endif
 }
 
 TEST(TransformationAddTypeFloatTest, Apply) {
@@ -103,15 +117,27 @@ TEST(TransformationAddTypeFloatTest, Apply) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Adds 16-bit float type.
   auto transformation = TransformationAddTypeFloat(6, 16);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(6));
+  ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(6));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(6)->opcode());
+  ASSERT_NE(nullptr, context->get_type_mgr()->GetType(6)->AsFloat());
 
   // Adds 32-bit float type.
   transformation = TransformationAddTypeFloat(7, 32);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(7));
+  ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(7));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(7)->opcode());
+  ASSERT_NE(nullptr, context->get_type_mgr()->GetType(7)->AsFloat());
 
   // Adds 64-bit float type.
   transformation = TransformationAddTypeFloat(8, 64);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(8));
+  ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(8));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(8)->opcode());
+  ASSERT_NE(nullptr, context->get_type_mgr()->GetType(8)->AsFloat());
 
   std::string variant_shader = R"(
          OpCapability Shader

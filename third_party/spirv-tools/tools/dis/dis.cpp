@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
 
   // Read the input binary.
   std::vector<uint32_t> contents;
-  if (!ReadFile<uint32_t>(inFile, "rb", &contents)) return 1;
+  if (!ReadBinaryFile<uint32_t>(inFile, &contents)) return 1;
 
   // If printing to standard output, then spvBinaryToText should
   // do the printing.  In particular, colour printing on Windows is

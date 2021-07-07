@@ -46,6 +46,7 @@ TEST(TransformationAddConstantBooleanTest, NeitherPresentInitiallyAddBoth) {
   spvtools::ValidatorOptions validator_options;
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
+
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // True and false can both be added as neither is present.
@@ -68,7 +69,14 @@ TEST(TransformationAddConstantBooleanTest, NeitherPresentInitiallyAddBoth) {
   auto add_false = TransformationAddConstantBoolean(8, false, false);
 
   ASSERT_TRUE(add_true.IsApplicable(context.get(), transformation_context));
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(7));
+  ASSERT_EQ(nullptr, context->get_constant_mgr()->FindDeclaredConstant(7));
   ApplyAndCheckFreshIds(add_true, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpConstantTrue, context->get_def_use_mgr()->GetDef(7)->opcode());
+  ASSERT_TRUE(context->get_constant_mgr()
+                  ->FindDeclaredConstant(7)
+                  ->AsBoolConstant()
+                  ->value());
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 

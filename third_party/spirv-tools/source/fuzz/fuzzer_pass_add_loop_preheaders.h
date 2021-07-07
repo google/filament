@@ -32,8 +32,6 @@ class FuzzerPassAddLoopPreheaders : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddLoopPreheaders();
-
   void Apply() override;
 };
 

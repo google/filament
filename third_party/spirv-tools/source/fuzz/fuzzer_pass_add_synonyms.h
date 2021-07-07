@@ -29,8 +29,6 @@ class FuzzerPassAddSynonyms : public FuzzerPass {
                         FuzzerContext* fuzzer_context,
                         protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddSynonyms() override;
-
   void Apply() override;
 };
 

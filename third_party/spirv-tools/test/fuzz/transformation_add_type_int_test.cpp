@@ -85,6 +85,29 @@ TEST(TransformationAddTypeIntTest, IsApplicable) {
   transformation = TransformationAddTypeInt(7, 32, true);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
+
+  // By default SPIR-V does not support 16-bit integers.
+  // Below we add such capability, so the test should now be succesful.
+  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityInt16);
+  ASSERT_TRUE(TransformationAddTypeInt(7, 16, true)
+                  .IsApplicable(context.get(), transformation_context));
+
+  // By default SPIR-V does not support 64-bit integers.
+  // Below we add such capability, so the test should now pass.
+  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityInt64);
+  ASSERT_TRUE(TransformationAddTypeInt(7, 64, true)
+                  .IsApplicable(context.get(), transformation_context));
+
+#ifndef NDEBUG
+  // Should not be able to add signed/unsigned integers of width different from
+  // 16/32/64 bits.
+  ASSERT_DEATH(TransformationAddTypeInt(7, 20, false)
+                   .IsApplicable(context.get(), transformation_context),
+               "Unexpected integer type width");
+  ASSERT_DEATH(TransformationAddTypeInt(12, 15, false)
+                   .IsApplicable(context.get(), transformation_context),
+               "Unexpected integer type width");
+#endif
 }
 
 TEST(TransformationAddTypeIntTest, Apply) {
@@ -118,8 +141,14 @@ TEST(TransformationAddTypeIntTest, Apply) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Adds signed 8-bit integer type.
+  // For this transformation we also check that the def-use manager and type
+  // manager are updated appropriately.
   auto transformation = TransformationAddTypeInt(6, 8, true);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(6));
+  ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(6));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpTypeInt, context->get_def_use_mgr()->GetDef(6)->opcode());
+  ASSERT_NE(nullptr, context->get_type_mgr()->GetType(6)->AsInteger());
 
   // Adds signed 16-bit integer type.
   transformation = TransformationAddTypeInt(7, 16, true);

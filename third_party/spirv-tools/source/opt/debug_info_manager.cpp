@@ -31,9 +31,7 @@ static const uint32_t kDebugInlinedAtOperandInlinedIndex = 6;
 static const uint32_t kDebugExpressOperandOperationIndex = 4;
 static const uint32_t kDebugDeclareOperandLocalVariableIndex = 4;
 static const uint32_t kDebugDeclareOperandVariableIndex = 5;
-static const uint32_t kDebugValueOperandLocalVariableIndex = 4;
 static const uint32_t kDebugValueOperandExpressionIndex = 6;
-static const uint32_t kDebugValueOperandIndexesIndex = 7;
 static const uint32_t kDebugOperationOperandOperationIndex = 4;
 static const uint32_t kOpVariableOperandStorageClassIndex = 2;
 static const uint32_t kDebugLocalVariableOperandParentIndex = 9;
@@ -479,44 +477,6 @@ bool DebugInfoManager::IsDeclareVisibleToInstr(Instruction* dbg_declare,
   return false;
 }
 
-Instruction* DebugInfoManager::AddDebugValueWithIndex(
-    uint32_t dbg_local_var_id, uint32_t value_id, uint32_t expr_id,
-    uint32_t index_id, Instruction* insert_before) {
-  uint32_t result_id = context()->TakeNextId();
-  if (!result_id) return nullptr;
-  std::unique_ptr<Instruction> new_dbg_value(new Instruction(
-      context(), SpvOpExtInst, context()->get_type_mgr()->GetVoidTypeId(),
-      result_id,
-      {
-          {spv_operand_type_t::SPV_OPERAND_TYPE_ID,
-           {context()
-                ->get_feature_mgr()
-                ->GetExtInstImportId_OpenCL100DebugInfo()}},
-          {spv_operand_type_t::SPV_OPERAND_TYPE_EXTENSION_INSTRUCTION_NUMBER,
-           {static_cast<uint32_t>(OpenCLDebugInfo100DebugValue)}},
-          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {dbg_local_var_id}},
-          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {value_id}},
-          {spv_operand_type_t::SPV_OPERAND_TYPE_ID,
-           {expr_id == 0 ? GetEmptyDebugExpression()->result_id() : expr_id}},
-      }));
-  if (index_id) {
-    new_dbg_value->AddOperand(
-        {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {index_id}});
-  }
-
-  Instruction* added_dbg_value =
-      insert_before->InsertBefore(std::move(new_dbg_value));
-  AnalyzeDebugInst(added_dbg_value);
-  if (context()->AreAnalysesValid(IRContext::Analysis::kAnalysisDefUse))
-    context()->get_def_use_mgr()->AnalyzeInstDefUse(added_dbg_value);
-  if (context()->AreAnalysesValid(
-          IRContext::Analysis::kAnalysisInstrToBlockMapping)) {
-    auto insert_blk = context()->get_instr_block(insert_before);
-    context()->set_instr_block(added_dbg_value, insert_blk);
-  }
-  return added_dbg_value;
-}
-
 bool DebugInfoManager::AddDebugValueIfVarDeclIsVisible(
     Instruction* scope_and_line, uint32_t variable_id, uint32_t value_id,
     Instruction* insert_pos,
@@ -540,28 +500,16 @@ bool DebugInfoManager::AddDebugValueIfVarDeclIsVisible(
            insert_before->opcode() == SpvOpVariable) {
       insert_before = insert_before->NextNode();
     }
-
-    uint32_t index_id = 0;
-    if (dbg_decl_or_val->NumOperands() > kDebugValueOperandIndexesIndex) {
-      index_id =
-          dbg_decl_or_val->GetSingleWordOperand(kDebugValueOperandIndexesIndex);
-    }
-
-    Instruction* added_dbg_value =
-        AddDebugValueWithIndex(dbg_decl_or_val->GetSingleWordOperand(
-                                   kDebugValueOperandLocalVariableIndex),
-                               value_id, 0, index_id, insert_before);
-    assert(added_dbg_value != nullptr);
-    added_dbg_value->UpdateDebugInfoFrom(scope_and_line);
-    AnalyzeDebugInst(added_dbg_value);
-    modified = true;
+    modified |= AddDebugValueForDecl(dbg_decl_or_val, value_id, insert_before,
+                                     scope_and_line) != nullptr;
   }
   return modified;
 }
 
-bool DebugInfoManager::AddDebugValueForDecl(Instruction* dbg_decl,
-                                            uint32_t value_id) {
-  if (dbg_decl == nullptr || !IsDebugDeclare(dbg_decl)) return false;
+Instruction* DebugInfoManager::AddDebugValueForDecl(
+    Instruction* dbg_decl, uint32_t value_id, Instruction* insert_before,
+    Instruction* scope_and_line) {
+  if (dbg_decl == nullptr || !IsDebugDeclare(dbg_decl)) return nullptr;
 
   std::unique_ptr<Instruction> dbg_val(dbg_decl->Clone(context()));
   dbg_val->SetResultId(context()->TakeNextId());
@@ -570,17 +518,18 @@ bool DebugInfoManager::AddDebugValueForDecl(Instruction* dbg_decl,
   dbg_val->SetOperand(kDebugDeclareOperandVariableIndex, {value_id});
   dbg_val->SetOperand(kDebugValueOperandExpressionIndex,
                       {GetEmptyDebugExpression()->result_id()});
+  dbg_val->UpdateDebugInfoFrom(scope_and_line);
 
-  auto* added_dbg_val = dbg_decl->InsertBefore(std::move(dbg_val));
+  auto* added_dbg_val = insert_before->InsertBefore(std::move(dbg_val));
   AnalyzeDebugInst(added_dbg_val);
   if (context()->AreAnalysesValid(IRContext::Analysis::kAnalysisDefUse))
     context()->get_def_use_mgr()->AnalyzeInstDefUse(added_dbg_val);
   if (context()->AreAnalysesValid(
           IRContext::Analysis::kAnalysisInstrToBlockMapping)) {
-    auto insert_blk = context()->get_instr_block(dbg_decl);
+    auto insert_blk = context()->get_instr_block(insert_before);
     context()->set_instr_block(added_dbg_val, insert_blk);
   }
-  return true;
+  return added_dbg_val;
 }
 
 uint32_t DebugInfoManager::GetVariableIdOfDebugValueUsedForDeclare(

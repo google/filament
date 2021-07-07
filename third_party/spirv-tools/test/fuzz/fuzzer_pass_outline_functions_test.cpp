@@ -124,8 +124,8 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryIsAlreadySuitable) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  PseudoRandomGenerator prng(0);
-  FuzzerContext fuzzer_context(&prng, 100);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
   protobufs::TransformationSequence transformation_sequence;
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
@@ -167,8 +167,8 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryHasOpVariable) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  PseudoRandomGenerator prng(0);
-  FuzzerContext fuzzer_context(&prng, 100);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
   protobufs::TransformationSequence transformation_sequence;
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
@@ -291,8 +291,8 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryBlockIsHeader) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  PseudoRandomGenerator prng(0);
-  FuzzerContext fuzzer_context(&prng, 100);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
   protobufs::TransformationSequence transformation_sequence;
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
@@ -458,8 +458,8 @@ TEST(FuzzerPassOutlineFunctionsTest, ExitBlock) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  PseudoRandomGenerator prng(0);
-  FuzzerContext fuzzer_context(&prng, 100);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
   protobufs::TransformationSequence transformation_sequence;
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,

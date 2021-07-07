@@ -2722,6 +2722,7 @@ OpSource GLSL 140
 ; CHECK: [[bb1]] = OpLabel
 ; CHECK-NEXT: OpBranch [[bb2:%\w+]]
 ; CHECK: [[bb2]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge
 ; CHECK-NEXT: OpSwitch {{%\w+}} [[bb3:%\w+]] 0 [[loop_merge]] 1 [[bb3:%\w+]]
 ; CHECK: [[bb3]] = OpLabel
 ; CHECK-NEXT: OpBranch [[sel_merge:%\w+]]
@@ -2739,6 +2740,7 @@ OpBranch %bb1
 OpSelectionMerge %sel_merge None
 OpBranchConditional %true %bb2 %bb4
 %bb2 = OpLabel
+OpSelectionMerge %bb3 None
 OpSwitch %undef_int %bb3 0 %loop_merge 1 %bb3
 %bb3 = OpLabel
 OpBranch %sel_merge
@@ -2782,6 +2784,7 @@ OpSource GLSL 140
 ; CHECK: [[bb1]] = OpLabel
 ; CHECK-NEXT: OpBranch [[bb2:%\w+]]
 ; CHECK: [[bb2]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge
 ; CHECK-NEXT: OpSwitch {{%\w+}} [[bb3:%\w+]] 0 [[loop_cont]] 1 [[bb3:%\w+]]
 ; CHECK: [[bb3]] = OpLabel
 ; CHECK-NEXT: OpBranch [[sel_merge:%\w+]]
@@ -2799,6 +2802,7 @@ OpBranch %bb1
 OpSelectionMerge %sel_merge None
 OpBranchConditional %true %bb2 %bb4
 %bb2 = OpLabel
+OpSelectionMerge %bb3 None
 OpSwitch %undef_int %bb3 0 %cont 1 %bb3
 %bb3 = OpLabel
 OpBranch %sel_merge

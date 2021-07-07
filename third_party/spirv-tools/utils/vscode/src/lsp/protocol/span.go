@@ -19,7 +19,8 @@ package protocol
 import (
 	"fmt"
 
-	"../span"
+	"github.com/KhronosGroup/SPIRV-Tools/utils/vscode/src/lsp/span"
+
 	errors "golang.org/x/xerrors"
 )
 

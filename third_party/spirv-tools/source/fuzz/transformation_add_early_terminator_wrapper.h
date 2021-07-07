@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddEarlyTerminatorWrapper : public Transformation {
  public:
   explicit TransformationAddEarlyTerminatorWrapper(
-      const protobufs::TransformationAddEarlyTerminatorWrapper& message);
+      protobufs::TransformationAddEarlyTerminatorWrapper message);
 
   TransformationAddEarlyTerminatorWrapper(uint32_t function_fresh_id,
                                           uint32_t label_fresh_id,

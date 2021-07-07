@@ -188,7 +188,7 @@ spv_result_t LogicalsPass(ValidationState_t& _, const Instruction* inst) {
           case SpvOpTypeStruct: {
             if (!composites) return fail();
             break;
-          };
+          }
 
           default:
             return fail();

@@ -26,9 +26,6 @@ FuzzerPassAddNoContractionDecorations::FuzzerPassAddNoContractionDecorations(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddNoContractionDecorations::
-    ~FuzzerPassAddNoContractionDecorations() = default;
-
 void FuzzerPassAddNoContractionDecorations::Apply() {
   // Consider every instruction in every block in every function.
   for (auto& function : *GetIRContext()->module()) {

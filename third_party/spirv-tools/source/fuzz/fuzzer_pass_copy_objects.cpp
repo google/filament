@@ -28,8 +28,6 @@ FuzzerPassCopyObjects::FuzzerPassCopyObjects(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassCopyObjects::~FuzzerPassCopyObjects() = default;
-
 void FuzzerPassCopyObjects::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* function, opt::BasicBlock* block,

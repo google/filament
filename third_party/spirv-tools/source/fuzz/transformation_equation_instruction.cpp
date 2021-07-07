@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationEquationInstruction::TransformationEquationInstruction(
-    const spvtools::fuzz::protobufs::TransformationEquationInstruction& message)
-    : message_(message) {}
+    protobufs::TransformationEquationInstruction message)
+    : message_(std::move(message)) {}
 
 TransformationEquationInstruction::TransformationEquationInstruction(
     uint32_t fresh_id, SpvOp opcode, const std::vector<uint32_t>& in_operand_id,
@@ -84,13 +84,17 @@ void TransformationEquationInstruction::Apply(
     rhs_id.push_back(id);
   }
 
-  FindInstruction(message_.instruction_to_insert_before(), ir_context)
-      ->InsertBefore(MakeUnique<opt::Instruction>(
+  auto insert_before =
+      FindInstruction(message_.instruction_to_insert_before(), ir_context);
+  opt::Instruction* new_instruction =
+      insert_before->InsertBefore(MakeUnique<opt::Instruction>(
           ir_context, static_cast<SpvOp>(message_.opcode()),
           MaybeGetResultTypeId(ir_context), message_.fresh_id(),
           std::move(in_operands)));
 
-  ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_instruction);
+  ir_context->set_instr_block(new_instruction,
+                              ir_context->get_instr_block(insert_before));
 
   // Add an equation fact as long as the result id is not irrelevant (it could
   // be if we are inserting into a dead block).

@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddTypeInt::TransformationAddTypeInt(
-    const spvtools::fuzz::protobufs::TransformationAddTypeInt& message)
-    : message_(message) {}
+    protobufs::TransformationAddTypeInt message)
+    : message_(std::move(message)) {}
 
 TransformationAddTypeInt::TransformationAddTypeInt(uint32_t fresh_id,
                                                    uint32_t width,
@@ -74,12 +74,21 @@ bool TransformationAddTypeInt::IsApplicable(
 
 void TransformationAddTypeInt::Apply(opt::IRContext* ir_context,
                                      TransformationContext* /*unused*/) const {
-  fuzzerutil::AddIntegerType(ir_context, message_.fresh_id(), message_.width(),
-                             message_.is_signed());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  auto type_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeInt, 0, message_.fresh_id(),
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.width()}},
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER,
+           {message_.is_signed() ? 1u : 0u}}});
+  auto type_instruction_ptr = type_instruction.get();
+  ir_context->module()->AddType(std::move(type_instruction));
+
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+
+  // Inform the def use manager that there is a new definition. Invalidate the
+  // type manager since we have added a new type.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(type_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisTypes);
 }
 
 protobufs::Transformation TransformationAddTypeInt::ToMessage() const {

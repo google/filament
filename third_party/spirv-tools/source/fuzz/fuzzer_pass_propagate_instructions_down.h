@@ -28,8 +28,6 @@ class FuzzerPassPropagateInstructionsDown : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassPropagateInstructionsDown() override;
-
   void Apply() override;
 };
 

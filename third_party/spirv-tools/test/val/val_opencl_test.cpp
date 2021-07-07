@@ -23,6 +23,7 @@ namespace spvtools {
 namespace val {
 namespace {
 
+using testing::Eq;
 using testing::HasSubstr;
 
 using ValidateOpenCL = spvtest::ValidateBase<bool>;
@@ -91,7 +92,7 @@ TEST_F(ValidateOpenCL, NonZeroMSImageBad) {
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("MS must be 0 in the OpenCL environement."
+      HasSubstr("MS must be 0 in the OpenCL environment."
                 "\n  %2 = OpTypeImage %void 2D 0 0 1 0 Unknown ReadOnly\n"));
 }
 
@@ -224,6 +225,264 @@ TEST_F(ValidateOpenCL, ImageReadWithConstOffsetBad) {
           "\n  %call = OpImageRead %v4uint %img %coord ConstOffset %coord\n"));
 }
 
+TEST_F(ValidateOpenCL, ImageRead_NonDepthScalarFloatResult_Bad) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %float %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to have 4 components"));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_NonDepthScalarIntResult_Bad) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %uint %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to have 4 components"));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_NonDepthVector3FloatResult_Bad) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+          %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %v3float %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to have 4 components"));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_NonDepthVector4FloatResult_Ok) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+          %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %v4float %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_NonDepthVector4IntResult_Ok) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+     %v4uint = OpTypeVector %uint 4
+          %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %v4uint %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_DepthScalarFloatResult_Ok) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %void 2D 1 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %float %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(), Eq(""));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_DepthScalarIntResult_Bad) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %void 2D 1 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %uint %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type from a depth image "
+                        "read to result in a scalar float value"));
+}
+
+TEST_F(ValidateOpenCL, ImageRead_DepthVectorFloatResult_Bad) {
+  std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %5 "image_kernel"
+               OpName %img "img"
+               OpName %coord "coord"
+               OpName %call "call"
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
+       %void = OpTypeVoid
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+          %3 = OpTypeImage %void 2D 1 0 0 0 Unknown ReadOnly
+          %4 = OpTypeFunction %void %3
+          %5 = OpFunction %void None %4
+        %img = OpFunctionParameter %3
+      %entry = OpLabel
+       %call = OpImageRead %v4float %img %coord
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type from a depth image "
+                        "read to result in a scalar float value"));
+}
+
 TEST_F(ValidateOpenCL, ImageSampleExplicitLodWithConstOffsetBad) {
   std::string spirv = R"(
                OpCapability Addresses
@@ -236,18 +495,16 @@ TEST_F(ValidateOpenCL, ImageSampleExplicitLodWithConstOffsetBad) {
                OpName %coord "coord"
                OpName %call "call"
        %uint = OpTypeInt 32 0
-     %uint_7 = OpConstant %uint 7
-     %uint_3 = OpConstant %uint 3
+     %v2uint = OpTypeVector %uint 2
+      %coord = OpConstantNull %v2uint
        %void = OpTypeVoid
           %3 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadOnly
           %4 = OpTypeFunction %void %3
           %8 = OpTypeSampler
          %10 = OpTypeSampledImage %3
      %v4uint = OpTypeVector %uint 4
-     %v2uint = OpTypeVector %uint 2
       %float = OpTypeFloat 32
           %9 = OpConstantSampler %8 None 0 Nearest
-      %coord = OpConstantComposite %v2uint %uint_7 %uint_3
     %float_0 = OpConstant %float 0
           %5 = OpFunction %void None %4
           %6 = OpFunctionParameter %3

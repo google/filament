@@ -181,6 +181,8 @@ INSTANTIATE_TEST_SUITE_P(
          {SpvCapabilityDeviceGroup, "DeviceGroup"},
          {SpvCapabilityAtomicFloat32AddEXT, "AtomicFloat32AddEXT"},
          {SpvCapabilityAtomicFloat64AddEXT, "AtomicFloat64AddEXT"},
+         {SpvCapabilityAtomicFloat32MinMaxEXT, "AtomicFloat32MinMaxEXT"},
+         {SpvCapabilityAtomicFloat64MinMaxEXT, "AtomicFloat64MinMaxEXT"},
          {SpvCapabilityMultiView, "MultiView"},
          {SpvCapabilityInt64ImageEXT, "Int64ImageEXT"},
          {SpvCapabilitySampleMaskOverrideCoverageNV,

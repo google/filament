@@ -29,8 +29,6 @@ class FuzzerPassPermuteInstructions : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassPermuteInstructions() override;
-
   void Apply() override;
 };
 

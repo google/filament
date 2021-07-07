@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddTypeFloat : public Transformation {
  public:
   explicit TransformationAddTypeFloat(
-      const protobufs::TransformationAddTypeFloat& message);
+      protobufs::TransformationAddTypeFloat message);
 
   TransformationAddTypeFloat(uint32_t fresh_id, uint32_t width);
 

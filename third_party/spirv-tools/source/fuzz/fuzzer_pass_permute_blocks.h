@@ -29,8 +29,6 @@ class FuzzerPassPermuteBlocks : public FuzzerPass {
                           FuzzerContext* fuzzer_context,
                           protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassPermuteBlocks() override;
-
   void Apply() override;
 };
 

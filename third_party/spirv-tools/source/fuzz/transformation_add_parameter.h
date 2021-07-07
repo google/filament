@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddParameter : public Transformation {
  public:
   explicit TransformationAddParameter(
-      const protobufs::TransformationAddParameter& message);
+      protobufs::TransformationAddParameter message);
 
   TransformationAddParameter(uint32_t function_id, uint32_t parameter_fresh_id,
                              uint32_t parameter_type_id,

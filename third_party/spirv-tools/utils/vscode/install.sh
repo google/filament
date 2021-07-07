@@ -18,15 +18,17 @@ set -e # Fail on any error.
 EXT_PATH=~/.vscode/extensions/google.spirvls-0.0.1
 ROOT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-go run ${ROOT_PATH}/src/tools/gen-grammar.go --cache ${ROOT_PATH}/cache --template ${ROOT_PATH}/spirv.json.tmpl --out ${ROOT_PATH}/spirv.json
-go run ${ROOT_PATH}/src/tools/gen-grammar.go --cache ${ROOT_PATH}/cache --template ${ROOT_PATH}/src/schema/schema.go.tmpl --out ${ROOT_PATH}/src/schema/schema.go
+pushd ${ROOT_PATH}
+    go run ./src/tools/gen-grammar.go --cache ./cache --template ./spirv.json.tmpl --out ./spirv.json
+    go run ./src/tools/gen-grammar.go --cache ./cache --template ./src/schema/schema.go.tmpl --out ./src/schema/schema.go
 
-mkdir -p ${EXT_PATH}
-cp ${ROOT_PATH}/extension.js ${EXT_PATH}
-cp ${ROOT_PATH}/package.json ${EXT_PATH}
-cp ${ROOT_PATH}/spirv.json ${EXT_PATH}
+    mkdir -p ${EXT_PATH}
+    cp ./extension.js ${EXT_PATH}
+    cp ./package.json ${EXT_PATH}
+    cp ./spirv.json ${EXT_PATH}
 
-go build -o ${EXT_PATH}/langsvr ${ROOT_PATH}/src/langsvr.go
+    go build -o ${EXT_PATH}/langsvr ./src/langsvr.go
+popd
 
 cd ${EXT_PATH}
 npm install

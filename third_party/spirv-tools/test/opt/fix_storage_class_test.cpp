@@ -528,6 +528,48 @@ TEST_F(FixStorageClassTest, FixLinkedAccessChain2) {
   SinglePassRunAndMatch<FixStorageClass>(text, false);
 }
 
+TEST_F(FixStorageClassTest, AllowImageFormatMismatch) {
+  const std::string text = R"(OpCapability Shader
+OpCapability SampledBuffer
+OpCapability ImageBuffer
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpSource HLSL 600
+OpName %type_buffer_image "type.buffer.image"
+OpName %Buf "Buf"
+OpName %main "main"
+OpName %src_main "src.main"
+OpName %bb_entry "bb.entry"
+OpName %type_buffer_image_0 "type.buffer.image"
+OpName %b "b"
+OpDecorate %Buf DescriptorSet 0
+OpDecorate %Buf Binding 0
+%float = OpTypeFloat 32
+%type_buffer_image = OpTypeImage %float Buffer 2 0 0 2 Rgba16f
+%_ptr_UniformConstant_type_buffer_image = OpTypePointer UniformConstant %type_buffer_image
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%type_buffer_image_0 = OpTypeImage %float Buffer 2 0 0 2 Rgba32f
+%_ptr_Function_type_buffer_image_0 = OpTypePointer Function %type_buffer_image_0
+%Buf = OpVariable %_ptr_UniformConstant_type_buffer_image UniformConstant
+%main = OpFunction %void None %11
+%13 = OpLabel
+%14 = OpFunctionCall %void %src_main
+OpReturn
+OpFunctionEnd
+%src_main = OpFunction %void None %11
+%bb_entry = OpLabel
+%b = OpVariable %_ptr_Function_type_buffer_image_0 Function
+%15 = OpLoad %type_buffer_image %Buf
+OpStore %b %15
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<FixStorageClass>(text, text, false, false);
+}
+
 using FixTypeTest = PassTest<::testing::Test>;
 
 TEST_F(FixTypeTest, FixAccessChain) {

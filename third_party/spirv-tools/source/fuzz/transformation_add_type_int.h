@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddTypeInt : public Transformation {
  public:
   explicit TransformationAddTypeInt(
-      const protobufs::TransformationAddTypeInt& message);
+      protobufs::TransformationAddTypeInt message);
 
   TransformationAddTypeInt(uint32_t fresh_id, uint32_t width, bool is_signed);
 

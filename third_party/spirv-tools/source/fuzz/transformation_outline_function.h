@@ -30,7 +30,7 @@ namespace fuzz {
 class TransformationOutlineFunction : public Transformation {
  public:
   explicit TransformationOutlineFunction(
-      const protobufs::TransformationOutlineFunction& message);
+      protobufs::TransformationOutlineFunction message);
 
   TransformationOutlineFunction(
       uint32_t entry_block, uint32_t exit_block,

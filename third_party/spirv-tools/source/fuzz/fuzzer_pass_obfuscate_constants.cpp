@@ -34,8 +34,6 @@ FuzzerPassObfuscateConstants::FuzzerPassObfuscateConstants(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassObfuscateConstants::~FuzzerPassObfuscateConstants() = default;
-
 void FuzzerPassObfuscateConstants::ObfuscateBoolConstantViaConstantPair(
     uint32_t depth, const protobufs::IdUseDescriptor& bool_constant_use,
     const std::vector<SpvOp>& greater_than_opcodes,

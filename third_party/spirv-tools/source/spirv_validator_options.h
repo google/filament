@@ -45,6 +45,7 @@ struct spv_validator_options_t {
         relax_block_layout(false),
         uniform_buffer_standard_layout(false),
         scalar_block_layout(false),
+        workgroup_scalar_block_layout(false),
         skip_block_layout(false),
         before_hlsl_legalization(false) {}
 
@@ -54,6 +55,7 @@ struct spv_validator_options_t {
   bool relax_block_layout;
   bool uniform_buffer_standard_layout;
   bool scalar_block_layout;
+  bool workgroup_scalar_block_layout;
   bool skip_block_layout;
   bool before_hlsl_legalization;
 };

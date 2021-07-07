@@ -14,11 +14,19 @@
 
 #include "source/fuzz/fuzzer_pass_add_dead_blocks.h"
 
+#include <algorithm>
+
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/transformation_add_dead_block.h"
 
 namespace spvtools {
 namespace fuzz {
+
+namespace {
+
+const size_t kMaxTransformationsInOnePass = 100U;
+
+}  // namespace
 
 FuzzerPassAddDeadBlocks::FuzzerPassAddDeadBlocks(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
@@ -26,8 +34,6 @@ FuzzerPassAddDeadBlocks::FuzzerPassAddDeadBlocks(
     protobufs::TransformationSequence* transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
-
-FuzzerPassAddDeadBlocks::~FuzzerPassAddDeadBlocks() = default;
 
 void FuzzerPassAddDeadBlocks::Apply() {
   // We iterate over all blocks in the module collecting up those at which we
@@ -57,9 +63,18 @@ void FuzzerPassAddDeadBlocks::Apply() {
           GetFuzzerContext()->GetFreshId(), block.id(), condition_value));
     }
   }
-  // Apply all those transformations that are in fact applicable.
-  for (auto& transformation : candidate_transformations) {
-    MaybeApplyTransformation(transformation);
+  // Applying transformations can be expensive as each transformation requires
+  // dominator information and also invalidates dominator information. We thus
+  // limit the number of transformations that one application of this fuzzer
+  // pass can apply. We choose to do this after identifying all the
+  // transformations that we *might* want to apply, rather than breaking the
+  // above loops once the limit is reached, to avoid biasing towards
+  // transformations that target early parts of the module.
+  GetFuzzerContext()->Shuffle(&candidate_transformations);
+  for (size_t i = 0; i < std::min(kMaxTransformationsInOnePass,
+                                  candidate_transformations.size());
+       i++) {
+    MaybeApplyTransformation(candidate_transformations[i]);
   }
 }
 

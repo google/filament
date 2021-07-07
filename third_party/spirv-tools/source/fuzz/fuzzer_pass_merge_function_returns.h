@@ -33,8 +33,6 @@ class FuzzerPassMergeFunctionReturns : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassMergeFunctionReturns();
-
   void Apply() override;
 
  private:

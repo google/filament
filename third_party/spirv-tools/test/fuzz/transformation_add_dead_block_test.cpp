@@ -142,6 +142,99 @@ TEST(TransformationAddDeadBlockTest, BasicTest) {
   ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
 }
 
+TEST(TransformationAddDeadBlockTest, ApplicableWithFalseCondition) {
+  std::string reference_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %6 "main"
+               OpExecutionMode %6 OriginUpperLeft
+
+; Types
+          %2 = OpTypeBool
+          %3 = OpTypeVoid
+          %4 = OpTypeFunction %3
+
+; Constants
+          %5 = OpConstantFalse %2
+
+; main function
+          %6 = OpFunction %3 None %4
+          %7 = OpLabel
+               OpSelectionMerge %11 None
+               OpBranchConditional %5 %8 %9
+          %8 = OpLabel
+               OpBranch %10
+          %9 = OpLabel
+               OpBranch %10
+         %10 = OpLabel
+               OpBranch %11
+         %11 = OpLabel
+               OpBranch %13
+         %12 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto env = SPV_ENV_UNIVERSAL_1_4;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  auto transformation = TransformationAddDeadBlock(14, 11, false);
+
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+
+  std::string variant_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %6 "main"
+               OpExecutionMode %6 OriginUpperLeft
+
+; Types
+          %2 = OpTypeBool
+          %3 = OpTypeVoid
+          %4 = OpTypeFunction %3
+
+; Constants
+          %5 = OpConstantFalse %2
+
+; main function
+          %6 = OpFunction %3 None %4
+          %7 = OpLabel
+               OpSelectionMerge %11 None
+               OpBranchConditional %5 %8 %9
+          %8 = OpLabel
+               OpBranch %10
+          %9 = OpLabel
+               OpBranch %10
+         %10 = OpLabel
+               OpBranch %11
+         %11 = OpLabel
+               OpSelectionMerge %13 None
+               OpBranchConditional %5 %14 %13
+         %14 = OpLabel
+               OpBranch %13
+         %12 = OpLabel
+               OpBranch %13
+         %13 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  ASSERT_TRUE(IsEqual(env, variant_shader, context.get()));
+}
+
 TEST(TransformationAddDeadBlockTest, TargetBlockMustNotBeSelectionMerge) {
   std::string shader = R"(
                OpCapability Shader

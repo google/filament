@@ -28,7 +28,7 @@ namespace fuzz {
 class TransformationReplaceConstantWithUniform : public Transformation {
  public:
   explicit TransformationReplaceConstantWithUniform(
-      const protobufs::TransformationReplaceConstantWithUniform& message);
+      protobufs::TransformationReplaceConstantWithUniform message);
 
   TransformationReplaceConstantWithUniform(
       protobufs::IdUseDescriptor id_use,

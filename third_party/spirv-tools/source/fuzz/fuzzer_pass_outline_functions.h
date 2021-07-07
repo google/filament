@@ -29,8 +29,6 @@ class FuzzerPassOutlineFunctions : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassOutlineFunctions();
-
   void Apply() override;
 
   // Returns a block suitable to be an entry block for a region that can be

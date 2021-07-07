@@ -103,6 +103,10 @@ class ValidationState_t {
     // Members need not be listed in offset order
     bool scalar_block_layout = false;
 
+    // Use scalar block layout (as defined above) for Workgroup block
+    // variables.  See VK_KHR_workgroup_memory_explicit_layout.
+    bool workgroup_scalar_block_layout = false;
+
     // SPIR-V 1.4 allows us to select between any two composite values
     // of the same type.
     bool select_between_composites = false;
@@ -459,6 +463,10 @@ class ValidationState_t {
 
   /// Records cons_id as a consumer of sampled_image_id.
   void RegisterSampledImageConsumer(uint32_t sampled_image_id,
+                                    Instruction* consumer);
+
+  // Record a function's storage class consumer instruction
+  void RegisterStorageClassConsumer(SpvStorageClass storage_class,
                                     Instruction* consumer);
 
   /// Returns the set of Global Variables.

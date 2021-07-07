@@ -29,8 +29,6 @@ class FuzzerPassReplaceOpSelectsWithConditionalBranches : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassReplaceOpSelectsWithConditionalBranches() override;
-
   void Apply() override;
 
  private:

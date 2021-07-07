@@ -33,9 +33,6 @@ FuzzerPassAddLoopsToCreateIntConstantSynonyms::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddLoopsToCreateIntConstantSynonyms::
-    ~FuzzerPassAddLoopsToCreateIntConstantSynonyms() = default;
-
 void FuzzerPassAddLoopsToCreateIntConstantSynonyms::Apply() {
   std::vector<uint32_t> constants;
 

@@ -103,7 +103,7 @@ namespace fuzz {
 class TransformationAddBitInstructionSynonym : public Transformation {
  public:
   explicit TransformationAddBitInstructionSynonym(
-      const protobufs::TransformationAddBitInstructionSynonym& message);
+      protobufs::TransformationAddBitInstructionSynonym message);
 
   TransformationAddBitInstructionSynonym(
       const uint32_t instruction_result_id,
@@ -127,6 +127,14 @@ class TransformationAddBitInstructionSynonym : public Transformation {
   // Returns the number of fresh ids required to apply the transformation.
   static uint32_t GetRequiredFreshIdCount(opt::IRContext* ir_context,
                                           opt::Instruction* bit_instruction);
+
+  //   Returns true if:
+  // - A |bit_instruction| is one of OpBitwiseOr, OpBitwiseAnd, OpBitwiseXor or
+  // OpNot.
+  // - |bit_instruction|'s operands are scalars.
+  // - The operands have the same signedness.
+  static bool IsInstructionSupported(opt::IRContext* ir_context,
+                                     opt::Instruction* instruction);
 
  private:
   protobufs::TransformationAddBitInstructionSynonym message_;

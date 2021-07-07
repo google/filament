@@ -62,6 +62,8 @@ OpEntryPoint GLCompute %main "main"
   spv_target_env env = SPV_ENV_VULKAN_1_0;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-LocalSize-04683"));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("In the Vulkan environment, GLCompute execution model entry "
@@ -111,6 +113,8 @@ OpExecutionMode %main OriginLowerLeft
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OriginLowerLeft-04653"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("In the Vulkan environment, the OriginLowerLeft "
                         "execution mode must not be used."));
 }
@@ -127,6 +131,8 @@ OpExecutionMode %main PixelCenterInteger
   spv_target_env env = SPV_ENV_VULKAN_1_0;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-PixelCenterInteger-04654"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("In the Vulkan environment, the PixelCenterInteger "
                         "execution mode must not be used."));
@@ -531,24 +537,16 @@ TEST_P(ValidateModeExecution, ExecutionMode) {
 
   std::ostringstream sstr;
   sstr << "OpCapability Shader\n";
-  if (!spvIsWebGPUEnv(env)) {
-    sstr << "OpCapability Geometry\n";
-    sstr << "OpCapability Tessellation\n";
-    sstr << "OpCapability TransformFeedback\n";
-  }
-  if (!spvIsVulkanOrWebGPUEnv(env)) {
+  sstr << "OpCapability Geometry\n";
+  sstr << "OpCapability Tessellation\n";
+  sstr << "OpCapability TransformFeedback\n";
+  if (!spvIsVulkanEnv(env)) {
     sstr << "OpCapability Kernel\n";
     if (env == SPV_ENV_UNIVERSAL_1_3) {
       sstr << "OpCapability SubgroupDispatch\n";
     }
   }
-  if (spvIsWebGPUEnv(env)) {
-    sstr << "OpCapability VulkanMemoryModelKHR\n";
-    sstr << "OpExtension \"SPV_KHR_vulkan_memory_model\"\n";
-    sstr << "OpMemoryModel Logical VulkanKHR\n";
-  } else {
-    sstr << "OpMemoryModel Logical GLSL450\n";
-  }
+  sstr << "OpMemoryModel Logical GLSL450\n";
   sstr << "OpEntryPoint " << model << " %main \"main\"\n";
   if (mode.find("LocalSizeId") == 0 || mode.find("LocalSizeHintId") == 0 ||
       mode.find("SubgroupsPerWorkgroupId") == 0) {
@@ -713,39 +711,6 @@ INSTANTIATE_TEST_SUITE_P(
             Values("Xfb", "Initializer", "Finalizer", "SubgroupSize 1",
                    "SubgroupsPerWorkgroup 1", "SubgroupsPerWorkgroupId %int1"),
             Values(SPV_ENV_UNIVERSAL_1_3)));
-
-INSTANTIATE_TEST_SUITE_P(ValidateModeGLComputeWebGPUAllowListGood,
-                         ValidateModeExecution,
-                         Combine(Values(SPV_SUCCESS), Values(""),
-                                 Values("GLCompute"), Values("LocalSize 1 1 1"),
-                                 Values(SPV_ENV_WEBGPU_0)));
-
-INSTANTIATE_TEST_SUITE_P(
-    ValidateModeGLComputeWebGPUAllowListBad, ValidateModeExecution,
-    Combine(Values(SPV_ERROR_INVALID_DATA),
-            Values("Execution mode must be one of OriginUpperLeft, "
-                   "DepthReplacing, DepthGreater, DepthLess, DepthUnchanged, "
-                   "LocalSize, or LocalSizeHint for WebGPU environment"),
-            Values("GLCompute"), Values("LocalSizeId %int1 %int1 %int1"),
-            Values(SPV_ENV_WEBGPU_0)));
-
-INSTANTIATE_TEST_SUITE_P(
-    ValidateModeFragmentWebGPUAllowListGood, ValidateModeExecution,
-    Combine(Values(SPV_SUCCESS), Values(""), Values("Fragment"),
-            Values("OriginUpperLeft", "DepthReplacing", "DepthGreater",
-                   "DepthLess", "DepthUnchanged"),
-            Values(SPV_ENV_WEBGPU_0)));
-
-INSTANTIATE_TEST_SUITE_P(
-    ValidateModeFragmentWebGPUAllowListBad, ValidateModeExecution,
-    Combine(Values(SPV_ERROR_INVALID_DATA),
-            Values("Execution mode must be one of OriginUpperLeft, "
-                   "DepthReplacing, DepthGreater, DepthLess, DepthUnchanged, "
-                   "LocalSize, or LocalSizeHint for WebGPU environment"),
-            Values("Fragment"),
-            Values("PixelCenterInteger", "OriginLowerLeft",
-                   "EarlyFragmentTests"),
-            Values(SPV_ENV_WEBGPU_0)));
 
 TEST_F(ValidateModeExecution, MeshNVLocalSize) {
   const std::string spirv = R"(

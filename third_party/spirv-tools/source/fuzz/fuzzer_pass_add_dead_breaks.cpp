@@ -28,8 +28,6 @@ FuzzerPassAddDeadBreaks::FuzzerPassAddDeadBreaks(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddDeadBreaks::~FuzzerPassAddDeadBreaks() = default;
-
 void FuzzerPassAddDeadBreaks::Apply() {
   // We first collect up lots of possibly-applicable transformations.
   std::vector<TransformationAddDeadBreak> candidate_transformations;

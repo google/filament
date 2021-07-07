@@ -30,8 +30,6 @@ class FuzzerPassReplaceBranchesFromDeadBlocksWithExits : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassReplaceBranchesFromDeadBlocksWithExits() override;
-
   void Apply() override;
 };
 

@@ -28,8 +28,6 @@ FuzzerPassExpandVectorReductions::FuzzerPassExpandVectorReductions(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassExpandVectorReductions::~FuzzerPassExpandVectorReductions() = default;
-
 void FuzzerPassExpandVectorReductions::Apply() {
   for (auto& function : *GetIRContext()->module()) {
     for (auto& block : function) {

@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationMergeBlocks::TransformationMergeBlocks(
-    const spvtools::fuzz::protobufs::TransformationMergeBlocks& message)
-    : message_(message) {}
+    protobufs::TransformationMergeBlocks message)
+    : message_(std::move(message)) {}
 
 TransformationMergeBlocks::TransformationMergeBlocks(uint32_t block_id) {
   message_.set_block_id(block_id);
@@ -43,6 +43,9 @@ bool TransformationMergeBlocks::IsApplicable(
   }
   auto first_block = ir_context->cfg()->block(predecessors.at(0));
 
+  if (!ir_context->IsReachable(*first_block)) {
+    return false;
+  }
   return opt::blockmergeutil::CanMergeWithSuccessor(ir_context, first_block);
 }
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018 Google LLC.
+# Copyright (c) 2021 Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,89 +17,38 @@
 
 # Fail on any error.
 set -e
-# Display commands being run.
-set -x
 
-BUILD_ROOT=$PWD
-SRC=$PWD/github/SPIRV-Tools
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$( cd "${SCRIPT_DIR}/../../.." >/dev/null 2>&1 && pwd )"
+
 CONFIG=$1
 COMPILER=$2
-
-SKIP_TESTS="False"
-BUILD_TYPE="Debug"
-
-CMAKE_C_CXX_COMPILER=""
-if [ $COMPILER = "clang" ]
-then
-  PATH=/usr/lib/llvm-3.8/bin:$PATH
-  CMAKE_C_CXX_COMPILER="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-fi
-
-# Possible configurations are:
-# ASAN, COVERAGE, RELEASE, DEBUG, DEBUG_EXCEPTION, RELEASE_MINGW
-
-if [ $CONFIG = "RELEASE" ] || [ $CONFIG = "RELEASE_MINGW" ]
-then
-  BUILD_TYPE="RelWithDebInfo"
-fi
-
-ADDITIONAL_CMAKE_FLAGS=""
-if [ $CONFIG = "ASAN" ]
-then
-  ADDITIONAL_CMAKE_FLAGS="-DSPIRV_USE_SANITIZER=address,bounds,null"
-  [ $COMPILER = "clang" ] || { echo "$CONFIG requires clang"; exit 1; }
-elif [ $CONFIG = "COVERAGE" ]
-then
-  ADDITIONAL_CMAKE_FLAGS="-DENABLE_CODE_COVERAGE=ON"
-  SKIP_TESTS="True"
-elif [ $CONFIG = "DEBUG_EXCEPTION" ]
-then
-  ADDITIONAL_CMAKE_FLAGS="-DDISABLE_EXCEPTIONS=ON -DDISABLE_RTTI=ON"
-elif [ $CONFIG = "RELEASE_MINGW" ]
-then
-  ADDITIONAL_CMAKE_FLAGS="-Dgtest_disable_pthreads=ON -DCMAKE_TOOLCHAIN_FILE=$SRC/cmake/linux-mingw-toolchain.cmake"
-  SKIP_TESTS="True"
-fi
-
-# Get NINJA.
-wget -q https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
-unzip -q ninja-linux.zip
-export PATH="$PWD:$PATH"
-
-cd $SRC
-git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers external/spirv-headers
-git clone https://github.com/google/googletest          external/googletest
-cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31dc610fec7 && cd .. && cd ..
-git clone --depth=1 https://github.com/google/effcee              external/effcee
-git clone --depth=1 https://github.com/google/re2                 external/re2
-git clone --depth=1 --branch v3.13.0 https://github.com/protocolbuffers/protobuf external/protobuf
-
-mkdir build && cd $SRC/build
-
-# Invoke the build.
+TOOL=$3
 BUILD_SHA=${KOKORO_GITHUB_COMMIT:-$KOKORO_GITHUB_PULL_REQUEST_COMMIT}
-echo $(date): Starting build...
-cmake -DPYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3 -GNinja -DCMAKE_INSTALL_PREFIX=$KOKORO_ARTIFACTS_DIR/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DRE2_BUILD_TESTING=OFF -DSPIRV_BUILD_FUZZER=ON $ADDITIONAL_CMAKE_FLAGS $CMAKE_C_CXX_COMPILER ..
 
-echo $(date): Build everything...
-ninja
-echo $(date): Build completed.
+docker run --rm -i \
+  --volume "${ROOT_DIR}:${ROOT_DIR}" \
+  --volume "${KOKORO_ARTIFACTS_DIR}:${KOKORO_ARTIFACTS_DIR}" \
+  --workdir "${ROOT_DIR}" \
+  --env SCRIPT_DIR=${SCRIPT_DIR} \
+  --env ROOT_DIR=${ROOT_DIR} \
+  --env CONFIG=${CONFIG} \
+  --env COMPILER=${COMPILER} \
+  --env TOOL=${TOOL} \
+  --env KOKORO_ARTIFACTS_DIR="${KOKORO_ARTIFACTS_DIR}" \
+  --env BUILD_SHA="${BUILD_SHA}" \
+  --entrypoint "${SCRIPT_DIR}/build-docker.sh" \
+  "gcr.io/shaderc-build/radial-build:latest"
 
-if [ $CONFIG = "COVERAGE" ]
-then
-  echo $(date): Check coverage...
-  ninja report-coverage
-  echo $(date): Check coverage completed.
-fi
 
-echo $(date): Starting ctest...
-if [ $SKIP_TESTS = "False" ]
-then
-  ctest -j4 --output-on-failure --timeout 300
-fi
-echo $(date): ctest completed.
+# chown the given directory to the current user, if it exists.
+# Docker creates files with the root user - this can upset the Kokoro artifact copier.
+function chown_dir() {
+  dir=$1
+  if [[ -d "$dir" ]]; then
+    sudo chown -R "$(id -u):$(id -g)" "$dir"
+  fi
+}
 
-# Package the build.
-ninja install
-cd $KOKORO_ARTIFACTS_DIR
-tar czf install.tgz install
+chown_dir "${ROOT_DIR}/build"
+chown_dir "${ROOT_DIR}/external"

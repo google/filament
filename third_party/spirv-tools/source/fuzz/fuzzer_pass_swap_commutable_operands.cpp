@@ -28,8 +28,6 @@ FuzzerPassSwapCommutableOperands::FuzzerPassSwapCommutableOperands(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassSwapCommutableOperands::~FuzzerPassSwapCommutableOperands() = default;
-
 void FuzzerPassSwapCommutableOperands::Apply() {
   auto context = GetIRContext();
   // Iterates over the module's instructions and checks whether it is

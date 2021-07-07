@@ -27,8 +27,6 @@ FuzzerPassAddLoopPreheaders::FuzzerPassAddLoopPreheaders(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddLoopPreheaders::~FuzzerPassAddLoopPreheaders() = default;
-
 void FuzzerPassAddLoopPreheaders::Apply() {
   for (auto& function : *GetIRContext()->module()) {
     // Keep track of all the loop headers we want to add a preheader to.

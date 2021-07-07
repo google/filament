@@ -29,8 +29,6 @@ class FuzzerPassReplaceParameterWithGlobal : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassReplaceParameterWithGlobal() override;
-
   void Apply() override;
 };
 

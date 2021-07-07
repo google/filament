@@ -97,10 +97,14 @@ struct Operand {
     assert(type == SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER);
     assert(1 <= words.size());
     assert(words.size() <= 2);
-    // Load the low word.
-    uint64_t result = uint64_t(words[0]);
+    uint64_t result = 0;
+    if (words.size() > 0) {  // Needed to avoid maybe-uninitialized GCC warning
+      uint32_t low = words[0];
+      result = uint64_t(low);
+    }
     if (words.size() > 1) {
-      result = result | (uint64_t(words[1]) << 32);
+      uint32_t high = words[1];
+      result = result | (uint64_t(high) << 32);
     }
     return result;
   }
@@ -205,7 +209,7 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   Instruction(Instruction&&);
   Instruction& operator=(Instruction&&);
 
-  virtual ~Instruction() = default;
+  ~Instruction() override = default;
 
   // Returns a newly allocated instruction that has the same operands, result,
   // and type as |this|.  The new instruction is not linked into any list.

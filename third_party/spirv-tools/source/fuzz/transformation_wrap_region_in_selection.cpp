@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationWrapRegionInSelection::TransformationWrapRegionInSelection(
-    const protobufs::TransformationWrapRegionInSelection& message)
-    : message_(message) {}
+    protobufs::TransformationWrapRegionInSelection message)
+    : message_(std::move(message)) {}
 
 TransformationWrapRegionInSelection::TransformationWrapRegionInSelection(
     uint32_t region_entry_block_id, uint32_t region_exit_block_id,

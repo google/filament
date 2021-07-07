@@ -79,8 +79,8 @@ bool HasValidDependencies(opt::IRContext* ir_context, opt::Instruction* inst) {
 }  // namespace
 
 TransformationPropagateInstructionUp::TransformationPropagateInstructionUp(
-    const protobufs::TransformationPropagateInstructionUp& message)
-    : message_(message) {}
+    protobufs::TransformationPropagateInstructionUp message)
+    : message_(std::move(message)) {}
 
 TransformationPropagateInstructionUp::TransformationPropagateInstructionUp(
     uint32_t block_id,

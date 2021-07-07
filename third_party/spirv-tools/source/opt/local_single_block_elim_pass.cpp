@@ -270,6 +270,8 @@ void LocalSingleBlockLoadStoreElimPass::InitExtensions() {
       "SPV_EXT_fragment_invocation_density",
       "SPV_EXT_physical_storage_buffer",
       "SPV_KHR_terminate_invocation",
+      "SPV_KHR_subgroup_uniform_control_flow",
+      "SPV_KHR_integer_dot_product",
   });
 }
 

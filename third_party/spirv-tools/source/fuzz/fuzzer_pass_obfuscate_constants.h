@@ -32,8 +32,6 @@ class FuzzerPassObfuscateConstants : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassObfuscateConstants() override;
-
   void Apply() override;
 
  private:

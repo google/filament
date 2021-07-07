@@ -31,7 +31,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"../grammar"
+	"github.com/KhronosGroup/SPIRV-Tools/utils/vscode/src/grammar"
 )
 
 type grammarDefinition struct {
@@ -54,7 +54,7 @@ var (
 			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.opencl.std.100.grammar.json",
 		}, {
 			name: "OpenCL.DebugInfo.100",
-			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Tools/master/source/extinst.opencl.debuginfo.100.grammar.json",
+			url:  "https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json",
 		},
 	}
 
@@ -106,7 +106,7 @@ func run() error {
 	for _, ext := range extensionGrammars {
 		root, err := parseGrammar(ext)
 		if err != nil {
-			return errors.Wrap(err, "Failed to parse extension grammar file")
+			return errors.Wrap(err, "Failed to parse extension grammar file: "+ext.name)
 		}
 		args.Extensions = append(args.Extensions, extension{Root: root, Name: ext.name})
 		args.All.Instructions = append(args.All.Instructions, root.Instructions...)

@@ -395,6 +395,21 @@
         { "kind" : "IdRef", "name" : "'File'" },
         { "kind" : "IdRef", "name" : "'Text'", "quantifier" : "?" }
       ]
+    },
+    {
+      "opname" : "DebugModuleINTEL",
+      "opcode" : 36,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "'Name'" },
+        { "kind" : "IdRef", "name" : "'Source'" },
+        { "kind" : "IdRef", "name" : "'Parent'" },
+        { "kind" : "LiteralInteger", "name" : "'Line'" },
+        { "kind" : "IdRef", "name" : "'ConfigurationMacros'" },
+        { "kind" : "IdRef", "name" : "'IncludePath'" },
+        { "kind" : "IdRef", "name" : "'APINotesFile'" },
+        { "kind" : "LiteralInteger", "name" : "'IsDeclaration'" }
+      ],
+      "capability" : "DebugInfoModuleINTEL"
     }
   ],
   "operand_kinds" : [
@@ -402,6 +417,10 @@
       "category" : "BitEnum",
       "kind" : "DebugInfoFlags",
       "enumerants" : [
+        {
+          "enumerant" : "None",
+          "value" : "0x0000"
+        },
         {
           "enumerant" : "FlagIsProtected",
           "value" : "0x01"

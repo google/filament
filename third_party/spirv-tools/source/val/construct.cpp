@@ -78,7 +78,12 @@ Construct::ConstructBlockSet Construct::blocks(Function* function) const {
   ConstructBlockSet construct_blocks;
   std::unordered_set<BasicBlock*> corresponding_headers;
   for (auto& other : corresponding_constructs()) {
-    corresponding_headers.insert(other->entry_block());
+    // The corresponding header can be the same block as this construct's
+    // header for loops with no loop construct. In those cases, don't add the
+    // loop header as it prevents finding any blocks in the construct.
+    if (type() != ConstructType::kContinue || other->entry_block() != header) {
+      corresponding_headers.insert(other->entry_block());
+    }
   }
   std::vector<BasicBlock*> stack;
   stack.push_back(const_cast<BasicBlock*>(header));

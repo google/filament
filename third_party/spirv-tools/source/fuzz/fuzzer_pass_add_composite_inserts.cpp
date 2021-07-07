@@ -29,8 +29,6 @@ FuzzerPassAddCompositeInserts::FuzzerPassAddCompositeInserts(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddCompositeInserts::~FuzzerPassAddCompositeInserts() = default;
-
 void FuzzerPassAddCompositeInserts::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* function, opt::BasicBlock* block,

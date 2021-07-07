@@ -23,8 +23,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationCompositeConstruct::TransformationCompositeConstruct(
-    const protobufs::TransformationCompositeConstruct& message)
-    : message_(message) {}
+    protobufs::TransformationCompositeConstruct message)
+    : message_(std::move(message)) {}
 
 TransformationCompositeConstruct::TransformationCompositeConstruct(
     uint32_t composite_type_id, std::vector<uint32_t> component,
@@ -120,12 +120,18 @@ void TransformationCompositeConstruct::Apply(
   }
 
   // Insert an OpCompositeConstruct instruction.
-  insert_before.InsertBefore(MakeUnique<opt::Instruction>(
+  auto new_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpCompositeConstruct, message_.composite_type_id(),
-      message_.fresh_id(), in_operands));
+      message_.fresh_id(), in_operands);
+  auto new_instruction_ptr = new_instruction.get();
+  insert_before.InsertBefore(std::move(new_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_instruction_ptr);
+  ir_context->set_instr_block(new_instruction_ptr, destination_block);
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
+
+  // No analyses need to be invalidated since the transformation is local to a
+  // block and the def-use and instruction-to-block mappings have been updated.
 
   AddDataSynonymFacts(ir_context, transformation_context);
 }
@@ -283,15 +289,25 @@ void TransformationCompositeConstruct::AddDataSynonymFacts(
       ir_context->get_type_mgr()->GetType(message_.composite_type_id());
   uint32_t index = 0;
   for (auto component : message_.component()) {
+    auto component_type = ir_context->get_type_mgr()->GetType(
+        ir_context->get_def_use_mgr()->GetDef(component)->type_id());
+    // Whether the component is a vector being packed into a vector determines
+    // how we should keep track of the indices associated with components.
+    const bool packing_vector_into_vector =
+        composite_type->AsVector() && component_type->AsVector();
     if (!fuzzerutil::CanMakeSynonymOf(
             ir_context, *transformation_context,
             ir_context->get_def_use_mgr()->GetDef(component))) {
-      index++;
+      // We can't make a synonym of this component, so we skip on to the next
+      // component.  In the case where we're packing a vector into a vector we
+      // have to skip as many components of the resulting vectors as there are
+      // elements of the component vector.
+      index += packing_vector_into_vector
+                   ? component_type->AsVector()->element_count()
+                   : 1;
       continue;
     }
-    auto component_type = ir_context->get_type_mgr()->GetType(
-        ir_context->get_def_use_mgr()->GetDef(component)->type_id());
-    if (composite_type->AsVector() && component_type->AsVector()) {
+    if (packing_vector_into_vector) {
       // The case where the composite being constructed is a vector and the
       // component provided for construction is also a vector is special.  It
       // requires adding a synonym fact relating each element of the sub-vector

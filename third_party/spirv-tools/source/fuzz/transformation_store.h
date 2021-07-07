@@ -25,7 +25,7 @@ namespace fuzz {
 
 class TransformationStore : public Transformation {
  public:
-  explicit TransformationStore(const protobufs::TransformationStore& message);
+  explicit TransformationStore(protobufs::TransformationStore message);
 
   TransformationStore(
       uint32_t pointer_id, uint32_t value_id,

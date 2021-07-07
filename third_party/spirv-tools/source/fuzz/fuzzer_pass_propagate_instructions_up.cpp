@@ -29,9 +29,6 @@ FuzzerPassPropagateInstructionsUp::FuzzerPassPropagateInstructionsUp(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassPropagateInstructionsUp::~FuzzerPassPropagateInstructionsUp() =
-    default;
-
 void FuzzerPassPropagateInstructionsUp::Apply() {
   for (const auto& function : *GetIRContext()->module()) {
     for (const auto& block : function) {

@@ -31,9 +31,6 @@ FuzzerPassReplaceLoadsStoresWithCopyMemories::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceLoadsStoresWithCopyMemories::
-    ~FuzzerPassReplaceLoadsStoresWithCopyMemories() = default;
-
 void FuzzerPassReplaceLoadsStoresWithCopyMemories::Apply() {
   // We look for matching pairs of instructions OpLoad and
   // OpStore within the same block. Potential instructions OpLoad to be matched

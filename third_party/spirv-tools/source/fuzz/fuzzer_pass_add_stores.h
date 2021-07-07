@@ -30,8 +30,6 @@ class FuzzerPassAddStores : public FuzzerPass {
                       FuzzerContext* fuzzer_context,
                       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddStores();
-
   void Apply() override;
 };
 

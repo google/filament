@@ -729,6 +729,47 @@ TEST_F(DescriptorScalarReplacementTest, ResourceStructAsFunctionParam) {
   SinglePassRunAndMatch<DescriptorScalarReplacement>(checks + shader, true);
 }
 
+TEST_F(DescriptorScalarReplacementTest, BindingForResourceArrayOfStructs) {
+  // Check that correct binding numbers are given to an array of descriptors
+  // to structs.
+
+  const std::string shader = R"(
+; CHECK: OpDecorate {{%\w+}} Binding 0
+; CHECK: OpDecorate {{%\w+}} Binding 1
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "psmain"
+               OpExecutionMode %2 OriginUpperLeft
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 0
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpMemberDecorate %_struct_4 1 Offset 4
+               OpDecorate %_struct_4 Block
+      %float = OpTypeFloat 32
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+  %_struct_4 = OpTypeStruct %float %int
+%_arr__struct_4_uint_2 = OpTypeArray %_struct_4 %uint_2
+%_ptr_Uniform__arr__struct_4_uint_2 = OpTypePointer Uniform %_arr__struct_4_uint_2
+       %void = OpTypeVoid
+         %25 = OpTypeFunction %void
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+          %5 = OpVariable %_ptr_Uniform__arr__struct_4_uint_2 Uniform
+          %2 = OpFunction %void None %25
+         %29 = OpLabel
+         %40 = OpAccessChain %_ptr_Uniform_int %5 %int_0 %int_1
+         %41 = OpAccessChain %_ptr_Uniform_int %5 %int_1 %int_1
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

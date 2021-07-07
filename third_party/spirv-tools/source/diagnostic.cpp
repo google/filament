@@ -37,7 +37,7 @@ spv_diagnostic spvDiagnosticCreate(const spv_position position,
   diagnostic->position = *position;
   diagnostic->isTextSource = false;
   memset(diagnostic->error, 0, length);
-  strncpy(diagnostic->error, message, length);
+  strcpy(diagnostic->error, message);
   return diagnostic;
 }
 

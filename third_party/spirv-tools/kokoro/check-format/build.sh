@@ -35,7 +35,8 @@ git clone https://github.com/google/googletest          external/googletest
 cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31dc610fec7 && cd .. && cd ..
 git clone --depth=1 https://github.com/google/effcee              external/effcee
 git clone --depth=1 https://github.com/google/re2                 external/re2
-curl -L http://llvm.org/svn/llvm-project/cfe/trunk/tools/clang-format/clang-format-diff.py -o utils/clang-format-diff.py;
+# The --fail flag causes the command to fail on HTTP error response codes, like 404.
+curl -L --fail https://raw.githubusercontent.com/llvm/llvm-project/main/clang/tools/clang-format/clang-format-diff.py -o utils/clang-format-diff.py
 
 echo $(date): Check formatting...
 ./utils/check_code_format.sh;

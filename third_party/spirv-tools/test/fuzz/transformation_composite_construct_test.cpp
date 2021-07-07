@@ -142,12 +142,29 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
   TransformationCompositeConstruct make_vec2_array_length_3_bad(
       37, {41, 45, 27, 27}, MakeInstructionDescriptor(46, SpvOpAccessChain, 0),
       200);
+  // The first component does not correspond to an instruction with a result
+  // type so this check should return false.
+  TransformationCompositeConstruct make_vec2_array_length_3_nores(
+      37, {2, 45, 27}, MakeInstructionDescriptor(46, SpvOpAccessChain, 0), 200);
   ASSERT_TRUE(make_vec2_array_length_3.IsApplicable(context.get(),
                                                     transformation_context));
   ASSERT_FALSE(make_vec2_array_length_3_bad.IsApplicable(
       context.get(), transformation_context));
+  ASSERT_FALSE(make_vec2_array_length_3_nores.IsApplicable(
+      context.get(), transformation_context));
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(200));
+  ASSERT_EQ(nullptr, context->get_instr_block(200));
+  uint32_t num_uses_of_41_before = context->get_def_use_mgr()->NumUses(41);
+  uint32_t num_uses_of_45_before = context->get_def_use_mgr()->NumUses(45);
+  uint32_t num_uses_of_27_before = context->get_def_use_mgr()->NumUses(27);
   ApplyAndCheckFreshIds(make_vec2_array_length_3, context.get(),
                         &transformation_context);
+  ASSERT_EQ(SpvOpCompositeConstruct,
+            context->get_def_use_mgr()->GetDef(200)->opcode());
+  ASSERT_EQ(34, context->get_instr_block(200)->id());
+  ASSERT_EQ(num_uses_of_41_before + 1, context->get_def_use_mgr()->NumUses(41));
+  ASSERT_EQ(num_uses_of_45_before + 1, context->get_def_use_mgr()->NumUses(45));
+  ASSERT_EQ(num_uses_of_27_before + 1, context->get_def_use_mgr()->NumUses(27));
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
   ASSERT_TRUE(transformation_context.GetFactManager()->IsSynonymous(
@@ -412,9 +429,15 @@ TEST(TransformationCompositeConstructTest, ConstructMatrices) {
   // Bad: %35 is mat4x3, not mat3x4.
   TransformationCompositeConstruct make_mat34_bad(
       35, {25, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+  // The first component does not correspond to an instruction with a result
+  // type so this check should return false.
+  TransformationCompositeConstruct make_mat34_nores(
+      32, {2, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
   ASSERT_TRUE(make_mat34.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_mat34_bad.IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      make_mat34_nores.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(make_mat34, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
@@ -625,9 +648,15 @@ TEST(TransformationCompositeConstructTest, ConstructStructs) {
   // Bad: Too few fields to make the struct.
   TransformationCompositeConstruct make_inner_bad(
       9, {25}, MakeInstructionDescriptor(57, SpvOpAccessChain, 0), 200);
+  // The first component does not correspond to an instruction with a result
+  // type so this check should return false.
+  TransformationCompositeConstruct make_inner_nores(
+      9, {2, 19}, MakeInstructionDescriptor(57, SpvOpAccessChain, 0), 200);
   ASSERT_TRUE(make_inner.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_inner_bad.IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      make_inner_nores.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(make_inner, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
@@ -1641,6 +1670,55 @@ TEST(TransformationCompositeConstructTest, OneIrrelevantComponent) {
       MakeDataDescriptor(100, {1}), MakeDataDescriptor(9, {})));
   ASSERT_TRUE(transformation_context.GetFactManager()->IsSynonymous(
       MakeDataDescriptor(100, {2}), MakeDataDescriptor(10, {})));
+}
+
+TEST(TransformationCompositeConstructTest, IrrelevantVec2ThenFloat) {
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 2
+          %8 = OpTypeVector %6 3
+          %9 = OpConstant %6 0
+         %11 = OpConstant %6 1
+         %12 = OpConstant %6 2
+         %10 = OpConstantComposite %7 %11 %12
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  transformation_context.GetFactManager()->AddFactIdIsIrrelevant(10);
+
+  TransformationCompositeConstruct transformation(
+      8, {10, 9}, MakeInstructionDescriptor(5, SpvOpReturn, 0), 100);
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_FALSE(transformation_context.GetFactManager()->IsSynonymous(
+      MakeDataDescriptor(100, {0}), MakeDataDescriptor(10, {0})));
+  ASSERT_FALSE(transformation_context.GetFactManager()->IsSynonymous(
+      MakeDataDescriptor(100, {1}), MakeDataDescriptor(10, {1})));
+  ASSERT_TRUE(transformation_context.GetFactManager()->IsSynonymous(
+      MakeDataDescriptor(100, {2}), MakeDataDescriptor(9, {})));
+  ASSERT_FALSE(transformation_context.GetFactManager()->IsSynonymous(
+      MakeDataDescriptor(100, {1}), MakeDataDescriptor(9, {})));
 }
 
 }  // namespace

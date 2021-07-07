@@ -35,6 +35,7 @@ void ChangeOperandToUndefReductionOpportunity::Apply() {
   assert(operand_type_id);
   auto undef_id = FindOrCreateGlobalUndef(context_, operand_type_id);
   inst_->SetOperand(operand_index_, {undef_id});
+  context_->InvalidateAnalyses(opt::IRContext::kAnalysisDefUse);
 }
 
 }  // namespace reduce

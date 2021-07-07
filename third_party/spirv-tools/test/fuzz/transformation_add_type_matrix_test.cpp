@@ -63,10 +63,21 @@ TEST(TransformationAddTypeMatrixTest, BasicTest) {
   ASSERT_FALSE(TransformationAddTypeMatrix(100, 11, 2)
                    .IsApplicable(context.get(), transformation_context));
 
-  TransformationAddTypeMatrix transformations[] = {
-      // %100 = OpTypeMatrix %8 2
-      TransformationAddTypeMatrix(100, 8, 2),
+  {
+    // %100 = OpTypeMatrix %8 2
+    TransformationAddTypeMatrix transformation(100, 8, 2);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(100));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpTypeMatrix,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsMatrix());
+  }
 
+  TransformationAddTypeMatrix transformations[] = {
       // %101 = OpTypeMatrix %8 3
       TransformationAddTypeMatrix(101, 8, 3),
 

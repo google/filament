@@ -41,6 +41,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
   ++inst_index_;
   const auto opcode = static_cast<SpvOp>(inst->opcode);
   if (IsDebugLineInst(opcode)) {
+    module()->SetContainsDebugInfo();
     last_line_inst_.reset();
     dbg_line_info_.push_back(
         Instruction(module()->context(), *inst, last_dbg_scope_));
@@ -61,12 +62,12 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
           inlined_at = inst->words[kInlinedAtIndex];
         last_dbg_scope_ =
             DebugScope(inst->words[kLexicalScopeIndex], inlined_at);
-        module()->SetContainsDebugScope();
+        module()->SetContainsDebugInfo();
         return true;
       }
       if (ext_inst_key == OpenCLDebugInfo100DebugNoScope) {
         last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
-        module()->SetContainsDebugScope();
+        module()->SetContainsDebugInfo();
         return true;
       }
     } else {
@@ -78,12 +79,12 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
           inlined_at = inst->words[kInlinedAtIndex];
         last_dbg_scope_ =
             DebugScope(inst->words[kLexicalScopeIndex], inlined_at);
-        module()->SetContainsDebugScope();
+        module()->SetContainsDebugInfo();
         return true;
       }
       if (ext_inst_key == DebugInfoDebugNoScope) {
         last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
-        module()->SetContainsDebugScope();
+        module()->SetContainsDebugInfo();
         return true;
       }
     }
@@ -92,7 +93,8 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
   std::unique_ptr<Instruction> spv_inst(
       new Instruction(module()->context(), *inst, std::move(dbg_line_info_)));
   if (!spv_inst->dbg_line_insts().empty()) {
-    if (spv_inst->dbg_line_insts().back().opcode() != SpvOpNoLine) {
+    if (extra_line_tracking_ &&
+        (spv_inst->dbg_line_insts().back().opcode() != SpvOpNoLine)) {
       last_line_inst_ = std::unique_ptr<Instruction>(
           spv_inst->dbg_line_insts().back().Clone(module()->context()));
     }
@@ -136,7 +138,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       return false;
     }
     block_ = MakeUnique<BasicBlock>(std::move(spv_inst));
-  } else if (IsTerminatorInst(opcode)) {
+  } else if (spvOpcodeIsBlockTerminator(opcode)) {
     if (function_ == nullptr) {
       Error(consumer_, src, loc, "terminator instruction outside function");
       return false;

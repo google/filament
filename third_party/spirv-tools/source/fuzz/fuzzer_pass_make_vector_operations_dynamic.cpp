@@ -28,9 +28,6 @@ FuzzerPassMakeVectorOperationsDynamic::FuzzerPassMakeVectorOperationsDynamic(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassMakeVectorOperationsDynamic::
-    ~FuzzerPassMakeVectorOperationsDynamic() = default;
-
 void FuzzerPassMakeVectorOperationsDynamic::Apply() {
   for (auto& function : *GetIRContext()->module()) {
     for (auto& block : function) {

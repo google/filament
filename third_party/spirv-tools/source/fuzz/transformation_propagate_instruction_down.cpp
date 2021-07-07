@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationPropagateInstructionDown::TransformationPropagateInstructionDown(
-    const protobufs::TransformationPropagateInstructionDown& message)
-    : message_(message) {}
+    protobufs::TransformationPropagateInstructionDown message)
+    : message_(std::move(message)) {}
 
 TransformationPropagateInstructionDown::TransformationPropagateInstructionDown(
     uint32_t block_id, uint32_t phi_fresh_id,
@@ -386,11 +386,8 @@ bool TransformationPropagateInstructionDown::IsApplicableToBlock(
     return false;
   }
 
-  const auto* dominator_analysis =
-      ir_context->GetDominatorAnalysis(block->GetParent());
-
   // |block| must be reachable.
-  if (!dominator_analysis->IsReachable(block)) {
+  if (!ir_context->IsReachable(*block)) {
     return false;
   }
 
@@ -429,6 +426,9 @@ bool TransformationPropagateInstructionDown::IsApplicableToBlock(
   // This is either 0 or a result id of some merge block in the function.
   auto phi_block_id =
       GetOpPhiBlockId(ir_context, block_id, *inst_to_propagate, successor_ids);
+
+  const auto* dominator_analysis =
+      ir_context->GetDominatorAnalysis(block->GetParent());
 
   // Make sure we can adjust all users of the propagated instruction.
   return ir_context->get_def_use_mgr()->WhileEachUse(
@@ -537,7 +537,7 @@ uint32_t TransformationPropagateInstructionDown::GetOpPhiBlockId(
 
   // Check that |merge_block_id| is reachable in the CFG and |block_id|
   // dominates |merge_block_id|.
-  if (!dominator_analysis->IsReachable(merge_block_id) ||
+  if (!ir_context->IsReachable(*ir_context->cfg()->block(merge_block_id)) ||
       !dominator_analysis->Dominates(block_id, merge_block_id)) {
     return 0;
   }

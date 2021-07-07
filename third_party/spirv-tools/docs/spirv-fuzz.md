@@ -53,7 +53,7 @@ See `transformation_set_selection_control.h` for an example.
 
 The `IsApplicable` method should have a comment in the header file describing the conditions for applicability in simple terms.  These conditions should be implemented in the body of this method in the `.cpp` file.
 
-In the case of `TransformationSetSelectionControl`, `IsApplicable` involves checking that `block_id` is indeed the id of a block that has an `OpSelectoinMerge` instruction, and that `selection_control` is a valid selection mask.
+In the case of `TransformationSetSelectionControl`, `IsApplicable` involves checking that `block_id` is indeed the id of a block that has an `OpSelectionMerge` instruction, and that `selection_control` is a valid selection mask.
 
 The `Apply` method should have a comment in the header file summarising the result of applying the transformation.  It should be implemented in the `.cpp` file, and you should assume that `IsApplicable` holds whenever `Apply` is invoked.
 

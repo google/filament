@@ -22,8 +22,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationOutlineFunction::TransformationOutlineFunction(
-    const spvtools::fuzz::protobufs::TransformationOutlineFunction& message)
-    : message_(message) {}
+    protobufs::TransformationOutlineFunction message)
+    : message_(std::move(message)) {}
 
 TransformationOutlineFunction::TransformationOutlineFunction(
     uint32_t entry_block, uint32_t exit_block,
@@ -175,6 +175,18 @@ bool TransformationOutlineFunction::IsApplicable(
   // This is achieved by going through every block in the function that contains
   // the region.
   for (auto& block : *entry_block->GetParent()) {
+    if (region_set.count(&block) != 0) {
+      // The block is in the region. Check that it does not have any unreachable
+      // predecessors. If it does, then we do not regard the region as single-
+      // entry-single-exit and hence do not outline it.
+      for (auto pred : ir_context->cfg()->preds(block.id())) {
+        if (!ir_context->IsReachable(*ir_context->cfg()->block(pred))) {
+          // The predecessor is unreachable.
+          return false;
+        }
+      }
+    }
+
     if (&block == exit_block) {
       // It is OK (and typically expected) for the exit block of the region to
       // have successors outside the region.
@@ -778,7 +790,6 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
       MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
           ir_context, SpvOpLabel, 0, message_.new_function_region_entry_block(),
           opt::Instruction::OperandList()));
-  outlined_region_entry_block->SetParent(outlined_function);
 
   if (&original_region_entry_block == &original_region_exit_block) {
     outlined_region_exit_block = outlined_region_entry_block.get();
@@ -814,8 +825,6 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
              "We should not yet have encountered the exit block.");
       outlined_region_exit_block = cloned_block.get();
     }
-
-    cloned_block->SetParent(outlined_function);
 
     // Redirect any OpPhi operands whose predecessors are the original region
     // entry block to become the new function entry block.

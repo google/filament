@@ -28,7 +28,7 @@ TEST_F(InlineOpaqueTest, InlineCallWithStructArgContainingSampledImage) {
   // Function with opaque argument is inlined.
   // TODO(greg-lunarg): Add HLSL code
 
-  const std::string predefs =
+  const std::string predefs_1 =
       R"(OpCapability Shader
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
@@ -47,22 +47,27 @@ OpName %sampler15 "sampler15"
 OpName %s0 "s0"
 OpName %texCoords "texCoords"
 OpName %param "param"
-OpDecorate %sampler15 DescriptorSet 0
+)";
+
+  const std::string name = R"(OpName %return_value "return_value"
+)";
+
+  const std::string predefs_2 = R"(OpDecorate %sampler15 DescriptorSet 0
 %void = OpTypeVoid
-%12 = OpTypeFunction %void
+%13 = OpTypeFunction %void
 %float = OpTypeFloat 32
 %v2float = OpTypeVector %float 2
 %v4float = OpTypeVector %float 4
 %_ptr_Output_v4float = OpTypePointer Output %v4float
 %outColor = OpVariable %_ptr_Output_v4float Output
-%17 = OpTypeImage %float 2D 0 0 0 1 Unknown
-%18 = OpTypeSampledImage %17
-%S_t = OpTypeStruct %v2float %v2float %18
+%18 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%19 = OpTypeSampledImage %18
+%S_t = OpTypeStruct %v2float %v2float %19
 %_ptr_Function_S_t = OpTypePointer Function %S_t
-%20 = OpTypeFunction %void %_ptr_Function_S_t
-%_ptr_UniformConstant_18 = OpTypePointer UniformConstant %18
-%_ptr_Function_18 = OpTypePointer Function %18
-%sampler15 = OpVariable %_ptr_UniformConstant_18 UniformConstant
+%21 = OpTypeFunction %void %_ptr_Function_S_t
+%_ptr_UniformConstant_19 = OpTypePointer UniformConstant %19
+%_ptr_Function_19 = OpTypePointer Function %19
+%sampler15 = OpVariable %_ptr_UniformConstant_19 UniformConstant
 %int = OpTypeInt 32 1
 %int_0 = OpConstant %int 0
 %int_2 = OpConstant %int 2
@@ -72,39 +77,38 @@ OpDecorate %sampler15 DescriptorSet 0
 )";
 
   const std::string before =
-      R"(%main = OpFunction %void None %12
-%28 = OpLabel
+      R"(%main = OpFunction %void None %13
+%29 = OpLabel
 %s0 = OpVariable %_ptr_Function_S_t Function
 %param = OpVariable %_ptr_Function_S_t Function
-%29 = OpLoad %v2float %texCoords
-%30 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
-OpStore %30 %29
-%31 = OpLoad %18 %sampler15
-%32 = OpAccessChain %_ptr_Function_18 %s0 %int_2
-OpStore %32 %31
-%33 = OpLoad %S_t %s0
-OpStore %param %33
-%34 = OpFunctionCall %void %foo_struct_S_t_vf2_vf21_ %param
+%30 = OpLoad %v2float %texCoords
+%31 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
+OpStore %31 %30
+%32 = OpLoad %19 %sampler15
+%33 = OpAccessChain %_ptr_Function_19 %s0 %int_2
+OpStore %33 %32
+%34 = OpLoad %S_t %s0
+OpStore %param %34
+%return_value = OpFunctionCall %void %foo_struct_S_t_vf2_vf21_ %param
 OpReturn
 OpFunctionEnd
 )";
 
   const std::string after =
-      R"(%34 = OpUndef %void
-%main = OpFunction %void None %12
-%28 = OpLabel
+      R"(%main = OpFunction %void None %13
+%29 = OpLabel
 %s0 = OpVariable %_ptr_Function_S_t Function
 %param = OpVariable %_ptr_Function_S_t Function
-%29 = OpLoad %v2float %texCoords
-%30 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
-OpStore %30 %29
-%31 = OpLoad %18 %sampler15
-%32 = OpAccessChain %_ptr_Function_18 %s0 %int_2
-OpStore %32 %31
-%33 = OpLoad %S_t %s0
-OpStore %param %33
-%42 = OpAccessChain %_ptr_Function_18 %param %int_2
-%43 = OpLoad %18 %42
+%30 = OpLoad %v2float %texCoords
+%31 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
+OpStore %31 %30
+%32 = OpLoad %19 %sampler15
+%33 = OpAccessChain %_ptr_Function_19 %s0 %int_2
+OpStore %33 %32
+%34 = OpLoad %S_t %s0
+OpStore %param %34
+%42 = OpAccessChain %_ptr_Function_19 %param %int_2
+%43 = OpLoad %19 %42
 %44 = OpAccessChain %_ptr_Function_v2float %param %int_0
 %45 = OpLoad %v2float %44
 %46 = OpImageSampleImplicitLod %v4float %43 %45
@@ -114,11 +118,11 @@ OpFunctionEnd
 )";
 
   const std::string post_defs =
-      R"(%foo_struct_S_t_vf2_vf21_ = OpFunction %void None %20
+      R"(%foo_struct_S_t_vf2_vf21_ = OpFunction %void None %21
 %s = OpFunctionParameter %_ptr_Function_S_t
 %35 = OpLabel
-%36 = OpAccessChain %_ptr_Function_18 %s %int_2
-%37 = OpLoad %18 %36
+%36 = OpAccessChain %_ptr_Function_19 %s %int_2
+%37 = OpLoad %19 %36
 %38 = OpAccessChain %_ptr_Function_v2float %s %int_0
 %39 = OpLoad %v2float %38
 %40 = OpImageSampleImplicitLod %v4float %37 %39
@@ -128,7 +132,8 @@ OpFunctionEnd
 )";
 
   SinglePassRunAndCheck<InlineOpaquePass>(
-      predefs + before + post_defs, predefs + after + post_defs, true, true);
+      predefs_1 + name + predefs_2 + before + post_defs,
+      predefs_1 + predefs_2 + after + post_defs, true, true);
 }
 
 TEST_F(InlineOpaqueTest, InlineOpaqueReturn) {
@@ -290,8 +295,7 @@ OpFunctionEnd
 )";
 
   const std::string after =
-      R"(%35 = OpUndef %void
-%main2 = OpFunction %void None %13
+      R"(%main2 = OpFunction %void None %13
 %29 = OpLabel
 %s0 = OpVariable %_ptr_Function_S_t Function
 %param = OpVariable %_ptr_Function_S_t Function

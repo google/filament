@@ -230,7 +230,7 @@ std::string BasicBlock::PrettyPrint(uint32_t options) const {
   std::ostringstream str;
   ForEachInst([&str, options](const Instruction* inst) {
     str << inst->PrettyPrint(options);
-    if (!IsTerminatorInst(inst->opcode())) {
+    if (!spvOpcodeIsBlockTerminator(inst->opcode())) {
       str << std::endl;
     }
   });
@@ -248,7 +248,8 @@ BasicBlock* BasicBlock::SplitBasicBlock(IRContext* context, uint32_t label_id,
   function_->InsertBasicBlockAfter(std::move(new_block_temp), this);
 
   new_block->insts_.Splice(new_block->end(), &insts_, iter, end());
-  new_block->SetParent(GetParent());
+  assert(new_block->GetParent() == GetParent() &&
+         "The parent should already be set appropriately.");
 
   context->AnalyzeDefUse(new_block->GetLabelInst());
 

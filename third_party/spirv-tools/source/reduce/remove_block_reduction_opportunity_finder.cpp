@@ -32,8 +32,8 @@ RemoveBlockReductionOpportunityFinder::GetAvailableOpportunities(
   for (auto* function : GetTargetFunctions(context, target_function)) {
     for (auto bi = function->begin(); bi != function->end(); ++bi) {
       if (IsBlockValidOpportunity(context, function, &bi)) {
-        result.push_back(
-            MakeUnique<RemoveBlockReductionOpportunity>(function, &*bi));
+        result.push_back(MakeUnique<RemoveBlockReductionOpportunity>(
+            context, function, &*bi));
       }
     }
   }

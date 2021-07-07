@@ -82,10 +82,30 @@ TEST(TransformationAddConstantCompositeTest, BasicTest) {
   ASSERT_FALSE(TransformationAddConstantComposite(100, 39, {11, 12}, false)
                    .IsApplicable(context.get(), transformation_context));
 
-  TransformationAddConstantComposite transformations[] = {
-      // %100 = OpConstantComposite %7 %11 %12
-      TransformationAddConstantComposite(100, 7, {11, 12}, false),
+  {
+    // %100 = OpConstantComposite %7 %11 %12
+    TransformationAddConstantComposite transformation(100, 7, {11, 12}, false);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_constant_mgr()->FindDeclaredConstant(100));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpConstantComposite,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_EQ(0.0F, context->get_constant_mgr()
+                        ->FindDeclaredConstant(100)
+                        ->AsVectorConstant()
+                        ->GetComponents()[0]
+                        ->GetFloat());
+    ASSERT_EQ(1.0F, context->get_constant_mgr()
+                        ->FindDeclaredConstant(100)
+                        ->AsVectorConstant()
+                        ->GetComponents()[1]
+                        ->GetFloat());
+  }
 
+  TransformationAddConstantComposite transformations[] = {
       // %101 = OpConstantComposite %7 %14 %15
       TransformationAddConstantComposite(101, 7, {14, 15}, false),
 

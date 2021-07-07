@@ -29,8 +29,6 @@ class FuzzerPassPermutePhiOperands : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassPermutePhiOperands() override;
-
   void Apply() override;
 };
 
