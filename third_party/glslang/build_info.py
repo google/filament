@@ -201,13 +201,13 @@ def main():
     software_version = deduce_software_version(directory)
     commit = describe(directory)
     output = template \
-        .replace("<major>", software_version["major"]) \
-        .replace("<minor>", software_version["minor"]) \
-        .replace("<patch>", software_version["patch"]) \
-        .replace("<flavor>", software_version["flavor"]) \
-        .replace("<-flavor>", software_version["-flavor"]) \
-        .replace("<date>", software_version["date"]) \
-        .replace("<commit>", commit)
+        .replace("@major@", software_version["major"]) \
+        .replace("@minor@", software_version["minor"]) \
+        .replace("@patch@", software_version["patch"]) \
+        .replace("@flavor@", software_version["flavor"]) \
+        .replace("@-flavor@", software_version["-flavor"]) \
+        .replace("@date@", software_version["date"]) \
+        .replace("@commit@", commit)
 
     if output_file is None:
         print(output)

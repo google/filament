@@ -253,12 +253,12 @@ protected:
 
     // Array and struct flattening
     TIntermTyped* flattenAccess(TIntermTyped* base, int member);
-    TIntermTyped* flattenAccess(int uniqueId, int member, TStorageQualifier outerStorage, const TType&, int subset = -1);
+    TIntermTyped* flattenAccess(long long uniqueId, int member, TStorageQualifier outerStorage, const TType&, int subset = -1);
     int findSubtreeOffset(const TIntermNode&) const;
     int findSubtreeOffset(const TType&, int subset, const TVector<int>& offsets) const;
     bool shouldFlatten(const TType&, TStorageQualifier, bool topLevel) const;
     bool wasFlattened(const TIntermTyped* node) const;
-    bool wasFlattened(int id) const { return flattenMap.find(id) != flattenMap.end(); }
+    bool wasFlattened(long long id) const { return flattenMap.find(id) != flattenMap.end(); }
     int  addFlattenedMember(const TVariable&, const TType&, TFlattenData&, const TString& name, bool linkage,
                             const TQualifier& outerQualifier, const TArraySizes* builtInArraySizes);
 
@@ -267,8 +267,8 @@ protected:
     void splitBuiltIn(const TString& baseName, const TType& memberType, const TArraySizes*, const TQualifier&);
     const TType& split(const TType& type, const TString& name, const TQualifier&);
     bool wasSplit(const TIntermTyped* node) const;
-    bool wasSplit(int id) const { return splitNonIoVars.find(id) != splitNonIoVars.end(); }
-    TVariable* getSplitNonIoVar(int id) const;
+    bool wasSplit(long long id) const { return splitNonIoVars.find(id) != splitNonIoVars.end(); }
+    TVariable* getSplitNonIoVar(long long id) const;
     void addPatchConstantInvocation();
     void fixTextureShadowModes();
     void finalizeAppendMethods();
@@ -386,7 +386,7 @@ protected:
     //
     TVector<TSymbol*> ioArraySymbolResizeList;
 
-    TMap<int, TFlattenData> flattenMap;
+    TMap<long long, TFlattenData> flattenMap;
 
     // IO-type map. Maps a pure symbol-table form of a structure-member list into
     // each of the (up to) three kinds of IO, as each as different allowed decorations,
@@ -399,7 +399,7 @@ protected:
     TMap<const TTypeList*, tIoKinds> ioTypeMap;
 
     // Structure splitting data:
-    TMap<int, TVariable*> splitNonIoVars;  // variables with the built-in interstage IO removed, indexed by unique ID.
+    TMap<long long, TVariable*> splitNonIoVars;  // variables with the built-in interstage IO removed, indexed by unique ID.
 
     // Structuredbuffer shared types.  Typically there are only a few.
     TVector<TType*> structBufferTypes;
@@ -488,18 +488,18 @@ protected:
     struct tShadowTextureSymbols {
         tShadowTextureSymbols() { symId.fill(-1); }
 
-        void set(bool shadow, int id) { symId[int(shadow)] = id; }
-        int get(bool shadow) const { return symId[int(shadow)]; }
+        void set(bool shadow, long long id) { symId[int(shadow)] = id; }
+        long long get(bool shadow) const { return symId[int(shadow)]; }
 
         // True if this texture has been seen with both shadow and non-shadow modes
         bool overloaded() const { return symId[0] != -1 && symId[1] != -1; }
-        bool isShadowId(int id) const { return symId[1] == id; }
+        bool isShadowId(long long id) const { return symId[1] == id; }
 
     private:
-        std::array<int, 2> symId;
+        std::array<long long, 2> symId;
     };
 
-    TMap<int, tShadowTextureSymbols*> textureShadowVariant;
+    TMap<long long, tShadowTextureSymbols*> textureShadowVariant;
     bool parsingEntrypointParameters;
 };
 

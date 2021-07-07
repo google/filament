@@ -53,7 +53,8 @@ genrule(
     name = "gen_build_info_h",
     srcs = ["CHANGES.md", "build_info.h.tmpl"],
     outs = ["glslang/build_info.h"],
-    cmd = "$(location build_info) $$(dirname $(location CHANGES.md)) -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
+    cmd_bash = "$(location build_info) $$(dirname $(location CHANGES.md)) -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
+    cmd_bat = "for %F in ($(location CHANGES.md)) do $(location build_info) %~dpF -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
     tools = [":build_info"],
 )
 
@@ -143,7 +144,8 @@ genrule(
         "include/SPIRV/NonSemanticDebugPrintf.h",
         "include/SPIRV/spirv.hpp",
     ],
-    cmd = "mkdir -p $(@D)/include/SPIRV && cp $(SRCS) $(@D)/include/SPIRV/",
+    cmd_bash = "mkdir -p $(@D)/include/SPIRV && cp $(SRCS) $(@D)/include/SPIRV/",
+    cmd_bat = "(if not exist $(@D)\\include\\SPIRV mkdir $(@D)\\include\\SPIRV) && (for %S in ($(SRCS)) do @xcopy /q %S $(@D)\\include\\SPIRV\\ >NUL)",
 )
 
 cc_library(

@@ -33,7 +33,7 @@
 
 if(WIN32)
     add_subdirectory(OSDependent/Windows)
-elseif(UNIX)
+elseif(UNIX OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
     add_subdirectory(OSDependent/Unix)
 else(WIN32)
     message("unknown platform")
@@ -73,6 +73,7 @@ set(MACHINEINDEPENDENT_SOURCES
     MachineIndependent/RemoveTree.cpp
     MachineIndependent/Scan.cpp
     MachineIndependent/ShaderLang.cpp
+    MachineIndependent/SpirvIntrinsics.cpp
     MachineIndependent/SymbolTable.cpp
     MachineIndependent/Versions.cpp
     MachineIndependent/intermOut.cpp
@@ -160,6 +161,7 @@ set(GLSLANG_HEADERS
     Include/PoolAlloc.h
     Include/ResourceLimits.h
     Include/ShHandle.h
+    Include/SpirvIntrinsics.h
     Include/Types.h)
 
 add_library(glslang ${LIB_TYPE} ${BISON_GLSLParser_OUTPUT_SOURCE} ${GLSLANG_SOURCES} ${GLSLANG_HEADERS})
