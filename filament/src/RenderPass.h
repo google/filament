@@ -280,6 +280,7 @@ public:
 
     Command const* begin() const noexcept { return mCommandBegin; }
     Command const* end() const noexcept { return mCommandEnd; }
+    bool empty() const noexcept { return begin() == end(); }
 
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.

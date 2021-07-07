@@ -497,7 +497,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // the color pass + refraction + color-grading as subpass if needed
     // this cancels the colorPass() call above if refraction is active.
-    if (view.isScreenSpaceRefractionEnabled()) {
+    if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
     }
 
