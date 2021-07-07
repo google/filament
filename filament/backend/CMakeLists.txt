@@ -235,8 +235,8 @@ function(build_vkshader SOURCE TARGET_PATH)
             DEPENDS matc ${SOURCE_PATH}
             COMMENT "Building SPIR-V")
 endfunction()
-build_vkshader("BlitColor.vs" "BlitColorVs.spv")
-build_vkshader("BlitColor.fs" "BlitColorFs.spv")
+build_vkshader("BlitDepth.vs" "BlitDepthVs.spv")
+build_vkshader("BlitDepth.fs" "BlitDepthFs.spv")
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
@@ -281,7 +281,7 @@ if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders)
+    target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)

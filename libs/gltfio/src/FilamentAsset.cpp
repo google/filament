@@ -72,6 +72,14 @@ FFilamentAsset::~FFilamentAsset() {
     }
 }
 
+const char* FFilamentAsset::getExtras(utils::Entity entity) const noexcept {
+    if (entity.isNull()) {
+        return mAssetExtras.c_str();
+    }
+    const auto iter = mNodeExtras.find(entity);
+    return iter == mNodeExtras.cend() ? nullptr : iter->second.c_str();
+}
+
 Animator* FFilamentAsset::getAnimator() noexcept {
     if (!mAnimator) {
         if (!mResourcesLoaded) {
@@ -256,6 +264,10 @@ size_t FilamentAsset::getEntitiesByName(const char* name, Entity* entities,
 size_t FilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
         size_t maxCount) const noexcept {
     return upcast(this)->getEntitiesByPrefix(prefix, entities, maxCount);
+}
+
+const char* FilamentAsset::getExtras(Entity entity) const noexcept {
+    return upcast(this)->getExtras(entity);
 }
 
 Animator* FilamentAsset::getAnimator() noexcept {

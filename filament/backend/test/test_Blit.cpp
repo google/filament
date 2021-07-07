@@ -484,7 +484,7 @@ TEST_F(BackendTest, DepthMinify) {
     api.endFrame(0);
 
     // Grab a screenshot.
-    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthBlit.png" };
+    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthMinify.png" };
     api.beginFrame(0, 0);
     dumpScreenshot(api, dstRenderTarget, &sparams);
     api.commit(swapChain);

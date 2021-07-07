@@ -29,6 +29,7 @@ namespace backend {
 
 struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
+    VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShaderModule fs) noexcept;
     ~VulkanProgram();
     VulkanContext& context;
     VulkanPipelineCache::ProgramBundle bundle;
@@ -71,7 +72,7 @@ private:
     VulkanAttachment mDepth = {};
     VulkanContext& mContext;
     const bool mOffscreen;
-    const uint8_t mSamples;
+    uint8_t mSamples;
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
 };
@@ -116,11 +117,10 @@ private:
 };
 
 struct VulkanSamplerGroup : public HwSamplerGroup {
-    VulkanSamplerGroup(VulkanContext& context, uint32_t count) : HwSamplerGroup(count) {}
+    VulkanSamplerGroup(uint32_t count) : HwSamplerGroup(count) {}
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
-    explicit VulkanRenderPrimitive(VulkanContext& context) {}
     void setPrimitiveType(backend::PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer);
     VulkanVertexBuffer* vertexBuffer = nullptr;

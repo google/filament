@@ -40,9 +40,11 @@ set(COMMON_SRCS
         src/shaders/CodeGenerator.cpp
         src/shaders/ShaderGenerator.cpp
         src/Enums.cpp
+        src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
-        src/Includes.cpp)
+        src/UibGenerator.cpp
+)
 
 # Sources and headers for filamat
 

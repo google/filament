@@ -171,22 +171,8 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         lightType.shadowCaster = builder->mCastShadows;
         lightType.lightCaster = builder->mCastLight;
 
-        ShadowParams& shadowParams = manager[i].shadowParams;
-        shadowParams.options.mapSize = clamp(builder->mShadowOptions.mapSize, 0u, 2048u);
-        shadowParams.options.shadowCascades = clamp<uint8_t>(builder->mShadowOptions.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
-        shadowParams.options.constantBias = clamp(builder->mShadowOptions.constantBias, 0.0f, 2.0f);
-        shadowParams.options.normalBias = clamp(builder->mShadowOptions.normalBias, 0.0f, 3.0f);
-        shadowParams.options.shadowFar = std::max(builder->mShadowOptions.shadowFar, 0.0f);
-        shadowParams.options.shadowNearHint = std::max(builder->mShadowOptions.shadowNearHint, 0.0f);
-        shadowParams.options.shadowFarHint = std::max(builder->mShadowOptions.shadowFarHint, 0.0f);
-        shadowParams.options.stable = builder->mShadowOptions.stable;
-        shadowParams.options.polygonOffsetConstant = builder->mShadowOptions.polygonOffsetConstant;
-        shadowParams.options.polygonOffsetSlope = builder->mShadowOptions.polygonOffsetSlope;
-        shadowParams.options.screenSpaceContactShadows = builder->mShadowOptions.screenSpaceContactShadows;
-        shadowParams.options.stepCount = builder->mShadowOptions.stepCount;
-        shadowParams.options.maxShadowDistance = builder->mShadowOptions.maxShadowDistance;
-
         // set default values by calling the setters
+        setShadowOptions(i, builder->mShadowOptions);
         setLocalPosition(i, builder->mPosition);
         setLocalDirection(i, builder->mDirection);
         setColor(i, builder->mColor);
@@ -225,6 +211,20 @@ void FLightManager::terminate() noexcept {
             manager.removeComponent(manager.getEntity(ci));
         }
     }
+}
+
+void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
+    ShadowParams& params = mManager[i].shadowParams;
+    params.options = options;
+    params.options.mapSize = clamp(options.mapSize, 8u, 2048u);
+    params.options.shadowCascades = clamp<uint8_t>(options.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
+    params.options.constantBias = clamp(options.constantBias, 0.0f, 2.0f);
+    params.options.normalBias = clamp(options.normalBias, 0.0f, 3.0f);
+    params.options.shadowFar = std::max(options.shadowFar, 0.0f);
+    params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
+    params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
+    params.options.vsm.msaaSamples = std::max(uint8_t(0), options.vsm.msaaSamples);
+    params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
 }
 
 void FLightManager::setLocalPosition(Instance i, const float3& position) noexcept {

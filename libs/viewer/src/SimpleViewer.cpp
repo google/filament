@@ -669,6 +669,10 @@ void SimpleViewer::updateUserInterface() {
         ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
         ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
         ImGui::Checkbox("Enable shadows", &light.enableShadows);
+        int mapSize = light.shadowOptions.mapSize;
+        ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
+        light.shadowOptions.mapSize = mapSize;
+
 
         bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
         ImGui::Checkbox("Enable VSM", &enableVsm);
@@ -683,6 +687,13 @@ void SimpleViewer::updateUserInterface() {
         snprintf(label, 32, "%d", 1 << vsmAnisotropy);
         ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
         mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
+        ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
+        ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+
+        // These are not very useful in practice (defaults are good), but we keep them here for debugging
+        //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
+        //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
+        //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
 
         int shadowCascades = light.shadowOptions.shadowCascades;
         ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);

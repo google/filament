@@ -22,6 +22,7 @@
 namespace gltfio {
 
 class Animator;
+class FilamentAsset;
 
 /**
  * \class FilamentInstance FilamentInstance.h gltfio/FilamentInstance.h
@@ -34,6 +35,11 @@ class Animator;
  */
 class FilamentInstance {
 public:
+    /**
+     * Gets the owner of this instance.
+     */
+    FilamentAsset* getAsset() const noexcept;
+
     /**
      * Gets the list of entities in this instance, one for each glTF node. All of these have a
      * Transform component. Some of the returned entities may also have a Renderable component or

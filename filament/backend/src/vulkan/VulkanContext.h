@@ -28,8 +28,6 @@
 #include <utils/Slice.h>
 #include <utils/Mutex.h>
 
-#include <memory>
-
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
 

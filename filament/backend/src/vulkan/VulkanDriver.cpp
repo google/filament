@@ -95,10 +95,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mContextManager(*platform),
-        mBlitter(mContext),
         mStagePool(mContext),
         mFramebufferCache(mContext),
-        mSamplerCache(mContext) {
+        mSamplerCache(mContext),
+        mBlitter(mContext, mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache) {
     mContext.rasterState = mPipelineCache.getDefaultRasterState();
 
     // Load Vulkan entry points.
@@ -397,7 +397,7 @@ void VulkanDriver::finish(int dummy) {
 }
 
 void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
-    construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, mContext, count);
+    construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, count);
 }
 
 void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
@@ -423,7 +423,7 @@ void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
-    construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
+    construct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1621,6 +1621,13 @@ void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y,
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
+    assert_invariant(mContext.currentRenderPass.renderPass == VK_NULL_HANDLE);
+
+    if (mContext.currentRenderPass.renderPass) {
+        utils::slog.e << "Blits cannot be invoked inside a render pass." << utils::io::endl;
+        return;
+    }
+
     VulkanRenderTarget* dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
 
@@ -1640,15 +1647,13 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
     const int32_t dstTop = std::min(dstRect.bottom + dstRect.height, dstExtent.height);
     const VkOffset3D dstOffsets[2] = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }};
 
-    const VkCommandBuffer cmdbuf = mContext.commands->get().cmdbuffer;
-
     if (any(buffers & TargetBufferFlags::DEPTH) && srcTarget->hasDepth() && dstTarget->hasDepth()) {
-        mBlitter.blitDepth(cmdbuf, {dstTarget, dstOffsets, srcTarget, srcOffsets});
+        mBlitter.blitDepth({dstTarget, dstOffsets, srcTarget, srcOffsets});
     }
 
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (any(buffers & getTargetBufferFlagsAt(i))) {
-            mBlitter.blitColor(cmdbuf,{ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(i) });
+            mBlitter.blitColor({ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(i) });
         }
     }
 }

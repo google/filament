@@ -32,6 +32,8 @@
 
 #include <math/mat4.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/CString.h>
 #include <utils/Entity.h>
 
 #include <cgltf.h>
@@ -180,6 +182,8 @@ struct FFilamentAsset : public FilamentAsset {
 
     const char* getName(utils::Entity entity) const noexcept;
 
+    const char* getExtras(utils::Entity entity) const noexcept;
+
     utils::Entity getFirstEntityByName(const char* name) noexcept;
 
     size_t getEntitiesByName(const char* name, utils::Entity* entities,
@@ -243,6 +247,8 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;
     tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
+    tsl::robin_map<utils::Entity, utils::CString> mNodeExtras;
+    utils::CString mAssetExtras;
 
     // Sentinels for situations where ResourceLoader needs to generate data.
     const cgltf_accessor mGenerateNormals = {};
@@ -254,7 +260,7 @@ struct FFilamentAsset : public FilamentAsset {
         ~SourceAsset() { cgltf_free(hierarchy); }
         cgltf_data* hierarchy;
         DracoCache dracoCache;
-        std::vector<uint8_t> glbData;
+        utils::FixedCapacityVector<uint8_t> glbData;
     };
 
     // We used shared ownership for the raw cgltf data in order to permit ResourceLoader to

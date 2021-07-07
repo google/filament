@@ -80,6 +80,10 @@ public:
         setSampler(index, { t, s });
     }
 
+    inline void clearSampler(size_t index)  {
+        setSampler(index, {});
+    }
+
 private:
 #if !defined(NDEBUG)
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs);

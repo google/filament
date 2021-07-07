@@ -65,6 +65,11 @@ using namespace filament::viewer;
 using namespace gltfio;
 using namespace utils;
 
+enum MaterialSource {
+    GENERATE_SHADERS,
+    LOAD_UBERSHADERS,
+};
+
 struct App {
     Engine* engine;
     SimpleViewer* viewer;
@@ -312,8 +317,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     Entity groundPlane = em.create();
     RenderableManager::Builder(1)
             .boundingBox({
-                { -planeExtent.x, 0, -planeExtent.z },
-                { planeExtent.x, 1e-4f, planeExtent.z }
+                    {}, { planeExtent.x, 1e-4f, planeExtent.z }
             })
             .material(0, shadowMaterial->getDefaultInstance())
             .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,

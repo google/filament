@@ -221,9 +221,7 @@ public:
         return getShadowParams(i).options;
     }
 
-    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
-        static_cast<ShadowParams&>(mManager[i].shadowParams).options = options;
-    }
+    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
 
 private:
     friend class FScene;

@@ -200,30 +200,30 @@ struct MaterialInfo {
 };
 
 static const MaterialInfo sMaterialList[] = {
-        { "sao",                   MATERIAL(SAO) },
-        { "mipmapDepth",           MATERIAL(MIPMAPDEPTH) },
-        { "vsmMipmap",             MATERIAL(VSMMIPMAP) },
-        { "bilateralBlur",         MATERIAL(BILATERALBLUR) },
-        { "separableGaussianBlur", MATERIAL(SEPARABLEGAUSSIANBLUR) },
-        { "bloomDownsample",       MATERIAL(BLOOMDOWNSAMPLE) },
-        { "bloomUpsample",         MATERIAL(BLOOMUPSAMPLE) },
-        { "flare",                 MATERIAL(FLARE) },
-        { "blitLow",               MATERIAL(BLITLOW) },
-        { "blitMedium",            MATERIAL(BLITMEDIUM) },
-        { "blitHigh",              MATERIAL(BLITHIGH) },
-        { "colorGrading",          MATERIAL(COLORGRADING) },
-        { "colorGradingAsSubpass", MATERIAL(COLORGRADINGASSUBPASS) },
-        { "fxaa",                  MATERIAL(FXAA) },
-        { "taa",                   MATERIAL(TAA) },
-        { "dofDownsample",         MATERIAL(DOFDOWNSAMPLE) },
-        { "dofCoc",                MATERIAL(DOFCOC) },
-        { "dofMipmap",             MATERIAL(DOFMIPMAP) },
-        { "dofTiles",              MATERIAL(DOFTILES) },
-        { "dofTilesSwizzle",       MATERIAL(DOFTILESSWIZZLE) },
-        { "dofDilate",             MATERIAL(DOFDILATE) },
-        { "dof",                   MATERIAL(DOF) },
-        { "dofMedian",             MATERIAL(DOFMEDIAN) },
-        { "dofCombine",            MATERIAL(DOFCOMBINE) },
+        { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
+        { "blitHigh",                   MATERIAL(BLITHIGH) },
+        { "blitLow",                    MATERIAL(BLITLOW) },
+        { "blitMedium",                 MATERIAL(BLITMEDIUM) },
+        { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
+        { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
+        { "colorGrading",               MATERIAL(COLORGRADING) },
+        { "colorGradingAsSubpass",      MATERIAL(COLORGRADINGASSUBPASS) },
+        { "dof",                        MATERIAL(DOF) },
+        { "dofCoc",                     MATERIAL(DOFCOC) },
+        { "dofCombine",                 MATERIAL(DOFCOMBINE) },
+        { "dofDilate",                  MATERIAL(DOFDILATE) },
+        { "dofDownsample",              MATERIAL(DOFDOWNSAMPLE) },
+        { "dofMedian",                  MATERIAL(DOFMEDIAN) },
+        { "dofMipmap",                  MATERIAL(DOFMIPMAP) },
+        { "dofTiles",                   MATERIAL(DOFTILES) },
+        { "dofTilesSwizzle",            MATERIAL(DOFTILESSWIZZLE) },
+        { "flare",                      MATERIAL(FLARE) },
+        { "fxaa",                       MATERIAL(FXAA) },
+        { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
+        { "sao",                        MATERIAL(SAO) },
+        { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
+        { "taa",                        MATERIAL(TAA) },
+        { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -234,15 +234,6 @@ void PostProcessManager::init() noexcept {
     for (auto const& info : sMaterialList) {
         registerPostProcessMaterial(info.name, info.data, info.size);
     }
-
-    // UBO storage size.
-    // The effective kernel size is (kMaxPositiveKernelSize - 1) * 4 + 1.
-    // e.g.: 5 positive-side samples, give 4+1+4=9 samples both sides
-    // taking advantage of linear filtering produces an effective kernel of 8+1+8=17 samples
-    // and because it's a separable filter, the effective 2D filter kernel size is 17*17
-    // The total number of samples needed over the two passes is 18.
-    auto& separableGaussianBlur = getPostProcessMaterial("separableGaussianBlur");
-    mSeparableGaussianBlurKernelStorageSize = separableGaussianBlur.getMaterial()->reflect("kernel")->size;
 
     mDummyOneTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
@@ -683,7 +674,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
         FrameGraphId<FrameGraphTexture> input, size_t roughnessLodCount,
         bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
     for (size_t i = 1; i < roughnessLodCount; i++) {
-        input = gaussianBlurPass(fg, input, i - 1, input, i, reinhard, kernelWidth, sigmaRatio);
+        input = gaussianBlurPass(fg, input, i - 1, input, i, 0, reinhard, kernelWidth, sigmaRatio);
         reinhard = false; // only do the reinhard filtering on the first level
     }
     return input;
@@ -691,7 +682,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, uint8_t srcLevel,
-        FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel,
+        FrameGraphId<FrameGraphTexture> output, uint8_t dstLevel, uint8_t layer,
         bool reinhard, size_t kernelWidth, float sigmaRatio) noexcept {
 
     const float sigma = (kernelWidth + 1.0f) / sigmaRatio;
@@ -739,7 +730,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
         FrameGraphId<FrameGraphTexture> temp;
     };
 
-    const size_t kernelStorageSize = mSeparableGaussianBlurKernelStorageSize;
+    // The effective kernel size is (kMaxPositiveKernelSize - 1) * 4 + 1.
+    // e.g.: 5 positive-side samples, give 4+1+4=9 samples both sides
+    // taking advantage of linear filtering produces an effective kernel of 8+1+8=17 samples
+    // and because it's a separable filter, the effective 2D filter kernel size is 17*17
+    // The total number of samples needed over the two passes is 18.
+
     fg.addPass<BlurPassData>("Gaussian Blur Passes",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = builder.getDescriptor(input);
@@ -761,7 +757,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 data.temp = builder.sample(data.temp);
                 data.temp = builder.declareRenderPass(data.temp);
 
-                data.out = builder.createSubresource(output, "Blurred texture mip",{ .level = dstLevel });
+                data.out = builder.createSubresource(output, "Blurred texture mip",
+                        { .level = dstLevel, .layer = layer });
                 data.out = builder.declareRenderPass(data.out);
             },
             [=](FrameGraphResources const& resources,
@@ -769,6 +766,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
                 auto const& separableGaussianBlur = getPostProcessMaterial("separableGaussianBlur");
                 FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance();
+                const size_t kernelStorageSize = mi->getMaterial()->reflect("kernel")->size;
 
                 float2 kernel[64];
                 size_t m = computeGaussianCoefficients(kernel,
@@ -1055,6 +1053,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
+                    driver.setMinMaxLevels(inOutColor, level, level);
+                    driver.setMinMaxLevels(inOutCoc, level, level);
                     mi->setParameter("mip", uint32_t(level));
                     mi->setParameter("weightScale", 0.5f / float(1u<<level));   // FIXME: halfres?
                     mi->commit(driver);
@@ -1062,6 +1062,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     driver.draw(pipeline, fullScreenRenderPrimitive);
                     driver.endRenderPass();
                 }
+                driver.setMinMaxLevels(inOutColor, 0, mipmapCount - 1u);
+                driver.setMinMaxLevels(inOutCoc, 0, mipmapCount - 1u);
             });
 
     /*
@@ -1531,8 +1533,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     commitAndRender(out, material, driver);
                 });
 
-        auto flare = gaussianBlurPass(fg, flarePass->out, 0,
-                {}, 0, false, 9);
+        auto flare = gaussianBlurPass(fg,
+                flarePass->out, 0,
+                {}, 0, 0,
+                false, 9);
 
         fg.getBlackboard().put("flare", flare);
 
@@ -1875,7 +1879,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 }
                 if (bloomOptions.lensFlare && flare) {
                     data.flare = builder.sample(flare);
-                    data.starburst = builder.sample(starburst);
+                    if (starburst) {
+                        data.starburst = builder.sample(starburst);
+                    }
                 }
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
@@ -2315,7 +2321,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level, bool finalize) noexcept {
+        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+        math::float4 clearColor, bool finalize) noexcept {
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -2332,7 +2339,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass(name, {
                     .attachments = { .color = { out }},
-                    .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f },
+                    .clearColor = clearColor,
                     .clearFlags = TargetBufferFlags::COLOR
                 });
             },
@@ -2350,6 +2357,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 driver.setMinMaxLevels(in, level, level);
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
+
+                // When generating shadow map mip levels, we want to preserve the 1 texel border.
+                // (note clearing never respects the scissor in filament)
+                PipelineState pipeline(material.getPipelineState());
+                pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
+
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("color", in, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -2358,12 +2371,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 mi->setParameter("level", uint32_t(level));
                 mi->setParameter("layer", uint32_t(layer));
                 mi->setParameter("uvscale", 1.0f / dim);
+                mi->commit(driver);
+                mi->use(driver);
 
-                // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                auto vpWidth = (uint32_t) std::max(0, dim - 2);
-                out.params.viewport = { 1, 1, vpWidth, vpWidth };
-
-                commitAndRender(out, material, driver);
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive());
+                driver.endRenderPass();
 
                 if (finalize) {
                    driver.setMinMaxLevels(in, 0, level);

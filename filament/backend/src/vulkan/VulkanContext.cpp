@@ -206,6 +206,7 @@ void VulkanContext::createLogicalDevice() {
     VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
         .pNext = nullptr,
+        .imageViewFormatSwizzle = VK_TRUE,
         .mutableComparisonSamplers = VK_TRUE,
     };
     if (portabilitySubsetSupported) {

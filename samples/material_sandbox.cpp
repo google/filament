@@ -866,8 +866,6 @@ static void gui(filament::Engine* engine, filament::View*) {
                     debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
             ImGui::Checkbox("Focus shadow casters",
                     debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
-            ImGui::Checkbox("Show checker board",
-                    debug.getPropertyAddress<bool>("d.shadowmap.checkerboard"));
 
             ImGui::SliderFloat("Normal bias", &params.normalBias, 0.0f, 4.0f);
             ImGui::SliderFloat("Constant bias", &params.constantBias, 0.0f, 1.0f);

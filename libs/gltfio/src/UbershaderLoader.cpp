@@ -44,14 +44,23 @@ public:
     UbershaderLoader(filament::Engine* engine);
     ~UbershaderLoader() {}
 
-    MaterialSource getSource() const noexcept override { return LOAD_UBERSHADERS; }
-
-    filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label) override;
 
     size_t getMaterialsCount() const noexcept override;
-    const filament::Material* const* getMaterials() const noexcept override;
+    const Material* const* getMaterials() const noexcept override;
     void destroyMaterials() override;
+
+    bool needsDummyData(VertexAttribute attrib) const noexcept override {
+        switch (attrib) {
+            case VertexAttribute::UV0:
+            case VertexAttribute::UV1:
+            case VertexAttribute::COLOR:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     Material* getMaterial(const MaterialKey& config) const;
 
@@ -64,7 +73,7 @@ public:
     mutable Material* mMaterials[11] = {};
     Texture* mDummyTexture = nullptr;
 
-    filament::Engine* mEngine;
+    Engine* mEngine;
 };
 
 #if GLTFIO_LITE

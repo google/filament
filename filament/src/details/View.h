@@ -23,7 +23,7 @@
 
 #include "FrameInfo.h"
 #include "FrameHistory.h"
-#include "UniformBuffer.h"
+#include "TypedUniformBuffer.h"
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
@@ -163,10 +163,13 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
             ArenaScope& arena, Viewport const& viewport) noexcept;
+
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadowMap() const noexcept;
+
     void cleanupRenderPasses() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
@@ -419,9 +422,9 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    UniformBuffer& getViewUniforms() const { return mPerViewUb; }
+    auto& getViewUniforms() const { return mPerViewUb; }
+    auto& getShadowUniforms() const { return mShadowUb; }
     backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
-    UniformBuffer& getShadowUniforms() const { return mShadowUb; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -497,7 +500,7 @@ private:
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
-    VsmShadowOptions mVsmShadowOptions = {};
+    VsmShadowOptions mVsmShadowOptions = {}; // FIXME: this should probably be per-light
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;
@@ -514,8 +517,8 @@ private:
 
     RenderQuality mRenderQuality;
 
-    mutable UniformBuffer mPerViewUb;
-    mutable UniformBuffer mShadowUb;
+    mutable TypedUniformBuffer<PerViewUib> mPerViewUb;
+    mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     mutable backend::SamplerGroup mPerViewSb;
 
     mutable FrameHistory mFrameHistory{};

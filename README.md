@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.10.5'
+    implementation 'com.google.android.filament:filament-android:1.10.6'
 }
 ```
 
@@ -63,7 +63,7 @@ A much smaller alternative to `filamat-android` that can only generate OpenGL sh
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.10.5'
+pod 'Filament', '~> 1.10.6'
 ```
 
 ### Snapshots
@@ -190,6 +190,7 @@ Here are a few screenshots of applications that use Filament in production:
   - [x] KHR_draco_mesh_compression
   - [x] KHR_lights_punctual
   - [x] KHR_materials_clearcoat
+  - [x] KHR_materials_ior
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
   - [x] KHR_materials_transmission

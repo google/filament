@@ -105,7 +105,6 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .extent = { w, h, depth },
         .mipLevels = levels,
         .arrayLayers = 1,
-        .samples = (VkSampleCountFlagBits) samples,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = 0
     };
@@ -159,7 +158,28 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         imageInfo.usage |= blittable;
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        // Depth resolves uses a custom shader and therefore needs to be sampleable.
+        if (samples > 1) {
+            imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
     }
+
+    // Constrain the sample count according to the sample count masks in VkPhysicalDeviceProperties.
+    // Note that VulkanRenderTarget holds a single MSAA count, so we play it safe if this is used as
+    // any kind of attachment (color or depth).
+    const auto& limits = context.physicalDeviceProperties.limits;
+    if (imageInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+        samples = reduceSampleCount(samples, isDepthFormat(mVkFormat) ?
+                limits.sampledImageDepthSampleCounts : limits.sampledImageColorSampleCounts);
+    }
+    if (imageInfo.usage & (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+        samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
+            limits.framebufferColorSampleCounts);
+    }
+    this->samples = samples;
+    imageInfo.samples = (VkSampleCountFlagBits) samples;
 
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &mTextureImage);
     if (error || FILAMENT_VULKAN_VERBOSE) {
@@ -397,7 +417,18 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
     getImageView(mPrimaryViewRange);
 }
 
-VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool force2D) {
+VkImageView VulkanTexture::getAttachmentView(int singleLevel, int singleLayer,
+        VkImageAspectFlags aspect) {
+    return getImageView({
+        .aspectMask = aspect,
+        .baseMipLevel = uint32_t(singleLevel),
+        .levelCount = uint32_t(1),
+        .baseArrayLayer = uint32_t(singleLayer),
+        .layerCount = uint32_t(1),
+    }, true);
+}
+
+VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool isAttachment) {
     auto iter = mCachedImageViews.find(range);
     if (iter != mCachedImageViews.end()) {
         return iter->second;
@@ -407,9 +438,9 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, bool forc
         .pNext = nullptr,
         .flags = 0,
         .image = mTextureImage,
-        .viewType = force2D ? VK_IMAGE_VIEW_TYPE_2D : mViewType,
+        .viewType = isAttachment ? VK_IMAGE_VIEW_TYPE_2D : mViewType,
         .format = mVkFormat,
-        .components = mSwizzle,
+        .components = isAttachment ? (VkComponentMapping{}) : mSwizzle,
         .subresourceRange = range
     };
     VkImageView imageView;

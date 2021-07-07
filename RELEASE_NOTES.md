@@ -3,7 +3,18 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.6 (currently main branch)
+## v1.10.7 (currently main branch)
+
+## v1.10.6
+
+- engine: Use exponential VSM and improve VSM user settings [⚠️ **Recompile Materials for VSM**].
+- engine: Optional blurring of VSM shadowmaps.
+- engine: Fix a crash when using lens flares.
+- engine: Fix backend crashes when using an unsupported sample count.
+- gltfio: Add new `getAsset`API to `FilamentInstance`.
+- gltfio: Introduce support for extras strings.
+- OpenGL: Increase OpenGL backend handle arena from 2 to 4 MiB.
+- Vulkan: Fix Texture swizzle support.
 
 ## v1.10.5
 

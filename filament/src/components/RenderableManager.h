@@ -28,7 +28,7 @@
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>
 
-#include <private/filament/UibGenerator.h>
+#include <private/filament/UibStructs.h>
 
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>
