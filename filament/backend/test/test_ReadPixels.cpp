@@ -62,7 +62,12 @@ void main() {
 
 namespace test {
 
-TEST_F(BackendTest, ReadPixels) {
+class ReadPixelsTest : public BackendTest {
+public:
+    bool readPixelsFinished = false;
+};
+
+TEST_F(ReadPixelsTest, ReadPixels) {
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU
@@ -318,9 +323,7 @@ TEST_F(BackendTest, ReadPixels) {
     getDriver().purge();
 }
 
-static bool gReadPixelsFinished = false;
-
-TEST_F(BackendTest, ReadPixelsPerformance) {
+TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     const size_t renderTargetSize = 2000;
     const int iterationCount = 100;
 
@@ -375,7 +378,7 @@ TEST_F(BackendTest, ReadPixelsPerformance) {
     state.rasterState.culling = CullingMode::NONE;
 
     for (int iteration = 0; iteration < iterationCount; ++iteration) {
-        gReadPixelsFinished = false;
+        readPixelsFinished = false;
 
         if (0 == iteration % 10) {
             printf("Executing test %d / %d\n", iteration, iterationCount);
@@ -392,8 +395,9 @@ TEST_F(BackendTest, ReadPixelsPerformance) {
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,
                 PixelDataFormat::RGBA, PixelDataType::UBYTE, 1, 0, 0, renderTargetSize,
                 [](void* buffer, size_t size, void* user) {
-                    gReadPixelsFinished = true;
-        });
+                    ReadPixelsTest* test = (ReadPixelsTest*) user;
+                    test->readPixelsFinished = true;
+                }, this);
 
         getDriverApi().readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
         getDriverApi().commit(swapChain);
@@ -402,7 +406,7 @@ TEST_F(BackendTest, ReadPixelsPerformance) {
         flushAndWait();
         getDriver().purge();
 
-        ASSERT_TRUE(gReadPixelsFinished);
+        ASSERT_TRUE(readPixelsFinished);
     }
 
     free(buffer);
