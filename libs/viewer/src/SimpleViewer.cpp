@@ -613,26 +613,24 @@ void SimpleViewer::updateUserInterface() {
             enableDithering(dither);
             ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
             ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
+
+            ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
+            // this clutters the UI and isn't that useful (except when working on TAA)
+            //ImGui::Indent();
+            //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
+            //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
+            //ImGui::Unindent();
+
+            bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
+            ImGui::Checkbox("FXAA", &fxaa);
+            enableFxaa(fxaa);
         ImGui::Unindent();
 
         bool msaa = mSettings.view.sampleCount != 1;
         ImGui::Checkbox("MSAA 4x", &msaa);
         enableMsaa(msaa);
 
-        ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
-
-        // this clutters the UI and isn't that useful (except when working on TAA)
-        //ImGui::Indent();
-        //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
-        //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
-        //ImGui::Unindent();
-
-        bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
-        ImGui::Checkbox("FXAA", &fxaa);
-        enableFxaa(fxaa);
-
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
-
         if (ImGui::CollapsingHeader("SSAO Options")) {
             auto& ssao = mSettings.view.ssao;
 

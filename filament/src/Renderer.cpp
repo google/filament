@@ -239,7 +239,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
-        msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
         vignetteOptions.enabled = false;
