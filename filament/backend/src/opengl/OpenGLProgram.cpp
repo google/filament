@@ -231,15 +231,24 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
                 t->gl.fence = nullptr;
             }
 
+            SamplerParams params{ samplers[index].s };
+            if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                // From OES_EGL_image_external spec:
+                // "The default s and t wrap modes are CLAMP_TO_EDGE and it is an INVALID_ENUM
+                //  error to set the wrap mode to any other value."
+                params.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
+                params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
+                params.wrapR = SamplerWrapMode::CLAMP_TO_EDGE;
+            }
+
             gld->bindTexture(tmu, t);
-            gld->bindSampler(tmu, samplers[index].s);
+            gld->bindSampler(tmu, params);
 
 #if defined(GL_EXT_texture_filter_anisotropic)
             if (UTILS_UNLIKELY(anisotropyWorkaround)) {
                 // Driver claims to support anisotropic filtering, but it fails when set on
                 // the sampler, we have to set it on the texture instead.
                 // The texture is already bound here.
-                SamplerParams params = samplers[index].s;
                 GLfloat anisotropy = float(1u << params.anisotropyLog2);
                 glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                         std::min(glc.gets.max_anisotropy, anisotropy));
