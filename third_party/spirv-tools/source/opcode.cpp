@@ -337,7 +337,7 @@ int32_t spvOpcodeGeneratesType(SpvOp op) {
     case SpvOpTypeCooperativeMatrixNV:
     // case SpvOpTypeAccelerationStructureKHR: covered by
     // SpvOpTypeAccelerationStructureNV
-    case SpvOpTypeRayQueryProvisionalKHR:
+    case SpvOpTypeRayQueryKHR:
       return true;
     default:
       // In particular, OpTypeForwardPointer does not generate a type,
@@ -417,8 +417,10 @@ bool spvOpcodeIsAtomicWithLoad(const SpvOp opcode) {
     case SpvOpAtomicISub:
     case SpvOpAtomicSMin:
     case SpvOpAtomicUMin:
+    case SpvOpAtomicFMinEXT:
     case SpvOpAtomicSMax:
     case SpvOpAtomicUMax:
+    case SpvOpAtomicFMaxEXT:
     case SpvOpAtomicAnd:
     case SpvOpAtomicOr:
     case SpvOpAtomicXor:
@@ -444,13 +446,30 @@ bool spvOpcodeIsReturn(SpvOp opcode) {
   }
 }
 
+bool spvOpcodeIsAbort(SpvOp opcode) {
+  switch (opcode) {
+    case SpvOpKill:
+    case SpvOpUnreachable:
+    case SpvOpTerminateInvocation:
+    case SpvOpTerminateRayKHR:
+    case SpvOpIgnoreIntersectionKHR:
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool spvOpcodeIsReturnOrAbort(SpvOp opcode) {
-  return spvOpcodeIsReturn(opcode) || opcode == SpvOpKill ||
-         opcode == SpvOpUnreachable || opcode == SpvOpTerminateInvocation;
+  return spvOpcodeIsReturn(opcode) || spvOpcodeIsAbort(opcode);
 }
 
 bool spvOpcodeIsBlockTerminator(SpvOp opcode) {
   return spvOpcodeIsBranch(opcode) || spvOpcodeIsReturnOrAbort(opcode);
+}
+
+bool spvOpcodeTerminatesExecution(SpvOp opcode) {
+  return opcode == SpvOpKill || opcode == SpvOpTerminateInvocation ||
+         opcode == SpvOpTerminateRayKHR || opcode == SpvOpIgnoreIntersectionKHR;
 }
 
 bool spvOpcodeIsBaseOpaqueType(SpvOp opcode) {

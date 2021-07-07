@@ -1548,6 +1548,105 @@ OpFunctionEnd
                                                   true);
 }
 
+TEST_F(GraphicsRobustAccessTest, ReplaceIndexReportsChanged) {
+  // A ClusterFuzz generated shader that triggered a
+  // "Binary size unexpectedly changed despite the optimizer saying there was no
+  // change" assertion.
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/4166.
+  std::string shader = R"(
+; SPIR-V
+; Version: 1.0
+; Generator: Google Shaderc over Glslang; 245
+; Bound: 41
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "else" %gl_GlobalInvocationID
+               OpExecutionMode %main LocalSize 1 1 3338665985
+               OpSource GLSL 450
+               OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+               OpSourceExtension "GL_GOOGLE_include_directive"
+               OpName %main "main"
+               OpName %index "index"
+               OpName %gl_GlobalInvocationID "gl_GlobalInvocationID"
+               OpName %S "S"
+               OpMemberName %_struct_24 0 ""
+               OpMemberName %_struct_24 1 ""
+               OpName %Dst "Dst"
+               OpMemberName %Dst 0 "s"
+               OpName %dst "dst"
+               OpName %Src "Src"
+               OpMemberName %Src 0 "s"
+               OpName %src "src"
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpMemberDecorate %_struct_24 0 Offset 64
+               OpMemberDecorate %_struct_24 1 Offset 8
+               OpDecorate %_arr__struct_24_uint_1 ArrayStride 16
+               OpMemberDecorate %Dst 0 Offset 0
+               OpDecorate %Dst BufferBlock
+               OpDecorate %dst DescriptorSet 0
+               OpDecorate %dst Binding 1
+               OpDecorate %_arr__struct_24_uint_1_0 ArrayStride 16
+               OpMemberDecorate %Src 0 Offset 0
+               OpDecorate %Src Block
+               OpDecorate %src DescriptorSet 0
+               OpDecorate %src Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+  %uint_4864 = OpConstant %uint 4864
+%_ptr_Input_uint = OpTypePointer Input %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+     %v2uint = OpTypeVector %uint 2
+ %_struct_24 = OpTypeStruct %_ptr_Input_uint %v2uint
+%_arr__struct_24_uint_1 = OpTypeArray %_struct_24 %uint_1
+        %Dst = OpTypeStruct %_arr__struct_24_uint_1
+%_ptr_Uniform_Dst = OpTypePointer Uniform %Dst
+        %dst = OpVariable %_ptr_Uniform_Dst Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_arr__struct_24_uint_1_0 = OpTypeArray %_struct_24 %uint_1
+        %Src = OpTypeStruct %_arr__struct_24_uint_1_0
+%_ptr_Uniform_Src = OpTypePointer Uniform %Src
+        %src = OpVariable %_ptr_Uniform_Src Uniform
+%_ptr_Uniform__struct_24 = OpTypePointer Uniform %_struct_24
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+      %index = OpVariable %_ptr_Function_uint Function
+         %14 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_4864
+         %15 = OpLoad %uint %14
+               OpStore %index %15
+         %16 = OpLoad %uint %index
+          %S = OpUGreaterThanEqual %bool %16 %uint_1
+               OpSelectionMerge %21 None
+               OpBranchConditional %S %20 %21
+         %20 = OpLabel
+               OpReturn
+         %21 = OpLabel
+         %31 = OpLoad %uint %index
+         %36 = OpLoad %uint %index
+         %38 = OpAccessChain %_ptr_Uniform__struct_24 %src %int_0 %36
+         %39 = OpLoad %_struct_24 %38
+         %40 = OpAccessChain %_ptr_Uniform__struct_24 %dst %int_0 %31
+               OpStore %40 %39
+               OpReturn
+               OpFunctionEnd
+)";
+
+  std::vector<uint32_t> optimized_bin;
+  auto status = spvtools::opt::Pass::Status::Failure;
+  std::tie(optimized_bin, status) =
+      SinglePassRunToBinary<GraphicsRobustAccessPass>(shader, false);
+  // Check whether the pass returns the correct modification indication.
+  EXPECT_EQ(status, spvtools::opt::Pass::Status::SuccessWithChange);
+}
+
 // TODO(dneto): Test access chain index wider than 64 bits?
 // TODO(dneto): Test struct access chain index wider than 64 bits?
 // TODO(dneto): OpImageTexelPointer

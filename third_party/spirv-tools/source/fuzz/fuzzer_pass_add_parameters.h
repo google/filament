@@ -32,8 +32,6 @@ class FuzzerPassAddParameters : public FuzzerPass {
                           FuzzerContext* fuzzer_context,
                           protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddParameters() override;
-
   void Apply() override;
 
  private:

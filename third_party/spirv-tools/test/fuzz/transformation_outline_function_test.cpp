@@ -2531,98 +2531,6 @@ TEST(TransformationOutlineFunctionTest, ExitBlockHeadsLoop) {
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 }
 
-TEST(TransformationOutlineFunctionTest, SkipVoidOutputId) {
-  std::string shader = R"(
-               OpCapability Shader
-          %1 = OpExtInstImport "GLSL.std.450"
-               OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %6 "main"
-               OpExecutionMode %6 OriginUpperLeft
-               OpSource ESSL 310
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-         %21 = OpTypeBool
-         %81 = OpConstantTrue %21
-          %6 = OpFunction %2 None %3
-          %7 = OpLabel
-               OpBranch %80
-         %80 = OpLabel
-         %84 = OpFunctionCall %2 %87
-               OpBranch %90
-         %90 = OpLabel
-         %86 = OpPhi %2 %84 %80
-               OpReturn
-               OpFunctionEnd
-         %87 = OpFunction %2 None %3
-         %88 = OpLabel
-               OpReturn
-               OpFunctionEnd
-  )";
-
-  const auto env = SPV_ENV_UNIVERSAL_1_5;
-  const auto consumer = nullptr;
-  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
-  spvtools::ValidatorOptions validator_options;
-  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
-                                               kConsoleMessageConsumer));
-  TransformationContext transformation_context(
-      MakeUnique<FactManager>(context.get()), validator_options);
-  TransformationOutlineFunction transformation(
-      /*entry_block*/ 80,
-      /*exit_block*/ 80,
-      /*new_function_struct_return_type_id*/ 300,
-      /*new_function_type_id*/ 301,
-      /*new_function_id*/ 302,
-      /*new_function_region_entry_block*/ 304,
-      /*new_caller_result_id*/ 305,
-      /*new_callee_result_id*/ 306,
-      /*input_id_to_fresh_id*/ {},
-      /*output_id_to_fresh_id*/ {{84, 307}});
-
-  ASSERT_TRUE(
-      transformation.IsApplicable(context.get(), transformation_context));
-  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
-                                               kConsoleMessageConsumer));
-
-  std::string after_transformation = R"(
-               OpCapability Shader
-          %1 = OpExtInstImport "GLSL.std.450"
-               OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %6 "main"
-               OpExecutionMode %6 OriginUpperLeft
-               OpSource ESSL 310
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-         %21 = OpTypeBool
-         %81 = OpConstantTrue %21
-        %300 = OpTypeStruct
-        %301 = OpTypeFunction %300
-          %6 = OpFunction %2 None %3
-          %7 = OpLabel
-               OpBranch %80
-         %80 = OpLabel
-        %305 = OpFunctionCall %300 %302
-         %84 = OpUndef %2
-               OpBranch %90
-         %90 = OpLabel
-         %86 = OpPhi %2 %84 %80
-               OpReturn
-               OpFunctionEnd
-         %87 = OpFunction %2 None %3
-         %88 = OpLabel
-               OpReturn
-               OpFunctionEnd
-        %302 = OpFunction %300 None %301
-        %304 = OpLabel
-        %307 = OpFunctionCall %2 %87
-        %306 = OpCompositeConstruct %300
-               OpReturnValue %306
-               OpFunctionEnd
-  )";
-  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
-}
-
 TEST(TransformationOutlineFunctionTest, Miscellaneous1) {
   // This tests outlining of some non-trivial code, and also tests the way
   // overflow ids are used by the transformation.
@@ -3297,6 +3205,45 @@ TEST(TransformationOutlineFunctionTest, Miscellaneous4) {
                OpFunctionEnd
   )";
   ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+}
+
+TEST(TransformationOutlineFunctionTest, NoOutlineWithUnreachableBlocks) {
+  // This checks that outlining will not be performed if a node in the region
+  // has an unreachable predecessor.
+
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+               OpName %4 "main"
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %4 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpBranch %5
+          %5 = OpLabel
+               OpReturn
+          %6 = OpLabel
+               OpBranch %5
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_4;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+  TransformationOutlineFunction transformation(5, 5, /* not relevant */ 200,
+                                               100, 101, 102, 103,
+                                               /* not relevant */ 201, {}, {});
+  ASSERT_FALSE(
+      transformation.IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

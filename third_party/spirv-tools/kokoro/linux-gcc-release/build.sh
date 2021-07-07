@@ -21,4 +21,4 @@ set -e
 set -x
 
 SCRIPT_DIR=`dirname "$BASH_SOURCE"`
-source $SCRIPT_DIR/../scripts/linux/build.sh RELEASE gcc
+source $SCRIPT_DIR/../scripts/linux/build.sh RELEASE gcc cmake

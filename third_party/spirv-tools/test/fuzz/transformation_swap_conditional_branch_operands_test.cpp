@@ -91,9 +91,31 @@ TEST(TransformationSwapConditionalBranchOperandsTest, BasicTest) {
 
   TransformationSwapConditionalBranchOperands transformation(
       MakeInstructionDescriptor(15, SpvOpBranchConditional, 0), 26);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(26));
+  ASSERT_EQ(nullptr, context->get_instr_block(26));
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpLogicalNot, context->get_def_use_mgr()->GetDef(26)->opcode());
+  ASSERT_EQ(5, context->get_instr_block(26)->id());
+  ASSERT_EQ(1, context->get_def_use_mgr()->NumUses(26));
+
+  // Check that the def-use manager knows that the conditional branch operands
+  // have been swapped.
+  std::vector<std::pair<uint32_t, uint32_t>> phi_operand_to_new_operand_index =
+      {{16, 2}, {21, 1}};
+  for (std::pair<uint32_t, uint32_t>& entry :
+       phi_operand_to_new_operand_index) {
+    context->get_def_use_mgr()->WhileEachUse(
+        entry.first,
+        [&entry](opt::Instruction* inst, uint32_t operand_index) -> bool {
+          if (inst->opcode() == SpvOpBranchConditional) {
+            EXPECT_EQ(entry.second, operand_index);
+            return false;
+          }
+          return true;
+        });
+  }
 
   std::string after_transformation = R"(
                OpCapability Shader

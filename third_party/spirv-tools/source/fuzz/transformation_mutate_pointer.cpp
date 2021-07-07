@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationMutatePointer::TransformationMutatePointer(
-    const protobufs::TransformationMutatePointer& message)
-    : message_(message) {}
+    protobufs::TransformationMutatePointer message)
+    : message_(std::move(message)) {}
 
 TransformationMutatePointer::TransformationMutatePointer(
     uint32_t pointer_id, uint32_t fresh_id,
@@ -92,36 +92,47 @@ void TransformationMutatePointer::Apply(
   auto* insert_before_inst =
       FindInstruction(message_.insert_before(), ir_context);
   assert(insert_before_inst && "|insert_before| descriptor is invalid");
+  opt::BasicBlock* enclosing_block =
+      ir_context->get_instr_block(insert_before_inst);
 
   auto pointee_type_id = fuzzerutil::GetPointeeTypeIdFromPointerType(
       ir_context, fuzzerutil::GetTypeId(ir_context, message_.pointer_id()));
 
   // Back up the original value.
-  insert_before_inst->InsertBefore(MakeUnique<opt::Instruction>(
+  auto backup_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpLoad, pointee_type_id, message_.fresh_id(),
       opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}}}));
+          {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}}});
+  auto backup_instruction_ptr = backup_instruction.get();
+  insert_before_inst->InsertBefore(std::move(backup_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(backup_instruction_ptr);
+  ir_context->set_instr_block(backup_instruction_ptr, enclosing_block);
 
   // Insert a new value.
-  insert_before_inst->InsertBefore(MakeUnique<opt::Instruction>(
+  auto new_value_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpStore, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}},
           {SPV_OPERAND_TYPE_ID,
            {fuzzerutil::MaybeGetZeroConstant(
-               ir_context, *transformation_context, pointee_type_id, true)}}}));
+               ir_context, *transformation_context, pointee_type_id, true)}}});
+  auto new_value_instruction_ptr = new_value_instruction.get();
+  insert_before_inst->InsertBefore(std::move(new_value_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_value_instruction_ptr);
+  ir_context->set_instr_block(new_value_instruction_ptr, enclosing_block);
 
   // Restore the original value.
-  insert_before_inst->InsertBefore(MakeUnique<opt::Instruction>(
+  auto restore_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpStore, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}},
-          {SPV_OPERAND_TYPE_ID, {message_.fresh_id()}}}));
+          {SPV_OPERAND_TYPE_ID, {message_.fresh_id()}}});
+  auto restore_instruction_ptr = restore_instruction.get();
+  insert_before_inst->InsertBefore(std::move(restore_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(restore_instruction_ptr);
+  ir_context->set_instr_block(restore_instruction_ptr, enclosing_block);
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-
-  // Make sure analyses represent the correct state of the module.
-  ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationMutatePointer::ToMessage() const {

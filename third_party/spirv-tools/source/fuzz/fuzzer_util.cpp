@@ -25,6 +25,25 @@ namespace fuzz {
 namespace fuzzerutil {
 namespace {
 
+// A utility class that uses RAII to change and restore the terminator
+// instruction of the |block|.
+class ChangeTerminatorRAII {
+ public:
+  explicit ChangeTerminatorRAII(opt::BasicBlock* block,
+                                opt::Instruction new_terminator)
+      : block_(block), old_terminator_(std::move(*block->terminator())) {
+    *block_->terminator() = std::move(new_terminator);
+  }
+
+  ~ChangeTerminatorRAII() {
+    *block_->terminator() = std::move(old_terminator_);
+  }
+
+ private:
+  opt::BasicBlock* block_;
+  opt::Instruction old_terminator_;
+};
+
 uint32_t MaybeGetOpConstant(opt::IRContext* ir_context,
                             const TransformationContext& transformation_context,
                             const std::vector<uint32_t>& words,
@@ -46,6 +65,34 @@ uint32_t MaybeGetOpConstant(opt::IRContext* ir_context,
 const spvtools::MessageConsumer kSilentMessageConsumer =
     [](spv_message_level_t, const char*, const spv_position_t&,
        const char*) -> void {};
+
+bool BuildIRContext(spv_target_env target_env,
+                    const spvtools::MessageConsumer& message_consumer,
+                    const std::vector<uint32_t>& binary_in,
+                    spv_validator_options validator_options,
+                    std::unique_ptr<spvtools::opt::IRContext>* ir_context) {
+  SpirvTools tools(target_env);
+  tools.SetMessageConsumer(message_consumer);
+  if (!tools.IsValid()) {
+    message_consumer(SPV_MSG_ERROR, nullptr, {},
+                     "Failed to create SPIRV-Tools interface; stopping.");
+    return false;
+  }
+
+  // Initial binary should be valid.
+  if (!tools.Validate(binary_in.data(), binary_in.size(), validator_options)) {
+    message_consumer(SPV_MSG_ERROR, nullptr, {},
+                     "Initial binary is invalid; stopping.");
+    return false;
+  }
+
+  // Build the module from the input binary.
+  auto result = BuildModule(target_env, message_consumer, binary_in.data(),
+                            binary_in.size());
+  assert(result && "IRContext must be valid");
+  *ir_context = std::move(result);
+  return true;
+}
 
 bool IsFreshId(opt::IRContext* context, uint32_t id) {
   return !context->get_def_use_mgr()->GetDef(id);
@@ -135,35 +182,46 @@ bool PhiIdsOkForNewEdge(
   return true;
 }
 
-void AddUnreachableEdgeAndUpdateOpPhis(
-    opt::IRContext* context, opt::BasicBlock* bb_from, opt::BasicBlock* bb_to,
-    uint32_t bool_id,
-    const google::protobuf::RepeatedField<google::protobuf::uint32>& phi_ids) {
-  assert(PhiIdsOkForNewEdge(context, bb_from, bb_to, phi_ids) &&
-         "Precondition on phi_ids is not satisfied");
+opt::Instruction CreateUnreachableEdgeInstruction(opt::IRContext* ir_context,
+                                                  uint32_t bb_from_id,
+                                                  uint32_t bb_to_id,
+                                                  uint32_t bool_id) {
+  const auto* bb_from = MaybeFindBlock(ir_context, bb_from_id);
+  assert(bb_from && "|bb_from_id| is invalid");
+  assert(MaybeFindBlock(ir_context, bb_to_id) && "|bb_to_id| is invalid");
   assert(bb_from->terminator()->opcode() == SpvOpBranch &&
          "Precondition on terminator of bb_from is not satisfied");
 
   // Get the id of the boolean constant to be used as the condition.
-  auto condition_inst = context->get_def_use_mgr()->GetDef(bool_id);
+  auto condition_inst = ir_context->get_def_use_mgr()->GetDef(bool_id);
   assert(condition_inst &&
          (condition_inst->opcode() == SpvOpConstantTrue ||
           condition_inst->opcode() == SpvOpConstantFalse) &&
          "|bool_id| is invalid");
 
   auto condition_value = condition_inst->opcode() == SpvOpConstantTrue;
-
-  const bool from_to_edge_already_exists = bb_from->IsSuccessor(bb_to);
-  auto successor = bb_from->terminator()->GetSingleWordInOperand(0);
+  auto successor_id = bb_from->terminator()->GetSingleWordInOperand(0);
 
   // Add the dead branch, by turning OpBranch into OpBranchConditional, and
   // ordering the targets depending on whether the given boolean corresponds to
   // true or false.
-  bb_from->terminator()->SetOpcode(SpvOpBranchConditional);
-  bb_from->terminator()->SetInOperands(
+  return opt::Instruction(
+      ir_context, SpvOpBranchConditional, 0, 0,
       {{SPV_OPERAND_TYPE_ID, {bool_id}},
-       {SPV_OPERAND_TYPE_ID, {condition_value ? successor : bb_to->id()}},
-       {SPV_OPERAND_TYPE_ID, {condition_value ? bb_to->id() : successor}}});
+       {SPV_OPERAND_TYPE_ID, {condition_value ? successor_id : bb_to_id}},
+       {SPV_OPERAND_TYPE_ID, {condition_value ? bb_to_id : successor_id}}});
+}
+
+void AddUnreachableEdgeAndUpdateOpPhis(
+    opt::IRContext* context, opt::BasicBlock* bb_from, opt::BasicBlock* bb_to,
+    uint32_t bool_id,
+    const google::protobuf::RepeatedField<google::protobuf::uint32>& phi_ids) {
+  assert(PhiIdsOkForNewEdge(context, bb_from, bb_to, phi_ids) &&
+         "Precondition on phi_ids is not satisfied");
+
+  const bool from_to_edge_already_exists = bb_from->IsSuccessor(bb_to);
+  *bb_from->terminator() = CreateUnreachableEdgeInstruction(
+      context, bb_from->id(), bb_to->id(), bool_id);
 
   // Update OpPhi instructions in the target block if this branch adds a
   // previously non-existent edge from source to target.
@@ -194,11 +252,11 @@ bool BlockIsBackEdge(opt::IRContext* context, uint32_t block_id,
     return false;
   }
 
-  // |block_id| must be reachable and be dominated by |loop_header|.
+  // |block| must be reachable and be dominated by |loop_header|.
   opt::DominatorAnalysis* dominator_analysis =
       context->GetDominatorAnalysis(loop_header->GetParent());
-  return dominator_analysis->IsReachable(block_id) &&
-         dominator_analysis->Dominates(loop_header_id, block_id);
+  return context->IsReachable(*block) &&
+         dominator_analysis->Dominates(loop_header, block);
 }
 
 bool BlockIsInLoopContinueConstruct(opt::IRContext* context, uint32_t block_id,
@@ -224,13 +282,6 @@ opt::BasicBlock::iterator GetIteratorForInstruction(
     }
   }
   return block->end();
-}
-
-bool BlockIsReachableInItsFunction(opt::IRContext* context,
-                                   opt::BasicBlock* bb) {
-  auto enclosing_function = bb->GetParent();
-  return context->GetDominatorAnalysis(enclosing_function)
-      ->Dominates(enclosing_function->entry().get(), bb);
 }
 
 bool CanInsertOpcodeBeforeInstruction(
@@ -410,7 +461,7 @@ bool IsValid(const opt::IRContext* context,
   std::vector<uint32_t> binary;
   context->module()->ToBinary(&binary, false);
   SpirvTools tools(context->grammar().target_env());
-  tools.SetMessageConsumer(consumer);
+  tools.SetMessageConsumer(std::move(consumer));
   return tools.Validate(binary.data(), binary.size(), validator_options);
 }
 
@@ -602,13 +653,12 @@ bool IdIsAvailableAtUse(opt::IRContext* context,
     // It is not OK for a definition to use itself.
     return false;
   }
-  auto dominator_analysis = context->GetDominatorAnalysis(enclosing_function);
-  if (!dominator_analysis->IsReachable(
-          context->get_instr_block(use_instruction)) ||
-      !dominator_analysis->IsReachable(context->get_instr_block(id))) {
+  if (!context->IsReachable(*context->get_instr_block(use_instruction)) ||
+      !context->IsReachable(*context->get_instr_block(id))) {
     // Skip unreachable blocks.
     return false;
   }
+  auto dominator_analysis = context->GetDominatorAnalysis(enclosing_function);
   if (use_instruction->opcode() == SpvOpPhi) {
     // In the case where the use is an operand to OpPhi, it is actually the
     // *parent* block associated with the operand that must be dominated by
@@ -646,8 +696,8 @@ bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
   }
   const auto* dominator_analysis =
       context->GetDominatorAnalysis(function_enclosing_instruction);
-  if (dominator_analysis->IsReachable(context->get_instr_block(instruction)) &&
-      dominator_analysis->IsReachable(context->get_instr_block(id)) &&
+  if (context->IsReachable(*context->get_instr_block(instruction)) &&
+      context->IsReachable(*context->get_instr_block(id)) &&
       dominator_analysis->Dominates(id_definition, instruction)) {
     // The id's definition dominates the instruction, and both the definition
     // and the instruction are in reachable blocks, thus the id is available at
@@ -657,8 +707,7 @@ bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
   if (id_definition->opcode() == SpvOpVariable &&
       function_enclosing_instruction ==
           context->get_instr_block(id)->GetParent()) {
-    assert(!dominator_analysis->IsReachable(
-               context->get_instr_block(instruction)) &&
+    assert(!context->IsReachable(*context->get_instr_block(instruction)) &&
            "If the instruction were in a reachable block we should already "
            "have returned true.");
     // The id is a variable and it is in the same function as |instruction|.
@@ -747,14 +796,15 @@ bool IsNullConstantSupported(const opt::analysis::Type& type) {
 
 bool GlobalVariablesMustBeDeclaredInEntryPointInterfaces(
     const opt::IRContext* ir_context) {
-  // TODO(afd): We capture the universal environments for which this requirement
-  //  holds.  The check should be refined on demand for other target
-  //  environments.
+  // TODO(afd): We capture the environments for which this requirement holds.
+  //  The check should be refined on demand for other target environments.
   switch (ir_context->grammar().target_env()) {
     case SPV_ENV_UNIVERSAL_1_0:
     case SPV_ENV_UNIVERSAL_1_1:
     case SPV_ENV_UNIVERSAL_1_2:
     case SPV_ENV_UNIVERSAL_1_3:
+    case SPV_ENV_VULKAN_1_0:
+    case SPV_ENV_VULKAN_1_1:
       return false;
     default:
       return true;
@@ -778,9 +828,10 @@ void AddVariableIdToEntryPointInterfaces(opt::IRContext* context, uint32_t id) {
   }
 }
 
-void AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
-                       uint32_t type_id, SpvStorageClass storage_class,
-                       uint32_t initializer_id) {
+opt::Instruction* AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
+                                    uint32_t type_id,
+                                    SpvStorageClass storage_class,
+                                    uint32_t initializer_id) {
   // Check various preconditions.
   assert(result_id != 0 && "Result id can't be 0");
 
@@ -815,16 +866,20 @@ void AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
     operands.push_back({SPV_OPERAND_TYPE_ID, {initializer_id}});
   }
 
-  context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context, SpvOpVariable, type_id, result_id, std::move(operands)));
+  auto new_instruction = MakeUnique<opt::Instruction>(
+      context, SpvOpVariable, type_id, result_id, std::move(operands));
+  auto result = new_instruction.get();
+  context->module()->AddGlobalValue(std::move(new_instruction));
 
   AddVariableIdToEntryPointInterfaces(context, result_id);
   UpdateModuleIdBound(context, result_id);
+
+  return result;
 }
 
-void AddLocalVariable(opt::IRContext* context, uint32_t result_id,
-                      uint32_t type_id, uint32_t function_id,
-                      uint32_t initializer_id) {
+opt::Instruction* AddLocalVariable(opt::IRContext* context, uint32_t result_id,
+                                   uint32_t type_id, uint32_t function_id,
+                                   uint32_t initializer_id) {
   // Check various preconditions.
   assert(result_id != 0 && "Result id can't be 0");
 
@@ -845,13 +900,17 @@ void AddLocalVariable(opt::IRContext* context, uint32_t result_id,
   auto* function = FindFunction(context, function_id);
   assert(function && "Function id is invalid");
 
-  function->begin()->begin()->InsertBefore(MakeUnique<opt::Instruction>(
+  auto new_instruction = MakeUnique<opt::Instruction>(
       context, SpvOpVariable, type_id, result_id,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_STORAGE_CLASS, {SpvStorageClassFunction}},
-          {SPV_OPERAND_TYPE_ID, {initializer_id}}}));
+          {SPV_OPERAND_TYPE_ID, {initializer_id}}});
+  auto result = new_instruction.get();
+  function->begin()->begin()->InsertBefore(std::move(new_instruction));
 
   UpdateModuleIdBound(context, result_id);
+
+  return result;
 }
 
 bool HasDuplicates(const std::vector<uint32_t>& arr) {
@@ -1355,74 +1414,6 @@ uint32_t MaybeGetBoolConstant(
   return 0;
 }
 
-void AddIntegerType(opt::IRContext* ir_context, uint32_t result_id,
-                    uint32_t width, bool is_signed) {
-  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeInt, 0, result_id,
-      opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {width}},
-          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {is_signed ? 1u : 0u}}}));
-
-  UpdateModuleIdBound(ir_context, result_id);
-}
-
-void AddFloatType(opt::IRContext* ir_context, uint32_t result_id,
-                  uint32_t width) {
-  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeFloat, 0, result_id,
-      opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {width}}}));
-
-  UpdateModuleIdBound(ir_context, result_id);
-}
-
-void AddVectorType(opt::IRContext* ir_context, uint32_t result_id,
-                   uint32_t component_type_id, uint32_t element_count) {
-  const auto* component_type =
-      ir_context->get_type_mgr()->GetType(component_type_id);
-  (void)component_type;  // Make compiler happy in release mode.
-  assert(component_type &&
-         (component_type->AsInteger() || component_type->AsFloat() ||
-          component_type->AsBool()) &&
-         "|component_type_id| is invalid");
-  assert(element_count >= 2 && element_count <= 4 &&
-         "Precondition: component count must be in range [2, 4].");
-  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeVector, 0, result_id,
-      opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_ID, {component_type_id}},
-          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {element_count}}}));
-
-  UpdateModuleIdBound(ir_context, result_id);
-}
-
-void AddStructType(opt::IRContext* ir_context, uint32_t result_id,
-                   const std::vector<uint32_t>& component_type_ids) {
-  opt::Instruction::OperandList operands;
-  operands.reserve(component_type_ids.size());
-
-  for (auto type_id : component_type_ids) {
-    const auto* type = ir_context->get_type_mgr()->GetType(type_id);
-    (void)type;  // Make compiler happy in release mode.
-    assert(type && !type->AsFunction() && "Component's type id is invalid");
-
-    if (type->AsStruct()) {
-      // From the spec for the BuiltIn decoration:
-      // - When applied to a structure-type member, that structure type cannot
-      //   be contained as a member of another structure type.
-      assert(!MembersHaveBuiltInDecoration(ir_context, type_id) &&
-             "A member struct has BuiltIn members");
-    }
-
-    operands.push_back({SPV_OPERAND_TYPE_ID, {type_id}});
-  }
-
-  ir_context->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeStruct, 0, result_id, std::move(operands)));
-
-  UpdateModuleIdBound(ir_context, result_id);
-}
-
 std::vector<uint32_t> IntToWords(uint64_t value, uint32_t width,
                                  bool is_signed) {
   assert(width <= 64 && "The bit width should not be more than 64 bits");
@@ -1825,6 +1816,113 @@ std::set<uint32_t> GetReachableReturnBlocks(opt::IRContext* ir_context,
                                              });
 
   return result;
+}
+
+bool NewTerminatorPreservesDominationRules(opt::IRContext* ir_context,
+                                           uint32_t block_id,
+                                           opt::Instruction new_terminator) {
+  auto* mutated_block = MaybeFindBlock(ir_context, block_id);
+  assert(mutated_block && "|block_id| is invalid");
+
+  ChangeTerminatorRAII change_terminator_raii(mutated_block,
+                                              std::move(new_terminator));
+  opt::DominatorAnalysis dominator_analysis;
+  dominator_analysis.InitializeTree(*ir_context->cfg(),
+                                    mutated_block->GetParent());
+
+  // Check that each dominator appears before each dominated block.
+  std::unordered_map<uint32_t, size_t> positions;
+  for (const auto& block : *mutated_block->GetParent()) {
+    positions[block.id()] = positions.size();
+  }
+
+  std::queue<uint32_t> q({mutated_block->GetParent()->begin()->id()});
+  std::unordered_set<uint32_t> visited;
+  while (!q.empty()) {
+    auto block = q.front();
+    q.pop();
+    visited.insert(block);
+
+    auto success = ir_context->cfg()->block(block)->WhileEachSuccessorLabel(
+        [&positions, &visited, &dominator_analysis, block, &q](uint32_t id) {
+          if (id == block) {
+            // Handle the case when loop header and continue target are the same
+            // block.
+            return true;
+          }
+
+          if (dominator_analysis.Dominates(block, id) &&
+              positions[block] > positions[id]) {
+            // |block| dominates |id| but appears after |id| - violates
+            // domination rules.
+            return false;
+          }
+
+          if (!visited.count(id)) {
+            q.push(id);
+          }
+
+          return true;
+        });
+
+    if (!success) {
+      return false;
+    }
+  }
+
+  // For each instruction in the |block->GetParent()| function check whether
+  // all its dependencies satisfy domination rules (i.e. all id operands
+  // dominate that instruction).
+  for (const auto& block : *mutated_block->GetParent()) {
+    if (!ir_context->IsReachable(block)) {
+      // If some block is not reachable then we don't need to worry about the
+      // preservation of domination rules for its instructions.
+      continue;
+    }
+
+    for (const auto& inst : block) {
+      for (uint32_t i = 0; i < inst.NumInOperands();
+           i += inst.opcode() == SpvOpPhi ? 2 : 1) {
+        const auto& operand = inst.GetInOperand(i);
+        if (!spvIsInIdType(operand.type)) {
+          continue;
+        }
+
+        if (MaybeFindBlock(ir_context, operand.words[0])) {
+          // Ignore operands that refer to OpLabel instructions.
+          continue;
+        }
+
+        const auto* dependency_block =
+            ir_context->get_instr_block(operand.words[0]);
+        if (!dependency_block) {
+          // A global instruction always dominates all instructions in any
+          // function.
+          continue;
+        }
+
+        auto domination_target_id = inst.opcode() == SpvOpPhi
+                                        ? inst.GetSingleWordInOperand(i + 1)
+                                        : block.id();
+
+        if (!dominator_analysis.Dominates(dependency_block->id(),
+                                          domination_target_id)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+opt::Module::iterator GetFunctionIterator(opt::IRContext* ir_context,
+                                          uint32_t function_id) {
+  return std::find_if(ir_context->module()->begin(),
+                      ir_context->module()->end(),
+                      [function_id](const opt::Function& f) {
+                        return f.result_id() == function_id;
+                      });
 }
 
 }  // namespace fuzzerutil

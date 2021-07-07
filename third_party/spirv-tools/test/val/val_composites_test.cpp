@@ -1994,6 +1994,36 @@ OpFunctionEnd
               HasSubstr("Cannot transpose matrices of 16-bit floats"));
 }
 
+TEST_F(ValidateComposites, CopyObjectVoid) {
+  const std::string spirv = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpName %4 "main"
+               OpName %6 "foo("
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %8 = OpFunctionCall %2 %6
+         %20 = OpCopyObject %2 %8
+               OpReturn
+               OpFunctionEnd
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpCopyObject cannot have void result type"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

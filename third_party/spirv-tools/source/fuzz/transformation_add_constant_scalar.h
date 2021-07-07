@@ -28,7 +28,7 @@ namespace fuzz {
 class TransformationAddConstantScalar : public Transformation {
  public:
   explicit TransformationAddConstantScalar(
-      const protobufs::TransformationAddConstantScalar& message);
+      protobufs::TransformationAddConstantScalar message);
 
   TransformationAddConstantScalar(uint32_t fresh_id, uint32_t type_id,
                                   const std::vector<uint32_t>& words,

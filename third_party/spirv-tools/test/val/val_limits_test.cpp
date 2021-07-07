@@ -212,6 +212,7 @@ TEST_F(ValidateLimits, SwitchNumBranchesGood) {
 %5 = OpFunction %1 None %2
 %7 = OpLabel
 %8 = OpIAdd %3 %4 %4
+     OpSelectionMerge %10 None
      OpSwitch %4 %10)";
 
   // Now add the (literal, label) pairs
@@ -240,6 +241,7 @@ TEST_F(ValidateLimits, SwitchNumBranchesBad) {
 %5 = OpFunction %1 None %2
 %7 = OpLabel
 %8 = OpIAdd %3 %4 %4
+     OpSelectionMerge %10 None
      OpSwitch %4 %10)";
 
   // Now add the (literal, label) pairs
@@ -271,6 +273,7 @@ TEST_F(ValidateLimits, CustomizedSwitchNumBranchesGood) {
 %5 = OpFunction %1 None %2
 %7 = OpLabel
 %8 = OpIAdd %3 %4 %4
+     OpSelectionMerge %10 None
      OpSwitch %4 %10)";
 
   // Now add the (literal, label) pairs
@@ -301,6 +304,7 @@ TEST_F(ValidateLimits, CustomizedSwitchNumBranchesBad) {
 %5 = OpFunction %1 None %2
 %7 = OpLabel
 %8 = OpIAdd %3 %4 %4
+     OpSelectionMerge %10 None
      OpSwitch %4 %10)";
 
   // Now add the (literal, label) pairs

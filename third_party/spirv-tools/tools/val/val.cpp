@@ -58,6 +58,7 @@ Options:
                                    uniform, storage buffer, and push constant layouts.  Scalar layout
                                    rules are more permissive than relaxed block layout so in effect
                                    this will override the --relax-block-layout option.
+  --workgroup-scalar-block-layout  Enable scalar block layout when checking Workgroup block layouts.
   --skip-block-layout              Skip checking standard uniform/storage buffer layout.
                                    Overrides any --relax-block-layout or --scalar-block-layout option.
   --relax-struct-store             Allow store from one struct type to a
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
         printf("%s\n", spvSoftwareVersionDetailsString());
         printf(
             "Targets:\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  "
-            "%s\n  %s\n",
+            "%s\n",
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_0),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_1),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_2),
@@ -118,8 +119,7 @@ int main(int argc, char** argv) {
             spvTargetEnvDescription(SPV_ENV_OPENCL_2_2),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_0),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_1),
-            spvTargetEnvDescription(SPV_ENV_VULKAN_1_1_SPIRV_1_4),
-            spvTargetEnvDescription(SPV_ENV_WEBGPU_0));
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_1_SPIRV_1_4));
         continue_processing = false;
         return_code = 0;
       } else if (0 == strcmp(cur_arg, "--help") || 0 == strcmp(cur_arg, "-h")) {
@@ -149,6 +149,8 @@ int main(int argc, char** argv) {
         options.SetUniformBufferStandardLayout(true);
       } else if (0 == strcmp(cur_arg, "--scalar-block-layout")) {
         options.SetScalarBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--workgroup-scalar-block-layout")) {
+        options.SetWorkgroupScalarBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--skip-block-layout")) {
         options.SetSkipBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
@@ -184,7 +186,7 @@ int main(int argc, char** argv) {
   }
 
   std::vector<uint32_t> contents;
-  if (!ReadFile<uint32_t>(inFile, "rb", &contents)) return 1;
+  if (!ReadBinaryFile<uint32_t>(inFile, &contents)) return 1;
 
   spvtools::SpirvTools tools(target_env);
   tools.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);

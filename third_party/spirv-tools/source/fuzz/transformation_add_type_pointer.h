@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddTypePointer : public Transformation {
  public:
   explicit TransformationAddTypePointer(
-      const protobufs::TransformationAddTypePointer& message);
+      protobufs::TransformationAddTypePointer message);
 
   TransformationAddTypePointer(uint32_t fresh_id, SpvStorageClass storage_class,
                                uint32_t base_type_id);

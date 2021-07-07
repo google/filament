@@ -28,8 +28,6 @@ FuzzerPassAdjustBranchWeights::FuzzerPassAdjustBranchWeights(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAdjustBranchWeights::~FuzzerPassAdjustBranchWeights() = default;
-
 void FuzzerPassAdjustBranchWeights::Apply() {
   // For all OpBranchConditional instructions,
   // randomly applies the transformation.

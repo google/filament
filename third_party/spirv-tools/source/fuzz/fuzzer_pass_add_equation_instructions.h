@@ -31,8 +31,6 @@ class FuzzerPassAddEquationInstructions : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddEquationInstructions();
-
   void Apply() override;
 
  private:

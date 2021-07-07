@@ -26,8 +26,6 @@ FuzzerPassAdjustFunctionControls::FuzzerPassAdjustFunctionControls(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAdjustFunctionControls::~FuzzerPassAdjustFunctionControls() = default;
-
 void FuzzerPassAdjustFunctionControls::Apply() {
   // Consider every function in the module.
   for (auto& function : *GetIRContext()->module()) {

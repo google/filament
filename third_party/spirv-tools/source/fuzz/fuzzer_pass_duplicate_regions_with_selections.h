@@ -31,8 +31,6 @@ class FuzzerPassDuplicateRegionsWithSelections : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassDuplicateRegionsWithSelections() override;
-
   void Apply() override;
 };
 

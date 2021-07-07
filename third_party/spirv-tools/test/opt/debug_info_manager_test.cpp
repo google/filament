@@ -31,6 +31,9 @@ static const uint32_t kDebugFunctionOperandFunctionIndex = 13;
 static const uint32_t kDebugInlinedAtOperandLineIndex = 4;
 static const uint32_t kDebugInlinedAtOperandScopeIndex = 5;
 static const uint32_t kDebugInlinedAtOperandInlinedIndex = 6;
+static const uint32_t kOpLineInOperandFileIndex = 0;
+static const uint32_t kOpLineInOperandLineIndex = 1;
+static const uint32_t kOpLineInOperandColumnIndex = 2;
 
 namespace spvtools {
 namespace opt {
@@ -607,6 +610,80 @@ void main(float in_var_color : COLOR) {
   EXPECT_EQ(def_use_mgr->GetDef(37), nullptr);
   EXPECT_EQ(def_use_mgr->GetDef(38), nullptr);
   EXPECT_FALSE(dbg_info_mgr->IsVariableDebugDeclared(100));
+}
+
+TEST(DebugInfoManager, AddDebugValueForDecl) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "OpenCL.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %in_var_COLOR
+               OpExecutionMode %main OriginUpperLeft
+          %5 = OpString "ps.hlsl"
+         %14 = OpString "#line 1 \"ps.hlsl\"
+void main(float in_var_color : COLOR) {
+  float color = in_var_color;
+}
+"
+         %17 = OpString "float"
+         %21 = OpString "main"
+         %24 = OpString "color"
+               OpName %in_var_COLOR "in.var.COLOR"
+               OpName %main "main"
+               OpDecorate %in_var_COLOR Location 0
+       %uint = OpTypeInt 32 0
+    %uint_32 = OpConstant %uint 32
+      %float = OpTypeFloat 32
+%_ptr_Input_float = OpTypePointer Input %float
+       %void = OpTypeVoid
+         %27 = OpTypeFunction %void
+%_ptr_Function_float = OpTypePointer Function %float
+%in_var_COLOR = OpVariable %_ptr_Input_float Input
+         %13 = OpExtInst %void %1 DebugExpression
+         %15 = OpExtInst %void %1 DebugSource %5 %14
+         %16 = OpExtInst %void %1 DebugCompilationUnit 1 4 %15 HLSL
+         %18 = OpExtInst %void %1 DebugTypeBasic %17 %uint_32 Float
+         %20 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %18 %18
+         %22 = OpExtInst %void %1 DebugFunction %21 %20 %15 1 1 %16 %21 FlagIsProtected|FlagIsPrivate 1 %main
+         %12 = OpExtInst %void %1 DebugInfoNone
+         %25 = OpExtInst %void %1 DebugLocalVariable %24 %18 %15 1 20 %22 FlagIsLocal 0
+       %main = OpFunction %void None %27
+         %28 = OpLabel
+        %100 = OpVariable %_ptr_Function_float Function
+         %31 = OpLoad %float %in_var_COLOR
+        %101 = OpExtInst %void %1 DebugScope %22
+               OpLine %5 13 7
+               OpStore %100 %31
+               OpNoLine
+        %102 = OpExtInst %void %1 DebugNoScope
+         %36 = OpExtInst %void %1 DebugDeclare %25 %100 %13
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  auto* def_use_mgr = context->get_def_use_mgr();
+  auto* dbg_decl = def_use_mgr->GetDef(36);
+  EXPECT_EQ(dbg_decl->GetOpenCL100DebugOpcode(),
+            OpenCLDebugInfo100DebugDeclare);
+
+  auto* dbg_info_mgr = context->get_debug_info_mgr();
+  Instruction* store = dbg_decl->PreviousNode();
+  auto* dbg_value =
+      dbg_info_mgr->AddDebugValueForDecl(dbg_decl, 100, dbg_decl, store);
+
+  EXPECT_EQ(dbg_value->GetOpenCL100DebugOpcode(), OpenCLDebugInfo100DebugValue);
+  EXPECT_EQ(dbg_value->dbg_line_inst()->GetSingleWordInOperand(
+                kOpLineInOperandFileIndex),
+            5);
+  EXPECT_EQ(dbg_value->dbg_line_inst()->GetSingleWordInOperand(
+                kOpLineInOperandLineIndex),
+            13);
+  EXPECT_EQ(dbg_value->dbg_line_inst()->GetSingleWordInOperand(
+                kOpLineInOperandColumnIndex),
+            7);
 }
 
 }  // namespace

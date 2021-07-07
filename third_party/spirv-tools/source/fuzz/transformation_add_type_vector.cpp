@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddTypeVector::TransformationAddTypeVector(
-    const spvtools::fuzz::protobufs::TransformationAddTypeVector& message)
-    : message_(message) {}
+    protobufs::TransformationAddTypeVector message)
+    : message_(std::move(message)) {}
 
 TransformationAddTypeVector::TransformationAddTypeVector(
     uint32_t fresh_id, uint32_t component_type_id, uint32_t component_count) {
@@ -46,13 +46,30 @@ bool TransformationAddTypeVector::IsApplicable(
 
 void TransformationAddTypeVector::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
-  fuzzerutil::AddVectorType(ir_context, message_.fresh_id(),
-                            message_.component_type_id(),
-                            message_.component_count());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  const auto* component_type =
+      ir_context->get_type_mgr()->GetType(message_.component_type_id());
+  (void)component_type;  // Make compiler happy in release mode.
+  assert(component_type &&
+         (component_type->AsInteger() || component_type->AsFloat() ||
+          component_type->AsBool()) &&
+         "|component_type_id| is invalid");
+  assert(message_.component_count() >= 2 && message_.component_count() <= 4 &&
+         "Precondition: component count must be in range [2, 4].");
+
+  auto type_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeVector, 0, message_.fresh_id(),
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_ID, {message_.component_type_id()}},
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.component_count()}}});
+  auto type_instruction_ptr = type_instruction.get();
+  ir_context->module()->AddType(std::move(type_instruction));
+
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+
+  // Inform the def use manager that there is a new definition. Invalidate the
+  // type manager since we have added a new type.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(type_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisTypes);
 }
 
 protobufs::Transformation TransformationAddTypeVector::ToMessage() const {

@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddDeadBlock::TransformationAddDeadBlock(
-    const spvtools::fuzz::protobufs::TransformationAddDeadBlock& message)
-    : message_(message) {}
+    protobufs::TransformationAddDeadBlock message)
+    : message_(std::move(message)) {}
 
 TransformationAddDeadBlock::TransformationAddDeadBlock(uint32_t fresh_id,
                                                        uint32_t existing_block,
@@ -79,9 +79,7 @@ bool TransformationAddDeadBlock::IsApplicable(
   }
 
   // |existing_block| must be reachable.
-  opt::DominatorAnalysis* dominator_analysis =
-      ir_context->GetDominatorAnalysis(existing_block->GetParent());
-  if (!dominator_analysis->IsReachable(existing_block->id())) {
+  if (!ir_context->IsReachable(*existing_block)) {
     return false;
   }
 
@@ -94,6 +92,8 @@ bool TransformationAddDeadBlock::IsApplicable(
   // the selection construct, its header |existing_block| will not dominate the
   // merge block |successor_block_id|, which is invalid. Thus, |existing_block|
   // must dominate |successor_block_id|.
+  opt::DominatorAnalysis* dominator_analysis =
+      ir_context->GetDominatorAnalysis(existing_block->GetParent());
   if (!dominator_analysis->Dominates(existing_block->id(),
                                      successor_block_id)) {
     return false;
@@ -153,7 +153,6 @@ void TransformationAddDeadBlock::Apply(
                                     : successor_block_id}}});
 
   // Add the new block to the enclosing function.
-  new_block->SetParent(enclosing_function);
   enclosing_function->InsertBasicBlockAfter(std::move(new_block),
                                             existing_block);
 

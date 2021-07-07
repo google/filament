@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddImageSampleUnusedComponents : public Transformation {
  public:
   explicit TransformationAddImageSampleUnusedComponents(
-      const protobufs::TransformationAddImageSampleUnusedComponents& message);
+      protobufs::TransformationAddImageSampleUnusedComponents message);
 
   TransformationAddImageSampleUnusedComponents(
       uint32_t coordinate_with_unused_components_id,

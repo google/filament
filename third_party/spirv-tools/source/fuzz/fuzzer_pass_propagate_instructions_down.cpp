@@ -27,15 +27,11 @@ FuzzerPassPropagateInstructionsDown::FuzzerPassPropagateInstructionsDown(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassPropagateInstructionsDown::~FuzzerPassPropagateInstructionsDown() =
-    default;
-
 void FuzzerPassPropagateInstructionsDown::Apply() {
   for (const auto& function : *GetIRContext()->module()) {
     std::vector<const opt::BasicBlock*> reachable_blocks;
     for (const auto& block : function) {
-      if (GetIRContext()->GetDominatorAnalysis(&function)->IsReachable(
-              &block)) {
+      if (GetIRContext()->IsReachable(block)) {
         reachable_blocks.push_back(&block);
       }
     }

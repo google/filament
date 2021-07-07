@@ -22,7 +22,7 @@ namespace fuzz {
 class TransformationAddOpPhiSynonym : public Transformation {
  public:
   explicit TransformationAddOpPhiSynonym(
-      const protobufs::TransformationAddOpPhiSynonym& message);
+      protobufs::TransformationAddOpPhiSynonym message);
 
   TransformationAddOpPhiSynonym(
       uint32_t block_id, const std::map<uint32_t, uint32_t>& preds_to_ids,

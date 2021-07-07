@@ -22,9 +22,8 @@ namespace fuzz {
 
 TransformationReplaceCopyObjectWithStoreLoad::
     TransformationReplaceCopyObjectWithStoreLoad(
-        const spvtools::fuzz::protobufs::
-            TransformationReplaceCopyObjectWithStoreLoad& message)
-    : message_(message) {}
+        protobufs::TransformationReplaceCopyObjectWithStoreLoad message)
+    : message_(std::move(message)) {}
 
 TransformationReplaceCopyObjectWithStoreLoad::
     TransformationReplaceCopyObjectWithStoreLoad(
@@ -88,6 +87,10 @@ void TransformationReplaceCopyObjectWithStoreLoad::Apply(
   assert(copy_object_instruction &&
          copy_object_instruction->opcode() == SpvOpCopyObject &&
          "The required OpCopyObject instruction must be defined.");
+
+  opt::BasicBlock* enclosing_block =
+      ir_context->get_instr_block(copy_object_instruction);
+
   // Get id used as a source by the OpCopyObject instruction.
   uint32_t src_operand = copy_object_instruction->GetSingleWordInOperand(0);
   // A pointer type instruction pointing to the value type must be defined.
@@ -98,36 +101,45 @@ void TransformationReplaceCopyObjectWithStoreLoad::Apply(
 
   // Adds a global or local variable (according to the storage class).
   if (message_.variable_storage_class() == SpvStorageClassPrivate) {
-    fuzzerutil::AddGlobalVariable(ir_context, message_.fresh_variable_id(),
-                                  pointer_type_id, SpvStorageClassPrivate,
-                                  message_.variable_initializer_id());
+    opt::Instruction* new_global = fuzzerutil::AddGlobalVariable(
+        ir_context, message_.fresh_variable_id(), pointer_type_id,
+        SpvStorageClassPrivate, message_.variable_initializer_id());
+    ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_global);
   } else {
-    auto function_id = ir_context->get_instr_block(copy_object_instruction)
-                           ->GetParent()
-                           ->result_id();
-    fuzzerutil::AddLocalVariable(ir_context, message_.fresh_variable_id(),
-                                 pointer_type_id, function_id,
-                                 message_.variable_initializer_id());
+    opt::Function* function =
+        ir_context->get_instr_block(copy_object_instruction)->GetParent();
+    opt::Instruction* new_local = fuzzerutil::AddLocalVariable(
+        ir_context, message_.fresh_variable_id(), pointer_type_id,
+        function->result_id(), message_.variable_initializer_id());
+    ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_local);
+    ir_context->set_instr_block(new_local, &*function->begin());
   }
 
   // First, insert the OpLoad instruction before the OpCopyObject instruction
   // and then insert the OpStore instruction before the OpLoad instruction.
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_variable_id());
-  copy_object_instruction
-      ->InsertBefore(MakeUnique<opt::Instruction>(
+  opt::Instruction* load_instruction =
+      copy_object_instruction->InsertBefore(MakeUnique<opt::Instruction>(
           ir_context, SpvOpLoad, copy_object_instruction->type_id(),
           message_.copy_object_result_id(),
           opt::Instruction::OperandList(
-              {{SPV_OPERAND_TYPE_ID, {message_.fresh_variable_id()}}})))
-      ->InsertBefore(MakeUnique<opt::Instruction>(
+              {{SPV_OPERAND_TYPE_ID, {message_.fresh_variable_id()}}})));
+  opt::Instruction* store_instruction =
+      load_instruction->InsertBefore(MakeUnique<opt::Instruction>(
           ir_context, SpvOpStore, 0, 0,
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {message_.fresh_variable_id()}},
                {SPV_OPERAND_TYPE_ID, {src_operand}}})));
+
+  // Register the new instructions with the def-use manager, and record their
+  // enclosing block.
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(store_instruction);
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(load_instruction);
+  ir_context->set_instr_block(store_instruction, enclosing_block);
+  ir_context->set_instr_block(load_instruction, enclosing_block);
+
   // Remove the CopyObject instruction.
   ir_context->KillInst(copy_object_instruction);
-
-  ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
 
   if (!transformation_context->GetFactManager()->IdIsIrrelevant(
           message_.copy_object_result_id()) &&

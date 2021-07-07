@@ -19,12 +19,10 @@
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/transformation_context.h"
 #include "source/fuzz/transformation_replace_constant_with_uniform.h"
-#include "source/fuzz/uniform_buffer_element_descriptor.h"
 #include "source/opt/build_module.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/types.h"
 #include "source/util/make_unique.h"
-#include "tools/util/cli_consumer.h"
 
 namespace spvtools {
 namespace fuzz {
@@ -160,8 +158,8 @@ bool ForceRenderRed(
     const spv_target_env& target_env, spv_validator_options validator_options,
     const std::vector<uint32_t>& binary_in,
     const spvtools::fuzz::protobufs::FactSequence& initial_facts,
+    const MessageConsumer& message_consumer,
     std::vector<uint32_t>* binary_out) {
-  auto message_consumer = spvtools::utils::CLIMessageConsumer;
   spvtools::SpirvTools tools(target_env);
   if (!tools.IsValid()) {
     message_consumer(SPV_MSG_ERROR, nullptr, {},
@@ -212,7 +210,6 @@ bool ForceRenderRed(
     auto new_exit_block = MakeUnique<opt::BasicBlock>(std::move(label));
     new_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
         ir_context.get(), SpvOpReturn, 0, 0, opt::Instruction::OperandList()));
-    new_exit_block->SetParent(entry_point_function);
     entry_point_function->AddBasicBlock(std::move(new_exit_block));
   }
 

@@ -21,9 +21,8 @@ namespace fuzz {
 
 TransformationReplaceBranchFromDeadBlockWithExit::
     TransformationReplaceBranchFromDeadBlockWithExit(
-        const spvtools::fuzz::protobufs::
-            TransformationReplaceBranchFromDeadBlockWithExit& message)
-    : message_(message) {}
+        protobufs::TransformationReplaceBranchFromDeadBlockWithExit message)
+    : message_(std::move(message)) {}
 
 TransformationReplaceBranchFromDeadBlockWithExit::
     TransformationReplaceBranchFromDeadBlockWithExit(uint32_t block_id,
@@ -162,7 +161,10 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::BlockIsSuitable(
   if (ir_context->cfg()->preds(successor->id()).size() < 2) {
     return false;
   }
-  return true;
+  // Make sure that domination rules are satisfied when we remove the branch
+  // from the |block| to its |successor|.
+  return fuzzerutil::NewTerminatorPreservesDominationRules(
+      ir_context, block.id(), {ir_context, SpvOpUnreachable});
 }
 
 }  // namespace fuzz

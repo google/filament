@@ -32,7 +32,6 @@ set(SPIRV_TOOLS_OPT_SOURCES
   dead_branch_elim_pass.h
   dead_insert_elim_pass.h
   dead_variable_elimination.h
-  decompose_initialized_variables_pass.h
   decoration_manager.h
   debug_info_manager.h
   def_use_manager.h
@@ -52,7 +51,6 @@ set(SPIRV_TOOLS_OPT_SOURCES
   fold_spec_constant_op_and_composite_pass.h
   freeze_spec_constant_value_pass.h
   function.h
-  generate_webgpu_initializers_pass.h
   graphics_robust_access_pass.h
   if_conversion.h
   inline_exhaustive_pass.h
@@ -64,6 +62,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   instruction.h
   instruction_list.h
   instrument_pass.h
+  interp_fixup_pass.h
   ir_builder.h
   ir_context.h
   ir_loader.h
@@ -97,16 +96,15 @@ set(SPIRV_TOOLS_OPT_SOURCES
   register_pressure.h
   relax_float_ops_pass.h
   remove_duplicates_pass.h
+  remove_unused_interface_variables_pass.h
   replace_invalid_opc.h
   scalar_analysis.h
   scalar_analysis_nodes.h
   scalar_replacement_pass.h
   set_spec_constant_default_value_pass.h
   simplification_pass.h
-  split_invalid_unreachable_pass.h
   ssa_rewrite_pass.h
   strength_reduction_pass.h
-  strip_atomic_counter_memory_pass.h
   strip_debug_info_pass.h
   strip_reflect_info_pass.h
   struct_cfg_analysis.h
@@ -140,7 +138,6 @@ set(SPIRV_TOOLS_OPT_SOURCES
   dead_branch_elim_pass.cpp
   dead_insert_elim_pass.cpp
   dead_variable_elimination.cpp
-  decompose_initialized_variables_pass.cpp
   decoration_manager.cpp
   debug_info_manager.cpp
   def_use_manager.cpp
@@ -160,7 +157,6 @@ set(SPIRV_TOOLS_OPT_SOURCES
   freeze_spec_constant_value_pass.cpp
   function.cpp
   graphics_robust_access_pass.cpp
-  generate_webgpu_initializers_pass.cpp
   if_conversion.cpp
   inline_exhaustive_pass.cpp
   inline_opaque_pass.cpp
@@ -171,9 +167,9 @@ set(SPIRV_TOOLS_OPT_SOURCES
   instruction.cpp
   instruction_list.cpp
   instrument_pass.cpp
+  interp_fixup_pass.cpp
   ir_context.cpp
   ir_loader.cpp
-  legalize_vector_shuffle_pass.cpp
   licm_pass.cpp
   local_access_chain_convert_pass.cpp
   local_redundancy_elimination.cpp
@@ -202,16 +198,15 @@ set(SPIRV_TOOLS_OPT_SOURCES
   register_pressure.cpp
   relax_float_ops_pass.cpp
   remove_duplicates_pass.cpp
+  remove_unused_interface_variables_pass.cpp
   replace_invalid_opc.cpp
   scalar_analysis.cpp
   scalar_analysis_simplification.cpp
   scalar_replacement_pass.cpp
   set_spec_constant_default_value_pass.cpp
   simplification_pass.cpp
-  split_invalid_unreachable_pass.cpp
   ssa_rewrite_pass.cpp
   strength_reduction_pass.cpp
-  strip_atomic_counter_memory_pass.cpp
   strip_debug_info_pass.cpp
   strip_reflect_info_pass.cpp
   struct_cfg_analysis.cpp

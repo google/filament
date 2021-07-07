@@ -60,6 +60,7 @@ TEST(TransformationPermutePhiOperandsTest, BasicTest) {
                OpBranch %17
          %17 = OpLabel
          %25 = OpPhi %6 %20 %16 %24 %21
+         %30 = OpIAdd %6 %25 %25
                OpStore %8 %25
                OpReturn
                OpFunctionEnd
@@ -105,6 +106,47 @@ TEST(TransformationPermutePhiOperandsTest, BasicTest) {
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
+  // Check that the def-use manager knows that the phi instruction's ids have
+  // been permuted.
+  std::vector<std::pair<uint32_t, uint32_t>> phi_operand_to_new_operand_index =
+      {{20, 4}, {16, 5}, {24, 2}, {21, 3}};
+  for (std::pair<uint32_t, uint32_t>& entry :
+       phi_operand_to_new_operand_index) {
+    context->get_def_use_mgr()->WhileEachUse(
+        entry.first,
+        [&entry](opt::Instruction* inst, uint32_t operand_index) -> bool {
+          if (inst->result_id() == 25) {
+            EXPECT_EQ(entry.second, operand_index);
+            return false;
+          }
+          return true;
+        });
+  }
+  bool found_use_in_store = false;
+  bool found_use_in_add_lhs = false;
+  bool found_use_in_add_rhs = false;
+  context->get_def_use_mgr()->ForEachUse(
+      25, [&found_use_in_store, &found_use_in_add_lhs, &found_use_in_add_rhs](
+              opt::Instruction* inst, uint32_t operand_index) {
+        if (inst->opcode() == SpvOpStore) {
+          ASSERT_FALSE(found_use_in_store);
+          found_use_in_store = true;
+        } else {
+          ASSERT_EQ(SpvOpIAdd, inst->opcode());
+          if (operand_index == 2) {
+            ASSERT_FALSE(found_use_in_add_lhs);
+            found_use_in_add_lhs = true;
+          } else {
+            ASSERT_EQ(3, operand_index);
+            ASSERT_FALSE(found_use_in_add_rhs);
+            found_use_in_add_rhs = true;
+          }
+        }
+      });
+  ASSERT_TRUE(found_use_in_store);
+  ASSERT_TRUE(found_use_in_add_lhs);
+  ASSERT_TRUE(found_use_in_add_rhs);
+
   std::string after_transformation = R"(
                OpCapability Shader
           %1 = OpExtInstImport "GLSL.std.450"
@@ -142,6 +184,7 @@ TEST(TransformationPermutePhiOperandsTest, BasicTest) {
                OpBranch %17
          %17 = OpLabel
          %25 = OpPhi %6 %24 %21 %20 %16
+         %30 = OpIAdd %6 %25 %25
                OpStore %8 %25
                OpReturn
                OpFunctionEnd

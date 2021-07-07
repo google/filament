@@ -359,7 +359,7 @@ function(spirv_tools_default_target_options target)
   )
   set_property(TARGET ${target} PROPERTY FOLDER "SPIRV-Tools libraries")
   spvtools_check_symbol_exports(${target})
-  add_dependencies(${target} core_tables enum_string_mapping extinst_tables)
+  add_dependencies(${target} spirv-tools-build-version core_tables enum_string_mapping extinst_tables)
 endfunction()
 
 # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and
@@ -408,6 +408,12 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
       target_link_libraries(${target} ${LIBRT})
     endforeach()
   endif()
+endif()
+
+if (ANDROID)
+    foreach(target ${SPIRV_TOOLS_TARGETS})
+        target_link_libraries(${target} PRIVATE android log)
+    endforeach()
 endif()
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)

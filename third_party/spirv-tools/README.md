@@ -136,7 +136,6 @@ As of this writing, there are 67 transforms including examples such as:
   * Loop-invariant code motion
   * Loop unroll
 * Other
-  * Generate WebGPU initializers
   * Graphics robust access
   * Upgrade memory model to VulkanKHR
 

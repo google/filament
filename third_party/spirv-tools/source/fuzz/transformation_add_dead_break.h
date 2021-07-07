@@ -28,7 +28,7 @@ namespace fuzz {
 class TransformationAddDeadBreak : public Transformation {
  public:
   explicit TransformationAddDeadBreak(
-      const protobufs::TransformationAddDeadBreak& message);
+      protobufs::TransformationAddDeadBreak message);
 
   TransformationAddDeadBreak(uint32_t from_block, uint32_t to_block,
                              bool break_condition_value,
@@ -70,15 +70,6 @@ class TransformationAddDeadBreak : public Transformation {
   // |message_.to_block| respects structured control flow.
   bool AddingBreakRespectsStructuredControlFlow(opt::IRContext* ir_context,
                                                 opt::BasicBlock* bb_from) const;
-
-  // Used by 'Apply' to actually apply the transformation to the module of
-  // interest, and by 'IsApplicable' to do a dry-run of the transformation on a
-  // cloned module, in order to check that the transformation leads to a valid
-  // module.  This is only invoked by 'IsApplicable' after certain basic
-  // applicability checks have been made, ensuring that the invocation of this
-  // method is legal.
-  void ApplyImpl(opt::IRContext* ir_context,
-                 const TransformationContext& transformation_context) const;
 
   protobufs::TransformationAddDeadBreak message_;
 };

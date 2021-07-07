@@ -27,8 +27,7 @@ namespace fuzz {
 class TransformationReplaceBranchFromDeadBlockWithExit : public Transformation {
  public:
   explicit TransformationReplaceBranchFromDeadBlockWithExit(
-      const protobufs::TransformationReplaceBranchFromDeadBlockWithExit&
-          message);
+      protobufs::TransformationReplaceBranchFromDeadBlockWithExit message);
 
   TransformationReplaceBranchFromDeadBlockWithExit(uint32_t block_id,
                                                    SpvOp opcode,
@@ -41,13 +40,17 @@ class TransformationReplaceBranchFromDeadBlockWithExit : public Transformation {
   //   predecessor
   // - |message_.opcode()| must be one of OpKill, OpReturn, OpReturnValue and
   //   OpUnreachable
-  // - |message_.opcode()| can only be OpKill the module's entry points all
+  // - |message_.opcode()| can only be OpKill if the module's entry points all
   //   have Fragment execution mode
   // - |message_.opcode()| can only be OpReturn if the return type of the
   //   function containing the block is void
   // - If |message_.opcode()| is OpReturnValue then |message_.return_value_id|
   //   must be an id that is available at the block terminator and that matches
   //   the return type of the enclosing function
+  // - Domination rules should be preserved when we apply this transformation.
+  //   In particular, if some block appears after the |block_id|'s successor in
+  //   the CFG, then that block cannot dominate |block_id|'s successor when this
+  //   transformation is applied.
   bool IsApplicable(
       opt::IRContext* ir_context,
       const TransformationContext& transformation_context) const override;

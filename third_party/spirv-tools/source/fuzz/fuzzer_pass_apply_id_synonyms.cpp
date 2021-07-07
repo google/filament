@@ -32,8 +32,6 @@ FuzzerPassApplyIdSynonyms::FuzzerPassApplyIdSynonyms(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassApplyIdSynonyms::~FuzzerPassApplyIdSynonyms() = default;
-
 void FuzzerPassApplyIdSynonyms::Apply() {
   // Compute a closure of data synonym facts, to enrich the pool of synonyms
   // that are available.

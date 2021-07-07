@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/fuzz/fuzzer.h"
-#include "source/fuzz/replayer.h"
-
 #include "gtest/gtest.h"
+#include "source/fuzz/fuzzer.h"
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/pseudo_random_generator.h"
+#include "source/fuzz/replayer.h"
 #include "source/fuzz/uniform_buffer_element_descriptor.h"
 #include "test/fuzz/fuzz_test_util.h"
 
@@ -1642,37 +1641,53 @@ void RunFuzzerAndReplayer(const std::string& shader,
     });
   }
 
-  std::vector<Fuzzer::RepeatedPassStrategy> strategies{
-      Fuzzer::RepeatedPassStrategy::kSimple,
-      Fuzzer::RepeatedPassStrategy::kLoopedWithRecommendations,
-      Fuzzer::RepeatedPassStrategy::kRandomWithRecommendations};
+  std::vector<RepeatedPassStrategy> strategies{
+      RepeatedPassStrategy::kSimple,
+      RepeatedPassStrategy::kLoopedWithRecommendations,
+      RepeatedPassStrategy::kRandomWithRecommendations};
   uint32_t strategy_index = 0;
   for (uint32_t seed = initial_seed; seed < initial_seed + num_runs; seed++) {
     spvtools::ValidatorOptions validator_options;
+
+    std::unique_ptr<opt::IRContext> ir_context;
+    ASSERT_TRUE(fuzzerutil::BuildIRContext(env, kConsoleMessageConsumer,
+                                           binary_in, validator_options,
+                                           &ir_context));
+
+    auto fuzzer_context = MakeUnique<FuzzerContext>(
+        MakeUnique<PseudoRandomGenerator>(seed),
+        FuzzerContext::GetMinFreshId(ir_context.get()), false);
+
+    auto transformation_context = MakeUnique<TransformationContext>(
+        MakeUnique<FactManager>(ir_context.get()), validator_options);
+    transformation_context->GetFactManager()->AddInitialFacts(
+        kConsoleMessageConsumer, initial_facts);
+
     // Every 4th time we run the fuzzer, enable all fuzzer passes.
     bool enable_all_passes = (seed % 4) == 0;
-    auto fuzzer_result =
-        Fuzzer(env, kConsoleMessageConsumer, binary_in, initial_facts,
-               donor_suppliers, MakeUnique<PseudoRandomGenerator>(seed),
-               enable_all_passes, strategies[strategy_index], true,
-               validator_options)
-            .Run();
+    Fuzzer fuzzer(std::move(ir_context), std::move(transformation_context),
+                  std::move(fuzzer_context), kConsoleMessageConsumer,
+                  donor_suppliers, enable_all_passes,
+                  strategies[strategy_index], true, validator_options);
+    auto fuzzer_result = fuzzer.Run(0);
 
     // Cycle the repeated pass strategy so that we try a different one next time
     // we run the fuzzer.
     strategy_index =
         (strategy_index + 1) % static_cast<uint32_t>(strategies.size());
 
-    ASSERT_EQ(Fuzzer::FuzzerResultStatus::kComplete, fuzzer_result.status);
-    ASSERT_TRUE(t.Validate(fuzzer_result.transformed_binary));
+    ASSERT_NE(Fuzzer::Status::kFuzzerPassLedToInvalidModule,
+              fuzzer_result.status);
+    std::vector<uint32_t> transformed_binary;
+    fuzzer.GetIRContext()->module()->ToBinary(&transformed_binary, true);
+    ASSERT_TRUE(t.Validate(transformed_binary));
 
     auto replayer_result =
-        Replayer(
-            env, kConsoleMessageConsumer, binary_in, initial_facts,
-            fuzzer_result.applied_transformations,
-            static_cast<uint32_t>(
-                fuzzer_result.applied_transformations.transformation_size()),
-            false, validator_options)
+        Replayer(env, kConsoleMessageConsumer, binary_in, initial_facts,
+                 fuzzer.GetTransformationSequence(),
+                 static_cast<uint32_t>(
+                     fuzzer.GetTransformationSequence().transformation_size()),
+                 false, validator_options)
             .Run();
     ASSERT_EQ(Replayer::ReplayerResultStatus::kComplete,
               replayer_result.status);
@@ -1682,12 +1697,12 @@ void RunFuzzerAndReplayer(const std::string& shader,
     // replay should be identical to that which resulted from fuzzing.
     std::string fuzzer_transformations_string;
     std::string replayer_transformations_string;
-    fuzzer_result.applied_transformations.SerializeToString(
+    fuzzer.GetTransformationSequence().SerializeToString(
         &fuzzer_transformations_string);
     replayer_result.applied_transformations.SerializeToString(
         &replayer_transformations_string);
     ASSERT_EQ(fuzzer_transformations_string, replayer_transformations_string);
-    ASSERT_TRUE(IsEqual(env, fuzzer_result.transformed_binary,
+    ASSERT_TRUE(IsEqual(env, transformed_binary,
                         replayer_result.transformed_module.get()));
   }
 }

@@ -33,9 +33,6 @@ FuzzerPassReplaceAddsSubsMulsWithCarryingExtended::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceAddsSubsMulsWithCarryingExtended::
-    ~FuzzerPassReplaceAddsSubsMulsWithCarryingExtended() = default;
-
 void FuzzerPassReplaceAddsSubsMulsWithCarryingExtended::Apply() {
   std::vector<opt::Instruction> instructions_for_transformation;
   for (auto& function : *GetIRContext()->module()) {

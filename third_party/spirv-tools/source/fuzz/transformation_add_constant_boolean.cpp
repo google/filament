@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddConstantBoolean::TransformationAddConstantBoolean(
-    const protobufs::TransformationAddConstantBoolean& message)
-    : message_(message) {}
+    protobufs::TransformationAddConstantBoolean message)
+    : message_(std::move(message)) {}
 
 TransformationAddConstantBoolean::TransformationAddConstantBoolean(
     uint32_t fresh_id, bool is_true, bool is_irrelevant) {
@@ -42,14 +42,18 @@ void TransformationAddConstantBoolean::Apply(
     TransformationContext* transformation_context) const {
   // Add the boolean constant to the module, ensuring the module's id bound is
   // high enough.
+  auto new_instruction = MakeUnique<opt::Instruction>(
+      ir_context, message_.is_true() ? SpvOpConstantTrue : SpvOpConstantFalse,
+      fuzzerutil::MaybeGetBoolType(ir_context), message_.fresh_id(),
+      opt::Instruction::OperandList());
+  auto new_instruction_ptr = new_instruction.get();
+  ir_context->module()->AddGlobalValue(std::move(new_instruction));
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  ir_context->module()->AddGlobalValue(
-      message_.is_true() ? SpvOpConstantTrue : SpvOpConstantFalse,
-      message_.fresh_id(), fuzzerutil::MaybeGetBoolType(ir_context));
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+
+  // Inform the def-use manager about the new instruction. Invalidate the
+  // constant manager as we have added a new constant.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(new_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisConstants);
 
   if (message_.is_irrelevant()) {
     transformation_context->GetFactManager()->AddFactIdIsIrrelevant(

@@ -21,6 +21,29 @@
 namespace spvtools {
 namespace reduce {
 
+const spvtools::MessageConsumer kConsoleMessageConsumer =
+    [](spv_message_level_t level, const char*, const spv_position_t& position,
+       const char* message) -> void {
+  switch (level) {
+    case SPV_MSG_FATAL:
+    case SPV_MSG_INTERNAL_ERROR:
+    case SPV_MSG_ERROR:
+      std::cerr << "error: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    case SPV_MSG_WARNING:
+      std::cout << "warning: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    case SPV_MSG_INFO:
+      std::cout << "info: line " << position.index << ": " << message
+                << std::endl;
+      break;
+    default:
+      break;
+  }
+};
+
 void CheckEqual(const spv_target_env env,
                 const std::vector<uint32_t>& expected_binary,
                 const std::vector<uint32_t>& actual_binary) {
@@ -55,8 +78,9 @@ void CheckEqual(const spv_target_env env, const std::string& expected_text,
 void CheckValid(spv_target_env env, const opt::IRContext* ir) {
   std::vector<uint32_t> binary;
   ir->module()->ToBinary(&binary, false);
-  SpirvTools t(env);
-  ASSERT_TRUE(t.Validate(binary));
+  SpirvTools tools(env);
+  tools.SetMessageConsumer(kConsoleMessageConsumer);
+  ASSERT_TRUE(tools.Validate(binary));
 }
 
 std::string ToString(spv_target_env env, const opt::IRContext* ir) {

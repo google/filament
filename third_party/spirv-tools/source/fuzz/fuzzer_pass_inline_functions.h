@@ -30,8 +30,6 @@ class FuzzerPassInlineFunctions : public FuzzerPass {
                             FuzzerContext* fuzzer_context,
                             protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassInlineFunctions() override;
-
   void Apply() override;
 };
 

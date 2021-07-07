@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationComputeDataSynonymFactClosure : public Transformation {
  public:
   explicit TransformationComputeDataSynonymFactClosure(
-      const protobufs::TransformationComputeDataSynonymFactClosure& message);
+      protobufs::TransformationComputeDataSynonymFactClosure message);
 
   explicit TransformationComputeDataSynonymFactClosure(
       uint32_t maximum_equivalence_class_size);

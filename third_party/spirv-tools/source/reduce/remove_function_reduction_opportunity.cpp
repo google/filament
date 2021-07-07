@@ -29,8 +29,8 @@ void RemoveFunctionReductionOpportunity::Apply() {
   for (opt::Module::iterator function_it = context_->module()->begin();
        function_it != context_->module()->end(); ++function_it) {
     if (&*function_it == function_) {
-      opt::eliminatedeadfunctionsutil::EliminateFunction(context_,
-                                                         &function_it);
+      function_it.Erase();
+      context_->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
       return;
     }
   }

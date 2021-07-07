@@ -31,8 +31,6 @@ FuzzerPassReplaceIrrelevantIds::FuzzerPassReplaceIrrelevantIds(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceIrrelevantIds::~FuzzerPassReplaceIrrelevantIds() = default;
-
 void FuzzerPassReplaceIrrelevantIds::Apply() {
   // Keep track of the irrelevant ids. This includes all the ids that are
   // irrelevant according to the fact manager and that are still present in the

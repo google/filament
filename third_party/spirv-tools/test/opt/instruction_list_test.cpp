@@ -35,7 +35,7 @@ class TestInstruction : public Instruction {
  public:
   TestInstruction() : Instruction() { created_instructions_.push_back(this); }
 
-  ~TestInstruction() { deleted_instructions_.push_back(this); }
+  ~TestInstruction() override{ deleted_instructions_.push_back(this); }
 
   static std::vector<TestInstruction*> created_instructions_;
   static std::vector<TestInstruction*> deleted_instructions_;

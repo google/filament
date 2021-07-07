@@ -272,10 +272,11 @@ void GraphicsRobustAccessPass::ClampIndicesForAccessChain(
 
   // Replaces one of the OpAccessChain index operands with a new value.
   // Updates def-use analysis.
-  auto replace_index = [&inst, def_use_mgr](uint32_t operand_index,
-                                            Instruction* new_value) {
+  auto replace_index = [this, &inst, def_use_mgr](uint32_t operand_index,
+                                                  Instruction* new_value) {
     inst.SetOperand(operand_index, {new_value->result_id()});
     def_use_mgr->AnalyzeInstUse(&inst);
+    module_status_.modified = true;
     return SPV_SUCCESS;
   };
 

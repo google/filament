@@ -22,7 +22,7 @@ set BUILD_TYPE=%1
 set VS_VERSION=%2
 
 :: Force usage of python 3.6
-set PATH=C:\python36;%PATH%
+set PATH=C:\python36;"C:\Program Files\CMake\bin";%PATH%
 
 cd %SRC%
 git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers external/spirv-headers
@@ -41,9 +41,6 @@ if %VS_VERSION% == 2017 (
 ) else if %VS_VERSION% == 2015 (
   call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
   echo "Using VS 2015..."
-) else if %VS_VERSION% == 2013 (
-  call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x64
-  echo "Using VS 2013..."
 )
 
 cd %SRC%
@@ -62,15 +59,8 @@ if "%KOKORO_GITHUB_COMMIT%." == "." (
 
 set CMAKE_FLAGS=-DCMAKE_INSTALL_PREFIX=%KOKORO_ARTIFACTS_DIR%\install -GNinja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DRE2_BUILD_TESTING=OFF -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe
 
-:: Skip building tests for VS2013
-if %VS_VERSION% == 2013 (
-  set CMAKE_FLAGS=%CMAKE_FLAGS% -DSPIRV_SKIP_TESTS=ON
-)
-
-:: Skip building spirv-fuzz for VS2013; it relies on protobufs which VS2013 cannot handle.
-if %VS_VERSION% NEQ 2013 (
-  set CMAKE_FLAGS=%CMAKE_FLAGS% -DSPIRV_BUILD_FUZZER=ON
-)
+:: Build spirv-fuzz
+set CMAKE_FLAGS=%CMAKE_FLAGS% -DSPIRV_BUILD_FUZZER=ON
 
 cmake %CMAKE_FLAGS% ..
 
@@ -85,13 +75,11 @@ echo "Build Completed %DATE% %TIME%"
 setlocal ENABLEDELAYEDEXPANSION
 
 :: ################################################
-:: Run the tests (We no longer run tests on VS2013)
+:: Run the tests
 :: ################################################
 echo "Running Tests... %DATE% %TIME%"
-if %VS_VERSION% NEQ 2013 (
-  ctest -C %BUILD_TYPE% --output-on-failure --timeout 300
-  if !ERRORLEVEL! NEQ 0 exit /b !ERRORLEVEL!
-)
+ctest -C %BUILD_TYPE% --output-on-failure --timeout 300
+if !ERRORLEVEL! NEQ 0 exit /b !ERRORLEVEL!
 echo "Tests Completed %DATE% %TIME%"
 
 :: ################################################
@@ -106,4 +94,3 @@ rm -rf %SRC%\build
 rm -rf %SRC%\external
 
 exit /b 0
-

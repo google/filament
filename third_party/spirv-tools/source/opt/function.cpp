@@ -42,7 +42,6 @@ Function* Function::Clone(IRContext* ctx) const {
   clone->blocks_.reserve(blocks_.size());
   for (const auto& b : blocks_) {
     std::unique_ptr<BasicBlock> bb(b->Clone(ctx));
-    bb->SetParent(clone);
     clone->AddBasicBlock(std::move(bb));
   }
 

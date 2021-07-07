@@ -31,9 +31,6 @@ FuzzerPassReplaceParameterWithGlobal::FuzzerPassReplaceParameterWithGlobal(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceParameterWithGlobal::~FuzzerPassReplaceParameterWithGlobal() =
-    default;
-
 void FuzzerPassReplaceParameterWithGlobal::Apply() {
   for (const auto& function : *GetIRContext()->module()) {
     if (fuzzerutil::FunctionIsEntryPoint(GetIRContext(),

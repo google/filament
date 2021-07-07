@@ -164,7 +164,6 @@ uint32_t WrapOpKill::GetKillingFuncId(SpvOp opcode) {
   bb->AddInstruction(std::move(kill_inst));
 
   // Add the bb to the function
-  bb->SetParent((*killing_func).get());
   (*killing_func)->AddBasicBlock(std::move(bb));
 
   // Add the function to the module.

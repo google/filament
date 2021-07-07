@@ -351,7 +351,6 @@ BasicBlock* LoopPeeling::CreateBlockBefore(BasicBlock* bb) {
   std::unique_ptr<BasicBlock> new_bb =
       MakeUnique<BasicBlock>(std::unique_ptr<Instruction>(new Instruction(
           context_, SpvOpLabel, 0, context_->TakeNextId(), {})));
-  new_bb->SetParent(loop_utils_.GetFunction());
   // Update the loop descriptor.
   Loop* in_loop = (*loop_utils_.GetLoopDescriptor())[bb];
   if (in_loop) {

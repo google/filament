@@ -24,7 +24,7 @@ namespace fuzz {
 class TransformationRecordSynonymousConstants : public Transformation {
  public:
   explicit TransformationRecordSynonymousConstants(
-      const protobufs::TransformationRecordSynonymousConstants& message);
+      protobufs::TransformationRecordSynonymousConstants message);
 
   TransformationRecordSynonymousConstants(uint32_t constant1_id,
                                           uint32_t constant2_id);

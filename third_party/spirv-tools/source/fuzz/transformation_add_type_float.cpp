@@ -26,8 +26,8 @@ TransformationAddTypeFloat::TransformationAddTypeFloat(uint32_t fresh_id,
 }
 
 TransformationAddTypeFloat::TransformationAddTypeFloat(
-    const spvtools::fuzz::protobufs::TransformationAddTypeFloat& message)
-    : message_(message) {}
+    protobufs::TransformationAddTypeFloat message)
+    : message_(std::move(message)) {}
 
 bool TransformationAddTypeFloat::IsApplicable(
     opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
@@ -65,11 +65,18 @@ bool TransformationAddTypeFloat::IsApplicable(
 
 void TransformationAddTypeFloat::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
-  fuzzerutil::AddFloatType(ir_context, message_.fresh_id(), message_.width());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  auto type_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeFloat, 0, message_.fresh_id(),
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.width()}}});
+  auto type_instruction_ptr = type_instruction.get();
+  ir_context->module()->AddType(std::move(type_instruction));
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+
+  // Inform the def use manager that there is a new definition, and invalidate
+  // the type manager since we have added a new type.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(type_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisTypes);
 }
 
 protobufs::Transformation TransformationAddTypeFloat::ToMessage() const {

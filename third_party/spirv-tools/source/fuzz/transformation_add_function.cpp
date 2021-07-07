@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddFunction::TransformationAddFunction(
-    const spvtools::fuzz::protobufs::TransformationAddFunction& message)
-    : message_(message) {}
+    protobufs::TransformationAddFunction message)
+    : message_(std::move(message)) {}
 
 TransformationAddFunction::TransformationAddFunction(
     const std::vector<protobufs::Instruction>& instructions) {
@@ -276,12 +276,10 @@ bool TransformationAddFunction::TryToAddFunction(
     // Invariant: we should always be at a label instruction at this point.
     assert(message_.instruction(instruction_index).opcode() == SpvOpLabel);
 
-    // Make a basic block using the label instruction, with the new function
-    // as its parent.
+    // Make a basic block using the label instruction.
     std::unique_ptr<opt::BasicBlock> block =
         MakeUnique<opt::BasicBlock>(InstructionFromMessage(
             ir_context, message_.instruction(instruction_index)));
-    block->SetParent(new_function.get());
 
     // Consider successive instructions until we hit another label or the end
     // of the function, adding each such instruction to the block.

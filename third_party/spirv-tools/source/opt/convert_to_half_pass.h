@@ -74,7 +74,7 @@ class ConvertToHalfPass : public Pass {
   void GenConvert(uint32_t* val_idp, uint32_t width, Instruction* inst);
 
   // Remove RelaxedPrecision decoration of |id|.
-  void RemoveRelaxedDecoration(uint32_t id);
+  bool RemoveRelaxedDecoration(uint32_t id);
 
   // Add |inst| to relaxed instruction set if warranted. Specifically, if
   // it is float32 and either decorated relaxed or a composite or phi

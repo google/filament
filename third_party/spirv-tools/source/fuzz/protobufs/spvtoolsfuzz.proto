@@ -557,6 +557,8 @@ message Transformation {
     TransformationWrapEarlyTerminatorInFunction wrap_early_terminator_in_function = 83;
     TransformationMergeFunctionReturns merge_function_returns = 84;
     TransformationExpandVectorReduction expand_vector_reduction = 85;
+    TransformationSwapFunctionVariables swap_function_variables = 86;
+    TransformationSwapTwoFunctions swap_two_functions = 87;
     // Add additional option using the next available number.
   }
 }
@@ -1134,6 +1136,14 @@ message TransformationAddSynonym {
     // New synonym is derived by applying OpLogicalAnd to |result_id| with the second
     // operand being 'true'.
     LOGICAL_AND = 5;
+
+    // New synonym is derived by applying OpBitwiseOr to |result_id| with the second
+    // operand being 0 taken with the same bit length as |result_id|
+    BITWISE_OR = 6;
+
+    // New synonym is derived by applying OpBitwiseXor to |result_id| with the second
+    // operand being 0 taken with the same bit length as |result_id|
+    BITWISE_XOR = 7;
   }
 
   // Type of the synonym to create. See SynonymType for more details.
@@ -1631,6 +1641,9 @@ message TransformationMergeFunctionReturns {
 
   // A fresh id for the header of the new outer loop.
   uint32 outer_header_id = 2;
+
+  // A fresh id for an unreachable continue construct for the new outer loop.
+  uint32 unreachable_continue_id = 7;
 
   // A fresh id for the new return block of the function,
   // i.e. the merge block of the new outer loop.
@@ -2258,6 +2271,24 @@ message TransformationSwapConditionalBranchOperands {
   // to invert the guard.
   uint32 fresh_id = 2;
 
+}
+
+message TransformationSwapFunctionVariables {
+  // A transformation that swaps function variables
+
+  // Result id of the first variable.
+  uint32 result_id1 = 1;
+  // Result id of the second variable.
+  uint32 result_id2 = 2;
+
+}
+
+message TransformationSwapTwoFunctions {
+  // A transformation that swaps the position of two functions within the same module.
+
+  // the IDs for the two functions that are swapped.
+  uint32 function_id1 = 1;
+  uint32 function_id2 = 2;
 }
 
 message TransformationToggleAccessChainInstruction {

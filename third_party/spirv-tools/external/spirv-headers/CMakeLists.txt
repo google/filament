@@ -79,7 +79,7 @@ target_include_directories(${PROJECT_NAME} INTERFACE
 if (SPIRV_HEADERS_ENABLE_INSTALL)
     message(STATUS "Installing SPIRV-Header")
 
-    set(config_install_dir "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+    set(config_install_dir "${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME}")
 
     set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 

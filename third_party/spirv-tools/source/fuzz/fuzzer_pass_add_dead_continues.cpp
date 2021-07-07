@@ -28,8 +28,6 @@ FuzzerPassAddDeadContinues::FuzzerPassAddDeadContinues(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddDeadContinues::~FuzzerPassAddDeadContinues() = default;
-
 void FuzzerPassAddDeadContinues::Apply() {
   // Consider every block in every function.
   for (auto& function : *GetIRContext()->module()) {

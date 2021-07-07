@@ -25,7 +25,7 @@ namespace fuzz {
 
 class TransformationLoad : public Transformation {
  public:
-  explicit TransformationLoad(const protobufs::TransformationLoad& message);
+  explicit TransformationLoad(protobufs::TransformationLoad message);
 
   TransformationLoad(
       uint32_t fresh_id, uint32_t pointer_id,

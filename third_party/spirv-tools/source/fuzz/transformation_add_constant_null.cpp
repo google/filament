@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddConstantNull::TransformationAddConstantNull(
-    const spvtools::fuzz::protobufs::TransformationAddConstantNull& message)
-    : message_(message) {}
+    spvtools::fuzz::protobufs::TransformationAddConstantNull message)
+    : message_(std::move(message)) {}
 
 TransformationAddConstantNull::TransformationAddConstantNull(uint32_t fresh_id,
                                                              uint32_t type_id) {
@@ -46,14 +46,18 @@ bool TransformationAddConstantNull::IsApplicable(
 }
 
 void TransformationAddConstantNull::Apply(
-    opt::IRContext* context, TransformationContext* /*unused*/) const {
-  context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context, SpvOpConstantNull, message_.type_id(), message_.fresh_id(),
-      opt::Instruction::OperandList()));
-  fuzzerutil::UpdateModuleIdBound(context, message_.fresh_id());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
+    opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
+  auto new_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpConstantNull, message_.type_id(), message_.fresh_id(),
+      opt::Instruction::OperandList());
+  auto new_instruction_ptr = new_instruction.get();
+  ir_context->module()->AddGlobalValue(std::move(new_instruction));
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+
+  // Inform the def-use manager about the new instruction. Invalidate the
+  // constant manager as we have added a new constant.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(new_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisConstants);
 }
 
 protobufs::Transformation TransformationAddConstantNull::ToMessage() const {

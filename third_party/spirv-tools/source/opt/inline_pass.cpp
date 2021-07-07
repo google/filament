@@ -383,9 +383,7 @@ std::unique_ptr<BasicBlock> InlinePass::InlineReturn(
   uint32_t returnLabelId = 0;
   for (auto callee_block_itr = calleeFn->begin();
        callee_block_itr != calleeFn->end(); ++callee_block_itr) {
-    if (callee_block_itr->tail()->opcode() == SpvOpUnreachable ||
-        callee_block_itr->tail()->opcode() == SpvOpKill ||
-        callee_block_itr->tail()->opcode() == SpvOpTerminateInvocation) {
+    if (spvOpcodeIsAbort(callee_block_itr->tail()->opcode())) {
       returnLabelId = context()->TakeNextId();
       break;
     }
@@ -619,14 +617,6 @@ bool InlinePass::GenInlineCode(
     assert(resId != 0);
     AddLoad(calleeTypeId, resId, returnVarId, &new_blk_ptr,
             call_inst_itr->dbg_line_inst(), call_inst_itr->GetDebugScope());
-  } else {
-    // Even though it is very unlikely, it is possible that the result id of
-    // the void-function call is used, so we need to generate an instruction
-    // with that result id.
-    std::unique_ptr<Instruction> undef_inst(
-        new Instruction(context(), SpvOpUndef, call_inst_itr->type_id(),
-                        call_inst_itr->result_id(), {}));
-    context()->AddGlobalValue(std::move(undef_inst));
   }
 
   // Move instructions of original caller block after call instruction.
@@ -645,6 +635,11 @@ bool InlinePass::GenInlineCode(
   for (auto& blk : *new_blocks) {
     id2block_[blk->id()] = &*blk;
   }
+
+  // We need to kill the name and decorations for the call, which will be
+  // deleted.
+  context()->KillNamesAndDecorates(&*call_inst_itr);
+
   return true;
 }
 
@@ -762,8 +757,7 @@ bool InlinePass::IsInlinableFunction(Function* func) {
 
 bool InlinePass::ContainsKillOrTerminateInvocation(Function* func) const {
   return !func->WhileEachInst([](Instruction* inst) {
-    const auto opcode = inst->opcode();
-    return (opcode != SpvOpKill) && (opcode != SpvOpTerminateInvocation);
+    return !spvOpcodeTerminatesExecution(inst->opcode());
   });
 }
 

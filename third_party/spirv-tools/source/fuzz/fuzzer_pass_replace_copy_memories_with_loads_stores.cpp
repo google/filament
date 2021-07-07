@@ -30,9 +30,6 @@ FuzzerPassReplaceCopyMemoriesWithLoadsStores::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceCopyMemoriesWithLoadsStores::
-    ~FuzzerPassReplaceCopyMemoriesWithLoadsStores() = default;
-
 void FuzzerPassReplaceCopyMemoriesWithLoadsStores::Apply() {
   GetIRContext()->module()->ForEachInst([this](opt::Instruction* instruction) {
     // Randomly decide whether to replace the OpCopyMemory.

@@ -377,6 +377,10 @@
       "kind" : "DebugInfoFlags",
       "enumerants" : [
         {
+          "enumerant" : "None",
+          "value" : "0x0000"
+        },
+        {
           "enumerant" : "FlagIsProtected",
           "value" : "0x01"
         },

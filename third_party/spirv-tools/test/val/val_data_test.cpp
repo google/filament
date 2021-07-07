@@ -36,24 +36,6 @@ std::string HeaderWith(std::string cap) {
          cap + " OpMemoryModel Logical GLSL450 ";
 }
 
-std::string WebGPUHeaderWith(std::string cap) {
-  return R"(
-OpCapability Shader
-OpCapability )" +
-         cap + R"(
-OpCapability VulkanMemoryModelKHR
-OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical VulkanKHR
-)";
-}
-
-std::string webgpu_header = R"(
-OpCapability Shader
-OpCapability VulkanMemoryModelKHR
-OpExtension "SPV_KHR_vulkan_memory_model"
-OpMemoryModel Logical VulkanKHR
-)";
-
 std::string header = R"(
      OpCapability Shader
      OpCapability Linkage
@@ -267,18 +249,6 @@ TEST_F(ValidateData, int8_with_storage_push_constant_8_good) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions()) << getDiagnosticString();
 }
 
-TEST_F(ValidateData, webgpu_int8_bad) {
-  std::string str = WebGPUHeaderWith("Int8") + "%2 = OpTypeInt 8 0";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY,
-            ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Capability Int8 is not allowed by WebGPU specification (or "
-                "requires extension)\n"
-                "  OpCapability Int8\n"));
-}
-
 TEST_F(ValidateData, int16_good) {
   std::string str = header_with_int16 + "%2 = OpTypeInt 16 1";
   CompileSuccessfully(str.c_str());
@@ -338,34 +308,6 @@ TEST_F(ValidateData, int16_bad) {
   EXPECT_THAT(getDiagnosticString(), HasSubstr(missing_int16_cap_error));
 }
 
-TEST_F(ValidateData, webgpu_int16_bad) {
-  std::string str = WebGPUHeaderWith("Int16") + "%2 = OpTypeInt 16 1";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY,
-            ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Capability Int16 is not allowed by WebGPU specification (or "
-                "requires extension)\n"
-                "  OpCapability Int16\n"));
-}
-
-TEST_F(ValidateData, webgpu_int32_good) {
-  std::string str = webgpu_header + R"(
-          OpEntryPoint Fragment %func "func"
-          OpExecutionMode %func OriginUpperLeft
-%uint_t = OpTypeInt 32 0
-  %void = OpTypeVoid
-%func_t = OpTypeFunction %void
-  %func = OpFunction %void None %func_t
-     %1 = OpLabel
-          OpReturn
-          OpFunctionEnd
-)";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
-}
-
 TEST_F(ValidateData, int64_good) {
   std::string str = header_with_int64 + "%2 = OpTypeInt 64 1";
   CompileSuccessfully(str.c_str());
@@ -377,18 +319,6 @@ TEST_F(ValidateData, int64_bad) {
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(), HasSubstr(missing_int64_cap_error));
-}
-
-TEST_F(ValidateData, webgpu_int64_bad) {
-  std::string str = WebGPUHeaderWith("Int64") + "%2 = OpTypeInt 64 1";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY,
-            ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Capability Int64 is not allowed by WebGPU specification (or "
-                "requires extension)\n"
-                "  OpCapability Int64\n"));
 }
 
 // Number of bits in an integer may be only one of: {8,16,32,64}
@@ -418,34 +348,6 @@ TEST_F(ValidateData, float16_bad) {
   EXPECT_THAT(getDiagnosticString(), HasSubstr(missing_float16_cap_error));
 }
 
-TEST_F(ValidateData, webgpu_float16_bad) {
-  std::string str = WebGPUHeaderWith("Float16") + "%2 = OpTypeFloat 16";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY,
-            ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Capability Float16 is not allowed by WebGPU specification (or "
-                "requires extension)\n"
-                "  OpCapability Float16\n"));
-}
-
-TEST_F(ValidateData, webgpu_float32_good) {
-  std::string str = webgpu_header + R"(
-           OpEntryPoint Fragment %func "func"
-           OpExecutionMode %func OriginUpperLeft
-%float_t = OpTypeFloat 32
-   %void = OpTypeVoid
- %func_t = OpTypeFunction %void
-   %func = OpFunction %void None %func_t
-      %1 = OpLabel
-           OpReturn
-           OpFunctionEnd
-)";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
-}
-
 TEST_F(ValidateData, float64_good) {
   std::string str = header_with_float64 + "%2 = OpTypeFloat 64";
   CompileSuccessfully(str.c_str());
@@ -457,18 +359,6 @@ TEST_F(ValidateData, float64_bad) {
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(), HasSubstr(missing_float64_cap_error));
-}
-
-TEST_F(ValidateData, webgpu_float64_bad) {
-  std::string str = WebGPUHeaderWith("Float64") + "%2 = OpTypeFloat 64";
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_CAPABILITY,
-            ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Capability Float64 is not allowed by WebGPU specification (or "
-                "requires extension)\n"
-                "  OpCapability Float64\n"));
 }
 
 // Number of bits in a float may be only one of: {16,32,64}
@@ -497,7 +387,7 @@ TEST_F(ValidateData, ids_should_be_validated_before_data) {
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("ID 3[%3] has not been defined"));
+              HasSubstr("Operand 3[%3] requires a previous definition"));
 }
 
 TEST_F(ValidateData, matrix_bad_column_type) {
@@ -882,66 +772,58 @@ TEST_F(ValidateData, vulkan_RTA_not_at_end_of_struct) {
                         "OpTypeStruct %_runtimearr_uint %uint\n"));
 }
 
-TEST_F(ValidateData, webgpu_RTA_array_at_end_of_struct) {
-  std::string str = R"(
-              OpCapability Shader
-              OpCapability VulkanMemoryModelKHR
-              OpExtension "SPV_KHR_vulkan_memory_model"
-              OpMemoryModel Logical VulkanKHR
-              OpEntryPoint Fragment %func "func"
-              OpExecutionMode %func OriginUpperLeft
-              OpDecorate %array_t ArrayStride 4
-              OpMemberDecorate %struct_t 0 Offset 0
-              OpMemberDecorate %struct_t 1 Offset 4
-              OpDecorate %struct_t Block
-     %uint_t = OpTypeInt 32 0
-   %array_t = OpTypeRuntimeArray %uint_t
-  %struct_t = OpTypeStruct %uint_t %array_t
-%struct_ptr = OpTypePointer StorageBuffer %struct_t
-         %2 = OpVariable %struct_ptr StorageBuffer
-      %void = OpTypeVoid
-    %func_t = OpTypeFunction %void
-      %func = OpFunction %void None %func_t
-         %1 = OpLabel
-              OpReturn
-              OpFunctionEnd
+TEST_F(ValidateData, TypeForwardReference) {
+  std::string test = R"(
+OpCapability Shader
+OpCapability PhysicalStorageBufferAddresses
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpTypeForwardPointer %1 PhysicalStorageBuffer
+%2 = OpTypeStruct
+%3 = OpTypeRuntimeArray %1
+%1 = OpTypePointer PhysicalStorageBuffer %2
 )";
 
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
+  CompileSuccessfully(test, SPV_ENV_UNIVERSAL_1_5);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
 }
 
-TEST_F(ValidateData, webgpu_RTA_not_at_end_of_struct) {
-  std::string str = R"(
-              OpCapability Shader
-              OpCapability VulkanMemoryModelKHR
-              OpExtension "SPV_KHR_vulkan_memory_model"
-              OpMemoryModel Logical VulkanKHR
-              OpEntryPoint Fragment %func "func"
-              OpExecutionMode %func OriginUpperLeft
-              OpDecorate %array_t ArrayStride 4
-              OpMemberDecorate %struct_t 0 Offset 0
-              OpMemberDecorate %struct_t 1 Offset 4
-              OpDecorate %struct_t Block
-     %uint_t = OpTypeInt 32 0
-   %array_t = OpTypeRuntimeArray %uint_t
-  %struct_t = OpTypeStruct %array_t %uint_t
-%struct_ptr = OpTypePointer StorageBuffer %struct_t
-         %2 = OpVariable %struct_ptr StorageBuffer
-      %void = OpTypeVoid
-    %func_t = OpTypeFunction %void
-      %func = OpFunction %void None %func_t
-         %1 = OpLabel
-              OpReturn
-              OpFunctionEnd
+TEST_F(ValidateData, VulkanTypeForwardStorageClass) {
+  std::string test = R"(
+OpCapability Shader
+OpCapability PhysicalStorageBufferAddresses
+OpMemoryModel Logical GLSL450
+OpTypeForwardPointer %1 Uniform
+%2 = OpTypeStruct
+%3 = OpTypeRuntimeArray %1
+%1 = OpTypePointer Uniform %2
 )";
 
-  CompileSuccessfully(str.c_str(), SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_WEBGPU_0));
+  CompileSuccessfully(test, SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("In WebGPU, OpTypeRuntimeArray must only be used for "
-                        "the last member of an OpTypeStruct\n  %_struct_3 = "
-                        "OpTypeStruct %_runtimearr_uint %uint\n"));
+              AnyVUID("VUID-StandaloneSpirv-OpTypeForwardPointer-04711"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In Vulkan, OpTypeForwardPointer must have "
+                        "a storage class of PhysicalStorageBuffer."));
+}
+
+TEST_F(ValidateData, TypeForwardReferenceMustBeForwardPointer) {
+  std::string test = R"(
+OpCapability Shader
+OpCapability PhysicalStorageBufferAddresses
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%1 = OpTypeStruct
+%2 = OpTypeRuntimeArray %3
+%3 = OpTypePointer PhysicalStorageBuffer %1
+)";
+
+  CompileSuccessfully(test, SPV_ENV_UNIVERSAL_1_5);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Operand 3[%_ptr_PhysicalStorageBuffer__struct_1] "
+                        "requires a previous definition"));
 }
 
 }  // namespace

@@ -32,9 +32,6 @@ FuzzerPassReplaceBranchesFromDeadBlocksWithExits::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceBranchesFromDeadBlocksWithExits::
-    ~FuzzerPassReplaceBranchesFromDeadBlocksWithExits() = default;
-
 void FuzzerPassReplaceBranchesFromDeadBlocksWithExits::Apply() {
   // OpKill can only be used as a terminator in a function that is guaranteed
   // to be executed with the Fragment execution model.  We conservatively only

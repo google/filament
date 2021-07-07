@@ -26,8 +26,6 @@ FuzzerPassAdjustLoopControls::FuzzerPassAdjustLoopControls(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAdjustLoopControls::~FuzzerPassAdjustLoopControls() = default;
-
 void FuzzerPassAdjustLoopControls::Apply() {
   // Consider every merge instruction in the module (via looking through all
   // functions and blocks).

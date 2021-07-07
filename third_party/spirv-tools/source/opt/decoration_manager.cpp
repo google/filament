@@ -53,11 +53,12 @@ namespace spvtools {
 namespace opt {
 namespace analysis {
 
-void DecorationManager::RemoveDecorationsFrom(
+bool DecorationManager::RemoveDecorationsFrom(
     uint32_t id, std::function<bool(const Instruction&)> pred) {
+  bool was_modified = false;
   const auto ids_iter = id_to_decoration_insts_.find(id);
   if (ids_iter == id_to_decoration_insts_.end()) {
-    return;
+    return was_modified;
   }
 
   TargetData& decorations_info = ids_iter->second;
@@ -99,7 +100,6 @@ void DecorationManager::RemoveDecorationsFrom(
 
     // Otherwise, remove |id| from the targets of |group_id|
     const uint32_t stride = inst->opcode() == SpvOpGroupDecorate ? 1u : 2u;
-    bool was_modified = false;
     for (uint32_t i = 1u; i < inst->NumInOperands();) {
       if (inst->GetSingleWordInOperand(i) != id) {
         i += stride;
@@ -155,6 +155,7 @@ void DecorationManager::RemoveDecorationsFrom(
           }),
       indirect_decorations.end());
 
+  was_modified |= !insts_to_kill.empty();
   for (Instruction* inst : insts_to_kill) context->KillInst(inst);
   insts_to_kill.clear();
 
@@ -165,6 +166,7 @@ void DecorationManager::RemoveDecorationsFrom(
     for (Instruction* inst : decorations_info.decorate_insts)
       insts_to_kill.push_back(inst);
   }
+  was_modified |= !insts_to_kill.empty();
   for (Instruction* inst : insts_to_kill) context->KillInst(inst);
 
   if (decorations_info.direct_decorations.empty() &&
@@ -172,6 +174,7 @@ void DecorationManager::RemoveDecorationsFrom(
       decorations_info.decorate_insts.empty()) {
     id_to_decoration_insts_.erase(ids_iter);
   }
+  return was_modified;
 }
 
 std::vector<Instruction*> DecorationManager::GetDecorationsFor(
@@ -485,6 +488,13 @@ void DecorationManager::ForEachDecoration(
     f(inst);
     return true;
   });
+}
+
+bool DecorationManager::FindDecoration(
+    uint32_t id, uint32_t decoration,
+    std::function<bool(const Instruction&)> f) {
+  return !WhileEachDecoration(
+      id, decoration, [&f](const Instruction& inst) { return !f(inst); });
 }
 
 void DecorationManager::CloneDecorations(uint32_t from, uint32_t to) {

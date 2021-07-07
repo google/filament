@@ -28,8 +28,6 @@ FuzzerPassMutatePointers::FuzzerPassMutatePointers(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassMutatePointers::~FuzzerPassMutatePointers() = default;
-
 void FuzzerPassMutatePointers::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* function, opt::BasicBlock* block,

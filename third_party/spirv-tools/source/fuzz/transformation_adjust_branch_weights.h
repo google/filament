@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAdjustBranchWeights : public Transformation {
  public:
   explicit TransformationAdjustBranchWeights(
-      const protobufs::TransformationAdjustBranchWeights& message);
+      protobufs::TransformationAdjustBranchWeights message);
 
   TransformationAdjustBranchWeights(
       const protobufs::InstructionDescriptor& instruction_descriptor,

@@ -38,7 +38,7 @@ namespace opt {
 // utility functions and supporting state.
 class MemPass : public Pass {
  public:
-  virtual ~MemPass() = default;
+  virtual ~MemPass() override = default;
 
   // Returns an undef value for the given |var_id|'s type.
   uint32_t GetUndefVal(uint32_t var_id) {

@@ -245,12 +245,6 @@ TEST_F(ValidationStateTest, CheckVulkanNonRecursiveBodyGood) {
             ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
 }
 
-TEST_F(ValidationStateTest, CheckWebGPUNonRecursiveBodyGood) {
-  std::string spirv = std::string(kVulkanMemoryHeader) + kNonRecursiveBody;
-  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
-}
-
 TEST_F(ValidationStateTest, CheckDirectlyRecursiveBodyGood) {
   std::string spirv = std::string(kHeader) + kDirectlyRecursiveBody;
   CompileSuccessfully(spirv);
@@ -263,15 +257,7 @@ TEST_F(ValidationStateTest, CheckVulkanDirectlyRecursiveBodyBad) {
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
             ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Entry points may not have a call graph with cycles.\n "
-                        " %1 = OpFunction %void Pure|Const %3\n"));
-}
-
-TEST_F(ValidationStateTest, CheckWebGPUDirectlyRecursiveBodyBad) {
-  std::string spirv = std::string(kVulkanMemoryHeader) + kDirectlyRecursiveBody;
-  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
+              AnyVUID("VUID-StandaloneSpirv-None-04634"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Entry points may not have a call graph with cycles.\n "
                         " %1 = OpFunction %void Pure|Const %3\n"));
@@ -290,70 +276,10 @@ TEST_F(ValidationStateTest, CheckVulkanIndirectlyRecursiveBodyBad) {
   EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
             ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_1));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-None-04634"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Entry points may not have a call graph with cycles.\n "
                         " %1 = OpFunction %void Pure|Const %3\n"));
-}
-
-// Indirectly recursive functions are caught by the function definition layout
-// rules, because they cause a situation where there are 2 functions that have
-// to be before each other, and layout is checked earlier.
-TEST_F(ValidationStateTest, CheckWebGPUIndirectlyRecursiveBodyBad) {
-  std::string spirv =
-      std::string(kVulkanMemoryHeader) + kIndirectlyRecursiveBody;
-  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_LAYOUT,
-            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("For WebGPU, functions need to be defined before being "
-                        "called.\n  %10 = OpFunctionCall %_struct_5 %11\n"));
-}
-
-TEST_F(ValidationStateTest,
-       CheckWebGPUDuplicateEntryNamesDifferentFunctionsBad) {
-  std::string spirv = std::string(kVulkanMemoryHeader) + R"(
-OpEntryPoint Fragment %func_1 "main"
-OpEntryPoint Vertex %func_2 "main"
-OpExecutionMode %func_1 OriginUpperLeft
-%void    = OpTypeVoid
-%void_f  = OpTypeFunction %void
-%func_1  = OpFunction %void None %void_f
-%label_1 = OpLabel
-           OpReturn
-           OpFunctionEnd
-%func_2  = OpFunction %void None %void_f
-%label_2 = OpLabel
-           OpReturn
-           OpFunctionEnd
-)";
-
-  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Entry point name \"main\" is not unique, which is not allow "
-                "in WebGPU env.\n  %1 = OpFunction %void None %4\n"));
-}
-
-TEST_F(ValidationStateTest, CheckWebGPUDuplicateEntryNamesSameFunctionBad) {
-  std::string spirv = std::string(kVulkanMemoryHeader) + R"(
-OpEntryPoint GLCompute %func_1 "main"
-OpEntryPoint Vertex %func_1 "main"
-%void    = OpTypeVoid
-%void_f  = OpTypeFunction %void
-%func_1  = OpFunction %void None %void_f
-%label_1 = OpLabel
-           OpReturn
-           OpFunctionEnd
-)";
-
-  CompileSuccessfully(spirv, SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            ValidateAndRetrieveValidationState(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(
-      getDiagnosticString(),
-      HasSubstr("Entry point name \"main\" is not unique, which is not allow "
-                "in WebGPU env.\n  %1 = OpFunction %void None %3\n"));
 }
 
 }  // namespace

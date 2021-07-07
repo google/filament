@@ -201,7 +201,7 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
             ret = SPV_SUCCESS;
           }
         } else if (can_have_forward_declared_ids(i)) {
-          if (inst->opcode() == SpvOpTypeStruct &&
+          if (spvOpcodeGeneratesType(inst->opcode()) &&
               !_.IsForwardPointer(operand_word)) {
             ret = _.diag(SPV_ERROR_INVALID_ID, inst)
                   << "Operand " << _.getIdName(operand_word)

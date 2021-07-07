@@ -21,9 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationExpandVectorReduction::TransformationExpandVectorReduction(
-    const spvtools::fuzz::protobufs::TransformationExpandVectorReduction&
-        message)
-    : message_(message) {}
+    protobufs::TransformationExpandVectorReduction message)
+    : message_(std::move(message)) {}
 
 TransformationExpandVectorReduction::TransformationExpandVectorReduction(
     const uint32_t instruction_result_id,

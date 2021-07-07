@@ -22,8 +22,8 @@ namespace fuzz {
 
 TransformationRecordSynonymousConstants::
     TransformationRecordSynonymousConstants(
-        const protobufs::TransformationRecordSynonymousConstants& message)
-    : message_(message) {}
+        protobufs::TransformationRecordSynonymousConstants message)
+    : message_(std::move(message)) {}
 
 TransformationRecordSynonymousConstants::
     TransformationRecordSynonymousConstants(uint32_t constant1_id,

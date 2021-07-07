@@ -28,8 +28,6 @@ class FuzzerPassAdjustLoopControls : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAdjustLoopControls() override;
-
   void Apply() override;
 };
 

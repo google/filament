@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddFunction : public Transformation {
  public:
   explicit TransformationAddFunction(
-      const protobufs::TransformationAddFunction& message);
+      protobufs::TransformationAddFunction message);
 
   // Creates a transformation to add a non live-safe function.
   explicit TransformationAddFunction(

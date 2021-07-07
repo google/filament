@@ -25,20 +25,14 @@ bool spvIsVulkanEnv(spv_target_env env);
 // Returns true if |env| is an OPENCL environment, false otherwise.
 bool spvIsOpenCLEnv(spv_target_env env);
 
-// Returns true if |env| is an WEBGPU environment, false otherwise.
-bool spvIsWebGPUEnv(spv_target_env env);
-
 // Returns true if |env| is an OPENGL environment, false otherwise.
 bool spvIsOpenGLEnv(spv_target_env env);
-
-// Returns true if |env| is a VULKAN or WEBGPU environment, false otherwise.
-bool spvIsVulkanOrWebGPUEnv(spv_target_env env);
 
 // Returns the version number for the given SPIR-V target environment.
 uint32_t spvVersionForTargetEnv(spv_target_env env);
 
 // Returns a string to use in logging messages that indicates the class of
-// environment, i.e. "Vulkan", "WebGPU", "OpenCL", etc.
+// environment, i.e. "Vulkan", "OpenCL", etc.
 std::string spvLogStringForEnv(spv_target_env env);
 
 // Returns a formatted list of all SPIR-V target environment names that

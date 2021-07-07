@@ -22,9 +22,8 @@ namespace fuzz {
 
 TransformationToggleAccessChainInstruction::
     TransformationToggleAccessChainInstruction(
-        const spvtools::fuzz::protobufs::
-            TransformationToggleAccessChainInstruction& message)
-    : message_(message) {}
+        protobufs::TransformationToggleAccessChainInstruction message)
+    : message_(std::move(message)) {}
 
 TransformationToggleAccessChainInstruction::
     TransformationToggleAccessChainInstruction(

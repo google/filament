@@ -27,9 +27,8 @@ const uint32_t kArithmeticInstructionIndexRightInOperand = 1;
 
 TransformationReplaceAddSubMulWithCarryingExtended::
     TransformationReplaceAddSubMulWithCarryingExtended(
-        const spvtools::fuzz::protobufs::
-            TransformationReplaceAddSubMulWithCarryingExtended& message)
-    : message_(message) {}
+        protobufs::TransformationReplaceAddSubMulWithCarryingExtended message)
+    : message_(std::move(message)) {}
 
 TransformationReplaceAddSubMulWithCarryingExtended::
     TransformationReplaceAddSubMulWithCarryingExtended(uint32_t struct_fresh_id,

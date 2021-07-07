@@ -30,9 +30,6 @@ FuzzerPassReplaceLinearAlgebraInstructions::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassReplaceLinearAlgebraInstructions::
-    ~FuzzerPassReplaceLinearAlgebraInstructions() = default;
-
 void FuzzerPassReplaceLinearAlgebraInstructions::Apply() {
   // For each instruction, checks whether it is a linear algebra instruction. In
   // this case, the transformation is randomly applied.

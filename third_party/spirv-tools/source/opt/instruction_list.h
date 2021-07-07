@@ -53,7 +53,7 @@ class InstructionList : public utils::IntrusiveList<Instruction> {
   }
 
   // Destroy this list and any instructions in the list.
-  inline virtual ~InstructionList();
+  inline ~InstructionList() override;
 
   class iterator : public utils::IntrusiveList<Instruction>::iterator {
    public:

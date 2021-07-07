@@ -38,7 +38,6 @@ spv_context spvContextCreate(spv_target_env env) {
     case SPV_ENV_UNIVERSAL_1_3:
     case SPV_ENV_VULKAN_1_1:
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
-    case SPV_ENV_WEBGPU_0:
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_UNIVERSAL_1_5:
     case SPV_ENV_VULKAN_1_2:

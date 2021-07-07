@@ -197,6 +197,7 @@ TEST(TransformationAddSynonymTest, AddZeroSubZeroMulOne) {
          %37 = OpTypeVector %36 2
          %38 = OpConstantTrue %36
          %39 = OpConstantComposite %37 %38 %38
+         %40 = OpConstant %6 37
           %4 = OpFunction %2 None %3
           %5 = OpLabel
                OpReturn
@@ -249,6 +250,29 @@ TEST(TransformationAddSynonymTest, AddZeroSubZeroMulOne) {
       ++fresh_id;
     }
   }
+  {
+    TransformationAddSynonym transformation(
+        40, protobufs::TransformationAddSynonym::BITWISE_OR, fresh_id,
+        insert_before);
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(transformation_context.GetFactManager()->IsSynonymous(
+        MakeDataDescriptor(40, {}), MakeDataDescriptor(fresh_id, {})));
+    ++fresh_id;
+  }
+  {
+    TransformationAddSynonym transformation(
+        40, protobufs::TransformationAddSynonym::BITWISE_XOR, fresh_id,
+        insert_before);
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(transformation_context.GetFactManager()->IsSynonymous(
+        MakeDataDescriptor(40, {}), MakeDataDescriptor(fresh_id, {})));
+  }
 
   std::string expected_shader = R"(
                OpCapability Shader
@@ -289,6 +313,7 @@ TEST(TransformationAddSynonymTest, AddZeroSubZeroMulOne) {
          %37 = OpTypeVector %36 2
          %38 = OpConstantTrue %36
          %39 = OpConstantComposite %37 %38 %38
+         %40 = OpConstant %6 37
           %4 = OpFunction %2 None %3
           %5 = OpLabel
          %50 = OpIAdd %6 %9 %7
@@ -303,6 +328,8 @@ TEST(TransformationAddSynonymTest, AddZeroSubZeroMulOne) {
          %59 = OpFMul %14 %17 %16
          %60 = OpFMul %18 %23 %20
          %61 = OpIMul %24 %29 %26
+         %62 = OpBitwiseOr %6 %40 %7
+         %63 = OpBitwiseXor %6 %40 %7
                OpReturn
                OpFunctionEnd
   )";

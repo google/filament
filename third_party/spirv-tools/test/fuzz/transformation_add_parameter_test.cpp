@@ -35,6 +35,10 @@ TEST(TransformationAddParameterTest, NonPointerBasicTest) {
           %7 = OpTypeBool
          %11 = OpTypeInt 32 1
          %16 = OpTypeFloat 32
+         %51 = OpConstant %11 2
+         %52 = OpTypeArray %16 %51
+         %53 = OpConstant %16 7
+         %54 = OpConstantComposite %52 %53 %53
           %3 = OpTypeFunction %2
           %6 = OpTypeFunction %7 %7
           %8 = OpConstant %11 23
@@ -141,6 +145,14 @@ TEST(TransformationAddParameterTest, NonPointerBasicTest) {
     ASSERT_TRUE(transformation_context.GetFactManager()->IdIsIrrelevant(60));
   }
   {
+    TransformationAddParameter correct(9, 68, 52, {{{13, 54}}}, 69);
+    ASSERT_TRUE(correct.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(correct, context.get(), &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+    ASSERT_TRUE(transformation_context.GetFactManager()->IdIsIrrelevant(68));
+  }
+  {
     TransformationAddParameter correct(17, 62, 7, {{}}, 63);
     ASSERT_TRUE(correct.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(correct, context.get(), &transformation_context);
@@ -177,6 +189,10 @@ TEST(TransformationAddParameterTest, NonPointerBasicTest) {
           %7 = OpTypeBool
          %11 = OpTypeInt 32 1
          %16 = OpTypeFloat 32
+         %51 = OpConstant %11 2
+         %52 = OpTypeArray %16 %51
+         %53 = OpConstant %16 7
+         %54 = OpConstantComposite %52 %53 %53
           %3 = OpTypeFunction %2
           %8 = OpConstant %11 23
          %12 = OpConstantTrue %7
@@ -188,11 +204,11 @@ TEST(TransformationAddParameterTest, NonPointerBasicTest) {
          %41 = OpTypeStruct %11 %16
          %42 = OpConstantComposite %41 %8 %32
          %44 = OpTypeFunction %2 %41 %7
-          %6 = OpTypeFunction %7 %7 %11
+          %6 = OpTypeFunction %7 %7 %11 %52
          %65 = OpTypeFunction %2 %31
           %4 = OpFunction %2 None %3
           %5 = OpLabel
-         %13 = OpFunctionCall %7 %9 %12 %8
+         %13 = OpFunctionCall %7 %9 %12 %8 %54
                OpReturn
                OpFunctionEnd
 
@@ -200,6 +216,7 @@ TEST(TransformationAddParameterTest, NonPointerBasicTest) {
           %9 = OpFunction %7 None %6
          %14 = OpFunctionParameter %7
          %60 = OpFunctionParameter %11
+         %68 = OpFunctionParameter %52
          %10 = OpLabel
                OpReturnValue %12
                OpFunctionEnd

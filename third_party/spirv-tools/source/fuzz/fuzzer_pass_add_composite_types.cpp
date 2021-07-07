@@ -28,8 +28,6 @@ FuzzerPassAddCompositeTypes::FuzzerPassAddCompositeTypes(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddCompositeTypes::~FuzzerPassAddCompositeTypes() = default;
-
 void FuzzerPassAddCompositeTypes::Apply() {
   MaybeAddMissingVectorTypes();
   MaybeAddMissingMatrixTypes();
@@ -125,7 +123,9 @@ uint32_t FuzzerPassAddCompositeTypes::ChooseScalarOrCompositeType() {
         break;
       case SpvOpTypeStruct: {
         if (!fuzzerutil::MembersHaveBuiltInDecoration(GetIRContext(),
-                                                      inst.result_id())) {
+                                                      inst.result_id()) &&
+            !fuzzerutil::HasBlockOrBufferBlockDecoration(GetIRContext(),
+                                                         inst.result_id())) {
           candidates.push_back(inst.result_id());
         }
       } break;
