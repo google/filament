@@ -256,7 +256,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShadowM
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTransparentShadows(
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTransparentShadow(
         JNIEnv*, jclass, jlong nativeBuilder, jboolean transparentShadow) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->transparentShadow(transparentShadow);
