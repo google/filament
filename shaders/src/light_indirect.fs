@@ -509,7 +509,9 @@ void applyRefraction(const PixelParams pixel,
 #endif
 #endif
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    // When IOR = 1.0, roughness cannot apply
+    // TODO: we should check material.ior instead of etaRI (material.ior / air.ior)
+    float perceptualRoughness = pixel.etaRI == 1.0 ? 0.0 : pixel.perceptualRoughnessUnclamped;
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
     // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
     perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
