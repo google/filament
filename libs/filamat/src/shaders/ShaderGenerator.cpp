@@ -244,13 +244,9 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateGetters(vs, ShaderType::VERTEX);
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
-    bool needsTransparentShadows = material.hasTransparentShadow &&
-            (material.blendingMode == BlendingMode::TRANSPARENT ||
-                    material.blendingMode == BlendingMode::FADE);
-
     if (variant.isDepthPass() &&
             material.blendingMode != BlendingMode::MASKED &&
-            !needsTransparentShadows &&
+            !material.hasTransparentShadow &&
             !hasCustomDepthShader()) {
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
@@ -447,11 +443,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
 
     // shading model
     if (variant.isDepthPass()) {
-        if (material.blendingMode == BlendingMode::MASKED ||
-                (material.hasTransparentShadow &&
-                    (material.blendingMode == BlendingMode::TRANSPARENT ||
-                     material.blendingMode == BlendingMode::FADE)))
-        {
+        if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
             appendShader(fs, mMaterialCode, mMaterialLineOffset);
         }
         // these variants are special and are treated as DEPTH variants. Filament will never
