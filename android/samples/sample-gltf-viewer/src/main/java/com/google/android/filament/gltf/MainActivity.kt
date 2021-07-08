@@ -78,7 +78,6 @@ class MainActivity : Activity() {
 
         modelViewer = ModelViewer(surfaceView)
         viewerContent.view = modelViewer.view
-        viewerContent.indirectLight = modelViewer.scene.indirectLight
         viewerContent.sunlight = modelViewer.light
         viewerContent.lightManager = modelViewer.engine.lightManager
         viewerContent.scene = modelViewer.scene
@@ -129,6 +128,7 @@ class MainActivity : Activity() {
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             scene.indirectLight = KTXLoader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f
+            viewerContent.indirectLight = modelViewer.scene.indirectLight
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             scene.skybox = KTXLoader.createSkybox(engine, it)
