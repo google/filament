@@ -254,6 +254,11 @@ if (NOT ANDROID)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
+    # ==============================================================================================
+    # Installation
+    # ==============================================================================================
+    install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
+    install(TARGETS material_sandbox RUNTIME DESTINATION bin)
 endif()
 
 # ==================================================================================================
