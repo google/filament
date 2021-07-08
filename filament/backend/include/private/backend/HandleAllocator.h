@@ -24,6 +24,12 @@
 #include <utils/compiler.h>
 #include <tsl/robin_map.h>
 
+#if !defined(NDEBUG) && UTILS_HAS_RTTI
+#   define HANDLE_TYPE_SAFETY 1
+#else
+#   define HANDLE_TYPE_SAFETY 0
+#endif
+
 namespace filament::backend {
 
 /*
@@ -52,7 +58,7 @@ public:
         Handle<D> h{ allocateHandle(sizeof(D)) };
         D* addr = handle_cast<D*>(h);
         new(addr) D(std::forward<ARGS>(args)...);
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
+#if HANDLE_TYPE_SAFETY
         addr->typeId = typeid(D).name();
 #endif
         return h;
@@ -75,7 +81,7 @@ public:
         addr->~D();
         new(addr) D(std::forward<ARGS>(args)...);
 
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
+#if HANDLE_TYPE_SAFETY
         addr->typeId = typeid(D).name();
 #endif
         return addr;
@@ -93,7 +99,7 @@ public:
     void deallocate(Handle<B>& handle, D const* p) noexcept {
         // allow to destroy the nullptr, similarly to operator delete
         if (p) {
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
+#if HANDLE_TYPE_SAFETY
             if (UTILS_UNLIKELY(p->typeId != typeid(D).name())) {
                 utils::slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
                        << ", but handle's actual type is " << p->typeId << utils::io::endl;
