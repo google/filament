@@ -350,7 +350,7 @@ public class MaterialBuilder {
     }
 
     @NonNull
-    public MaterialBuilder transparentShadow(sboolean transparentShadow) {
+    public MaterialBuilder transparentShadow(boolean transparentShadow) {
         nMaterialBuilderTransparentShadow(mNativeObject, transparentShadow);
         return this;
     }
