@@ -175,9 +175,15 @@ void evaluatePunctualLights(const MaterialInputs material,
     // Iterate point lights
     for ( ; index < end; index++) {
         Light light = getLight(index);
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
+            continue;
+        }
+#endif
+
         float visibility = 1.0;
 #if defined(HAS_SHADOWING)
-        if (light.NoL > 0.0){
+        if (light.NoL > 0.0) {
             if (light.castsShadows) {
                 visibility = shadow(light_shadowMap, light.shadowLayer,
                     getSpotLightSpacePosition(light.shadowIndex));
@@ -187,11 +193,11 @@ void evaluatePunctualLights(const MaterialInputs material,
                     visibility *= 1.0 - screenSpaceContactShadow(light.l);
                 }
             }
-        }
-#endif
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
-            continue;
+            if (visibility <= 0.0) {
+                continue;
+            }
+#endif
         }
 #endif
 
