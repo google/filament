@@ -350,6 +350,12 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder transparentShadow(boolean transparentShadow) {
+        nMaterialBuilderTransparentShadow(mNativeObject, transparentShadow);
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder specularAntiAliasing(boolean specularAntiAliasing) {
         nMaterialBuilderSpecularAntiAliasing(mNativeObject, specularAntiAliasing);
         return this;
@@ -551,6 +557,8 @@ public class MaterialBuilder {
 
     private static native void nMaterialBuilderShadowMultiplier(long mNativeObject,
             boolean shadowMultiplier);
+    private static native void nMaterialBuilderTransparentShadow(long mNativeObject,
+            boolean transparentShadow);
     private static native void nMaterialBuilderSpecularAntiAliasing(long mNativeObject,
             boolean specularAntiAliasing);
     private static native void nMaterialBuilderSpecularAntiAliasingVariance(long mNativeObject,

@@ -5,7 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.10.8 (currently main branch)
 
-- engine: Added support for transparent shadows. Add `transparentShadows : true` in the material file.
+- engine: Added support for transparent shadows. Add `transparentShadow : true` in the material file.
 - java: Removed support for Java desktop targets (macOS, Linux, and Windows) [⚠️ **API Change**].
 
 ## v1.10.7
