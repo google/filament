@@ -261,6 +261,7 @@ bool MaterialCompiler::run(const Config& config) {
     Config::Input* input = config.getInput();
     ssize_t size = input->open();
     if (size <= 0) {
+        std::cerr << "Input file is empty" << std::endl;
         return false;
     }
     auto buffer = input->read();
