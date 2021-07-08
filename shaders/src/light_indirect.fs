@@ -509,11 +509,11 @@ void applyRefraction(const PixelParams pixel,
 #endif
 #endif
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
+    // of 1.5 has full microfacet refraction
+    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
+            saturate(pixel.etaIR * 3.0 - 2.0));
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
-
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
