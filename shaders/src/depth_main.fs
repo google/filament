@@ -7,15 +7,25 @@ layout(location = 0) out vec4 fragColor;
 //------------------------------------------------------------------------------
 
 void main() {
-#if defined(BLEND_MODE_MASKED)
+#if defined(BLEND_MODE_MASKED) || (defined(BLEND_MODE_TRANSPARENT) && defined(HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);
 
     float alpha = inputs.baseColor.a;
+#if defined(BLEND_MODE_MASKED)
     if (alpha < getMaskThreshold()) {
         discard;
     }
+#endif
+
+#if defined(HAS_TRANSPARENT_SHADOW)
+    // Interleaved gradient noise, see dithering.fs
+    float noise = fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), gl_FragCoord.xy)));
+    if (noise >= alpha) {
+        discard;
+    }
+#endif
 #endif
 
 #if defined(HAS_VSM)

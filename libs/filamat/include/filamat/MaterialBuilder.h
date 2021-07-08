@@ -393,6 +393,9 @@ public:
     //! The material output is multiplied by the shadowing factor (UNLIT model only).
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
+    //! This material casts transparent shadows. The blending mode must be TRANSPARENT or FADE.
+    MaterialBuilder& transparentShadow(bool transparentShadow) noexcept;
+
     /**
      * Reduces specular aliasing for materials that have low roughness. Turning this feature on also
      * helps preserve the shapes of specular highlights as an object moves away from the camera.
@@ -695,6 +698,7 @@ private:
     float mSpecularAntiAliasingThreshold = 0.2f;
 
     bool mShadowMultiplier = false;
+    bool mTransparentShadow = false;
 
     uint8_t mParameterCount = 0;
 

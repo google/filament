@@ -412,7 +412,7 @@ with a direction map](images/screenshot_anisotropy.png)
 The result shown in figure [anisotropyDirectionProperty] was obtained using the direction map shown
 in figure [anisotropyDirectionProperty].
 
-![Figure [anisotropyDirectionProperty]: Example of a direction map](images/screenshot_anisotropy_map.jpg)
+![Figure [anisotropyDirectionProperty]: Example of Lighting: specularAmbientOcclusiona direction map](images/screenshot_anisotropy_map.jpg)
 
 ### Ambient occlusion
 
@@ -1540,6 +1540,42 @@ fragment {
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Lighting: transparentShadow
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:     Enables transparent shadows on this material. When this feature is enabled, Filament emulates
+      transparent shadows using a dithering pattern: they work best with variance shadow maps (VSM)
+      and blurring enabled. The opacity of the shadow derives directly from the alpha channel of
+      the material's `baseColor` property. Transparent shadows can be enabled on opaque objects,
+      making them compatible with refractive/transmissive objects that are otherwise considered
+      opaque.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Clear plastic with stickers",
+    transparentShadows : true,
+    blending : transparent,
+    // ...
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, getUV0());
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [transparentShadows]: Objects rendered with transparent shadows and blurry VSM with a
+radius of 4. Model [Bottle of Water](https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff)
+by [T-Art](https://sketchfab.com/person-x).](images/screenshot_transparent_shadows.jpg)
 
 ### Lighting: clearCoatIorChange
 
