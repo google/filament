@@ -82,31 +82,66 @@ Driver* OpenGLDriver::create(
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
-    {
-        // here we check we're on a supported version of GL before initializing the driver
-        GLint major = 0, minor = 0;
-        glGetIntegerv(GL_MAJOR_VERSION, &major);
-        glGetIntegerv(GL_MINOR_VERSION, &minor);
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    GLBufferObject            :   8       moderate
+    //    GLFence                   :   8       few
+    //    GLIndexBuffer             :   8       moderate
+    //    GLSamplerGroup            :   8       few
+    // -- less than or equal 16 bytes
+    //    GLUniformBuffer           :  20       many
+    //    GLSync                    :  24       few
+    //    GLTimerQuery              :  32       few
+    //    GLRenderPrimitive         :  48       many
+    //    OpenGLProgram             :  48       moderate
+    // -- less than or equal 64 bytes
+    //    GLTexture                 :  72       moderate
+    //    GLStream                  : 168       few
+    //    GLRenderTarget            : 192       few
+    //    GLVertexBuffer            : 200       moderate
+    // -- less than or equal to 208 bytes
 
-        if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
-            PANIC_LOG("Can't get OpenGL version");
-            cleanup:
-            ec->terminate();
-            return {};
+    slog.d
+           << "HwFence: " << sizeof(HwFence)
+           << "\nGLBufferObject: " << sizeof(GLBufferObject)
+           << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
+           << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
+           << "\nGLUniformBuffer: " << sizeof(GLUniformBuffer)
+           << "\nGLSamplerGroup: " << sizeof(GLSamplerGroup)
+           << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
+           << "\nGLTexture: " << sizeof(GLTexture)
+           << "\nGLTimerQuery: " << sizeof(GLTimerQuery)
+           << "\nGLStream: " << sizeof(GLStream)
+           << "\nGLRenderTarget: " << sizeof(GLRenderTarget)
+           << "\nGLSync: " << sizeof(GLSync)
+           << "\nOpenGLProgram: " << sizeof(OpenGLProgram)
+           << io::endl;
+#endif
+
+    // here we check we're on a supported version of GL before initializing the driver
+    GLint major = 0, minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+    if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
+        PANIC_LOG("Can't get OpenGL version");
+        cleanup:
+        ec->terminate();
+        return {};
+    }
+
+    if (GLES30_HEADERS) {
+        // we require GLES 3.1 headers, but we support GLES 3.0
+        if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
+            PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
+            goto cleanup;
         }
-
-        if (GLES30_HEADERS) {
-            // we require GLES 3.1 headers, but we support GLES 3.0
-            if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
-                PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
-                goto cleanup;
-            }
-        } else if (GL41_HEADERS) {
-            // we require GL 4.1 headers and minimum version
-            if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
-                PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
-                goto cleanup;
-            }
+    } else if (GL41_HEADERS) {
+        // we require GL 4.1 headers and minimum version
+        if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
+            PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
+            goto cleanup;
         }
     }
 
@@ -292,39 +327,6 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // ------------------------------------------------------------------------------------------------
 // Creating driver objects
 // ------------------------------------------------------------------------------------------------
-
-// For reference on a 64-bits machine:
-//    GLSync                    :  8
-//    GLFence                   : 16
-//    GLSamplerGroup            : 16        few
-// -- less than or equal 16 bytes
-
-//    GLIndexBuffer             : 24        moderate
-//    GLUniformBuffer           : 32        many
-//    GLRenderPrimitive         : 56        many
-//    OpenGLProgram             : 56        moderate
-// -- less than or equal 64 bytes
-
-//    GLTexture                 : 80        moderate
-//    GLRenderTarget            : 200       few
-//    GLVertexBuffer            : 208       moderate
-//    GLStream                  : 176       few
-// -- less than or equal to 208 bytes
-
-#if 0
-    // this is useful for development, but too verbose even for debug builds
-    slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
-    slog.d << "HwSync: " << sizeof(HwSync) << io::endl;
-    slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
-    slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
-    slog.d << "GLRenderPrimitive: " << sizeof(GLRenderPrimitive) << io::endl;
-    slog.d << "GLTexture: " << sizeof(GLTexture) << io::endl;
-    slog.d << "OpenGLProgram: " << sizeof(OpenGLProgram) << io::endl;
-    slog.d << "GLRenderTarget: " << sizeof(GLRenderTarget) << io::endl;
-    slog.d << "GLVertexBuffer: " << sizeof(GLVertexBuffer) << io::endl;
-    slog.d << "GLUniformBuffer: " << sizeof(GLUniformBuffer) << io::endl;
-    slog.d << "GLStream: " << sizeof(GLStream) << io::endl;
-#endif
 
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();
