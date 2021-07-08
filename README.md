@@ -115,7 +115,7 @@ Here are a few screenshots of applications that use Filament in production:
 ### APIs
 
 - Native C++ API for Android, iOS, Linux, macOS and Windows
-- Java/JNI API for Android, Linux, macOS and Windows
+- Java/JNI API for Android
 - JavaScript API
 
 ### Backends
@@ -265,20 +265,6 @@ For complete examples of Linux, macOS and Windows Filament applications, look at
 in the `samples/` directory. These samples are all based on `samples/app/` which contains the code
 that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
 
-### Java on Linux, macOS and Windows
-
-After building Filament, you can use `filament-java.jar` and its companion `filament-jni` native
-library to use Filament in desktop Java applications.
-
-You must always first initialize Filament by calling `Filament.init()`.
-
-You can use Filament either with AWT or Swing, using respectively a `FilamentCanvas` or a
-`FilamentPanel`.
-
-Following the steps above (how to use Filament from native code), create an `Engine` and a
-`Renderer`, but instead of calling `beginFrame` and `endFrame` on the renderer itself, call
-these methods on `FilamentCanvas` or `FilamentPanel`.
-
 ### Android
 
 See `android/samples` for examples of how to use Filament on Android.
@@ -330,9 +316,9 @@ and tools.
 - `docs`:                     Documentation
   - `math`:                   Mathematica notebooks used to explore BRDFs, equations, etc.
 - `filament`:                 Filament rendering engine (minimal dependencies)
+  - `backend`:                Rendering backends/drivers (Vulkan, Metal, OpenGL/ES)
 - `ide`:                      Configuration files for IDEs (CLion, etc.)
 - `ios`:                      Sample projects for iOS
-- `java`:                     Java bindings for Filament libraries
 - `libs`:                     Libraries
   - `bluegl`:                 OpenGL bindings for macOS, Linux and Windows
   - `bluevk`:                 Vulkan bindings for macOS, Linux, Windows and Android
@@ -352,6 +338,7 @@ and tools.
   - `math`:                   Math library
   - `mathio`:                 Math types support for output streams
   - `utils`:                  Utility library (threads, memory, data structures, etc.)
+  - `viewer`:                 glTF viewer library (requires gltfio)
 - `samples`:                  Sample desktop applications
 - `shaders`:                  Shaders used by `filamat` and `matc`
 - `third_party`:              External libraries and assets

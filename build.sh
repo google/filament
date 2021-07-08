@@ -27,8 +27,6 @@ function print_help {
     echo "        Always invoke CMake before incremental builds."
     echo "    -i"
     echo "        Install build output"
-    echo "    -j"
-    echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
@@ -150,8 +148,6 @@ BUILD_ANDROID_SAMPLES=false
 
 RUN_TESTS=false
 
-FILAMENT_ENABLE_JAVA=ON
-
 INSTALL_COMMAND=
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
@@ -217,7 +213,6 @@ function build_desktop_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
-            -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
@@ -694,12 +689,6 @@ function validate_build_command {
             exit 1
         fi
     fi
-    # Make sure we have Java
-    local javac_binary=$(command -v javac)
-    if [[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]; then
-        echo "Warning: JAVA_HOME is not set, skipping Java projects"
-        FILAMENT_ENABLE_JAVA=OFF
-    fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
     if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
@@ -773,9 +762,6 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
             ;;
         i)
             INSTALL_COMMAND=install
-            ;;
-        j)
-            FILAMENT_ENABLE_JAVA=OFF
             ;;
         m)
             BUILD_GENERATOR="Unix Makefiles"
