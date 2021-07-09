@@ -147,6 +147,7 @@ Here are a few screenshots of applications that use Filament in production:
 - Spot and directional light shadows
 - Cascaded shadows
 - EVSM or PCF shadows
+- Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
 - Screen-space refraction
