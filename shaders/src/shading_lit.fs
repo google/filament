@@ -296,7 +296,7 @@ vec4 evaluateLights(const MaterialInputs material) {
 void addEmissive(const MaterialInputs material, inout vec4 color) {
 #if defined(MATERIAL_HAS_EMISSIVE)
     highp vec4 emissive = material.emissive;
-    highp float attenuation = mix(1.0, frameUniforms.exposure, emissive.w);
+    highp float attenuation = mix(1.0, getExposure(), emissive.w);
     color.rgb += emissive.rgb * (attenuation * color.a);
 #endif
 }
