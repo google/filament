@@ -131,6 +131,8 @@ if (FILAMENT_SUPPORTS_METAL)
             src/opengl/PlatformCocoaGL.mm
             PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
     endif()
+
+    option(FILAMENT_METAL_PROFILING "Enable profiling for the Metal backend" OFF)
 endif()
 
 # ==================================================================================================
@@ -342,6 +344,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
+
+if (FILAMENT_SUPPORTS_METAL)
+    target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_METAL_PROFILING}>:FILAMENT_METAL_PROFILING>)
+endif()
 
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
