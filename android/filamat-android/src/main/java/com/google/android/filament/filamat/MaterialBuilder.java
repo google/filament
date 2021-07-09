@@ -91,7 +91,7 @@ public class MaterialBuilder {
         SHADOW
     }
 
-    public enum SamplerPrecision {
+    public enum ParameterPrecision {
         LOW,
         MEDIUM,
         HIGH,
@@ -259,7 +259,7 @@ public class MaterialBuilder {
 
     @NonNull
     public MaterialBuilder samplerParameter(@NonNull SamplerType type, SamplerFormat format,
-            SamplerPrecision precision, String name) {
+            ParameterPrecision precision, String name) {
         nMaterialBuilderSamplerParameter(
                 mNativeObject, type.ordinal(), format.ordinal(), precision.ordinal(), name);
         return this;

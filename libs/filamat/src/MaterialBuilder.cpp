@@ -180,27 +180,29 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::parameter(UniformType type, const char* name) noexcept {
+MaterialBuilder& MaterialBuilder::parameter(
+        UniformType type, const char* name, ParameterPrecision precision) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, type, 1 };
-    return *this;
-}
-
-MaterialBuilder& MaterialBuilder::parameter(UniformType type, size_t size, const char* name) noexcept {
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, type, size };
+    mParameters[mParameterCount++] = { name, type, 1, precision };
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, SamplerFormat format, SamplerPrecision precision, const char* name) noexcept {
+        UniformType type, size_t size, const char* name, ParameterPrecision precision) noexcept {
+    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
+    mParameters[mParameterCount++] = { name, type, size, precision };
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::parameter(
+        SamplerType samplerType, SamplerFormat format, ParameterPrecision precision, const char* name) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, samplerType, format, precision };
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
-        SamplerPrecision precision, const char* name) noexcept {
+        ParameterPrecision precision, const char* name) noexcept {
     ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
             "Subpass parameters must have FLOAT format.");
 
@@ -215,31 +217,31 @@ MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerForm
 
 MaterialBuilder& MaterialBuilder::parameter(
         SamplerType samplerType, SamplerFormat format, const char* name) noexcept {
-    return parameter(samplerType, format, SamplerPrecision::DEFAULT, name);
+    return parameter(samplerType, format, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
-        SamplerType samplerType, SamplerPrecision precision, const char* name) noexcept {
+        SamplerType samplerType, ParameterPrecision precision, const char* name) noexcept {
     return parameter(samplerType, SamplerFormat::FLOAT, precision, name);
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
         SamplerType samplerType, const char* name) noexcept {
-    return parameter(samplerType, SamplerFormat::FLOAT, SamplerPrecision::DEFAULT, name);
+    return parameter(samplerType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerFormat format,
         const char* name) noexcept {
-    return parameter(subpassType, format, SamplerPrecision::DEFAULT, name);
+    return parameter(subpassType, format, ParameterPrecision::DEFAULT, name);
 }
 
-MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, SamplerPrecision precision,
+MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, ParameterPrecision precision,
         const char* name) noexcept {
     return parameter(subpassType, SamplerFormat::FLOAT, precision, name);
 }
 
 MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, const char* name) noexcept {
-    return parameter(subpassType, SamplerFormat::FLOAT, SamplerPrecision::DEFAULT, name);
+    return parameter(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) noexcept {
@@ -427,7 +429,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         if (param.isSampler()) {
             sbb.add(param.name, param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size, param.uniformType);
+            ibb.add(param.name, param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses blong to the "MaterialParams" block.

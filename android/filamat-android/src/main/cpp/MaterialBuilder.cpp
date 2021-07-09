@@ -146,7 +146,7 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSampler
     auto builder = (MaterialBuilder*) nativeBuilder;
     const char* name = env->GetStringUTFChars(name_, nullptr);
     builder->parameter((MaterialBuilder::SamplerType) samplerType,
-            (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::SamplerPrecision) precision,
+            (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::ParameterPrecision) precision,
             name);
     env->ReleaseStringUTFChars(name_, name);
 }
