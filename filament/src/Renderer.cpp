@@ -482,9 +482,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
 
     if (colorGradingConfigForColor.asSubpass) {
-        // append colorgrading subpass after refraction pass
+        // append colorgrading subpass after all other passes
         pass.appendCustomCommand(
-                RenderPass::Pass::REFRACT,
+                RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor](){
                     ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
