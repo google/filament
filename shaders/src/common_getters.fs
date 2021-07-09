@@ -64,6 +64,8 @@ highp float getUserTimeMod(float m) {
 
 /** @public-api */
 float getExposure() {
+    // NOTE: this is a highp uniform only to work around #3602 (qualcomm)
+    // We are intentionally casting it to mediump here, as per the Materials doc.
     return frameUniforms.exposure;
 }
 
