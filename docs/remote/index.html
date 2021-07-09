@@ -227,7 +227,7 @@ class Connection {
 class App {
     constructor(canvas) {
         this.connection = new Connection();
-        this.pendingFile = null;
+        this.cachedFile = null;
 
         this.connectionUrl = document.getElementById("connection-url");
         this.dropbox = document.getElementById("dropbox");
@@ -346,9 +346,8 @@ class App {
                 this.connection.send(file.name);
                 this.connection.send(buffer);
             });
-        } else {
-            this.pendingFile = file;
         }
+        this.cachedFile = file;
     }
 
     updateDom() {
@@ -389,9 +388,8 @@ class App {
         this.connection.addEventListener("open", () => {
             this.updateDom();
             this.previousSettingsJson = "";
-            if (this.pendingFile) {
-                this.uploadFile(this.pendingFile);
-                this.pendingFile = null;
+            if (this.cachedFile) {
+                this.uploadFile(this.cachedFile);
             }
         });
         this.connection.addEventListener("close", () => {
