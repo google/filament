@@ -57,8 +57,7 @@ public:
     ~Program() noexcept;
 
     // sets the material name and variant for diagnostic purposes only
-    Program& diagnostics(utils::CString const& name, uint8_t variantKey = 0);
-    Program& diagnostics(utils::CString&& name, uint8_t variantKey = 0) noexcept;
+    Program& diagnostics(utils::CString const& name, uint8_t variantKey);
 
     // sets one of the program's shader (e.g. vertex, fragment)
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
@@ -105,7 +104,6 @@ private:
     friend utils::io::ostream& operator<< (utils::io::ostream& out, const Program& builder);
 #endif
 
-    // FIXME: none of these fields should be public as this is a public API
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     std::array<ShaderBlob, SHADER_TYPE_COUNT> mShadersSource;

@@ -53,7 +53,7 @@ void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type ty
     }
 }
 
-inline std::pair<DebugRegistry::Property const *, size_t> FDebugRegistry::getProperties() const noexcept {
+DebugRegistry::PropertyArray FDebugRegistry::getProperties() const noexcept {
     return {mProperties.data(), mProperties.size()};
 }
 
@@ -87,7 +87,7 @@ inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) c
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-std::pair<DebugRegistry::Property const*, size_t> DebugRegistry::getProperties() const noexcept {
+DebugRegistry::PropertyArray DebugRegistry::getProperties() const noexcept {
     return upcast(this)->getProperties();
 }
 

@@ -2171,13 +2171,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
                 data.output = builder.declareRenderPass(
                         builder.createTexture("opaque blit output", outDesc));
 
-                // FIXME: here we use sample() instead of read() because this forces the
-                //      backend to use a texture (instead of a renderbuffer). We need this because
-                //      "implicit resolve" renderbuffers are currently not supported -- and
-                //      implicit resolves are needed when taking the blit path.
-                //      (we do this only when the texture does not request multisampling, since
-                //      these are not sampleable).
-                data.input = (inputDesc.samples > 1) ? builder.read(input) : builder.sample(input);
+                data.input =  builder.read(input);
 
                 // We use a RenderPass for the source here, instead of just creating a render
                 // target from data.input in the execute closure, because data.input may refer to
