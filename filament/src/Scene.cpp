@@ -271,36 +271,15 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
     FScene::LightSoa& lightData = getLightData();
 
     /*
-     * Here we copy our lights data into the GPU buffer, some lights might be left out if there
-     * are more than the GPU buffer allows (i.e. 256).
-     *
-     * We always sort lights by distance to the camera plane so that:
-     * - we can build light trees
-     * - lights farther from the camera are dropped when in excess
-     *   (note this doesn't work well, e.g. for search-lights)
+     * Here we copy our lights data into the GPU buffer.
      */
 
-    ArenaScope arena(rootArena.getAllocator());
     size_t const size = lightData.size();
     // number of point/spot lights
     size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
     assert_invariant(positionalLightCount);
 
-    // always allocate at least 4 entries, because the vectorized loops below rely on that
-    float* const UTILS_RESTRICT distances = arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
-
-    // pre-compute the lights' distance to the camera plane, for sorting below
-    // - we don't skip the directional light, because we don't care, it's ignored during sorting
     float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
-    computeLightCameraPlaneDistances(distances, camera, spheres, size);
-
-    // skip directional light
-    Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
-    std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + size,
-            [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
-
-    // drop excess lights
-    lightData.resize(std::min(size, CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
 
     // compute the light ranges (needed when building light trees)
     float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
@@ -323,26 +302,6 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
     }
 
     driver.loadUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });
-}
-
-// These methods need to exist so clang honors the __restrict__ keyword, which in turn
-// produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
-// pay the price of the call!
-UTILS_ALWAYS_INLINE
-inline void FScene::computeLightCameraPlaneDistances(
-        float* UTILS_RESTRICT const distances,
-        CameraInfo const& UTILS_RESTRICT camera,
-        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
-
-    // without this, the vectorization is less efficient
-    // we're guaranteed to have a multiple of 4 lights (at least)
-    count = uint32_t(count + 3u) & ~3u;
-
-    for (size_t i = 0 ; i < count; i++) {
-        const float4 sphere = spheres[i];
-        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
-        distances[i] = -center.z > 0.0f ? -center.z : 0.0f; // std::max() prevents vectorization (???)
-    }
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
