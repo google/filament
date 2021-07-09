@@ -51,7 +51,6 @@ public:
 
     using value_type = std::pair<Val1, Val2>;
     using reference = Ref;
-    using pointer = value_type*;
     using difference_type = ptrdiff_t;
     using iterator_category = std::random_access_iterator_tag;
 
@@ -60,11 +59,9 @@ public:
     Zip2Iterator(Zip2Iterator const& rhs) noexcept = default;
     Zip2Iterator& operator=(Zip2Iterator const& rhs) = default;
 
-    value_type operator*() const { return { *mIt.first, *mIt.second }; }
-    reference  operator*()       { return { *mIt.first, *mIt.second }; }
+    reference operator*() const { return { *mIt.first, *mIt.second }; }
 
-    const value_type operator[](size_t n) const { return *(*this + n); }
-          reference  operator[](size_t n)       { return *(*this + n); }
+    reference operator[](size_t n) const { return *(*this + n); }
 
     Zip2Iterator& operator++() {
         ++mIt.first;
