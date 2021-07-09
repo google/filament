@@ -51,6 +51,7 @@ public:
 
     using value_type = std::pair<Val1, Val2>;
     using reference = Ref;
+    using pointer = value_type*;
     using difference_type = ptrdiff_t;
     using iterator_category = std::random_access_iterator_tag;
 
