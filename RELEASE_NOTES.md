@@ -3,7 +3,7 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.8 (currently main branch)
+## v1.11.0 (currently main branch)
 
 - engine: Added support for transparent shadows. Add `transparentShadow : true` in the material file.
 - java: Removed support for Java desktop targets (macOS, Linux, and Windows) [⚠️ **API Change**].
