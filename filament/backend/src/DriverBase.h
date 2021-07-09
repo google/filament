@@ -45,9 +45,6 @@ class Dispatcher;
  */
 
 struct HwBase {
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    const char* typeId = nullptr;
-#endif
 };
 
 struct HwVertexBuffer : public HwBase {

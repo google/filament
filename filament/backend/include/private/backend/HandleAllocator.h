@@ -23,6 +23,7 @@
 #include <utils/Log.h>
 #include <utils/compiler.h>
 #include <tsl/robin_map.h>
+#include <unordered_map>
 
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
 #   define HANDLE_TYPE_SAFETY 1
@@ -59,7 +60,9 @@ public:
         D* addr = handle_cast<D*>(h);
         new(addr) D(std::forward<ARGS>(args)...);
 #if HANDLE_TYPE_SAFETY
-        addr->typeId = typeid(D).name();
+        mLock.lock();
+        mHandleTypeId[addr] = typeid(D).name();
+        mLock.unlock();
 #endif
         return h;
     }
@@ -82,7 +85,9 @@ public:
         new(addr) D(std::forward<ARGS>(args)...);
 
 #if HANDLE_TYPE_SAFETY
-        addr->typeId = typeid(D).name();
+        mLock.lock();
+        mHandleTypeId[addr] = typeid(D).name();
+        mLock.unlock();
 #endif
         return addr;
     }
@@ -100,12 +105,15 @@ public:
         // allow to destroy the nullptr, similarly to operator delete
         if (p) {
 #if HANDLE_TYPE_SAFETY
-            if (UTILS_UNLIKELY(p->typeId != typeid(D).name())) {
+            mLock.lock();
+            auto typeId = mHandleTypeId[p];
+            mHandleTypeId.erase(p);
+            mLock.unlock();
+            if (UTILS_UNLIKELY(typeId != typeid(D).name())) {
                 utils::slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
-                       << ", but handle's actual type is " << p->typeId << utils::io::endl;
+                       << ", but handle's actual type is " << typeId << utils::io::endl;
                 std::terminate();
             }
-            const_cast<D *>(p)->typeId = "(deleted)";
 #endif
             p->~D();
             deallocateHandle(handle.getId(), sizeof(D));
@@ -183,7 +191,7 @@ private:
 #ifndef NDEBUG
     using HandleArena = utils::Arena<Allocator,
             utils::LockingPolicy::SpinLock,
-            utils::TrackingPolicy::Debug>;
+            utils::TrackingPolicy::DebugAndHighWatermark>;
 #else
     using HandleArena = utils::Arena<Allocator,
             utils::LockingPolicy::SpinLock>;
@@ -247,6 +255,9 @@ private:
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
     HandleBase::HandleId mId = 0;
+#if HANDLE_TYPE_SAFETY
+    mutable std::unordered_map<const void*, const char*> mHandleTypeId;
+#endif
 };
 
 } // namespace filament::backend
