@@ -34,7 +34,7 @@ class FDebugRegistry : public DebugRegistry {
 public:
     FDebugRegistry() noexcept;
 
-    std::pair<Property const*, size_t> getProperties() const noexcept;
+    PropertyArray getProperties() const noexcept;
 
     bool hasProperty(const char* name) const noexcept;
 

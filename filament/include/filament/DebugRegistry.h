@@ -25,9 +25,6 @@
 
 #include <math/mathfwd.h>
 
-// FIXME: could we get rid of <utility>
-#include <utility> // for std::pair
-
 #include <stdint.h>
 
 namespace filament {
@@ -57,12 +54,17 @@ public:
         Type type;          //!< property type
     };
 
+    struct PropertyArray {
+        Property const* array;
+        size_t size;
+    };
+
     /**
      * Queries the list of all available properties.
      *
      * @return A pair containing a pointer to a Property array and the size of this array.
      */
-    std::pair<Property const*, size_t> getProperties() const noexcept;
+    PropertyArray getProperties() const noexcept;
 
     /**
      * Queries whether a property exists

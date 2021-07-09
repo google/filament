@@ -33,12 +33,6 @@ Program& Program::diagnostics(utils::CString const& name, uint8_t variant) {
     return *this;
 }
 
-Program& Program::diagnostics(utils::CString&& name, uint8_t variant) noexcept {
-    name.swap(mName);
-    mVariant = variant;
-    return *this;
-}
-
 Program& Program::shader(Program::Shader shader, void const* data, size_t size) noexcept {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
