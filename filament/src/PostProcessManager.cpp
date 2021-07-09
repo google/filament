@@ -2162,11 +2162,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 
     auto& ppBlit = fg.addPass<PostProcessScaling>("opaque blit",
             [&](FrameGraph::Builder& builder, auto& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
 
                 // we currently have no use for this case, so we just assert. This is better for now to trap
                 // cases that we might not intend.
-                assert_invariant(inputDesc.samples <= 1);
+                assert_invariant(fg.getDescriptor(input).samples <= 1);
 
                 data.output = builder.declareRenderPass(
                         builder.createTexture("opaque blit output", outDesc));
