@@ -422,7 +422,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         if (param.isSampler()) {
             sbb.add(param.name, param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
-            ibb.add(param.name, param.size, param.uniformType);
+            ibb.add(param.name, param.size, param.uniformType, param.precision);
         } else if (param.isSubpass()) {
             // For now, we only support a single subpass for attachment 0.
             // Subpasses blong to the "MaterialParams" block.
