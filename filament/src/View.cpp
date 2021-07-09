@@ -39,6 +39,7 @@
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
 #include <utils/debug.h>
+#include <utils/Zip2Iterator.h>
 
 #include <math/scalar.h>
 #include <math/fast.h>
@@ -234,23 +235,30 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 
     // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
     // shadow-casting spot lights are ignored.
-    for (size_t l = 1; l < lightData.size(); l++) {
+    for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
+
+        // when we get here all the lights should be visible
+        assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
+
         FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
 
-        // Invisible lights get culled and should not count towards the spot limit.
-        bool visible = lightData.elementAt<FScene::VISIBILITY>(l) != 0;
+        if (UTILS_LIKELY(!light)) {
+            continue; // invalid instance
+        }
 
-        if (UTILS_LIKELY(!(light && lcm.isSpotLight(light) &&
-                lcm.isShadowCaster(light) && visible))) {
-            continue;
+        if (UTILS_LIKELY(!lcm.isShadowCaster(light))) {
+            continue; // doesn't cast shadows
+        }
+
+        if (UTILS_LIKELY(!lcm.isSpotLight(light))) {
+            continue; // is not a spot-light (we're not supporting point-lights yet)
         }
 
         const auto& shadowOptions = lcm.getShadowOptions(light);
         mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
-
-        shadowCastingSpotCount++;
+        ++shadowCastingSpotCount;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
-            break;
+            break; // we ran out of spotlight shadow casting
         }
     }
 
@@ -425,9 +433,9 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
     if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
-                    FView::prepareVisibleLights(
-                            engine.getLightManager(), js, frustum, scene->getLightData());
+                [this, &engine, &arena, scene](JobSystem&, JobSystem::Job*) {
+                    FView::prepareVisibleLights(engine.getLightManager(), arena,
+                            mViewingCameraInfo, mCullingFrustum, scene->getLightData());
                 }));
     }
 
@@ -795,8 +803,8 @@ void FView::cullRenderables(JobSystem& js,
     functor(0, renderableData.size());
 }
 
-void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
-        Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
+void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
+        const CameraInfo& camera, Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
     assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
@@ -850,7 +858,59 @@ void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
                     });
     assert_invariant(visibleLightCount == size_t(last - lightData.begin()));
 
-    lightData.resize(visibleLightCount);
+
+    /*
+     * Some lights might be left out if there are more than the GPU buffer allows (i.e. 256).
+     *
+     * We always sort lights by distance to the camera so that:
+     * - we can build light trees later
+     * - lights farther from the camera are dropped when in excess
+     *   Note this doesn't always work well, e.g. for search-lights, we might need to also
+     *   take the radius into account.
+     * - This helps our limited numbers of spot-shadow as well.
+     */
+
+    ArenaScope arena(rootArena.getAllocator());
+    size_t const size = visibleLightCount;
+    // number of point/spot lights
+    size_t const positionalLightCount = size - FScene::DIRECTIONAL_LIGHTS_COUNT;
+    if (positionalLightCount) {
+        // always allocate at least 4 entries, because the vectorized loops below rely on that
+        float* const UTILS_RESTRICT distances =
+                arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
+
+        // pre-compute the lights' distance to the camera, for sorting below
+        // - we don't skip the directional light, because we don't care, it's ignored during sorting
+        float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
+        computeLightCameraDistances(distances, camera, spheres, size);
+
+        // skip directional light
+        Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
+        std::sort(b + FScene::DIRECTIONAL_LIGHTS_COUNT, b + size,
+                [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
+    }
+
+    // drop excess lights
+    lightData.resize(std::min(size, CONFIG_MAX_LIGHT_COUNT + FScene::DIRECTIONAL_LIGHTS_COUNT));
+}
+
+// These methods need to exist so clang honors the __restrict__ keyword, which in turn
+// produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
+// pay the price of the call!
+UTILS_ALWAYS_INLINE
+inline void FView::computeLightCameraDistances(
+        float* UTILS_RESTRICT const distances,
+        CameraInfo const& UTILS_RESTRICT camera,
+        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
+
+    // without this, the vectorization is less efficient
+    // we're guaranteed to have a multiple of 4 lights (at least)
+    count = uint32_t(count + 3u) & ~3u;
+    for (size_t i = 0 ; i < count; i++) {
+        const float4 sphere = spheres[i];
+        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
+        distances[i] = length(center);
+    }
 }
 
 void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,

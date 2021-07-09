@@ -206,9 +206,6 @@ private:
     static inline void computeLightRanges(math::float2* zrange,
             CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
 
-    static inline void computeLightCameraPlaneDistances(float* distances,
-            const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
-
     FEngine& mEngine;
     FSkybox* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;

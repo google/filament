@@ -440,9 +440,12 @@ private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
-    static void prepareVisibleLights(
-            FLightManager const& lcm, utils::JobSystem& js, Frustum const& frustum,
+    static void prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
+            const CameraInfo& camera, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
+
+    static inline void computeLightCameraDistances(float* distances,
+            const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
 
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
