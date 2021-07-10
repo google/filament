@@ -290,7 +290,6 @@ std::string shaderFromKey(const MaterialKey& config) {
                 // TODO: Provided by Filament, but this should really be provided/computed by gltfio
                 // TODO: This scale is per renderable and should include the scale of the mesh node
                 float scale = objectUniforms.userData;
-
                 material.thickness = materialParams.volumeThicknessFactor * scale;
             )SHADER";
 
