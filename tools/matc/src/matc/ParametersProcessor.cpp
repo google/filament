@@ -180,9 +180,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                     Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
         }
         if (arraySize == 0) {
-            builder.parameter(type, nameString.c_str(), precision);
+            builder.parameter(type, precision, nameString.c_str());
         } else {
-            builder.parameter(type, arraySize, nameString.c_str(), precision);
+            builder.parameter(type, arraySize, precision, nameString.c_str());
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {

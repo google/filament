@@ -244,12 +244,22 @@ public:
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
     //! Add a parameter (i.e., a uniform) to this material.
-    MaterialBuilder& parameter(UniformType type, const char* name,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+    MaterialBuilder& parameter(UniformType type, ParameterPrecision precision,
+            const char* name) noexcept;
+
+    //! Add a parameter (i.e., a uniform) to this material.
+    MaterialBuilder& parameter(UniformType type, const char* name) noexcept {
+        return parameter(type, ParameterPrecision::DEFAULT, name);
+    }
 
     //! Add a parameter array to this material.
-    MaterialBuilder& parameter(UniformType type, size_t size, const char* name,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+    MaterialBuilder& parameter(UniformType type, size_t size,
+            ParameterPrecision precision, const char* name) noexcept;
+
+    //! Add a parameter array to this material.
+    MaterialBuilder& parameter(UniformType type, size_t size, const char* name) noexcept {
+        return parameter(type, size, ParameterPrecision::DEFAULT, name);
+    }
 
     /**
      * Add a sampler parameter to this material.
