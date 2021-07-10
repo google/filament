@@ -206,13 +206,6 @@ std::string shaderFromKey(const MaterialKey& config) {
         if (config.hasTransmission) {
             shader += R"SHADER(
                 material.transmission = materialParams.transmissionFactor;
-
-                // KHR_materials_transmission stipulates that baseColor be used for absorption, and
-                // it says "the transmitted light will be modulated by this color as it passes",
-                // which is inverted from Filament's notion of absorption.  Note that Filament
-                // clamps this value to [0,1].
-                material.absorption = 1.0 - material.baseColor.rgb;
-
             )SHADER";
             if (config.hasTransmissionTexture) {
                 shader += "highp float2 transmissionUV = ${transmission};\n";
@@ -477,8 +470,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             }
         }
 
-        builder.blending(MaterialBuilder::BlendingMode::FADE);
-        builder.depthWrite(true);
+        builder.blending(MaterialBuilder::BlendingMode::MASKED);
     } else {
         // BLENDING
         switch (config.alphaMode) {
@@ -516,7 +508,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             }
         }
 
-        // TODO: Should we follow transmission here and use FADE/depthWrite?
+        builder.blending(MaterialBuilder::BlendingMode::MASKED);
     }
 
     // IOR

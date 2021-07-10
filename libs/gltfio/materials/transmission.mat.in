@@ -2,8 +2,7 @@ material {
     name : transmission_${SHADINGMODEL}_${BLENDING},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
-    blending : fade,
-    depthWrite : true,
+    blending : masked,
     doubleSided : ${DOUBLESIDED},
     flipUV : false,
     specularAmbientOcclusion : simple,
@@ -86,7 +85,6 @@ fragment {
         material.metallic = materialParams.metallicFactor;
         material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
         material.transmission = materialParams.transmissionFactor;
-        material.absorption = 1.0 - material.baseColor.rgb;
         material.ior = materialParams.ior;
 
         if (materialParams.transmissionIndex > -1) {
