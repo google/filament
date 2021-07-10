@@ -124,8 +124,11 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
                 visibility.castShadows = true;
             }
 
+            // FIXME: We compute and store the local scale because it's needed for glTF but
+            //        we need a better way to handle this
             const mat4f& transform = tcm.getTransform(ti);
-            float scale = (length(transform[0].xyz) + length(transform[1].xyz) + length(transform[2].xyz)) / 3.0f;
+            float scale = (length(transform[0].xyz) + length(transform[1].xyz) +
+                    length(transform[2].xyz)) / 3.0f;
 
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
