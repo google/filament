@@ -247,30 +247,30 @@ public class MaterialBuilder {
 
     @NonNull
     public MaterialBuilder uniformParameter(@NonNull UniformType type, String name) {
-        nMaterialBuilderUniformParameter(mNativeObject, type.ordinal(), name,
-            ParameterPrecision.DEFAULT.ordinal());
+        nMaterialBuilderUniformParameter(mNativeObject, type.ordinal(),
+                ParameterPrecision.DEFAULT.ordinal(), name);
         return this;
     }
 
     @NonNull
-    public MaterialBuilder uniformParameter(@NonNull UniformType type, String name,
-            ParameterPrecision precision) {
-        nMaterialBuilderUniformParameter(mNativeObject, type.ordinal(), name, precision.ordinal());
+    public MaterialBuilder uniformParameter(@NonNull UniformType type,
+            ParameterPrecision precision, String name) {
+        nMaterialBuilderUniformParameter(mNativeObject, type.ordinal(), precision.ordinal(), name);
         return this;
     }
 
     @NonNull
     public MaterialBuilder uniformParameterArray(@NonNull UniformType type, int size, String name) {
-        nMaterialBuilderUniformParameterArray(mNativeObject, type.ordinal(), size, name,
-            ParameterPrecision.DEFAULT.ordinal());
+        nMaterialBuilderUniformParameterArray(mNativeObject, type.ordinal(), size,
+                ParameterPrecision.DEFAULT.ordinal(), name);
         return this;
     }
 
     @NonNull
-    public MaterialBuilder uniformParameterArray(@NonNull UniformType type, int size, String name,
-            ParameterPrecision precision) {
-        nMaterialBuilderUniformParameterArray(mNativeObject, type.ordinal(), size, name,
-            precision.ordinal());
+    public MaterialBuilder uniformParameterArray(@NonNull UniformType type, int size,
+            ParameterPrecision precision, String name) {
+        nMaterialBuilderUniformParameterArray(mNativeObject, type.ordinal(), size,
+                precision.ordinal(), name);
         return this;
     }
 
@@ -552,9 +552,9 @@ public class MaterialBuilder {
     private static native void nMaterialBuilderShading(long nativeBuilder, int shading);
     private static native void nMaterialBuilderInterpolation(long nativeBuilder, int interpolation);
     private static native void nMaterialBuilderUniformParameter(long nativeBuilder, int type,
-            String name, int precision);
+            int precision, String name);
     private static native void nMaterialBuilderUniformParameterArray(long nativeBuilder, int type,
-            int size, String name, int precision);
+            int size, int precision, String name);
     private static native void nMaterialBuilderSamplerParameter(long nativeBuilder, int type,
             int format, int precision, String name);
     private static native void nMaterialBuilderVariable(long nativeBuilder, int variable,

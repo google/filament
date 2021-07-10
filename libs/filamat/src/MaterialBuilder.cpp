@@ -181,14 +181,14 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
-        UniformType type, const char* name, ParameterPrecision precision) noexcept {
+        UniformType type, ParameterPrecision precision, const char* name) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, type, 1, precision };
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::parameter(
-        UniformType type, size_t size, const char* name, ParameterPrecision precision) noexcept {
+        UniformType type, size_t size, ParameterPrecision precision, const char* name) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
