@@ -123,7 +123,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::UINT)
-            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("userData", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
 }

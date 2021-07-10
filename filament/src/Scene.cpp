@@ -124,6 +124,12 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
                 visibility.castShadows = true;
             }
 
+            // FIXME: We compute and store the local scale because it's needed for glTF but
+            //        we need a better way to handle this
+            const mat4f& transform = tcm.getTransform(ti);
+            float scale = (length(transform[0].xyz) + length(transform[1].xyz) +
+                    length(transform[2].xyz)) / 3.0f;
+
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
                     ri,                       // RENDERABLE_INSTANCE
@@ -137,7 +143,8 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
                     rcm.getLayerMask(ri),     // LAYERS
                     worldAABB.halfExtent,     // WORLD_AABB_EXTENT
                     {},                       // PRIMITIVES
-                    0                         // SUMMED_PRIMITIVE_COUNT
+                    0,                        // SUMMED_PRIMITIVE_COUNT
+                    scale                     // USER_DATA
             );
         }
 
@@ -247,6 +254,10 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphWeights),
                 sceneData.elementAt<MORPH_WEIGHTS>(i));
+
+        // TODO: We need to find a better way to provide the scale information per object
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, userData), sceneData.elementAt<USER_DATA>(i));
     }
 
     // TODO: handle static objects separately

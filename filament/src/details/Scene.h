@@ -116,6 +116,9 @@ public:
         // These are temporaries and should be stored out of line
         PRIMITIVES,             //  8 | level-of-detail'ed primitives
         SUMMED_PRIMITIVE_COUNT, //  4 | summed visible primitive counts
+
+        // FIXME: We need a better way to handle this
+        USER_DATA,              //  4 | user data currently used to store the scale
     };
 
     using RenderableSoa = utils::StructureOfArrays<
@@ -130,7 +133,9 @@ public:
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
             utils::Slice<FRenderPrimitive>,             // PRIMITIVES
-            uint32_t                                    // SUMMED_PRIMITIVE_COUNT
+            uint32_t,                                   // SUMMED_PRIMITIVE_COUNT
+            // FIXME: We need a better way to handle this
+            float                                       // USER_DATA
     >;
 
     RenderableSoa const& getRenderableData() const noexcept { return mRenderableData; }
