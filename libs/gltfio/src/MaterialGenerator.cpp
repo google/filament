@@ -283,6 +283,29 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
         }
 
+        if (config.hasVolume) {
+            shader += R"SHADER(
+                material.absorption = materialParams.volumeAbsorption;
+
+                // TODO: Provided by Filament, but this should really be provided/computed by gltfio
+                // TODO: This scale is per renderable and should include the scale of the mesh node
+                float scale = objectUniforms.userData;
+
+                material.thickness = materialParams.volumeThicknessFactor * scale;
+            )SHADER";
+
+            if (config.hasVolumeThicknessTexture) {
+                shader += "highp float2 volumeThicknessUV = ${volumeThickness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "volumeThicknessUV = (vec3(volumeThicknessUV, 1.0) * "
+                              "materialParams.volumeThicknessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.thickness *= texture(materialParams_volumeThicknessMap, volumeThicknessUV).g;
+                )SHADER";
+            }
+        }
+
         if (config.hasIOR) {
             shader += R"SHADER(
                 material.ior = materialParams.ior;
@@ -474,6 +497,26 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
                 // Ignore
                 break;
         }
+    }
+
+    // VOLUME
+    if (config.hasVolume) {
+        builder.refractionMode(RefractionMode::SCREEN_SPACE);
+
+        // Override thin transmission if both extensions are used
+        builder.refractionType(RefractionType::SOLID);
+
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "volumeAbsorption");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "volumeThicknessFactor");
+
+        if (config.hasVolumeThicknessTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "volumeThicknessMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3, "volumeThicknessUvMatrix");
+            }
+        }
+
+        // TODO: Should we follow transmission here and use FADE/depthWrite?
     }
 
     // IOR

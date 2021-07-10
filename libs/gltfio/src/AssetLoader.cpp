@@ -913,6 +913,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .has_pbr_specular_glossiness = false,
         .has_clearcoat = false,
         .has_transmission = false,
+        .has_volume = false,
         .has_ior = false,
         .has_specular = false,
         .has_sheen = false,
@@ -929,6 +930,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto ccConfig = inputMat->clearcoat;
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
+    auto vlConfig = inputMat->volume;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -976,8 +978,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .sheenColorUV = (uint8_t) shConfig.sheen_color_texture.texcoord,
         .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
         .sheenRoughnessUV = (uint8_t) shConfig.sheen_roughness_texture.texcoord,
+        .hasVolumeThicknessTexture = vlConfig.thickness_texture.texture != nullptr,
+        .volumeThicknessUV = (uint8_t) vlConfig.thickness_texture.texcoord,
         .hasSheen = !!inputMat->has_sheen,
-        .hasIOR = !!inputMat->has_ior
+        .hasIOR = !!inputMat->has_ior,
+        .hasVolume = !!inputMat->has_volume,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1147,6 +1152,26 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
                 mi->setParameter("sheenRoughnessUvMatrix", uvmat);
+            }
+        }
+    }
+
+    if (matkey.hasVolume) {
+        mi->setParameter("volumeThicknessFactor", vlConfig.thickness_factor);
+
+        float attenuationDistance = vlConfig.attenuation_distance;
+        // TODO: We assume a color in linear sRGB, is this correct? The spec doesn't say anything
+        const float* attenuationColor = vlConfig.attenuation_color;
+        LinearColor absorption = Color::absorptionAtDistance(
+                *reinterpret_cast<const LinearColor*>(attenuationColor), attenuationDistance);
+        mi->setParameter("volumeAbsorption", RgbType::LINEAR, absorption);
+
+        if (matkey.hasVolumeThicknessTexture) {
+            addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("volumeThicknessUvMatrix", uvmat);
             }
         }
     }
