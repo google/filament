@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.11.0 (currently main branch)
 
 - engine: Added support for transparent shadows. Add `transparentShadow : true` in the material file.
+- gltfio: Added support for `KHR_materials_volume`.
 - java: Removed support for Java desktop targets (macOS, Linux, and Windows) [⚠️ **API Change**].
 
 ## v1.10.7

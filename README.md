@@ -196,6 +196,7 @@ Here are a few screenshots of applications that use Filament in production:
   - [x] KHR_materials_sheen
   - [x] KHR_materials_transmission
   - [x] KHR_materials_unlit
+  - [x] KHR_materials_volume
   - [x] KHR_mesh_quantization
   - [x] KHR_texture_transform
 
