@@ -511,7 +511,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         if (config.hasVolumeThicknessTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "volumeThicknessMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "volumeThicknessUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "volumeThicknessUvMatrix");
             }
         }
 
