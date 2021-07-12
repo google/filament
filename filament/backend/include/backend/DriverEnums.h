@@ -67,15 +67,15 @@ enum class Backend : uint8_t {
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
-static constexpr const char* backendToString(backend::Backend backend) {
+static constexpr const char* backendToString(Backend backend) {
     switch (backend) {
-        case backend::Backend::NOOP:
+        case Backend::NOOP:
             return "Noop";
-        case backend::Backend::OPENGL:
+        case Backend::OPENGL:
             return "OpenGL";
-        case backend::Backend::VULKAN:
+        case Backend::VULKAN:
             return "Vulkan";
-        case backend::Backend::METAL:
+        case Backend::METAL:
             return "Metal";
         default:
             return "Unknown";
@@ -761,10 +761,10 @@ using AttributeArray = std::array<Attribute, MAX_VERTEX_ATTRIBUTE_COUNT>;
 //! Raster state descriptor
 struct RasterState {
 
-    using CullingMode = filament::backend::CullingMode;
-    using DepthFunc = filament::backend::SamplerCompareFunc;
-    using BlendEquation = filament::backend::BlendEquation;
-    using BlendFunction = filament::backend::BlendFunction;
+    using CullingMode = CullingMode;
+    using DepthFunc = SamplerCompareFunc;
+    using BlendEquation = BlendEquation;
+    using BlendFunction = BlendFunction;
 
     RasterState() noexcept { // NOLINT
         static_assert(sizeof(RasterState) == sizeof(uint32_t),
@@ -887,7 +887,7 @@ struct RenderPassParams {
     DepthRange depthRange{};    //!< depth range for this pass
 
     //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
-    filament::math::float4 clearColor = {};
+    math::float4 clearColor = {};
 
     //! Depth value to clear the depth buffer with
     double clearDepth = 0.0;
@@ -912,7 +912,7 @@ struct PolygonOffset {
 };
 
 
-using FrameScheduledCallback = void(*)(backend::PresentCallable callable, void* user);
+using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
 using FrameCompletedCallback = void(*)(void* user);
 
