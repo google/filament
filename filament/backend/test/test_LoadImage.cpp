@@ -24,12 +24,13 @@
 #include <fstream>
 #include <vector>
 
+#ifndef IOS
 #include <imageio/BlockCompression.h>
+using namespace image;
+#endif
 
 using namespace filament;
 using namespace filament::backend;
-
-using namespace image;
 
 namespace {
 
@@ -114,6 +115,7 @@ static void fillCheckerboard(void* buffer, size_t size, size_t stride, size_t co
     }
 }
 
+#ifndef IOS
 static PixelBufferDescriptor compressedCheckerboardPixelBuffer(size_t size) {
     LinearImage uncompressed(size, size, 4);
     fillCheckerboard<float>(uncompressed.getPixelRef(), size, size, 4, 1.0f);
@@ -133,6 +135,7 @@ static PixelBufferDescriptor compressedCheckerboardPixelBuffer(size_t size) {
             }, nullptr);
     return descriptor;
 }
+#endif
 
 static void getPixelInfo(PixelDataFormat format, PixelDataType type, size_t& outComponents, int& outBpp) {
     switch (format) {
@@ -376,7 +379,9 @@ TEST_F(BackendTest, UpdateImage2D) {
     // testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
 
     // Test compresseed format upload.
+#ifndef IOS
     testCases.emplace_back("RGBA, DXT1_RGBA -> DXT1_RGBA", PixelDataFormat::RGBA, CompressedPixelDataType::DXT1_RGBA, TextureFormat::DXT1_RGBA);
+#endif
 
     auto& api = getDriverApi();
 
@@ -407,9 +412,13 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         // Upload some pixel data.
         if (t.compressed) {
+#ifdef IOS
+            assert_invariant(false);
+#else
             assert_invariant(!t.uploadSubregions);
             PixelBufferDescriptor descriptor = compressedCheckerboardPixelBuffer(512);
             api.update2DImage(texture, 0, 0, 0, 512, 512, std::move(descriptor));
+#endif
         } else {
             if (t.uploadSubregions) {
                 const auto& pf = t.pixelFormat;

@@ -297,7 +297,9 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
 inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type) {
     if (type == PixelDataType::UINT_2_10_10_10_REV) return MTLPixelFormatRGB10A2Unorm;
     if (type == PixelDataType::UINT_10F_11F_11F_REV) return MTLPixelFormatRG11B10Float;
-    if (type == PixelDataType::USHORT_565) return MTLPixelFormatB5G6R5Unorm;
+    if (@available(macOS 11, *)) {
+        if (type == PixelDataType::USHORT_565) return MTLPixelFormatB5G6R5Unorm;
+    }
 
     #define CONVERT(FORMAT, TYPE, MTL) \
     if (PixelDataFormat::FORMAT == format && PixelDataType::TYPE == type)  return MTLPixelFormat ## MTL;
@@ -339,39 +341,47 @@ inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type)
 
 inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     switch (format) {
-        default: return format;
         case MTLPixelFormatR8Unorm_sRGB: return MTLPixelFormatR8Unorm;
         case MTLPixelFormatRG8Unorm_sRGB: return MTLPixelFormatRG8Unorm;
         case MTLPixelFormatRGBA8Unorm_sRGB: return MTLPixelFormatRGBA8Unorm;
         case MTLPixelFormatBGRA8Unorm_sRGB: return MTLPixelFormatBGRA8Unorm;
-        case MTLPixelFormatBGR10_XR_sRGB: return MTLPixelFormatBGR10_XR;
-        case MTLPixelFormatBGRA10_XR_sRGB: return MTLPixelFormatBGRA10_XR;
+#if !defined(IOS)
         case MTLPixelFormatBC1_RGBA_sRGB: return MTLPixelFormatBC1_RGBA;
         case MTLPixelFormatBC2_RGBA_sRGB: return MTLPixelFormatBC2_RGBA;
         case MTLPixelFormatBC3_RGBA_sRGB: return MTLPixelFormatBC3_RGBA;
         case MTLPixelFormatBC7_RGBAUnorm_sRGB: return MTLPixelFormatBC7_RGBAUnorm;
-        case MTLPixelFormatPVRTC_RGB_2BPP_sRGB: return MTLPixelFormatPVRTC_RGB_2BPP;
-        case MTLPixelFormatPVRTC_RGB_4BPP_sRGB: return MTLPixelFormatPVRTC_RGB_4BPP;
-        case MTLPixelFormatPVRTC_RGBA_2BPP_sRGB: return MTLPixelFormatPVRTC_RGBA_2BPP;
-        case MTLPixelFormatPVRTC_RGBA_4BPP_sRGB: return MTLPixelFormatPVRTC_RGBA_4BPP;
-        case MTLPixelFormatEAC_RGBA8_sRGB: return MTLPixelFormatEAC_RGBA8;
-        case MTLPixelFormatETC2_RGB8_sRGB: return MTLPixelFormatETC2_RGB8;
-        case MTLPixelFormatETC2_RGB8A1_sRGB: return MTLPixelFormatETC2_RGB8A1;
-        case MTLPixelFormatASTC_4x4_sRGB: return MTLPixelFormatASTC_4x4_LDR;
-        case MTLPixelFormatASTC_5x4_sRGB: return MTLPixelFormatASTC_5x4_LDR;
-        case MTLPixelFormatASTC_5x5_sRGB: return MTLPixelFormatASTC_5x5_LDR;
-        case MTLPixelFormatASTC_6x5_sRGB: return MTLPixelFormatASTC_6x5_LDR;
-        case MTLPixelFormatASTC_6x6_sRGB: return MTLPixelFormatASTC_6x6_LDR;
-        case MTLPixelFormatASTC_8x5_sRGB: return MTLPixelFormatASTC_8x5_LDR;
-        case MTLPixelFormatASTC_8x6_sRGB: return MTLPixelFormatASTC_8x6_LDR;
-        case MTLPixelFormatASTC_8x8_sRGB: return MTLPixelFormatASTC_8x8_LDR;
-        case MTLPixelFormatASTC_10x5_sRGB: return MTLPixelFormatASTC_10x5_LDR;
-        case MTLPixelFormatASTC_10x6_sRGB: return MTLPixelFormatASTC_10x6_LDR;
-        case MTLPixelFormatASTC_10x8_sRGB: return MTLPixelFormatASTC_10x8_LDR;
-        case MTLPixelFormatASTC_10x10_sRGB: return MTLPixelFormatASTC_10x10_LDR;
-        case MTLPixelFormatASTC_12x10_sRGB: return MTLPixelFormatASTC_12x10_LDR;
-        case MTLPixelFormatASTC_12x12_sRGB: return MTLPixelFormatASTC_12x12_LDR;
+#endif
+        default: break;
     }
+    if (@available(macOS 11, *)) {
+        switch (format) {
+            case MTLPixelFormatASTC_4x4_sRGB: return MTLPixelFormatASTC_4x4_LDR;
+            case MTLPixelFormatASTC_5x4_sRGB: return MTLPixelFormatASTC_5x4_LDR;
+            case MTLPixelFormatASTC_5x5_sRGB: return MTLPixelFormatASTC_5x5_LDR;
+            case MTLPixelFormatASTC_6x5_sRGB: return MTLPixelFormatASTC_6x5_LDR;
+            case MTLPixelFormatASTC_6x6_sRGB: return MTLPixelFormatASTC_6x6_LDR;
+            case MTLPixelFormatASTC_8x5_sRGB: return MTLPixelFormatASTC_8x5_LDR;
+            case MTLPixelFormatASTC_8x6_sRGB: return MTLPixelFormatASTC_8x6_LDR;
+            case MTLPixelFormatASTC_8x8_sRGB: return MTLPixelFormatASTC_8x8_LDR;
+            case MTLPixelFormatASTC_10x5_sRGB: return MTLPixelFormatASTC_10x5_LDR;
+            case MTLPixelFormatASTC_10x6_sRGB: return MTLPixelFormatASTC_10x6_LDR;
+            case MTLPixelFormatASTC_10x8_sRGB: return MTLPixelFormatASTC_10x8_LDR;
+            case MTLPixelFormatASTC_10x10_sRGB: return MTLPixelFormatASTC_10x10_LDR;
+            case MTLPixelFormatASTC_12x10_sRGB: return MTLPixelFormatASTC_12x10_LDR;
+            case MTLPixelFormatASTC_12x12_sRGB: return MTLPixelFormatASTC_12x12_LDR;
+            case MTLPixelFormatPVRTC_RGB_2BPP_sRGB: return MTLPixelFormatPVRTC_RGB_2BPP;
+            case MTLPixelFormatPVRTC_RGB_4BPP_sRGB: return MTLPixelFormatPVRTC_RGB_4BPP;
+            case MTLPixelFormatPVRTC_RGBA_2BPP_sRGB: return MTLPixelFormatPVRTC_RGBA_2BPP;
+            case MTLPixelFormatPVRTC_RGBA_4BPP_sRGB: return MTLPixelFormatPVRTC_RGBA_4BPP;
+            case MTLPixelFormatEAC_RGBA8_sRGB: return MTLPixelFormatEAC_RGBA8;
+            case MTLPixelFormatETC2_RGB8_sRGB: return MTLPixelFormatETC2_RGB8;
+            case MTLPixelFormatETC2_RGB8A1_sRGB: return MTLPixelFormatETC2_RGB8A1;
+            case MTLPixelFormatBGR10_XR_sRGB: return MTLPixelFormatBGR10_XR;
+            case MTLPixelFormatBGRA10_XR_sRGB: return MTLPixelFormatBGRA10_XR;
+            default: break;
+        }
+    }
+    return format;
 }
 
 constexpr inline MTLTextureType getMetalType(SamplerType target) {
