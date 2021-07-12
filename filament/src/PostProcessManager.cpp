@@ -299,7 +299,8 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
-        const RenderPass& pass, uint32_t width, uint32_t height, float scale) noexcept {
+        RenderPass const& pass, uint32_t width, uint32_t height, float scale) noexcept {
+
 
     // structure pass -- automatically culled if not used, currently used by:
     //    - ssao
@@ -332,7 +333,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
                         .clearFlags = TargetBufferFlags::DEPTH
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
                 auto out = resources.getRenderPassInfo();
                 pass.execute(resources.getPassName(), out.target, out.params);
             });
@@ -380,8 +382,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
     return depth;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
-        FrameGraph& fg, RenderPass& pass,
+FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
         View::AmbientOcclusionOptions options) noexcept {
 
@@ -1040,6 +1041,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
+                auto desc       = resources.getDescriptor(data.inOutColor);
                 auto inOutColor = resources.getTexture(data.inOutColor);
                 auto inOutCoc   = resources.getTexture(data.inOutCoc);
 
@@ -1052,11 +1054,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 const PipelineState pipeline(material.getPipelineState(variant));
 
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
+                    uint32_t w = FTexture::valueForLevel(level, desc.width);
+                    uint32_t h = FTexture::valueForLevel(level, desc.height);
+
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
                     driver.setMinMaxLevels(inOutColor, level, level);
                     driver.setMinMaxLevels(inOutCoc, level, level);
                     mi->setParameter("mip", uint32_t(level));
                     mi->setParameter("weightScale", 0.5f / float(1u<<level));   // FIXME: halfres?
+                    mi->setParameter("pixelSize", 1.0f / float2{w, h});
                     mi->commit(driver);
                     driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive);

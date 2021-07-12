@@ -229,6 +229,8 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::DEPTH32F: return MTLPixelFormatDepth32Float;
 #if !defined(IOS)
         case TextureFormat::DEPTH24_STENCIL8: return MTLPixelFormatDepth24Unorm_Stencil8;
+#else
+        case TextureFormat::DEPTH24_STENCIL8: return MTLPixelFormatDepth32Float_Stencil8;
 #endif
         case TextureFormat::DEPTH32F_STENCIL8: return MTLPixelFormatDepth32Float_Stencil8;
 

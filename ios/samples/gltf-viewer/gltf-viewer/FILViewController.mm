@@ -152,9 +152,17 @@ using namespace utils;
 }
 
 - (void)loadSettings:(viewer::ReceivedMessage const*)message {
-    _automation->applySettings(message->buffer, message->bufferByteCount, self.modelView.view,
-            nullptr, 0u, _indirectLight, _sun, &self.modelView.engine->getLightManager(),
-            self.modelView.scene, self.modelView.renderer);
+    viewer::AutomationEngine::ViewerContent content = {
+        .view = self.modelView.view,
+        .renderer = self.modelView.renderer,
+        .materials = nullptr,
+        .materialCount = 0u,
+        .lightManager = &self.modelView.engine->getLightManager(),
+        .scene = self.modelView.scene,
+        .indirectLight = _indirectLight,
+        .sunlight = _sun,
+    };
+    _automation->applySettings(message->buffer, message->bufferByteCount, content);
     ColorGrading* const colorGrading = _automation->getColorGrading(self.modelView.engine);
     self.modelView.view->setColorGrading(colorGrading);
     self.modelView.cameraFocalLength = _automation->getViewerOptions().cameraFocalLength;

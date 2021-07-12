@@ -3,7 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.7 (currently main branch)
+## v1.10.8 (currently main branch)
+
+## v1.10.7
+
+- engine: Spot-light position calculation moved to fragment shader.
+- engine: Small shadow mapping fixes and improvements.
+- gltfio: Add fast path for native material providers.
+- gltfio: Allow Java / Kotlin clients to customize MaterialProvider.
+- engine: Fix out of bounds access with `RenderTarget` java bindings.
+- Metal: `TextureFormat::DEPTH24_STENCIL8` now maps to a 32 bit depth format on iOS.
 
 ## v1.10.6
 

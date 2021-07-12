@@ -226,10 +226,6 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
-    if (litVariants && variant.hasShadowReceiver()) {
-        cg.generateUniforms(vs, ShaderType::VERTEX,
-                BindingPoints::SHADOW, UibGenerator::getShadowUib());
-    }
     if (variant.hasSkinningOrMorphing()) {
         cg.generateUniforms(vs, ShaderType::VERTEX,
                 BindingPoints::PER_RENDERABLE_BONES,
@@ -420,6 +416,10 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
             BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::LIGHTS, UibGenerator::getLightsUib());
+    if (litVariants && variant.hasShadowReceiver()) {
+        cg.generateUniforms(fs, ShaderType::FRAGMENT,
+                BindingPoints::SHADOW, UibGenerator::getShadowUib());
+    }
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,

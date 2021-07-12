@@ -62,6 +62,7 @@ class MainActivity : Activity() {
     private val automation = AutomationEngine()
     private var loadStartTime = 0L
     private var loadStartFence: Fence? = null
+    private val viewerContent = AutomationEngine.ViewerContent()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +77,12 @@ class MainActivity : Activity() {
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
 
         modelViewer = ModelViewer(surfaceView)
+        viewerContent.view = modelViewer.view
+        viewerContent.indirectLight = modelViewer.scene.indirectLight
+        viewerContent.sunlight = modelViewer.light
+        viewerContent.lightManager = modelViewer.engine.lightManager
+        viewerContent.scene = modelViewer.scene
+        viewerContent.renderer = modelViewer.renderer
 
         surfaceView.setOnTouchListener { _, event ->
             modelViewer.onTouchEvent(event)
@@ -112,7 +119,7 @@ class MainActivity : Activity() {
         }
 
         modelViewer.loadModelGltfAsync(buffer) { uri -> readCompressedAsset("models/$uri") }
-        modelViewer.transformToUnitCube()
+        updateRootTransform()
     }
 
     private fun createIndirectLight() {
@@ -157,7 +164,7 @@ class MainActivity : Activity() {
         withContext(Dispatchers.Main) {
             modelViewer.destroyModel()
             modelViewer.loadModelGlb(message.buffer)
-            modelViewer.transformToUnitCube()
+            updateRootTransform()
             loadStartTime = System.nanoTime()
             loadStartFence = modelViewer.engine.createFence()
         }
@@ -277,7 +284,7 @@ class MainActivity : Activity() {
                     pathToBufferMapping[path]
                 }
             }
-            modelViewer.transformToUnitCube()
+            updateRootTransform()
             loadStartTime = System.nanoTime()
             loadStartFence = modelViewer.engine.createFence()
         }
@@ -316,11 +323,19 @@ class MainActivity : Activity() {
 
     fun loadSettings(message: RemoteServer.ReceivedMessage) {
         val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
-        automation.applySettings(json, modelViewer.view, null,
-                modelViewer.scene.indirectLight, modelViewer.light, modelViewer.engine.lightManager,
-                modelViewer.scene, modelViewer.renderer)
-        modelViewer.view.colorGrading = automation.getColorGrading((modelViewer.engine))
+        viewerContent.assetLights = modelViewer.asset?.lightEntities
+        automation.applySettings(json, viewerContent)
+        modelViewer.view.colorGrading = automation.getColorGrading(modelViewer.engine)
         modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
+        updateRootTransform()
+    }
+
+    private fun updateRootTransform() {
+        if (automation.viewerOptions.autoScaleEnabled) {
+            modelViewer.transformToUnitCube()
+        } else {
+            modelViewer.clearRootTransform()
+        }
     }
 
     inner class FrameCallback : Choreographer.FrameCallback {
@@ -332,7 +347,7 @@ class MainActivity : Activity() {
                 if (it.wait(Fence.Mode.FLUSH, 0) == Fence.FenceStatus.CONDITION_SATISFIED) {
                     val end = System.nanoTime()
                     val total = (end - loadStartTime) / 1_000_000
-                    Log.i(TAG, "The Filament backend took ${total} ms to load the model geometry.")
+                    Log.i(TAG, "The Filament backend took $total ms to load the model geometry.")
                     modelViewer.engine.destroyFence(it)
                     loadStartFence = null
                 }

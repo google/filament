@@ -312,10 +312,10 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // -- less than or equal to 208 bytes
 
 
-OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
+OpenGLDriver::HandleAllocator::HandleAllocator(const utils::AreaPolicy::HeapArea& area)
 {
     // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.getSize() / 32;
+    const size_t unit = area.size() / 32;
     const size_t offsetPool1 =      unit;
     const size_t offsetPool2 = 16 * unit;
     char* const p = (char*)area.begin();
@@ -914,11 +914,15 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
     // There's a bug with certain drivers preventing us from emulating
     // EXT_multisampled_render_to_texture when the texture is a TEXTURE_2D_ARRAY, so we'll simply
-    // fall back to non-MSAA rendering.
+    // fall back to non-MSAA rendering for now. Also, MSRTT is never available for TEXTURE_2D_ARRAY,
+    // and since we are a 2D array, we know we're sampleable and therefore that a resolve will
+    // be needed.
+    // Note that this affects VSM shadows in particular.
+    // TODO: a better workaround would be to do the resolve by hand in that case
     const bool disableMultisampling =
             gl.bugs.disable_sidecar_blit_into_texture_array &&
             rt->gl.samples > 1 && t->samples <= 1 &&
-            target == GL_TEXTURE_2D_ARRAY;
+            target == GL_TEXTURE_2D_ARRAY; // implies MSRTT is not available
 
     if (rt->gl.samples <= 1 ||
         (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture) ||

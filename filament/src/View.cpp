@@ -226,7 +226,7 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
         assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-        mShadowMapManager.setShadowCascades(0, shadowOptions.shadowCascades);
+        mShadowMapManager.setShadowCascades(0, &shadowOptions);
     }
 
     // Find all shadow-casting spot lights.
@@ -245,7 +245,8 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             continue;
         }
 
-        mShadowMapManager.addSpotShadowMap(l);
+        const auto& shadowOptions = lcm.getShadowOptions(light);
+        mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
 
         shadowCastingSpotCount++;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
@@ -863,8 +864,8 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 }
 
 void FView::renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
-        RenderPass& pass) noexcept {
-    mShadowMapManager.render(fg, engine, *this, driver, pass);
+        RenderPass const& pass) noexcept {
+    mShadowMapManager.render(fg, engine, driver, pass, *this);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {

@@ -110,7 +110,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.scene = scene
         view.camera = camera
 
-        assetLoader = AssetLoader(engine, MaterialProvider(engine), EntityManager.get())
+        assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
 
         // Always add a direct light source since it is required for shadowing.
@@ -222,6 +222,16 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
             center -= centerPoint / scaleFactor
             val transform = scale(Float3(scaleFactor)) * translation(-center)
             tm.setTransform(tm.getInstance(asset.root), transpose(transform).toFloatArray())
+        }
+    }
+
+    /**
+     * Removes the transformation that was set up via transformToUnitCube.
+     */
+    fun clearRootTransform() {
+        asset?.let {
+            val tm = engine.transformManager
+            tm.setTransform(tm.getInstance(it.root), Mat4().toFloatArray())
         }
     }
 

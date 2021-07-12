@@ -6,12 +6,6 @@ mat4 getLightFromWorldMatrix() {
     return frameUniforms.lightFromWorldMatrix[0];
 }
 
-#if defined(HAS_SHADOWING)
-mat4 getSpotLightFromWorldMatrix(uint index) {
-    return shadowUniforms.spotLightFromWorldMatrix[index];
-}
-#endif
-
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
     return objectUniforms.worldFromModelMatrix;

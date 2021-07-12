@@ -65,7 +65,7 @@ using LightManager = filament::LightManager;
 void applySettings(const ViewSettings& settings, View* dest);
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        LightManager* lm, Scene* scene);
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene);
 void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
         Renderer* renderer);
 
@@ -174,6 +174,7 @@ struct ViewerOptions {
     sRGBColor backgroundColor = { 0.0f };
     float cameraFocalLength = 28.0f;
     float cameraFocusDistance = 10.0f;
+    bool autoScaleEnabled = true;
 };
 
 struct Settings {

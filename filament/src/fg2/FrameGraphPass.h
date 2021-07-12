@@ -58,7 +58,7 @@ class FrameGraphPass : public FrameGraphPassBase {
     friend class FrameGraph;
 
     // allow our allocators to instantiate us
-    template<typename, typename, typename>
+    template<typename, typename, typename, typename>
     friend class utils::Arena;
 
     explicit FrameGraphPass(Execute&& execute) noexcept

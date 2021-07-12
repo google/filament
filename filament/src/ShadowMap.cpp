@@ -69,24 +69,23 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, FView::Range const& range, RenderPass& pass,
-        FView& view) noexcept {
+void ShadowMap::render(DriverApi& driver, FView::Range const& range, 
+        RenderPass* const pass, FView& view) noexcept {
     FEngine& engine = mEngine;
 
+    filament::CameraInfo cameraInfo(getCamera());
+
     FScene& scene = *view.getScene();
+    FScene::RenderableSoa& renderableData = scene.getRenderableData();
 
-    FCamera const& camera = getCamera();
-    filament::CameraInfo cameraInfo(camera);
-
-    pass.setCamera(cameraInfo);
-    pass.setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
-
+    pass->setCamera(cameraInfo);
+    pass->setGeometry(renderableData, range, scene.getRenderableUBO());
     // updatePrimitivesLod must be run before appendCommands.
-    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), range);
+    view.updatePrimitivesLod(engine, cameraInfo, renderableData, range);
 
-    pass.newCommandBuffer();
-    pass.appendCommands(RenderPass::SHADOW);
-    pass.sortCommands();
+    pass->overridePolygonOffset(&mPolygonOffset);
+    pass->appendCommands(RenderPass::SHADOW);
+    pass->sortCommands();
 }
 
 mat4f ShadowMap::getLightViewMatrix(float3 position, float3 direction) noexcept {
@@ -230,9 +229,13 @@ void ShadowMap::computeShadowCameraDirectional(
             camera.model * FCamera::inverseProjection(camera.projection),
             cascadeParams.csNearFar);
 
+    // we use aligned_storage<> here to avoid the default initialization of std::array<>
+    std::aligned_storage<sizeof(FrustumBoxIntersection)>::type localStorage;
+    FrustumBoxIntersection& wsClippedShadowReceiverVolume{ reinterpret_cast<FrustumBoxIntersection&>(localStorage) };
+
     // compute the intersection of the shadow receivers volume with the view volume
     // in world space. This returns a set of points on the convex-hull of the intersection.
-    size_t vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
+    size_t vertexCount = intersectFrustumWithBox(wsClippedShadowReceiverVolume,
             wsViewFrustumVertices, wsShadowReceiversVolume);
 
     /*
@@ -256,7 +259,7 @@ void ShadowMap::computeShadowCameraDirectional(
     }
     for (size_t i = 0; i < vertexCount; ++i) {
         // far: figure out farthest shadow receivers
-        float3 v = mat4f::project(MvAtOrigin, mWsClippedShadowReceiverVolume[i]);
+        float3 v = mat4f::project(MvAtOrigin, wsClippedShadowReceiverVolume[i]);
         lsLightFrustumBounds.min.z = std::min(lsLightFrustumBounds.min.z, v.z);
         if (USE_DEPTH_CLAMP) {
             // further tighten to the shadow receiver volume
@@ -299,7 +302,7 @@ void ShadowMap::computeShadowCameraDirectional(
         if (shadowReceiverVolumeBoundingSphere.w < viewVolumeBoundingSphere.w) {
             viewVolumeBoundingSphere.w = 0;
             std::copy_n(wsShadowReceiversVolume.getCorners().data(), 8,
-                    mWsClippedShadowReceiverVolume.data());
+                    wsClippedShadowReceiverVolume.data());
         }
     }
 
@@ -347,7 +350,7 @@ void ShadowMap::computeShadowCameraDirectional(
             LMpMv = L * MpMv;
 
             W = applyLISPSM(Wp, camera, params, LMpMv,
-                    mWsClippedShadowReceiverVolume, vertexCount, dir);
+                    wsClippedShadowReceiverVolume, vertexCount, dir);
         }
 
         /*
@@ -367,7 +370,7 @@ void ShadowMap::computeShadowCameraDirectional(
         if (params.options.stable && viewVolumeBoundingSphere.w > 0) {
             bounds = compute2DBounds(Mv, viewVolumeBoundingSphere);
         } else {
-            bounds = compute2DBounds(WLMpMv, mWsClippedShadowReceiverVolume.data(), vertexCount);
+            bounds = compute2DBounds(WLMpMv, wsClippedShadowReceiverVolume.data(), vertexCount);
         }
         lsLightFrustumBounds.min.xy = bounds.min.xy;
         lsLightFrustumBounds.max.xy = bounds.max.xy;
@@ -553,8 +556,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes
-        const float vz0 = std::max(0.0f, std::max(zn + dzn, z0));
-        const float vz1 = std::max(0.0f, std::min(zf - dzf, z1));
+        const float vz0 = std::max(0.0f, std::max(std::max(zn, camera.zn + dzn), z0));
+        const float vz1 = std::max(0.0f, std::min(std::min(zf, camera.zf - dzf), z1));
 
         // in the general case, nopt is computed as:
         const float nopt0 = (1.0f / sinLV) * (z0 + std::sqrt(vz0 * vz1));
