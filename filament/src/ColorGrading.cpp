@@ -220,11 +220,8 @@ inline float3 adaptationTransform(float2 whiteBalance) {
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
-    v = sRGB_to_LMS * v;
-    v = adaptationTransform(whiteBalance) * v;
-    v = LMS_to_sRGB * v;
-    return v;
+inline float3 chromaticAdaptation(float3 v, float3 adaptationTransform) {
+    return LMS_to_sRGB * (adaptationTransform * (sRGB_to_LMS * v));
 }
 
 //------------------------------------------------------------------------------
@@ -279,7 +276,7 @@ mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) {
     }
 }
 
-float3 selectLumaTransform(ColorGrading::ToneMapping toneMapping) {
+float3 selectLuminanceTransform(ColorGrading::ToneMapping toneMapping) {
     switch (toneMapping) {
         case ColorGrading::ToneMapping::ACES_LEGACY:
         case ColorGrading::ToneMapping::ACES:
@@ -434,11 +431,12 @@ ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
 struct Config {
     mat3f colorGradingTransformIn;
     mat3f colorGradingTransformOut;
-    float3 lumaTransform;
+    float3 luminanceTransform;
     ColorTransform linearToLogTransform;
     ColorTransform logToLinearTransform;
     ColorTransform toneMapper;
     size_t lutDimension;
+    float3 adaptationTransform;
 };
 
 // Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
@@ -458,11 +456,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         std::lock_guard<utils::SpinLock> lock(configLock);
         c.colorGradingTransformIn  = selectColorGradingTransformIn(builder->toneMapping);
         c.colorGradingTransformOut = selectColorGradingTransformOut(builder->toneMapping);
-        c.lumaTransform            = selectLumaTransform(builder->toneMapping);
+        c.luminanceTransform       = selectLuminanceTransform(builder->toneMapping);
         c.linearToLogTransform     = selectLinearToLogTransform(builder->toneMapping);
         c.logToLinearTransform     = selectLogToLinearTransform(builder->toneMapping);
         c.toneMapper               = selectToneMapping(builder->toneMapping);
         c.lutDimension             = selectLutDimension(builder->quality);
+        c.adaptationTransform      = adaptationTransform(builder->whiteBalance);
     }
 
     size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
@@ -507,7 +506,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // TODO: Performed in sRGB, should be in Rec.2020 or AP1
                     if (builder->hasAdjustments) {
                         // White balance
-                        v = chromaticAdaptation(v, builder->whiteBalance);
+                        v = chromaticAdaptation(v, config.adaptationTransform);
                     }
 
                     // Convert to color grading color space
@@ -521,7 +520,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
                         // Shadows/mid-tones/highlights
-                        v = tonalRanges(v, config.lumaTransform,
+                        v = tonalRanges(v, config.luminanceTransform,
                                 builder->shadows, builder->midtones, builder->highlights,
                                 builder->tonalRanges);
 
