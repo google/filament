@@ -16,6 +16,8 @@
 
 #include "ToneMapping.h"
 
+using namespace filament::math;
+
 namespace filament {
 namespace aces {
 
@@ -103,7 +105,7 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
     float3 XYZ = AP1_to_XYZ * linearCV;
     float3 xyY = XYZ_to_xyY(XYZ);
 
-    xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<math::half>::max());
+    xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<half>::max());
     xyY.z = std::pow(xyY.z, DIM_SURROUND_GAMMA);
 
     XYZ = xyY_to_XYZ(xyY);
@@ -147,7 +149,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     ap0.r += hueWeight * saturation * (RRT_RED_PIVOT - ap0.r) * (1.0f - RRT_RED_SCALE);
 
     // ACES to RGB rendering space
-    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<math::half>::max());
+    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<half>::max());
 
     // Global desaturation
     ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);

@@ -48,19 +48,19 @@ class UTILS_PUBLIC Material : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using BlendingMode = filament::BlendingMode;
-    using Shading = filament::Shading;
-    using Interpolation = filament::Interpolation;
-    using VertexDomain = filament::VertexDomain;
-    using TransparencyMode = filament::TransparencyMode;
+    using BlendingMode = BlendingMode;
+    using Shading = Shading;
+    using Interpolation = Interpolation;
+    using VertexDomain = VertexDomain;
+    using TransparencyMode = TransparencyMode;
 
-    using ParameterType = filament::backend::UniformType;
-    using Precision = filament::backend::Precision;
-    using SamplerType = filament::backend::SamplerType;
-    using SamplerFormat = filament::backend::SamplerFormat;
-    using CullingMode = filament::backend::CullingMode;
-    using ShaderModel = filament::backend::ShaderModel;
-    using SubpassType = filament::backend::SubpassType;
+    using ParameterType = backend::UniformType;
+    using Precision = backend::Precision;
+    using SamplerType = backend::SamplerType;
+    using SamplerFormat = backend::SamplerFormat;
+    using CullingMode = backend::CullingMode;
+    using ShaderModel = backend::ShaderModel;
+    using SubpassType = backend::SubpassType;
 
     /**
      * Holds information about a material parameter.

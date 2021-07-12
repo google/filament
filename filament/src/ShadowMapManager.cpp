@@ -132,7 +132,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
         map.getShadowMap().render(driver, range, &entry.pass, view);
     }
 
-    const float vsmMoment2 = std::numeric_limits<math::half>::max();
+    const float vsmMoment2 = std::numeric_limits<half>::max();
     const float vsmMoment1 = std::sqrt(vsmMoment2);
     const float4 vsmClearColor{ vsmMoment1, vsmMoment2, 0.0f, 0.0f };
 

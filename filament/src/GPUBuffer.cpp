@@ -24,6 +24,7 @@
 namespace filament {
 
 using namespace backend;
+using namespace math;
 
 static size_t dataTypeToSize(GPUBuffer::Element element) noexcept {
     using ET = GPUBuffer::ElementType;
@@ -34,7 +35,7 @@ static size_t dataTypeToSize(GPUBuffer::Element element) noexcept {
         case ET::INT16:  return element.size * sizeof(int16_t);
         case ET::UINT32: return element.size * sizeof(uint32_t);
         case ET::INT32:  return element.size * sizeof(int32_t);
-        case ET::HALF:   return element.size * sizeof(math::half);
+        case ET::HALF:   return element.size * sizeof(half);
         case ET::FLOAT:  return element.size * sizeof(float);
     }
 }

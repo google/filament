@@ -125,7 +125,7 @@ public:
     inline Visibility getVisibility(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
-    inline filament::math::float4 getMorphWeights(Instance instance) const noexcept;
+    inline math::float4 getMorphWeights(Instance instance) const noexcept;
 
     inline backend::Handle<backend::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
     inline uint32_t getBoneCount(Instance instance) const noexcept;
@@ -152,7 +152,7 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        filament::backend::Handle<backend::HwUniformBuffer> handle;
+        backend::Handle<backend::HwUniformBuffer> handle;
         UniformBuffer bones;
         size_t count;
     };
@@ -173,7 +173,7 @@ private:
     using Base = utils::SingleInstanceComponentManager<
             Box,                             // AABB
             uint8_t,                         // LAYERS
-            filament::math::float4,          // MORPH_WEIGHTS
+            math::float4,                    // MORPH_WEIGHTS
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             std::unique_ptr<Bones>           // BONES
@@ -315,7 +315,7 @@ uint8_t FRenderableManager::getPriority(Instance instance) const noexcept {
     return getVisibility(instance).priority;
 }
 
-filament::math::float4 FRenderableManager::getMorphWeights(Instance instance) const noexcept {
+math::float4 FRenderableManager::getMorphWeights(Instance instance) const noexcept {
     return mManager[instance].morphWeights;
 }
 
