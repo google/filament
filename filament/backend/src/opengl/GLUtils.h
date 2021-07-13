@@ -115,6 +115,15 @@ constexpr inline GLenum getBufferUsage(backend::BufferUsage usage) noexcept {
     }
 }
 
+constexpr inline GLenum getBufferBindingType(backend::BufferObjectBinding bindingType) noexcept {
+    switch (bindingType) {
+        case backend::BufferObjectBinding::VERTEX:
+            return GL_ARRAY_BUFFER;
+        case backend::BufferObjectBinding::UNIFORM:
+            return GL_UNIFORM_BUFFER;
+    }
+}
+
 constexpr inline GLboolean getNormalization(bool normalized) noexcept {
     return GLboolean(normalized ? GL_TRUE : GL_FALSE);
 }

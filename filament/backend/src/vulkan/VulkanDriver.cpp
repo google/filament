@@ -469,7 +469,7 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
     auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh,
-            mContext, mStagePool, byteCount);
+            mContext, mStagePool, byteCount, bindingType, usage);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
        destruct_handle<VulkanBufferObject>(mHandleMap, boh);
     });
@@ -478,6 +478,13 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
        auto bufferObject = handle_cast<VulkanBufferObject>(mHandleMap, boh);
+       if (bufferObject->bindingType == BufferObjectBinding::UNIFORM) {
+           mPipelineCache.unbindUniformBuffer(bufferObject->buffer->getGpuBuffer());
+           // Decrement the refcount of the uniform buffer, but schedule it for destruction a few
+           // frames in the future. To be safe, we need to assume that the current command buffer is
+           // still using it somewhere.
+           mDisposer.acquire(bufferObject);
+       }
        mDisposer.removeReference(bufferObject);
     }
 }
@@ -845,6 +852,7 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    assert_invariant(bo.bindingType == BufferObjectBinding::VERTEX);
     vb.buffers[index] = bo.buffer.get();
 }
 

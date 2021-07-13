@@ -285,6 +285,7 @@ enum class ElementType : uint8_t {
 //! Buffer object binding type
 enum class BufferObjectBinding : uint8_t {
     VERTEX,
+    UNIFORM
 };
 
 //! Face culling Mode

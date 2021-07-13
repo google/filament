@@ -19,6 +19,7 @@
 
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
+#include "GLUtils.h"
 #include "OpenGLContext.h"
 
 #include "private/backend/HandleAllocator.h"
@@ -75,9 +76,13 @@ public:
 
     struct GLBufferObject : public backend::HwBufferObject {
         using HwBufferObject::HwBufferObject;
-        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
+        GLBufferObject(uint32_t size, backend::BufferObjectBinding bindingType) noexcept
+            : HwBufferObject(size) {
+            gl.binding =  GLUtils::getBufferBindingType(bindingType);
+        }
         struct {
             GLuint id = 0;
+            GLenum binding = 0;
         } gl;
     };
 
