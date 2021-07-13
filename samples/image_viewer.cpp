@@ -38,6 +38,7 @@
 
 #include <getopt/getopt.h>
 
+#include <math/half.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 #include <math/mat3.h>
@@ -199,43 +200,55 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
 
 static void loadImage(App& app, Engine* engine, Path filename) {
     std::ifstream inputStream(filename, std::ios::binary);
-    LinearImage* image = new LinearImage(
-            ImageDecoder::decode(inputStream, filename, ImageDecoder::ColorSpace::LINEAR)
-    );
+    LinearImage image = ImageDecoder::decode(
+            inputStream, filename, ImageDecoder::ColorSpace::LINEAR);
 
-    if (image->getChannels() != 3) {
+    uint32_t channels = image.getChannels();
+    if (channels != 3) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
-        delete image;
         exit(1);
     }
 
-    if (!image->isValid()) {
+    if (!image.isValid()) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
         exit(1);
     }
 
     inputStream.close();
 
-    uint32_t w = image->getWidth();
-    uint32_t h = image->getHeight();
-    Texture *texture = Texture::Builder()
+    uint32_t w = image.getWidth();
+    uint32_t h = image.getHeight();
+    Texture* texture = Texture::Builder()
             .width(w)
             .height(h)
             .levels(0xff)
-            .format(Texture::InternalFormat::RGB16F)
+            .format(Texture::InternalFormat::RGBA16F)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .build(*engine);
 
+    uint8_t* data = new uint8_t[w * h * sizeof(half4)];
+    const float* pixelRef = image.getPixelRef();
+    for (uint32_t i = 0; i < w * h; i++) {
+        uint32_t j = i * channels;
+        reinterpret_cast<half4*>(data)[i] = half4{
+            half(pixelRef[j]),
+            half(pixelRef[j + 1]),
+            half(pixelRef[j + 2]),
+            1.0f
+        };
+    }
+
     Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
-        delete (LinearImage*) data;
+        delete[] reinterpret_cast<uint8_t*>(data);
     };
 
     Texture::PixelBufferDescriptor buffer(
-            image->getPixelRef(),
-            size_t(w * h * image->getChannels() * sizeof(float)),
-            Texture::Format::RGB,
-            Texture::Type::FLOAT,
-            freeCallback);
+            data,
+            size_t(w * h * 4 * sizeof(half)),
+            Texture::Format::RGBA,
+            Texture::Type::HALF,
+            freeCallback
+    );
 
     texture->setImage(*engine, 0, std::move(buffer));
     texture->generateMipmaps(*engine);
@@ -332,11 +345,20 @@ int main(int argc, char** argv) {
             float srcRatio = srcWidth / srcHeight;
             float dstRatio = dstWidth / dstHeight;
 
+            bool xMajor = dstWidth / srcWidth > dstHeight / srcHeight;
+
             float sx = 1.0f;
             float sy = dstRatio / srcRatio;
 
             float tx = 0.0f;
             float ty = ((1.0f - sy) * 0.5f) / sy;
+
+            if (xMajor) {
+                sx = srcRatio / dstRatio;
+                sy = 1.0;
+                tx = ((1.0f - sx) * 0.5f) / sx;
+                ty = 0.0f;
+            }
 
             mat3f transform(
                  1.0f / sx,  0.0f,       0.0f,
