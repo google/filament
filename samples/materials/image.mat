@@ -7,7 +7,8 @@ material {
         },
         {
             type : mat3,
-            name : transform
+            name : transform,
+            precision : high
         }
     ],
     variables : [
@@ -20,20 +21,20 @@ material {
     culling: none
 }
 
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.imageUV.st = getPosition().st * 0.5 + 0.5;
+    }
+}
+
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
-        vec2 uv = (materialParams.transform * vec3(saturate(variable_imageUV.st), 1.0)).st;
+        highp vec2 uv = (materialParams.transform * vec3(saturate(variable_imageUV.st), 1.0)).st;
         if (uv.s > 1.0 || uv.s < 0.0 || uv.t < 0.0 || uv.t > 1.0) discard;
         uv.t = 1.0 - uv.t;
 
         material.baseColor = textureLod(materialParams_image, uv.st, 0.0);
-    }
-}
-
-vertex {
-    void materialVertex(inout MaterialVertexInputs material) {
-        material.imageUV.st = getPosition().st * 0.5 + 0.5;
     }
 }
