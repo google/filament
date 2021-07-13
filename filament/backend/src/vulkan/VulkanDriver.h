@@ -90,7 +90,7 @@ private:
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = Blob(sizeof(Dp), 0);
+        mHandleMap[mNextId] = Blob(sizeof(Dp));
         return Handle<B>(mNextId++);
     }
 
