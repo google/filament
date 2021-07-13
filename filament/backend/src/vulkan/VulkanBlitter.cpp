@@ -214,8 +214,11 @@ void VulkanBlitter::shutdown() noexcept {
         delete mDepthResolveProgram;
         mDepthResolveProgram = nullptr;
 
-        delete mTriangleBuffer;
-        mTriangleBuffer = nullptr;
+        if (mTriangleBuffer) {
+            mTriangleBuffer->terminate(mContext);
+            delete mTriangleBuffer;
+            mTriangleBuffer = nullptr;
+        }
 
         delete mParamsBuffer;
         mParamsBuffer = nullptr;
@@ -261,7 +264,8 @@ void VulkanBlitter::lazyInit() noexcept {
     mTriangleBuffer = new VulkanBuffer(mContext, mStagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             sizeof(kTriangleVertices));
 
-    mTriangleBuffer->loadFromCpu(kTriangleVertices, 0, sizeof(kTriangleVertices));
+    mTriangleBuffer->loadFromCpu(mContext, mStagePool,
+            kTriangleVertices, 0, sizeof(kTriangleVertices));
 
     mParamsBuffer = new VulkanUniformBuffer(mContext, mStagePool,
             sizeof(BlitterUniforms), backend::BufferUsage::STATIC);

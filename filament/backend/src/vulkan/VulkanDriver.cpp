@@ -454,8 +454,8 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
             elementSize, indexCount);
-    mDisposer.createDisposable(indexBuffer, [this, ibh] () {
-        destruct_handle<VulkanIndexBuffer>(mHandleMap, ibh);
+    mDisposer.createDisposable(indexBuffer, [this, ibh]() {
+        destruct_handle<VulkanIndexBuffer>(mContext, mHandleMap, ibh);
     });
 }
 
@@ -470,8 +470,8 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
     auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh,
             mContext, mStagePool, byteCount, bindingType, usage);
-    mDisposer.createDisposable(bufferObject, [this, boh] () {
-       destruct_handle<VulkanBufferObject>(mHandleMap, boh);
+    mDisposer.createDisposable(bufferObject, [this, boh]() {
+        destruct_handle<VulkanBufferObject>(mContext, mHandleMap, boh);
     });
 }
 
@@ -857,7 +857,7 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     auto ib = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
-    ib->buffer.loadFromCpu(p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(mContext, mStagePool, p.buffer, byteOffset, p.size);
     mDisposer.acquire(ib);
     scheduleDestroy(std::move(p));
 }
@@ -865,7 +865,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
     auto bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
-    bo->buffer.loadFromCpu(bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(mContext, mStagePool, bd.buffer, byteOffset, bd.size);
     mDisposer.acquire(bo);
     scheduleDestroy(std::move(bd));
 }
