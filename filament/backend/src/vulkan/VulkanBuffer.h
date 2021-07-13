@@ -29,7 +29,7 @@ public:
     VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool, VkBufferUsageFlags usage,
             uint32_t numBytes);
     ~VulkanBuffer();
-    void loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes);
+    void loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const;
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
 private:
     VulkanContext& mContext;

@@ -41,7 +41,7 @@ VulkanBuffer::~VulkanBuffer() {
     vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
 }
 
-void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) {
+void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
     assert_invariant(byteOffset == 0);
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;

@@ -479,7 +479,7 @@ void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
        auto bufferObject = handle_cast<VulkanBufferObject>(mHandleMap, boh);
        if (bufferObject->bindingType == BufferObjectBinding::UNIFORM) {
-           mPipelineCache.unbindUniformBuffer(bufferObject->buffer->getGpuBuffer());
+           mPipelineCache.unbindUniformBuffer(bufferObject->buffer.getGpuBuffer());
            // Decrement the refcount of the uniform buffer, but schedule it for destruction a few
            // frames in the future. To be safe, we need to assume that the current command buffer is
            // still using it somewhere.
@@ -851,13 +851,13 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     auto& bo = *handle_cast<VulkanBufferObject>(mHandleMap, boh);
     assert_invariant(bo.bindingType == BufferObjectBinding::VERTEX);
-    vb.buffers[index] = bo.buffer.get();
+    vb.buffers[index] = &bo.buffer;
 }
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     auto ib = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
-    ib->buffer->loadFromCpu(p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(p.buffer, byteOffset, p.size);
     mDisposer.acquire(ib);
     scheduleDestroy(std::move(p));
 }
@@ -865,7 +865,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
     auto bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
-    bo->buffer->loadFromCpu(bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(bd.buffer, byteOffset, bd.size);
     mDisposer.acquire(bo);
     scheduleDestroy(std::move(bd));
 }
@@ -1867,7 +1867,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
     vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim.indexBuffer->buffer->getGpuBuffer(), 0,
+    vkCmdBindIndexBuffer(cmdbuffer, prim.indexBuffer->buffer.getGpuBuffer(), 0,
             prim.indexBuffer->indexType);
 
     // Finally, make the actual draw call. TODO: support subranges

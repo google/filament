@@ -81,23 +81,23 @@ struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes);
-    utils::FixedCapacityVector<VulkanBuffer*> buffers;
+    utils::FixedCapacityVector<VulkanBuffer const*> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
     VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-            indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-            buffer(new VulkanBuffer(context, stagePool,
-                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
+            buffer(context, stagePool,
+                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
+            indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
+    const VulkanBuffer buffer;
     const VkIndexType indexType;
-    const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
     VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
             uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
-    const std::unique_ptr<VulkanBuffer> buffer;
+    const VulkanBuffer buffer;
     BufferObjectBinding bindingType;
 };
 
