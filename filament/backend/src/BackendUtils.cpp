@@ -331,7 +331,7 @@ size_t getBlockHeight(TextureFormat format) noexcept {
 bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped) {
     // We only reshape 3 component pixel buffers: either RGB or RGB_INTEGER.
     if (!(data.format == PixelDataFormat::RGB || data.format == PixelDataFormat::RGB_INTEGER)) {
-        return;
+        return false;
     }
 
     const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
