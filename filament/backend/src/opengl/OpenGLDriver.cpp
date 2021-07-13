@@ -432,17 +432,29 @@ void OpenGLDriver::createIndexBufferR(
 void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
     DEBUG_MARKER()
+    assert_invariant(byteCount > 0);
 
     auto& gl = mContext;
-    GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount);
+    if (bindingType == BufferObjectBinding::VERTEX) {
+        gl.bindVertexArray(nullptr);
+    }
+
+    GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount, bindingType);
     glGenBuffers(1, &bo->gl.id);
-    gl.bindVertexArray(nullptr);
+    gl.bindBuffer(bo->gl.binding, bo->gl.id);
+    glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
+    CHECK_GL_ERROR(utils::slog.e)
+}
 
-    assert_invariant(byteCount > 0);
-    assert_invariant(bindingType == BufferObjectBinding::VERTEX);
+void OpenGLDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
+        BufferUsage usage) {
+    DEBUG_MARKER()
 
-    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferData(GL_ARRAY_BUFFER, byteCount, nullptr, getBufferUsage(usage));
+    auto& gl = mContext;
+    GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size, usage);
+    glGenBuffers(1, &ub->gl.ubo.id);
+    gl.bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo.id);
+    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -466,21 +478,6 @@ void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size
 
     construct<GLSamplerGroup>(sbh, size);
 }
-
-void OpenGLDriver::createUniformBufferR(
-        Handle<HwUniformBuffer> ubh,
-        uint32_t size,
-        BufferUsage usage) {
-    DEBUG_MARKER()
-
-    auto& gl = mContext;
-    GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size, usage);
-    glGenBuffers(1, &ub->gl.ubo.id);
-    gl.bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo.id);
-    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
 
 UTILS_NOINLINE
 void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
@@ -1216,12 +1213,21 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     DEBUG_MARKER()
-
     if (boh) {
         auto& gl = mContext;
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-        gl.deleteBuffers(1, &bo->gl.id, GL_ARRAY_BUFFER);
+        gl.deleteBuffers(1, &bo->gl.id, bo->gl.binding);
         destruct(boh, bo);
+    }
+}
+
+void OpenGLDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
+    DEBUG_MARKER()
+    if (ubh) {
+        auto& gl = mContext;
+        GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
+        gl.deleteBuffers(1, &ub->gl.ubo.id, GL_UNIFORM_BUFFER);
+        destruct(ubh, ub);
     }
 }
 
@@ -1249,16 +1255,6 @@ void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     if (sbh) {
         GLSamplerGroup* sb = handle_cast<GLSamplerGroup*>(sbh);
         destruct(sbh, sb);
-    }
-}
-
-void OpenGLDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    DEBUG_MARKER()
-    if (ubh) {
-        auto& gl = mContext;
-        GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
-        gl.deleteBuffers(1, &ub->gl.ubo.id, GL_UNIFORM_BUFFER);
-        destruct(ubh, ub);
     }
 }
 
@@ -1635,6 +1631,8 @@ void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
     GLVertexBuffer* vb = handle_cast<GLVertexBuffer *>(vbh);
     GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
 
+    assert_invariant(bo->gl.binding == GL_ARRAY_BUFFER);
+
     // If the specified VBO handle is different from what's already in the slot, then update the
     // slot and bump the cyclical version number. Dependent VAOs use the version number to detect
     // when they should be updated.
@@ -1675,9 +1673,12 @@ void OpenGLDriver::updateBufferObject(
 
     assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
-    gl.bindVertexArray(nullptr);
-    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, bd.size, bd.buffer);
+    if (bo->gl.binding == GL_ARRAY_BUFFER) {
+        gl.bindVertexArray(nullptr);
+    }
+    gl.bindBuffer(bo->gl.binding, bo->gl.id);
+    glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+    // TODO: handle the streaming like we did for UBOs
 
     scheduleDestroy(std::move(bd));
 

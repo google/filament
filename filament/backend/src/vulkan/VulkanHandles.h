@@ -96,10 +96,9 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
 
 struct VulkanBufferObject : public HwBufferObject {
     VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
-            uint32_t byteCount) : HwBufferObject(byteCount),
-            buffer(new VulkanBuffer(context, stagePool,
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, byteCount)) {}
+            uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
     const std::unique_ptr<VulkanBuffer> buffer;
+    BufferObjectBinding bindingType;
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
@@ -146,6 +145,16 @@ struct VulkanTimerQuery : public HwTimerQuery {
     VulkanContext& mContext;
     std::atomic<VulkanCommandBuffer const*> cmdbuffer;
 };
+
+inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
+        BufferObjectBinding bindingType) noexcept {
+    switch(bindingType) {
+        case BufferObjectBinding::VERTEX:
+            return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        case BufferObjectBinding::UNIFORM:
+            return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    }
+}
 
 } // namespace filament
 } // namespace backend
