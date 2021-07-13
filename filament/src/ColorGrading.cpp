@@ -52,6 +52,8 @@ struct ColorGrading::BuilderDetails {
     ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
 
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    // Exposure
+    float  exposure         = 0.0f;
     // White balance
     float2 whiteBalance     = {0.0f, 0.0f};
     // Channel mixer
@@ -86,6 +88,7 @@ struct ColorGrading::BuilderDetails {
         // Note: Do NOT compare hasAdjustments
         return quality == rhs.quality &&
                toneMapping == rhs.toneMapping &&
+               exposure == rhs.exposure &&
                whiteBalance == rhs.whiteBalance &&
                outRed == rhs.outRed &&
                outGreen == rhs.outGreen &&
@@ -121,6 +124,11 @@ ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel
 
 ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
     mImpl->toneMapping = toneMapping;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::exposure(float exposure) noexcept {
+    mImpl->exposure = exposure;
     return *this;
 }
 
@@ -195,6 +203,15 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     mImpl->hasAdjustments = hasAdjustments;
 
     return upcast(engine).createColorGrading(*this);
+}
+
+//------------------------------------------------------------------------------
+// White balance
+//------------------------------------------------------------------------------
+
+UTILS_ALWAYS_INLINE
+inline float3 adjustExposure(float3 v, float exposure) {
+    return v * std::exp2(exposure);
 }
 
 //------------------------------------------------------------------------------
@@ -505,6 +522,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
                     // TODO: Performed in sRGB, should be in Rec.2020 or AP1
                     if (builder->hasAdjustments) {
+                        // Exposure
+                        v = adjustExposure(v, builder->exposure);
                         // White balance
                         v = chromaticAdaptation(v, config.adaptationTransform);
                     }

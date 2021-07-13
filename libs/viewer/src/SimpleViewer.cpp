@@ -154,6 +154,8 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
 
+        ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
+
         if (ImGui::CollapsingHeader("White balance")) {
             int temperature = colorGrading.temperature * 100.0f;
             int tint = colorGrading.tint * 100.0f;

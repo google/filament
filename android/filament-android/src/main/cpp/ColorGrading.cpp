@@ -61,6 +61,13 @@ Java_com_google_android_filament_ColorGrading_nBuilderToneMapping(JNIEnv*, jclas
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderExposure(JNIEnv*, jclass,
+        jlong nativeBuilder, jfloat exposure) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->exposure(exposure);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderWhiteBalance(JNIEnv*, jclass,
         jlong nativeBuilder, jfloat temperature, jfloat tint) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;

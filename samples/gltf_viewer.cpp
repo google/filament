@@ -502,7 +502,7 @@ int main(int argc, char** argv) {
 
         loadResources(filename);
 
-        createGroundPlane(engine, scene, app);
+        createImageRenderable(engine, scene, app);
 
         app.viewer->setUiCallback([&app, scene, view, engine] () {
             auto& automation = *app.automationEngine;
