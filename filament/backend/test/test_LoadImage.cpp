@@ -351,6 +351,7 @@ TEST_F(BackendTest, UpdateImage2D) {
     // Test texture formats not all backends support natively.
     // TODO: Vulkan crashes with "VK_FORMAT_R32G32B32_SFLOAT is not supported"
     testCases.emplace_back("RGB, FLOAT -> RGB32F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F);
+    testCases.emplace_back("RGB, FLOAT -> RGB16F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB16F);
 
     // Test packed format uploads.
     // TODO: Vulkan crashes with "Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)"
