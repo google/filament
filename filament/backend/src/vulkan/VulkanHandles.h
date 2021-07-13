@@ -134,6 +134,7 @@ struct VulkanFence : public HwFence {
 };
 
 struct VulkanSync : public HwSync {
+    VulkanSync() {}
     VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
@@ -144,7 +145,7 @@ struct VulkanTimerQuery : public HwTimerQuery {
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
     VulkanContext& mContext;
-    std::atomic<VulkanCommandBuffer const*> cmdbuffer;
+    std::atomic<VulkanCommandBuffer const*> cmdbuffer = nullptr;
 };
 
 } // namespace filament

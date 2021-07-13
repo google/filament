@@ -74,8 +74,7 @@ HandleBase::HandleId HandleAllocator::allocateHandleSlow(size_t size) noexcept {
 
     if (UTILS_UNLIKELY(id == (HEAP_HANDLE_FLAG|1u))) { // meaning id was zero
         PANIC_LOG("HandleAllocator arena is full, using slower system heap. Please increase "
-                  "FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB which is currently set to %u MiB.",
-                FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB);
+                  "the appropriate constant (e.g. FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB).");
     }
     return id;
 }

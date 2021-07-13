@@ -660,7 +660,9 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
 }
 
 Handle<HwSync> VulkanDriver::createSyncS() noexcept {
-    return alloc_handle<VulkanSync, HwSync>();
+    Handle<HwSync> sh = alloc_handle<VulkanSync, HwSync>();
+    construct_handle<VulkanSync>(mHandleMap, sh);
+    return sh;
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {

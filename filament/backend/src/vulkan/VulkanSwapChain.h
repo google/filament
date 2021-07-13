@@ -37,28 +37,28 @@ struct VulkanSwapChain : public HwSwapChain {
     VulkanAttachment& getColor() { return color[currentSwapIndex]; }
 
     VulkanContext& context;
-    VkSurfaceKHR surface;
-    VkSwapchainKHR swapchain;
-    VkSurfaceFormatKHR surfaceFormat;
-    VkExtent2D clientSize;
-    VkQueue presentQueue;
-    VkQueue headlessQueue;
-    uint32_t currentSwapIndex;
+    VkSurfaceKHR surface = {};
+    VkSwapchainKHR swapchain = {};
+    VkSurfaceFormatKHR surfaceFormat = {};
+    VkExtent2D clientSize = {};
+    VkQueue presentQueue = {};
+    VkQueue headlessQueue = {};
+    uint32_t currentSwapIndex = {};
 
     // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
     // in a swap chain.
     utils::FixedCapacityVector<VulkanAttachment> color;
-    VulkanAttachment depth;
+    VulkanAttachment depth = {};
 
     // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
     // submission.
-    VkSemaphore imageAvailable;
+    VkSemaphore imageAvailable = {};
 
     // This is true after the swap chain image has been acquired, but before it has been presented.
-    bool acquired;
+    bool acquired = false;
 
-    bool suboptimal;
-    bool firstRenderPass;
+    bool suboptimal = false;
+    bool firstRenderPass = false;
 };
 
 } // namespace filament
