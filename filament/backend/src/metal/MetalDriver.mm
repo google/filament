@@ -712,7 +712,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     auto* vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     auto* bufferObject = handle_cast<MetalBufferObject>(mHandleMap, boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    assert_invariant(bufferObject->getBuffer());
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
