@@ -73,7 +73,12 @@ struct App {
         IndexBuffer* imageIndexBuffer = nullptr;
         Material* imageMaterial = nullptr;
         Texture* imageTexture = nullptr;
+        Texture* defaultTexture = nullptr;
+        TextureSampler sampler;
     } scene;
+
+    bool showImage = false;
+    float3 backgroundColor = float3(0.0f);
 
     // zero-initialized so that the first time through is always dirty.
     ColorGradingSettings lastColorGradingOptions = { 0 };
@@ -195,9 +200,33 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.imageVertexBuffer = vertexBuffer;
     app.scene.imageIndexBuffer = indexBuffer;
     app.scene.imageMaterial = material;
+
+    Texture* texture = Texture::Builder()
+            .width(1)
+            .height(1)
+            .levels(1)
+            .format(Texture::InternalFormat::RGBA8)
+            .sampler(Texture::Sampler::SAMPLER_2D)
+            .build(*engine);
+    static uint32_t pixel = 0;
+    Texture::PixelBufferDescriptor buffer(&pixel, 4, Texture::Format::RGBA, Texture::Type::UBYTE);
+    texture->setImage(*engine, 0, std::move(buffer));
+
+    app.scene.defaultTexture = texture;
 }
 
 static void loadImage(App& app, Engine* engine, Path filename) {
+    if (app.scene.imageTexture) {
+        engine->destroy(app.scene.imageTexture);
+        app.scene.imageTexture = nullptr;
+    }
+
+    if (!filename.exists()) {
+        std::cerr << "The input image does not exist: " << filename << std::endl;
+        app.showImage = false;
+        return;
+    }
+
     std::ifstream inputStream(filename, std::ios::binary);
     LinearImage image = ImageDecoder::decode(
             inputStream, filename, ImageDecoder::ColorSpace::LINEAR);
@@ -205,12 +234,14 @@ static void loadImage(App& app, Engine* engine, Path filename) {
     uint32_t channels = image.getChannels();
     if (channels != 3) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
-        exit(1);
+        app.showImage = false;
+        return;
     }
 
     if (!image.isValid()) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
-        exit(1);
+        app.showImage = false;
+        return;
     }
 
     inputStream.close();
@@ -252,18 +283,13 @@ static void loadImage(App& app, Engine* engine, Path filename) {
     texture->setImage(*engine, 0, std::move(buffer));
     texture->generateMipmaps(*engine);
 
-    TextureSampler sampler;
-    sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
-    sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
-    sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
-    sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+    app.scene.sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
+    app.scene.sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
+    app.scene.sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
+    app.scene.sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
 
-    app.scene.imageMaterial->setDefaultParameter("image", texture, sampler);
-
-    if (app.scene.imageTexture) {
-        engine->destroy(app.scene.imageTexture);
-    }
     app.scene.imageTexture = texture;
+    app.showImage = true;
 }
 
 int main(int argc, char** argv) {
@@ -290,9 +316,13 @@ int main(int argc, char** argv) {
 
         createImageRenderable(engine, scene, app);
 
-        if (filename.exists()) {
-            loadImage(app, engine, filename);
-        }
+        loadImage(app, engine, filename);
+
+        app.viewer->setUiCallback([&app] () {
+            if (ImGui::CollapsingHeader("Image", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::ColorEdit3("Background color", &app.backgroundColor.r);
+            }
+        });
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -301,6 +331,7 @@ int main(int argc, char** argv) {
         engine->destroy(app.scene.imageIndexBuffer);
         engine->destroy(app.scene.imageMaterial);
         engine->destroy(app.scene.imageTexture);
+        engine->destroy(app.scene.defaultTexture);
         engine->destroy(app.colorGrading);
 
         delete app.viewer;
@@ -334,7 +365,7 @@ int main(int argc, char** argv) {
             view->setColorGrading(nullptr);
         }
 
-        if (app.scene.imageTexture) {
+        if (app.showImage) {
             Texture *texture = app.scene.imageTexture;
             float srcWidth = texture->getWidth();
             float srcHeight = texture->getHeight();
@@ -360,13 +391,22 @@ int main(int argc, char** argv) {
             }
 
             mat3f transform(
-                 1.0f / sx,  0.0f,       0.0f,
-                 0.0f,       1.0f / sy,  0.0f,
-                -tx,        -ty,         1.0f
+                    1.0f / sx,  0.0f,       0.0f,
+                    0.0f,       1.0f / sy,  0.0f,
+                    -tx,        -ty,         1.0f
             );
 
             app.scene.imageMaterial->setDefaultParameter("transform", transform);
+            app.scene.imageMaterial->setDefaultParameter(
+                    "image", app.scene.imageTexture, app.scene.sampler);
+        } else {
+            app.scene.imageMaterial->setDefaultParameter(
+                    "image", app.scene.defaultTexture, app.scene.sampler);
         }
+
+        app.scene.imageMaterial->setDefaultParameter("showImage", app.showImage ? 1 : 0);
+        app.scene.imageMaterial->setDefaultParameter(
+                "backgroundColor", RgbType::sRGB, app.backgroundColor);
     };
 
     FilamentApp& filamentApp = FilamentApp::get();

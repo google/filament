@@ -9,6 +9,14 @@ material {
             type : mat3,
             name : transform,
             precision : high
+        },
+        {
+            type : float3,
+            name : backgroundColor
+        },
+        {
+            type : int,
+            name : showImage
         }
     ],
     variables : [
@@ -32,9 +40,11 @@ fragment {
         prepareMaterial(material);
 
         highp vec2 uv = (materialParams.transform * vec3(saturate(variable_imageUV.st), 1.0)).st;
-        if (uv.s > 1.0 || uv.s < 0.0 || uv.t < 0.0 || uv.t > 1.0) discard;
-        uv.t = 1.0 - uv.t;
-
-        material.baseColor = textureLod(materialParams_image, uv.st, 0.0);
+        if (materialParams.showImage == 0 || uv.s > 1.0 || uv.s < 0.0 || uv.t < 0.0 || uv.t > 1.0) {
+            material.baseColor = vec4(materialParams.backgroundColor, 1.0);
+        } else {
+            uv.t = 1.0 - uv.t;
+            material.baseColor = texture(materialParams_image, uv.st);
+        }
     }
 }
