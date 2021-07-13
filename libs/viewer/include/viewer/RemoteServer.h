@@ -19,6 +19,8 @@
 
 #include <viewer/Settings.h>
 
+#include <utils/compiler.h>
+
 #include <stddef.h>
 #include <mutex>
 
@@ -50,7 +52,7 @@ struct ReceivedMessage {
  * to pop it off the small internal queue. When they are done examining the message contents
  * they should call releaseReceivedMessage.
  */
-class RemoteServer {
+class UTILS_PUBLIC RemoteServer {
 public:
     RemoteServer(int port = 8082);
     ~RemoteServer();

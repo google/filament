@@ -17,6 +17,8 @@
 #ifndef FILAGUI_IMGUIEXTENSIONS_H
 #define FILAGUI_IMGUIEXTENSIONS_H
 
+#include <utils/compiler.h>
+
 struct ImVec2;
 
 /**
@@ -34,6 +36,7 @@ namespace ImGuiExt {
      * then normalize it. Clients should not directly normalize the UI value as this would cause
      * surprises for users who attempt to type in individual components.
      */
+    UTILS_PUBLIC
     bool DirectionWidget(const char* label, float v[3]);
 
     /**
@@ -44,6 +47,7 @@ namespace ImGuiExt {
      * - series_end: called when a series is done rendering
      * - values_getter: the first parameter indicates which series is being rendered
      */
+    UTILS_PUBLIC
     void PlotLinesSeries(const char* label, int series_count,
             void (*series_start)(int series),
             float (*values_getter)(int series, void* data, int idx),

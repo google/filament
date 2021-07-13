@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#ifndef CAMUTILS_COMPILER_H
+#define CAMUTILS_COMPILER_H
+
 #if __has_attribute(visibility)
-#    define UTILS_PUBLIC __attribute__((visibility("default")))
+#    define CAMUTILS_PUBLIC __attribute__((visibility("default")))
 #else
-#    define UTILS_PUBLIC
+#    define CAMUTILS_PUBLIC
 #endif
 
-UTILS_PUBLIC
-void bar() noexcept {
-}
+#endif // CAMUTILS_COMPILER_H

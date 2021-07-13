@@ -17,6 +17,8 @@
 #ifndef IMAGE_LINEARIMAGE_H
 #define IMAGE_LINEARIMAGE_H
 
+#include <utils/compiler.h>
+
 #include <cstdint>
 
 /**
@@ -39,7 +41,7 @@ namespace image {
  * function in ImageOps to combine planar data. Pixels are stored such that the row stride is simply
  * width * channels * sizeof(float).
  */
-class LinearImage {
+class UTILS_PUBLIC LinearImage {
 public:
 
     ~LinearImage();

@@ -21,6 +21,8 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 
+#include <utils/compiler.h>
+
 #include <array>
 #include <string>
 
@@ -120,7 +122,7 @@ inline uint8_t getNumUvSets(const UvMap& uvmap) {
  * MaterialProvider is destroyed, which allows clients to take ownership if desired.
  *
  */
-class MaterialProvider {
+class UTILS_PUBLIC MaterialProvider {
 public:
     virtual ~MaterialProvider() {}
 
@@ -177,6 +179,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap,
  *
  * @see createUbershaderLoader
  */
+UTILS_PUBLIC
 MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimizeShaders = false);
 
 /**
@@ -188,6 +191,7 @@ MaterialProvider* createMaterialGenerator(filament::Engine* engine, bool optimiz
  *
  * @see createMaterialGenerator
  */
+UTILS_PUBLIC
 MaterialProvider* createUbershaderLoader(filament::Engine* engine);
 
 } // namespace gltfio

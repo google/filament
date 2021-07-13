@@ -24,6 +24,8 @@
 #include <filament/Scene.h>
 #include <filament/View.h>
 
+#include <utils/compiler.h>
+
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -70,9 +72,10 @@ void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox
         Renderer* renderer);
 
 // Creates a new ColorGrading object based on the given settings.
+UTILS_PUBLIC
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine);
 
-class JsonSerializer {
+class UTILS_PUBLIC JsonSerializer {
 public:
     JsonSerializer();
     ~JsonSerializer();

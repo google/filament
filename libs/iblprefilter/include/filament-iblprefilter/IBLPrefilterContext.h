@@ -17,6 +17,7 @@
 #ifndef TNT_IBL_PREFILTER_IBLPREFILTER_H
 #define TNT_IBL_PREFILTER_IBLPREFILTER_H
 
+#include <utils/compiler.h>
 #include <utils/Entity.h>
 
 #include <filament/Texture.h>
@@ -54,7 +55,7 @@ class Texture;
  *     .build(engine);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class IBLPrefilterContext {
+class UTILS_PUBLIC IBLPrefilterContext {
 public:
 
     /**

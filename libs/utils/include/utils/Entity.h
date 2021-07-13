@@ -17,6 +17,8 @@
 #ifndef TNT_UTILS_ENTITY_H
 #define TNT_UTILS_ENTITY_H
 
+#include <utils/compiler.h>
+
 // FIXME: could we get rid of <functional>
 #include <functional>   // for std::hash
 
@@ -25,7 +27,7 @@
 
 namespace utils {
 
-class Entity {
+class UTILS_PUBLIC Entity {
 public:
     // this can be used to create an array of to-be-filled entities (see create())
     Entity() noexcept = default;

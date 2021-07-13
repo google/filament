@@ -18,6 +18,7 @@
 #define CAMUTILS_MANIPULATOR_H
 
 #include <camutils/Bookmark.h>
+#include <camutils/compiler.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -73,7 +74,7 @@ enum class Fov { VERTICAL, HORIZONTAL };
  * @see Bookmark
  */
 template <typename FLOAT>
-class Manipulator {
+class CAMUTILS_PUBLIC Manipulator {
 public:
     using vec2 = filament::math::vec2<FLOAT>;
     using vec3 = filament::math::vec3<FLOAT>;

@@ -22,9 +22,11 @@
 
 #include <image/LinearImage.h>
 
+#include <utils/compiler.h>
+
 namespace image {
 
-class ImageEncoder {
+class UTILS_PUBLIC ImageEncoder {
 public:
     enum class Format {
         PNG,        // 8-bit sRGB, 1 or 3 channels

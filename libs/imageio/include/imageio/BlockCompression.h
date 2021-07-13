@@ -26,6 +26,8 @@
 
 #include <math/vec2.h>
 
+#include <utils/compiler.h>
+
 #include <stdint.h>
 
 namespace image {
@@ -184,6 +186,7 @@ struct CompressionConfig {
 
 bool parseOptionString(const std::string& options, CompressionConfig* config);
 
+UTILS_PUBLIC
 CompressedTexture compressTexture(const CompressionConfig& config, const LinearImage& image);
 
 } // namespace image

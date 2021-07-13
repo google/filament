@@ -94,7 +94,7 @@ public:
      *
      * @see generatePrefilterMipmap()
      */
-    struct UTILS_PUBLIC PrefilterOptions {
+    struct PrefilterOptions {
         uint16_t sampleCount = 8;   //!< sample count used for filtering
         bool mirror = true;         //!< whether the environment must be mirrored
     private:

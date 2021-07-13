@@ -20,6 +20,7 @@
 #include <filament/Box.h>
 #include <filament/TextureSampler.h>
 
+#include <utils/compiler.h>
 #include <utils/Entity.h>
 
 namespace filament {
@@ -52,7 +53,7 @@ class FilamentInstance;
  *
  * \todo Only the default glTF scene is loaded, other glTF scenes are ignored.
  */
-class FilamentAsset {
+class UTILS_PUBLIC FilamentAsset {
 public:
 
     /**
