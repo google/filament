@@ -62,7 +62,7 @@ private:
     filament::backend::CommandBufferQueue commandBufferQueue;
     filament::backend::DriverApi commandStream;
 
-    filament::backend::Handle<filament::backend::HwUniformBuffer> uniform;
+    filament::backend::Handle<filament::backend::HwBufferObject> uniform;
 };
 
 } // namespace test

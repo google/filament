@@ -103,20 +103,6 @@ struct VulkanBufferObject : public HwBufferObject {
     const BufferObjectBinding bindingType;
 };
 
-struct VulkanUniformBuffer : public HwUniformBuffer {
-    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-            uint32_t numBytes, backend::BufferUsage usage);
-    ~VulkanUniformBuffer();
-    void loadFromCpu(const void* cpuData, uint32_t numBytes);
-    VkBuffer getGpuBuffer() const { return mGpuBuffer; }
-
-private:
-    VulkanContext& mContext;
-    VulkanStagePool& mStagePool;
-    VkBuffer mGpuBuffer;
-    VmaAllocation mGpuMemory;
-};
-
 struct VulkanSamplerGroup : public HwSamplerGroup {
     VulkanSamplerGroup(uint32_t count) : HwSamplerGroup(count) {}
 };

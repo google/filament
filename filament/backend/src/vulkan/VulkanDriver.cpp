@@ -400,28 +400,6 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
     construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, count);
 }
 
-void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
-        BufferUsage usage) {
-    auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
-            mStagePool, size, usage);
-    mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
-        destruct_handle<VulkanUniformBuffer>(mHandleMap, ubh);
-    });
-}
-
-void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    if (ubh) {
-        auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-        mPipelineCache.unbindUniformBuffer(buffer->getGpuBuffer());
-
-        // Decrement the refcount of the uniform buffer, but schedule it for destruction a few
-        // frames in the future. To be safe, we need to assume that the current command buffer is
-        // still using it somewhere.
-        mDisposer.acquire(buffer);
-        mDisposer.removeReference(buffer);
-    }
-}
-
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
     construct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
 }
@@ -640,10 +618,6 @@ Handle<HwTexture> VulkanDriver::importTextureS() noexcept {
 
 Handle<HwSamplerGroup> VulkanDriver::createSamplerGroupS() noexcept {
     return alloc_handle<VulkanSamplerGroup, HwSamplerGroup>();
-}
-
-Handle<HwUniformBuffer> VulkanDriver::createUniformBufferS() noexcept {
-    return alloc_handle<VulkanUniformBuffer, HwUniformBuffer>();
 }
 
 Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
@@ -979,15 +953,6 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) { }
 
 bool VulkanDriver::canGenerateMipmaps() {
     return false;
-}
-
-void VulkanDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
-    if (data.size > 0) {
-        auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-        buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
-        mDisposer.acquire(buffer);
-        scheduleDestroy(std::move(data));
-    }
 }
 
 void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
@@ -1345,18 +1310,18 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             result == VK_ERROR_OUT_OF_DATE_KHR);
 }
 
-void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
-    auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
+    auto* bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
     const VkDeviceSize size = VK_WHOLE_SIZE;
-    mPipelineCache.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
+    mPipelineCache.bindUniformBuffer((uint32_t) index, bo->buffer.getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+void VulkanDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
-    auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-    mPipelineCache.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
+    auto* bo = handle_cast<VulkanBufferObject>(mHandleMap, boh);
+    mPipelineCache.bindUniformBuffer((uint32_t)index, bo->buffer.getGpuBuffer(), offset, size);
 }
 
 void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {

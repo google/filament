@@ -121,7 +121,6 @@ public:
 
 private:
     MetalBuffer buffer;
-
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
@@ -133,12 +132,6 @@ struct MetalVertexBuffer : public HwVertexBuffer {
 
 struct MetalIndexBuffer : public HwIndexBuffer {
     MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount);
-
-    MetalBuffer buffer;
-};
-
-struct MetalUniformBuffer : public HwUniformBuffer {
-    MetalUniformBuffer(MetalContext& context, size_t size);
 
     MetalBuffer buffer;
 };

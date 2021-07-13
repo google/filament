@@ -67,7 +67,7 @@ void RenderPass::resize(size_t count) noexcept {
 }
 
 void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> vr,
-        backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept {
+        backend::Handle<backend::HwBufferObject> uboHandle) noexcept {
     mRenderableSoa = &soa;
     mVisibleRenderables = vr;
     mUboHandle = uboHandle;
@@ -531,7 +531,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
         PolygonOffset* const pPipelinePolygonOffset =
                 mPolygonOffsetOverride ? &dummyPolyOffset : &pipeline.polygonOffset;
 
-        Handle<HwUniformBuffer> uboHandle = mUboHandle;
+        Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const& customCommands = mCustomCommands;

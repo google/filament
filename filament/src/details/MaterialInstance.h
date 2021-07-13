@@ -149,7 +149,7 @@ private:
 
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
-    backend::Handle<backend::HwUniformBuffer> mUbHandle;
+    backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
 
     UniformBuffer mUniforms;

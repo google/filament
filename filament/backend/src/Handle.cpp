@@ -62,7 +62,6 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwIndexBuffer>& 
 template io::ostream& operator<<(io::ostream& out, const Handle<HwRenderPrimitive>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwProgram>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwSamplerGroup>& h) noexcept;
-template io::ostream& operator<<(io::ostream& out, const Handle<HwUniformBuffer>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwTexture>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwRenderTarget>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwFence>& h) noexcept;

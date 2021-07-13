@@ -218,10 +218,6 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
 DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
         uint32_t, size)
 
-DECL_DRIVER_API_R_N(backend::UniformBufferHandle, createUniformBuffer,
-        uint32_t, size,
-        backend::BufferUsage, usage)
-
 DECL_DRIVER_API_R_0(backend::RenderPrimitiveHandle, createRenderPrimitive)
 
 DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
@@ -270,7 +266,6 @@ DECL_DRIVER_API_N(destroyBufferObject,    backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive, backend::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_N(destroyProgram,         backend::ProgramHandle, ph)
 DECL_DRIVER_API_N(destroySamplerGroup,    backend::SamplerGroupHandle, sbh)
-DECL_DRIVER_API_N(destroyUniformBuffer,   backend::UniformBufferHandle, ubh)
 DECL_DRIVER_API_N(destroyTexture,         backend::TextureHandle, th)
 DECL_DRIVER_API_N(destroyRenderTarget,    backend::RenderTargetHandle, rth)
 DECL_DRIVER_API_N(destroySwapChain,       backend::SwapChainHandle, sch)
@@ -325,10 +320,6 @@ DECL_DRIVER_API_N(updateBufferObject,
         backend::BufferObjectHandle, ibh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
-
-DECL_DRIVER_API_N(loadUniformBuffer,
-        backend::UniformBufferHandle, ubh,
-        backend::BufferDescriptor&&, buffer)
 
 DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
@@ -428,11 +419,11 @@ DECL_DRIVER_API_N(commit,
 
 DECL_DRIVER_API_N(bindUniformBuffer,
         uint32_t, index,
-        backend::UniformBufferHandle, ubh)
+        backend::BufferObjectHandle, ubh)
 
 DECL_DRIVER_API_N(bindUniformBufferRange,
         uint32_t, index,
-        backend::UniformBufferHandle, ubh,
+        backend::BufferObjectHandle, ubh,
         uint32_t, offset,
         uint32_t, size)
 

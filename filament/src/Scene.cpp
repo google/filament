@@ -194,7 +194,7 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
     }
 }
 
-void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept {
+void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwBufferObject> renderableUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
 
@@ -263,7 +263,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     // TODO: handle static objects separately
     mHasContactShadows = hasContactShadows;
     mRenderableViewUbh = renderableUbh;
-    driver.loadUniformBuffer(renderableUbh, { buffer, size });
+    driver.updateBufferObject(renderableUbh, { buffer, size }, 0);
 
     if (mSkybox) {
         mSkybox->commit(driver);
@@ -276,7 +276,7 @@ void FScene::terminate(FEngine& engine) {
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena,
-        backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept {
+        backend::Handle<backend::HwBufferObject> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();
@@ -312,7 +312,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         lp[gpuIndex].type                 = lcm.isPointLight(li) ? 0u : 1u;
     }
 
-    driver.loadUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });
+    driver.updateBufferObject(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) }, 0);
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
