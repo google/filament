@@ -64,6 +64,7 @@ class FColorGrading;
  * ========
  *
  * The various transforms held by ColorGrading are applied in the following order:
+ * - Exposure
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
@@ -78,6 +79,7 @@ class FColorGrading;
  * ========
  *
  * Here are the default color grading options:
+ * - Exposure: 0.0
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
@@ -151,6 +153,19 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
+
+        /**
+         * Adjusts the exposure of this image. The exposure is specified in stops:
+         * each stop brightens (positive values) or darkens (negative values) the image by
+         * a factor of 2. This means that an exposure of 3 will brighten the image 8 times
+         * more than an exposure of 0 (2^3 = 8 and 2^0 = 1). Contrary to the camera's exposure,
+         * this setting is applied after all post-processing (bloom, etc.) are applied.
+         *
+         * @param exposure Value in EV stops. Can be negative, 0, or positive.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& exposure(float exposure) noexcept;
 
         /**
          * Adjusts the while balance of the image. This can be used to remove color casts

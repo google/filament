@@ -279,6 +279,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "toneMapping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
+        } else if (compare(tok, jsonChunk, "exposure") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->exposure);
         } else if (compare(tok, jsonChunk, "temperature") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->temperature);
         } else if (compare(tok, jsonChunk, "tint") == 0) {
@@ -963,6 +965,7 @@ void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
     return ColorGrading::Builder()
         .quality(settings.quality)
+        .exposure(settings.exposure)
         .whiteBalance(settings.temperature, settings.tint)
         .channelMixer(settings.outRed, settings.outGreen, settings.outBlue)
         .shadowsMidtonesHighlights(
@@ -1086,6 +1089,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
+        << "\"exposure\": " << (in.exposure) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
         << "\"outRed\": " << (in.outRed) << ",\n"
@@ -1339,10 +1343,11 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 200, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 204, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
+            exposure == rhs.exposure &&
             temperature == rhs.temperature &&
             tint == rhs.tint &&
             outRed == rhs.outRed &&
