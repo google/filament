@@ -267,11 +267,11 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
 }
 
 MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(std::make_unique<MetalBuffer>(context, byteCount)) {}
+        : HwBufferObject(byteCount), buffer(context, byteCount) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     assert_invariant(byteOffset + size <= byteCount);
-    buffer->copyIntoBuffer(data, size);
+    buffer.copyIntoBuffer(data, size);
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,

@@ -117,10 +117,10 @@ public:
     MetalBufferObject(MetalContext& context, uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
-    MetalBuffer* getBuffer() const { return buffer.get(); }
+    MetalBuffer* getBuffer() { return &buffer; }
 
 private:
-    std::unique_ptr<MetalBuffer> buffer = nullptr;
+    MetalBuffer buffer;
 
 };
 
