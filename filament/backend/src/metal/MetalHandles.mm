@@ -665,6 +665,9 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
     const size_t stagingBufferSize = shape.totalBytes;
     const bool largeUpload = stagingBufferSize > deviceMaxBufferLength;
 
+    // TODO: these two assertions can be removed once MetalBlitter supports blitting into 3D
+    // textures.
+
     ASSERT_PRECONDITION(!nonBlittableTexture || !conversionNecessary,
             "SAMPLER_2D_ARRAY, SAMPLER_3D, and SAMPLER_CUBEMAP texture uploads"
             "do not support format conversions.");

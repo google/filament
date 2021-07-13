@@ -329,8 +329,9 @@ size_t getBlockHeight(TextureFormat format) noexcept {
 }
 
 bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped) {
-    if (data.format != PixelDataFormat::RGB && data.format != PixelDataFormat::RGB_INTEGER) {
-        return false;
+    // We only reshape 3 component pixel buffers: either RGB or RGB_INTEGER.
+    if (!(data.format == PixelDataFormat::RGB || data.format == PixelDataFormat::RGB_INTEGER)) {
+        return;
     }
 
     const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
@@ -363,7 +364,6 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
             reshaped = std::move(pbd);
             return true;
         }
-
         case PixelDataType::FLOAT: {
             uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
             DataReshaper::reshape<float, 3, 4>(bytes, data.buffer, data.size);
@@ -371,7 +371,6 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
             reshaped = std::move(pbd);
             return true;
         }
-
         default:
            return false;
     }

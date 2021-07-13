@@ -164,13 +164,13 @@ struct MetalProgram : public HwProgram {
 };
 
 struct PixelBufferShape {
-    size_t bytesPerPixel;
-    size_t bytesPerRow;
-    size_t bytesPerSlice;
-    size_t totalBytes;
+    uint32_t bytesPerPixel;
+    uint32_t bytesPerRow;
+    uint32_t bytesPerSlice;
+    uint32_t totalBytes;
 
     // Offset into the buffer where the pixel data begins.
-    size_t sourceOffset;
+    uint32_t sourceOffset;
 
     static PixelBufferShape compute(const PixelBufferDescriptor& data, TextureFormat format,
             MTLSize size, uint32_t byteOffset);
