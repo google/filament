@@ -429,10 +429,8 @@ void OpenGLDriver::createIndexBufferR(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createBufferObjectR(
-        Handle<HwBufferObject> boh,
-        uint32_t byteCount,
-        BufferObjectBinding bindingType) {
+void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
+        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -444,7 +442,7 @@ void OpenGLDriver::createBufferObjectR(
     assert_invariant(bindingType == BufferObjectBinding::VERTEX);
 
     gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferData(GL_ARRAY_BUFFER, byteCount, nullptr, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, byteCount, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 

@@ -210,13 +210,13 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffer
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {
+        uint32_t indexCount, BufferUsage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<MetalIndexBuffer>(mHandleMap, ibh, *mContext, elementSize, indexCount);
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType) {
+        BufferObjectBinding bindingType, BufferUsage) {
     construct_handle<MetalBufferObject>(mHandleMap, boh, *mContext, byteCount);
 }
 
@@ -274,8 +274,7 @@ void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size)
     mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
 }
 
-void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
-        BufferUsage usage) {
+void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size, BufferUsage) {
     construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
 }
 
