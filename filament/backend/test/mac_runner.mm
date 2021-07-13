@@ -81,9 +81,9 @@ test::NativeView getNativeView() {
     // This is important, as it allows us to read pixels from the default swap chain.
     metalLayer.framebufferOnly = NO;
 
-    // It's important to set the drawableSize to the actual backing pixels. When rendering
-    // full-screen, we can skip the macOS compositor if the size matches the display size.
-    metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+    // For test cases, we explicitly don't use convertSizeToBacking here because we want test cases
+    // to run the same on retina and non-retina displays.
+    metalLayer.drawableSize = CGSizeMake(512, 512);
 
     // This is set to NO by default, but is also important to ensure we can bypass the compositor
     // in full-screen mode

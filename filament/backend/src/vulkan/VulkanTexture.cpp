@@ -17,6 +17,8 @@
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
 
+#include <private/backend/BackendUtils.h>
+
 #include "DataReshaper.h"
 
 #include <utils/Panic.h>
@@ -264,45 +266,8 @@ void VulkanTexture::update3DImage(const PixelBufferDescriptor& data, uint32_t wi
     // First, reshape 3-component data into 4-component data. The fourth component is usually
     // set to 1 (one exception is when type = HALF). In practice, alpha is just a dummy channel.
     // Note that the reshaped data is freed at the end of this method due to the callback.
-
-    if (data.format == PixelDataFormat::RGB) {
-        const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
-        const size_t reshapedSize = 4 * data.size / 3;
-        const PixelDataFormat reshapedFormat = PixelDataFormat::RGBA;
-        switch (data.type) {
-            case PixelDataType::BYTE:
-            case PixelDataType::UBYTE: {
-                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
-                DataReshaper::reshape<uint8_t, 3, 4>(bytes, data.buffer, data.size);
-                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
-                reshapedData = std::move(pbd);
-                hostData = &reshapedData;
-                break;
-            }
-            case PixelDataType::SHORT:
-            case PixelDataType::USHORT:
-            case PixelDataType::HALF: {
-                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
-                DataReshaper::reshape<uint16_t, 3, 4>(bytes, data.buffer, data.size);
-                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
-                reshapedData = std::move(pbd);
-                hostData = &reshapedData;
-                break;
-            }
-            case PixelDataType::INT:
-            case PixelDataType::UINT:
-            case PixelDataType::FLOAT: {
-                uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
-                DataReshaper::reshape<uint32_t, 3, 4>(bytes, data.buffer, data.size);
-                PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
-                reshapedData = std::move(pbd);
-                hostData = &reshapedData;
-                break;
-            }
-
-            default:
-                break;
-        }
+    if (reshape(data, reshapedData)) {
+        hostData = &reshapedData;
     }
 
     // If format conversion is both required and supported, use vkCmdBlitImage. Otherwise, use
