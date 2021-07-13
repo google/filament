@@ -272,8 +272,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
 VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
         uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
         : HwBufferObject(byteCount),
-          buffer(std::make_unique<VulkanBuffer>(context, stagePool,
-                  getBufferObjectUsage(bindingType), byteCount)),
+          buffer(context, stagePool, getBufferObjectUsage(bindingType), byteCount),
           bindingType(bindingType) {
 }
 
