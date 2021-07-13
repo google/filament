@@ -72,6 +72,9 @@ struct HwBufferObject : public HwBase {
     HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
+struct HwUniformBuffer : public HwBase {
+};
+
 struct HwIndexBuffer : public HwBase {
     uint32_t count : 27;
     uint32_t elementSize : 5;
@@ -109,9 +112,6 @@ struct HwSamplerGroup : public HwBase {
     std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
     HwSamplerGroup() noexcept = default;
     explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
-};
-
-struct HwUniformBuffer : public HwBase {
 };
 
 struct HwTexture : public HwBase {

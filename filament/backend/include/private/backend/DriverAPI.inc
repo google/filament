@@ -177,7 +177,8 @@ DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
 
 DECL_DRIVER_API_R_N(backend::BufferObjectHandle, createBufferObject,
         uint32_t, byteCount,
-        backend::BufferObjectBinding, bindingType)
+        backend::BufferObjectBinding, bindingType,
+        backend::BufferUsage, usage)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         backend::SamplerType, target,

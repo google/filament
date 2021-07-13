@@ -467,9 +467,9 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
-        uint32_t byteCount, BufferObjectBinding bindingType) {
-    auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh, mContext, mStagePool,
-            byteCount);
+        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
+    auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh,
+            mContext, mStagePool, byteCount);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
        destruct_handle<VulkanBufferObject>(mHandleMap, boh);
     });
