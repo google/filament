@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,6 @@
 #include <math/norm.h>
 
 #include <imgui.h>
-#include <filagui/ImGuiExtensions.h>
 
 #include <imageio/ImageDecoder.h>
 
@@ -370,17 +369,13 @@ int main(int argc, char** argv) {
         }
     };
 
-    auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
-        // TODO
-    };
-
     FilamentApp& filamentApp = FilamentApp::get();
 
     filamentApp.setDropHandler([&] (std::string path) {
         loadImage(app, app.engine, Path(path));
     });
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
+    filamentApp.run(app.config, setup, cleanup, gui, preRender);
 
     return 0;
 }

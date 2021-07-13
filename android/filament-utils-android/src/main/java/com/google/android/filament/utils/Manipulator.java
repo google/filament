@@ -267,7 +267,7 @@ public class Manipulator {
          * @return this <code>Builder</code> object for chaining calls
          */
         @NonNull
-        public Builder imageEntity(float a, float b, float c, float d) {
+        public Builder groundPlane(float a, float b, float c, float d) {
             nBuilderGroundPlane(mNativeBuilder, a, b, c, d);
             return this;
         }
