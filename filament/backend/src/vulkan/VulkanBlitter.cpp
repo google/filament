@@ -220,8 +220,11 @@ void VulkanBlitter::shutdown() noexcept {
             mTriangleBuffer = nullptr;
         }
 
-        delete mParamsBuffer;
-        mParamsBuffer = nullptr;
+        if (mParamsBuffer) {
+            mParamsBuffer->terminate(mContext);
+            delete mParamsBuffer;
+            mParamsBuffer = nullptr;
+        }
     }
 }
 
@@ -267,8 +270,8 @@ void VulkanBlitter::lazyInit() noexcept {
     mTriangleBuffer->loadFromCpu(mContext, mStagePool,
             kTriangleVertices, 0, sizeof(kTriangleVertices));
 
-    mParamsBuffer = new VulkanUniformBuffer(mContext, mStagePool,
-            sizeof(BlitterUniforms), backend::BufferUsage::STATIC);
+    mParamsBuffer = new VulkanBuffer(mContext, mStagePool, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            sizeof(BlitterUniforms));
 }
 
 // At a high level, the procedure for resolving depth looks like this:
@@ -285,7 +288,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .sampleCount = src.texture->samples,
         .inverseSampleCount = 1.0f / float(src.texture->samples),
     };
-    mParamsBuffer->loadFromCpu(&uniforms, sizeof(uniforms));
+    mParamsBuffer->loadFromCpu(mContext, mStagePool, &uniforms, 0, sizeof(uniforms));
 
     // BEGIN RENDER PASS
     // -----------------

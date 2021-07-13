@@ -274,10 +274,6 @@ void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size)
     mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
 }
 
-void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size, BufferUsage) {
-    construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
-}
-
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int dummy) {
     construct_handle<MetalRenderPrimitive>(mHandleMap, rph);
 }
@@ -399,10 +395,6 @@ Handle<HwSamplerGroup> MetalDriver::createSamplerGroupS() noexcept {
     return alloc_handle<MetalSamplerGroup, HwSamplerGroup>();
 }
 
-Handle<HwUniformBuffer> MetalDriver::createUniformBufferS() noexcept {
-    return alloc_handle<MetalUniformBuffer, HwUniformBuffer>();
-}
-
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
     return alloc_handle<MetalRenderPrimitive, HwRenderPrimitive>();
 }
@@ -465,6 +457,7 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (UTILS_UNLIKELY(!boh)) {
         return;
     }
+    // TODO: we can skip this loop if we're not a uniform buffer
     auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
     for (auto& thisUniform : mContext->uniformState) {
         if (thisUniform.buffer == bo->getBuffer()) {
@@ -499,19 +492,6 @@ void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     }
     mContext->samplerGroups.erase(metalSampler);
     destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
-}
-
-void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    if (!ubh) {
-        return;
-    }
-    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
-    for (auto& thisUniform : mContext->uniformState) {
-        if (thisUniform.buffer == &ub->buffer) {
-            thisUniform.bound = false;
-        }
-    }
-    destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
@@ -812,18 +792,6 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
-        BufferDescriptor&& data) {
-    if (data.size <= 0) {
-       return;
-    }
-
-    auto uniform = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
-
-    uniform->buffer.copyIntoBuffer(data.buffer, data.size);
-    scheduleDestroy(std::move(data));
-}
-
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
@@ -918,22 +886,22 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
     swapChain->releaseDrawable();
 }
 
-void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
-    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
-    mContext->uniformState[index] = UniformBufferState {
-        .buffer = &ub->buffer,
-        .offset = 0,
-        .bound = true
+void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
+    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    mContext->uniformState[index] = UniformBufferState{
+            .buffer = bo->getBuffer(),
+            .offset = 0,
+            .bound = true
     };
 }
 
-void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
-    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
-    mContext->uniformState[index] = UniformBufferState {
-        .buffer = &ub->buffer,
-        .offset = offset,
-        .bound = true
+    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    mContext->uniformState[index] = UniformBufferState{
+            .buffer = bo->getBuffer(),
+            .offset = offset,
+            .bound = true
     };
 }
 

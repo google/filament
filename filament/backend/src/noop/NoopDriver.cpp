@@ -73,9 +73,6 @@ void NoopDriver::flush(int) {
 void NoopDriver::finish(int) {
 }
 
-void NoopDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-}
-
 void NoopDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
@@ -239,10 +236,6 @@ bool NoopDriver::canGenerateMipmaps() {
     return true;
 }
 
-void NoopDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
-    scheduleDestroy(std::move(data));
-}
-
 void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
 }
@@ -271,10 +264,10 @@ void NoopDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> re
 void NoopDriver::commit(Handle<HwSwapChain> sch) {
 }
 
-void NoopDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
+void NoopDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
 }
 
-void NoopDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+void NoopDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> ubh,
         uint32_t offset, uint32_t size) {
 }
 

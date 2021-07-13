@@ -72,9 +72,6 @@ struct HwBufferObject : public HwBase {
     HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
-struct HwUniformBuffer : public HwBase {
-};
-
 struct HwIndexBuffer : public HwBase {
     uint32_t count : 27;
     uint32_t elementSize : 5;

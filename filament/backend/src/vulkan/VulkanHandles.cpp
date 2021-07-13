@@ -276,62 +276,6 @@ VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& 
           bindingType(bindingType) {
 }
 
-VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool) {
-    // Create the VkBuffer.
-    VkBufferCreateInfo bufferInfo {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = numBytes,
-        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    };
-    VmaAllocationCreateInfo allocInfo {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY
-    };
-    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
-}
-
-void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
-    void* mapped;
-    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
-
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-
-    VkBufferCopy region { .size = numBytes };
-    vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-
-    // First, ensure that the copy finishes before the next draw call.
-    // Second, in case the user decides to upload another chunk (without ever using the first one)
-    // we need to ensure that this upload completes first.
-
-    // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
-    // seems to be insufficient on Mali devices. To work around this we are using a more
-    // aggressive ALL_GRAPHICS_BIT barrier.
-
-    VkBufferMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = mGpuBuffer,
-        .size = VK_WHOLE_SIZE
-    };
-
-    vkCmdPipelineBarrier(cmdbuffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-            0, 0, nullptr, 1, &barrier, 0, nullptr);
-}
-
-VulkanUniformBuffer::~VulkanUniformBuffer() {
-    vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
-}
-
 void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
     this->type = pt;
     switch (pt) {

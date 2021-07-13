@@ -473,10 +473,10 @@ private:
 
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
-    backend::Handle<backend::HwUniformBuffer> mPerViewUbh;
-    backend::Handle<backend::HwUniformBuffer> mLightUbh;
-    backend::Handle<backend::HwUniformBuffer> mShadowUbh;
-    backend::Handle<backend::HwUniformBuffer> mRenderableUbh;
+    backend::Handle<backend::HwBufferObject> mPerViewUbh;
+    backend::Handle<backend::HwBufferObject> mLightUbh;
+    backend::Handle<backend::HwBufferObject> mShadowUbh;
+    backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
     FScene* mScene = nullptr;
     FCamera* mCullingCamera = nullptr;

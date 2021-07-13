@@ -87,7 +87,8 @@ Froxelizer::Froxelizer(FEngine& engine)
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
             "Record Buffer must use bytes");
 
-    mRecordsBuffer = driverApi.createUniformBuffer(RECORD_BUFFER_ENTRY_COUNT,BufferUsage::DYNAMIC);
+    mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     mFroxelBuffer  = GPUBuffer(driverApi, { GPUBuffer::ElementType::UINT16, 2 },
             FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
@@ -106,7 +107,7 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     mPlanesX = nullptr;
     mDistancesZ = nullptr;
 
-    driverApi.destroyUniformBuffer(mRecordsBuffer);
+    driverApi.destroyBufferObject(mRecordsBuffer);
 
     mFroxelBuffer.terminate(driverApi);
 }
@@ -503,8 +504,8 @@ void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
     mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
 
-    driverApi.loadUniformBuffer(mRecordsBuffer,
-            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT });
+    driverApi.updateBufferObject(mRecordsBuffer,
+            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT }, 0);
 
 #ifndef NDEBUG
     mFroxelBufferUser.clear();

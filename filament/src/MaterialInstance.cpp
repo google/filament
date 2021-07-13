@@ -193,7 +193,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(other->getUniformBuffer());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
+        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -219,7 +220,8 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::STATIC);
+        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -257,14 +259,14 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mUbHandle);
+    driver.destroyBufferObject(mUbHandle);
     driver.destroySamplerGroup(mSbHandle);
 }
 
 void FMaterialInstance::commitSlow(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty()) {
-        driver.loadUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
+        driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (mSamplers.isDirty()) {
         driver.updateSamplerGroup(mSbHandle, std::move(mSamplers.toCommandStream()));

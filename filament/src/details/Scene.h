@@ -86,10 +86,10 @@ public:
 
     void prepare(const math::mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena,
-            backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept;
+            backend::Handle<backend::HwBufferObject> lightUbh) noexcept;
 
 
-    filament::backend::Handle<backend::HwUniformBuffer> getRenderableUBO() const noexcept {
+    filament::backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
         return mRenderableViewUbh;
     }
 
@@ -126,7 +126,7 @@ public:
             math::mat4f,                                // WORLD_TRANSFORM
             bool,                                       // REVERSED_WINDING_ORDER
             FRenderableManager::Visibility,             // VISIBILITY_STATE
-            backend::Handle<backend::HwUniformBuffer>,  // BONES_UBH
+            backend::Handle<backend::HwBufferObject>,   // BONES_UBH
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             math::float4,                               // MORPH_WEIGHTS
@@ -203,7 +203,7 @@ public:
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept;
+    void updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
 
     bool hasContactShadows() const noexcept;
 
@@ -231,7 +231,7 @@ private:
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    backend::Handle<backend::HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
+    backend::Handle<backend::HwBufferObject> mRenderableViewUbh; // This is actually owned by the view.
     bool mHasContactShadows = false;
 };
 

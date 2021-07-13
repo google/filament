@@ -35,6 +35,8 @@ using namespace utils;
 
 namespace filament {
 
+using namespace backend;
+
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
     std::vector<Entry> mEntries;
@@ -303,8 +305,9 @@ void FRenderableManager::create(
             // system such that multiple skinned renderables will share regions within a single
             // large block of bones.
             bones = std::unique_ptr<Bones>(new Bones{
-                    driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
-                            backend::BufferUsage::DYNAMIC),
+                    driver.createBufferObject(
+                            CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
+                            BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC),
                     UniformBuffer{ count * sizeof(PerRenderableUibBone) },
                     count
             });
@@ -364,7 +367,7 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     // destroy the bones structures if any
     std::unique_ptr<Bones> const& bones = manager[ci].bones;
     if (bones) {
-        driver.destroyUniformBuffer(bones->handle);
+        driver.destroyBufferObject(bones->handle);
     }
 }
 
@@ -389,7 +392,8 @@ void FRenderableManager::prepare(
         assert_invariant(i);  // we should never get the null instance here
         if (UTILS_UNLIKELY(bones[i])) {
             if (bones[i]->bones.isDirty()) {
-                driver.loadUniformBuffer(bones[i]->handle, bones[i]->bones.toBufferDescriptor(driver));
+                driver.updateBufferObject(bones[i]->handle,
+                        bones[i]->bones.toBufferDescriptor(driver), 0);
             }
         }
     }

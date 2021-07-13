@@ -127,7 +127,7 @@ public:
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline math::float4 getMorphWeights(Instance instance) const noexcept;
 
-    inline backend::Handle<backend::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
+    inline backend::Handle<backend::HwBufferObject> getBonesUbh(Instance instance) const noexcept;
     inline uint32_t getBoneCount(Instance instance) const noexcept;
 
 
@@ -152,7 +152,7 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        backend::Handle<backend::HwUniformBuffer> handle;
+        backend::Handle<backend::HwBufferObject> handle;
         UniformBuffer bones;
         size_t count;
     };
@@ -323,9 +323,9 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
 
-backend::Handle<backend::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
+backend::Handle<backend::HwBufferObject> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
     std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->handle : backend::Handle<backend::HwUniformBuffer>{};
+    return bones ? bones->handle : backend::Handle<backend::HwBufferObject>{};
 }
 
 inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {

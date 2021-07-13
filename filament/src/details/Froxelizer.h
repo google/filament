@@ -88,7 +88,7 @@ public:
     void terminate(backend::DriverApi& driverApi) noexcept;
 
     // gpu buffer containing records. valid after construction.
-    backend::Handle<backend::HwUniformBuffer> getRecordBuffer() const noexcept {
+    backend::Handle<backend::HwBufferObject> getRecordBuffer() const noexcept {
         return mRecordsBuffer;
     }
 
@@ -243,7 +243,7 @@ private:
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
     math::float2 mOneOverDimension = {};
-    backend::UniformBufferHandle mRecordsBuffer;
+    backend::BufferObjectHandle mRecordsBuffer;
     GPUBuffer mFroxelBuffer;
 
     // needed for update()

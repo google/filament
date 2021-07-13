@@ -210,7 +210,7 @@ public:
     struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
-        backend::Handle<backend::HwUniformBuffer> perRenderableBones;   // 4 bytes
+        backend::Handle<backend::HwBufferObject> perRenderableBones;    // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
         Variant materialVariant;                                        // 1 byte
@@ -265,7 +265,7 @@ public:
 
     // specifies the geometry to generate commands for
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
-            backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
+            backend::Handle<backend::HwBufferObject> uboHandle) noexcept;
 
     // specifies camera information (e.g. used for sorting commands)
     void setCamera(const CameraInfo& camera) noexcept { mCamera = camera; }
@@ -313,7 +313,7 @@ public:
         Command const* mBegin;
         Command const* mEnd;
         const CustomCommandVector mCustomCommands;
-        const backend::Handle<backend::HwUniformBuffer> mUboHandle;
+        const backend::Handle<backend::HwBufferObject> mUboHandle;
         const backend::PolygonOffset mPolygonOffset;
         const bool mPolygonOffsetOverride;
 
@@ -399,7 +399,7 @@ private:
     utils::Range<uint32_t> mVisibleRenderables{};
 
     // the UBO containing the data for the renderables
-    backend::Handle<backend::HwUniformBuffer> mUboHandle;
+    backend::Handle<backend::HwBufferObject> mUboHandle;
 
     // info about the camera
     CameraInfo mCamera;

@@ -36,7 +36,6 @@ struct HwSwapChain;
 struct HwSync;
 struct HwTexture;
 struct HwTimerQuery;
-struct HwUniformBuffer;
 struct HwVertexBuffer;
 
 /*
@@ -109,7 +108,6 @@ using SwapChainHandle       = Handle<HwSwapChain>;
 using SyncHandle            = Handle<HwSync>;
 using TextureHandle         = Handle<HwTexture>;
 using TimerQueryHandle      = Handle<HwTimerQuery>;
-using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
 } // namespace backend
