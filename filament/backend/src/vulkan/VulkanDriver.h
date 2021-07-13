@@ -20,6 +20,7 @@
 #include "VulkanPipelineCache.h"
 #include "VulkanBlitter.h"
 #include "VulkanDisposer.h"
+#include "VulkanConstants.h"
 #include "VulkanContext.h"
 #include "VulkanFboCache.h"
 #include "VulkanSamplerCache.h"
@@ -27,13 +28,11 @@
 #include "VulkanUtility.h"
 
 #include "private/backend/Driver.h"
+#include "private/backend/HandleAllocator.h"
 #include "DriverBase.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
-#include <utils/FixedCapacityVector.h>
-
-#include <unordered_map>
 
 namespace filament {
 namespace backend {
@@ -77,86 +76,62 @@ private:
     VulkanDriver& operator = (VulkanDriver const&) = delete;
 
 private:
+
+    // See also the explicit template instantiation in HandleAllocator.cpp
+    backend::HandleAllocator<16, 64, 880> mHandleAllocator;
+
     backend::VulkanPlatform& mContextManager;
 
-    // For now we're not bothering to store handles in pools, just simple on-demand allocation.
-    // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = utils::FixedCapacityVector<uint8_t>;
-    using HandleMap = std::unordered_map<HandleBase::HandleId, Blob>;
-    HandleMap mHandleMap;
-    std::mutex mHandleMapMutex;
-    HandleBase::HandleId mNextId = 1;
+    template<typename D, typename ... ARGS>
+    backend::Handle<D> initHandle(ARGS&& ... args) noexcept {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
+    }
 
-    template<typename Dp, typename B>
-    Handle<B> alloc_handle() {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = Blob(sizeof(Dp));
-        return Handle<B>(mNextId++);
+    template<typename D>
+    backend::Handle<D> allocHandle() noexcept {
+        return mHandleAllocator.allocate<D>();
+    }
+
+    template<typename D, typename B, typename ... ARGS>
+    typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
+    construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D, B>(handle, std::forward<ARGS>(args) ...);
+    }
+
+    template<typename B, typename D,
+            typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
+    void destruct(backend::Handle<B> handle, D const* p) noexcept {
+        return mHandleAllocator.deallocate(handle, p);
     }
 
     template<typename Dp, typename B>
-    Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter->second;
-        assert_invariant(blob.size() == sizeof(Dp));
-        return reinterpret_cast<Dp*>(blob.data());
+    typename std::enable_if_t<
+            std::is_pointer_v<Dp> &&
+            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+    handle_cast(backend::Handle<B>& handle) noexcept {
+        return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
     template<typename Dp, typename B>
-    const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter->second;
-        assert_invariant(blob.size() == sizeof(Dp));
-        return reinterpret_cast<const Dp*>(blob.data());
+    inline typename std::enable_if_t<
+            std::is_pointer_v<Dp> &&
+            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+    handle_cast(backend::Handle<B> const& handle) noexcept {
+        return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
-    template<typename Dp, typename B, typename ... ARGS>
-    Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter->second;
-        assert_invariant(blob.size() == sizeof(Dp));
-        Dp* addr = reinterpret_cast<Dp*>(blob.data());
-        new(addr) Dp(std::forward<ARGS>(args)...);
-        return addr;
+    template<typename D, typename B>
+    void destruct(Handle<B> handle) noexcept {
+        destruct(handle, handle_cast<D const*>(handle));
     }
 
-    template<typename Dp, typename B>
-    void destruct_handle(HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        // Call the destructor, remove the blob, don't bother reclaiming the integer id.
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter->second;
-        assert_invariant(blob.size() == sizeof(Dp));
-        reinterpret_cast<Dp*>(blob.data())->~Dp();
-        handleMap.erase(handle.getId());
-    }
-
-    // This version of destruct_handle take a VulkanContext and calls a terminate(VulkanContext&)
+    // This version of destruct takes a VulkanContext and calls a terminate(VulkanContext&)
     // on the handle before calling the dtor
     template<typename Dp, typename B>
-    void destruct_handle(VulkanContext& context, HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        // Call the destructor, remove the blob, don't bother reclaiming the integer id.
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter->second;
-        assert_invariant(blob.size() == sizeof(Dp));
-        reinterpret_cast<Dp*>(blob.data())->terminate(context);
-        reinterpret_cast<Dp*>(blob.data())->~Dp();
-        handleMap.erase(handle.getId());
+    void destruct(VulkanContext& context, Handle<B> handle) noexcept {
+        auto ptr = handle_cast<Dp*>(handle);
+        ptr->terminate(context);
+        mHandleAllocator.deallocate(handle, ptr);
     }
 
     void refreshSwapChain();

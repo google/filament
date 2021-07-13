@@ -240,7 +240,8 @@ private:
 
     // Memory management...
 
-    backend::HandleAllocator mHandleAllocator;
+    // See also the explicit template instantiation in HandleAllocator.cpp
+    backend::HandleAllocator<16, 64, 208> mHandleAllocator;
 
     template<typename D, typename ... ARGS>
     backend::Handle<D> initHandle(ARGS&& ... args) noexcept {

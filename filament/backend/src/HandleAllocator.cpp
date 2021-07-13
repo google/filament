@@ -24,26 +24,29 @@ namespace filament::backend {
 
 using namespace utils;
 
+template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
-HandleAllocator::Allocator::Allocator(AreaPolicy::HeapArea const& area)
+HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& area)
         : mArea(area) {
     // TODO: we probably need a better way to set the size of these pools
     const size_t unit = area.size() / 32;
     const size_t offsetPool1 =      unit;
     const size_t offsetPool2 = 16 * unit;
     char* const p = (char*)area.begin();
-    mPool0 = PoolAllocator< 16, 16>(p, p + offsetPool1);
-    mPool1 = PoolAllocator< 64, 16>(p + offsetPool1, p + offsetPool2);
-    mPool2 = PoolAllocator<208, 16>(p + offsetPool2, area.end());
+    mPool0 = PoolAllocator< P0, 16>(p, p + offsetPool1);
+    mPool1 = PoolAllocator< P1, 16>(p + offsetPool1, p + offsetPool2);
+    mPool2 = PoolAllocator< P2, 16>(p + offsetPool2, area.end());
 }
 
 // ------------------------------------------------------------------------------------------------
 
-HandleAllocator::HandleAllocator(const char* name, size_t size) noexcept
+template <size_t P0, size_t P1, size_t P2>
+HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size) noexcept
     : mHandleArena(name, size) {
 }
 
-HandleAllocator::~HandleAllocator() {
+template <size_t P0, size_t P1, size_t P2>
+HandleAllocator<P0, P1, P2>::~HandleAllocator() {
     auto& overflowMap = mOverflowMap;
     if (!overflowMap.empty()) {
         PANIC_LOG("Not all handles have been freed. Probably leaking memory.");
@@ -54,8 +57,9 @@ HandleAllocator::~HandleAllocator() {
     }
 }
 
+template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
-void* HandleAllocator::handleToPointerSlow(HandleBase::HandleId id) const noexcept {
+void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) const noexcept {
     auto& overflowMap = mOverflowMap;
     std::lock_guard lock(mLock);
     auto pos = overflowMap.find(id);
@@ -65,7 +69,8 @@ void* HandleAllocator::handleToPointerSlow(HandleBase::HandleId id) const noexce
     return nullptr;
 }
 
-HandleBase::HandleId HandleAllocator::allocateHandleSlow(size_t size) noexcept {
+template <size_t P0, size_t P1, size_t P2>
+HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size) noexcept {
     void* p = ::malloc(size);
     std::unique_lock lock(mLock);
     HandleBase::HandleId id = (++mId) | HEAP_HANDLE_FLAG;
@@ -79,7 +84,8 @@ HandleBase::HandleId HandleAllocator::allocateHandleSlow(size_t size) noexcept {
     return id;
 }
 
-void HandleAllocator::deallocateHandleSlow(HandleBase::HandleId id, size_t) noexcept {
+template <size_t P0, size_t P1, size_t P2>
+void HandleAllocator<P0, P1, P2>::deallocateHandleSlow(HandleBase::HandleId id, size_t) noexcept {
     assert_invariant(id & HEAP_HANDLE_FLAG);
     void* p = nullptr;
     auto& overflowMap = mOverflowMap;
@@ -94,5 +100,15 @@ void HandleAllocator::deallocateHandleSlow(HandleBase::HandleId id, size_t) noex
 
     ::free(p);
 }
+
+// Explicit template instantiations.
+// If you change any of these, be sure to change the corollary declaration.
+#if defined (FILAMENT_SUPPORTS_OPENGL)
+template class HandleAllocator<16, 64, 208>;
+#endif
+
+#if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+template class HandleAllocator<16, 64, 880>;
+#endif
 
 } // namespace filament::backend

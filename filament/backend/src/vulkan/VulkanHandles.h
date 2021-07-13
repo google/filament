@@ -55,12 +55,12 @@ struct VulkanRenderTarget : private HwRenderTarget {
 
     ~VulkanRenderTarget();
 
-    void transformClientRectToPlatform(VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VkViewport* bounds) const;
-    VkExtent2D getExtent() const;
-    VulkanAttachment getColor(int target) const;
+    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const;
+    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const;
+    VkExtent2D getExtent(VulkanSwapChain* currentSurface) const;
+    VulkanAttachment getColor(VulkanSwapChain* currentSurface, int target) const;
     VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth() const;
+    VulkanAttachment getDepth(VulkanSwapChain* currentSurface) const;
     VulkanAttachment getMsaaDepth() const;
     int getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
@@ -70,11 +70,10 @@ struct VulkanRenderTarget : private HwRenderTarget {
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};
-    VulkanContext& mContext;
-    const bool mOffscreen;
-    uint8_t mSamples;
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
+    const bool mOffscreen : 1;
+    uint8_t mSamples : 7;
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer {
