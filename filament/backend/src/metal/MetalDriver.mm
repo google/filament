@@ -462,9 +462,16 @@ void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 }
 
 void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
-    if (boh) {
-        destruct_handle<MetalBufferObject>(mHandleMap, boh);
+    if (UTILS_UNLIKELY(!boh)) {
+        return;
     }
+    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    for (auto& thisUniform : mContext->uniformState) {
+        if (thisUniform.buffer == bo->getBuffer()) {
+            thisUniform.bound = false;
+        }
+    }
+    destruct_handle<MetalBufferObject>(mHandleMap, boh);
 }
 
 void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -498,12 +505,13 @@ void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (!ubh) {
         return;
     }
-    destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
+    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
     for (auto& thisUniform : mContext->uniformState) {
-        if (thisUniform.ubh == ubh) {
+        if (thisUniform.buffer == &ub->buffer) {
             thisUniform.bound = false;
         }
     }
+    destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
@@ -911,18 +919,20 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 }
 
 void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
+    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
     mContext->uniformState[index] = UniformBufferState {
+        .buffer = &ub->buffer,
         .offset = 0,
-        .ubh = ubh,
         .bound = true
     };
 }
 
 void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
         uint32_t offset, uint32_t size) {
+    auto* ub = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
     mContext->uniformState[index] = UniformBufferState {
+        .buffer = &ub->buffer,
         .offset = offset,
-        .ubh = ubh,
         .bound = true
     };
 }
@@ -1264,8 +1274,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     NSUInteger offsets[Program::BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
-            MetalUniformBuffer* uniform, uint32_t index) {
-        uniformsToBind[index] = &uniform->buffer;
+            MetalBuffer* buffer, uint32_t index) {
+        uniformsToBind[index] = buffer;
         offsets[index] = state.offset;
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
@@ -1417,14 +1427,13 @@ void MetalDriver::enumerateSamplerGroups(
 }
 
 void MetalDriver::enumerateBoundUniformBuffers(
-        const std::function<void(const UniformBufferState&, MetalUniformBuffer*, uint32_t)>& f) {
+        const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
     for (uint32_t i = 0; i < Program::BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;
         }
-        auto* uniform = handle_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
-        f(thisUniform, uniform, i);
+        f(thisUniform, thisUniform.buffer, i);
     }
 }
 

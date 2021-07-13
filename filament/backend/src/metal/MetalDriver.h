@@ -35,6 +35,7 @@ class MetalPlatform;
 
 namespace metal {
 
+class MetalBuffer;
 struct MetalUniformBuffer;
 struct MetalContext;
 struct MetalProgram;
@@ -160,7 +161,7 @@ private:
     void enumerateSamplerGroups(const MetalProgram* program,
             const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
     void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
-            MetalUniformBuffer*, uint32_t)>& f);
+            MetalBuffer*, uint32_t)>& f);
 
 };
 
