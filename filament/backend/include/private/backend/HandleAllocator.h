@@ -51,11 +51,11 @@ public:
      *  struct ConcreteTexture : public HwTexture {
      *      ConcreteTexture(int w, int h);
      *  };
-     *  Handle<ConcreteTexture> h = allocate(w, h);
+     *  Handle<ConcreteTexture> h = allocateAndConstruct(w, h);
      *
      */
     template<typename D, typename ... ARGS>
-    Handle<D> allocate(ARGS&& ... args) noexcept {
+    Handle<D> allocateAndConstruct(ARGS&& ... args) noexcept {
         Handle<D> h{ allocateHandle(sizeof(D)) };
         D* addr = handle_cast<D*>(h);
         new(addr) D(std::forward<ARGS>(args)...);
@@ -68,8 +68,58 @@ public:
     }
 
     /*
+     * Allocates (without constructing) a D object and returns a Handle<D>
+     *
+     * e.g.:
+     *  struct ConcreteTexture : public HwTexture {
+     *      ConcreteTexture(int w, int h);
+     *  };
+     *  Handle<ConcreteTexture> h = allocate();
+     *
+     */
+    template<typename D>
+    Handle<D> allocate() noexcept {
+        Handle<D> h{ allocateHandle(sizeof(D)) };
+#if HANDLE_TYPE_SAFETY
+        D* addr = handle_cast<D*>(h);
+        mLock.lock();
+        mHandleTypeId[addr] = typeid(D).name();
+        mLock.unlock();
+#endif
+        return h;
+    }
+
+
+    /*
      * Destroys the object D at Handle<B> and construct a new D in its place
      * e.g.:
+     *  Handle<ConcreteTexture> h = allocateAndConstruct(w, h);
+     *  ConcreteTexture* p = reconstruct(h, w, h);
+     */
+    template<typename D, typename B, typename ... ARGS>
+    typename std::enable_if_t<std::is_base_of_v<B, D>, D>*
+    destroyAndConstruct(Handle<B> const& handle, ARGS&& ... args) noexcept {
+        assert_invariant(handle);
+        D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
+        assert_invariant(addr);
+
+        // currently we implement construct<> with dtor+ctor, we could use operator= also
+        // but all our dtors are trivial, ~D() is actually a noop.
+        addr->~D();
+        new(addr) D(std::forward<ARGS>(args)...);
+
+#if HANDLE_TYPE_SAFETY
+        mLock.lock();
+        mHandleTypeId[addr] = typeid(D).name();
+        mLock.unlock();
+#endif
+        return addr;
+    }
+
+    /*
+     * Construct a new D at Handle<B>
+     * e.g.:
+     *  Handle<ConcreteTexture> h = allocate();
      *  ConcreteTexture* p = construct(h, w, h);
      */
     template<typename D, typename B, typename ... ARGS>
@@ -78,10 +128,6 @@ public:
         assert_invariant(handle);
         D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
         assert_invariant(addr);
-
-        // currently we implement construct<> with dtor+ctor, we could use operator= also
-        // but all our dtors are trivial, ~D() is actually a noop.
-        addr->~D();
         new(addr) D(std::forward<ARGS>(args)...);
 
 #if HANDLE_TYPE_SAFETY

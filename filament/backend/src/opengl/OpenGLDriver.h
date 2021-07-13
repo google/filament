@@ -253,13 +253,13 @@ private:
 
     template<typename D, typename ... ARGS>
     backend::Handle<D> initHandle(ARGS&& ... args) noexcept {
-        return mHandleAllocator.allocate<D>(std::forward<ARGS>(args) ...);
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
     }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
     construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept {
-        return mHandleAllocator.construct<D, B>(handle, std::forward<ARGS>(args) ...);
+        return mHandleAllocator.destroyAndConstruct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
     template<typename B, typename D,

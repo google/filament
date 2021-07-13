@@ -1471,7 +1471,7 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
             // we can end-up here if:
             // - the platform doesn't support h/w fences
             // - wait() was called before the fence was asynchronously created.
-            //   This case is not handled in OpenGLDriver but is handle by FFence.
+            //   This case is not handled in OpenGLDriver but is handled by FFence.
             //   TODO: move FFence logic into the backend.
             return FenceStatus::ERROR;
         }
