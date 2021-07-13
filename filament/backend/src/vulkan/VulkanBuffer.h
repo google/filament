@@ -36,6 +36,7 @@ public:
 private:
     VmaAllocation mGpuMemory = VK_NULL_HANDLE;
     VkBuffer mGpuBuffer = VK_NULL_HANDLE;
+    VkBufferUsageFlags mUsage = {};
 };
 
 } // namespace filament

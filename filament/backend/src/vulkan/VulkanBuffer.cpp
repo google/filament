@@ -25,7 +25,12 @@ namespace filament {
 namespace backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VkBufferUsageFlags usage, uint32_t numBytes) {
+        VkBufferUsageFlags usage, uint32_t numBytes) : mUsage(usage) {
+
+    // for now make sure that only 1 bit is set in usage
+    // (because loadFromCpu() assumes that somewhat)
+    assert_invariant(usage && !(usage & (usage - 1)));
+
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -60,27 +65,53 @@ void VulkanBuffer::loadFromCpu(VulkanContext& context, VulkanStagePool& stagePoo
 
     const VkCommandBuffer cmdbuffer = context.commands->get().cmdbuffer;
 
-    VkBufferCopy region { .size = numBytes };
+    VkBufferCopy region{ .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
 
     // Firstly, ensure that the copy finishes before the next draw call.
     // Secondly, in case the user decides to upload another chunk (without ever using the first one)
     // we need to ensure that this upload completes first.
-    VkBufferMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT |
-                         VK_ACCESS_TRANSFER_WRITE_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = mGpuBuffer,
-        .size = VK_WHOLE_SIZE
-    };
 
-    vkCmdPipelineBarrier(cmdbuffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0, 0, nullptr, 1, &barrier, 0, nullptr);
+    if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+
+        VkBufferMemoryBarrier barrier{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT |
+                                 VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .buffer = mGpuBuffer,
+                .size = VK_WHOLE_SIZE
+        };
+
+        vkCmdPipelineBarrier(cmdbuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                0, 0, nullptr, 1, &barrier, 0, nullptr);
+
+    }
+
+    if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+        // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
+        // seems to be insufficient on Mali devices. To work around this we are using a more
+        // aggressive ALL_GRAPHICS_BIT barrier.
+
+        VkBufferMemoryBarrier barrier{
+                .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .buffer = mGpuBuffer,
+                .size = VK_WHOLE_SIZE
+        };
+
+        vkCmdPipelineBarrier(cmdbuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                0, 0, nullptr, 1, &barrier, 0, nullptr);
+    }
 }
 
 } // namespace filament
