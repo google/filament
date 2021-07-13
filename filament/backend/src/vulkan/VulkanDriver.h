@@ -144,6 +144,21 @@ private:
         handleMap.erase(handle.getId());
     }
 
+    // This version of destruct_handle take a VulkanContext and calls a terminate(VulkanContext&)
+    // on the handle before calling the dtor
+    template<typename Dp, typename B>
+    void destruct_handle(VulkanContext& context, HandleMap& handleMap, const Handle<B>& handle) noexcept {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
+        // Call the destructor, remove the blob, don't bother reclaiming the integer id.
+        auto iter = handleMap.find(handle.getId());
+        assert_invariant(iter != handleMap.end());
+        Blob& blob = iter->second;
+        assert_invariant(blob.size() == sizeof(Dp));
+        reinterpret_cast<Dp*>(blob.data())->terminate(context);
+        reinterpret_cast<Dp*>(blob.data())->~Dp();
+        handleMap.erase(handle.getId());
+    }
+
     void refreshSwapChain();
     void collectGarbage();
 

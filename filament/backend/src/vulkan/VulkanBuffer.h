@@ -29,11 +29,11 @@ public:
     VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool, VkBufferUsageFlags usage,
             uint32_t numBytes);
     ~VulkanBuffer();
-    void loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const;
+    void terminate(VulkanContext& context);
+    void loadFromCpu(VulkanContext& context, VulkanStagePool& stagePool,
+            const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const;
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
 private:
-    VulkanContext& mContext;
-    VulkanStagePool& mStagePool;
     VmaAllocation mGpuMemory = VK_NULL_HANDLE;
     VkBuffer mGpuBuffer = VK_NULL_HANDLE;
 };

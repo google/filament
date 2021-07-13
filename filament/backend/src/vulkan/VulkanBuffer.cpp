@@ -25,7 +25,7 @@ namespace filament {
 namespace backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VkBufferUsageFlags usage, uint32_t numBytes) : mContext(context), mStagePool(stagePool) {
+        VkBufferUsageFlags usage, uint32_t numBytes) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -38,19 +38,27 @@ VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
 }
 
 VulkanBuffer::~VulkanBuffer() {
-    vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
+    assert_invariant(mGpuMemory == VK_NULL_HANDLE);
+    assert_invariant(mGpuBuffer == VK_NULL_HANDLE);
 }
 
-void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
-    assert_invariant(byteOffset == 0);
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
-    void* mapped;
-    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, byteOffset, numBytes);
+void VulkanBuffer::terminate(VulkanContext& context) {
+    vmaDestroyBuffer(context.allocator, mGpuBuffer, mGpuMemory);
+    mGpuMemory = VK_NULL_HANDLE;
+    mGpuBuffer = VK_NULL_HANDLE;
+}
 
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+void VulkanBuffer::loadFromCpu(VulkanContext& context, VulkanStagePool& stagePool,
+        const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
+    assert_invariant(byteOffset == 0);
+    VulkanStage const* stage = stagePool.acquireStage(numBytes);
+    void* mapped;
+    vmaMapMemory(context.allocator, stage->memory, &mapped);
+    memcpy(mapped, cpuData, numBytes);
+    vmaUnmapMemory(context.allocator, stage->memory);
+    vmaFlushAllocation(context.allocator, stage->memory, byteOffset, numBytes);
+
+    const VkCommandBuffer cmdbuffer = context.commands->get().cmdbuffer;
 
     VkBufferCopy region { .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);

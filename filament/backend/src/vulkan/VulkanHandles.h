@@ -90,15 +90,17 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
             buffer(context, stagePool,
                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
             indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
-    const VulkanBuffer buffer;
+    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanBuffer buffer;
     const VkIndexType indexType;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
     VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
             uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
-    const VulkanBuffer buffer;
-    BufferObjectBinding bindingType;
+    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanBuffer buffer;
+    const BufferObjectBinding bindingType;
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
