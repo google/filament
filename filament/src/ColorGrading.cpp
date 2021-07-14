@@ -310,11 +310,14 @@ inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
 
 UTILS_ALWAYS_INLINE
 inline constexpr float3 tonalRanges(
-        float3 v, float3 luma, float3 shadows, float3 midtones, float3 highlights, float4 ranges) {
+        float3 v, float3 luminance,
+        float3 shadows, float3 midtones, float3 highlights,
+        float4 ranges
+) {
     // See the Mathematica notebook at docs/math/Shadows Midtones Highlight.nb for
     // details on how the curves were designed. The default curve values are based
     // on the defaults from the "Log" color wheels in DaVinci Resolve.
-    float y = dot(v, luma);
+    float y = dot(v, luminance);
 
     // Shadows curve
     float s = 1.0f - smoothstep(ranges.x, ranges.y, y);
@@ -345,16 +348,16 @@ inline constexpr float3 contrast(float3 v, float contrast) {
 }
 
 UTILS_ALWAYS_INLINE
-inline constexpr float3 saturation(float3 v, float saturation) {
-    const float3 y = dot(v, LUMA_REC709);
+inline constexpr float3 saturation(float3 v, float3 luminance, float saturation) {
+    const float3 y = dot(v, luminance);
     return y + saturation * (v - y);
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 vibrance(float3 v, float vibrance) {
+inline float3 vibrance(float3 v, float3 luminance, float vibrance) {
     float r = v.r - max(v.g, v.b);
     float s = (vibrance - 1.0f) / (1.0f + std::exp(-r * 3.0f)) + 1.0f;
-    float3 l{(1.0f - s) * LUMA_REC709};
+    float3 l{(1.0f - s) * luminance};
     return float3{
         dot(v, l + float3{s, 0.0f, 0.0f}),
         dot(v, l + float3{0.0f, s, 0.0f}),
@@ -515,7 +518,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
             for (size_t g = 0; g < config.lutDimension; g++) {
                 for (size_t r = 0; r < config.lutDimension; r++) {
-                    float3 v = float3{ r, g, b } * (1.0f / float(config.lutDimension - 1u));
+                    float3 v = float3{r, g, b} * (1.0f / float(config.lutDimension - 1u));
 
                     // LogC encoding
                     v = LogC_to_linear(v);
@@ -557,10 +560,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = config.logToLinearTransform(v);
 
                         // Vibrance in linear space
-                        v = vibrance(v, builder->vibrance);
+                        v = vibrance(v, config.luminanceTransform, builder->vibrance);
 
                         // Saturation in linear space
-                        v = saturation(v, builder->saturation);
+                        v = saturation(v, config.luminanceTransform, builder->saturation);
 
                         // Kill negative values before tone mapping
                         v = max(v, 0.0f);
@@ -615,8 +618,16 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
-    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
-            c.lutDimension, c.lutDimension, c.lutDimension, TextureUsage::DEFAULT);
+    mLutHandle = driver.createTexture(
+            SamplerType::SAMPLER_3D,
+            1,
+            textureFormat,
+            1,
+            c.lutDimension,
+            c.lutDimension,
+            c.lutDimension,
+            TextureUsage::DEFAULT
+    );
 
     if (converted) {
         free(data);
