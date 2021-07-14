@@ -21,8 +21,6 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
-#include "GPUBuffer.h"
-
 #include <filament/Viewport.h>
 
 #include <backend/Handle.h>
@@ -93,7 +91,7 @@ public:
     }
 
     // gpu buffer containing froxels. valid after construction.
-    GPUBuffer const& getFroxelBuffer() const noexcept { return mFroxelBuffer; }
+    backend::Handle<backend::HwTexture> getFroxelTexture() const noexcept { return mFroxelTexture; }
 
     void setOptions(float zLightNear, float zLightFar) noexcept;
 
@@ -244,7 +242,7 @@ private:
     float mClipToFroxelY = 0.0f;
     math::float2 mOneOverDimension = {};
     backend::BufferObjectHandle mRecordsBuffer;
-    GPUBuffer mFroxelBuffer;
+    backend::Handle<backend::HwTexture> mFroxelTexture;
 
     // needed for update()
     Viewport mViewport;
