@@ -210,13 +210,12 @@ public:
     struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
-        backend::Handle<backend::HwBufferObject> perRenderableBones;    // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved = {};                                          // 1 byte
+        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 byte (9)
     };
-    static_assert(sizeof(PrimitiveInfo) == sizeof(void*) + 16);
+    static_assert(sizeof(PrimitiveInfo) == 24);
 
     struct alignas(8) Command {     // 32 bytes
         CommandKey key = 0;         //  8 bytes
@@ -312,13 +311,14 @@ public:
         FEngine& mEngine;
         Command const* mBegin;
         Command const* mEnd;
+        FScene::RenderableSoa const& mRenderableSoa;
         const CustomCommandVector mCustomCommands;
         const backend::Handle<backend::HwBufferObject> mUboHandle;
         const backend::PolygonOffset mPolygonOffset;
         const bool mPolygonOffsetOverride;
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-                : mEngine(pass->mEngine), mBegin(b), mEnd(e),
+                : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
                   mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
                   mPolygonOffset(pass->mPolygonOffset),
                   mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
@@ -326,8 +326,9 @@ public:
             assert_invariant(e <= pass->end());
         }
 
-        void recordDriverCommands(backend::DriverApi& driver, const Command* first,
-                const Command* last) const noexcept;
+        void recordDriverCommands(backend::DriverApi& driver,
+                const Command* first, const Command* last,
+                FScene::RenderableSoa const& soa) const noexcept;
 
     public:
         void execute(const char* name,

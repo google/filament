@@ -132,19 +132,19 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
 
             // we know there is enough space in the array
             sceneData.push_back_unsafe(
-                    ri,                       // RENDERABLE_INSTANCE
-                    worldTransform,           // WORLD_TRANSFORM
-                    reversedWindingOrder,     // REVERSED_WINDING_ORDER
-                    visibility,               // VISIBILITY_STATE
-                    rcm.getBonesUbh(ri),      // BONES_UBH
-                    worldAABB.center,         // WORLD_AABB_CENTER
-                    0,                        // VISIBLE_MASK
-                    rcm.getMorphWeights(ri),  // MORPH_WEIGHTS
-                    rcm.getLayerMask(ri),     // LAYERS
-                    worldAABB.halfExtent,     // WORLD_AABB_EXTENT
-                    {},                       // PRIMITIVES
-                    0,                        // SUMMED_PRIMITIVE_COUNT
-                    scale                     // USER_DATA
+                    ri,                             // RENDERABLE_INSTANCE
+                    worldTransform,                 // WORLD_TRANSFORM
+                    reversedWindingOrder,           // REVERSED_WINDING_ORDER
+                    visibility,                     // VISIBILITY_STATE
+                    rcm.getSkinningBufferInfo(ri),  // SKINNING_BUFFER
+                    worldAABB.center,               // WORLD_AABB_CENTER
+                    0,                              // VISIBLE_MASK
+                    rcm.getMorphWeights(ri),        // MORPH_WEIGHTS
+                    rcm.getLayerMask(ri),           // LAYERS
+                    worldAABB.halfExtent,           // WORLD_AABB_EXTENT
+                    {},                             // PRIMITIVES
+                    0,                              // SUMMED_PRIMITIVE_COUNT
+                    scale                           // USER_DATA
             );
         }
 

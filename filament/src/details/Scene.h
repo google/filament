@@ -104,7 +104,7 @@ public:
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
         REVERSED_WINDING_ORDER, //  1 | det(WORLD_TRANSFORM)<0
         VISIBILITY_STATE,       //  1 | visibility data of the component
-        BONES_UBH,              //  4 | bones uniform buffer handle
+        SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //  1 | each bit represents a visibility in a pass
         MORPH_WEIGHTS,          //  4 | floats for morphing
@@ -126,7 +126,7 @@ public:
             math::mat4f,                                // WORLD_TRANSFORM
             bool,                                       // REVERSED_WINDING_ORDER
             FRenderableManager::Visibility,             // VISIBILITY_STATE
-            backend::Handle<backend::HwBufferObject>,   // BONES_UBH
+            FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             math::float4,                               // MORPH_WEIGHTS

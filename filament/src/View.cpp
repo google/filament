@@ -574,10 +574,6 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     s.fogInscatteringSize  = fogOptions.inScatteringSize;
     s.fogColorFromIbl      = fogOptions.fogColorFromIbl ? 1.0f : 0.0f;
 
-    // upload the renderables's dirty UBOs
-    engine.getRenderableManager().prepare(driver,
-            renderableData.data<FScene::RENDERABLE_INSTANCE>(), merged);
-
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);
 }
