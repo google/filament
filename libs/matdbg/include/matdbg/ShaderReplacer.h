@@ -35,6 +35,8 @@ public:
     const uint8_t* getEditedPackage() const;
     size_t getEditedSize() const;
 private:
+    bool replaceSpirv(backend::ShaderModel shaderModel, uint8_t variant,
+            backend::ShaderType stage, const char* sourceString, size_t stringLength);
     const backend::Backend mBackend;
     filaflat::ChunkContainer mOriginalPackage;
     filaflat::ChunkContainer* mEditedPackage = nullptr;

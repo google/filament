@@ -48,13 +48,28 @@ window.MonacoEnvironment = {
     }
 };
 
-// TODO: this function could be simplified by changing the format of the shader selector.
+function getShaderAPI(selection) {
+    if (!selection) {
+        selection = gCurrentShader;
+    }
+    if ("glindex" in selection) return "opengl";
+    if ("vkindex" in selection) return "vulkan";
+    if ("metalindex" in selection) return "metal";
+    return "error";
+}
+
 function rebuildMaterial() {
     let api = 0, index = -1;
-    if ("glindex" in gCurrentShader)    { api = 1; index = gCurrentShader.glindex; }
-    if ("vkindex" in gCurrentShader)    { api = 2; index = gCurrentShader.vkindex; }
-    if ("metalindex" in gCurrentShader) { api = 3; index = gCurrentShader.metalindex; }
-    const editedText = getShaderRecord(gCurrentShader).text;
+    if (gCurrentLanguage === "spirv") {
+        console.error("SPIR-V editing is not supported.");
+        return;
+    }
+    switch (getShaderAPI()) {
+        case "opengl": api = 1; index = gCurrentShader.glindex; break;
+        case "vulkan": api = 2; index = gCurrentShader.vkindex; break;
+        case "metal":  api = 3; index = gCurrentShader.metalindex; break;
+    }
+    const editedText = getShaderRecord(gCurrentShader)[gCurrentLanguage];
     const byteCount = new Blob([editedText]).size;
     gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
 }
@@ -87,7 +102,7 @@ document.querySelector("body").addEventListener("click", (evt) => {
     for (const lang of "glsl spirv msl".split(" ")) {
         if (anchor.classList.contains(lang)) {
             gCurrentLanguage = lang;
-            renderShaderStatus();
+            selectShader(gCurrentShader);
             return;
         }
     }
@@ -227,23 +242,28 @@ function fetchMaterials() {
 }
 
 function fetchShader(selection, matinfo, onDone) {
-    let query, target;
-    if (selection.glindex >= 0) {
-        query = `type=glsl&glindex=${selection.glindex}`;
-        target = matinfo.opengl[parseInt(selection.glindex)];
-    }
-    if (selection.vkindex >= 0) {
-        query = `type=spirv&vkindex=${selection.vkindex}`;
-        target = matinfo.vulkan[parseInt(selection.vkindex)];
-    }
-    if (selection.metalindex >= 0) {
-        query = `type=glsl&metalindex=${selection.metalindex}`;
-        target = matinfo.metal[parseInt(selection.metalindex)];
+    let query, target, index;
+    switch (getShaderAPI(selection)) {
+        case "opengl":
+            index = parseInt(selection.glindex);
+            query = `type=${gCurrentLanguage}&glindex=${index}`;
+            target = matinfo.opengl[index];
+            break;
+        case "vulkan":
+            index = parseInt(selection.vkindex);
+            query = `type=${gCurrentLanguage}&vkindex=${index}`;
+            target = matinfo.vulkan[index];
+            break;
+        case "metal":
+            index = parseInt(selection.metalindex);
+            query = `type=${gCurrentLanguage}&metalindex=${index}`;
+            target = matinfo.metal[index];
+            break;
     }
     fetch(`api/shader?matid=${matinfo.matid}&${query}`).then(function(response) {
         return response.text();
     }).then(function(shaderText) {
-        target.text = shaderText;
+        target[gCurrentLanguage] = shaderText;
         onDone();
     });
 }
@@ -347,15 +367,19 @@ function renderShaderStatus() {
         const glsl = "glsl " + (gCurrentLanguage === "glsl" ? "active" : "");
         const msl = "msl " + (gCurrentLanguage === "msl" ? "active" : "");
         const spirv = "spirv " + (gCurrentLanguage === "spirv" ? "active" : "");
-        if (gCurrentShader.metalindex >= 0) {
-            statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
-            statusString += ` &nbsp; <a class='status_button ${msl}'>[MSL]</a>`;
+        switch (getShaderAPI()) {
+            case "opengl":
+                statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
+                break;
+            case "metal":
+                statusString += ` &nbsp; <a class='status_button ${msl}'>[MSL]</a>`;
+                break;
+            case "vulkan":
+                statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
+                statusString += ` &nbsp; <a class='status_button ${spirv}'>[SPIRV]</a>`;
+                break;
         }
-        if (gCurrentShader.vkindex >= 0) {
-            statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
-            statusString += ` &nbsp; <a class='status_button ${spirv}'>[SPIRV]</a>`;
-        }
-        if (shader.modified) {
+        if (shader.modified && gCurrentLanguage !== "spirv") {
             statusString += " &nbsp; <a class='status_button rebuild'>[rebuild]</a>";
         }
         if (!shader.active) {
@@ -371,17 +395,37 @@ function selectShader(selection) {
         console.error("Shader not yet available.")
         return;
     }
+
+    // Change the current language selection if necessary.
+    switch (getShaderAPI(selection)) {
+        case "opengl":
+            if (gCurrentLanguage != "glsl") {
+                gCurrentLanguage = "glsl";
+            }
+            break;
+        case "vulkan":
+            if (gCurrentLanguage != "spirv" && gCurrentLanguage != "glsl") {
+                gCurrentLanguage = "spirv";
+            }
+            break;
+        case "metal":
+            if (gCurrentLanguage != "msl") {
+                gCurrentLanguage = "msl";
+            }
+            break;
+    }
+
     const showShaderSource = () => {
         gCurrentShader = selection;
         gCurrentShader.matid = gCurrentMaterial;
         renderMaterialDetail();
         gEditorIsLoading = true;
-        gEditor.setValue(shader.text);
+        gEditor.setValue(shader[gCurrentLanguage]);
         gEditorIsLoading = false;
         shaderSource.style.visibility = "visible";
         renderShaderStatus();
     };
-    if (!shader.text) {
+    if (!shader[gCurrentLanguage]) {
         const matInfo = gMaterialDatabase[gCurrentMaterial];
         fetchShader(selection, matInfo, showShaderSource);
     } else {
@@ -401,7 +445,7 @@ function onEdit(changes) {
         shader.modified = true;
         renderShaderStatus();
     }
-    shader.text = gEditor.getValue();
+    shader[gCurrentLanguage] = gEditor.getValue();
 }
 
 function selectMaterial(matid, selectFirstShader) {
