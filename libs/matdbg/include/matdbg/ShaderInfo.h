@@ -22,14 +22,8 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 
-#include <private/filament/Variant.h>
-
-#include <utils/bitset.h>
-
 namespace filament {
 namespace matdbg {
-
-using VariantList = utils::bitset<uint64_t, VARIANT_COUNT>;
 
 struct ShaderInfo {
     backend::ShaderModel shaderModel;
