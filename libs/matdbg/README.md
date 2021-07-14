@@ -185,7 +185,7 @@ Filament has 7-bit mask, so each number in the list is between 0 and 127.
 
 ---
 
-`/api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}`
+`/api/shader?matid={id}&type=[glsl|spirv|msl]&[glindex|vkindex|metalindex]={index}`
 
 Returns the entire shader code for the given variant. This is the only HTTP request that returns
 text instead of JSON.
