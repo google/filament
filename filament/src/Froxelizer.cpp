@@ -90,8 +90,10 @@ Froxelizer::Froxelizer(FEngine& engine)
     mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
-    mFroxelBuffer  = GPUBuffer(driverApi, { GPUBuffer::ElementType::UINT16, 2 },
-            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
+    mFroxelTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
+            backend::TextureFormat::RG16UI, 1,
+            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
 }
 
 Froxelizer::~Froxelizer() {
@@ -108,8 +110,7 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     mDistancesZ = nullptr;
 
     driverApi.destroyBufferObject(mRecordsBuffer);
-
-    mFroxelBuffer.terminate(driverApi);
+    driverApi.destroyTexture(mFroxelTexture);
 }
 
 void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
@@ -502,7 +503,11 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 
 void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
-    mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
+    driverApi.update2DImage(mFroxelTexture, 0, 0, 0,
+            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT,{
+                    mFroxelBufferUser.begin(), mFroxelBufferUser.sizeInBytes(),
+                    PixelBufferDescriptor::PixelDataFormat::RG_INTEGER,
+                    PixelBufferDescriptor::PixelDataType::USHORT });
 
     driverApi.updateBufferObject(mRecordsBuffer,
             { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT }, 0);
