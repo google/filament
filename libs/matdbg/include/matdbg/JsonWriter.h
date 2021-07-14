@@ -23,6 +23,8 @@
 
 #include <utils/CString.h>
 
+#include "ShaderInfo.h"
+
 namespace filament {
 namespace matdbg {
 
@@ -45,7 +47,7 @@ public:
     // shader index is an active variant. Each bit in the activeVariants bitmask
     // represents one of the possible variant combinations.
     bool writeActiveInfo(const filaflat::ChunkContainer& package, backend::Backend backend,
-            uint64_t activeVariants);
+            VariantList activeVariants);
 
 private:
     utils::CString mJsonString;
