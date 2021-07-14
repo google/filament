@@ -8,6 +8,8 @@ A new header is inserted each time a *tag* is created.
 - engine: Luminance scaling can now be used with any tone mapping operator. It was previously tied
   to the "EVILS" tone mapping operator.
 - engine: Removed the "EVILS" tone mapping operator [⚠️ **API Change**].
+- engine: Improvements to Skinning. A new `SkinningBuffer` API allows bone sharing between 
+  renderables.
 
 ## v1.11.0
 

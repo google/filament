@@ -32,6 +32,7 @@ set(PUBLIC_HDRS
         include/filament/RenderableManager.h
         include/filament/Renderer.h
         include/filament/Scene.h
+        include/filament/SkinningBuffer.h
         include/filament/Skybox.h
         include/filament/Stream.h
         include/filament/SwapChain.h
@@ -73,6 +74,7 @@ set(SRCS
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
+        src/SkinningBuffer.cpp
         src/Skybox.cpp
         src/Stream.cpp
         src/SwapChain.cpp
@@ -135,6 +137,7 @@ set(PRIVATE_HDRS
         src/details/ShadowMap.h
         src/details/ShadowMapManager.h
         src/details/Skybox.h
+        src/details/SkinningBuffer.h
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h

@@ -113,7 +113,7 @@ public class RenderableManager {
          * @param count the number of primitives that will be supplied to the builder
          *
          * Note that builders typically do not have a long lifetime since clients should discard
-         * them after calling build(). For a usage example, see {@link RenderableManager}.
+         * them after calling {@link #build}. For a usage example, see {@link RenderableManager}.
          */
         public Builder(@IntRange(from = 1) int count) {
             mNativeBuilder = nCreateBuilder(count);
@@ -128,7 +128,7 @@ public class RenderableManager {
          * <code>geometry()</code> and <code>material()</code>.
          *
          * @param index zero-based index of the primitive, must be less than the count passed to Builder constructor
-         * @param type specifies the topology of the primitive (e.g., PrimitiveType.TRIANGLES)
+         * @param type specifies the topology of the primitive (e.g., {@link PrimitiveType#TRIANGLES})
          * @param vertices specifies the vertex buffer, which in turn specifies a set of attributes
          * @param indices specifies the index buffer (either u16 or u32)
          * @param offset specifies where in the index buffer to start reading (expressed as a number of indices)
@@ -147,7 +147,7 @@ public class RenderableManager {
         }
 
         /**
-         * For details, see the {@link RenderableManager.Builder#geometry primary overload}.
+         * For details, see the {@link RenderableManager.Builder#geometry} primary overload.
          */
         @NonNull
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
@@ -159,7 +159,7 @@ public class RenderableManager {
         }
 
         /**
-         * For details, see the {@link RenderableManager.Builder#geometry primary overload}.
+         * For details, see the {@link RenderableManager.Builder#geometry} primary overload.
          */
         @NonNull
         public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
@@ -303,6 +303,50 @@ public class RenderableManager {
             return this;
         }
 
+        /**
+         * Allows bones to be swapped out and shared using SkinningBuffer.
+         *
+         * If skinning buffer mode is enabled, clients must call #setSkinningBuffer() rather than
+         * #setBonesAsQuaternions(). This allows sharing of data between renderables.
+         *
+         * @param enabled If true, enables buffer object mode.  False by default.
+         */
+        @NonNull
+        public Builder enableSkinningBuffers(boolean enabled) {
+            nEnableSkinningBuffers(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
+         * Enables GPU vertex skinning for up to 255 bones, 0 by default.
+         *
+         *<p>Skinning Buffer mode must be enabled.</p>
+         *
+         *<p>Each vertex can be affected by up to 4 bones simultaneously. The attached
+         * VertexBuffer must provide data in the BONE_INDICES slot (uvec4) and the
+         * BONE_WEIGHTS slot (float4).</p>
+         *
+         *<p>See also {@link #setSkinningBuffer}, {@link SkinningBuffer#setBonesAsMatrices}
+         * or  {@link SkinningBuffer#setBonesAsQuaternions},
+         * which can be called on a per-frame basis to advance the animation.</p>
+         *
+         * @see #setSkinningBuffer
+         * @see SkinningBuffer#setBonesAsMatrices
+         * @see SkinningBuffer#setBonesAsQuaternions
+         *
+         * @param skinningBuffer null to disable, otherwise the {@link SkinningBuffer} to use
+         * @param boneCount 0 to disable, otherwise the number of bone transforms (up to 255)
+         * @param offset offset in the {@link SkinningBuffer}
+         * @return this <code>Builder</code> object for chaining calls
+         */
+        @NonNull
+        public Builder skinning(SkinningBuffer skinningBuffer,
+                @IntRange(from = 0, to = 255) int boneCount, int offset) {
+            nBuilderSkinningBuffer(mNativeBuilder,
+                    skinningBuffer != null ? skinningBuffer.getNativeObject() : 0, boneCount, offset);
+            return this;
+        }
+
         @NonNull
         public Builder skinning(@IntRange(from = 0, to = 255) int boneCount) {
             nBuilderSkinning(mNativeBuilder, boneCount);
@@ -312,12 +356,16 @@ public class RenderableManager {
         /**
          * Enables GPU vertex skinning for up to 255 bones, 0 by default.
          *
+         * <p>Skinning Buffer mode must be disabled.</p>
+         *
          * <p>Each vertex can be affected by up to 4 bones simultaneously. The attached
          * VertexBuffer must provide data in the <code>BONE_INDICES</code> slot (uvec4) and the
          * <code>BONE_WEIGHTS</code> slot (float4).</p>
          *
          * <p>See also {@link RenderableManager#setBonesAsMatrices}, which can be called on a per-frame basis
          * to advance the animation.</p>
+         *
+         * @see SkinningBuffer#setBonesAsMatrices
          *
          * @param boneCount Number of bones associated with this component
          * @param bones A FloatBuffer containing boneCount transforms. Each transform consists of 8 float.
@@ -379,9 +427,22 @@ public class RenderableManager {
         }
     }
 
+
+    /**
+     * Associates a {@link SkinningBuffer} to a renderable instance
+     * @param i Instance of the Renderable
+     * @param skinningBuffer {@link SkinningBuffer} to use
+     * @param count Numbers of bones to set
+     * @param offset Offset in the {@link SkinningBuffer}
+     */
+    public void setSkinningBuffer(@EntityInstance int i, @NonNull SkinningBuffer skinningBuffer,
+                           int count, int offset) {
+        nSetSkinningBuffer(mNativeObject, i, skinningBuffer.getNativeObject(), count, offset);
+    }
+
     /**
      * Sets the transforms associated with each bone of a Renderable.
-    *
+     *
      * @param i Instance of the Renderable
      * @param matrices A FloatBuffer containing boneCount 4x4 packed matrices (i.e. 16 floats each matrix and no gap between matrices)
      * @param boneCount Number of bones to set
@@ -654,8 +715,11 @@ public class RenderableManager {
     private static native void nBuilderScreenSpaceContactShadows(long nativeBuilder, boolean enabled);
     private static native void nBuilderSkinning(long nativeBuilder, int boneCount);
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
+    private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, boolean enabled);
+    private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
 
+    private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
     private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
@@ -672,7 +736,6 @@ public class RenderableManager {
     private static native int nGetPrimitiveCount(long nativeRenderableManager, int i);
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
-    private static native long nGetMaterialAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);

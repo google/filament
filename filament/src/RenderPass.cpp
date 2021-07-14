@@ -278,7 +278,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaReversedWinding = soa.data<FScene::REVERSED_WINDING_ORDER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
-    auto const* const UTILS_RESTRICT soaBonesUbh        = soa.data<FScene::BONES_UBH>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
@@ -352,7 +351,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
-        cmdColor.primitive.perRenderableBones = soaBonesUbh[i];
         materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
         materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
 
@@ -363,7 +361,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
         cmdDepth.primitive.index = (uint16_t)i;
-        cmdDepth.primitive.perRenderableBones = soaBonesUbh[i];
         cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
         cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
@@ -514,17 +511,20 @@ void RenderPass::Executor::execute(const char* name,
     engine.flush();
 
     driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(driver, mBegin, mEnd);
+    recordDriverCommands(driver, mBegin, mEnd, mRenderableSoa);
     driver.endRenderPass();
 }
 
 UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
-        const Command* first, const Command* last) const noexcept {
+        const Command* first, const Command* last,
+        FScene::RenderableSoa const& soa) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
+
+        auto const* const UTILS_RESTRICT soaSkinning = soa.data<FScene::SKINNING_BUFFER>();
 
         PolygonOffset dummyPolyOffset;
         PipelineState pipeline{ .polygonOffset = mPolygonOffset };
@@ -564,14 +564,18 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
             size_t offset = info.index * sizeof(PerRenderableUib);
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE,
                     uboHandle, offset, sizeof(PerRenderableUib));
-            if (UTILS_UNLIKELY(info.perRenderableBones)) {
-                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_BONES,
-                        info.perRenderableBones);
+
+            auto skinning = soaSkinning[info.index];
+            if (UTILS_UNLIKELY(skinning.handle)) {
+                // note: we can't bind less than CONFIG_MAX_BONE_COUNT due to glsl limitations
+                driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE_BONES,
+                        skinning.handle,
+                        skinning.offset * sizeof(PerRenderableUibBone),
+                        CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
             }
             driver.draw(pipeline, info.primitiveHandle);
         }
     }
 }
-
 
 } // namespace filament

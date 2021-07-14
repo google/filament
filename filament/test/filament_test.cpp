@@ -792,7 +792,7 @@ TEST(FilamentTest, Bones) {
 
         static void check(mat4f const& m) noexcept {
             PerRenderableUibBone b;
-            FRenderableManager::makeBone(&b, m);
+            FSkinningBuffer::makeBone(&b, m);
 
             expect_eq(Shader::vertice(b), m);
 
@@ -803,7 +803,7 @@ TEST(FilamentTest, Bones) {
 
         static void check(mat4f const& m, float3 const& v) noexcept {
             PerRenderableUibBone b;
-            FRenderableManager::makeBone(&b, m);
+            FSkinningBuffer::makeBone(&b, m);
 
             expect_eq((m * v).xyz, Shader::vertice(v, b));
 
