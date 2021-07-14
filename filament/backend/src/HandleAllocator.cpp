@@ -102,13 +102,12 @@ void HandleAllocator<P0, P1, P2>::deallocateHandleSlow(HandleBase::HandleId id, 
 }
 
 // Explicit template instantiations.
-// If you change any of these, be sure to change the corollary declaration.
 #if defined (FILAMENT_SUPPORTS_OPENGL)
-template class HandleAllocator<16, 64, 208>;
+template class HandleAllocatorGL;
 #endif
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-template class HandleAllocator<16, 64, 880>;
+template class HandleAllocatorVK;
 #endif
 
 } // namespace filament::backend

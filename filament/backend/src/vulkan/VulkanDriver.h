@@ -77,8 +77,7 @@ private:
 
 private:
 
-    // See also the explicit template instantiation in HandleAllocator.cpp
-    backend::HandleAllocator<16, 64, 880> mHandleAllocator;
+    backend::HandleAllocatorVK mHandleAllocator;
 
     backend::VulkanPlatform& mContextManager;
 
