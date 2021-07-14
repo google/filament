@@ -527,6 +527,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Post Processing...
 
+    bool mightNeedFinalBlit = true;
     if (hasPostProcess) {
         if (dofOptions.enabled) {
             input = ppm.dof(fg, input, dofOptions, needsAlphaChannel, cameraInfo, scale);
@@ -550,6 +551,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     !colorGrading || needsAlphaChannel);
         }
         if (scaled) {
+            mightNeedFinalBlit = false;
             if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
             } else {
@@ -570,10 +572,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //   as a subpass)
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
 
-    const bool outputIsInput = input == colorPassOutput;
-    if ((outputIsInput && viewRenderTarget == mRenderTarget &&
-                    (msaa > 1 || colorGradingConfig.asSubpass)) ||
-        (!outputIsInput && blending)) {
+    const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTarget);
+    if (mightNeedFinalBlit &&
+            ((outputIsSwapChain && (msaa > 1 || colorGradingConfig.asSubpass)) ||
+            blending)) {
         if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
             input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
         } else {
