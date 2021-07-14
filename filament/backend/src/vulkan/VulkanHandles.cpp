@@ -114,12 +114,12 @@ static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachmen
 // Creates a special "default" render target (i.e. associated with the swap chain)
 // Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
-        mContext(context), mOffscreen(false), mSamples(1) {}
+        mOffscreen(false), mSamples(1) {}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
-            HwRenderTarget(width, height), mContext(context), mOffscreen(true), mSamples(samples) {
+            HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
 
     // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
     // miplevel and array layer.
@@ -212,33 +212,33 @@ VulkanRenderTarget::~VulkanRenderTarget() {
     }
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
-    const auto& extent = getExtent();
+void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const {
+    const auto& extent = getExtent(currentSurface);
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
-    flipVertically(bounds, getExtent().height);
+void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const {
+    flipVertically(bounds, getExtent(currentSurface).height);
 }
 
-VkExtent2D VulkanRenderTarget::getExtent() const {
+VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const {
     if (mOffscreen) {
         return {width, height};
     }
-    return mContext.currentSurface->clientSize;
+    return currentSurface->clientSize;
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : mContext.currentSurface->getColor();
+VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
+    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColor();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth() const {
-    return mOffscreen ? mDepth : mContext.currentSurface->depth;
+VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
+    return mOffscreen ? mDepth : currentSurface->depth;
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {

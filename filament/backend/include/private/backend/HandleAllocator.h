@@ -31,11 +31,15 @@
 #   define HANDLE_TYPE_SAFETY 0
 #endif
 
+#define HandleAllocatorGL HandleAllocator<16, 64, 208>
+#define HandleAllocatorVK HandleAllocator<16, 64, 880>
+
 namespace filament::backend {
 
 /*
  * A utility class to efficiently allocate and manage Handle<>
  */
+template <size_t P0, size_t P1, size_t P2>
 class HandleAllocator {
 public:
 
@@ -205,11 +209,12 @@ public:
 
 private:
 
+    // template <int P0, int P1, int P2>
     class Allocator {
         friend class HandleAllocator;
-        utils::PoolAllocator< 16, 16>   mPool0;
-        utils::PoolAllocator< 64, 16>   mPool1;
-        utils::PoolAllocator<208, 16>   mPool2;
+        utils::PoolAllocator<P0, 16>   mPool0;
+        utils::PoolAllocator<P1, 16>   mPool1;
+        utils::PoolAllocator<P2, 16>   mPool2;
         UTILS_UNUSED_IN_RELEASE const utils::AreaPolicy::HeapArea& mArea;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
