@@ -515,7 +515,7 @@ const DebugServer::MaterialRecord* DebugServer::getRecord(const MaterialKey& key
 void DebugServer::updateActiveVariants() {
     if (mQueryCallback) {
         for (auto& pair : mMaterialRecords) {
-            uint64_t& result = mMaterialRecords[pair.first].activeVariants;
+            VariantList& result = mMaterialRecords[pair.first].activeVariants;
             mQueryCallback(pair.second.userdata, &result);
         }
     }

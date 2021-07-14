@@ -527,16 +527,12 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
     material->mPendingEdits = createParser(engine.getBackend(), packageData, packageSize);
 }
 
-void FMaterial::onQueryCallback(void* userdata, uint64_t* pVariants) {
+void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     FMaterial* material = upcast((Material*) userdata);
-    uint64_t variants = 0;
-    auto& cachedPrograms = material->mCachedPrograms;
-    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
-        if (cachedPrograms[i]) {
-            variants |= (1u << i);
-        }
-    }
-    *pVariants = variants;
+#if FILAMENT_ENABLE_MATDBG
+    *pVariants = material->mActivePrograms;
+    material->mActivePrograms.reset();
+#endif
 }
 
  /** @}*/
