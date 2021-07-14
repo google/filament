@@ -23,7 +23,7 @@
 
 #include <utils/CString.h>
 
-#include "ShaderInfo.h"
+#include <private/filament/Variant.h>
 
 namespace filament {
 namespace matdbg {

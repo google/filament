@@ -21,9 +21,9 @@
 
 #include <backend/DriverEnums.h>
 
-#include <tsl/robin_map.h>
+#include <private/filament/Variant.h>
 
-#include "ShaderInfo.h"
+#include <tsl/robin_map.h>
 
 class CivetServer;
 
