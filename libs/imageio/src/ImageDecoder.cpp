@@ -473,7 +473,8 @@ LinearImage EXRDecoder::decode() {
         size_t i = 0;
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
-                 filament::math::float3& pixel = *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
+                filament::math::float3& pixel =
+                        *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                 pixel.r = rgba[i++];
                 pixel.g = rgba[i++];
                 pixel.b = rgba[i++];

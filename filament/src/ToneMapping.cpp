@@ -210,6 +210,10 @@ float genericTonemap(float x, float contrast, float shoulder,
     return saturate(xc / (std::pow(xc, shoulder) * b + c));
 }
 
+constexpr float luminance(float3 v) noexcept {
+    return dot(v, LUMA_HK_REC709);
+}
+
 float3 EVILS(float3 x) noexcept {
     // Troy Sobotka, 2021, "EVILS - Exposure Value Invariant Luminance Scaling"
     // https://colab.research.google.com/drive/1iPJzNNKR7PynFmsqSnQm3bCZmQ3CvAJ-#scrollTo=psU43hb-BLzB
@@ -225,16 +229,16 @@ float3 EVILS(float3 x) noexcept {
     constexpr float hdrMax = 64.0f;
 
     // We assume an input compatible with Rec.709 luminance weights
-    float luminanceIn = dot(x, LUMA_REC709);
+    float luminanceIn = luminance(x);
     float luminanceOut = genericTonemap(luminanceIn, contrast, shoulder, midGreyIn, midGreyOut, hdrMax);
 
     float peak = max(x);
     float3 chromaRatio = max(x / peak, 0.0f);
 
-    float chromaRatioLuminance = dot(chromaRatio, LUMA_REC709);
+    float chromaRatioLuminance = luminance(chromaRatio);
 
     float3 maxReserves = 1.0f - chromaRatio;
-    float maxReservesLuminance = dot(maxReserves, LUMA_REC709);
+    float maxReservesLuminance = luminance(maxReserves);
 
     float luminanceDifference = std::max(luminanceOut - chromaRatioLuminance, 0.0f);
     float scaledLuminanceDifference =
@@ -243,7 +247,7 @@ float3 EVILS(float3 x) noexcept {
     float chromaScale = (luminanceOut - luminanceDifference) /
             std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
 
-    return saturate(chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves);
+    return chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves;
 }
 
 float3 DisplayRange(float3 x) noexcept {
