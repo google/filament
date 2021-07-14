@@ -92,7 +92,8 @@ CString ShaderExtractor::spirvToGLSL(const uint32_t* data, size_t wordCount) {
     using namespace spirv_cross;
 
     CompilerGLSL::Options emitOptions;
-    emitOptions.es = true;
+    emitOptions.es = false;
+    emitOptions.version = 410;
     emitOptions.vulkan_semantics = true;
 
     vector<uint32_t> spirv(data, data + wordCount);
