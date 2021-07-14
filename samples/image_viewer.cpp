@@ -228,17 +228,17 @@ static void loadImage(App& app, Engine* engine, Path filename) {
     }
 
     std::ifstream inputStream(filename, std::ios::binary);
-    LinearImage image = ImageDecoder::decode(
-            inputStream, filename, ImageDecoder::ColorSpace::LINEAR);
+    LinearImage* image = new LinearImage(ImageDecoder::decode(
+            inputStream, filename, ImageDecoder::ColorSpace::LINEAR));
 
-    uint32_t channels = image.getChannels();
+    uint32_t channels = image->getChannels();
     if (channels != 3) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
         app.showImage = false;
         return;
     }
 
-    if (!image.isValid()) {
+    if (!image->isValid()) {
         std::cerr << "The input image is invalid: " << filename << std::endl;
         app.showImage = false;
         return;
@@ -246,37 +246,25 @@ static void loadImage(App& app, Engine* engine, Path filename) {
 
     inputStream.close();
 
-    uint32_t w = image.getWidth();
-    uint32_t h = image.getHeight();
+    uint32_t w = image->getWidth();
+    uint32_t h = image->getHeight();
     Texture* texture = Texture::Builder()
             .width(w)
             .height(h)
             .levels(0xff)
-            .format(Texture::InternalFormat::RGBA16F)
+            .format(Texture::InternalFormat::RGB16F)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .build(*engine);
 
-    uint8_t* data = new uint8_t[w * h * sizeof(half4)];
-    const float* pixelRef = image.getPixelRef();
-    for (uint32_t i = 0; i < w * h; i++) {
-        uint32_t j = i * channels;
-        reinterpret_cast<half4*>(data)[i] = half4{
-            half(pixelRef[j]),
-            half(pixelRef[j + 1]),
-            half(pixelRef[j + 2]),
-            1.0f
-        };
-    }
-
     Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
-        delete[] reinterpret_cast<uint8_t*>(data);
+        delete reinterpret_cast<LinearImage*>(data);
     };
 
     Texture::PixelBufferDescriptor buffer(
-            data,
-            size_t(w * h * 4 * sizeof(half)),
-            Texture::Format::RGBA,
-            Texture::Type::HALF,
+            image->getPixelRef(),
+            size_t(w * h * channels * sizeof(float)),
+            Texture::Format::RGB,
+            Texture::Type::FLOAT,
             freeCallback
     );
 
