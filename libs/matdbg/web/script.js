@@ -389,8 +389,8 @@ function selectMaterial(matid, selectFirstShader) {
         const mat = gMaterialDatabase[gCurrentMaterial];
         const selection = { matid };
         if (mat.opengl.length > 0) selection.glindex = 0;
-        else if (mat.vkindex.length > 0) selection.vkindex = 0;
-        else if (mat.metalindex.length > 0) selection.metalindex = 0;
+        else if (mat.vulkan.length > 0) selection.vkindex = 0;
+        else if (mat.metal.length > 0) selection.metalindex = 0;
         selectShader(selection);
     }
 }
