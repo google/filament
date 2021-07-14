@@ -12,6 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
 */
 const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.25.2/min/';
 const kUntitledPlaceholder = "untitled";
@@ -29,6 +30,7 @@ const gMaterialDatabase = {};
 let gSocket = null;
 let gEditor = null;
 let gCurrentMaterial = "00000000";
+let gCurrentLanguage = "glsl";
 let gCurrentShader = { matid: "00000000", glindex: 0 };
 let gCurrentSocketId = 0;
 let gEditorIsLoading = false;
@@ -79,6 +81,15 @@ document.querySelector("body").addEventListener("click", (evt) => {
     if (anchor.classList.contains("rebuild")) {
         rebuildMaterial();
         return;
+    }
+
+    // Handle language selection.
+    for (const lang of "glsl spirv msl".split(" ")) {
+        if (anchor.classList.contains(lang)) {
+            gCurrentLanguage = lang;
+            renderShaderStatus();
+            return;
+        }
     }
 });
 
@@ -332,11 +343,24 @@ function getShaderRecord(selection) {
 function renderShaderStatus() {
     const shader = getShaderRecord(gCurrentShader);
     let statusString = "";
-    if (shader && shader.modified) {
-        statusString += " &nbsp; <a class='rebuild'>[rebuild]</a>";
-    }
-    if (shader && !shader.active) {
-        statusString += " &nbsp; <span class='warning'> selected variant is inactive </span>";
+    if (shader) {
+        const glsl = "glsl " + (gCurrentLanguage === "glsl" ? "active" : "");
+        const msl = "msl " + (gCurrentLanguage === "msl" ? "active" : "");
+        const spirv = "spirv " + (gCurrentLanguage === "spirv" ? "active" : "");
+        if (gCurrentShader.metalindex >= 0) {
+            statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
+            statusString += ` &nbsp; <a class='status_button ${msl}'>[MSL]</a>`;
+        }
+        if (gCurrentShader.vkindex >= 0) {
+            statusString += ` &nbsp; <a class='status_button ${glsl}'>[GLSL]</a>`;
+            statusString += ` &nbsp; <a class='status_button ${spirv}'>[SPIRV]</a>`;
+        }
+        if (shader.modified) {
+            statusString += " &nbsp; <a class='status_button rebuild'>[rebuild]</a>";
+        }
+        if (!shader.active) {
+            statusString += " &nbsp; <span class='warning'> selected variant is inactive </span>";
+        }
     }
     header.innerHTML = "matdbg" + statusString;
 }
