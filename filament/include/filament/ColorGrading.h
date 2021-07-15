@@ -74,6 +74,7 @@ class FColorGrading;
  * - Saturation
  * - Curves
  * - Tone mapping
+ * - Luminance scaling
  *
  * Defaults
  * ========
@@ -90,6 +91,7 @@ class FColorGrading;
  * - Saturation: 1.0
  * - Curves: gamma {1,1,1}, midPoint {1,1,1}, and scale {1,1,1}
  * - Tone mapping: ACES_LEGACY
+ * - Luminance scaling: false
  *
  * @see View
  */
@@ -111,7 +113,7 @@ public:
         ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
         ACES          = 2,     //!< ACES tone mapping
         FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        EVILS         = 4,     //!< Exposure value invariant luminance scaling tone mapping, offers the best behaviors in high intensity areas
+        RESERVED      = 4,     //!< Currently unused
         REINHARD      = 5,     //!< Reinhard luma-based tone mapping
         DISPLAY_RANGE = 6,     //!< Tone mapping used to validate/debug scene exposure
     };
@@ -153,6 +155,22 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
+
+        /**
+         * Enables or disables the luminance scaling component (LICH) from the exposure value
+         * invariant luminance system (EVILS). When this setting is enabled, pixels with high
+         * chromatic values will roll-off to white to offer a more natural rendering. This step
+         * also helps avoid undesirable hue skews caused by out of gamut colors clipped
+         * to the destination color gamut.
+         *
+         * When luminance scaling is enabled, tone mapping is performed on the luminance of each
+         * pixel instead of per-channel.
+         *
+         * @param luminanceScaling Enables or disables EVILS post-tone mapping
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& luminanceScaling(bool luminanceScaling) noexcept;
 
         /**
          * Adjusts the exposure of this image. The exposure is specified in stops:

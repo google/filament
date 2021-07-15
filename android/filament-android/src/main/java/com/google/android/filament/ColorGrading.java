@@ -64,6 +64,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Saturation</li>
  * <li>Curves</li>
  * <li>Tone mapping</li>
+ * <li>Luminance scaling</li>
  * </ul>
  *
  * <h1>Defaults</h1>
@@ -81,6 +82,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Saturation: <code>1.0</code></li>
  * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
  * <li>Tone mapping: {@link ToneMapping#ACES_LEGACY}</li>
+ * <li>Luminance scaling: false</li>
  * </ul>
  *
  * @see View
@@ -111,8 +113,8 @@ public class ColorGrading {
         ACES,
         /** Filmic tone mapping, modelled after ACES but applied in sRGB space. */
         FILMIC,
-        /** Exposure value invariant luminance scaling tone mapping, offers the best behaviors in high intensity areas. */
-        EVILS,
+        /** Reserved for future use. */
+        RESERVED,
         /** Reinhard luma-based tone mapping. */
         REINHARD,
         /** Tone mapping used to validate/debug scene exposure. */
@@ -170,6 +172,25 @@ public class ColorGrading {
          */
         public Builder toneMapping(ToneMapping toneMapping) {
             nBuilderToneMapping(mNativeBuilder, toneMapping.ordinal());
+            return this;
+        }
+
+        /**
+         * Enables or disables the luminance scaling component (LICH) from the exposure value
+         * invariant luminance system (EVILS). When this setting is enabled, pixels with high
+         * chromatic values will roll-off to white to offer a more natural rendering. This step
+         * also helps avoid undesirable hue skews caused by out of gamut colors clipped
+         * to the destination color gamut.
+         *
+         * When luminance scaling is enabled, tone mapping is performed on the luminance of each
+         * pixel instead of per-channel.
+         *
+         * @param luminanceScaling Enables or disables EVILS post-tone mapping
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder luminanceScaling(boolean luminanceScaling) {
+            nBuilderLuminanceScaling(mNativeBuilder, luminanceScaling);
             return this;
         }
 
@@ -482,6 +503,7 @@ public class ColorGrading {
 
     private static native void nBuilderQuality(long nativeBuilder, int quality);
     private static native void nBuilderToneMapping(long nativeBuilder, int toneMapper);
+    private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
     private static native void nBuilderExposure(long nativeBuilder, float exposure);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
     private static native void nBuilderChannelMixer(long nativeBuilder, float[] outRed, float[] outGreen, float[] outBlue);
