@@ -110,4 +110,8 @@ template class HandleAllocatorGL;
 template class HandleAllocatorVK;
 #endif
 
+#if defined (FILAMENT_SUPPORTS_METAL)
+template class HandleAllocatorMTL;
+#endif
+
 } // namespace filament::backend
