@@ -402,7 +402,7 @@ containing two `.ktx` files (one for the IBL itself, one for the skybox). To gen
 simply use this command:
 
 ```
-cmgen -x ./ibls/ my_ibl.exr
+cmgen -f ktx -x ./ibls/ my_ibl.exr
 ```
 
 The source environment map can be a PNG (8 or 16 bit), a PSD (16 or 32 bit), an HDR or an OpenEXR
