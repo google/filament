@@ -1092,7 +1092,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
-        << "\"luminanceScaling\": " << (in.luminanceScaling) << ",\n"
+        << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
