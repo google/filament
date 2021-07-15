@@ -67,8 +67,6 @@ float3 ACES(float3 x) noexcept;
 
 float3 ACES_Legacy(float3 x) noexcept;
 
-float3 EVILS(float3 x) noexcept;
-
 /**
  * Converts the input HDR RGB color into one of 16 debug colors that represent
  * the pixel's exposure. When the output is cyan, the input color represents

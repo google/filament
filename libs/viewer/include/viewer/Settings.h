@@ -98,6 +98,7 @@ struct ColorGradingSettings {
     bool enabled = true;
     filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    bool luminanceScaling = false;
     float exposure = 0.0f;
     float temperature = 0.0f;
     float tint = 0.0f;

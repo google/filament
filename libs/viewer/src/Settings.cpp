@@ -186,7 +186,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "ACES_LEGACY")) { *out = ToneMapping::ACES_LEGACY; }
     else if (0 == compare(tokens[i], jsonChunk, "ACES")) { *out = ToneMapping::ACES; }
     else if (0 == compare(tokens[i], jsonChunk, "FILMIC")) { *out = ToneMapping::FILMIC; }
-    else if (0 == compare(tokens[i], jsonChunk, "EVILS")) { *out = ToneMapping::EVILS; }
+    else if (0 == compare(tokens[i], jsonChunk, "RESERVED")) { *out = ToneMapping::RESERVED; }
     else if (0 == compare(tokens[i], jsonChunk, "REINHARD")) { *out = ToneMapping::REINHARD; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
@@ -279,6 +279,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "toneMapping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
+        } else if (compare(tok, jsonChunk, "luminanceScaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->luminanceScaling);
         } else if (compare(tok, jsonChunk, "exposure") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->exposure);
         } else if (compare(tok, jsonChunk, "temperature") == 0) {
@@ -980,6 +982,7 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
         .saturation(settings.saturation)
         .curves(settings.gamma, settings.midPoint, settings.scale)
         .toneMapping(settings.toneMapping)
+        .luminanceScaling(settings.luminanceScaling)
         .build(*engine);
 }
 
@@ -1049,7 +1052,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::ACES_LEGACY: return out << "\"ACES_LEGACY\"";
         case ToneMapping::ACES: return out << "\"ACES\"";
         case ToneMapping::FILMIC: return out << "\"FILMIC\"";
-        case ToneMapping::EVILS: return out << "\"EVILS\"";
+        case ToneMapping::RESERVED: return out << "\"RESERVED\"";
         case ToneMapping::REINHARD: return out << "\"REINHARD\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }
@@ -1089,6 +1092,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
+        << "\"luminanceScaling\": " << (in.luminanceScaling) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
@@ -1347,6 +1351,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
+            luminanceScaling == rhs.luminanceScaling &&
             exposure == rhs.exposure &&
             temperature == rhs.temperature &&
             tint == rhs.tint &&
