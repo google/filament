@@ -369,47 +369,47 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 }
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
-    return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
+    return alloc_handle<MetalVertexBuffer>();
 }
 
 Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
-    return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
+    return alloc_handle<MetalIndexBuffer>();
 }
 
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
-    return alloc_handle<MetalBufferObject, HwBufferObject>();
+    return alloc_handle<MetalBufferObject>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwTexture> MetalDriver::importTextureS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwSamplerGroup> MetalDriver::createSamplerGroupS() noexcept {
-    return alloc_handle<MetalSamplerGroup, HwSamplerGroup>();
+    return alloc_handle<MetalSamplerGroup>();
 }
 
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
-    return alloc_handle<MetalRenderPrimitive, HwRenderPrimitive>();
+    return alloc_handle<MetalRenderPrimitive>();
 }
 
 Handle<HwProgram> MetalDriver::createProgramS() noexcept {
-    return alloc_handle<MetalProgram, HwProgram>();
+    return alloc_handle<MetalProgram>();
 }
 
 Handle<HwRenderTarget> MetalDriver::createDefaultRenderTargetS() noexcept {
-    return alloc_handle<MetalRenderTarget, HwRenderTarget>();
+    return alloc_handle<MetalRenderTarget>();
 }
 
 Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
-    return alloc_handle<MetalRenderTarget, HwRenderTarget>();
+    return alloc_handle<MetalRenderTarget>();
 }
 
 Handle<HwFence> MetalDriver::createFenceS() noexcept {
@@ -425,11 +425,11 @@ Handle<HwSync> MetalDriver::createSyncS() noexcept {
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
-    return alloc_handle<MetalSwapChain, HwSwapChain>();
+    return alloc_handle<MetalSwapChain>();
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
-    return alloc_handle<MetalSwapChain, HwSwapChain>();
+    return alloc_handle<MetalSwapChain>();
 }
 
 Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {

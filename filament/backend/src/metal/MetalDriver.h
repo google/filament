@@ -84,34 +84,34 @@ private:
 
     backend::HandleAllocatorMTL mHandleAllocator;
 
-    template<typename Dp, typename B>
-    Handle<B> alloc_handle() {
-        return mHandleAllocator.allocate<Dp>();
+    template<typename D>
+    Handle<D> alloc_handle() {
+        return mHandleAllocator.allocate<D>();
     }
 
-    template<typename Dp, typename B, typename ... ARGS>
+    template<typename D, typename B, typename ... ARGS>
     Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
-        return mHandleAllocator.allocateAndConstruct<Dp>(std::forward<ARGS>(args)...);
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
     }
 
-    template<typename Dp, typename B>
-    Dp* handle_cast(Handle<B> handle) noexcept {
-        return mHandleAllocator.handle_cast<Dp*>(handle);
+    template<typename D, typename B>
+    D* handle_cast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
     }
 
-    template<typename Dp, typename B>
-    const Dp* handle_const_cast(const Handle<B>& handle) noexcept {
-        return mHandleAllocator.handle_cast<Dp*>(handle);
+    template<typename D, typename B>
+    const D* handle_const_cast(const Handle<B>& handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
     }
 
-    template<typename Dp, typename B, typename ... ARGS>
-    Dp* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
-        return mHandleAllocator.construct<Dp>(handle, std::forward<ARGS>(args)...);
+    template<typename D, typename B, typename ... ARGS>
+    D* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 
-    template<typename Dp, typename B>
+    template<typename D, typename B>
     void destruct_handle(Handle<B>& handle) noexcept {
-        auto* p = mHandleAllocator.handle_cast<Dp*>(handle);
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
         mHandleAllocator.deallocate(handle, p);
     }
 
