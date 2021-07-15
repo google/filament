@@ -34,6 +34,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace filament {
@@ -260,6 +261,7 @@ private:
 
 // MetalFence is used to implement both Fences and Syncs.
 // There's no diamond problem, because HwBase (superclass of HwFence and HwSync) is empty.
+static_assert(std::is_empty_v<HwBase>);
 class MetalFence : public HwFence, public HwSync {
 public:
 
