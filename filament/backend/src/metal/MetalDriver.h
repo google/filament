@@ -20,6 +20,8 @@
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
 
+#include "private/backend/HandleAllocator.h"
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/debug.h>
@@ -84,6 +86,8 @@ private:
      * Memory management
      */
 
+    backend::HandleAllocatorMTL mHandleAllocator;
+
     // Copied from VulkanDriver.h
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
@@ -96,66 +100,33 @@ private:
 
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = malloc(sizeof(Dp));
-        return Handle<B>(mNextId++);
+        return mHandleAllocator.allocate<Dp>();
     }
 
     template<typename Dp, typename B, typename ... ARGS>
     Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        Blob blob = mHandleMap[mNextId] = malloc(sizeof(Dp));
-        Dp* addr = reinterpret_cast<Dp*>(blob);
-        new(addr) Dp(std::forward<ARGS>(args)...);
-        return Handle<B>(mNextId++);
+        return mHandleAllocator.allocateAndConstruct<Dp>(std::forward<ARGS>(args)...);
     }
 
     template<typename Dp, typename B>
     Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        return reinterpret_cast<Dp*>(blob);
+        return mHandleAllocator.handle_cast<Dp*>(handle);
     }
 
     template<typename Dp, typename B>
     const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        return reinterpret_cast<const Dp*>(blob);
+        return mHandleAllocator.handle_cast<Dp*>(handle);
     }
 
     template<typename Dp, typename B, typename ... ARGS>
     Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        Dp* addr = reinterpret_cast<Dp*>(blob);
-        new(addr) Dp(std::forward<ARGS>(args)...);
-        return addr;
+        return mHandleAllocator.construct<Dp>(handle, std::forward<ARGS>(args)...);
     }
 
     template<typename Dp, typename B>
     void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        assert_invariant(handle);
-        // Call the destructor, remove the blob, don't bother reclaiming the integer id.
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        reinterpret_cast<Dp*>(blob)->~Dp();
-        free(blob);
-        handleMap.erase(handle.getId());
+        auto* p = mHandleAllocator.handle_cast<Dp*>(handle);
+        mHandleAllocator.deallocate(handle, p);
     }
 
     void enumerateSamplerGroups(const MetalProgram* program,

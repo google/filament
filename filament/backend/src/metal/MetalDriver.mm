@@ -55,7 +55,8 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
 MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
-        mContext(new MetalContext) {
+        mContext(new MetalContext),
+        mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();

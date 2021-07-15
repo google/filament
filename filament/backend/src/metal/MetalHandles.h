@@ -258,7 +258,9 @@ private:
     id<MTLTexture> multisampledDepth = nil;
 };
 
-class MetalFence : public HwFence {
+// MetalFence is used to implement both Fences and Syncs.
+// There's no diamond problem, because HwBase (superclass of HwFence and HwSync) is empty.
+class MetalFence : public HwFence, public HwSync {
 public:
 
     // MetalFence is special, as it gets constructed on the Filament thread. We must delay inserting

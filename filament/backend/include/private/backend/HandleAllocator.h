@@ -31,8 +31,9 @@
 #   define HANDLE_TYPE_SAFETY 0
 #endif
 
-#define HandleAllocatorGL HandleAllocator<16, 64, 208>
-#define HandleAllocatorVK HandleAllocator<16, 64, 880>
+#define HandleAllocatorGL  HandleAllocator<16, 64, 208>
+#define HandleAllocatorVK  HandleAllocator<16, 64, 880>
+#define HandleAllocatorMTL HandleAllocator<16, 64, 576>
 
 namespace filament::backend {
 
