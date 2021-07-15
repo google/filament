@@ -62,7 +62,28 @@ using namespace utils;
 
     self.title = @"https://google.github.io/filament/remote";
 
-    [self createRenderables];
+    // Arguments:
+    // --model <path>
+    //     path to glb or gltf file to load from documents directory
+    NSString* modelPath = nil;
+
+    NSArray* arguments = [[NSProcessInfo processInfo] arguments];
+    for (NSUInteger i = 0; i < arguments.count; i++) {
+        NSString* argument = arguments[i];
+        NSString* nextArgument = (i + 1) < arguments.count ? arguments[i + 1] : nil;
+        if ([argument isEqualToString:@"--model"]) {
+            if (!nextArgument) {
+                NSLog(@"Warning: --model option requires path argument. None provided.");
+            }
+            modelPath = nextArgument;
+        }
+    }
+
+    if (modelPath) {
+        [self createRenderablesFromPath:modelPath];
+    } else {
+        [self createDefaultRenderables];
+    }
     [self createLights];
 
     _server = new viewer::RemoteServer();
@@ -93,7 +114,37 @@ using namespace utils;
 
 #pragma mark Private
 
-- (void)createRenderables {
+- (void)createRenderablesFromPath:(NSString*)model {
+    // Retrieve the full path to the model in the documents directory.
+    NSString* documentPath = [NSSearchPathForDirectoriesInDomains(
+            NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    NSString* path = [documentPath stringByAppendingPathComponent:model];
+
+    if (![[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        NSLog(@"Error: no file exists at %@", path);
+        return;
+    }
+
+    NSData* buffer = [NSData dataWithContentsOfFile:path];
+    if ([model hasSuffix:@".glb"]) {
+        [self.modelView loadModelGlb:buffer];
+    } else if ([model hasSuffix:@".gltf"]) {
+        NSString* parentDirectory = [path stringByDeletingLastPathComponent];
+        [self.modelView loadModelGltf:buffer
+                             callback:^NSData*(NSString* uri) {
+                                 NSString* p = [parentDirectory stringByAppendingPathComponent:uri];
+                                 return [NSData dataWithContentsOfFile:p];
+                             }];
+    } else {
+        NSLog(@"Error: file %@ must have either a .glb or .gltf extension.", path);
+        return;
+    }
+
+    self.title = model;
+    [self.modelView transformToUnitCube];
+}
+
+- (void)createDefaultRenderables {
     NSString* path = [[NSBundle mainBundle] pathForResource:@"scene"
                                                      ofType:@"gltf"
                                                 inDirectory:@"BusterDrone"];
