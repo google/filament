@@ -43,6 +43,10 @@ set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "4" CACHE STRING
     "Size of the OpenGL handle arena, default 4."
 )
 
+set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
+    "Size of the Metal handle arena, default 8."
+)
+
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================

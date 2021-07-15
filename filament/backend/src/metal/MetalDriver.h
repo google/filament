@@ -39,6 +39,10 @@ struct MetalContext;
 struct MetalProgram;
 struct UniformBufferState;
 
+#ifndef FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB
+#define FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
+
 class MetalDriver final : public DriverBase {
     explicit MetalDriver(backend::MetalPlatform* platform) noexcept;
     ~MetalDriver() noexcept override;
