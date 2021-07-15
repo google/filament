@@ -448,8 +448,9 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
+# Disable optimizations and enable debug info (preserves names in SPIR-V)
 if (FILAMENT_DISABLE_MATOPT)
-    set(MATC_OPT_FLAGS -g)
+    set(MATC_OPT_FLAGS -gd)
 endif()
 
 set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
