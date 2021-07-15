@@ -528,8 +528,8 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
 }
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
-    FMaterial* material = upcast((Material*) userdata);
 #if FILAMENT_ENABLE_MATDBG
+    FMaterial* material = upcast((Material*) userdata);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();
 #endif
