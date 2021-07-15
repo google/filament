@@ -26,10 +26,6 @@
 #include <utils/Log.h>
 #include <utils/debug.h>
 
-#include <tsl/robin_map.h>
-
-#include <mutex>
-
 namespace filament {
 namespace backend {
 
@@ -88,16 +84,6 @@ private:
 
     backend::HandleAllocatorMTL mHandleAllocator;
 
-    // Copied from VulkanDriver.h
-
-    // For now we're not bothering to store handles in pools, just simple on-demand allocation.
-    // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = void*;
-    using HandleMap = tsl::robin_map<HandleBase::HandleId, Blob>;
-    std::mutex mHandleMapMutex;
-    HandleMap mHandleMap;
-    HandleBase::HandleId mNextId = 1;
-
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
         return mHandleAllocator.allocate<Dp>();
@@ -109,22 +95,22 @@ private:
     }
 
     template<typename Dp, typename B>
-    Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
+    Dp* handle_cast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<Dp*>(handle);
     }
 
     template<typename Dp, typename B>
-    const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
+    const Dp* handle_const_cast(const Handle<B>& handle) noexcept {
         return mHandleAllocator.handle_cast<Dp*>(handle);
     }
 
     template<typename Dp, typename B, typename ... ARGS>
-    Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
+    Dp* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
         return mHandleAllocator.construct<Dp>(handle, std::forward<ARGS>(args)...);
     }
 
     template<typename Dp, typename B>
-    void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
+    void destruct_handle(Handle<B>& handle) noexcept {
         auto* p = mHandleAllocator.handle_cast<Dp*>(handle);
         mHandleAllocator.deallocate(handle, p);
     }
