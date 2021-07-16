@@ -37,6 +37,13 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "enabled": true,
             "quality": "MEDIUM",
             "toneMapping": "ACES_LEGACY",
+            "genericToneMapper": {
+                "contrast": 1.0,
+                "shoulder": 1.0,
+                "midGrayIn": 1.0,
+                "midGrayOut": 1.0,
+                "hdrMax": 16.0
+            },
             "luminanceScaling": false,
             "exposure": 0,
             "temperature": 0,

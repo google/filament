@@ -292,6 +292,15 @@ struct GenericToneMapper::Options {
         midGrayOut = saturate(midGrayOut);
         hdrMax = max(hdrMax, 1.0f);
 
+        this->contrast = contrast;
+        this->shoulder = shoulder;
+        this->midGrayIn = midGrayIn;
+        this->midGrayOut = midGrayOut;
+        this->hdrMax = hdrMax;
+
+        // remap shoulder
+        shoulder = 0.8f + 0.4f * shoulder;
+
         float mc = std::pow(midGrayIn, contrast);
         float mcs = std::pow(mc, shoulder);
 
@@ -303,12 +312,6 @@ struct GenericToneMapper::Options {
 
         b = -((-mc + (midGrayOut * (hcs * mc - hc * v)) / u) / v);
         c = (hcs * mc - hc * v) / u;
-
-        this->contrast = contrast;
-        this->shoulder = shoulder;
-        this->midGrayIn = midGrayIn;
-        this->midGrayOut = midGrayOut;
-        this->hdrMax = hdrMax;
     }
 #pragma clang diagnostic pop
 
@@ -339,7 +342,7 @@ GenericToneMapper::~GenericToneMapper() noexcept {
 }
 
 float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
-    float3 xc = pow(min(x, mOptions->hdrMax), mOptions->contrast);
+    float3 xc = pow(clamp(x, 0.0f, mOptions->hdrMax), mOptions->contrast);
     return saturate(xc / (pow(xc, mOptions->shoulder) * mOptions->b + mOptions->c));
 }
 

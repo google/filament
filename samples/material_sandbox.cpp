@@ -970,6 +970,9 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     if (g_params.colorGrading) {
         if (g_params.colorGradingOptions != g_lastColorGradingOptions) {
             ColorGradingOptions &options = g_params.colorGradingOptions;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             ColorGrading *colorGrading = ColorGrading::Builder()
                     .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
                     .channelMixer(options.outRed, options.outGreen, options.outBlue)
@@ -987,6 +990,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                     .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
                     .luminanceScaling(options.luminanceScaling)
                     .build(*engine);
+#pragma clang diagnostic pop
 
             if (g_colorGrading) {
                 engine->destroy(g_colorGrading);

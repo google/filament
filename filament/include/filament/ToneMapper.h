@@ -147,7 +147,7 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
      */
     GenericToneMapper(
             float contrast = 1.4f,
-            float shoulder = 1.0f,
+            float shoulder = 0.5f,
             float midGrayIn = 0.18f,
             float midGrayOut = 0.266f,
             float hdrMax = 10.0f

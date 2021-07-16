@@ -151,8 +151,18 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0Generic\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+        if (colorGrading.toneMapping == ToneMapping::GENERIC) {
+            if (ImGui::CollapsingHeader("Tonemap parameters")) {
+                GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
+                ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
+                ImGui::SliderFloat("Shoulder##genericToneMapper", &generic.shoulder, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
+                ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
+            }
+        }
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
 
         ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
