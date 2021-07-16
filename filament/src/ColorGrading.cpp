@@ -210,7 +210,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     if (needToneMapper) {
         switch (mImpl->toneMapping) {
             case ToneMapping::LINEAR:
-                mImpl->toneMapper = new ToneMapper();
+                mImpl->toneMapper = new LinearToneMapper();
                 break;
             case ToneMapping::ACES_LEGACY:
                 mImpl->toneMapper = new ACESLegacyToneMapper();

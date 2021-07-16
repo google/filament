@@ -27,25 +27,45 @@ namespace filament {
  *
  */
 struct UTILS_PUBLIC ToneMapper {
-    virtual ~ToneMapper() noexcept = default;
+    ToneMapper() noexcept;
+    virtual ~ToneMapper() noexcept;
 
-    virtual math::float3 operator()(math::float3 c) const noexcept;
+    virtual math::float3 operator()(math::float3 c) const noexcept = 0;
 };
 
-struct ACESToneMapper : public ToneMapper {
-    math::float3 operator()(math::float3 c) const noexcept final;
+struct UTILS_PUBLIC LinearToneMapper final : public ToneMapper {
+    LinearToneMapper() noexcept;
+    ~LinearToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 c) const noexcept;
 };
 
-struct ACESLegacyToneMapper : public ToneMapper {
-    math::float3 operator()(math::float3 c) const noexcept final;
+struct UTILS_PUBLIC ACESToneMapper final : public ToneMapper {
+    ACESToneMapper() noexcept;
+    ~ACESToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 c) const noexcept;
 };
 
-struct FilmicToneMapper : public ToneMapper {
-    math::float3 operator()(math::float3 x) const noexcept final;
+struct UTILS_PUBLIC ACESLegacyToneMapper final : public ToneMapper {
+    ACESLegacyToneMapper() noexcept;
+    ~ACESLegacyToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 c) const noexcept;
 };
 
-struct DisplayRangeToneMapper : public ToneMapper {
-    math::float3 operator()(math::float3 c) const noexcept final;
+struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
+    FilmicToneMapper() noexcept;
+    ~FilmicToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 x) const noexcept;
+};
+
+struct UTILS_PUBLIC DisplayRangeToneMapper final : public ToneMapper {
+    DisplayRangeToneMapper() noexcept;
+    ~DisplayRangeToneMapper() noexcept;
+
+    math::float3 operator()(math::float3 c) const noexcept;
 };
 
 } // namespace filament

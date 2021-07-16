@@ -21,11 +21,6 @@
 #include <math/vec3.h>
 #include <math/scalar.h>
 
-#include <iostream>
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-
 namespace filament {
 
 using namespace math;
@@ -193,17 +188,31 @@ float3 ACES(float3 color, float brightness) noexcept {
 // Tone mappers
 //------------------------------------------------------------------------------
 
-float3 ToneMapper::operator()(float3 v) const noexcept {
+#define DEFAULT_CONSTRUCTORS(A) \
+        A::A() noexcept = default; \
+        A::~A() noexcept = default;
+
+DEFAULT_CONSTRUCTORS(ToneMapper)
+
+DEFAULT_CONSTRUCTORS(LinearToneMapper)
+
+float3 LinearToneMapper::operator()(float3 v) const noexcept {
     return v;
 }
+
+DEFAULT_CONSTRUCTORS(ACESToneMapper)
 
 float3 ACESToneMapper::operator()(math::float3 c) const noexcept {
     return aces::ACES(c, 1.0f);
 }
 
+DEFAULT_CONSTRUCTORS(ACESLegacyToneMapper)
+
 float3 ACESLegacyToneMapper::operator()(math::float3 c) const noexcept {
     return aces::ACES(c, 1.0f / 0.6f);
 }
+
+DEFAULT_CONSTRUCTORS(FilmicToneMapper)
 
 float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
@@ -214,6 +223,8 @@ float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
     constexpr float e = 0.14f;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
+
+DEFAULT_CONSTRUCTORS(DisplayRangeToneMapper)
 
 float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
     // 16 debug colors + 1 duplicated at the end for easy indexing
@@ -279,6 +290,6 @@ float genericTonemap(
     return saturate(xc / (std::pow(xc, shoulder) * b + c));
 }
 
-} // namespace filament
+#undef DEFAULT_CONSTRUCTORS
 
-#pragma clang diagnostic pop
+} // namespace filament
