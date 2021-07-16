@@ -20,6 +20,7 @@
 #define TNT_FILAMENT_COLOR_GRADING_H
 
 #include <filament/FilamentAPI.h>
+#include <filament/ToneMapper.h>
 
 #include <utils/compiler.h>
 
@@ -113,9 +114,7 @@ public:
         ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
         ACES          = 2,     //!< ACES tone mapping
         FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        RESERVED      = 4,     //!< Currently unused
-        REINHARD      = 5,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 6,     //!< Tone mapping used to validate/debug scene exposure
+        DISPLAY_RANGE = 4,     //!< Tone mapping used to validate/debug scene exposure
     };
 
     //! Use Builder to construct a ColorGrading object instance

@@ -113,10 +113,6 @@ public class ColorGrading {
         ACES,
         /** Filmic tone mapping, modelled after ACES but applied in sRGB space. */
         FILMIC,
-        /** Reserved for future use. */
-        RESERVED,
-        /** Reinhard luma-based tone mapping. */
-        REINHARD,
         /** Tone mapping used to validate/debug scene exposure. */
         DISPLAY_RANGE,
     }

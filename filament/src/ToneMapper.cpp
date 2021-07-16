@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-#include "ToneMapping.h"
+#include <filament/ToneMapper.h>
 
-using namespace filament::math;
+#include "ColorSpace.h"
+
+#include <math/vec3.h>
+#include <math/scalar.h>
+
+#include <iostream>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wweak-vtables"
 
 namespace filament {
+
+using namespace math;
+
 namespace aces {
 
 inline float rgb_2_saturation(float3 rgb) {
@@ -131,7 +142,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 
-    float3 ap0 = AP1_to_AP0 * color;
+    float3 ap0 = REC2020_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -173,19 +184,66 @@ float3 ACES(float3 color, float brightness) noexcept {
     // Apply desaturation to compensate for luminance difference
     linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    return linearCV;
+    return AP1_to_REC2020 * linearCV;
 }
 
 } // namespace aces
 
-namespace tonemap {
+//------------------------------------------------------------------------------
+// Tone mappers
+//------------------------------------------------------------------------------
 
-float3 ACES(float3 x) noexcept {
-    return aces::ACES(x, 1.0f);
+float3 ToneMapper::operator()(float3 v) const noexcept {
+    return v;
 }
 
-float3 ACES_Legacy(float3 x) noexcept {
-    return aces::ACES(x, 1.0f / 0.6f);
+float3 ACESToneMapper::operator()(math::float3 c) const noexcept {
+    return aces::ACES(c, 1.0f);
+}
+
+float3 ACESLegacyToneMapper::operator()(math::float3 c) const noexcept {
+    return aces::ACES(c, 1.0f / 0.6f);
+}
+
+float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    constexpr float a = 2.51f;
+    constexpr float b = 0.03f;
+    constexpr float c = 2.43f;
+    constexpr float d = 0.59f;
+    constexpr float e = 0.14f;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
+    // 16 debug colors + 1 duplicated at the end for easy indexing
+    constexpr float3 debugColors[17] = {
+            {0.0,     0.0,     0.0},         // black
+            {0.0,     0.0,     0.1647},      // darkest blue
+            {0.0,     0.0,     0.3647},      // darker blue
+            {0.0,     0.0,     0.6647},      // dark blue
+            {0.0,     0.0,     0.9647},      // blue
+            {0.0,     0.9255,  0.9255},      // cyan
+            {0.0,     0.5647,  0.0},         // dark green
+            {0.0,     0.7843,  0.0},         // green
+            {1.0,     1.0,     0.0},         // yellow
+            {0.90588, 0.75294, 0.0},         // yellow-orange
+            {1.0,     0.5647,  0.0},         // orange
+            {1.0,     0.0,     0.0},         // bright red
+            {0.8392,  0.0,     0.0},         // red
+            {1.0,     0.0,     1.0},         // magenta
+            {0.6,     0.3333,  0.7882},      // purple
+            {1.0,     1.0,     1.0},         // white
+            {1.0,     1.0,     1.0}          // white
+    };
+
+    // The 5th color in the array (cyan) represents middle gray (18%)
+    // Every stop above or below middle gray causes a color shift
+    float v = log2(dot(c, LUMA_REC709) / 0.18f);
+    v = clamp(v + 5.0f, 0.0f, 15.0f);
+
+    size_t index = size_t(v);
+    return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
 }
 
 // TODO: These constants were chosen to match our ACES tone mappers as closely as possible
@@ -221,37 +279,6 @@ float genericTonemap(
     return saturate(xc / (std::pow(xc, shoulder) * b + c));
 }
 
-float3 DisplayRange(float3 x) noexcept {
-    // 16 debug colors + 1 duplicated at the end for easy indexing
-
-    constexpr float3 debugColors[17] = {
-            {0.0,     0.0,     0.0},         // black
-            {0.0,     0.0,     0.1647},      // darkest blue
-            {0.0,     0.0,     0.3647},      // darker blue
-            {0.0,     0.0,     0.6647},      // dark blue
-            {0.0,     0.0,     0.9647},      // blue
-            {0.0,     0.9255,  0.9255},      // cyan
-            {0.0,     0.5647,  0.0},         // dark green
-            {0.0,     0.7843,  0.0},         // green
-            {1.0,     1.0,     0.0},         // yellow
-            {0.90588, 0.75294, 0.0},         // yellow-orange
-            {1.0,     0.5647,  0.0},         // orange
-            {1.0,     0.0,     0.0},         // bright red
-            {0.8392,  0.0,     0.0},         // red
-            {1.0,     0.0,     1.0},         // magenta
-            {0.6,     0.3333,  0.7882},      // purple
-            {1.0,     1.0,     1.0},         // white
-            {1.0,     1.0,     1.0}          // white
-    };
-
-    // The 5th color in the array (cyan) represents middle gray (18%)
-    // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(x, LUMA_REC709) / 0.18f);
-    v = clamp(v + 5.0f, 0.0f, 15.0f);
-
-    size_t index = size_t(v);
-    return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
-}
-
-} // namespace tonemap
 } // namespace filament
+
+#pragma clang diagnostic pop
