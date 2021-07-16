@@ -958,7 +958,7 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
-        auto light = lm->getInstance(sceneLights[i]);
+        light = lm->getInstance(sceneLights[i]);
         if (lm->isSpotLight(light)) {
             lm->setShadowCaster(light, settings.enableShadows);
         }
