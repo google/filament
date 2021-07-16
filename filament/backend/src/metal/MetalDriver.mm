@@ -126,9 +126,6 @@ MetalDriver::~MetalDriver() noexcept {
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
-#if defined(FILAMENT_METAL_PROFILING)
-    os_release(mContext->log);
-#endif
     delete mContext->bufferPool;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
