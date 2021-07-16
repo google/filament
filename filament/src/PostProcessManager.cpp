@@ -467,6 +467,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
+                        .depth = 1,
+                        .type = Texture::Sampler::SAMPLER_2D_ARRAY,
                         .format = (lowPassFilterEnabled || highQualityUpsampling) ? TextureFormat::RGB8 : TextureFormat::R8
                 });
 
@@ -609,7 +611,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 data.input = builder.sample(input);
 
                 data.blurred = builder.createTexture("Blurred output", {
-                        .width = desc.width, .height = desc.height, .format = format });
+                        .width = desc.width,
+                        .height = desc.height,
+                        .depth = desc.depth,
+                        .type = desc.type,
+                        .format = format });
 
                 FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
                 assert_invariant(depth);
@@ -619,7 +625,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 // We need to clear the buffers because we are skipping pixels at infinity (skybox)
                 data.blurred = builder.write(data.blurred, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass("Blurred target", {
-                        .attachments = { .color = { data.blurred }, . depth = depth },
+                        .attachments = { .color = { data.blurred }, .depth = depth },
                         .clearColor = { 1.0f },
                         .clearFlags = TargetBufferFlags::COLOR
                 });

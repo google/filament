@@ -830,7 +830,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
                 view.prepareSSAO(data.ssao ?
-                        resources.getTexture(data.ssao) : ppm.getOneTexture());
+                        resources.getTexture(data.ssao) : ppm.getOneTextureArray());
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
