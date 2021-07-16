@@ -52,7 +52,7 @@ namespace utils {
 class JobSystem;
 } // namespace utils;
 
-// Avoid warnings for using the ToneMapping API, which has been publicly deprecated.
+// Avoid warnings for using the deprecated APIs.
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -233,14 +233,6 @@ public:
 
     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
         return mTemporalAntiAliasingOptions;
-    }
-
-    void setToneMapping(ToneMapping type) noexcept {
-        mToneMapping = type;
-    }
-
-    ToneMapping getToneMapping() const noexcept {
-        return mToneMapping;
     }
 
     void setColorGrading(FColorGrading* colorGrading) noexcept {
@@ -496,7 +488,6 @@ private:
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
-    ToneMapping mToneMapping = ToneMapping::ACES;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mScreenSpaceRefractionEnabled = true;

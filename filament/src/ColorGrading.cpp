@@ -46,7 +46,11 @@ using namespace backend;
 
 struct ColorGrading::BuilderDetails {
     const ToneMapper* toneMapper = nullptr;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+#pragma clang diagnostic pop
 
     bool hasAdjustments = false;
 
@@ -119,6 +123,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 
 ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel qualityLevel) noexcept {
     mImpl->quality = qualityLevel;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::toneMapper(const ToneMapper* toneMapper) noexcept {
+    mImpl->toneMapper = toneMapper;
     return *this;
 }
 
@@ -199,6 +208,8 @@ ColorGrading::Builder& ColorGrading::Builder::curves(
     return *this;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     // We want to see if any of the default adjustment values have been modified
     // We skip the tonemapping operator on purpose since we always want to apply it
@@ -206,6 +217,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     bool hasAdjustments = defaults != *mImpl;
     mImpl->hasAdjustments = hasAdjustments;
 
+    // Fallback for clients that still use the deprecated ToneMapping API
     bool needToneMapper = mImpl->toneMapper == nullptr;
     if (needToneMapper) {
         switch (mImpl->toneMapping) {
@@ -236,6 +248,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
 
     return colorGrading;
 }
+#pragma clang diagnostic pop
 
 //------------------------------------------------------------------------------
 // White balance
