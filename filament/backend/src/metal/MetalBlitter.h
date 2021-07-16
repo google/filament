@@ -99,6 +99,8 @@ private:
 
     void blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
             const BlitArgs& args);
+    void blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+            const BlitArgs& args);
     id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
     id<MTLFunction> getBlitVertexFunction();
     id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);

@@ -137,6 +137,56 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         args.destination.depth.textureType != MTLTextureType2DMultisample,
         "Blitting between MSAA render targets with differing pixel formats and/or regions is not supported.");
 
+    blitSlowPath(cmdBuffer, blitColor, blitDepth, args);
+}
+
+void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+        const BlitArgs& args) {
+    if (blitColor) {
+        if (args.source.color.sampleCount == args.destination.color.sampleCount &&
+            args.source.color.pixelFormat == args.destination.color.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.color
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.color
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitColor = false;
+        }
+    }
+
+    if (blitDepth) {
+        if (args.source.depth.sampleCount == args.destination.depth.sampleCount &&
+            args.source.depth.pixelFormat == args.destination.depth.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.depth
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.depth
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitDepth = false;
+        }
+    }
+}
+
+void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+        const BlitArgs& args) {
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     if (blitColor) {
@@ -251,51 +301,9 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     [encoder setFragmentBytes:&args.source.level length:sizeof(uint8_t) atIndex:0];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [encoder endEncoding];
-}
 
-void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-        const BlitArgs& args) {
-    if (blitColor) {
-        if (args.source.color.sampleCount == args.destination.color.sampleCount &&
-            args.source.color.pixelFormat == args.destination.color.pixelFormat &&
-            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
-
-            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
-            [blitEncoder copyFromTexture:args.source.color
-                             sourceSlice:0
-                             sourceLevel:args.source.level
-                            sourceOrigin:args.source.region.origin
-                              sourceSize:args.source.region.size
-                               toTexture:args.destination.color
-                        destinationSlice:0
-                        destinationLevel:args.destination.level
-                       destinationOrigin:args.destination.region.origin];
-            [blitEncoder endEncoding];
-
-            blitColor = false;
-        }
-    }
-
-    if (blitDepth) {
-        if (args.source.depth.sampleCount == args.destination.depth.sampleCount &&
-            args.source.depth.pixelFormat == args.destination.depth.pixelFormat &&
-            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
-
-            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
-            [blitEncoder copyFromTexture:args.source.depth
-                             sourceSlice:0
-                             sourceLevel:args.source.level
-                            sourceOrigin:args.source.region.origin
-                              sourceSize:args.source.region.size
-                               toTexture:args.destination.depth
-                        destinationSlice:0
-                        destinationLevel:args.destination.level
-                       destinationOrigin:args.destination.region.origin];
-            [blitEncoder endEncoding];
-
-            blitDepth = false;
-        }
-    }
+    blitColor = false;
+    blitDepth = false;
 }
 
 void MetalBlitter::shutdown() noexcept {
