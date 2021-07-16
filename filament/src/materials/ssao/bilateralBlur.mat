@@ -2,7 +2,7 @@ material {
     name : bilateralBlur,
     parameters : [
         {
-            type : sampler2d,
+            type : sampler2dArray,
             name : ssao,
             precision: medium
         },
@@ -57,7 +57,7 @@ fragment {
 
     void tap(inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
         // ambient occlusion sample
-        vec3 data = textureLod(materialParams_ssao, position, 0.0).rgb;
+        vec3 data = textureLod(materialParams_ssao, vec3(position, 0.0), 0.0).rgb;
 
         // bilateral sample
         float bilateral = bilateralWeight(depth, unpack(data.gb));
@@ -69,7 +69,7 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
 
-        vec3 data = textureLod(materialParams_ssao, uv, 0.0).rgb;
+        vec3 data = textureLod(materialParams_ssao, vec3(uv, 0.0), 0.0).rgb;
         if (data.g * data.b == 1.0) {
             // This is the skybox, skip
             postProcess.color.rgb = data;

@@ -28,14 +28,14 @@ float evaluateSSAO() {
 
         // Read four AO samples and their depths values
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-        vec4 ao = textureGather(light_ssao, uv, 0);
-        vec4 dg = textureGather(light_ssao, uv, 1);
-        vec4 db = textureGather(light_ssao, uv, 2);
+        vec4 ao = textureGather(light_ssao, vec3(uv, 0.0), 0);
+        vec4 dg = textureGather(light_ssao, vec3(uv, 0.0), 1);
+        vec4 db = textureGather(light_ssao, vec3(uv, 0.0), 2);
 #else
-        vec3 s01 = textureLodOffset(light_ssao, uv, 0.0, ivec2(0, 1)).rgb;
-        vec3 s11 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 1)).rgb;
-        vec3 s10 = textureLodOffset(light_ssao, uv, 0.0, ivec2(1, 0)).rgb;
-        vec3 s00 = textureLodOffset(light_ssao, uv, 0.0, ivec2(0, 0)).rgb;
+        vec3 s01 = textureLodOffset(light_ssao, vec3(uv, 0.0), 0.0, ivec2(0, 1)).rgb;
+        vec3 s11 = textureLodOffset(light_ssao, vec3(uv, 0.0), 0.0, ivec2(1, 1)).rgb;
+        vec3 s10 = textureLodOffset(light_ssao, vec3(uv, 0.0), 0.0, ivec2(1, 0)).rgb;
+        vec3 s00 = textureLodOffset(light_ssao, vec3(uv, 0.0), 0.0, ivec2(0, 0)).rgb;
         vec4 ao = vec4(s01.r, s11.r, s10.r, s00.r);
         vec4 dg = vec4(s01.g, s11.g, s10.g, s00.g);
         vec4 db = vec4(s01.b, s11.b, s10.b, s00.b);
@@ -61,7 +61,7 @@ float evaluateSSAO() {
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
         return dot(ao, w) * (1.0 / (w.x + w.y + w.z + w.w));
     } else {
-        return textureLod(light_ssao, uv, 0.0).r;
+        return textureLod(light_ssao, vec3(uv, 0.0), 0.0).r;
     }
 #else
     // SSAO is not applied when blending is enabled
