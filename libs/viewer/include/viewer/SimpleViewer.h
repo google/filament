@@ -243,6 +243,7 @@ private:
     int mCurrentCamera = 0;
 
     // Color grading UI state.
+    float mToneMapPlot[1024];
     float mRangePlot[1024 * 3];
     float mCurvePlot[1024 * 3];
 };

@@ -288,8 +288,8 @@ struct GenericToneMapper::Options {
     ) {
         contrast = max(contrast, 1e-5f);
         shoulder = saturate(shoulder);
-        midGrayIn = saturate(midGrayIn);
-        midGrayOut = saturate(midGrayOut);
+        midGrayIn = clamp(midGrayIn, 1e-5f, 1.0f);
+        midGrayOut = clamp(midGrayOut, 1e-5f, 1.0f);
         hdrMax = max(hdrMax, 1.0f);
 
         this->contrast = contrast;
@@ -299,13 +299,13 @@ struct GenericToneMapper::Options {
         this->hdrMax = hdrMax;
 
         // remap shoulder
-        shoulder = 0.8f + 0.4f * shoulder;
+        d = 0.8f + 0.4f * shoulder;
 
         float mc = std::pow(midGrayIn, contrast);
-        float mcs = std::pow(mc, shoulder);
+        float mcs = std::pow(mc, d);
 
         float hc = std::pow(hdrMax, contrast);
-        float hcs = std::pow(hc, shoulder);
+        float hcs = std::pow(hc, d);
 
         float u = (hcs - mcs) * midGrayOut;
         float v = mcs * midGrayOut;
@@ -324,6 +324,7 @@ struct GenericToneMapper::Options {
     // Computed fields, do not modify
     float b;
     float c;
+    float d;
 };
 
 GenericToneMapper::GenericToneMapper(
@@ -343,7 +344,7 @@ GenericToneMapper::~GenericToneMapper() noexcept {
 
 float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
     float3 xc = pow(clamp(x, 0.0f, mOptions->hdrMax), mOptions->contrast);
-    return saturate(xc / (pow(xc, mOptions->shoulder) * mOptions->b + mOptions->c));
+    return saturate(xc / (pow(xc, mOptions->d) * mOptions->b + mOptions->c));
 }
 
 float GenericToneMapper::getContrast() const noexcept { return  mOptions->contrast; }
