@@ -51,6 +51,8 @@ void SimpleConditionalBranchToBranchReductionOpportunity::Apply() {
       {{SPV_OPERAND_TYPE_ID,
         {conditional_branch_instruction_->GetSingleWordInOperand(
             kTrueBranchOperandIndex)}}});
+  conditional_branch_instruction_->context()->InvalidateAnalysesExceptFor(
+      opt::IRContext::kAnalysisNone);
 }
 
 }  // namespace reduce

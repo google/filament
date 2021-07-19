@@ -27,6 +27,11 @@
 #include <array>
 #include <stack>
 
+#if defined(FILAMENT_METAL_PROFILING)
+#include <os/log.h>
+#include <os/signpost.h>
+#endif
+
 #include <tsl/robin_set.h>
 
 namespace filament {
@@ -106,6 +111,12 @@ struct MetalContext {
     TimerQueryInterface* timerQueryImpl;
 
     std::stack<const char*> groupMarkers;
+
+#if defined(FILAMENT_METAL_PROFILING)
+    // Logging and profiling.
+    os_log_t log;
+    os_signpost_id_t signpostId;
+#endif
 };
 
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);

@@ -28,7 +28,7 @@ namespace fuzz {
 class TransformationPropagateInstructionUp : public Transformation {
  public:
   explicit TransformationPropagateInstructionUp(
-      const protobufs::TransformationPropagateInstructionUp& message);
+      protobufs::TransformationPropagateInstructionUp message);
 
   TransformationPropagateInstructionUp(
       uint32_t block_id,

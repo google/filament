@@ -29,8 +29,6 @@ class FuzzerPassAddCompositeTypes : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddCompositeTypes();
-
   void Apply() override;
 
  private:

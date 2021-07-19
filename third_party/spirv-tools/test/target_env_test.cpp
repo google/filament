@@ -95,7 +95,6 @@ INSTANTIATE_TEST_SUITE_P(
         {"opencl2.0embedded", true, SPV_ENV_OPENCL_EMBEDDED_2_0},
         {"opencl2.1embedded", true, SPV_ENV_OPENCL_EMBEDDED_2_1},
         {"opencl2.2embedded", true, SPV_ENV_OPENCL_EMBEDDED_2_2},
-        {"webgpu0", true, SPV_ENV_WEBGPU_0},
         {"opencl2.3", false, SPV_ENV_UNIVERSAL_1_0},
         {"opencl3.0", false, SPV_ENV_UNIVERSAL_1_0},
         {"vulkan1.9", false, SPV_ENV_UNIVERSAL_1_0},

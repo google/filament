@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"../jsonrpc2"
+	"github.com/KhronosGroup/SPIRV-Tools/utils/vscode/src/lsp/jsonrpc2"
 )
 
 type Client interface {

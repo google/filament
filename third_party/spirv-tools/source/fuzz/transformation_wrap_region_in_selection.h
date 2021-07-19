@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationWrapRegionInSelection : public Transformation {
  public:
   explicit TransformationWrapRegionInSelection(
-      const protobufs::TransformationWrapRegionInSelection& message);
+      protobufs::TransformationWrapRegionInSelection message);
 
   TransformationWrapRegionInSelection(uint32_t region_entry_block_id,
                                       uint32_t region_exit_block_id,

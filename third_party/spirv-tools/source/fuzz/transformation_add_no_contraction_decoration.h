@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddNoContractionDecoration : public Transformation {
  public:
   explicit TransformationAddNoContractionDecoration(
-      const protobufs::TransformationAddNoContractionDecoration& message);
+      protobufs::TransformationAddNoContractionDecoration message);
 
   explicit TransformationAddNoContractionDecoration(uint32_t fresh_id);
 

@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationSetSelectionControl : public Transformation {
  public:
   explicit TransformationSetSelectionControl(
-      const protobufs::TransformationSetSelectionControl& message);
+      protobufs::TransformationSetSelectionControl message);
 
   TransformationSetSelectionControl(uint32_t block_id,
                                     uint32_t selection_control);

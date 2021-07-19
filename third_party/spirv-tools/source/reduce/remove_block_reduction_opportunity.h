@@ -27,7 +27,8 @@ namespace reduce {
 class RemoveBlockReductionOpportunity : public ReductionOpportunity {
  public:
   // Creates the opportunity to remove |block| in |function| in |context|.
-  RemoveBlockReductionOpportunity(opt::Function* function,
+  RemoveBlockReductionOpportunity(opt::IRContext* context,
+                                  opt::Function* function,
                                   opt::BasicBlock* block);
 
   bool PreconditionHolds() override;
@@ -36,6 +37,7 @@ class RemoveBlockReductionOpportunity : public ReductionOpportunity {
   void Apply() override;
 
  private:
+  opt::IRContext* context_;
   opt::Function* function_;
   opt::BasicBlock* block_;
 };

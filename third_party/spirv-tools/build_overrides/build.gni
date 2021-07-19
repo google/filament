@@ -16,9 +16,6 @@
 # Chromium specific targets in a client project's GN file etc.
 build_with_chromium = false
 
-# Don't use Chromium's third_party/binutils.
-linux_use_bundled_binutils_override = false
-
 declare_args() {
   # Android 32-bit non-component, non-clang builds cannot have symbol_level=2
   # due to 4GiB file size limit, see https://crbug.com/648948.

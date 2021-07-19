@@ -223,7 +223,7 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
   case Type::k##kind:                                                     \
     typeInst = MakeUnique<Instruction>(context(), SpvOpType##kind, 0, id, \
                                        std::initializer_list<Operand>{}); \
-    break;
+    break
     DefineParameterlessCase(Void);
     DefineParameterlessCase(Bool);
     DefineParameterlessCase(Sampler);
@@ -513,7 +513,7 @@ Type* TypeManager::RebuildType(const Type& type) {
 #define DefineNoSubtypeCase(kind)             \
   case Type::k##kind:                         \
     rebuilt_ty.reset(type.Clone().release()); \
-    return type_pool_.insert(std::move(rebuilt_ty)).first->get();
+    return type_pool_.insert(std::move(rebuilt_ty)).first->get()
 
     DefineNoSubtypeCase(Void);
     DefineNoSubtypeCase(Bool);
@@ -862,8 +862,8 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
                                      inst.GetSingleWordInOperand(2),
                                      inst.GetSingleWordInOperand(3));
       break;
-    case SpvOpTypeRayQueryProvisionalKHR:
-      type = new RayQueryProvisionalKHR();
+    case SpvOpTypeRayQueryKHR:
+      type = new RayQueryKHR();
       break;
     default:
       SPIRV_UNIMPLEMENTED(consumer_, "unhandled type");

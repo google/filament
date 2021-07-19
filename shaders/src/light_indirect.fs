@@ -486,7 +486,8 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-void applyRefraction(const PixelParams pixel,
+void applyRefraction(
+    const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
@@ -500,7 +501,7 @@ void applyRefraction(const PixelParams pixel,
 #error invalid REFRACTION_TYPE
 #endif
 
-    /* compute transmission T */
+    // compute transmission T
 #if defined(MATERIAL_HAS_ABSORPTION)
 #if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
@@ -509,11 +510,11 @@ void applyRefraction(const PixelParams pixel,
 #endif
 #endif
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
+    // of 1.5 has full microfacet refraction
+    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
+            saturate(pixel.etaIR * 3.0 - 2.0));
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
-
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
@@ -543,10 +544,13 @@ void applyRefraction(const PixelParams pixel,
     vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
-    /* fresnel from the first interface */
+    // base color changes the amount of light passing through the boundary
+    Ft *= pixel.diffuseColor;
+
+    // fresnel from the first interface
     Ft *= 1.0 - E;
 
-    /* apply absorption */
+    // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
 #endif
@@ -557,7 +561,8 @@ void applyRefraction(const PixelParams pixel,
 }
 #endif
 
-void combineDiffuseAndSpecular(const PixelParams pixel,
+void combineDiffuseAndSpecular(
+        const PixelParams pixel,
         const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
         inout vec3 color) {
 #if defined(HAS_REFRACTION)

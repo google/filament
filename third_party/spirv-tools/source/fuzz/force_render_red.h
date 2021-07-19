@@ -41,7 +41,7 @@ bool ForceRenderRed(
     const spv_target_env& target_env, spv_validator_options validator_options,
     const std::vector<uint32_t>& binary_in,
     const spvtools::fuzz::protobufs::FactSequence& initial_facts,
-    std::vector<uint32_t>* binary_out);
+    const MessageConsumer& message_consumer, std::vector<uint32_t>* binary_out);
 
 }  // namespace fuzz
 }  // namespace spvtools

@@ -403,8 +403,10 @@ class IRContext {
   // instruction exists.
   Instruction* KillInst(Instruction* inst);
 
-  // Removes the non-semantic instruction tree that uses |inst|'s result id.
-  void KillNonSemanticInfo(Instruction* inst);
+  // Collects the non-semantic instruction tree that uses |inst|'s result id
+  // to be killed later.
+  void CollectNonSemanticTree(Instruction* inst,
+                              std::unordered_set<Instruction*>* to_kill);
 
   // Returns true if all of the given analyses are valid.
   bool AreAnalysesValid(Analysis set) { return (set & valid_analyses_) == set; }
@@ -596,9 +598,13 @@ class IRContext {
   bool ProcessCallTreeFromRoots(ProcessFunction& pfn,
                                 std::queue<uint32_t>* roots);
 
-  // Emmits a error message to the message consumer indicating the error
+  // Emits a error message to the message consumer indicating the error
   // described by |message| occurred in |inst|.
   void EmitErrorMessage(std::string message, Instruction* inst);
+
+  // Returns true if and only if there is a path to |bb| from the entry block of
+  // the function that contains |bb|.
+  bool IsReachable(const opt::BasicBlock& bb);
 
  private:
   // Builds the def-use manager from scratch, even if it was already valid.

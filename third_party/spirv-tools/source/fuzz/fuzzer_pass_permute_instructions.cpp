@@ -29,8 +29,6 @@ FuzzerPassPermuteInstructions::FuzzerPassPermuteInstructions(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassPermuteInstructions::~FuzzerPassPermuteInstructions() = default;
-
 void FuzzerPassPermuteInstructions::Apply() {
   // We are iterating over all instructions in all basic blocks.
   for (auto& function : *GetIRContext()->module()) {

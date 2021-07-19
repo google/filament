@@ -29,9 +29,6 @@ FuzzerPassDuplicateRegionsWithSelections::
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassDuplicateRegionsWithSelections::
-    ~FuzzerPassDuplicateRegionsWithSelections() = default;
-
 void FuzzerPassDuplicateRegionsWithSelections::Apply() {
   // Iterate over all of the functions in the module.
   for (auto& function : *GetIRContext()->module()) {

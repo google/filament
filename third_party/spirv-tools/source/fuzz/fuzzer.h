@@ -23,6 +23,7 @@
 #include "source/fuzz/fuzzer_pass.h"
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/pass_management/repeated_pass_instances.h"
+#include "source/fuzz/pass_management/repeated_pass_manager.h"
 #include "source/fuzz/pass_management/repeated_pass_recommender.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 #include "source/fuzz/random_generator.h"
@@ -37,33 +38,28 @@ namespace fuzz {
 class Fuzzer {
  public:
   // Possible statuses that can result from running the fuzzer.
-  enum class FuzzerResultStatus {
+  enum class Status {
     kComplete,
-    kFailedToCreateSpirvToolsInterface,
+    kModuleTooBig,
+    kTransformationLimitReached,
+    kFuzzerStuck,
     kFuzzerPassLedToInvalidModule,
-    kInitialBinaryInvalid,
   };
 
-  struct FuzzerResult {
-    FuzzerResultStatus status;
-    std::vector<uint32_t> transformed_binary;
-    protobufs::TransformationSequence applied_transformations;
+  struct Result {
+    // Status of the fuzzing session.
+    Status status;
+
+    // Equals to true if new transformations were applied during the previous
+    // fuzzing session.
+    bool is_changed;
   };
 
-  // Each field of this enum corresponds to an available repeated pass
-  // strategy, and is used to decide which kind of RepeatedPassManager object
-  // to create.
-  enum class RepeatedPassStrategy {
-    kSimple,
-    kRandomWithRecommendations,
-    kLoopedWithRecommendations
-  };
-
-  Fuzzer(spv_target_env target_env, MessageConsumer consumer,
-         const std::vector<uint32_t>& binary_in,
-         const protobufs::FactSequence& initial_facts,
+  Fuzzer(std::unique_ptr<opt::IRContext> ir_context,
+         std::unique_ptr<TransformationContext> transformation_context,
+         std::unique_ptr<FuzzerContext> fuzzer_context,
+         MessageConsumer consumer,
          const std::vector<fuzzerutil::ModuleSupplier>& donor_suppliers,
-         std::unique_ptr<RandomGenerator> random_generator,
          bool enable_all_passes, RepeatedPassStrategy repeated_pass_strategy,
          bool validate_after_each_fuzzer_pass,
          spv_validator_options validator_options);
@@ -76,15 +72,23 @@ class Fuzzer {
 
   ~Fuzzer();
 
-  // Transforms |binary_in_| by running a number of randomized fuzzer passes.
-  // Initial facts about the input binary and the context in which it will
-  // execute are provided via |initial_facts_|.  A source of donor modules to be
-  // used by transformations is provided via |donor_suppliers_|.  On success,
-  // returns a successful result status together with the transformed binary and
-  // the sequence of transformations that were applied.  Otherwise, returns an
-  // appropriate result status together with an empty binary and empty
-  // transformation sequence.
-  FuzzerResult Run();
+  // Transforms |ir_context_| by running a number of randomized fuzzer passes.
+  // Initial facts about the input binary and the context in which it will be
+  // executed are provided with |transformation_context_|.
+  // |num_of_transformations| is equal to the maximum number of transformations
+  // applied in a single call to this method. This parameter is ignored if its
+  // value is equal to 0. Because fuzzing cannot stop mid way through a fuzzer
+  // pass, fuzzing will stop after the fuzzer pass that exceeds
+  // |num_of_transformations| has completed, so that the total number of
+  // transformations may be somewhat larger than this number.
+  Result Run(uint32_t num_of_transformations_to_apply);
+
+  // Returns the current IR context. It may be invalid if the Run method
+  // returned Status::kFuzzerPassLedToInvalidModule previously.
+  opt::IRContext* GetIRContext();
+
+  // Returns the sequence of applied transformations.
+  const protobufs::TransformationSequence& GetTransformationSequence() const;
 
  private:
   // A convenience method to add a repeated fuzzer pass to |pass_instances| with
@@ -119,7 +123,9 @@ class Fuzzer {
 
   // Decides whether to apply more repeated passes. The probability decreases as
   // the number of transformations that have been applied increases.
-  bool ShouldContinueFuzzing();
+  // The described probability is only applied if
+  // |continue_fuzzing_probabilistically| is true.
+  bool ShouldContinueRepeatedPasses(bool continue_fuzzing_probabilistically);
 
   // Applies |pass|, which must be a pass constructed with |ir_context|.
   // If |validate_after_each_fuzzer_pass_| is not set, true is always returned.
@@ -128,57 +134,59 @@ class Fuzzer {
   // instruction has a distinct unique id.
   bool ApplyPassAndCheckValidity(FuzzerPass* pass) const;
 
-  // Target environment.
-  const spv_target_env target_env_;
-
   // Message consumer that will be invoked once for each message communicated
   // from the library.
-  MessageConsumer consumer_;
-
-  // The initial binary to which fuzzing should be applied.
-  const std::vector<uint32_t>& binary_in_;
-
-  // Initial facts known to hold in advance of applying any transformations.
-  const protobufs::FactSequence& initial_facts_;
-
-  // A source of modules whose contents can be donated into the module being
-  // fuzzed.
-  const std::vector<fuzzerutil::ModuleSupplier>& donor_suppliers_;
-
-  // Random number generator to control decision making during fuzzing.
-  std::unique_ptr<RandomGenerator> random_generator_;
+  const MessageConsumer consumer_;
 
   // Determines whether all passes should be enabled, vs. having passes be
   // probabilistically enabled.
-  bool enable_all_passes_;
-
-  // Controls which type of RepeatedPassManager object to create.
-  RepeatedPassStrategy repeated_pass_strategy_;
+  const bool enable_all_passes_;
 
   // Determines whether the validator should be invoked after every fuzzer pass.
-  bool validate_after_each_fuzzer_pass_;
+  const bool validate_after_each_fuzzer_pass_;
 
   // Options to control validation.
-  spv_validator_options validator_options_;
+  const spv_validator_options validator_options_;
 
   // The number of repeated fuzzer passes that have been applied is kept track
   // of, in order to enforce a hard limit on the number of times such passes
   // can be applied.
   uint32_t num_repeated_passes_applied_;
 
+  // We use this to determine whether we can continue fuzzing incrementally
+  // since the previous call to the Run method could've returned
+  // kFuzzerPassLedToInvalidModule.
+  bool is_valid_;
+
   // Intermediate representation for the module being fuzzed, which gets
   // mutated as fuzzing proceeds.
   std::unique_ptr<opt::IRContext> ir_context_;
 
+  // Contextual information that is required in order to apply
+  // transformations.
+  std::unique_ptr<TransformationContext> transformation_context_;
+
   // Provides probabilities that control the fuzzing process.
   std::unique_ptr<FuzzerContext> fuzzer_context_;
 
-  // Contextual information that is required in order to apply transformations.
-  std::unique_ptr<TransformationContext> transformation_context_;
-
-  // The sequence of transformations that have been applied during fuzzing.  It
+  // The sequence of transformations that have been applied during fuzzing. It
   // is initially empty and grows as fuzzer passes are applied.
   protobufs::TransformationSequence transformation_sequence_out_;
+
+  // This object contains instances of all fuzzer passes that will participate
+  // in the fuzzing.
+  RepeatedPassInstances pass_instances_;
+
+  // This object defines the recommendation logic for fuzzer passes.
+  std::unique_ptr<RepeatedPassRecommender> repeated_pass_recommender_;
+
+  // This object manager a list of fuzzer pass and their available
+  // recommendations.
+  std::unique_ptr<RepeatedPassManager> repeated_pass_manager_;
+
+  // Some passes that it does not make sense to apply repeatedly, as they do not
+  // unlock other passes.
+  std::vector<std::unique_ptr<FuzzerPass>> final_passes_;
 };
 
 }  // namespace fuzz

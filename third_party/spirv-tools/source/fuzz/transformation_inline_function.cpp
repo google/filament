@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationInlineFunction::TransformationInlineFunction(
-    const spvtools::fuzz::protobufs::TransformationInlineFunction& message)
-    : message_(message) {}
+    protobufs::TransformationInlineFunction message)
+    : message_(std::move(message)) {}
 
 TransformationInlineFunction::TransformationInlineFunction(
     uint32_t function_call_id,
@@ -183,7 +183,6 @@ void TransformationInlineFunction::Apply(
     auto* cloned_block = block.Clone(ir_context);
     cloned_block = caller_function->InsertBasicBlockBefore(
         std::unique_ptr<opt::BasicBlock>(cloned_block), successor_block);
-    cloned_block->SetParent(caller_function);
     cloned_block->GetLabel()->SetResultId(result_id_map.at(cloned_block->id()));
     fuzzerutil::UpdateModuleIdBound(ir_context, cloned_block->id());
 

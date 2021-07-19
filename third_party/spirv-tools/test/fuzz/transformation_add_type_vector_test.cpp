@@ -57,10 +57,21 @@ TEST(TransformationAddTypeVectorTest, BasicTest) {
   ASSERT_FALSE(TransformationAddTypeVector(100, 1, 2).IsApplicable(
       context.get(), transformation_context));
 
-  TransformationAddTypeVector transformations[] = {
-      // %100 = OpTypeVector %6 2
-      TransformationAddTypeVector(100, 6, 2),
+  {
+    // %100 = OpTypeVector %6 2
+    TransformationAddTypeVector transformation(100, 6, 2);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(100));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpTypeVector,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsVector());
+  }
 
+  TransformationAddTypeVector transformations[] = {
       // %101 = OpTypeVector %7 3
       TransformationAddTypeVector(101, 7, 3),
 

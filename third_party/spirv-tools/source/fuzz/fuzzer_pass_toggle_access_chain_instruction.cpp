@@ -28,9 +28,6 @@ FuzzerPassToggleAccessChainInstruction::FuzzerPassToggleAccessChainInstruction(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassToggleAccessChainInstruction::
-    ~FuzzerPassToggleAccessChainInstruction() = default;
-
 void FuzzerPassToggleAccessChainInstruction::Apply() {
   auto context = GetIRContext();
   // Iterates over the module's instructions and checks whether it is

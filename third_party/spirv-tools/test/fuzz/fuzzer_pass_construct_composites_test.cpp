@@ -77,7 +77,8 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicStructs) {
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
 
-  auto prng = MakeUnique<PseudoRandomGenerator>(0);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
 
   for (uint32_t i = 0; i < 10; i++) {
     const auto context =
@@ -87,7 +88,6 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicStructs) {
         context.get(), validator_options, kConsoleMessageConsumer));
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
-    FuzzerContext fuzzer_context(prng.get(), 100);
     protobufs::TransformationSequence transformation_sequence;
 
     FuzzerPassConstructComposites fuzzer_pass(
@@ -158,7 +158,8 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicArrays) {
   const auto env = SPV_ENV_UNIVERSAL_1_3;
   const auto consumer = nullptr;
 
-  auto prng = MakeUnique<PseudoRandomGenerator>(0);
+  FuzzerContext fuzzer_context(MakeUnique<PseudoRandomGenerator>(0), 100,
+                               false);
 
   for (uint32_t i = 0; i < 10; i++) {
     const auto context =
@@ -168,7 +169,6 @@ TEST(FuzzerPassConstructCompositesTest, IsomorphicArrays) {
         context.get(), validator_options, kConsoleMessageConsumer));
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
-    FuzzerContext fuzzer_context(prng.get(), 100);
     protobufs::TransformationSequence transformation_sequence;
 
     FuzzerPassConstructComposites fuzzer_pass(

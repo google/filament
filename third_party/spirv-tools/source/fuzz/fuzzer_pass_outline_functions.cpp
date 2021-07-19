@@ -31,8 +31,6 @@ FuzzerPassOutlineFunctions::FuzzerPassOutlineFunctions(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassOutlineFunctions::~FuzzerPassOutlineFunctions() = default;
-
 void FuzzerPassOutlineFunctions::Apply() {
   std::vector<opt::Function*> original_functions;
   for (auto& function : *GetIRContext()->module()) {

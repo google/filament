@@ -113,12 +113,21 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0);
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
+
+#if defined(FILAMENT_METAL_PROFILING)
+    mContext->log = os_log_create("com.google.filament", "Metal");
+    mContext->signpostId = os_signpost_id_generate(mContext->log);
+    assert_invariant(mContext->signpostId != OS_SIGNPOST_ID_NULL);
+#endif
 }
 
 MetalDriver::~MetalDriver() noexcept {
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
+#if defined(FILAMENT_METAL_PROFILING)
+    os_release(mContext->log);
+#endif
     delete mContext->bufferPool;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
@@ -129,6 +138,9 @@ void MetalDriver::tick(int) {
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+#if defined(FILAMENT_METAL_PROFILING)
+    os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
+#endif
 }
 
 void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -167,6 +179,10 @@ void MetalDriver::endFrame(uint32_t frameId) {
     CVMetalTextureCacheFlush(mContext->textureCache, 0);
 
     assert_invariant(mContext->groupMarkers.empty());
+
+#if defined(FILAMENT_METAL_PROFILING)
+    os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
+#endif
 }
 
 void MetalDriver::flush(int) {

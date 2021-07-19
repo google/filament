@@ -69,7 +69,7 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
         return error;
       }
 
-      if (auto error = ValidateMemorySemantics(_, inst, 2)) {
+      if (auto error = ValidateMemorySemantics(_, inst, 2, memory_scope)) {
         return error;
       }
       break;
@@ -82,7 +82,7 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
         return error;
       }
 
-      if (auto error = ValidateMemorySemantics(_, inst, 1)) {
+      if (auto error = ValidateMemorySemantics(_, inst, 1, memory_scope)) {
         return error;
       }
       break;
@@ -119,7 +119,7 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
         return error;
       }
 
-      if (auto error = ValidateMemorySemantics(_, inst, 2)) {
+      if (auto error = ValidateMemorySemantics(_, inst, 2, memory_scope)) {
         return error;
       }
       break;

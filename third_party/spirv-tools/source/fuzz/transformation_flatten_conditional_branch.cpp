@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationFlattenConditionalBranch::TransformationFlattenConditionalBranch(
-    const protobufs::TransformationFlattenConditionalBranch& message)
-    : message_(message) {}
+    protobufs::TransformationFlattenConditionalBranch message)
+    : message_(std::move(message)) {}
 
 TransformationFlattenConditionalBranch::TransformationFlattenConditionalBranch(
     uint32_t header_block_id, bool true_branch_first,
@@ -441,16 +441,16 @@ bool TransformationFlattenConditionalBranch::
          header->terminator()->opcode() == SpvOpBranchConditional &&
          "|header| must be the header of a conditional.");
 
+  // |header| must be reachable.
+  if (!ir_context->IsReachable(*header)) {
+    return false;
+  }
+
   auto enclosing_function = header->GetParent();
   auto dominator_analysis =
       ir_context->GetDominatorAnalysis(enclosing_function);
   auto postdominator_analysis =
       ir_context->GetPostDominatorAnalysis(enclosing_function);
-
-  // |header| must be reachable.
-  if (!dominator_analysis->IsReachable(header)) {
-    return false;
-  }
 
   // Check that the header and the merge block describe a single-entry,
   // single-exit region.
@@ -512,13 +512,29 @@ bool TransformationFlattenConditionalBranch::
       return false;
     }
 
+    // The base objects for all data descriptors involved in synonym facts.
+    std::unordered_set<uint32_t> synonym_base_objects;
+    for (auto* synonym :
+         transformation_context.GetFactManager()->GetAllSynonyms()) {
+      synonym_base_objects.insert(synonym->object());
+    }
+
     // Check all of the instructions in the block.
-    bool all_instructions_compatible =
-        block->WhileEachInst([ir_context, instructions_that_need_ids](
-                                 opt::Instruction* instruction) {
+    bool all_instructions_compatible = block->WhileEachInst(
+        [ir_context, instructions_that_need_ids,
+         &synonym_base_objects](opt::Instruction* instruction) {
           // We can ignore OpLabel instructions.
           if (instruction->opcode() == SpvOpLabel) {
             return true;
+          }
+
+          // If the instruction is the base object of some synonym then we
+          // conservatively bail out: if a synonym ends up depending on an
+          // instruction that needs to be enclosed in a side-effect wrapper then
+          // it might no longer hold after we flatten the conditional.
+          if (instruction->result_id() &&
+              synonym_base_objects.count(instruction->result_id())) {
+            return false;
           }
 
           // If the instruction is a branch, it must be an unconditional branch.
@@ -828,7 +844,9 @@ bool TransformationFlattenConditionalBranch::OpSelectArgumentsAreRestricted(
     case SPV_ENV_UNIVERSAL_1_0:
     case SPV_ENV_UNIVERSAL_1_1:
     case SPV_ENV_UNIVERSAL_1_2:
-    case SPV_ENV_UNIVERSAL_1_3: {
+    case SPV_ENV_UNIVERSAL_1_3:
+    case SPV_ENV_VULKAN_1_0:
+    case SPV_ENV_VULKAN_1_1: {
       return true;
     }
     default:

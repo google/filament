@@ -27,8 +27,6 @@ FuzzerPassAddLoads::FuzzerPassAddLoads(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddLoads::~FuzzerPassAddLoads() = default;
-
 void FuzzerPassAddLoads::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* function, opt::BasicBlock* block,

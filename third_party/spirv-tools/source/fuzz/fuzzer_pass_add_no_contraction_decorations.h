@@ -28,8 +28,6 @@ class FuzzerPassAddNoContractionDecorations : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddNoContractionDecorations() override;
-
   void Apply() override;
 };
 

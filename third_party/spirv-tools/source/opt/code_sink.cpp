@@ -218,8 +218,10 @@ bool CodeSinkingPass::HasUniformMemorySync() {
       case SpvOpAtomicISub:
       case SpvOpAtomicSMin:
       case SpvOpAtomicUMin:
+      case SpvOpAtomicFMinEXT:
       case SpvOpAtomicSMax:
       case SpvOpAtomicUMax:
+      case SpvOpAtomicFMaxEXT:
       case SpvOpAtomicAnd:
       case SpvOpAtomicOr:
       case SpvOpAtomicXor:

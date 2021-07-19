@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddConstantBoolean : public Transformation {
  public:
   explicit TransformationAddConstantBoolean(
-      const protobufs::TransformationAddConstantBoolean& message);
+      protobufs::TransformationAddConstantBoolean message);
 
   TransformationAddConstantBoolean(uint32_t fresh_id, bool is_true,
                                    bool is_irrelevant);

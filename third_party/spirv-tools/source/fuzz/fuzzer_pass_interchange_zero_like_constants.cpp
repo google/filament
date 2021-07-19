@@ -29,9 +29,6 @@ FuzzerPassInterchangeZeroLikeConstants::FuzzerPassInterchangeZeroLikeConstants(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassInterchangeZeroLikeConstants::
-    ~FuzzerPassInterchangeZeroLikeConstants() = default;
-
 uint32_t FuzzerPassInterchangeZeroLikeConstants::FindOrCreateToggledConstant(
     opt::Instruction* declaration) {
   // |declaration| must not be a specialization constant because we do not know

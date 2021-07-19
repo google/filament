@@ -143,10 +143,18 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
 
   TransformationCompositeExtract transformation_1(
       MakeInstructionDescriptor(36, SpvOpConvertFToS, 0), 201, 100, {2});
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(201));
+  ASSERT_EQ(nullptr, context->get_instr_block(201));
+  uint32_t num_uses_of_100_before = context->get_def_use_mgr()->NumUses(100);
   ASSERT_TRUE(
       transformation_1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_1, context.get(),
                         &transformation_context);
+  ASSERT_EQ(SpvOpCompositeExtract,
+            context->get_def_use_mgr()->GetDef(201)->opcode());
+  ASSERT_EQ(15, context->get_instr_block(201)->id());
+  ASSERT_EQ(num_uses_of_100_before + 1,
+            context->get_def_use_mgr()->NumUses(100));
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 

@@ -947,7 +947,9 @@ TEST(TransformationSetLoopControlTest, CheckSPIRVVersionsRespected) {
 
   for (auto env :
        {SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1, SPV_ENV_UNIVERSAL_1_2,
-        SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_5}) {
+        SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_5,
+        SPV_ENV_VULKAN_1_0, SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_1_SPIRV_1_4,
+        SPV_ENV_VULKAN_1_2}) {
     const auto consumer = nullptr;
     const auto context =
         BuildModule(env, consumer, shader, kFuzzAssembleOption);
@@ -956,23 +958,33 @@ TEST(TransformationSetLoopControlTest, CheckSPIRVVersionsRespected) {
         context.get(), validator_options, kConsoleMessageConsumer));
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
-    TransformationSetLoopControl transformation(
-        10, SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask, 4, 4);
+    TransformationSetLoopControl peel_count(10, SpvLoopControlPeelCountMask, 4,
+                                            0);
+    TransformationSetLoopControl partial_count(
+        10, SpvLoopControlPartialCountMask, 0, 4);
 
     switch (env) {
       case SPV_ENV_UNIVERSAL_1_0:
       case SPV_ENV_UNIVERSAL_1_1:
       case SPV_ENV_UNIVERSAL_1_2:
       case SPV_ENV_UNIVERSAL_1_3:
+      case SPV_ENV_VULKAN_1_0:
+      case SPV_ENV_VULKAN_1_1:
         // PeelCount and PartialCount were introduced in SPIRV 1.4, so are not
         // valid in the context of older versions.
         ASSERT_FALSE(
-            transformation.IsApplicable(context.get(), transformation_context));
+            peel_count.IsApplicable(context.get(), transformation_context));
+        ASSERT_FALSE(
+            partial_count.IsApplicable(context.get(), transformation_context));
         break;
       case SPV_ENV_UNIVERSAL_1_4:
       case SPV_ENV_UNIVERSAL_1_5:
+      case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
+      case SPV_ENV_VULKAN_1_2:
         ASSERT_TRUE(
-            transformation.IsApplicable(context.get(), transformation_context));
+            peel_count.IsApplicable(context.get(), transformation_context));
+        ASSERT_TRUE(
+            partial_count.IsApplicable(context.get(), transformation_context));
         break;
       default:
         assert(false && "Unhandled environment");

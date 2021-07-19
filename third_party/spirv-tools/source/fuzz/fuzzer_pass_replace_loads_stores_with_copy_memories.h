@@ -30,8 +30,6 @@ class FuzzerPassReplaceLoadsStoresWithCopyMemories : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassReplaceLoadsStoresWithCopyMemories() override;
-
   void Apply() override;
 };
 

@@ -21,9 +21,8 @@ namespace fuzz {
 
 TransformationAddNoContractionDecoration::
     TransformationAddNoContractionDecoration(
-        const spvtools::fuzz::protobufs::
-            TransformationAddNoContractionDecoration& message)
-    : message_(message) {}
+        protobufs::TransformationAddNoContractionDecoration message)
+    : message_(std::move(message)) {}
 
 TransformationAddNoContractionDecoration::
     TransformationAddNoContractionDecoration(uint32_t result_id) {

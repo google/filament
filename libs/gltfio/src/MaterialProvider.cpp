@@ -52,8 +52,11 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.sheenColorUV == k2.sheenColorUV) &&
         (k1.hasSheenRoughnessTexture == k2.hasSheenRoughnessTexture) &&
         (k1.sheenRoughnessUV == k2.sheenRoughnessUV) &&
+        (k1.hasVolumeThicknessTexture == k2.hasVolumeThicknessTexture) &&
+        (k1.volumeThicknessUV == k2.volumeThicknessUV) &&
         (k1.hasSheen == k2.hasSheen) &&
-        (k1.hasIOR == k2.hasIOR);
+        (k1.hasIOR == k2.hasIOR) &&
+        (k1.hasVolume == k2.hasVolume);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
@@ -133,6 +136,13 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->sheenRoughnessUV] = (UvSet) index++;
         }
     }
+    if (key->hasVolumeThicknessTexture && retval[key->volumeThicknessUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasVolumeThicknessTexture = false;
+        } else {
+            retval[key->volumeThicknessUV] = (UvSet) index++;
+        }
+    }
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -156,6 +166,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& clearCoatNormalUV = uvstrings[uvmap[config.clearCoatNormalUV]];
     const auto& sheenColorUV = uvstrings[uvmap[config.sheenColorUV]];
     const auto& sheenRoughnessUV = uvstrings[uvmap[config.sheenRoughnessUV]];
+    const auto& volumeThicknessUV = uvstrings[uvmap[config.volumeThicknessUV]];
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -168,6 +179,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${clearCoatNormal}", clearCoatNormalUV);
     replaceAll("${sheenColor}", sheenColorUV);
     replaceAll("${sheenRoughness}", sheenRoughnessUV);
+    replaceAll("${volumeThickness}", volumeThicknessUV);
 }
 
 } // namespace gltfio

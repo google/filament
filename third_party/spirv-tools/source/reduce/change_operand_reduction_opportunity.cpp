@@ -14,6 +14,8 @@
 
 #include "source/reduce/change_operand_reduction_opportunity.h"
 
+#include "source/opt/ir_context.h"
+
 namespace spvtools {
 namespace reduce {
 
@@ -26,6 +28,7 @@ bool ChangeOperandReductionOpportunity::PreconditionHolds() {
 
 void ChangeOperandReductionOpportunity::Apply() {
   inst_->SetOperand(operand_index_, {new_id_});
+  inst_->context()->get_def_use_mgr()->UpdateDefUse(inst_);
 }
 
 }  // namespace reduce

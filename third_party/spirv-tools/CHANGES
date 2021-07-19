@@ -1,7 +1,181 @@
 Revision history for SPIRV-Tools
 
-v2020.6 2020-09-24
- - Start SPIRV-Tools v2020.6
+v2021.3-dev 2021-06-22
+ - Start v2021.3-dev
+
+v2021.2 2021-06-18
+ - General
+    - Support SPV_KHR_subgroup_uniform_control_flow (#4318)
+    - Support Intel extensions for fixed point and hls-float (#4321)
+    - Fix crash when optimizing shaders with DebugPrintf (#4280)
+
+ - Validator
+    - Support Vulkan Storage Class for Execution Model (#4212)
+
+ - Optimizer
+    - Handle SPV_KHR_vulkan_memory_model in dead-code elimination (#4320)
+    - Support folding OpBitcast with numeric constants (#4247)
+
+ - Fuzz
+    - Add tests for MaybeGet* functions in fuzzerutil (#4284)
+    - Fix OutlineFunction in presence of unreachable blocks (#4308)
+    - Fix def-use update in PermutePhiOperands (#4309)
+    - Swap positions of two functions in a module (#4236)
+
+v2021.1 2021-04-19
+ - General
+    - Support SPV_KHR_linkonce_odr, SPV_KHR_expect_assume (#4161)
+    - Fixes for the vscode language server extension (#4150)
+ - Validator
+    - Add validation for SPV_EXT_shader_atomic_float_min_max (#4105)
+    - Add Vulkan Execution Scope checks (#4183)
+    - Vulkan 64-bit OpAtomicStore check (#4163)
+ - Optimizer
+    - Add interpolate legalization pass (#4220)
+ - Fuzz
+    - Various performance optimizations
+    - Do not add too many dead blocks (#4217)
+    - Add WGSL compatibility flag to context (#4193)
+    - Add persistent state to the fuzzer (#4137)
+
+v2020.7 2021-02-16
+ - General
+    - Support pending Intel extensions (#4116)
+    - Remove WebGPU support (#4108)
+ - Validator
+    - Vulkan image gather constant component (#4133)
+    - Add Vulkan PSB64 convert VUID (#4122)
+    - Validate SPV_KHR_workgroup_memory_explicit_layout (#4128)
+    - Validate VK_KHR_zero_initialize_workgroup_memory (#4124)
+    - Add Vulkan image gather offset VUID (#4118)
+    - Label Vulkan atomic semantics VUIDs (#4120)
+    - Label VUID 04662 (#4123)
+    - Label VUID 04683 (#4121)
+    - Add Vulkan EXT builtins (#4115)
+    - Validate Sampled=1 for Vulkan ImageQuerySizeLod, ImageQueryLevels, ImageQueryLod (#4103)
+    - Add Vulkan Memory Scope VUs (#4106)
+    - Add Vulkan Addressing Model check (#4107)
+    - Vulkan atomic storage class (#4079)
+    - Label standalone Vulkan VUID (#4091)
+    - Add Vulkan decroation VUID (#4090)
+    - Add Vulkan FP Mode VUID (#4088)
+    - Fix Vulkan image sampled check (#4085)
+    - Add Vulkan ForwardPointer VUID (#4089)
+    - Add Vulkan ImageTexelPointer format check (#4087)
+    - Add Vulkan Group Operation VUID (#4086)
+    - Add first StandAlone VUID 04633 (#4077)
+    - Add Subgroup VUIDs (#4074)
+    - validate return type of OpImageRead (#4072)
+    - tighter validation of multisampled images (#4059)
+    - validate OpTypeImage Sampled values for environemnts (#4064)
+    - validate StorageImageMultisampled capability (#4062)
+    - Add last TessLevelOuter and TessLevelInner VUID (#4055)
+    - Add last ClipDistance and CullDistance VUID (#4054)
+    - Add last ViewportIndex and Layer VUID (#4053)
+    - Add last Position VUID (#4052)
+    - Allow forward pointer to be used in types generally (#4044)
+ - Optimizer
+    - Mark module as modified if convert-to-half removes decorations (#4127)
+    - Fix binding number calculation in desc sroa (#4095)
+    - Run DCE when SPV_KHR_shader_clock is used (#4049)
+ - Debug Info
+    - Set correct scope and line info for DebugValue (#4125)
+    - Avoid integrity check failures caused by propagating line instructions (#4096)
+ - Linker
+    - Linker usability improvements (#4084)
+ - Instrumentation
+    - Generate differentiated error codes for buffer oob checking (#4097)
+ - Fuzz
+    - Fix OpPhi handling in DuplicateRegionWithSelection (#4065)
+
+v2020.6 2020-12-07
+ - General
+    CMake: Add SPIRV_TOOLS_BUILD_STATIC flag (#3910)
+ - Disassembler
+    Add some context comments to disassembly. (#3847)
+ - Optimizer
+   - Take new (raytracing) termination instructions into account. (#4050)
+   - Do run DCE if SPV_KHR_ray_query is used. (#4047)
+   - Handle 8-bit index in elim dead member (#4043)
+   - Add texel buffer out-of-bounds checking instrumentation (#4038)
+   - Update MeshShadingNV dependencies (and land Ray tracing updates) (#4028)
+   - Fix buffer oob instrumentation for matrix refs (#4025)
+   - Fix SSA re-writing in the presence of variable pointers. (#4010)
+   - Add support to prevent functions from being inlined if they have
+     DontInline flag (#3858)
+   - Add SPV_EXT_shader_image_int64 (#3852)
+   - Support SPV_KHR_fragment_shading_rate (#3943)
+   - Fix use-after-move in val/validate.cpp (#3848)
+ - Debug Info
+   - properly preserve DebugValue indexes operand (#4022)
+   - Add DebugValue for invisible store in single_store_elim (#4002)
+   - Propagate OpLine to all applied instructions in spirv-opt (#3951)
+   - Add DebugValue for DebugDecl invisible to value assignment (#3973)
+   - Add DebugValue for function param regardless of scope (#3923)
+   - Debug info preservation in convert-local-access-chains pass (#3835)
+   - Debug info preservation in redundancy-elimination pass (#3839)
+   - Debug info preservation in if-conversion pass (#3861)
+ - Validator
+   - Add validation support for the ray tracing built-in variables (#4041)
+   - Use less stack space when validating Vulkan builtins (#4019)
+   - Fix SPV_KHR_fragment_shading_rate VUID label (#4014)
+   - Label Layer and ViewportIndex VUIDs (#4013)
+   - Allow the ViewportIndex and Layer built-ins on SPIR-V 1.5 (#3986)
+   - Fix validation of OpPhi instructions (#3919)
+ - Fuzz
+   - Fix facts arising from CompositeConstruct (#4034)
+   - Do not flatten conditionals that create synonyms (#4030)
+   - Add support for reining in rogue fuzzer passes (#3987)
+   - Fix assertion failure in FuzzerPassAddCompositeExtract (#3995)
+   - Fix invalid equation facts (#4009)
+   - Fix bugs in TransformationFlattenConditionalBranch (#4006)
+   - Fix bug related to transformation applicability (#3990)
+   - Add expand vector reduction transformation (#3869)
+   - Add FuzzerPassAddCompositeExtract (#3904)
+   - Fix mismatch with shrinker step limit (#3985)
+   - Fix off-by-one error in replayer (#3982)
+   - Get order right for OpSelect arguments (#3974)
+   - Do not add synonym-creating loops in dead blocks (#3975)
+   - Skip OpTypeSampledImage when propagating up (#3976)
+   - Pass OpUndef in function call if needed (#3978)
+   - Fix off-by-one in TransformationCompositeConstruct (#3979)
+   - Tolerate absent ids in data synonym fact management (#3966)
+   - Fix to id availability (#3971)
+   - Fix operand types (#3962)
+   - Don't flatten conditional if condition is irrelevant (#3944)
+   - Do not produce OpPhis of type OpTypeSampledImage (#3964)
+   - Restrict fuzzer pass to reachable blocks (#3970)
+   - Handle more types when extending OpPhi instructions (#3969)
+   - Skip early terminator wrappers when merging returns (#3968)
+   - Avoid irrelevant constants in synonym-creating loops (#3967)
+   - Skip dead blocks in FuzzerPassAddOpPhiSynonyms (#3965)
+   - Avoid the type manager when looking for struct types (#3963)
+   - Fix to TransformationDuplicateRegionWithSelection (#3941)
+   - Skip OpFunction when replacing irrelevant ids (#3932)
+   - Use component-wise selectors when flattening conditional branches (#3921)
+   - Avoid void struct member when outlining functions (#3936)
+   - Do not allow Block-decorated structs when adding parameters (#3931)
+   - Fix to operand id type (#3937)
+   - Handle dead blocks in TransformationEquationInstruction (#3933)
+   - Do not allow sampled image load when flattening conditionals (#3930)
+   - Take care of OpPhi instructions when inlining (#3939)
+   - Fix to TransformationInlineFunction (#3913)
+   - Wrap early terminators before merging returns (#3925)
+   - Lower probability of adding bit instruction synonyms (#3917)
+   - Fix handling of OpPhi in FlattenConditionalBranch (#3916)
+   - Avoid creating blocks without parents (#3908)
+   - Do not allow creation of constants of block-decorated structs (#3903)
+   - Fixes related to irrelevant ids (#3901)
+   - Fix to transformation that adds a synonym via a loop (#3898)
+   - Fix to duplicate region with selection (#3896)
+   - Do not expose synonym facts for non-existent ids (#3891)
+   - Do not add synonyms involving irrelevant ids (#3890)
+   - Do not replace irrelevant ids that are not in blocks (#3892)
+   - Wrap OpKill and similar in function calls (#3884)
+   - Integrate spirv-reduce with shrinker (#3849)
+   - Report fresh ids in transformations (#3856)
+   - Support OpNot bit instruction case (#3841)
+   - Return IR and transformation context after replay (#3846)
 
 v2020.5 2020-09-22
  - General

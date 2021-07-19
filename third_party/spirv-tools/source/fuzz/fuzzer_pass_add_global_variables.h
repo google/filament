@@ -29,8 +29,6 @@ class FuzzerPassAddGlobalVariables : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddGlobalVariables();
-
   void Apply() override;
 };
 

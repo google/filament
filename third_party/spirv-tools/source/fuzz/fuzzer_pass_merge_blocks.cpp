@@ -28,8 +28,6 @@ FuzzerPassMergeBlocks::FuzzerPassMergeBlocks(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassMergeBlocks::~FuzzerPassMergeBlocks() = default;
-
 void FuzzerPassMergeBlocks::Apply() {
   // First we populate a sequence of transformations that we might consider
   // applying.

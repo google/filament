@@ -379,6 +379,7 @@ bool IsAlignedTo(uint32_t offset, uint32_t alignment) {
 // or row major-ness.
 spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
                          const char* decoration_str, bool blockRules,
+                         bool scalar_block_layout,
                          uint32_t incoming_offset,
                          MemberConstraints& constraints,
                          ValidationState_t& vstate) {
@@ -392,7 +393,6 @@ spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
   // For example, relaxed layout is implied by Vulkan 1.1.  But scalar layout
   // is more permissive than relaxed layout.
   const bool relaxed_block_layout = vstate.IsRelaxedBlockLayout();
-  const bool scalar_block_layout = vstate.options()->scalar_block_layout;
 
   auto fail = [&vstate, struct_id, storage_class_str, decoration_str,
                blockRules, relaxed_block_layout,
@@ -501,6 +501,7 @@ spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
     if (SpvOpTypeStruct == opcode &&
         SPV_SUCCESS != (recursive_status = checkLayout(
                             id, storage_class_str, decoration_str, blockRules,
+                            scalar_block_layout,
                             offset, constraints, vstate)))
       return recursive_status;
     // Check matrix stride.
@@ -553,7 +554,8 @@ spv_result_t checkLayout(uint32_t struct_id, const char* storage_class_str,
         if (SpvOpTypeStruct == element_inst->opcode() &&
             SPV_SUCCESS != (recursive_status = checkLayout(
                                 typeId, storage_class_str, decoration_str,
-                                blockRules, next_offset, constraints, vstate)))
+                                blockRules, scalar_block_layout,
+                                next_offset, constraints, vstate)))
           return recursive_status;
         // If offsets accumulate up to a 16-byte multiple stop checking since
         // it will just repeat.
@@ -698,6 +700,9 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
     const auto& descs = vstate.entry_point_descriptions(entry_point);
     int num_builtin_inputs = 0;
     int num_builtin_outputs = 0;
+    int num_workgroup_variables = 0;
+    int num_workgroup_variables_with_block = 0;
+    int num_workgroup_variables_with_aliased = 0;
     for (const auto& desc : descs) {
       std::unordered_set<Instruction*> seen_vars;
       for (auto interface : desc.interfaces) {
@@ -754,6 +759,16 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
           if (auto error = CheckBuiltInVariable(interface, vstate))
             return error;
         }
+
+        if (storage_class == SpvStorageClassWorkgroup) {
+          ++num_workgroup_variables;
+          if (type_instr && SpvOpTypeStruct == type_instr->opcode()) {
+            if (hasDecoration(type_id, SpvDecorationBlock, vstate))
+              ++num_workgroup_variables_with_block;
+            if (hasDecoration(var_instr->id(), SpvDecorationAliased, vstate))
+              ++num_workgroup_variables_with_aliased;
+          }
+        }
       }
       if (num_builtin_inputs > 1 || num_builtin_outputs > 1) {
         return vstate.diag(SPV_ERROR_INVALID_BINARY,
@@ -775,6 +790,30 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
                  << linkage_name << ") cannot be applied to function id "
                  << entry_point
                  << " because it is targeted by an OpEntryPoint instruction.";
+        }
+      }
+
+      if (vstate.HasCapability(SpvCapabilityWorkgroupMemoryExplicitLayoutKHR) &&
+          num_workgroup_variables > 0 &&
+          num_workgroup_variables_with_block > 0) {
+        if (num_workgroup_variables != num_workgroup_variables_with_block) {
+          return vstate.diag(SPV_ERROR_INVALID_BINARY, vstate.FindDef(entry_point))
+                 << "When declaring WorkgroupMemoryExplicitLayoutKHR, "
+                    "either all or none of the Workgroup Storage Class variables "
+                    "in the entry point interface must point to struct types "
+                    "decorated with Block.  Entry point id "
+                 << entry_point << " does not meet this requirement.";
+        }
+        if (num_workgroup_variables_with_block > 1 &&
+            num_workgroup_variables_with_block !=
+            num_workgroup_variables_with_aliased) {
+          return vstate.diag(SPV_ERROR_INVALID_BINARY, vstate.FindDef(entry_point))
+                 << "When declaring WorkgroupMemoryExplicitLayoutKHR, "
+                    "if more than one Workgroup Storage Class variable in "
+                    "the entry point interface point to a type decorated "
+                    "with Block, all of them must be decorated with Aliased. "
+                    "Entry point id "
+                 << entry_point << " does not meet this requirement.";
         }
       }
     }
@@ -942,14 +981,16 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
 
       const bool phys_storage_buffer =
           storageClass == SpvStorageClassPhysicalStorageBufferEXT;
-      if (uniform || push_constant || storage_buffer || phys_storage_buffer) {
+      const bool workgroup = storageClass == SpvStorageClassWorkgroup;
+      if (uniform || push_constant || storage_buffer || phys_storage_buffer ||
+          workgroup) {
         const auto ptrInst = vstate.FindDef(words[1]);
         assert(SpvOpTypePointer == ptrInst->opcode());
         auto id = ptrInst->words()[3];
         auto id_inst = vstate.FindDef(id);
         // Jump through one level of arraying.
-        if (id_inst->opcode() == SpvOpTypeArray ||
-            id_inst->opcode() == SpvOpTypeRuntimeArray) {
+        if (!workgroup && (id_inst->opcode() == SpvOpTypeArray ||
+                           id_inst->opcode() == SpvOpTypeRuntimeArray)) {
           id = id_inst->GetOperandAs<uint32_t>(1u);
           id_inst = vstate.FindDef(id);
         }
@@ -961,7 +1002,9 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
         // Prepare for messages
         const char* sc_str =
             uniform ? "Uniform"
-                    : (push_constant ? "PushConstant" : "StorageBuffer");
+                    : (push_constant ? "PushConstant"
+                                     : (workgroup ? "Workgroup"
+                                                  : "StorageBuffer"));
 
         if (spvIsVulkanEnv(vstate.context()->target_env)) {
           const bool block = hasDecoration(id, SpvDecorationBlock, vstate);
@@ -1029,8 +1072,9 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
           const bool bufferDeco = SpvDecorationBufferBlock == dec.dec_type();
           const bool blockRules = uniform && blockDeco;
           const bool bufferRules =
-              (uniform && bufferDeco) || (push_constant && blockDeco) ||
-              ((storage_buffer || phys_storage_buffer) && blockDeco);
+              (uniform && bufferDeco) ||
+              ((push_constant || storage_buffer ||
+                phys_storage_buffer || workgroup) && blockDeco);
           if (uniform && blockDeco) {
             vstate.RegisterPointerToUniformBlock(ptrInst->id());
             vstate.RegisterStructForUniformBlock(id);
@@ -1044,6 +1088,10 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
           if (blockRules || bufferRules) {
             const char* deco_str = blockDeco ? "Block" : "BufferBlock";
             spv_result_t recursive_status = SPV_SUCCESS;
+            const bool scalar_block_layout = workgroup ?
+                vstate.options()->workgroup_scalar_block_layout :
+                vstate.options()->scalar_block_layout;
+
             if (isMissingOffsetInStruct(id, vstate)) {
               return vstate.diag(SPV_ERROR_INVALID_ID, vstate.FindDef(id))
                      << "Structure id " << id << " decorated as " << deco_str
@@ -1072,12 +1120,14 @@ spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
                         "decorations.";
             } else if (blockRules &&
                        (SPV_SUCCESS != (recursive_status = checkLayout(
-                                            id, sc_str, deco_str, true, 0,
+                                            id, sc_str, deco_str, true,
+                                            scalar_block_layout, 0,
                                             constraints, vstate)))) {
               return recursive_status;
             } else if (bufferRules &&
                        (SPV_SUCCESS != (recursive_status = checkLayout(
-                                            id, sc_str, deco_str, false, 0,
+                                            id, sc_str, deco_str, false,
+                                            scalar_block_layout, 0,
                                             constraints, vstate)))) {
               return recursive_status;
             }
@@ -1260,7 +1310,8 @@ spv_result_t CheckVulkanMemoryModelDeprecatedDecorations(
 // decorations.  Otherwise emits a diagnostic and returns something other than
 // SPV_SUCCESS.
 spv_result_t CheckFPRoundingModeForShaders(ValidationState_t& vstate,
-                                           const Instruction& inst) {
+                                           const Instruction& inst,
+                                           const Decoration& decoration) {
   // Validates width-only conversion instruction for floating-point object
   // i.e., OpFConvert
   if (inst.opcode() != SpvOpFConvert) {
@@ -1268,6 +1319,15 @@ spv_result_t CheckFPRoundingModeForShaders(ValidationState_t& vstate,
            << "FPRoundingMode decoration can be applied only to a "
               "width-only conversion instruction for floating-point "
               "object.";
+  }
+
+  if (spvIsVulkanEnv(vstate.context()->target_env)) {
+    const auto mode = decoration.params()[0];
+    if ((mode != SpvFPRoundingModeRTE) && (mode != SpvFPRoundingModeRTZ)) {
+      return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
+             << vstate.VkErrorID(4675)
+             << "In Vulkan, the FPRoundingMode mode must only by RTE or RTZ.";
+    }
   }
 
   // Validates Object operand of an OpStore
@@ -1559,7 +1619,7 @@ spv_result_t CheckLocationDecoration(ValidationState_t& vstate,
   {                                             \
     spv_result_t e##LINE = (X);                 \
     if (e##LINE != SPV_SUCCESS) return e##LINE; \
-  }
+  } static_assert(true, "require extra semicolon")
 #define PASS_OR_BAIL(X) PASS_OR_BAIL_AT_LINE(X, __LINE__)
 
 // Check rules for decorations where we start from the decoration rather
@@ -1588,7 +1648,8 @@ spv_result_t CheckDecorationsFromDecoration(ValidationState_t& vstate) {
           break;
         case SpvDecorationFPRoundingMode:
           if (is_shader)
-            PASS_OR_BAIL(CheckFPRoundingModeForShaders(vstate, *inst));
+            PASS_OR_BAIL(
+                CheckFPRoundingModeForShaders(vstate, *inst, decoration));
           break;
         case SpvDecorationNonWritable:
           PASS_OR_BAIL(CheckNonWritableDecoration(vstate, *inst, decoration));

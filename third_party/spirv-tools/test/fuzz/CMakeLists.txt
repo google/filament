@@ -17,6 +17,7 @@ if (${SPIRV_BUILD_FUZZER})
   set(SOURCES
           fuzz_test_util.h
 
+          available_instructions_test.cpp
           call_graph_test.cpp
           comparator_deep_blocks_first_test.cpp
           data_synonym_transformation_test.cpp
@@ -30,6 +31,7 @@ if (${SPIRV_BUILD_FUZZER})
           fuzzer_pass_construct_composites_test.cpp
           fuzzer_pass_donate_modules_test.cpp
           fuzzer_pass_outline_functions_test.cpp
+          fuzzerutil_test.cpp
           instruction_descriptor_test.cpp
           fuzzer_pass_test.cpp
           replayer_test.cpp
@@ -113,6 +115,8 @@ if (${SPIRV_BUILD_FUZZER})
           transformation_store_test.cpp
           transformation_swap_commutable_operands_test.cpp
           transformation_swap_conditional_branch_operands_test.cpp
+          transformation_swap_function_variables_test.cpp
+          transformation_swap_two_functions_test.cpp
           transformation_toggle_access_chain_instruction_test.cpp
           transformation_record_synonymous_constants_test.cpp
           transformation_vector_shuffle_test.cpp

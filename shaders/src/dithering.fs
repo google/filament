@@ -26,7 +26,7 @@ float triangleNoise(highp vec2 n) {
     return fract(xy * 95.4307) + fract(xy * 75.04961) - 1.0;
 }
 
-// n must not be normalize (e.g. window coordinates)
+// n must not be normalized (e.g. window coordinates)
 float interleavedGradientNoise(highp vec2 n) {
     return fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), n)));
 }

@@ -93,6 +93,11 @@ class DescriptorScalarReplacement : public Pass {
   // bindings used by its members.
   uint32_t GetNumBindingsUsedByType(uint32_t type_id);
 
+  // Returns true if |type| is a type that could be used for a structured buffer
+  // as opposed to a type that would be used for a structure of resource
+  // descriptors.
+  bool IsTypeOfStructuredBuffer(const Instruction* type) const;
+
   // A map from an OpVariable instruction to the set of variables that will be
   // used to replace it. The entry |replacement_variables_[var][i]| is the id of
   // a variable that will be used in the place of the the ith element of the

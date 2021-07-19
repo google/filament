@@ -26,6 +26,7 @@ set(SRCS
         src/CommandStream.cpp
         src/Driver.cpp
         src/Handle.cpp
+        src/HandleAllocator.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/Platform.cpp
@@ -43,6 +44,7 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/DriverApiForward.h
+        include/private/backend/HandleAllocator.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
@@ -129,6 +131,8 @@ if (FILAMENT_SUPPORTS_METAL)
             src/opengl/PlatformCocoaGL.mm
             PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
     endif()
+
+    option(FILAMENT_METAL_PROFILING "Enable profiling for the Metal backend" OFF)
 endif()
 
 # ==================================================================================================
@@ -340,6 +344,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
+
+if (FILAMENT_SUPPORTS_METAL)
+    target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_METAL_PROFILING}>:FILAMENT_METAL_PROFILING>)
+endif()
 
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>

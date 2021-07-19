@@ -1331,6 +1331,72 @@ OpFunctionEnd
   SinglePassRunAndMatch<ConvertToHalfPass>(defs + func, true);
 }
 
+TEST_F(ConvertToHalfTest, RemoveRelaxDec) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/4117
+
+  // This test is a case where the relax precision decorations need to be
+  // removed, but the body of the function does not change because there are not
+  // arithmetic operations.  So, there is not need for the Float16 capability.
+  const std::string test =
+      R"(
+; CHECK-NOT: OpCapability Float16
+; GLSL seems to generate this decoration on the load of a texture, which seems odd to me.
+; This pass does not currently remove it, and I'm not sure what we should do with it, so I will leave it.
+; CHECK: OpDecorate [[tex:%\w+]] RelaxedPrecision
+; CHECK-NOT: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK: OpLabel
+; CHECK: [[tex]] = OpLoad {{%\w+}} %sTexture
+; CHECK: [[coord:%\w+]] = OpLoad %v2float
+; CHECK: [[retval:%\w+]] = OpImageSampleImplicitLod %v4float {{%\w+}} [[coord]]
+; CHECK: OpStore %outFragColor [[retval]]
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %outFragColor %v_texcoord
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %outFragColor "outFragColor"
+               OpName %sTexture "sTexture"
+               OpName %v_texcoord "v_texcoord"
+               OpDecorate %outFragColor RelaxedPrecision
+               OpDecorate %outFragColor Location 0
+               OpDecorate %sTexture RelaxedPrecision
+               OpDecorate %sTexture DescriptorSet 0
+               OpDecorate %sTexture Binding 0
+               OpDecorate %14 RelaxedPrecision
+               OpDecorate %v_texcoord RelaxedPrecision
+               OpDecorate %v_texcoord Location 0
+               OpDecorate %18 RelaxedPrecision
+               OpDecorate %19 RelaxedPrecision
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%outFragColor = OpVariable %_ptr_Output_v4float Output
+         %10 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %11 = OpTypeSampledImage %10
+%_ptr_UniformConstant_11 = OpTypePointer UniformConstant %11
+   %sTexture = OpVariable %_ptr_UniformConstant_11 UniformConstant
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+ %v_texcoord = OpVariable %_ptr_Input_v2float Input
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %14 = OpLoad %11 %sTexture
+         %18 = OpLoad %v2float %v_texcoord
+         %19 = OpImageSampleImplicitLod %v4float %14 %18
+               OpStore %outFragColor %19
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  auto result = SinglePassRunAndMatch<ConvertToHalfPass>(test, true);
+  EXPECT_EQ(Pass::Status::SuccessWithChange, std::get<1>(result));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

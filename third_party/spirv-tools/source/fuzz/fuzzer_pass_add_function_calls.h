@@ -29,8 +29,6 @@ class FuzzerPassAddFunctionCalls : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddFunctionCalls();
-
   void Apply() override;
 
  private:

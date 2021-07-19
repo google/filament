@@ -29,8 +29,6 @@ FuzzerPassInlineFunctions::FuzzerPassInlineFunctions(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassInlineFunctions::~FuzzerPassInlineFunctions() = default;
-
 void FuzzerPassInlineFunctions::Apply() {
   // |function_call_instructions| are the instructions that will be inlined.
   // First, they will be collected and then do the inlining in another loop.

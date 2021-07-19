@@ -140,10 +140,21 @@ and can be used to test a PR, or even to include the results in the PR.
 This is not required though.
 
 The header-generation project is under the `tools/buildHeaders` directory.
-Use CMake to build the project, in a `build` subdirectory (under `tools/buildHeaders`).
+Use CMake to build and install the project, in a `build` subdirectory (under `tools/buildHeaders`).
 There is then a bash script at `bin/makeHeaders` that shows how to use the built
 header-generator binary to generate the headers from the JSON grammar.
 (Execute `bin/makeHeaders` from the `tools/buildHeaders` directory.)
+Here's a complete example:
+
+```
+cd tools/buildHeaders
+mkdir build
+cd build
+cmake ..
+cmake --build . --target install
+cd ..
+./bin/makeHeaders
+```
 
 Notes:
 - this generator is used in a broader context within Khronos to generate the specification,

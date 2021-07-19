@@ -47,6 +47,19 @@ spv_result_t ValidateGroupNonUniformBallotBitCount(ValidationState_t& _,
                                                    "vector of four components "
                                                    "of integer type scalar";
   }
+
+  const auto group = inst->GetOperandAs<uint32_t>(3);
+  if (spvIsVulkanEnv(_.context()->target_env)) {
+    if ((group != SpvGroupOperationReduce) &&
+        (group != SpvGroupOperationInclusiveScan) &&
+        (group != SpvGroupOperationExclusiveScan)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << _.VkErrorID(4685)
+             << "In Vulkan: The OpGroupNonUniformBallotBitCount group "
+                "operation must be only: Reduce, InclusiveScan, or "
+                "ExclusiveScan.";
+    }
+  }
   return SPV_SUCCESS;
 }
 

@@ -32,13 +32,6 @@ OpCapability SampleRateShading
 )";
 }
 
-std::string GetWebGPUShaderCapabilities() {
-  return R"(
-OpCapability Shader
-OpCapability VulkanMemoryModelKHR
-)";
-}
-
 std::string GetDefaultShaderTypes() {
   return R"(
 %void = OpTypeVoid
@@ -115,55 +108,15 @@ std::string GetDefaultShaderTypes() {
 %f32vec3arr3 = OpTypeArray %f32vec3 %u32_3
 %f32vec4arr3 = OpTypeArray %f32vec4 %u32_3
 %f64vec4arr3 = OpTypeArray %f64vec4 %u32_3
-)";
-}
 
-std::string GetWebGPUShaderTypes() {
-  return R"(
-%void = OpTypeVoid
-%func = OpTypeFunction %void
-%bool = OpTypeBool
-%f32 = OpTypeFloat 32
-%u32 = OpTypeInt 32 0
-%f32vec2 = OpTypeVector %f32 2
-%f32vec3 = OpTypeVector %f32 3
-%f32vec4 = OpTypeVector %f32 4
-%u32vec2 = OpTypeVector %u32 2
-%u32vec3 = OpTypeVector %u32 3
-%u32vec4 = OpTypeVector %u32 4
-
-%f32_0 = OpConstant %f32 0
-%f32_1 = OpConstant %f32 1
-%f32_2 = OpConstant %f32 2
-%f32_3 = OpConstant %f32 3
-%f32_4 = OpConstant %f32 4
-%f32_h = OpConstant %f32 0.5
-%f32vec2_01 = OpConstantComposite %f32vec2 %f32_0 %f32_1
-%f32vec2_12 = OpConstantComposite %f32vec2 %f32_1 %f32_2
-%f32vec3_012 = OpConstantComposite %f32vec3 %f32_0 %f32_1 %f32_2
-%f32vec3_123 = OpConstantComposite %f32vec3 %f32_1 %f32_2 %f32_3
-%f32vec4_0123 = OpConstantComposite %f32vec4 %f32_0 %f32_1 %f32_2 %f32_3
-%f32vec4_1234 = OpConstantComposite %f32vec4 %f32_1 %f32_2 %f32_3 %f32_4
-
-%u32_0 = OpConstant %u32 0
-%u32_1 = OpConstant %u32 1
-%u32_2 = OpConstant %u32 2
-%u32_3 = OpConstant %u32 3
-%u32_4 = OpConstant %u32 4
-
-%u32vec2_01 = OpConstantComposite %u32vec2 %u32_0 %u32_1
-%u32vec2_12 = OpConstantComposite %u32vec2 %u32_1 %u32_2
-%u32vec4_0123 = OpConstantComposite %u32vec4 %u32_0 %u32_1 %u32_2 %u32_3
-
-%u32arr2 = OpTypeArray %u32 %u32_2
-%u32arr3 = OpTypeArray %u32 %u32_3
-%u32arr4 = OpTypeArray %u32 %u32_4
-%f32arr2 = OpTypeArray %f32 %u32_2
-%f32arr3 = OpTypeArray %f32 %u32_3
-%f32arr4 = OpTypeArray %f32 %u32_4
-
-%f32vec3arr3 = OpTypeArray %f32vec3 %u32_3
-%f32vec4arr3 = OpTypeArray %f32vec4 %u32_3
+%f32mat22 = OpTypeMatrix %f32vec2 2
+%f32mat23 = OpTypeMatrix %f32vec2 3
+%f32mat32 = OpTypeMatrix %f32vec3 2
+%f32mat33 = OpTypeMatrix %f32vec3 3
+%f64mat22 = OpTypeMatrix %f64vec2 2
+%f32mat34 = OpTypeMatrix %f32vec3 4
+%f32mat43 = OpTypeMatrix %f32vec4 3
+%f32mat44 = OpTypeMatrix %f32vec4 4
 )";
 }
 
@@ -174,15 +127,6 @@ CodeGenerator CodeGenerator::GetDefaultShaderCodeGenerator() {
   generator.capabilities_ = GetDefaultShaderCapabilities();
   generator.memory_model_ = "OpMemoryModel Logical GLSL450\n";
   generator.types_ = GetDefaultShaderTypes();
-  return generator;
-}
-
-CodeGenerator CodeGenerator::GetWebGPUShaderCodeGenerator() {
-  CodeGenerator generator;
-  generator.capabilities_ = GetWebGPUShaderCapabilities();
-  generator.memory_model_ = "OpMemoryModel Logical VulkanKHR\n";
-  generator.extensions_ = "OpExtension \"SPV_KHR_vulkan_memory_model\"\n";
-  generator.types_ = GetWebGPUShaderTypes();
   return generator;
 }
 

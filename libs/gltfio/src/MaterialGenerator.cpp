@@ -206,13 +206,6 @@ std::string shaderFromKey(const MaterialKey& config) {
         if (config.hasTransmission) {
             shader += R"SHADER(
                 material.transmission = materialParams.transmissionFactor;
-
-                // KHR_materials_transmission stipulates that baseColor be used for absorption, and
-                // it says "the transmitted light will be modulated by this color as it passes",
-                // which is inverted from Filament's notion of absorption.  Note that Filament
-                // clamps this value to [0,1].
-                material.absorption = 1.0 - material.baseColor.rgb;
-
             )SHADER";
             if (config.hasTransmissionTexture) {
                 shader += "highp float2 transmissionUV = ${transmission};\n";
@@ -283,6 +276,28 @@ std::string shaderFromKey(const MaterialKey& config) {
             }
         }
 
+        if (config.hasVolume) {
+            shader += R"SHADER(
+                material.absorption = materialParams.volumeAbsorption;
+
+                // TODO: Provided by Filament, but this should really be provided/computed by gltfio
+                // TODO: This scale is per renderable and should include the scale of the mesh node
+                float scale = objectUniforms.userData;
+                material.thickness = materialParams.volumeThicknessFactor * scale;
+            )SHADER";
+
+            if (config.hasVolumeThicknessTexture) {
+                shader += "highp float2 volumeThicknessUV = ${volumeThickness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "volumeThicknessUV = (vec3(volumeThicknessUV, 1.0) * "
+                              "materialParams.volumeThicknessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.thickness *= texture(materialParams_volumeThicknessMap, volumeThicknessUV).g;
+                )SHADER";
+            }
+        }
+
         if (config.hasIOR) {
             shader += R"SHADER(
                 material.ior = materialParams.ior;
@@ -330,7 +345,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasBaseColorTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap");
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3, "baseColorUvMatrix");
+            builder.parameter(MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH, "baseColorUvMatrix");
         }
     }
     if (config.hasVertexColors) {
@@ -343,7 +359,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasMetallicRoughnessTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap");
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3, "metallicRoughnessUvMatrix");
+            builder.parameter(MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH, "metallicRoughnessUvMatrix");
         }
     }
 
@@ -359,7 +376,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasNormalTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3, "normalUvMatrix");
+            builder.parameter(MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH, "normalUvMatrix");
         }
     }
 
@@ -369,7 +387,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasOcclusionTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "occlusionMap");
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3, "occlusionUvMatrix");
+            builder.parameter(MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH, "occlusionUvMatrix");
         }
     }
 
@@ -378,7 +397,8 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     if (config.hasEmissiveTexture) {
         builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap");
         if (config.hasTextureTransforms) {
-            builder.parameter(MaterialBuilder::UniformType::MAT3, "emissiveUvMatrix");
+            builder.parameter(MaterialBuilder::UniformType::MAT3,
+                    MaterialBuilder::ParameterPrecision::HIGH, "emissiveUvMatrix");
         }
     }
 
@@ -389,20 +409,23 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         if (config.hasClearCoatTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatUvMatrix");
             }
         }
         if (config.hasClearCoatRoughnessTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatRoughnessMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatRoughnessUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatRoughnessUvMatrix");
             }
         }
         if (config.hasClearCoatNormalTexture) {
             builder.parameter(MaterialBuilder::UniformType::FLOAT, "clearCoatNormalScale");
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "clearCoatNormalUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "clearCoatNormalUvMatrix");
             }
         }
     }
@@ -414,13 +437,15 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         if (config.hasSheenColorTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenColorMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenColorUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "sheenColorUvMatrix");
             }
         }
         if (config.hasSheenRoughnessTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "sheenRoughnessMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "sheenRoughnessUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "sheenRoughnessUvMatrix");
             }
         }
     }
@@ -440,12 +465,12 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         if (config.hasTransmissionTexture) {
             builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "transmissionMap");
             if (config.hasTextureTransforms) {
-                builder.parameter(MaterialBuilder::UniformType::MAT3, "transmissionUvMatrix");
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "transmissionUvMatrix");
             }
         }
 
-        builder.blending(MaterialBuilder::BlendingMode::FADE);
-        builder.depthWrite(true);
+        builder.blending(MaterialBuilder::BlendingMode::MASKED);
     } else {
         // BLENDING
         switch (config.alphaMode) {
@@ -463,6 +488,27 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
                 // Ignore
                 break;
         }
+    }
+
+    // VOLUME
+    if (config.hasVolume) {
+        builder.refractionMode(RefractionMode::SCREEN_SPACE);
+
+        // Override thin transmission if both extensions are used
+        builder.refractionType(RefractionType::SOLID);
+
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "volumeAbsorption");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT,  "volumeThicknessFactor");
+
+        if (config.hasVolumeThicknessTexture) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "volumeThicknessMap");
+            if (config.hasTextureTransforms) {
+                builder.parameter(MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH, "volumeThicknessUvMatrix");
+            }
+        }
+
+        builder.blending(MaterialBuilder::BlendingMode::MASKED);
     }
 
     // IOR

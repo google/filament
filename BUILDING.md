@@ -8,10 +8,6 @@ To build Filament, you must first install the following tools:
 - clang 7.0 (or more recent)
 - [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
-To build the Java based components of the project you can optionally install (recommended):
-
-- OpenJDK 1.8 (or more recent)
-
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
 
@@ -23,10 +19,8 @@ To build Filament for Android you must also install the following:
 
 ### Environment variables
 
-Make sure the environment variable `ANDROID_HOME` points to the location of your Android SDK.
-
-By default our build system will attempt to compile the Java bindings. To do so, the environment
-variable `JAVA_HOME` should point to the location of your JDK.
+To build Filament for Android, make sure the environment variable `ANDROID_HOME` points to the
+location of your Android SDK.
 
 When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#webassembly).
 
@@ -65,23 +59,10 @@ To install the libraries and executables in `out/debug/` and `out/release/`, add
 You can force a clean build by adding the `-c` flag. The script offers more features described
 by executing `build.sh -h`.
 
-### Disabling Java builds
-
-By default our build system will attempt to compile the Java bindings. If you wish to skip this
-compilation step simply pass the `-j` flag to `build.sh`:
-
-```
-$ ./build.sh -j release
-```
-
-If you use CMake directly instead of the build script, pass `-DFILAMENT_ENABLE_JAVA=OFF`
-to CMake instead.
-
 ### Filament-specific CMake Options
 
 The following CMake options are boolean options specific to Filament:
 
-- `FILAMENT_ENABLE_JAVA`:          Compile Java projects: requires a JDK and the JAVA_HOME env var
 - `FILAMENT_ENABLE_LTO`:           Enable link-time optimizations if supported by the compiler
 - `FILAMENT_BUILD_FILAMAT`:        Build filamat and JNI buildings
 - `FILAMENT_SUPPORTS_OPENGL`:      Include the OpenGL backend
@@ -161,14 +142,6 @@ make sure the command line tools are setup by running:
 
 ```
 $ xcode-select --install
-```
-
-After installing Java 1.8 you must also ensure that your `JAVA_HOME` environment variable is
-properly set. If it doesn't already point to the appropriate JDK, you can simply add the following
-to your `.profile`:
-
-```
-export JAVA_HOME="$(/usr/libexec/java_home)"
 ```
 
 Then run `cmake` and `ninja` to trigger a build:

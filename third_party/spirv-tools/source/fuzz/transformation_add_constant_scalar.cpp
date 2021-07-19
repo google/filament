@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddConstantScalar::TransformationAddConstantScalar(
-    const spvtools::fuzz::protobufs::TransformationAddConstantScalar& message)
-    : message_(message) {}
+    spvtools::fuzz::protobufs::TransformationAddConstantScalar message)
+    : message_(std::move(message)) {}
 
 TransformationAddConstantScalar::TransformationAddConstantScalar(
     uint32_t fresh_id, uint32_t type_id, const std::vector<uint32_t>& words,
@@ -64,19 +64,21 @@ bool TransformationAddConstantScalar::IsApplicable(
 void TransformationAddConstantScalar::Apply(
     opt::IRContext* ir_context,
     TransformationContext* transformation_context) const {
-  ir_context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
+  auto new_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpConstant, message_.type_id(), message_.fresh_id(),
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_LITERAL_INTEGER,
             std::vector<uint32_t>(message_.word().begin(),
-                                  message_.word().end())}})));
+                                  message_.word().end())}}));
+  auto new_instruction_ptr = new_instruction.get();
+  ir_context->module()->AddGlobalValue(std::move(new_instruction));
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
 
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  // Inform the def-use manager about the new instruction. Invalidate the
+  // constant manager as we have added a new constant.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(new_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisConstants);
 
   if (message_.is_irrelevant()) {
     transformation_context->GetFactManager()->AddFactIdIsIrrelevant(

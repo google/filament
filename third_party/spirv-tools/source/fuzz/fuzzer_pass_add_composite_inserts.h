@@ -29,7 +29,6 @@ class FuzzerPassAddCompositeInserts : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddCompositeInserts();
   void Apply() override;
 
   // Checks if any component of a composite is a pointer.

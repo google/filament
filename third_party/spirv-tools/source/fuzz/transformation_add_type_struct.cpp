@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddTypeStruct::TransformationAddTypeStruct(
-    const spvtools::fuzz::protobufs::TransformationAddTypeStruct& message)
-    : message_(message) {}
+    protobufs::TransformationAddTypeStruct message)
+    : message_(std::move(message)) {}
 
 TransformationAddTypeStruct::TransformationAddTypeStruct(
     uint32_t fresh_id, const std::vector<uint32_t>& member_type_ids) {
@@ -39,9 +39,11 @@ bool TransformationAddTypeStruct::IsApplicable(
   }
   for (auto member_type : message_.member_type_id()) {
     auto type = ir_context->get_type_mgr()->GetType(member_type);
-    if (!type || type->AsFunction()) {
-      // The member type id either does not refer to a type, or refers to a
-      // function type; both are illegal.
+    if (!type || type->AsFunction() ||
+        fuzzerutil::HasBlockOrBufferBlockDecoration(ir_context, member_type)) {
+      // The member type id either does not refer to a type, refers to a
+      // function type, or refers to a block-decorated struct. These cases are
+      // all illegal.
       return false;
     }
 
@@ -58,14 +60,36 @@ bool TransformationAddTypeStruct::IsApplicable(
 
 void TransformationAddTypeStruct::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
-  fuzzerutil::AddStructType(
-      ir_context, message_.fresh_id(),
-      std::vector<uint32_t>(message_.member_type_id().begin(),
-                            message_.member_type_id().end()));
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  opt::Instruction::OperandList operands;
+  operands.reserve(message_.member_type_id().size());
+
+  for (auto type_id : message_.member_type_id()) {
+    const auto* type = ir_context->get_type_mgr()->GetType(type_id);
+    (void)type;  // Make compiler happy in release mode.
+    assert(type && !type->AsFunction() && "Component's type id is invalid");
+
+    if (type->AsStruct()) {
+      // From the spec for the BuiltIn decoration:
+      // - When applied to a structure-type member, that structure type cannot
+      //   be contained as a member of another structure type.
+      assert(!fuzzerutil::MembersHaveBuiltInDecoration(ir_context, type_id) &&
+             "A member struct has BuiltIn members");
+    }
+
+    operands.push_back({SPV_OPERAND_TYPE_ID, {type_id}});
+  }
+
+  auto type_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeStruct, 0, message_.fresh_id(), std::move(operands));
+  auto type_instruction_ptr = type_instruction.get();
+  ir_context->AddType(std::move(type_instruction));
+
+  fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
+
+  // Inform the def use manager that there is a new definition. Invalidate the
+  // type manager since we have added a new type.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(type_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisTypes);
 }
 
 protobufs::Transformation TransformationAddTypeStruct::ToMessage() const {

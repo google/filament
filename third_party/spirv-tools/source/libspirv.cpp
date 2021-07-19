@@ -14,8 +14,8 @@
 
 #include "spirv-tools/libspirv.hpp"
 
+#include <cassert>
 #include <iostream>
-
 #include <string>
 #include <utility>
 #include <vector>
@@ -60,7 +60,9 @@ struct SpirvTools::Impl {
   spv_context context;  // C interface context object.
 };
 
-SpirvTools::SpirvTools(spv_target_env env) : impl_(new Impl(env)) {}
+SpirvTools::SpirvTools(spv_target_env env) : impl_(new Impl(env)) {
+  assert(env != SPV_ENV_WEBGPU_0);
+}
 
 SpirvTools::~SpirvTools() {}
 

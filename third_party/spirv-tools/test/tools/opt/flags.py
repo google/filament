@@ -73,10 +73,7 @@ class TestValidPassFlags(expect.ValidObjectFile1_5,
       '--remove-duplicates', '--replace-invalid-opcode', '--ssa-rewrite',
       '--scalar-replacement', '--scalar-replacement=42', '--strength-reduction',
       '--strip-debug', '--strip-reflect', '--vector-dce', '--workaround-1209',
-      '--unify-const', '--legalize-vector-shuffle',
-      '--split-invalid-unreachable', '--generate-webgpu-initializers',
-      '--decompose-initialized-variables', '--graphics-robust-access',
-      '--wrap-opkill', '--amd-ext-to-khr'
+      '--unify-const', '--graphics-robust-access', '--wrap-opkill', '--amd-ext-to-khr'
   ]
   expected_passes = [
       'wrap-opkill',
@@ -124,10 +121,6 @@ class TestValidPassFlags(expect.ValidObjectFile1_5,
       'vector-dce',
       'workaround-1209',
       'unify-const',
-      'legalize-vector-shuffle',
-      'split-invalid-unreachable',
-      'generate-webgpu-initializers',
-      'decompose-initialized-variables',
       'graphics-robust-access',
       'wrap-opkill',
       'amd-ext-to-khr'
@@ -362,45 +355,3 @@ class TestLoopPeelingThresholdArgsInvalidNumber(expect.ErrorMessageSubstr):
 
   spirv_args = ['--loop-peeling-threshold=a10f']
   expected_error_substr = 'must have a positive integer argument'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestWebGPUToVulkanThenVulkanToWebGPUIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests Vulkan->WebGPU flag cannot be used after WebGPU->Vulkan flag."""
-
-  spirv_args = ['--webgpu-to-vulkan', '--vulkan-to-webgpu']
-  expected_error_substr = 'Cannot use both'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestVulkanToWebGPUThenWebGPUToVulkanIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests WebGPU->Vulkan flag cannot be used after Vulkan->WebGPU flag."""
-
-  spirv_args = ['--vulkan-to-webgpu', '--webgpu-to-vulkan']
-  expected_error_substr = 'Cannot use both'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestTargetEnvThenVulkanToWebGPUIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests Vulkan->WebGPU flag cannot be used after target env flag."""
-
-  spirv_args = ['--target-env=opengl4.0', '--vulkan-to-webgpu']
-  expected_error_substr = 'defines the target environment'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestVulkanToWebGPUThenTargetEnvIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests target env flag cannot be used after Vulkan->WebGPU flag."""
-
-  spirv_args = ['--vulkan-to-webgpu', '--target-env=opengl4.0']
-  expected_error_substr = 'defines the target environment'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestTargetEnvThenWebGPUToVulkanIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests WebGPU->Vulkan flag cannot be used after target env flag."""
-
-  spirv_args = ['--target-env=opengl4.0', '--webgpu-to-vulkan']
-  expected_error_substr = 'defines the target environment'
-
-@inside_spirv_testsuite('SpirvOptFlags')
-class TestWebGPUToVulkanThenTargetEnvIsInvalid(expect.ReturnCodeIsNonZero, expect.ErrorMessageSubstr):
-  """Tests target env flag cannot be used after WebGPU->Vulkan flag."""
-
-  spirv_args = ['--webgpu-to-vulkan', '--target-env=opengl4.0']
-  expected_error_substr = 'defines the target environment'

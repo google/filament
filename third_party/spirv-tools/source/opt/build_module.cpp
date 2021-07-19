@@ -50,11 +50,20 @@ std::unique_ptr<opt::IRContext> BuildModule(spv_target_env env,
                                             MessageConsumer consumer,
                                             const uint32_t* binary,
                                             const size_t size) {
+  return BuildModule(env, consumer, binary, size, true);
+}
+
+std::unique_ptr<opt::IRContext> BuildModule(spv_target_env env,
+                                            MessageConsumer consumer,
+                                            const uint32_t* binary,
+                                            const size_t size,
+                                            bool extra_line_tracking) {
   auto context = spvContextCreate(env);
   SetContextMessageConsumer(context, consumer);
 
   auto irContext = MakeUnique<opt::IRContext>(env, consumer);
   opt::IrLoader loader(consumer, irContext->module());
+  loader.SetExtraLineTracking(extra_line_tracking);
 
   spv_result_t status = spvBinaryParse(context, &loader, binary, size,
                                        SetSpvHeader, SetSpvInst, nullptr);

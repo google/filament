@@ -14,6 +14,7 @@
 
 #include "source/spirv_target_env.h"
 
+#include <cassert>
 #include <cstring>
 #include <string>
 
@@ -61,7 +62,8 @@ const char* spvTargetEnvDescription(spv_target_env env) {
     case SPV_ENV_VULKAN_1_1:
       return "SPIR-V 1.3 (under Vulkan 1.1 semantics)";
     case SPV_ENV_WEBGPU_0:
-      return "SPIR-V 1.3 (under WIP WebGPU semantics)";
+      assert(false);
+      break;
     case SPV_ENV_UNIVERSAL_1_4:
       return "SPIR-V 1.4";
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
@@ -98,8 +100,10 @@ uint32_t spvVersionForTargetEnv(spv_target_env env) {
       return SPV_SPIRV_VERSION_WORD(1, 2);
     case SPV_ENV_UNIVERSAL_1_3:
     case SPV_ENV_VULKAN_1_1:
-    case SPV_ENV_WEBGPU_0:
       return SPV_SPIRV_VERSION_WORD(1, 3);
+    case SPV_ENV_WEBGPU_0:
+      assert(false);
+      break;
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
       return SPV_SPIRV_VERSION_WORD(1, 4);
@@ -134,7 +138,6 @@ static const std::pair<const char*, spv_target_env> spvTargetEnvNameMap[] = {
     {"opengl4.2", SPV_ENV_OPENGL_4_2},
     {"opengl4.3", SPV_ENV_OPENGL_4_3},
     {"opengl4.5", SPV_ENV_OPENGL_4_5},
-    {"webgpu0", SPV_ENV_WEBGPU_0},
 };
 
 bool spvParseTargetEnv(const char* s, spv_target_env* env) {
@@ -200,7 +203,6 @@ bool spvIsVulkanEnv(spv_target_env env) {
     case SPV_ENV_OPENCL_2_2:
     case SPV_ENV_OPENCL_EMBEDDED_2_2:
     case SPV_ENV_UNIVERSAL_1_3:
-    case SPV_ENV_WEBGPU_0:
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_UNIVERSAL_1_5:
       return false;
@@ -209,6 +211,9 @@ bool spvIsVulkanEnv(spv_target_env env) {
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
     case SPV_ENV_VULKAN_1_2:
       return true;
+    case SPV_ENV_WEBGPU_0:
+      assert(false);
+      break;
   }
   return false;
 }
@@ -226,7 +231,6 @@ bool spvIsOpenCLEnv(spv_target_env env) {
     case SPV_ENV_UNIVERSAL_1_2:
     case SPV_ENV_UNIVERSAL_1_3:
     case SPV_ENV_VULKAN_1_1:
-    case SPV_ENV_WEBGPU_0:
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
     case SPV_ENV_UNIVERSAL_1_5:
@@ -241,38 +245,9 @@ bool spvIsOpenCLEnv(spv_target_env env) {
     case SPV_ENV_OPENCL_2_1:
     case SPV_ENV_OPENCL_2_2:
       return true;
-  }
-  return false;
-}
-
-bool spvIsWebGPUEnv(spv_target_env env) {
-  switch (env) {
-    case SPV_ENV_UNIVERSAL_1_0:
-    case SPV_ENV_VULKAN_1_0:
-    case SPV_ENV_UNIVERSAL_1_1:
-    case SPV_ENV_OPENGL_4_0:
-    case SPV_ENV_OPENGL_4_1:
-    case SPV_ENV_OPENGL_4_2:
-    case SPV_ENV_OPENGL_4_3:
-    case SPV_ENV_OPENGL_4_5:
-    case SPV_ENV_UNIVERSAL_1_2:
-    case SPV_ENV_UNIVERSAL_1_3:
-    case SPV_ENV_VULKAN_1_1:
-    case SPV_ENV_OPENCL_1_2:
-    case SPV_ENV_OPENCL_EMBEDDED_1_2:
-    case SPV_ENV_OPENCL_2_0:
-    case SPV_ENV_OPENCL_EMBEDDED_2_0:
-    case SPV_ENV_OPENCL_EMBEDDED_2_1:
-    case SPV_ENV_OPENCL_EMBEDDED_2_2:
-    case SPV_ENV_OPENCL_2_1:
-    case SPV_ENV_OPENCL_2_2:
-    case SPV_ENV_UNIVERSAL_1_4:
-    case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
-    case SPV_ENV_UNIVERSAL_1_5:
-    case SPV_ENV_VULKAN_1_2:
-      return false;
     case SPV_ENV_WEBGPU_0:
-      return true;
+      assert(false);
+      break;
   }
   return false;
 }
@@ -293,7 +268,6 @@ bool spvIsOpenGLEnv(spv_target_env env) {
     case SPV_ENV_OPENCL_EMBEDDED_2_2:
     case SPV_ENV_OPENCL_2_1:
     case SPV_ENV_OPENCL_2_2:
-    case SPV_ENV_WEBGPU_0:
     case SPV_ENV_UNIVERSAL_1_4:
     case SPV_ENV_VULKAN_1_1_SPIRV_1_4:
     case SPV_ENV_UNIVERSAL_1_5:
@@ -305,12 +279,11 @@ bool spvIsOpenGLEnv(spv_target_env env) {
     case SPV_ENV_OPENGL_4_3:
     case SPV_ENV_OPENGL_4_5:
       return true;
+    case SPV_ENV_WEBGPU_0:
+      assert(false);
+      break;
   }
   return false;
-}
-
-bool spvIsVulkanOrWebGPUEnv(spv_target_env env) {
-  return spvIsVulkanEnv(env) || spvIsWebGPUEnv(env);
 }
 
 std::string spvLogStringForEnv(spv_target_env env) {
@@ -338,9 +311,6 @@ std::string spvLogStringForEnv(spv_target_env env) {
       case SPV_ENV_VULKAN_1_2:
         return "Vulkan";
     }
-    case SPV_ENV_WEBGPU_0: {
-      return "WebGPU";
-    }
     case SPV_ENV_UNIVERSAL_1_0:
     case SPV_ENV_UNIVERSAL_1_1:
     case SPV_ENV_UNIVERSAL_1_2:
@@ -349,6 +319,9 @@ std::string spvLogStringForEnv(spv_target_env env) {
     case SPV_ENV_UNIVERSAL_1_5: {
       return "Universal";
     }
+    case SPV_ENV_WEBGPU_0:
+      assert(false);
+      break;
   }
   return "Unknown";
 }

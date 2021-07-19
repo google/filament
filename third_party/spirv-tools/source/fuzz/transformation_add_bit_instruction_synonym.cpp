@@ -21,9 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddBitInstructionSynonym::TransformationAddBitInstructionSynonym(
-    const spvtools::fuzz::protobufs::TransformationAddBitInstructionSynonym&
-        message)
-    : message_(message) {}
+    protobufs::TransformationAddBitInstructionSynonym message)
+    : message_(std::move(message)) {}
 
 TransformationAddBitInstructionSynonym::TransformationAddBitInstructionSynonym(
     const uint32_t instruction_result_id,
@@ -40,20 +39,9 @@ bool TransformationAddBitInstructionSynonym::IsApplicable(
   auto instruction =
       ir_context->get_def_use_mgr()->GetDef(message_.instruction_result_id());
 
-  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3557):
-  //  Right now we only support certain operations. When this issue is addressed
-  //  the following conditional can use the function |spvOpcodeIsBit|.
-  // |instruction| must be defined and must be a supported bit instruction.
-  if (!instruction || (instruction->opcode() != SpvOpBitwiseOr &&
-                       instruction->opcode() != SpvOpBitwiseXor &&
-                       instruction->opcode() != SpvOpBitwiseAnd &&
-                       instruction->opcode() != SpvOpNot)) {
-    return false;
-  }
-
-  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3792):
-  //  Right now, only integer operands are supported.
-  if (ir_context->get_type_mgr()->GetType(instruction->type_id())->AsVector()) {
+  // Checks on: only integer operands are supported, instructions are bitwise
+  // operations only. Signedness of the operands must be the same.
+  if (!IsInstructionSupported(ir_context, instruction)) {
     return false;
   }
 
@@ -109,6 +97,65 @@ void TransformationAddBitInstructionSynonym::Apply(
     default:
       assert(false && "Should be unreachable.");
       break;
+  }
+}
+
+bool TransformationAddBitInstructionSynonym::IsInstructionSupported(
+    opt::IRContext* ir_context, opt::Instruction* instruction) {
+  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3557):
+  //  Right now we only support certain operations. When this issue is addressed
+  //  the following conditional can use the function |spvOpcodeIsBit|.
+  // |instruction| must be defined and must be a supported bit instruction.
+  if (!instruction || (instruction->opcode() != SpvOpBitwiseOr &&
+                       instruction->opcode() != SpvOpBitwiseXor &&
+                       instruction->opcode() != SpvOpBitwiseAnd &&
+                       instruction->opcode() != SpvOpNot)) {
+    return false;
+  }
+
+  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3792):
+  //  Right now, only integer operands are supported.
+  if (ir_context->get_type_mgr()->GetType(instruction->type_id())->AsVector()) {
+    return false;
+  }
+
+  if (instruction->opcode() == SpvOpNot) {
+    auto operand = instruction->GetInOperand(0).words[0];
+    auto operand_inst = ir_context->get_def_use_mgr()->GetDef(operand);
+    auto operand_type =
+        ir_context->get_type_mgr()->GetType(operand_inst->type_id());
+    auto operand_sign = operand_type->AsInteger()->IsSigned();
+
+    auto type_id_sign = ir_context->get_type_mgr()
+                            ->GetType(instruction->type_id())
+                            ->AsInteger()
+                            ->IsSigned();
+
+    return operand_sign == type_id_sign;
+
+  } else {
+    // Other BitWise operations that takes two operands.
+    auto first_operand = instruction->GetInOperand(0).words[0];
+    auto first_operand_inst =
+        ir_context->get_def_use_mgr()->GetDef(first_operand);
+    auto first_operand_type =
+        ir_context->get_type_mgr()->GetType(first_operand_inst->type_id());
+    auto first_operand_sign = first_operand_type->AsInteger()->IsSigned();
+
+    auto second_operand = instruction->GetInOperand(1).words[0];
+    auto second_operand_inst =
+        ir_context->get_def_use_mgr()->GetDef(second_operand);
+    auto second_operand_type =
+        ir_context->get_type_mgr()->GetType(second_operand_inst->type_id());
+    auto second_operand_sign = second_operand_type->AsInteger()->IsSigned();
+
+    auto type_id_sign = ir_context->get_type_mgr()
+                            ->GetType(instruction->type_id())
+                            ->AsInteger()
+                            ->IsSigned();
+
+    return first_operand_sign == second_operand_sign &&
+           first_operand_sign == type_id_sign;
   }
 }
 

@@ -82,31 +82,66 @@ Driver* OpenGLDriver::create(
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
-    {
-        // here we check we're on a supported version of GL before initializing the driver
-        GLint major = 0, minor = 0;
-        glGetIntegerv(GL_MAJOR_VERSION, &major);
-        glGetIntegerv(GL_MINOR_VERSION, &minor);
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    GLBufferObject            :   8       moderate
+    //    GLFence                   :   8       few
+    //    GLIndexBuffer             :   8       moderate
+    //    GLSamplerGroup            :   8       few
+    // -- less than or equal 16 bytes
+    //    GLUniformBuffer           :  20       many
+    //    GLSync                    :  24       few
+    //    GLTimerQuery              :  32       few
+    //    GLRenderPrimitive         :  48       many
+    //    OpenGLProgram             :  48       moderate
+    // -- less than or equal 64 bytes
+    //    GLTexture                 :  72       moderate
+    //    GLStream                  : 168       few
+    //    GLRenderTarget            : 192       few
+    //    GLVertexBuffer            : 200       moderate
+    // -- less than or equal to 208 bytes
 
-        if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
-            PANIC_LOG("Can't get OpenGL version");
-            cleanup:
-            ec->terminate();
-            return {};
+    slog.d
+           << "HwFence: " << sizeof(HwFence)
+           << "\nGLBufferObject: " << sizeof(GLBufferObject)
+           << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
+           << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
+           << "\nGLUniformBuffer: " << sizeof(GLUniformBuffer)
+           << "\nGLSamplerGroup: " << sizeof(GLSamplerGroup)
+           << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
+           << "\nGLTexture: " << sizeof(GLTexture)
+           << "\nGLTimerQuery: " << sizeof(GLTimerQuery)
+           << "\nGLStream: " << sizeof(GLStream)
+           << "\nGLRenderTarget: " << sizeof(GLRenderTarget)
+           << "\nGLSync: " << sizeof(GLSync)
+           << "\nOpenGLProgram: " << sizeof(OpenGLProgram)
+           << io::endl;
+#endif
+
+    // here we check we're on a supported version of GL before initializing the driver
+    GLint major = 0, minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+    if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
+        PANIC_LOG("Can't get OpenGL version");
+        cleanup:
+        ec->terminate();
+        return {};
+    }
+
+    if (GLES30_HEADERS) {
+        // we require GLES 3.1 headers, but we support GLES 3.0
+        if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
+            PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
+            goto cleanup;
         }
-
-        if (GLES30_HEADERS) {
-            // we require GLES 3.1 headers, but we support GLES 3.0
-            if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
-                PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
-                goto cleanup;
-            }
-        } else if (GL41_HEADERS) {
-            // we require GL 4.1 headers and minimum version
-            if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
-                PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
-                goto cleanup;
-            }
+    } else if (GL41_HEADERS) {
+        // we require GL 4.1 headers and minimum version
+        if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
+            PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
+            goto cleanup;
         }
     }
 
@@ -131,7 +166,7 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>()),
-          mHandleArena("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
+          mHandleAllocator("Handles", FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
           mPlatform(*platform) {
   
@@ -292,119 +327,6 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
 // ------------------------------------------------------------------------------------------------
 // Creating driver objects
 // ------------------------------------------------------------------------------------------------
-
-// For reference on a 64-bits machine:
-//    GLSync                    :  8
-//    GLFence                   : 16
-//    GLSamplerGroup            : 16        few
-// -- less than or equal 16 bytes
-
-//    GLIndexBuffer             : 24        moderate
-//    GLUniformBuffer           : 32        many
-//    GLRenderPrimitive         : 56        many
-//    OpenGLProgram             : 56        moderate
-// -- less than or equal 64 bytes
-
-//    GLTexture                 : 80        moderate
-//    GLRenderTarget            : 200       few
-//    GLVertexBuffer            : 208       moderate
-//    GLStream                  : 176       few
-// -- less than or equal to 208 bytes
-
-
-OpenGLDriver::HandleAllocator::HandleAllocator(const utils::AreaPolicy::HeapArea& area)
-{
-    // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.size() / 32;
-    const size_t offsetPool1 =      unit;
-    const size_t offsetPool2 = 16 * unit;
-    char* const p = (char*)area.begin();
-    mPool0 = PoolAllocator<16, 16>(p, p + offsetPool1);
-    mPool1 = PoolAllocator<64, 32>(p + offsetPool1, p + offsetPool2);
-    mPool2 = PoolAllocator<208, 32>(p + offsetPool2, area.end());
-
-#if 0
-    // this is useful for development, but too verbose even for debug builds
-    slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
-    slog.d << "HwSync: " << sizeof(HwSync) << io::endl;
-    slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
-    slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
-    slog.d << "GLRenderPrimitive: " << sizeof(GLRenderPrimitive) << io::endl;
-    slog.d << "GLTexture: " << sizeof(GLTexture) << io::endl;
-    slog.d << "OpenGLProgram: " << sizeof(OpenGLProgram) << io::endl;
-    slog.d << "GLRenderTarget: " << sizeof(GLRenderTarget) << io::endl;
-    slog.d << "GLVertexBuffer: " << sizeof(GLVertexBuffer) << io::endl;
-    slog.d << "GLUniformBuffer: " << sizeof(GLUniformBuffer) << io::endl;
-    slog.d << "GLStream: " << sizeof(GLStream) << io::endl;
-#endif
-}
-
-// This is not inlined because it's a faire amount of code
-UTILS_NOINLINE
-HandleBase::HandleId OpenGLDriver::allocateHandle(void* addr) noexcept {
-    ASSERT_POSTCONDITION(addr,
-            "OpenGL backend handle arena is full, please increase "
-            "FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB which is currently set to %u MiB.",
-            FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB);
-
-    char* const base = (char *)mHandleArena.getArea().begin();
-    size_t offset = (char*)addr - base;
-    return HandleBase::HandleId(offset >> HandleAllocator::MIN_ALIGNMENT_SHIFT);
-}
-
-// this is inline so that mHandleArena.alloc(size) can be inlined (because size is in fact constexpr)
-// which resolves which pool will be used at compile time.
-UTILS_ALWAYS_INLINE
-HandleBase::HandleId OpenGLDriver::allocateHandle(size_t size) noexcept {
-    return allocateHandle(mHandleArena.alloc(size));
-}
-
-template<typename D, typename ... ARGS>
-backend::Handle<D> OpenGLDriver::initHandle(ARGS&& ... args) noexcept {
-    static_assert(sizeof(D) <= 208, "Handle<> too large");
-    backend::Handle<D> h{ allocateHandle(sizeof(D)) };
-    D* addr = handle_cast<D *>(h);
-    new(addr) D(std::forward<ARGS>(args)...);
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    addr->typeId = typeid(D).name();
-#endif
-    return h;
-}
-
-
-template<typename D, typename B, typename ... ARGS>
-typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-OpenGLDriver::construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
-    assert_invariant(handle);
-    D* addr = handle_cast<D *>(const_cast<Handle<B>&>(handle));
-
-    // currently we implement construct<> with dtor+ctor, we could use operator= also
-    // but all our dtors are trivial, ~D() is actually a noop.
-    addr->~D();
-    new(addr) D(std::forward<ARGS>(args)...);
-
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    addr->typeId = typeid(D).name();
-#endif
-    return addr;
-}
-
-template <typename B, typename D, typename>
-void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
-    // allow to destroy the nullptr, similarly to operator delete
-    if (p) {
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-        if (UTILS_UNLIKELY(p->typeId != typeid(D).name())) {
-            slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
-                   << ", but handle's actual type is " << p->typeId << io::endl;
-            std::terminate();
-        }
-        const_cast<D *>(p)->typeId = "(deleted)";
-#endif
-        p->~D();
-        mHandleArena.free(const_cast<D*>(p), sizeof(D));
-    }
-}
 
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();

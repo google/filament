@@ -66,7 +66,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ibl
             .add("iblLuminance",            1, UniformInterfaceBlock::Type::FLOAT)
             // camera
-            .add("exposure",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("exposure",                1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH) // high precision to work around #3602 (qualcomm)
             .add("ev100",                   1, UniformInterfaceBlock::Type::FLOAT)
             // ibl
             .add("iblSH",                   9, UniformInterfaceBlock::Type::FLOAT3)
@@ -123,7 +123,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("skinningEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("morphingEnabled", 1, UniformInterfaceBlock::Type::INT)
             .add("screenSpaceContactShadows", 1, UniformInterfaceBlock::Type::UINT)
-            .add("padding0", 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("userData", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
 }

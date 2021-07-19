@@ -29,8 +29,6 @@ class FuzzerPassToggleAccessChainInstruction : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassToggleAccessChainInstruction();
-
   void Apply() override;
 };
 

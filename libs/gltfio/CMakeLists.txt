@@ -69,6 +69,7 @@ generate_mat(ubershader specularGlossiness masked)
 generate_mat(ubershader unlit fade)
 generate_mat(ubershader unlit opaque)
 generate_mat(ubershader unlit masked)
+generate_mat(volume lit volume)
 generate_mat(transmission lit transmission)
 generate_mat(sheen lit sheen)
 

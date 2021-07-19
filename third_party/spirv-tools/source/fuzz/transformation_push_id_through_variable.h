@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationPushIdThroughVariable : public Transformation {
  public:
   explicit TransformationPushIdThroughVariable(
-      const protobufs::TransformationPushIdThroughVariable& message);
+      protobufs::TransformationPushIdThroughVariable message);
 
   TransformationPushIdThroughVariable(
       uint32_t value_id, uint32_t value_synonym_fresh_id,

@@ -27,8 +27,6 @@ FuzzerPassAddGlobalVariables::FuzzerPassAddGlobalVariables(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddGlobalVariables::~FuzzerPassAddGlobalVariables() = default;
-
 void FuzzerPassAddGlobalVariables::Apply() {
   SpvStorageClass variable_storage_class = SpvStorageClassPrivate;
   for (auto& entry_point : GetIRContext()->module()->entry_points()) {

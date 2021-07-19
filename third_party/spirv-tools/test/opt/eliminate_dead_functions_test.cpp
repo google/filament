@@ -439,6 +439,84 @@ OpFunctionEnd
   SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
 }
 
+TEST_F(EliminateDeadFunctionsBasicTest, NonSemanticInfoRemoveDebugPrintf) {
+  const std::string text = R"(
+; CHECK-NOT: %foo_ = OpFunction %void None % 3
+; CHECK-NOT: % 7 = OpLabel
+; CHECK-NOT: %c = OpVariable %_ptr_Function_v4float Function
+; CHECK-NOT: % 22 = OpAccessChain %_ptr_UniformConstant_13 %samplers %int_0
+; CHECK-NOT: % 23 = OpLoad % 13 % 22
+; CHECK-NOT: % 27 = OpImageSampleExplicitLod %v4float % 23 % 26 Lod %float_0
+; CHECK-NOT: OpStore %c % 27
+; CHECK-NOT: % 31 = OpAccessChain %_ptr_Function_float %c %uint_0
+; CHECK-NOT: % 32 = OpLoad %float %31
+; CHECK-NOT: % 34 = OpExtInst %void %33 1 % 28 % 32
+OpCapability RayTracingKHR
+OpExtension "SPV_KHR_non_semantic_info"
+OpExtension "SPV_KHR_ray_tracing"
+%1 = OpExtInstImport "GLSL.std.450"
+%33 = OpExtInstImport "NonSemantic.DebugPrintf"
+OpMemoryModel Logical GLSL450
+OpEntryPoint ClosestHitNV %main "main" %samplers
+%28 = OpString "%f"
+OpSource GLSL 460
+OpSourceExtension "GL_EXT_debug_printf"
+OpName %main "main"
+OpName %foo_ "foo("
+OpName %c "c"
+OpName %samplers "samplers"
+OpDecorate %samplers DescriptorSet 0
+OpDecorate %samplers Binding 0
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%12 = OpTypeImage %float 3D 0 0 0 1 Unknown
+%13 = OpTypeSampledImage %12
+%uint = OpTypeInt 32 0
+%uint_1 = OpConstant %uint 1
+%_arr_13_uint_1 = OpTypeArray %13 %uint_1
+%_ptr_UniformConstant__arr_13_uint_1 = OpTypePointer UniformConstant %_arr_13_uint_1
+%samplers = OpVariable %_ptr_UniformConstant__arr_13_uint_1 UniformConstant
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%_ptr_UniformConstant_13 = OpTypePointer UniformConstant %13
+%v3float = OpTypeVector %float 3
+%float_0 = OpConstant %float 0
+%26 = OpConstantComposite %v3float %float_0 %float_0 %float_0
+%uint_0 = OpConstant %uint 0
+%_ptr_Function_float = OpTypePointer Function %float
+%main = OpFunction %void None %3
+%5 = OpLabel
+%36 = OpVariable %_ptr_Function_v4float Function
+%38 = OpAccessChain %_ptr_UniformConstant_13 %samplers %int_0
+%39 = OpLoad %13 %38
+%40 = OpImageSampleExplicitLod %v4float %39 %26 Lod %float_0
+OpStore %36 %40
+%41 = OpAccessChain %_ptr_Function_float %36 %uint_0
+%42 = OpLoad %float %41
+%43 = OpExtInst %void %33 1 %28 %42
+OpReturn
+OpFunctionEnd
+%foo_ = OpFunction %void None %3
+%7 = OpLabel
+%c = OpVariable %_ptr_Function_v4float Function
+%22 = OpAccessChain %_ptr_UniformConstant_13 %samplers %int_0
+%23 = OpLoad %13 %22
+%27 = OpImageSampleExplicitLod %v4float %23 %26 Lod %float_0
+OpStore %c %27
+%31 = OpAccessChain %_ptr_Function_float %c %uint_0
+%32 = OpLoad %float %31
+%34 = OpExtInst %void %33 1 %28 %32
+OpReturn
+OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<EliminateDeadFunctionsPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -28,7 +28,7 @@ namespace fuzz {
 class TransformationAccessChain : public Transformation {
  public:
   explicit TransformationAccessChain(
-      const protobufs::TransformationAccessChain& message);
+      protobufs::TransformationAccessChain message);
 
   TransformationAccessChain(
       uint32_t fresh_id, uint32_t pointer_id,
@@ -83,13 +83,13 @@ class TransformationAccessChain : public Transformation {
  private:
   // Returns {false, 0} in each of the following cases:
   // - |index_id| does not correspond to a 32-bit integer constant
-  // - the object being indexed is not a composite type
+  // - |object_type_id| must be a struct type
   // - the constant at |index_id| is out of bounds.
   // Otherwise, returns {true, value}, where value is the value of the constant
   // at |index_id|.
-  std::pair<bool, uint32_t> GetIndexValue(opt::IRContext* ir_context,
-                                          uint32_t index_id,
-                                          uint32_t object_type_id) const;
+  std::pair<bool, uint32_t> GetStructIndexValue(opt::IRContext* ir_context,
+                                                uint32_t index_id,
+                                                uint32_t object_type_id) const;
 
   // Returns true if |index_id| corresponds, in the given context, to a 32-bit
   // integer which can be used to index an object of the type specified by

@@ -1403,18 +1403,20 @@ TEST_F(LocalSingleStoreElimTest, AddDebugValueforStoreOutOfDebugDeclareScope) {
 %param_var_pos = OpVariable %_ptr_Function_v4float Function
 %param_var_color = OpVariable %_ptr_Function_v4float Function
          %55 = OpLoad %v4float %in_var_POSITION
+               OpLine %7 6 23
                OpStore %param_var_pos %55
+               OpNoLine
          %56 = OpLoad %v4float %in_var_COLOR
 ;CHECK:      DebugNoScope
 ;CHECK-NOT:  OpLine
 ;CHECK:      [[pos:%\w+]] = OpLoad %v4float %in_var_POSITION
 ;CHECK:      [[color:%\w+]] = OpLoad %v4float %in_var_COLOR
 
-               OpStore %param_var_color %56
-         %93 = OpExtInst %void %1 DebugScope %48
-               OpLine %7 6 23
-         %73 = OpExtInst %void %1 DebugDeclare %53 %param_var_pos %52
                OpLine %7 7 23
+               OpStore %param_var_color %56
+               OpNoLine
+         %93 = OpExtInst %void %1 DebugScope %48
+         %73 = OpExtInst %void %1 DebugDeclare %53 %param_var_pos %52
          %74 = OpExtInst %void %1 DebugDeclare %51 %param_var_color %52
 ;CHECK:      OpLine [[file:%\w+]] 6 23
 ;CHECK-NEXT: {{%\w+}} = OpExtInst %void {{%\w+}} DebugValue [[dbg_pos]] [[pos]] [[empty_expr:%\w+]]

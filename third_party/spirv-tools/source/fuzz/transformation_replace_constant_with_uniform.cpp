@@ -22,9 +22,8 @@ namespace fuzz {
 
 TransformationReplaceConstantWithUniform::
     TransformationReplaceConstantWithUniform(
-        const spvtools::fuzz::protobufs::
-            TransformationReplaceConstantWithUniform& message)
-    : message_(message) {}
+        protobufs::TransformationReplaceConstantWithUniform message)
+    : message_(std::move(message)) {}
 
 TransformationReplaceConstantWithUniform::
     TransformationReplaceConstantWithUniform(
@@ -254,28 +253,39 @@ void TransformationReplaceConstantWithUniform::Apply(
   auto* insert_before_inst = GetInsertBeforeInstruction(ir_context);
   assert(insert_before_inst &&
          "There must exist an insertion point for OpAccessChain and OpLoad");
+  opt::BasicBlock* enclosing_block =
+      ir_context->get_instr_block(insert_before_inst);
 
   // Add an access chain instruction to target the uniform element.
-  insert_before_inst->InsertBefore(
-      MakeAccessChainInstruction(ir_context, constant_type_id));
+  auto access_chain_instruction =
+      MakeAccessChainInstruction(ir_context, constant_type_id);
+  auto access_chain_instruction_ptr = access_chain_instruction.get();
+  insert_before_inst->InsertBefore(std::move(access_chain_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(
+      access_chain_instruction_ptr);
+  ir_context->set_instr_block(access_chain_instruction_ptr, enclosing_block);
 
   // Add a load from this access chain.
-  insert_before_inst->InsertBefore(
-      MakeLoadInstruction(ir_context, constant_type_id));
+  auto load_instruction = MakeLoadInstruction(ir_context, constant_type_id);
+  auto load_instruction_ptr = load_instruction.get();
+  insert_before_inst->InsertBefore(std::move(load_instruction));
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(load_instruction_ptr);
+  ir_context->set_instr_block(load_instruction_ptr, enclosing_block);
 
   // Adjust the instruction containing the usage of the constant so that this
   // usage refers instead to the result of the load.
   instruction_containing_constant_use->SetInOperand(
       message_.id_use_descriptor().in_operand_index(),
       {message_.fresh_id_for_load()});
+  ir_context->get_def_use_mgr()->EraseUseRecordsOfOperandIds(
+      instruction_containing_constant_use);
+  ir_context->get_def_use_mgr()->AnalyzeInstUse(
+      instruction_containing_constant_use);
 
   // Update the module id bound to reflect the new instructions.
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id_for_load());
   fuzzerutil::UpdateModuleIdBound(ir_context,
                                   message_.fresh_id_for_access_chain());
-
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
 }
 
 protobufs::Transformation TransformationReplaceConstantWithUniform::ToMessage()

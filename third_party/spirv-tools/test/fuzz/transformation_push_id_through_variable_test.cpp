@@ -341,7 +341,26 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   auto transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(value_synonym_id));
+  ASSERT_EQ(nullptr, context->get_instr_block(value_synonym_id));
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(variable_id));
+  ASSERT_EQ(nullptr, context->get_instr_block(variable_id));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_EQ(SpvOpLoad,
+            context->get_def_use_mgr()->GetDef(value_synonym_id)->opcode());
+  ASSERT_EQ(36, context->get_instr_block(value_synonym_id)->id());
+  ASSERT_EQ(SpvOpVariable,
+            context->get_def_use_mgr()->GetDef(variable_id)->opcode());
+  ASSERT_EQ(5, context->get_instr_block(variable_id)->id());
+  uint32_t variable_use_count = 0;
+  context->get_def_use_mgr()->ForEachUse(
+      variable_id,
+      [&variable_use_count](opt::Instruction* inst, uint32_t /*unused*/) {
+        ASSERT_TRUE(inst->opcode() == SpvOpLoad ||
+                    inst->opcode() == SpvOpStore);
+        variable_use_count++;
+      });
+  ASSERT_EQ(2, variable_use_count);
 
   value_id = 21;
   value_synonym_id = 102;

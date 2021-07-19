@@ -23,7 +23,7 @@ copy %ROOT_PATH%\extension.js %EXT_PATH%
 copy %ROOT_PATH%\package.json %EXT_PATH%
 copy %ROOT_PATH%\spirv.json %EXT_PATH%
 
-go build -o %EXT_PATH%\langsvr %ROOT_PATH%\src\langsvr.go
+go build -o %EXT_PATH%\langsvr.exe %ROOT_PATH%\src\langsvr.go
 
 @pushd %EXT_PATH%
 call npm install

@@ -1334,6 +1334,9 @@ TEST(TransformationDuplicateRegionWithSelectionTest,
                OpBranch %50
          %50 = OpLabel
          %51 = OpCopyObject %7 %12
+               OpBranch %52
+         %52 = OpLabel
+         %53 = OpCopyObject %7 %51
                OpReturn
                OpFunctionEnd
     )";
@@ -2273,6 +2276,207 @@ TEST(TransformationDuplicateRegionWithSelectionTest,
   ASSERT_FALSE(TransformationDuplicateRegionWithSelection(
                    600, 31, 601, 20, 20, {{20, 602}}, {{11, 603}}, {{11, 605}})
                    .IsApplicable(context.get(), transformation_context));
+}
+
+TEST(TransformationDuplicateRegionWithSelectionTest,
+     DoNotProduceOpPhiWithVoidType) {
+  std::string reference_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %10 = OpTypeBool
+         %11 = OpConstantTrue %10
+          %4 = OpFunction %2 None %3
+         %12 = OpLabel
+               OpBranch %5
+          %5 = OpLabel
+          %8 = OpFunctionCall %2 %6
+               OpReturn
+               OpFunctionEnd
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_4;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  TransformationDuplicateRegionWithSelection transformation(
+      100, 11, 101, 5, 5, {{5, 102}}, {{8, 103}}, {});
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  std::string expected_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %10 = OpTypeBool
+         %11 = OpConstantTrue %10
+          %4 = OpFunction %2 None %3
+         %12 = OpLabel
+               OpBranch %100
+        %100 = OpLabel
+               OpSelectionMerge %101 None
+               OpBranchConditional %11 %5 %102
+          %5 = OpLabel
+          %8 = OpFunctionCall %2 %6
+               OpBranch %101
+        %102 = OpLabel
+        %103 = OpFunctionCall %2 %6
+               OpBranch %101
+        %101 = OpLabel
+               OpReturn
+               OpFunctionEnd
+          %6 = OpFunction %2 None %3
+          %7 = OpLabel
+               OpReturn
+               OpFunctionEnd
+        )";
+
+  ASSERT_TRUE(IsEqual(env, expected_shader, context.get()));
+}
+
+TEST(TransformationDuplicateRegionWithSelectionTest,
+     DoNotProduceOpPhiWithDisallowedType) {
+  std::string reference_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpDecorate %13 DescriptorSet 0
+               OpDecorate %13 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 2
+          %8 = OpTypePointer Function %7
+         %10 = OpTypeImage %6 2D 0 0 0 1 Unknown
+         %11 = OpTypeSampledImage %10
+         %12 = OpTypePointer UniformConstant %11
+         %13 = OpVariable %12 UniformConstant
+         %15 = OpConstant %6 1
+         %16 = OpConstantComposite %7 %15 %15
+         %17 = OpTypeVector %6 4
+         %19 = OpTypeInt 32 0
+         %20 = OpConstant %19 0
+         %22 = OpTypePointer Function %6
+         %90 = OpTypeBool
+         %91 = OpConstantTrue %90
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %9 = OpVariable %8 Function
+               OpBranch %81
+         %81 = OpLabel
+         %14 = OpLoad %11 %13
+         %18 = OpImageSampleImplicitLod %17 %14 %16
+         %21 = OpCompositeExtract %6 %18 0
+         %23 = OpAccessChain %22 %9 %20
+               OpStore %23 %21
+               OpBranch %80
+         %80 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, reference_shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  TransformationDuplicateRegionWithSelection transformation(
+      100, 91, 101, 81, 81, {{81, 102}},
+      {{14, 103}, {18, 104}, {21, 105}, {23, 106}}, {{18, 107}, {21, 108}});
+  ASSERT_TRUE(
+      transformation.IsApplicable(context.get(), transformation_context));
+  ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  std::string expected_shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpDecorate %13 DescriptorSet 0
+               OpDecorate %13 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 2
+          %8 = OpTypePointer Function %7
+         %10 = OpTypeImage %6 2D 0 0 0 1 Unknown
+         %11 = OpTypeSampledImage %10
+         %12 = OpTypePointer UniformConstant %11
+         %13 = OpVariable %12 UniformConstant
+         %15 = OpConstant %6 1
+         %16 = OpConstantComposite %7 %15 %15
+         %17 = OpTypeVector %6 4
+         %19 = OpTypeInt 32 0
+         %20 = OpConstant %19 0
+         %22 = OpTypePointer Function %6
+         %90 = OpTypeBool
+         %91 = OpConstantTrue %90
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %9 = OpVariable %8 Function
+               OpBranch %100
+        %100 = OpLabel
+               OpSelectionMerge %101 None
+               OpBranchConditional %91 %81 %102
+         %81 = OpLabel
+         %14 = OpLoad %11 %13
+         %18 = OpImageSampleImplicitLod %17 %14 %16
+         %21 = OpCompositeExtract %6 %18 0
+         %23 = OpAccessChain %22 %9 %20
+               OpStore %23 %21
+               OpBranch %101
+        %102 = OpLabel
+        %103 = OpLoad %11 %13
+        %104 = OpImageSampleImplicitLod %17 %103 %16
+        %105 = OpCompositeExtract %6 %104 0
+        %106 = OpAccessChain %22 %9 %20
+               OpStore %106 %105
+               OpBranch %101
+        %101 = OpLabel
+        %107 = OpPhi %17 %18 %81 %104 %102
+        %108 = OpPhi %6 %21 %81 %105 %102
+               OpBranch %80
+         %80 = OpLabel
+               OpReturn
+               OpFunctionEnd
+        )";
+
+  ASSERT_TRUE(IsEqual(env, expected_shader, context.get()));
 }
 
 }  // namespace

@@ -30,8 +30,6 @@ class FuzzerPassReplaceIrrelevantIds : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassReplaceIrrelevantIds();
-
   void Apply() override;
 };
 }  // namespace fuzz

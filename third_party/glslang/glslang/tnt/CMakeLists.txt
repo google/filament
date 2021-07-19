@@ -22,6 +22,7 @@ set(SOURCES
         ../MachineIndependent/RemoveTree.cpp
         ../MachineIndependent/Scan.cpp
         ../MachineIndependent/ShaderLang.cpp
+        ../MachineIndependent/SpirvIntrinsics.cpp
         ../MachineIndependent/SymbolTable.cpp
         ../MachineIndependent/Versions.cpp
         ../MachineIndependent/intermOut.cpp

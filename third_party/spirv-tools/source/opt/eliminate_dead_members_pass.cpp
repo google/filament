@@ -20,7 +20,7 @@
 namespace {
 const uint32_t kRemovedMember = 0xFFFFFFFF;
 const uint32_t kSpecConstOpOpcodeIdx = 0;
-}
+}  // namespace
 
 namespace spvtools {
 namespace opt {
@@ -228,15 +228,10 @@ void EliminateDeadMembersPass::MarkMembersAsLiveForAccessChain(
             const_mgr->FindDeclaredConstant(inst->GetSingleWordInOperand(i))
                 ->AsIntConstant();
         assert(member_idx);
-        if (member_idx->type()->AsInteger()->width() == 32) {
-          used_members_[type_id].insert(member_idx->GetU32());
-          type_id = type_inst->GetSingleWordInOperand(member_idx->GetU32());
-        } else {
-          used_members_[type_id].insert(
-              static_cast<uint32_t>(member_idx->GetU64()));
-          type_id = type_inst->GetSingleWordInOperand(
-              static_cast<uint32_t>(member_idx->GetU64()));
-        }
+        uint32_t index =
+            static_cast<uint32_t>(member_idx->GetZeroExtendedValue());
+        used_members_[type_id].insert(index);
+        type_id = type_inst->GetSingleWordInOperand(index);
       } break;
       case SpvOpTypeArray:
       case SpvOpTypeRuntimeArray:
@@ -477,12 +472,8 @@ bool EliminateDeadMembersPass::UpdateAccessChain(Instruction* inst) {
             const_mgr->FindDeclaredConstant(inst->GetSingleWordInOperand(i))
                 ->AsIntConstant();
         assert(member_idx);
-        uint32_t orig_member_idx;
-        if (member_idx->type()->AsInteger()->width() == 32) {
-          orig_member_idx = member_idx->GetU32();
-        } else {
-          orig_member_idx = static_cast<uint32_t>(member_idx->GetU64());
-        }
+        uint32_t orig_member_idx =
+            static_cast<uint32_t>(member_idx->GetZeroExtendedValue());
         uint32_t new_member_idx = GetNewMemberIndex(type_id, orig_member_idx);
         assert(new_member_idx != kRemovedMember);
         if (orig_member_idx != new_member_idx) {

@@ -23,7 +23,7 @@ namespace fuzz {
 class TransformationReplaceIrrelevantId : public Transformation {
  public:
   explicit TransformationReplaceIrrelevantId(
-      const protobufs::TransformationReplaceIrrelevantId& message);
+      protobufs::TransformationReplaceIrrelevantId message);
 
   TransformationReplaceIrrelevantId(
       const protobufs::IdUseDescriptor& id_use_descriptor,

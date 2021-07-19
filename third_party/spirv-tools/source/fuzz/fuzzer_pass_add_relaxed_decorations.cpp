@@ -26,8 +26,6 @@ FuzzerPassAddRelaxedDecorations::FuzzerPassAddRelaxedDecorations(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddRelaxedDecorations::~FuzzerPassAddRelaxedDecorations() = default;
-
 void FuzzerPassAddRelaxedDecorations::Apply() {
   // Consider every instruction in every block in every function.
   for (auto& function : *GetIRContext()->module()) {

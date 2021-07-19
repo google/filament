@@ -10,11 +10,12 @@ unzip main.zip
 rsync -r glslang-master/ glslang/ --delete
 rm -r main.zip glslang-master
 rm -rf glslang/Test/
-git checkout glslang/*/tnt/*
+git checkout main glslang/tnt glslang/glslang/tnt glslang/SPIRV/tnt glslang/OGLCompilersDLL/tnt
 git restore glslang/LICENSE
 git add glslang
 ```
 
+- If necessary, add or remove source files from `glslang/glslang/tnt/CMakeLists.txt` et al.
 - If necessary, update the `DefaultTBuiltInResource` definition inside `libs/filamat/src/sca/builtinResource.h` to glslang's located at
 `third_party/glslang/StandAlone/ResourceLimits.cpp`
 - Compile and test `matc`

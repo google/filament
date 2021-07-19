@@ -655,12 +655,20 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_COMPOSITE_TYPE:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_TYPE_QUALIFIER:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_OPERATION:
-    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_IMPORTED_ENTITY: {
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_IMPORTED_ENTITY:
+    case SPV_OPERAND_TYPE_FPDENORM_MODE:
+    case SPV_OPERAND_TYPE_FPOPERATION_MODE:
+    case SPV_OPERAND_TYPE_QUANTIZATION_MODES:
+    case SPV_OPERAND_TYPE_OVERFLOW_MODES:
+    case SPV_OPERAND_TYPE_PACKED_VECTOR_FORMAT:
+    case SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT: {
       // A single word that is a plain enum value.
 
       // Map an optional operand type to its corresponding concrete type.
       if (type == SPV_OPERAND_TYPE_OPTIONAL_ACCESS_QUALIFIER)
         parsed_operand.type = SPV_OPERAND_TYPE_ACCESS_QUALIFIER;
+      if (type == SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT)
+        parsed_operand.type = SPV_OPERAND_TYPE_PACKED_VECTOR_FORMAT;
 
       spv_operand_desc entry;
       if (grammar_.lookupOperand(type, word, &entry)) {

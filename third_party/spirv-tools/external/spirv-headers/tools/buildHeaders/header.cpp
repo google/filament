@@ -500,7 +500,7 @@ namespace {
 
         virtual std::string fmtEnumUse(const std::string& opPrefix, const std::string& name) const { return pre() + name; }
 
-        virtual void printHasResultType(std::ostream& out) const
+        virtual void printHasResultType(std::ostream& out) const override
         {
             const Json::Value& enums = spvRoot["spv"]["enum"];
 
@@ -643,7 +643,7 @@ namespace {
         }
 
         // Add type prefix for scoped enum
-        virtual std::string fmtEnumUse(const std::string& opPrefix, const std::string& name) const { return opPrefix + "::" + name; }
+        virtual std::string fmtEnumUse(const std::string& opPrefix, const std::string& name) const override { return opPrefix + "::" + name; }
 
         std::string headerGuardSuffix() const override { return "HPP"; }
     };

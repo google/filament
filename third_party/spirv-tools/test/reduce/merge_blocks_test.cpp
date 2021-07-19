@@ -647,6 +647,64 @@ TEST(MergeBlocksReductionPassTest, LoopReturnReverse) {
   MergeBlocksReductionPassTest_LoopReturn_Helper(true);
 }
 
+TEST(MergeBlocksReductionPassTest, MergeUnreachable) {
+  std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpName %4 "main"
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %11 = OpTypeBool
+         %12 = OpConstantFalse %11
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpReturn
+          %9 = OpLabel
+               OpBranch %100
+        %100 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context =
+      BuildModule(env, consumer, shader, kReduceAssembleOption);
+  const auto ops =
+      MergeBlocksReductionOpportunityFinder().GetAvailableOpportunities(
+          context.get(), 0);
+  ASSERT_EQ(1, ops.size());
+
+  ASSERT_TRUE(ops[0]->PreconditionHolds());
+  ops[0]->TryToApply();
+
+  std::string after = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+               OpName %4 "main"
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+         %11 = OpTypeBool
+         %12 = OpConstantFalse %11
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpReturn
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  CheckEqual(env, after, context.get());
+}
+
 }  // namespace
 }  // namespace reduce
 }  // namespace spvtools

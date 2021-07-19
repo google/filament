@@ -45,9 +45,6 @@ class Dispatcher;
  */
 
 struct HwBase {
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-    const char* typeId = nullptr;
-#endif
 };
 
 struct HwVertexBuffer : public HwBase {
@@ -76,12 +73,15 @@ struct HwBufferObject : public HwBase {
 };
 
 struct HwIndexBuffer : public HwBase {
-    uint32_t count{};
-    uint8_t elementSize{};
+    uint32_t count : 27;
+    uint32_t elementSize : 5;
 
-    HwIndexBuffer() noexcept = default;
+    HwIndexBuffer() noexcept : count{}, elementSize{} { }
     HwIndexBuffer(uint8_t elementSize, uint32_t indexCount) noexcept :
             count(indexCount), elementSize(elementSize) {
+        // we could almost store elementSize on 4 bits because it's never > 16 and never 0
+        assert_invariant(elementSize > 0 && elementSize <= 16);
+        assert_invariant(indexCount < (1u << 27));
     }
 };
 

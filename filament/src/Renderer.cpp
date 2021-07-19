@@ -239,7 +239,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
-        msaa = 1;
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
         vignetteOptions.enabled = false;
@@ -1014,12 +1013,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
             // when the gpu will finish, otherwise we'll have inconsistent latency/frames.
 
             // TODO: evaluate if we can make it in time, and if not why.
-            // If the problem is cpu+gpu latency we can try to push the desired presentation time
-            // further away, but this has limits, as only 2 buffers are dequeuable.
-            // If the problem is the gpu is overwhelmed, then we need to
-            //  - see if there is more headroom in dynamic resolution
-            //  - or start skipping frames. Ideally lower the framerate too.
-
+            //   If the problem is cpu+gpu latency we can try to push the desired presentation time
+            //   further away, but this has limits, as only 2 buffers are dequeuable.
+            //   If the problem is the gpu is overwhelmed, then we need to
+            //    - see if there is more headroom in dynamic resolution
+            //    - or start skipping frames. Ideally lower the framerate to
             // presentation time is set to the middle of the period we're interested in
             steady_clock::time_point presentationTime = desiredPresentationTime - refreshPeriod / 2;
             driver.setPresentationTime(presentationTime.time_since_epoch().count());

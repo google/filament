@@ -102,8 +102,12 @@ TEST(TransformationEquationInstructionTest, SignedNegate) {
       14, SpvOpSNegate, {7}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
+  ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(14));
+  ASSERT_EQ(nullptr, context->get_instr_block(14));
   ApplyAndCheckFreshIds(transformation1, context.get(),
                         &transformation_context);
+  ASSERT_EQ(SpvOpSNegate, context->get_def_use_mgr()->GetDef(14)->opcode());
+  ASSERT_EQ(13, context->get_instr_block(14)->id());
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 

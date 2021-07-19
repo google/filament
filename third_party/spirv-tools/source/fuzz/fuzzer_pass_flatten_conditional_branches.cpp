@@ -30,9 +30,6 @@ FuzzerPassFlattenConditionalBranches::FuzzerPassFlattenConditionalBranches(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassFlattenConditionalBranches::~FuzzerPassFlattenConditionalBranches() =
-    default;
-
 void FuzzerPassFlattenConditionalBranches::Apply() {
   for (auto& function : *GetIRContext()->module()) {
     // Get all the selection headers that we want to flatten. We need to collect

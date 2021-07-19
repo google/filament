@@ -63,10 +63,21 @@ TEST(TransformationAddTypeStructTest, BasicTest) {
   ASSERT_FALSE(TransformationAddTypeStruct(100, {3}).IsApplicable(
       context.get(), transformation_context));
 
-  TransformationAddTypeStruct transformations[] = {
-      // %100 = OpTypeStruct %6 %7 %8 %9 %10 %11
-      TransformationAddTypeStruct(100, {6, 7, 8, 9, 10, 11}),
+  {
+    // %100 = OpTypeStruct %6 %7 %8 %9 %10 %11
+    TransformationAddTypeStruct transformation(100, {6, 7, 8, 9, 10, 11});
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(100));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpTypeStruct,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsStruct());
+  }
 
+  TransformationAddTypeStruct transformations[] = {
       // %101 = OpTypeStruct
       TransformationAddTypeStruct(101, {}),
 

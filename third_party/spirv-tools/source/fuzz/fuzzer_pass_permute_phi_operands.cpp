@@ -32,8 +32,6 @@ FuzzerPassPermutePhiOperands::FuzzerPassPermutePhiOperands(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassPermutePhiOperands::~FuzzerPassPermutePhiOperands() = default;
-
 void FuzzerPassPermutePhiOperands::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* /*unused*/, opt::BasicBlock* /*unused*/,

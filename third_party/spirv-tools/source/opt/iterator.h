@@ -30,18 +30,14 @@ namespace opt {
 // std::unique_ptr managed elements in the vector, behaving like we are using
 // std::vector<|ValueType|>.
 template <typename ValueType, bool IsConst = false>
-class UptrVectorIterator
-    : public std::iterator<std::random_access_iterator_tag,
-                           typename std::conditional<IsConst, const ValueType,
-                                                     ValueType>::type> {
+class UptrVectorIterator {
  public:
-  using super = std::iterator<
-      std::random_access_iterator_tag,
-      typename std::conditional<IsConst, const ValueType, ValueType>::type>;
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = ValueType;
 
-  using pointer = typename super::pointer;
-  using reference = typename super::reference;
-  using difference_type = typename super::difference_type;
+  using pointer = value_type*;
+  using reference = value_type&;
+  using difference_type = std::ptrdiff_t;
 
   // Type aliases. We need to apply constness properly if |IsConst| is true.
   using Uptr = std::unique_ptr<ValueType>;
@@ -174,11 +170,7 @@ inline IteratorRange<IteratorType> make_const_range(
 //
 // Currently this iterator is always an input iterator.
 template <typename SubIterator, typename Predicate>
-class FilterIterator
-    : public std::iterator<
-          std::input_iterator_tag, typename SubIterator::value_type,
-          typename SubIterator::difference_type, typename SubIterator::pointer,
-          typename SubIterator::reference> {
+class FilterIterator {
  public:
   // Iterator interface.
   using iterator_category = typename SubIterator::iterator_category;

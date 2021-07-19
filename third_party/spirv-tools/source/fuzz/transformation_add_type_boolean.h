@@ -25,7 +25,7 @@ namespace fuzz {
 class TransformationAddTypeBoolean : public Transformation {
  public:
   explicit TransformationAddTypeBoolean(
-      const protobufs::TransformationAddTypeBoolean& message);
+      protobufs::TransformationAddTypeBoolean message);
 
   explicit TransformationAddTypeBoolean(uint32_t fresh_id);
 

@@ -29,8 +29,6 @@ class FuzzerPassAddCopyMemory : public FuzzerPass {
                           FuzzerContext* fuzzer_context,
                           protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddCopyMemory() override;
-
   void Apply() override;
 };
 

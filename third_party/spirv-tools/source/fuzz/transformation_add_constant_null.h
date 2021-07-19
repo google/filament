@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddConstantNull : public Transformation {
  public:
   explicit TransformationAddConstantNull(
-      const protobufs::TransformationAddConstantNull& message);
+      protobufs::TransformationAddConstantNull message);
 
   TransformationAddConstantNull(uint32_t fresh_id, uint32_t type_id);
 
@@ -34,12 +34,12 @@ class TransformationAddConstantNull : public Transformation {
   // - |message_.type_id| must be the id of a type for which it is acceptable
   //   to create a null constant
   bool IsApplicable(
-      opt::IRContext* context,
+      opt::IRContext* ir_context,
       const TransformationContext& transformation_context) const override;
 
   // Adds an OpConstantNull instruction to the module, with |message_.type_id|
   // as its type.  The instruction has result id |message_.fresh_id|.
-  void Apply(opt::IRContext* context,
+  void Apply(opt::IRContext* ir_context,
              TransformationContext* transformation_context) const override;
 
   std::unordered_set<uint32_t> GetFreshIds() const override;

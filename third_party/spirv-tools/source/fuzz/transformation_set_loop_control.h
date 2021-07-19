@@ -29,7 +29,7 @@ class TransformationSetLoopControl : public Transformation {
   const static uint32_t kLoopControlFirstLiteralInOperandIndex = 3;
 
   explicit TransformationSetLoopControl(
-      const protobufs::TransformationSetLoopControl& message);
+      protobufs::TransformationSetLoopControl message);
 
   TransformationSetLoopControl(uint32_t block_id, uint32_t loop_control,
                                uint32_t peel_count, uint32_t partial_count);

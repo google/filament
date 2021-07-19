@@ -21,9 +21,8 @@ namespace fuzz {
 
 TransformationDuplicateRegionWithSelection::
     TransformationDuplicateRegionWithSelection(
-        const spvtools::fuzz::protobufs::
-            TransformationDuplicateRegionWithSelection& message)
-    : message_(message) {}
+        protobufs::TransformationDuplicateRegionWithSelection message)
+    : message_(std::move(message)) {}
 
 TransformationDuplicateRegionWithSelection::
     TransformationDuplicateRegionWithSelection(
@@ -209,7 +208,7 @@ bool TransformationDuplicateRegionWithSelection::IsApplicable(
         return false;
       }
     } else {
-      auto duplicate_label = original_label_to_duplicate_label[block->id()];
+      auto duplicate_label = original_label_to_duplicate_label.at(block->id());
       // Each id assigned to labels in the region must be distinct and fresh.
       if (!duplicate_label ||
           !CheckIdIsFreshAndNotUsedByThisTransformation(
@@ -217,7 +216,7 @@ bool TransformationDuplicateRegionWithSelection::IsApplicable(
         return false;
       }
     }
-    for (auto instr : *block) {
+    for (auto& instr : *block) {
       if (!instr.HasResultId()) {
         continue;
       }
@@ -228,7 +227,7 @@ bool TransformationDuplicateRegionWithSelection::IsApplicable(
           return false;
         }
       } else {
-        auto duplicate_id = original_id_to_duplicate_id[instr.result_id()];
+        auto duplicate_id = original_id_to_duplicate_id.at(instr.result_id());
         // Id assigned to this result id in the region must be distinct and
         // fresh.
         if (!duplicate_id ||
@@ -237,43 +236,48 @@ bool TransformationDuplicateRegionWithSelection::IsApplicable(
           return false;
         }
       }
-      if (&instr == &*exit_block->tail() ||
-          fuzzerutil::IdIsAvailableBeforeInstruction(
-              ir_context, &*exit_block->tail(), instr.result_id())) {
-        // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3787):
-        //     Consider not adding OpPhi instructions for the pointers and
-        //     sampled images which are unused after the region, so that the
-        //     transformation could be still applicable.
-
-        // Using pointers with OpPhi requires capability VariablePointers.
-        if (ir_context->get_def_use_mgr()->GetDef(instr.type_id())->opcode() ==
-                SpvOpTypePointer &&
-            !ir_context->get_feature_mgr()->HasCapability(
-                SpvCapabilityVariablePointers)) {
-          return false;
-        }
-
-        // OpTypeSampledImage cannot be the result type of an OpPhi instruction.
-        if (ir_context->get_def_use_mgr()->GetDef(instr.type_id())->opcode() ==
-            SpvOpTypeSampledImage) {
-          return false;
-        }
-
-        // Every instruction with a result id available at the end of the region
-        // must be present in the map |original_id_to_phi_id|, unless overflow
-        // ids are present.
-        if (original_id_to_phi_id.count(instr.result_id()) == 0) {
-          if (!transformation_context.GetOverflowIdSource()->HasOverflowIds()) {
+      // If the instruction is available at the end of the region then we would
+      // like to be able to add an OpPhi instruction at the merge point of the
+      // duplicated region to capture the values computed by both duplicates of
+      // the instruction, so that this is also available after the region.  We
+      // do this not just for instructions that are already used after the
+      // region, but for all instructions so that the phi is available to future
+      // transformations.
+      if (AvailableAfterRegion(instr, exit_block, ir_context)) {
+        if (!ValidOpPhiArgument(instr, ir_context)) {
+          // The instruction cannot be used as an OpPhi argument.  This is a
+          // blocker if there are uses of the instruction after the region.
+          // Otherwise we can simply avoid generating an OpPhi for this
+          // instruction and its duplicate.
+          if (!ir_context->get_def_use_mgr()->WhileEachUser(
+                  &instr,
+                  [ir_context,
+                   &region_set](opt::Instruction* use_instr) -> bool {
+                    opt::BasicBlock* use_block =
+                        ir_context->get_instr_block(use_instr);
+                    return use_block == nullptr ||
+                           region_set.count(use_block) > 0;
+                  })) {
             return false;
           }
         } else {
-          auto phi_id = original_id_to_phi_id[instr.result_id()];
-          // Id assigned to this result id in the region must be distinct and
-          // fresh.
-          if (!phi_id ||
-              !CheckIdIsFreshAndNotUsedByThisTransformation(
-                  phi_id, ir_context, &ids_used_by_this_transformation)) {
-            return false;
+          // Every instruction with a result id available at the end of the
+          // region must be present in the map |original_id_to_phi_id|, unless
+          // overflow ids are present.
+          if (original_id_to_phi_id.count(instr.result_id()) == 0) {
+            if (!transformation_context.GetOverflowIdSource()
+                     ->HasOverflowIds()) {
+              return false;
+            }
+          } else {
+            auto phi_id = original_id_to_phi_id.at(instr.result_id());
+            // Id assigned to this result id in the region must be distinct and
+            // fresh.
+            if (!phi_id ||
+                !CheckIdIsFreshAndNotUsedByThisTransformation(
+                    phi_id, ir_context, &ids_used_by_this_transformation)) {
+              return false;
+            }
           }
         }
       }
@@ -329,7 +333,7 @@ void TransformationDuplicateRegionWithSelection::Apply(
           {block->id(),
            transformation_context->GetOverflowIdSource()->GetNextOverflowId()});
     }
-    for (auto instr : *block) {
+    for (auto& instr : *block) {
       if (!instr.HasResultId()) {
         continue;
       }
@@ -338,9 +342,8 @@ void TransformationDuplicateRegionWithSelection::Apply(
             {instr.result_id(), transformation_context->GetOverflowIdSource()
                                     ->GetNextOverflowId()});
       }
-      if (&instr == &*exit_block->tail() ||
-          fuzzerutil::IdIsAvailableBeforeInstruction(
-              ir_context, &*exit_block->tail(), instr.result_id())) {
+      if (AvailableAfterRegion(instr, exit_block, ir_context) &&
+          ValidOpPhiArgument(instr, ir_context)) {
         if (original_id_to_phi_id.count(instr.result_id()) == 0) {
           original_id_to_phi_id.insert(
               {instr.result_id(), transformation_context->GetOverflowIdSource()
@@ -414,12 +417,12 @@ void TransformationDuplicateRegionWithSelection::Apply(
     }
 
     fuzzerutil::UpdateModuleIdBound(
-        ir_context, original_label_to_duplicate_label[block->id()]);
+        ir_context, original_label_to_duplicate_label.at(block->id()));
 
     std::unique_ptr<opt::BasicBlock> duplicated_block =
         MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
             ir_context, SpvOpLabel, 0,
-            original_label_to_duplicate_label[block->id()],
+            original_label_to_duplicate_label.at(block->id()),
             opt::Instruction::OperandList()));
 
     for (auto& instr : *block) {
@@ -444,8 +447,10 @@ void TransformationDuplicateRegionWithSelection::Apply(
       duplicated_block->AddInstruction(
           std::unique_ptr<opt::Instruction>(cloned_instr));
 
-      fuzzerutil::UpdateModuleIdBound(
-          ir_context, original_id_to_duplicate_id[instr.result_id()]);
+      if (instr.HasResultId()) {
+        fuzzerutil::UpdateModuleIdBound(
+            ir_context, original_id_to_duplicate_id.at(instr.result_id()));
+      }
 
       // If an id from the original region was used in this instruction,
       // replace it with the value from |original_id_to_duplicate_id|.
@@ -456,8 +461,7 @@ void TransformationDuplicateRegionWithSelection::Apply(
            original_label_to_duplicate_label](uint32_t* op) {
             if (original_id_to_duplicate_id.count(*op) != 0) {
               *op = original_id_to_duplicate_id.at(*op);
-            }
-            if (original_label_to_duplicate_label.count(*op) != 0) {
+            } else if (original_label_to_duplicate_label.count(*op) != 0) {
               *op = original_label_to_duplicate_label.at(*op);
             }
           });
@@ -484,26 +488,27 @@ void TransformationDuplicateRegionWithSelection::Apply(
 
   for (auto& block : region_blocks) {
     for (auto& instr : *block) {
-      if (instr.result_id() != 0 &&
-          (&instr == &*exit_block->tail() ||
-           fuzzerutil::IdIsAvailableBeforeInstruction(
-               ir_context, &*exit_block->tail(), instr.result_id()))) {
-        // Add the OpPhi instruction for every result id that is
-        // available at the end of the region (the last instruction
-        // of the |exit_block|)
+      if (instr.result_id() == 0) {
+        continue;
+      }
+      if (AvailableAfterRegion(instr, exit_block, ir_context) &&
+          ValidOpPhiArgument(instr, ir_context)) {
+        // Add an OpPhi instruction for every result id that is available at
+        // the end of the region, as long as the result id is valid for use
+        // with OpPhi.
         merge_block->AddInstruction(MakeUnique<opt::Instruction>(
             ir_context, SpvOpPhi, instr.type_id(),
-            original_id_to_phi_id[instr.result_id()],
+            original_id_to_phi_id.at(instr.result_id()),
             opt::Instruction::OperandList({
                 {SPV_OPERAND_TYPE_ID, {instr.result_id()}},
                 {SPV_OPERAND_TYPE_ID, {exit_block->id()}},
                 {SPV_OPERAND_TYPE_ID,
-                 {original_id_to_duplicate_id[instr.result_id()]}},
+                 {original_id_to_duplicate_id.at(instr.result_id())}},
                 {SPV_OPERAND_TYPE_ID, {duplicated_exit_block->id()}},
             })));
 
         fuzzerutil::UpdateModuleIdBound(
-            ir_context, original_id_to_phi_id[instr.result_id()]);
+            ir_context, original_id_to_phi_id.at(instr.result_id()));
 
         // If the instruction has been remapped by an OpPhi, look
         // for all its uses outside of the region and outside of the
@@ -544,7 +549,8 @@ void TransformationDuplicateRegionWithSelection::Apply(
           {{SPV_OPERAND_TYPE_ID, {message_.condition_id()}},
            {SPV_OPERAND_TYPE_ID, {message_.entry_block_id()}},
            {SPV_OPERAND_TYPE_ID,
-            {original_label_to_duplicate_label[message_.entry_block_id()]}}})));
+            {original_label_to_duplicate_label.at(
+                message_.entry_block_id())}}})));
 
   // Move the terminator of |exit_block| to the end of
   // |merge_block|.
@@ -676,6 +682,39 @@ TransformationDuplicateRegionWithSelection::GetFreshIds() const {
     result.insert(pair.second());
   }
   return result;
+}
+
+bool TransformationDuplicateRegionWithSelection::AvailableAfterRegion(
+    const opt::Instruction& instr, opt::BasicBlock* exit_block,
+    opt::IRContext* ir_context) {
+  opt::Instruction* final_instruction_in_region = &*exit_block->tail();
+  return &instr == final_instruction_in_region ||
+         fuzzerutil::IdIsAvailableBeforeInstruction(
+             ir_context, final_instruction_in_region, instr.result_id());
+}
+
+bool TransformationDuplicateRegionWithSelection::ValidOpPhiArgument(
+    const opt::Instruction& instr, opt::IRContext* ir_context) {
+  opt::Instruction* instr_type =
+      ir_context->get_def_use_mgr()->GetDef(instr.type_id());
+
+  // It is invalid to apply OpPhi to void-typed values.
+  if (instr_type->opcode() == SpvOpTypeVoid) {
+    return false;
+  }
+
+  // Using pointers with OpPhi requires capability VariablePointers.
+  if (instr_type->opcode() == SpvOpTypePointer &&
+      !ir_context->get_feature_mgr()->HasCapability(
+          SpvCapabilityVariablePointers)) {
+    return false;
+  }
+
+  // OpTypeSampledImage cannot be the result type of an OpPhi instruction.
+  if (instr_type->opcode() == SpvOpTypeSampledImage) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace fuzz

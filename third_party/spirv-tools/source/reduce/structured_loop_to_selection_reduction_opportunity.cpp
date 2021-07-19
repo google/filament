@@ -27,16 +27,14 @@ const uint32_t kMergeNodeIndex = 0;
 
 bool StructuredLoopToSelectionReductionOpportunity::PreconditionHolds() {
   // Is the loop header reachable?
-  return loop_construct_header_->GetLabel()
-      ->context()
-      ->GetDominatorAnalysis(enclosing_function_)
-      ->IsReachable(loop_construct_header_);
+  return loop_construct_header_->GetLabel()->context()->IsReachable(
+      *loop_construct_header_);
 }
 
 void StructuredLoopToSelectionReductionOpportunity::Apply() {
   // Force computation of dominator analysis, CFG and structured CFG analysis
   // before we start to mess with edges in the function.
-  context_->GetDominatorAnalysis(enclosing_function_);
+  context_->GetDominatorAnalysis(loop_construct_header_->GetParent());
   context_->cfg();
   context_->GetStructuredCFGAnalysis();
 
@@ -78,8 +76,7 @@ void StructuredLoopToSelectionReductionOpportunity::RedirectToClosestMergeBlock(
     }
     already_seen.insert(pred);
 
-    if (!context_->GetDominatorAnalysis(enclosing_function_)
-             ->IsReachable(pred)) {
+    if (!context_->IsReachable(*context_->cfg()->block(pred))) {
       // We do not care about unreachable predecessors (and dominance
       // information, and thus the notion of structured control flow, makes
       // little sense for unreachable blocks).
@@ -216,7 +213,7 @@ void StructuredLoopToSelectionReductionOpportunity::ChangeLoopToSelection() {
 
 void StructuredLoopToSelectionReductionOpportunity::FixNonDominatedIdUses() {
   // Consider each instruction in the function.
-  for (auto& block : *enclosing_function_) {
+  for (auto& block : *loop_construct_header_->GetParent()) {
     for (auto& def : block) {
       if (def.opcode() == SpvOpVariable) {
         // Variables are defined at the start of the function, and can be
@@ -243,7 +240,7 @@ void StructuredLoopToSelectionReductionOpportunity::FixNonDominatedIdUses() {
               case SpvStorageClassFunction:
                 use->SetOperand(
                     index, {FindOrCreateFunctionVariable(
-                               context_, enclosing_function_,
+                               context_, loop_construct_header_->GetParent(),
                                context_->get_type_mgr()->GetId(pointer_type))});
                 break;
               default:
@@ -276,11 +273,11 @@ bool StructuredLoopToSelectionReductionOpportunity::
   if (use->opcode() == SpvOpPhi) {
     // A use in a phi doesn't need to be dominated by its definition, but the
     // associated parent block does need to be dominated by the definition.
-    return context_->GetDominatorAnalysis(enclosing_function_)
+    return context_->GetDominatorAnalysis(loop_construct_header_->GetParent())
         ->Dominates(def_block.id(), use->GetSingleWordOperand(use_index + 1));
   }
   // In non-phi cases, a use needs to be dominated by its definition.
-  return context_->GetDominatorAnalysis(enclosing_function_)
+  return context_->GetDominatorAnalysis(loop_construct_header_->GetParent())
       ->Dominates(def, use);
 }
 
