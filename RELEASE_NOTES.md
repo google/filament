@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.11.1 (currently main branch)
+## v1.11.2 (currently main branch)
+
+## v1.11.1
 
 - engine: Luminance scaling can now be used with any tone mapping operator. It was previously tied
   to the "EVILS" tone mapping operator.
@@ -14,7 +16,13 @@ A new header is inserted each time a *tag* is created.
 ## v1.11.0
 
 - engine: Added support for transparent shadows. Add `transparentShadow : true` in the material file.
+- engine: honor user-defined precision in material files for non-samplers, rename `SamplerPrecision`
+  to `ParameterPrecicion`. [⚠️ **API Change**]
+- engine: Work around Qualcomm issue with point lights.
+- engine: Allow MSAA when post-processing is disabled.
+- engine: enable up to 6 spot-light shadows.
 - gltfio: Added support for `KHR_materials_volume`.
+- gltfio: fix precision in KHR_texture_transform.
 - java: Removed support for Java desktop targets (macOS, Linux, and Windows) [⚠️ **API Change**].
 
 ## v1.10.7
