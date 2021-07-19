@@ -81,12 +81,12 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Vibrance: <code>1.0</code></li>
  * <li>Saturation: <code>1.0</code></li>
  * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
- * <li>Tone mapping: {@link ToneMapping#ACES_LEGACY}</li>
+ * <li>Tone mapping: {@link ToneMapper.ACESLegacy}</li>
  * <li>Luminance scaling: false</li>
  * </ul>
  *
  * @see View
- * @see ToneMapping
+ * @see ToneMapper
  */
 public class ColorGrading {
     long mNativeObject;
@@ -103,6 +103,8 @@ public class ColorGrading {
 
     /**
      * List of available tone-mapping operators.
+     *
+     * @deprecated Use {@link ColorGrading.Builder#toneMapper(ToneMapper)}
      */
     public enum ToneMapping {
         /** Linear tone mapping (i.e. no tone mapping). */
@@ -160,11 +162,32 @@ public class ColorGrading {
          * Selects the tone mapping operator to apply to the HDR color buffer as the last
          * operation of the color grading post-processing step.
          *
+         * The default tone mapping operator is {@link ToneMapper.ACESLegacy}.
+         *
+         * The specified tone mapper must have a lifecycle that exceeds the lifetime of
+         * this builder. Since the build(Engine&) method is synchronous, it is safe to
+         * delete the tone mapper object after that finishes executing.
+         *
+         * @param toneMapper The tone mapping operator to apply to the HDR color buffer
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder toneMapper(ToneMapper toneMapper) {
+            nBuilderToneMapper(mNativeBuilder, toneMapper.getNativeObject());
+            return this;
+        }
+
+        /**
+         * Selects the tone mapping operator to apply to the HDR color buffer as the last
+         * operation of the color grading post-processing step.
+         *
          * The default tone mapping operator is {@link ToneMapping#ACES_LEGACY}.
          *
          * @param toneMapping The tone mapping operator to apply to the HDR color buffer
          *
          * @return This Builder, for chaining calls
+         *
+         * @deprecated Use {@link #toneMapper(ToneMapper)}
          */
         public Builder toneMapping(ToneMapping toneMapping) {
             nBuilderToneMapping(mNativeBuilder, toneMapping.ordinal());
@@ -498,7 +521,8 @@ public class ColorGrading {
     private static native void nDestroyBuilder(long nativeBuilder);
 
     private static native void nBuilderQuality(long nativeBuilder, int quality);
-    private static native void nBuilderToneMapping(long nativeBuilder, int toneMapper);
+    private static native void nBuilderToneMapper(long nativeBuilder, long toneMapper);
+    private static native void nBuilderToneMapping(long nativeBuilder, int toneMapping);
     private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
     private static native void nBuilderExposure(long nativeBuilder, float exposure);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
