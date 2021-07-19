@@ -137,6 +137,85 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         args.destination.depth.textureType != MTLTextureType2DMultisample,
         "Blitting between MSAA render targets with differing pixel formats and/or regions is not supported.");
 
+    // If the destination texture doesn't have the MTLTextureUsageRenderTarget flag, we have to blit
+    // to an intermediate texture first to perform the format conversion. Then, we can perform a
+    // "fast blit" to the final destination texture.
+
+    id<MTLTexture> intermediateColor = nil;
+    id<MTLTexture> intermediateDepth = nil;
+    BlitArgs slowBlit = args;
+    BlitArgs finalBlit = args;
+
+    MTLRegion sourceRegionNoOffset = MTLRegionMake2D(0, 0,
+            args.source.region.size.width, args.source.region.size.height);
+
+    if (blitColor && !(args.destination.color.usage & MTLTextureUsageRenderTarget)) {
+        intermediateColor = createIntermediateTexture(args.destination.color, args.source.region.size);
+        slowBlit.destination.color = finalBlit.source.color = intermediateColor;
+        slowBlit.destination.level = finalBlit.source.level = 0;
+        slowBlit.destination.region = finalBlit.source.region = sourceRegionNoOffset;
+    }
+    if (blitDepth && !(args.destination.depth.usage & MTLTextureUsageRenderTarget)) {
+        intermediateDepth = createIntermediateTexture(args.destination.depth, args.source.region.size);
+        slowBlit.destination.depth = finalBlit.source.depth = intermediateDepth;
+        slowBlit.destination.level = finalBlit.source.level = 0;
+        slowBlit.destination.region = finalBlit.source.region = sourceRegionNoOffset;
+    }
+
+    blitSlowPath(cmdBuffer, blitColor, blitDepth, slowBlit);
+
+    bool finalBlitColor = intermediateColor != nil;
+    bool finalBlitDepth = intermediateDepth != nil;
+    blitFastPath(cmdBuffer, finalBlitColor, finalBlitDepth, finalBlit);
+}
+
+void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+        const BlitArgs& args) {
+    if (blitColor) {
+        if (args.source.color.sampleCount == args.destination.color.sampleCount &&
+            args.source.color.pixelFormat == args.destination.color.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.color
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.color
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitColor = false;
+        }
+    }
+
+    if (blitDepth) {
+        if (args.source.depth.sampleCount == args.destination.depth.sampleCount &&
+            args.source.depth.pixelFormat == args.destination.depth.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.depth
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.depth
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitDepth = false;
+        }
+    }
+}
+
+void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+        const BlitArgs& args) {
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     if (blitColor) {
@@ -251,52 +330,22 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     [encoder setFragmentBytes:&args.source.level length:sizeof(uint8_t) atIndex:0];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [encoder endEncoding];
+
+    blitColor = false;
+    blitDepth = false;
 }
 
-void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-        const BlitArgs& args) {
-    if (blitColor) {
-        if (args.source.color.sampleCount == args.destination.color.sampleCount &&
-            args.source.color.pixelFormat == args.destination.color.pixelFormat &&
-            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
-
-            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
-            [blitEncoder copyFromTexture:args.source.color
-                             sourceSlice:0
-                             sourceLevel:args.source.level
-                            sourceOrigin:args.source.region.origin
-                              sourceSize:args.source.region.size
-                               toTexture:args.destination.color
-                        destinationSlice:0
-                        destinationLevel:args.destination.level
-                       destinationOrigin:args.destination.region.origin];
-            [blitEncoder endEncoding];
-
-            blitColor = false;
-        }
-    }
-
-    if (blitDepth) {
-        if (args.source.depth.sampleCount == args.destination.depth.sampleCount &&
-            args.source.depth.pixelFormat == args.destination.depth.pixelFormat &&
-            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
-
-            id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
-            [blitEncoder copyFromTexture:args.source.depth
-                             sourceSlice:0
-                             sourceLevel:args.source.level
-                            sourceOrigin:args.source.region.origin
-                              sourceSize:args.source.region.size
-                               toTexture:args.destination.depth
-                        destinationSlice:0
-                        destinationLevel:args.destination.level
-                       destinationOrigin:args.destination.region.origin];
-            [blitEncoder endEncoding];
-
-            blitDepth = false;
-        }
-    }
+id<MTLTexture> MetalBlitter::createIntermediateTexture(id<MTLTexture> t, MTLSize size) {
+    assert_invariant(t.textureType == MTLTextureType2D);
+    MTLTextureDescriptor* descriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:t.pixelFormat
+                                                              width:size.width
+                                                             height:size.height
+                                                          mipmapped:NO];
+    descriptor.usage = t.usage & MTLTextureUsageRenderTarget;
+    return [mContext.device newTextureWithDescriptor:descriptor];
 }
+
 
 void MetalBlitter::shutdown() noexcept {
     mBlitFunctions.clear();
@@ -309,7 +358,7 @@ void MetalBlitter::setupColorAttachment(const BlitArgs& args,
     descriptor.colorAttachments[0].level = args.destination.level;
 
     descriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    // We don't need to load the contents of the attachment if we're only blitting to part of it.
+    // We don't need to load the contents of the attachment if we're blitting over all of it.
     if (args.colorDestinationIsFullAttachment()) {
         descriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
     }
@@ -322,7 +371,7 @@ void MetalBlitter::setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescr
     descriptor.depthAttachment.level = args.destination.level;
 
     descriptor.depthAttachment.loadAction = MTLLoadActionLoad;
-    // We don't need to load the contents of the attachment if we're only blitting to part of it.
+    // We don't need to load the contents of the attachment if we're blitting over all of it.
     if (args.depthDestinationIsFullAttachment()) {
         descriptor.depthAttachment.loadAction = MTLLoadActionDontCare;
     }

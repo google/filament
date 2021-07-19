@@ -48,10 +48,6 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     // All textures can be blitted from, so they must have the UsageShaderRead flag.
     u |= MTLTextureUsageShaderRead;
 
-    // All textures can be blitted to, so they must have the UsageShaderRenderTarget flag.
-    // TODO: this isn't optimal.
-    u |= MTLTextureUsageRenderTarget;
-
     return MTLTextureUsage(u);
 }
 
