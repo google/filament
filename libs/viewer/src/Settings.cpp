@@ -389,6 +389,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->resolution);
         } else if (compare(tok, jsonChunk, "intensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->intensity);
+        } else if (compare(tok, jsonChunk, "bilateralThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bilateralThreshold);
         } else if (compare(tok, jsonChunk, "quality") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "lowPassFilter") == 0) {
@@ -1138,6 +1140,7 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"bias\": " << (in.bias) << ",\n"
         << "\"resolution\": " << (in.resolution) << ",\n"
         << "\"intensity\": " << (in.intensity) << ",\n"
+        << "\"bilateralThreshold\": " << (in.bilateralThreshold) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"lowPassFilter\": " << (in.lowPassFilter) << ",\n"
         << "\"upsampling\": " << (in.upsampling) << ",\n"
