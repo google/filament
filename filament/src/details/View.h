@@ -287,12 +287,13 @@ public:
 
     void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
         options.radius = math::max(0.0f, options.radius);
-        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
         options.power = std::max(0.0f, options.power);
+        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
         // snap to the closer of 0.5 or 1.0
         options.resolution = std::floor(
                 math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
+        options.bilateralThreshold = std::max(0.0f, options.bilateralThreshold);
         options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
         options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
         options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);

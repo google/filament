@@ -399,9 +399,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     // (see en.wikipedia.org/wiki/Gaussian_filter)
     // More intuitively, 2q is the width of the filter in pixels.
     BilateralPassConfig config = {
-            // TODO: "bilateralThreshold" should be a user-settable parameter
-            //       z-distance that constitute an edge for bilateral filtering
-            .bilateralThreshold = 0.0625f
+            .bilateralThreshold = options.bilateralThreshold
     };
 
     float sampleCount{};
