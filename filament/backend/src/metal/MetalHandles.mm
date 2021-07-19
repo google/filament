@@ -926,11 +926,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.textureType = MTLTextureType2DMultisample;
     descriptor.sampleCount = samples;
     descriptor.usage = MTLTextureUsageRenderTarget;
-#if defined(IOS)
-    descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-#else
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
-#endif
 
     return [device newTextureWithDescriptor:descriptor];
 }
