@@ -154,6 +154,11 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
     ) noexcept;
     ~GenericToneMapper() noexcept final;
 
+    GenericToneMapper(GenericToneMapper const&) = delete;
+    GenericToneMapper& operator=(GenericToneMapper const&) = delete;
+    GenericToneMapper(GenericToneMapper&& rhs)  noexcept;
+    GenericToneMapper& operator=(GenericToneMapper& rhs) noexcept;
+
     math::float3 operator()(math::float3 x) const noexcept;
 
     /** Returns the contrast of the curve as a strictly positive value. */

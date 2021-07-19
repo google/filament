@@ -342,6 +342,16 @@ GenericToneMapper::~GenericToneMapper() noexcept {
     delete mOptions;
 }
 
+GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs)  noexcept : mOptions(rhs.mOptions) {
+    rhs.mOptions = nullptr;
+}
+
+GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper& rhs) noexcept {
+    mOptions = rhs.mOptions;
+    rhs.mOptions = nullptr;
+    return *this;
+}
+
 float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
     float3 xc = pow(clamp(x, 0.0f, mOptions->hdrMax), mOptions->contrast);
     return saturate(xc / (pow(xc, mOptions->d) * mOptions->b + mOptions->c));
