@@ -193,10 +193,14 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, uint8_t varian
     }
 
     // Copy the new package from the stringstream into a ChunkContainer.
+    // The memory gets freed by DebugServer, which has ownership over the material package.
     const size_t size = tstream.str().size();
     uint8_t* data = new uint8_t[size];
     memcpy(data, tstream.str().data(), size);
+
+    assert_invariant(mEditedPackage == nullptr);
     mEditedPackage = new filaflat::ChunkContainer(data, size);
+
     return true;
 }
 
@@ -280,10 +284,14 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, uint8_t variant,
     }
 
     // Copy the new package from the stringstream into a ChunkContainer.
+    // The memory gets freed by DebugServer, which has ownership over the material package.
     const size_t size = tstream.str().size();
     uint8_t* data = new uint8_t[size];
     memcpy(data, tstream.str().data(), size);
+
+    assert_invariant(mEditedPackage == nullptr);
     mEditedPackage = new filaflat::ChunkContainer(data, size);
+
     return true;
 }
 
@@ -292,7 +300,7 @@ const uint8_t* ShaderReplacer::getEditedPackage() const {
 }
 
 size_t ShaderReplacer::getEditedSize() const {
-    return  mEditedPackage->getSize();
+    return mEditedPackage->getSize();
 }
 
 void ShaderIndex::addStringLines(const uint8_t* chunkContent, size_t size) {
