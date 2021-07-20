@@ -19,7 +19,6 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/LightManager.h>
-#include <filament/Material.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
@@ -119,6 +118,47 @@ static void computeCurvePlot(Settings& settings, float* curvePlot) {
     }
 }
 
+static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
+    float hdrMax = 10.0f;
+    ToneMapper* mapper;
+    switch (settings.toneMapping) {
+        case ToneMapping::LINEAR:
+            mapper = new LinearToneMapper;
+            break;
+        case ToneMapping::ACES_LEGACY:
+            mapper = new ACESLegacyToneMapper;
+            break;
+        case ToneMapping::ACES:
+            mapper = new ACESToneMapper;
+            break;
+        case ToneMapping::FILMIC:
+            mapper = new FilmicToneMapper;
+            break;
+        case ToneMapping::GENERIC:
+            mapper = new GenericToneMapper(
+                    settings.genericToneMapper.contrast,
+                    settings.genericToneMapper.shoulder,
+                    settings.genericToneMapper.midGrayIn,
+                    settings.genericToneMapper.midGrayOut,
+                    settings.genericToneMapper.hdrMax
+            );
+            hdrMax = settings.genericToneMapper.hdrMax;
+            break;
+        case ToneMapping::DISPLAY_RANGE:
+            mapper = new DisplayRangeToneMapper;
+            break;
+    }
+
+    float a = std::log10(hdrMax * 1.5f / 1e-6f);
+    for (size_t i = 0; i < 1024; i++) {
+        float v = i;
+        float x = 1e-6f * std::pow(10.0f, a * v / 1023.0f);
+        plot[i] = (*mapper)(x).r;
+    }
+
+    delete mapper;
+}
+
 static void tooltipFloat(float value) {
     if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%.2f", value);
@@ -134,10 +174,10 @@ static void pushSliderColors(float hue) {
 
 static void popSliderColors() { ImGui::PopStyleColor(4); }
 
-static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlot) {
+static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlot, float* toneMapPlot) {
     const static ImVec2 verticalSliderSize(18.0f, 160.0f);
-    const static ImVec2 plotLinesSize(260.0f, 160.0f);
-    const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
+    const static ImVec2 plotLinesSize(0.0f, 160.0f);
+    const static ImVec2 plotLinesWideSize(0.0f, 120.0f);
 
     if (ImGui::CollapsingHeader("Color grading")) {
         ColorGradingSettings& colorGrading = settings.view.colorGrading;
@@ -151,8 +191,25 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0Reserved\0Reinhard\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0Generic\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+        if (colorGrading.toneMapping == ToneMapping::GENERIC) {
+            if (ImGui::CollapsingHeader("Tonemap parameters")) {
+                GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
+                ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
+                ImGui::SliderFloat("Shoulder##genericToneMapper", &generic.shoulder, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
+                ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
+            }
+        }
+
+        computeToneMapPlot(colorGrading, toneMapPlot);
+
+        ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
+        ImGui::PlotLines("", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f, ImVec2(0, 160));
+        ImGui::PopStyleColor();
+
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
 
         ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
@@ -828,7 +885,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
-    colorGradingUI(mSettings, mRangePlot, mCurvePlot);
+    colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);
 
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.

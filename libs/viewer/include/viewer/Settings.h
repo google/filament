@@ -49,6 +49,15 @@ struct ViewSettings;
 struct LightSettings;
 struct ViewerOptions;
 
+enum class ToneMapping : uint8_t {
+    LINEAR        = 0,
+    ACES_LEGACY   = 1,
+    ACES          = 2,
+    FILMIC        = 3,
+    GENERIC       = 4,
+    DISPLAY_RANGE = 5,
+};
+
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
 using AntiAliasing = filament::View::AntiAliasing;
 using BloomOptions = filament::View::BloomOptions;
@@ -58,7 +67,6 @@ using FogOptions = filament::View::FogOptions;
 using RenderQuality = filament::View::RenderQuality;
 using ShadowType = filament::View::ShadowType;
 using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
-using ToneMapping = filament::ColorGrading::ToneMapping;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
 using LightManager = filament::LightManager;
@@ -94,10 +102,21 @@ private:
     Context* context;
 };
 
+struct GenericToneMapperSettings {
+    float contrast = 1.4f;
+    float shoulder = 0.5f;
+    float midGrayIn = 0.18f;
+    float midGrayOut = 0.266f;
+    float hdrMax = 10.0f;
+    bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
+    bool operator==(const GenericToneMapperSettings &rhs) const;
+};
+
 struct ColorGradingSettings {
     bool enabled = true;
     filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    GenericToneMapperSettings genericToneMapper;
     bool luminanceScaling = false;
     float exposure = 0.0f;
     float temperature = 0.0f;

@@ -81,6 +81,7 @@ add_library(filament-jni SHARED
     src/main/cpp/SwapChain.cpp
     src/main/cpp/Texture.cpp
     src/main/cpp/TextureSampler.cpp
+    src/main/cpp/ToneMapper.cpp
     src/main/cpp/TransformManager.cpp
     src/main/cpp/VertexBuffer.cpp
     src/main/cpp/View.cpp
