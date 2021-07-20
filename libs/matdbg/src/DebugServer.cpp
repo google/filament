@@ -31,6 +31,8 @@
 
 #include <filaflat/ChunkContainer.h>
 
+#include <tsl/robin_set.h>
+
 #include <backend/DriverEnums.h>
 
 #include <sstream>
@@ -334,7 +336,7 @@ public:
     }
 
     void handleReadyState(CivetServer *server, struct mg_connection *conn) override {
-        mConnection = conn;
+        mConnections.insert(conn);
     }
 
     bool handleData(CivetServer *server, struct mg_connection *conn, int bits, char *data,
@@ -417,21 +419,22 @@ public:
     }
 
     void handleClose(CivetServer *server, const struct mg_connection *conn) override {
-        mConnection = nullptr;
+        struct mg_connection *key = const_cast<struct mg_connection *>(conn);
+        mConnections.erase(key);
     }
 
-    // Notify the JavaScript client that a new material package has been loaded.
+    // Notify all JavaScript clients that a new material package has been loaded.
     void addMaterial(const DebugServer::MaterialRecord& material) {
-        if (mConnection) {
+        for (auto connection : mConnections) {
             char matid[9] = {};
             snprintf(matid, sizeof(matid), "%8.8x", material.key);
-            mg_websocket_write(mConnection, MG_WEBSOCKET_OPCODE_TEXT, matid, 8);
+            mg_websocket_write(connection, MG_WEBSOCKET_OPCODE_TEXT, matid, 8);
         }
     }
 
 private:
     DebugServer* mServer;
-    struct mg_connection* mConnection = nullptr;
+    tsl::robin_set<struct mg_connection*> mConnections;
 };
 
 DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
@@ -441,11 +444,13 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     mCss = CString((const char*) MATDBG_RESOURCES_STYLE_DATA, MATDBG_RESOURCES_STYLE_SIZE - 1);
     #endif
 
-    // By default the server spawns 50 threads so we override this to 2. This limits the server
-    // to having no more than 2 HTTP clients, which is perfectly fine for debugging purposes.
+    // By default the server spawns 50 threads so we override this to 10. According to the civetweb
+    // documentation, "it is recommended to use num_threads of at least 5, since browsers often
+    /// establish multiple connections to load a single web page, including all linked documents
+    // (CSS, JavaScript, images, ...)."  If this count is too small, the web app basically hangs.
     const char* kServerOptions[] = {
         "listening_ports", "8080",
-        "num_threads", "2",
+        "num_threads", "10",
         "error_log_file", "civetweb.txt",
         nullptr
     };
