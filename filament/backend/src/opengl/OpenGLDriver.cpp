@@ -1643,6 +1643,7 @@ void OpenGLDriver::updateBufferObject(
 
     if (bo->gl.binding == GL_UNIFORM_BUFFER) {
         // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
+        // TODO: take byteOffset into account.
         updateBuffer(bo, bd, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
     } else {
         if (bo->gl.binding == GL_ARRAY_BUFFER) {

@@ -40,8 +40,16 @@ std::string fragment (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
+uniform Params {
+    highp vec4 padding[4];  // offset of 64 bytes
+
+    highp float red;
+    highp float green;
+    highp float blue;
+} params;
+
 void main() {
-    fragColor = vec4(1.0);
+    fragColor = vec4(params.red, params.green, params.blue, 1.0f);
 }
 
 )");
@@ -136,6 +144,77 @@ TEST_F(BackendTest, VertexBufferUpdate) {
     }
 
     executeCommands();
+}
+
+struct MaterialParams {
+    float red;
+    float green;
+    float blue;
+};
+
+static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
+    MaterialParams* tmp = new MaterialParams(params);
+    auto cb = [](void* buffer, size_t size, void* user) {
+        MaterialParams* sp = (MaterialParams*) buffer;
+        delete sp;
+    };
+    BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
+    dapi.updateBufferObject(ubh, std::move(bd), 0);
+}
+
+TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
+    // Create a platform-specific SwapChain and make it current.
+    auto swapChain = createSwapChain();
+    getDriverApi().makeCurrent(swapChain, swapChain);
+
+    // Create a program.
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    Program p = shaderGen.getProgram();
+    p.setUniformBlock(1, utils::CString("params"));
+    auto program = getDriverApi().createProgram(std::move(p));
+
+    // Create a uniform buffer.
+    auto ubuffer = getDriverApi().createBufferObject(sizeof(MaterialParams) + 64,
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+    getDriverApi().bindUniformBuffer(0, ubuffer);
+
+    // Upload uniforms.
+    {
+        MaterialParams params {
+            .red = 1.0f,
+            .green = 0.0f,
+            .blue = 0.5f
+        };
+        MaterialParams* tmp = new MaterialParams(params);
+        auto cb = [](void* buffer, size_t size, void* user) {
+            MaterialParams* sp = (MaterialParams*) buffer;
+            delete sp;
+        };
+        BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
+        getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
+    }
+
+    auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+
+    renderTriangle(defaultRenderTarget, swapChain, program);
+
+    static const uint32_t expectedHash = 2000773999;
+    readPixelsAndAssertHash("BufferObjectUpdateWithOffset", 512, 512, defaultRenderTarget, expectedHash);
+
+    getDriverApi().flush();
+    getDriverApi().commit(swapChain);
+    getDriverApi().endFrame(0);
+
+    getDriverApi().destroyProgram(program);
+    getDriverApi().destroySwapChain(swapChain);
+    getDriverApi().destroyRenderTarget(defaultRenderTarget);
+
+    // This ensures all driver commands have finished before exiting the test.
+    getDriverApi().finish();
+
+    executeCommands();
+
+    getDriver().purge();
 }
 
 } // namespace test
