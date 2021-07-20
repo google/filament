@@ -96,8 +96,8 @@ Driver* OpenGLDriver::create(
     //    OpenGLProgram             :  48       moderate
     // -- less than or equal 64 bytes
     //    GLTexture                 :  72       moderate
+    //    GLRenderTarget            : 112       few
     //    GLStream                  : 168       few
-    //    GLRenderTarget            : 192       few
     //    GLVertexBuffer            : 200       moderate
     // -- less than or equal to 208 bytes
 
@@ -733,7 +733,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
     TargetBufferFlags resolveFlags = {};
 
-    GLRenderTarget::GL::RenderBuffer const* pRenderBuffer = nullptr;
+    GLTexture* pAttachmentTexture = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
         case GL_COLOR_ATTACHMENT1:
@@ -745,26 +745,26 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         case GL_COLOR_ATTACHMENT7:
             static_assert(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT == 8);
             resolveFlags = getTargetBufferFlagsAt(attachment - GL_COLOR_ATTACHMENT0);
-            pRenderBuffer = &rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
+            pAttachmentTexture = rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
             break;
         case GL_DEPTH_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
-            pRenderBuffer = &rt->gl.depth;
+            pAttachmentTexture = rt->gl.depth;
             break;
         case GL_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::STENCIL;
-            pRenderBuffer = &rt->gl.stencil;
+            pAttachmentTexture = rt->gl.stencil;
             break;
         case GL_DEPTH_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
             resolveFlags |= TargetBufferFlags::STENCIL;
-            pRenderBuffer = &rt->gl.depth;
+            pAttachmentTexture = rt->gl.depth;
             break;
         default:
             break;
     }
 
-    assert_invariant(pRenderBuffer);
+    assert_invariant(pAttachmentTexture);
 
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
@@ -895,21 +895,26 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         resolveFlags = TargetBufferFlags::NONE;
 
     } else {
-        assert_invariant(rt->gl.samples > 1);
-        assert_invariant(pRenderBuffer->rb == 0);
-
         // Here we emulate EXT_multisampled_render_to_texture.
         //
         // This attachment needs to be explicitly resolved in endRenderPass().
         // The first step is to create a sidecar multi-sampled renderbuffer, which is where drawing
         // will actually take place, and use that in lieu of the requested attachment.
         // The sidecar will be destroyed when the render target handle is destroyed.
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        glGenRenderbuffers(1, &pRenderBuffer->rb);
-        renderBufferStorage(pRenderBuffer->rb,
-                t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
 
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, pRenderBuffer->rb);
+        assert_invariant(rt->gl.samples > 1);
+        assert_invariant(pAttachmentTexture);
+
+        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+
+        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0)) {
+            glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+            renderBufferStorage(pAttachmentTexture->gl.sidecarRenderBufferMS,
+                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
+        }
+
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
+                pAttachmentTexture->gl.sidecarRenderBufferMS);
 
         // Here we lazily create a "read" sidecar FBO, used later as the resolve target. Note that
         // at least one of the render target's attachments needs to be both MSAA and sampleable in
@@ -1061,8 +1066,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
-                rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
-                rt->gl.color[i].level = color[i].level;
+                rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
@@ -1075,9 +1079,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         assert_invariant(!stencil.handle || stencil.handle == depth.handle);
-        rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
-        rt->gl.depth.level = depth.level;
-        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) ||
+        rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
             (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
             // special case: depth & stencil requested, but both not provided
@@ -1088,13 +1091,11 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
-            rt->gl.depth.level = depth.level;
+            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
-            rt->gl.stencil.level = stencil.level;
+            rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
@@ -1254,6 +1255,9 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
             if (t->gl.fence) {
                 glDeleteSync(t->gl.fence);
             }
+            if (t->gl.sidecarRenderBufferMS) {
+                glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
+            }
         }
         destruct(th, t);
     }
@@ -1274,19 +1278,6 @@ void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &rt->gl.fbo_read);
-        }
-
-        // free the sidecar renderbuffers if any
-        for (auto& renderBuffer : rt->gl.color) {
-            if (renderBuffer.rb) {
-                glDeleteRenderbuffers(1, &renderBuffer.rb);
-            }
-        }
-        if (rt->gl.depth.rb) {
-            glDeleteRenderbuffers(1, &rt->gl.depth.rb);
-        }
-        if (rt->gl.stencil.rb) {
-            glDeleteRenderbuffers(1, &rt->gl.stencil.rb);
         }
         destruct(rth, rt);
     }
