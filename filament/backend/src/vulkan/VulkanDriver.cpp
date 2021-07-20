@@ -412,8 +412,7 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
-        BufferUsage usage) {
+        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes) {
     auto vertexBuffer = construct<VulkanVertexBuffer>(vbh, mContext, mStagePool,
             bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {

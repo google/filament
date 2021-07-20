@@ -190,8 +190,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     mHandle = driver.createVertexBuffer(
-            mBufferCount, attributeCount, mVertexCount, attributeArray,
-            backend::BufferUsage::STATIC);
+            mBufferCount, attributeCount, mVertexCount, attributeArray);
 
     // If buffer objects are not enabled at the API level, then we create them internally.
     if (!mBufferObjectsEnabled) {
