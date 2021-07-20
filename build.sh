@@ -755,7 +755,7 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON"
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
