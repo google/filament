@@ -22,12 +22,12 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-MetalBuffer::MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer)
+MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer)
         : mBufferSize(size), mContext(context) {
-    // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
-    // immediate command encoder methods like setVertexBytes:length:atIndex:.
-    // TODO: we shouldn't do this if the data persists for multiple uses.
-    if (size <= 4 * 1024 && !forceGpuBuffer) {   // 4K
+    // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
+    // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
+    const bool dynamicUsage = usage == BufferUsage::DYNAMIC || usage == BufferUsage::STREAM;
+    if (size <= 4 * 1024 && dynamicUsage && !forceGpuBuffer) {
         mBufferPoolEntry = nullptr;
         mCpuBuffer = malloc(size);
     }

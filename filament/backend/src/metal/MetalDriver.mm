@@ -206,14 +206,14 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffer
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage) {
+        uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    construct_handle<MetalIndexBuffer>(ibh, *mContext, elementSize, indexCount);
+    construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage) {
-    construct_handle<MetalBufferObject>(boh, *mContext, byteCount);
+        BufferObjectBinding bindingType, BufferUsage usage) {
+    construct_handle<MetalBufferObject>(boh, *mContext, usage, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,

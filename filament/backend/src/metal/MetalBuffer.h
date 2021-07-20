@@ -20,6 +20,8 @@
 #include "MetalContext.h"
 #include "MetalBufferPool.h"
 
+#include <backend/DriverEnums.h>
+
 #include <Metal/Metal.h>
 
 namespace filament {
@@ -29,7 +31,7 @@ namespace metal {
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
