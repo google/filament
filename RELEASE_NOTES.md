@@ -5,6 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.11.2 (currently main branch)
 
+- engine: New API: `ColorGrading::Builder::toneMapper(const ToneMapper*)`.
+- engine: New tone mapper: `GenericToneMapper`, a configurable tone mapper.
+- engine: `ColorGrading::Builder::toneMapping(ColorGrading::ToneMapping)` is now deprecated.
+- engine: Removed `REINHARD` tonemap operator[⚠️ **API Change**].
+
 ## v1.11.1
 
 - engine: Luminance scaling can now be used with any tone mapping operator. It was previously tied
