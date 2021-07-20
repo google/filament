@@ -262,8 +262,9 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
     ext.QCOM_tiled_rendering = hasExtension(exts, "GL_QCOM_tiled_rendering");
     ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
     ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
-    ext.WEBGL_texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
-    ext.WEBGL_texture_compression_s3tc_srgb = hasExtension(exts, "WEBGL_compressed_texture_s3tc_srgb");
+    ext.WEBGL_compressed_texture_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
+    ext.WEBGL_compressed_texture_s3tc_srgb = hasExtension(exts, "WEBGL_compressed_texture_s3tc_srgb");
+    ext.WEBGL_compressed_texture_etc = hasExtension(exts, "WEBGL_compressed_texture_etc");
     // ES 3.2 implies EXT_color_buffer_float
     if (major >= 3 && minor >= 2) {
         ext.EXT_color_buffer_float = true;
