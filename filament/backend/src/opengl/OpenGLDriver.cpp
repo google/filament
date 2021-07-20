@@ -1440,13 +1440,18 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     const auto& ext = mContext.ext;
     if (isETC2Compression(format)) {
-        return ext.EXT_texture_compression_etc2;
+        return ext.EXT_texture_compression_etc2 ||
+               ext.WEBGL_compressed_texture_etc; // WEBGL specific, apparently contains ETC2
     }
     if (isS3TCSRGBCompression(format)) {
-        return ext.EXT_texture_compression_s3tc_srgb || ext.WEBGL_texture_compression_s3tc_srgb;
+        // see https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_sRGB.txt
+        return  ext.WEBGL_compressed_texture_s3tc_srgb || // this is WEBGL specific
+                ext.EXT_texture_compression_s3tc_srgb || // this is ES specific
+               (ext.EXT_texture_compression_s3tc && ext.EXT_texture_sRGB);
     }
     if (isS3TCCompression(format)) {
-        return ext.EXT_texture_compression_s3tc || ext.WEBGL_texture_compression_s3tc;
+        return  ext.EXT_texture_compression_s3tc || // this is ES specific
+                ext.WEBGL_compressed_texture_s3tc; // this is WEBGL specific
     }
     return getInternalFormat(format) != 0;
 }
