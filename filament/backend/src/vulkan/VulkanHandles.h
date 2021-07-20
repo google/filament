@@ -53,8 +53,6 @@ struct VulkanRenderTarget : private HwRenderTarget {
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context);
 
-    ~VulkanRenderTarget();
-
     void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const;
     void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const;
     VkExtent2D getExtent(VulkanSwapChain* currentSurface) const;

@@ -49,6 +49,8 @@ struct VulkanTexture : public HwTexture {
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
+    void setSidecar(VulkanTexture* sidecar) { mSidecarMSAA = sidecar; }
+    VulkanTexture* getSidecar() const { return mSidecarMSAA; }
 
 private:
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
@@ -67,6 +69,7 @@ private:
     void updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
         uint32_t height, uint32_t depth, int miplevel);
 
+    VulkanTexture* mSidecarMSAA = nullptr;
     const VkFormat mVkFormat;
     const VkComponentMapping mSwizzle;
     VkImageViewType mViewType;

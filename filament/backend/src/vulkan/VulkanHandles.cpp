@@ -163,8 +163,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         const VulkanAttachment& spec = color[index];
         VulkanTexture* texture = spec.texture;
         if (texture && texture->samples == 1) {
-            VulkanTexture* msTexture = new VulkanTexture(context, texture->target, level,
-                    texture->format, samples, width, height, depth, texture->usage, stagePool);
+            VulkanTexture* msTexture = texture->getSidecar();
+            if (UTILS_UNLIKELY(msTexture == nullptr)) {
+                msTexture = new VulkanTexture(context, texture->target, level,
+                        texture->format, samples, width, height, depth, texture->usage, stagePool);
+                texture->setSidecar(msTexture);
+            }
             mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
             mMsaaAttachments[index].view = msTexture->getAttachmentView(0, 0,
                     VK_IMAGE_ASPECT_COLOR_BIT);
@@ -185,8 +189,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     }
 
     // Create sidecar MSAA texture for the depth attachment.
-    VulkanTexture* msTexture = new VulkanTexture(context, depthTexture->target, level,
-            depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+    VulkanTexture* msTexture = depthTexture->getSidecar();
+    if (UTILS_UNLIKELY(msTexture == nullptr)) {
+        msTexture = new VulkanTexture(context, depthTexture->target, level,
+                depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+        depthTexture->setSidecar(msTexture);
+    }
     mMsaaDepthAttachment = createAttachment(context, {
         .format = {},
         .image = {},
@@ -199,17 +207,6 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     });
     mMsaaDepthAttachment.view = msTexture->getAttachmentView(depthSpec.level, depthSpec.layer,
             VK_IMAGE_ASPECT_DEPTH_BIT);
-}
-
-VulkanRenderTarget::~VulkanRenderTarget() {
-    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        if (mMsaaAttachments[index].texture != mColor[index].texture) {
-            delete mMsaaAttachments[index].texture;
-        }
-    }
-    if (mMsaaDepthAttachment.texture != mDepth.texture) {
-        delete mMsaaDepthAttachment.texture;
-    }
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const {
