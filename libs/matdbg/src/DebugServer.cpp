@@ -34,6 +34,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include "sca/GLSLTools.h"
+
 #include <sstream>
 #include <string>
 
@@ -509,9 +511,11 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     mServer->addWebSocketHandler("", mWebSocketHandler);
 
     slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
+    filamat::GLSLTools::init();
 }
 
 DebugServer::~DebugServer() {
+    filamat::GLSLTools::shutdown();
     for (auto& pair : mMaterialRecords) {
         delete [] pair.second.package;
     }
