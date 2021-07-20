@@ -78,6 +78,8 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
         // if we have mip-maps we assume the full pyramid
         size += size / 3;
     }
+    // TODO: this is not taking into account the potential sidecar MS buffer
+    //  but we have not way to know about its existence at this point.
     return size;
 }
 
