@@ -343,7 +343,8 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         case PixelDataType::UBYTE: {
             uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
             DataReshaper::reshape<uint8_t, 3, 4>(bytes, data.buffer, data.size);
-            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
+                    data.alignment, data.left, data.top, data.stride, freeFunc);
             reshaped = std::move(pbd);
             return true;
         }
@@ -352,7 +353,8 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         case PixelDataType::HALF: {
             uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
             DataReshaper::reshape<uint16_t, 3, 4>(bytes, data.buffer, data.size);
-            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
+                    data.alignment, data.left, data.top, data.stride, freeFunc);
             reshaped = std::move(pbd);
             return true;
         }
@@ -360,14 +362,16 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         case PixelDataType::UINT: {
             uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
             DataReshaper::reshape<uint32_t, 3, 4>(bytes, data.buffer, data.size);
-            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
+                    data.alignment, data.left, data.top, data.stride, freeFunc);
             reshaped = std::move(pbd);
             return true;
         }
         case PixelDataType::FLOAT: {
             uint8_t* bytes = (uint8_t*) malloc(reshapedSize);
             DataReshaper::reshape<float, 3, 4>(bytes, data.buffer, data.size);
-            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type, freeFunc);
+            PixelBufferDescriptor pbd(bytes, reshapedSize, reshapedFormat, data.type,
+                    data.alignment, data.left, data.top, data.stride, freeFunc);
             reshaped = std::move(pbd);
             return true;
         }
