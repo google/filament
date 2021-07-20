@@ -679,9 +679,8 @@ uint8_t MetalDriver::getMaxDrawBuffers() {
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
-    assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-    ib->buffer.copyIntoBuffer(data.buffer, data.size);
+    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset);
     scheduleDestroy(std::move(data));
 }
 

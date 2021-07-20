@@ -96,6 +96,18 @@ void TrianglePrimitive::updateIndices(const short indices[3]) noexcept {
     mDriverApi.updateIndexBuffer(mIndexBuffer, std::move(bufferDesc), 0);
 }
 
+void TrianglePrimitive::updateIndices(const short* indices, int count, int offset) noexcept {
+    void* buffer = malloc(sizeof(short) * count);
+    short* indexBuffer = (short*) buffer;
+    std::copy(indices, indices + count, indexBuffer);
+
+    BufferDescriptor bufferDesc(indexBuffer, sizeof(short) * count,
+            [] (void* buffer, size_t size, void* user) {
+        free(buffer);
+    });
+    mDriverApi.updateIndexBuffer(mIndexBuffer, std::move(bufferDesc), offset * sizeof(short));
+}
+
 TrianglePrimitive::~TrianglePrimitive() {
     mDriverApi.destroyBufferObject(mBufferObject);
     mDriverApi.destroyVertexBuffer(mVertexBuffer);

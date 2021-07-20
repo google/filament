@@ -44,16 +44,17 @@ MetalBuffer::~MetalBuffer() {
     }
 }
 
-void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
+void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     if (size <= 0) {
         return;
     }
-    ASSERT_PRECONDITION(size <= mBufferSize, "Attempting to copy %d bytes into a buffer of size %d",
-            size, mBufferSize);
+    ASSERT_PRECONDITION(size + byteOffset <= mBufferSize,
+            "Attempting to copy %d bytes into a buffer of size %d at offset %d",
+            size, mBufferSize, byteOffset);
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
-        memcpy(mCpuBuffer, src, size);
+        memcpy(static_cast<uint8_t*>(mCpuBuffer) + byteOffset, src, size);
         return;
     }
 
@@ -64,7 +65,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
     }
 
     mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents), src, size);
+    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + byteOffset, src, size);
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {

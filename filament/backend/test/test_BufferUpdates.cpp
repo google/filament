@@ -107,8 +107,11 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
             if (updateIndices) {
                 if (triangleIndex % 2 == 0) {
+                    // Upload each index separately, to test offsets.
                     const short i[3] {0, 1, 2};
-                    triangle.updateIndices(i);
+                    triangle.updateIndices(i + 0, 1, 0);
+                    triangle.updateIndices(i + 1, 1, 1);
+                    triangle.updateIndices(i + 2, 1, 2);
                 } else {
                     // This effectively hides this triangle.
                     const short i[3] {0, 0, 0};
