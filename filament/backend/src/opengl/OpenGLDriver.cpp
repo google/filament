@@ -1642,14 +1642,20 @@ void OpenGLDriver::updateBufferObject(
 
     if (bo->gl.binding == GL_UNIFORM_BUFFER) {
         // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
-        // TODO: take byteOffset into account.
-        updateBuffer(bo, bd, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
+        updateBuffer(bo, bd, byteOffset, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
     } else {
         if (bo->gl.binding == GL_ARRAY_BUFFER) {
             gl.bindVertexArray(nullptr);
         }
         gl.bindBuffer(bo->gl.binding, bo->gl.id);
-        glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+        if (byteOffset == 0 && bd.size == bo->byteCount) {
+            // it looks like it's generally faster (or not worse) to use glBufferData()
+            glBufferData(bo->gl.binding, bd.size, bd.buffer, getBufferUsage(bo->usage));
+        } else {
+            // glBufferSubData() could be catastrophically inefficient if several are
+            // issued during the same frame. Currently, we're not doing that though.
+            glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+        }
     }
 
     scheduleDestroy(std::move(bd));
@@ -1657,14 +1663,17 @@ void OpenGLDriver::updateBufferObject(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateBuffer(GLBufferObject* buffer,
-        BufferDescriptor const& p, uint32_t alignment) noexcept {
+void OpenGLDriver::updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p,
+        uint32_t byteOffset, uint32_t alignment) noexcept {
     assert_invariant(buffer->byteCount >= p.size);
     assert_invariant(buffer->gl.id);
 
     auto& gl = mContext;
     gl.bindBuffer(buffer->gl.binding, buffer->gl.id);
     if (buffer->usage == BufferUsage::STREAM) {
+
+        // in streaming mode it's meaningless to have an offset specified
+        assert_invariant(byteOffset == 0);
 
         buffer->size = (uint32_t)p.size;
 
@@ -1702,19 +1711,20 @@ void OpenGLDriver::updateBuffer(GLBufferObject* buffer,
             buffer->base = offset;
 
             CHECK_GL_ERROR(utils::slog.e)
-            return;
+        } else {
+            // In stream mode we're allowed to allocate a whole new buffer
+            glBufferData(buffer->gl.binding, p.size, p.buffer, getBufferUsage(buffer->usage));
         }
-    }
-
-    if (p.size == buffer->byteCount) {
-        // it looks like it's generally faster (or not worse) to use glBufferData()
-        glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer, getBufferUsage(buffer->usage));
     } else {
-        // when loading less that the buffer size, it's okay to assume the back of the buffer
-        // is undefined. glBufferSubData() could be catastrophically inefficient if several are
-        // issued during the same frame. Currently, we're not doing that though.
-        // TODO: investigate if it'll be faster to use glBufferData().
-        glBufferSubData(buffer->gl.binding, 0, p.size, p.buffer);
+        if (byteOffset == 0 && p.size == buffer->byteCount) {
+            // it looks like it's generally faster (or not worse) to use glBufferData()
+            glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer,
+                    getBufferUsage(buffer->usage));
+        } else {
+            // glBufferSubData() could be catastrophically inefficient if several are
+            // issued during the same frame. Currently, we're not doing that though.
+            glBufferSubData(buffer->gl.binding, byteOffset, p.size, p.buffer);
+        }
     }
 
     CHECK_GL_ERROR(utils::slog.e)

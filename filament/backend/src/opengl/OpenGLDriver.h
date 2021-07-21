@@ -374,7 +374,8 @@ private:
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStreamTexId(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateStreamAcquired(GLTexture* t, backend::DriverApi* driver) noexcept;
-    void updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
+    void updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p,
+            uint32_t byteOffset, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     void setExternalTexture(GLTexture* t, void* image);
