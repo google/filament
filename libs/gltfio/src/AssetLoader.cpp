@@ -102,11 +102,9 @@ struct FAssetLoader : public AssetLoader {
         FilamentInstance** instances, size_t numInstances);
     FilamentInstance* createInstance(FFilamentAsset* primary);
 
-    bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
-            size_t numAssets);
-
-    ~FAssetLoader() {
-        delete mMaterials;
+    static void destroy(FAssetLoader** loader) noexcept {
+        delete *loader;
+        *loader = nullptr;
     }
 
     void destroyAsset(const FFilamentAsset* asset) {
@@ -1268,8 +1266,9 @@ AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {
-    delete *loader;
-    *loader = nullptr;
+    FAssetLoader* temp(upcast(*loader));
+    FAssetLoader::destroy(&temp);
+    *loader = temp;
 }
 
 FilamentAsset* AssetLoader::createAssetFromJson(uint8_t const* bytes, uint32_t nbytes) {
