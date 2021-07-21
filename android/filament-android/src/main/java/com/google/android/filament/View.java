@@ -171,9 +171,13 @@ public class View {
 
         /**
          * Depth distance that constitute an edge for filtering. Must be positive.
-         * Default is 5mm.
+         * Default is 5cm.
+         * This must be adjusted with the scene's scale and/or units.
+         * A value too low will result in high frequency noise, while a value too high will
+         * result in the loss of geometry edges. For AO, it is generally better to be too
+         * blurry than not enough.
          */
-        public float bilateralThreshold = 0.005f;
+        public float bilateralThreshold = 0.05f;
 
         /**
          * The quality setting controls the number of samples used for evaluating Ambient
