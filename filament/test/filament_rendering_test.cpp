@@ -60,9 +60,10 @@ protected:
         mView->setScene(mScene);
         mView->setCamera(mCamera);
 
+        LinearToneMapper linearToneMapper;
         mColorGrading = ColorGrading::Builder()
-            .toneMapping(ColorGrading::ToneMapping::LINEAR)
-            .build(*mEngine);
+                .toneMapper(&linearToneMapper)
+                .build(*mEngine);
         mView->setColorGrading(mColorGrading);
 
         mSkybox = Skybox::Builder().build(*mEngine);
