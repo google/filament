@@ -116,7 +116,7 @@ cmake ..\.. ^
 :: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
 :: Some resource libraries require significant heap space to compile, so first compile them serially.
 :: Note: we could also try removing the "/m" flag here if the error persists.
-cmake --build . --target filagui_resources --config %config% -- /m || exit /b
+cmake --build . --target filagui --config %config% -- /m || exit /b
 cmake --build . --target gltfio_resources --config %config% -- /m || exit /b
 cmake --build . --target gltfio_resources_lite --config %config% -- /m || exit /b
 cmake --build . --target gltf-resources --config %config% -- /m || exit /b
