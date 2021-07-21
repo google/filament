@@ -74,7 +74,7 @@ public:
     void clean() const noexcept { mDirty.reset(); }
 
     // set sampler at given index
-    void setSampler(size_t index, Sampler const& sampler) noexcept;
+    void setSampler(size_t index, Sampler sampler) noexcept;
 
     inline void setSampler(size_t index, Handle<HwTexture> t, SamplerParams s)  {
         setSampler(index, { t, s });
