@@ -112,6 +112,13 @@ cmake ..\.. ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
     || exit /b
+
+:: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
+:: Some resource libraries require significant heap space to compile, so first compile them serially.
+:: Note: we could also try removing the "/m" flag here if the error persists.
+cmake --build . --target gltf-resources --config %config% -- /m || exit /b
+cmake --build . --target filamentapp-resources --config %config% -- /m || exit /b
+
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
 
 echo Disk info after building variant: %variant%
