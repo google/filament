@@ -399,8 +399,7 @@ void OpenGLDriver::createVertexBufferR(
         uint8_t bufferCount,
         uint8_t attributeCount,
         uint32_t elementCount,
-        AttributeArray attributes,
-        BufferUsage usage) {
+        AttributeArray attributes) {
     DEBUG_MARKER()
     construct<GLVertexBuffer>(vbh, bufferCount, attributeCount, elementCount, attributes);
 }

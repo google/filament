@@ -200,9 +200,7 @@ void MetalDriver::finish(int) {
 }
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
-        BufferUsage usage) {
-    // TODO: Take BufferUsage into account when creating the buffer.
+        uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes) {
     construct_handle<MetalVertexBuffer>(vbh, *mContext, bufferCount,
             attributeCount, vertexCount, attributes);
 }
