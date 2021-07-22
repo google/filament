@@ -138,6 +138,7 @@ void VulkanContext::selectPhysicalDevice() {
         //     0x1010 - ImgTec
         //     0x10DE - NVIDIA
         //     0x13B5 - ARM
+        //     0x106B - APPLE
         //     0x5143 - Qualcomm
         //     0x8086 - INTEL
         //
