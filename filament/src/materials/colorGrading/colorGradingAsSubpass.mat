@@ -36,7 +36,7 @@ material {
     ],
     outputs : [
         {
-            name : color,
+            name : dummy,
             target : color,
             type : float4,
             location : 0
@@ -111,16 +111,16 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        postProcess.color = resolve();
+        vec4 color = resolve();
         if (materialParams.dithering > 0) {
-            vec4 dithered = dither(postProcess.color, materialParams.temporalNoise);
+            vec4 dithered = dither(color, materialParams.temporalNoise);
 #if POST_PROCESS_OPAQUE
-            postProcess.color.rgb = dithered.rgb;
+            color.rgb = dithered.rgb;
 #else
-            postProcess.color = dithered;
+            color = dithered;
 #endif
         }
-        postProcess.tonemappedOutput = postProcess.color;
+        postProcess.tonemappedOutput = color;
     }
 
 }
