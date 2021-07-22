@@ -806,6 +806,13 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
+    // TODO: We might need a better way to handle vendor-specific workaround
+    // Disable framebuffer fetch on APPLE M1 (vendor 0x106b, device 0xa140)
+    // Subpasses, don't seen to work on M1, this possibly needs more investigation.
+    VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
+    if ((deviceProperties.vendorID == 0x106b) && (deviceProperties.deviceID == 0xa140)) {
+        return false;
+    }
     return true;
 }
 
