@@ -1,4 +1,23 @@
 /*
+ * Copyright (C) 2021 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef FILAMENT_MATERIALS_SSCT
+#define FILAMENT_MATERIALS_SSCT
+
+/*
  * Largely based on "Dominant Light Shadowing"
  * "Lighting Technology of The Last of Us Part II" by Hawar Doghramachi, Naughty Dog, LLC
  */
@@ -118,3 +137,19 @@ float coneTraceOcclusion(in ConeTraceSetup setup, const highp sampler2D depthTex
     }
     return occlusion * setup.intensity;
 }
+
+float ssctDominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal,
+        const highp sampler2D depthTexture, const highp vec2 fragCoord,
+        vec2 rayCount, ConeTraceSetup cone) {
+
+    float occlusion = 0.0;
+    for (float i = 1.0; i <= rayCount.x; i += 1.0) {
+        cone.jitterOffset.x = random(fragCoord * i) * 2.0 - 1.0;      // direction
+        cone.jitterOffset.y = random(fragCoord * i * vec2(3, 11));    // step
+        occlusion += coneTraceOcclusion(cone, depthTexture);
+    }
+    return occlusion * rayCount.y;
+}
+
+
+#endif // FILAMENT_MATERIALS_SSCT
