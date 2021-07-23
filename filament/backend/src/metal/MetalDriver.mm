@@ -1037,6 +1037,10 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     auto dstTarget = handle_cast<MetalRenderTarget>(dst);
 
+    ASSERT_PRECONDITION(
+            !(buffers & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)),
+            "Blitting only supports COLOR0");
+
     ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
                         dstRect.left >= 0 && dstRect.bottom >= 0,
             "Source and destination rects must be positive.");
@@ -1069,23 +1073,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     args.destination.region = dstRegion;
 
     if (any(buffers & TargetBufferFlags::COLOR_ALL)) {
-        size_t srcAttachIndex = 0;
-        if (any(buffers & TargetBufferFlags::COLOR0)) {
-            srcAttachIndex = 0;
-        }
-        if (any(buffers & TargetBufferFlags::COLOR1)) {
-            srcAttachIndex = 1;
-        }
-        if (any(buffers & TargetBufferFlags::COLOR2)) {
-            srcAttachIndex = 2;
-        }
-        if (any(buffers & TargetBufferFlags::COLOR3)) {
-            srcAttachIndex = 3;
-        }
-
-        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getReadColorAttachment(srcAttachIndex);
-
-        // We always blit to the COLOR0 attachment.
+        // We always blit from/to the COLOR0 attachment.
+        MetalRenderTarget::Attachment srcColorAttachment = srcTarget->getReadColorAttachment(0);
         MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getDrawColorAttachment(0);
 
         if (srcColorAttachment && dstColorAttachment) {

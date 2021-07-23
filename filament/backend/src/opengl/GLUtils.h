@@ -93,7 +93,7 @@ constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {
 
 constexpr inline GLbitfield getAttachmentBitfield(backend::TargetBufferFlags flags) noexcept {
     GLbitfield mask = 0;
-    if (any(flags & backend::TargetBufferFlags::COLOR)) {
+    if (any(flags & backend::TargetBufferFlags::COLOR_ALL)) {
         mask |= (GLbitfield)GL_COLOR_BUFFER_BIT;
     }
     if (any(flags & backend::TargetBufferFlags::DEPTH)) {
