@@ -115,7 +115,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     uint32_t cascades;
 
     float aoSamplingQualityAndEdgeDistance;     // 0: bilinear, !0: bilateral edge distance
-    float aoReserved1;
+    float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
     float aoReserved2;
     float aoReserved3;
 

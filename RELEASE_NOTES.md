@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.11.3 (currently main branch)
 
+- engine: Option to automatically compute bent normals from SSAO & apply to specular AO
+  [⚠️ **Material breakage**].
+
 ## v1.11.2
 
 - engine: New API: `ColorGrading::Builder::toneMapper(const ToneMapper*)`.

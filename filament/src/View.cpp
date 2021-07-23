@@ -682,10 +682,12 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
                          SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
     });
 
-    const float edgeDistance = 1.0 / 0.0625;// TODO: don't hardcode this
+    const float edgeDistance = 1.0f / mAmbientOcclusionOptions.bilateralThreshold;
     auto& s = mPerViewUb.edit();
     s.aoSamplingQualityAndEdgeDistance =
             mAmbientOcclusionOptions.enabled && highQualitySampling ? edgeDistance : 0.0f;
+    s.aoBentNormals =
+            mAmbientOcclusionOptions.enabled && mAmbientOcclusionOptions.bentNormals ? 1.0f : 0.0f;
 }
 
 void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {

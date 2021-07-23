@@ -620,6 +620,8 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
                 ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
+                ImGui::SliderFloat("Bilateral Threshold", &params.ssaoOptions.bilateralThreshold, 0.0f, 0.5f);
+                ImGui::Checkbox("Bent Normals", &params.ssaoOptions.bentNormals);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
                 params.ssaoOptions.quality = (View::QualityLevel)quality;

@@ -3026,7 +3026,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
             glFilterMode = GL_NEAREST;
         }
 
-        // note: for msaa RenderTargets withh non-msaa attachments, we copy from the msaa sidecar
+        // note: for msaa RenderTargets with non-msaa attachments, we copy from the msaa sidecar
         // buffer -- this should produce the same output that if we copied from the resolved
         // texture. EXT_multisampled_render_to_texture seems to allow both behaviours, and this
         // is an emulation of that.  We cannot use the resolved texture easily because it's not
