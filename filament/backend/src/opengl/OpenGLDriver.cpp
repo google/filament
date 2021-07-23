@@ -2318,6 +2318,11 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
     GLbitfield mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
+
+        // we can only resolve COLOR0 at the moment
+        assert_invariant(!(rt->targets &
+                (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+
         GLint read = rt->gl.fbo_read;
         GLint draw = rt->gl.fbo;
         if (action == ResolveAction::STORE) {
@@ -3029,6 +3034,14 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // reverse-resolve, but that wouldn't buy us anything.
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
+
+        // blit operations are only supported from RenderTargets that have only COLOR0 (or
+        // no color buffer at all)
+        assert_invariant(
+                !(s->targets & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+
+        assert_invariant(
+                !(d->targets & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
 
         // With GLES 3.x, GL_INVALID_OPERATION is generated if the value of GL_SAMPLE_BUFFERS
         // for the draw buffer is greater than zero. This works with OpenGL, so we want to
