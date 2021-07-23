@@ -314,12 +314,17 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/sao.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
+        DEPENDS src/materials/ssao/ssct.fs
+        DEPENDS src/materials/ssao/depthUtils.fs
+        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/ssao/saoImpl.fs
+        DEPENDS src/materials/ssao/ssctImpl.fs
         APPEND
 )
 
 add_custom_command(
-        OUTPUT "${MATERIAL_DIR}/sao.filamat"
-        DEPENDS src/materials/ssao/ssct.fs
+        OUTPUT "${MATERIAL_DIR}/bilateralBlur.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
         APPEND
 )
 
