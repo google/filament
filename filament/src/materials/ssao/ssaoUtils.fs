@@ -50,5 +50,14 @@ highp float unpack(highp vec2 depth) {
     return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
 }
 
+vec3 packBentNormal(vec3 bn) {
+    return bn * 0.5 + 0.5;
+}
+
+vec3 unpackBentNormal(vec3 bn) {
+    return bn * 2.0 - 1.0;
+}
+
+
 #endif // FILAMENT_MATERIALS_SSAO_UTILS
 

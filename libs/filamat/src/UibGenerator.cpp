@@ -96,7 +96,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             // SSAO sampling parameters
             .add("aoSamplingQualityAndEdgeDistance", 1, UniformInterfaceBlock::Type::FLOAT)
-            .add("aoReserved1",             1, UniformInterfaceBlock::Type::FLOAT)
+            .add("aoBentNormals",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("aoReserved2",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("aoReserved3",             1, UniformInterfaceBlock::Type::FLOAT)
 

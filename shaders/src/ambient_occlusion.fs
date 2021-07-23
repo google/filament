@@ -16,9 +16,12 @@ float unpack(vec2 depth) {
     return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
 }
 
-float evaluateSSAO() {
+struct SSAOInterpolationCache {
+    highp vec4 weights;
+};
+
+float evaluateSSAO(const highp vec2 uv, out SSAOInterpolationCache cache) {
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
-    highp vec2 uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
 
     // Upscale the SSAO buffer in real-time, in high quality mode we use a custom bilinear
     // filter. This adds about 2.0ms @ 250MHz on Pixel 4.
@@ -40,6 +43,14 @@ float evaluateSSAO() {
         vec4 dg = vec4(s01.g, s11.g, s10.g, s00.g);
         vec4 db = vec4(s01.b, s11.b, s10.b, s00.b);
 #endif
+        // bilateral weights
+        vec4 depths;
+        depths.x = unpack(vec2(dg.x, db.x));
+        depths.y = unpack(vec2(dg.y, db.y));
+        depths.z = unpack(vec2(dg.z, db.z));
+        depths.w = unpack(vec2(dg.w, db.w));
+        depths *= -frameUniforms.cameraFar;
+
         // bilinear weights
         vec2 f = fract(uv * size - 0.5);
         vec4 b;
@@ -48,18 +59,12 @@ float evaluateSSAO() {
         b.z = f.x * (1.0 - f.y);
         b.w = (1.0 - f.x) * (1.0 - f.y);
 
-        // bilateral weights
-        vec4 depths;
-        depths.x = unpack(vec2(dg.x, db.x));
-        depths.y = unpack(vec2(dg.y, db.y));
-        depths.z = unpack(vec2(dg.z, db.z));
-        depths.w = unpack(vec2(dg.w, db.w));
-        depths *= -frameUniforms.cameraFar;
         highp mat4 m = getViewFromWorldMatrix();
         highp float d = dot(vec3(m[0].z, m[1].z, m[2].z), shading_position) + m[3].z;
         highp vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
-        return dot(ao, w) * (1.0 / (w.x + w.y + w.z + w.w));
+        cache.weights = w / (w.x + w.y + w.z + w.w);
+        return dot(ao, cache.weights);
     } else {
         return textureLod(light_ssao, vec3(uv, 0.0), 0.0).r;
     }
@@ -74,7 +79,6 @@ float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
     return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
 }
 
-#if defined(MATERIAL_HAS_BENT_NORMAL)
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
     // Approximation mentioned by Jimenez et al. 2016
@@ -99,11 +103,9 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     float area = sq(x) * (-2.0 * x + 3.0);
     return area * (1.0 - max(cosCap1, cosCap2));
 }
-#endif
 
 // This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
-float SpecularAO_Cones(float NoV, float visibility, float roughness) {
-#if defined(MATERIAL_HAS_BENT_NORMAL)
+float SpecularAO_Cones(vec3 bentNormal, float NoV, float visibility, float roughness) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
 
     // aperture from ambient occlusion
@@ -111,7 +113,7 @@ float SpecularAO_Cones(float NoV, float visibility, float roughness) {
     // aperture from roughness, log(10) / log(2) = 3.321928
     float cosAs = exp2(-3.321928 * sq(roughness));
     // angle betwen bent normal and reflection direction
-    float cosB  = dot(shading_bentNormal, shading_reflected);
+    float cosB  = dot(bentNormal, shading_reflected);
 
     // Remove the 2 * PI term from the denominator, it cancels out the same term from
     // sphericalCapsIntersection()
@@ -119,22 +121,66 @@ float SpecularAO_Cones(float NoV, float visibility, float roughness) {
     // Smoothly kill specular AO when entering the perceptual roughness range [0.1..0.3]
     // Without this, specular AO can remove all reflections, which looks bad on metals
     return mix(1.0, ao, smoothstep(0.01, 0.09, roughness));
-#else
-    return SpecularAO_Lagarde(NoV, visibility, roughness);
-#endif
 }
 
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
-float computeSpecularAO(float NoV, float visibility, float roughness) {
+
+vec3 unpackBentNormal(vec3 bn) {
+    // this must match src/materials/ssao/ssaoUtils.fs
+    return bn * 2.0 - 1.0;
+}
+
+float computeSpecularAO(const highp vec2 uv, float NoV, float visibility, float roughness,
+        const in SSAOInterpolationCache cache) {
+
+    float specularAO = 1.0;
+
+// SSAO is not applied when blending is enabled
+#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
+
 #if SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_SIMPLE
-    return SpecularAO_Lagarde(NoV, visibility, roughness);
+    specularAO = SpecularAO_Lagarde(NoV, visibility, roughness);
 #elif SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_BENT_NORMALS
-    return SpecularAO_Cones(NoV, visibility, roughness);
-#else
-    return 1.0;
+#   if defined(MATERIAL_HAS_BENT_NORMAL)
+        specularAO = SpecularAO_Cones(shading_bentNormal, NoV, visibility, roughness);
+#   else
+        specularAO = SpecularAO_Cones(shading_normal, NoV, visibility, roughness);
+#   endif
 #endif
+
+    if (frameUniforms.aoBentNormals > 0.0) {
+        vec3 bn;
+        if (frameUniforms.aoSamplingQualityAndEdgeDistance > 0.0) {
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+            vec4 bnr = textureGather(light_ssao, vec3(uv, 1.0), 0);
+            vec4 bng = textureGather(light_ssao, vec3(uv, 1.0), 1);
+            vec4 bnb = textureGather(light_ssao, vec3(uv, 1.0), 2);
+#else
+            vec3 s01 = textureLodOffset(light_ssao, vec3(uv, 1.0), 0.0, ivec2(0, 1)).rgb;
+            vec3 s11 = textureLodOffset(light_ssao, vec3(uv, 1.0), 0.0, ivec2(1, 1)).rgb;
+            vec3 s10 = textureLodOffset(light_ssao, vec3(uv, 1.0), 0.0, ivec2(1, 0)).rgb;
+            vec3 s00 = textureLodOffset(light_ssao, vec3(uv, 1.0), 0.0, ivec2(0, 0)).rgb;
+            vec4 bnr = vec4(s01.r, s11.r, s10.r, s00.r);
+            vec4 bng = vec4(s01.g, s11.g, s10.g, s00.g);
+            vec4 bnb = vec4(s01.b, s11.b, s10.b, s00.b);
+#endif
+            bn.r = dot(bnr, cache.weights);
+            bn.g = dot(bng, cache.weights);
+            bn.b = dot(bnb, cache.weights);
+        } else {
+            bn = textureLod(light_ssao, vec3(uv, 1.0), 0.0).xyz;
+        }
+        bn = unpackBentNormal(bn);
+        bn = normalize(bn);
+        specularAO = min(specularAO, SpecularAO_Cones(bn, NoV, visibility, roughness));
+        // For now we don't use the AO bent normal for the diffuse because the AO bent normal
+        // is currently a face normal.
+    }
+#endif
+
+    return specularAO;
 }
 
 #if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1

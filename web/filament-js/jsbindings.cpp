@@ -365,7 +365,12 @@ value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOpti
     .field("resolution", &filament::View::AmbientOcclusionOptions::resolution)
     .field("intensity", &filament::View::AmbientOcclusionOptions::intensity)
     .field("bilateralThreshold", &filament::View::AmbientOcclusionOptions::bilateralThreshold)
-    .field("quality", &filament::View::AmbientOcclusionOptions::quality);
+    .field("quality", &filament::View::AmbientOcclusionOptions::quality)
+    .field("lowPassFilter", &filament::View::AmbientOcclusionOptions::lowPassFilter)
+    .field("upsampling", &filament::View::AmbientOcclusionOptions::upsampling)
+    .field("enabled", &filament::View::AmbientOcclusionOptions::enabled)
+    .field("bentNormals", &filament::View::AmbientOcclusionOptions::bentNormals)
+    .field("minHorizonAngleRad", &filament::View::AmbientOcclusionOptions::minHorizonAngleRad);
     // TODO: ssct options
 
 value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")

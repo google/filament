@@ -179,9 +179,11 @@ set(MATERIAL_SRCS
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomUpsample.mat
         src/materials/ssao/bilateralBlur.mat
+        src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat
         src/materials/skybox.mat
         src/materials/ssao/sao.mat
+        src/materials/ssao/saoBentNormals.mat
         src/materials/separableGaussianBlur.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
@@ -323,7 +325,24 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/saoBentNormals.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        DEPENDS src/materials/ssao/ssct.fs
+        DEPENDS src/materials/ssao/depthUtils.fs
+        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/ssao/saoImpl.fs
+        DEPENDS src/materials/ssao/ssctImpl.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT "${MATERIAL_DIR}/bilateralBlur.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/bilateralBlurBentNormals.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
         APPEND
 )

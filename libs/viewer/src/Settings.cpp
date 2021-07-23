@@ -428,6 +428,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->upsampling);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "bentNormals") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bentNormals);
         } else if (compare(tok, jsonChunk, "minHorizonAngleRad") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->minHorizonAngleRad);
         } else if (compare(tok, jsonChunk, "ssct") == 0) {
@@ -1204,6 +1206,7 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"lowPassFilter\": " << (in.lowPassFilter) << ",\n"
         << "\"upsampling\": " << (in.upsampling) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"bentNormals\": " << to_string(in.bentNormals) << ",\n"
         << "\"minHorizonAngleRad\": " << (in.minHorizonAngleRad) << ",\n"
         << "\"ssct\": " << (in.ssct) << "\n"
         << "}";

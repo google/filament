@@ -573,9 +573,13 @@ void combineDiffuseAndSpecular(
 }
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
-    float ssao = evaluateSSAO();
+    SSAOInterpolationCache interpolationCache;
+
+    highp vec2 uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+    float ssao = evaluateSSAO(uv, interpolationCache);
     float diffuseAO = min(material.ambientOcclusion, ssao);
-    float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.roughness);
+    float specularAO = computeSpecularAO(uv, shading_NoV, diffuseAO, pixel.roughness,
+            interpolationCache);
 
     // specular layer
     vec3 Fr;

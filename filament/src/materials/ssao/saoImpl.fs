@@ -24,6 +24,10 @@
 #include "ssaoUtils.fs"
 #include "geometry.fs"
 
+#ifndef COMPUTE_BENT_NORMAL
+#error "COMPUTE_BENT_NORMAL must be set"
+#endif
+
 const float kLog2LodRate = 3.0;
 
 // Ambient Occlusion, largely inspired from:
@@ -52,7 +56,8 @@ vec3 tapLocationFast(float i, vec2 p, const float noise) {
     return vec3(p, radius * radius);
 }
 
-void computeAmbientOcclusionSAO(inout float occlusion, float i, float ssDiskRadius,
+void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
+        float i, float ssDiskRadius,
         const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
         const vec2 tapPosition, const float noise) {
 
@@ -82,10 +87,26 @@ void computeAmbientOcclusionSAO(inout float occlusion, float i, float ssDiskRadi
     // sin(beta) * |v|. So the test simplifies to vn^2 < vv * sin(epsilon)^2.
     w *= step(vv * materialParams.minHorizonAngleSineSquared, vn * vn);
 
-    occlusion += w * max(0.0, vn + origin.z * materialParams.bias) / (vv + materialParams.peak2);
+    float sampleOcclusion = max(0.0, vn + (origin.z * materialParams.bias)) / (vv + materialParams.peak2);
+    occlusion += w * sampleOcclusion;
+
+#if COMPUTE_BENT_NORMAL
+
+    // TODO: revisit how we choose to keep the normal or not
+    // reject samples beyond the far plane
+    if (occlusionDepth * materialParams.invFarPlane < 1.0) {
+        float rr = 1.0 / materialParams.invRadiusSquared;
+        float cc = vv - vn*vn;
+        float s = sqrt(max(0.0, rr - cc));
+        vec3 n = normalize(v + normal * (s - vn));// vn is negative
+        bentNormal += n * (sampleOcclusion <= 0.0 ? 1.0 : 0.0);
+    }
+
+#endif
 }
 
-float scalableAmbientObscurance(highp vec2 uv, highp vec3 origin, vec3 normal) {
+void scalableAmbientObscurance(out float obscurance, out vec3 bentNormal,
+        highp vec2 uv, highp vec3 origin, vec3 normal) {
     float noise = random(getFragCoord(materialParams.resolution));
     highp vec2 tapPosition = startPosition(noise);
     highp mat2 angleStep = tapAngleStep();
@@ -94,10 +115,15 @@ float scalableAmbientObscurance(highp vec2 uv, highp vec3 origin, vec3 normal) {
     // proportional to the projected area of the sphere
     float ssDiskRadius = -(materialParams.projectionScaleRadius / origin.z);
 
-    float occlusion = 0.0;
+    obscurance = 0.0;
+    bentNormal = normal;
     for (float i = 0.0; i < materialParams.sampleCount.x; i += 1.0) {
-        computeAmbientOcclusionSAO(occlusion, i, ssDiskRadius, uv, origin, normal, tapPosition, noise);
+        computeAmbientOcclusionSAO(obscurance, bentNormal,
+                i, ssDiskRadius, uv, origin, normal, tapPosition, noise);
         tapPosition = angleStep * tapPosition;
     }
-    return sqrt(occlusion * materialParams.intensity);
+    obscurance = sqrt(obscurance * materialParams.intensity);
+#if COMPUTE_BENT_NORMAL
+    bentNormal = normalize(bentNormal);
+#endif
 }

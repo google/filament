@@ -152,6 +152,7 @@ private:
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
+        bool bentNormals = false;
         float standardDeviation = 1.0f;
         float bilateralThreshold = 0.0625f;
         float scale = 1.0f;
