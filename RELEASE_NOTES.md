@@ -10,8 +10,11 @@ A new header is inserted each time a *tag* is created.
 - engine: Luminance scaling can now be used with any tone mapping operator. It was previously tied
   to the "EVILS" tone mapping operator.
 - engine: Removed the "EVILS" tone mapping operator [⚠️ **API Change**].
-- engine: Improvements to Skinning. A new `SkinningBuffer` API allows bone sharing between 
+- engine: Improvements to Skinning. A new `SkinningBuffer` API allows bone sharing between
   renderables.
+- engine: Improvements to internal memory allocation for Metal and Vulkan backends.
+- engine: Default to OpenGL backend when Windows does not support Vulkan.
+- samples: Add new sample app: image_viewer.
 
 ## v1.11.0
 
