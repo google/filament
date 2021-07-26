@@ -9,6 +9,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/camutils/Bookmark.h
+        include/camutils/compiler.h
         include/camutils/Manipulator.h
 )
 

@@ -39,13 +39,13 @@ using LinearColorA = math::float4;
 using sRGBColorA  = math::float4;
 
 //! types of RGB colors
-enum class UTILS_PUBLIC RgbType : uint8_t {
+enum class RgbType : uint8_t {
     sRGB,   //!< the color is defined in sRGB space
     LINEAR, //!< the color is defined in linear space
 };
 
 //! types of RGBA colors
-enum class UTILS_PUBLIC RgbaType : uint8_t {
+enum class RgbaType : uint8_t {
     /**
      * the color is defined in sRGB space and the RGB values
      * have not been premultiplied by the alpha (for instance, a 50%
@@ -73,7 +73,7 @@ enum class UTILS_PUBLIC RgbaType : uint8_t {
 };
 
 //! type of color conversion to use when converting to/from sRGB and linear spaces
-enum UTILS_PUBLIC ColorConversion {
+enum ColorConversion {
     ACCURATE,   //!< accurate conversion using the sRGB standard
     FAST        //!< fast conversion using a simple gamma 2.2 curve
 };

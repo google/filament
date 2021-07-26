@@ -54,6 +54,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  *
  * The various transforms held by ColorGrading are applied in the following order:
  * <ul>
+ * <li>Exposure</li>
  * <li>White balance</li>
  * <li>Channel mixer</li>
  * <li>Shadows/mid-tones/highlights</li>
@@ -63,12 +64,14 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Saturation</li>
  * <li>Curves</li>
  * <li>Tone mapping</li>
+ * <li>Luminance scaling</li>
  * </ul>
  *
  * <h1>Defaults</h1>
  *
  * Here are the default color grading options:
  * <ul>
+ * <li>Exposure: 0.0</li>
  * <li>White balance: temperature <code>0.0</code>, and tint <code>0.0</code></li>
  * <li>Channel mixer: red <code>{1,0,0}</code>, green <code>{0,1,0}</code>, blue <code>{0,0,1}</code></li>
  * <li>Shadows/mid-tones/highlights: shadows <code>{1,1,1,0}</code>, mid-tones <code>{1,1,1,0}</code>,
@@ -79,6 +82,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Saturation: <code>1.0</code></li>
  * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
  * <li>Tone mapping: {@link ToneMapping#ACES_LEGACY}</li>
+ * <li>Luminance scaling: false</li>
  * </ul>
  *
  * @see View
@@ -109,8 +113,8 @@ public class ColorGrading {
         ACES,
         /** Filmic tone mapping, modelled after ACES but applied in sRGB space. */
         FILMIC,
-        /** Exposure value invariant luminance scaling tone mapping, offers the best behaviors in high intensity areas. */
-        EVILS,
+        /** Reserved for future use. */
+        RESERVED,
         /** Reinhard luma-based tone mapping. */
         REINHARD,
         /** Tone mapping used to validate/debug scene exposure. */
@@ -168,6 +172,41 @@ public class ColorGrading {
          */
         public Builder toneMapping(ToneMapping toneMapping) {
             nBuilderToneMapping(mNativeBuilder, toneMapping.ordinal());
+            return this;
+        }
+
+        /**
+         * Enables or disables the luminance scaling component (LICH) from the exposure value
+         * invariant luminance system (EVILS). When this setting is enabled, pixels with high
+         * chromatic values will roll-off to white to offer a more natural rendering. This step
+         * also helps avoid undesirable hue skews caused by out of gamut colors clipped
+         * to the destination color gamut.
+         *
+         * When luminance scaling is enabled, tone mapping is performed on the luminance of each
+         * pixel instead of per-channel.
+         *
+         * @param luminanceScaling Enables or disables EVILS post-tone mapping
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder luminanceScaling(boolean luminanceScaling) {
+            nBuilderLuminanceScaling(mNativeBuilder, luminanceScaling);
+            return this;
+        }
+
+        /**
+         * Adjusts the exposure of this image. The exposure is specified in stops:
+         * each stop brightens (positive values) or darkens (negative values) the image by
+         * a factor of 2. This means that an exposure of 3 will brighten the image 8 times
+         * more than an exposure of 0 (2^3 = 8 and 2^0 = 1). Contrary to the camera's exposure,
+         * this setting is applied after all post-processing (bloom, etc.) are applied.
+         *
+         * @param exposure Value in EV stops. Can be negative, 0, or positive.
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder exposure(float exposure) {
+            nBuilderExposure(mNativeBuilder, exposure);
             return this;
         }
 
@@ -464,6 +503,8 @@ public class ColorGrading {
 
     private static native void nBuilderQuality(long nativeBuilder, int quality);
     private static native void nBuilderToneMapping(long nativeBuilder, int toneMapper);
+    private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
+    private static native void nBuilderExposure(long nativeBuilder, float exposure);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
     private static native void nBuilderChannelMixer(long nativeBuilder, float[] outRed, float[] outGreen, float[] outBlue);
     private static native void nBuilderShadowsMidtonesHighlights(long nativeBuilder, float[] shadows, float[] midtones, float[] highlights, float[] ranges);

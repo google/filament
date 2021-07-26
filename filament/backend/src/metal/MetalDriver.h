@@ -20,13 +20,11 @@
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
 
+#include "private/backend/HandleAllocator.h"
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/debug.h>
-
-#include <tsl/robin_map.h>
-
-#include <mutex>
 
 namespace filament {
 namespace backend {
@@ -35,10 +33,15 @@ class MetalPlatform;
 
 namespace metal {
 
+class MetalBuffer;
 struct MetalUniformBuffer;
 struct MetalContext;
 struct MetalProgram;
 struct UniformBufferState;
+
+#ifndef FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB
+#define FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
 
 class MetalDriver final : public DriverBase {
     explicit MetalDriver(backend::MetalPlatform* platform) noexcept;
@@ -83,84 +86,43 @@ private:
      * Memory management
      */
 
-    // Copied from VulkanDriver.h
+    backend::HandleAllocatorMTL mHandleAllocator;
 
-    // For now we're not bothering to store handles in pools, just simple on-demand allocation.
-    // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = void*;
-    using HandleMap = tsl::robin_map<HandleBase::HandleId, Blob>;
-    std::mutex mHandleMapMutex;
-    HandleMap mHandleMap;
-    HandleBase::HandleId mNextId = 1;
-
-    template<typename Dp, typename B>
-    Handle<B> alloc_handle() {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = malloc(sizeof(Dp));
-        return Handle<B>(mNextId++);
+    template<typename D>
+    Handle<D> alloc_handle() {
+        return mHandleAllocator.allocate<D>();
     }
 
-    template<typename Dp, typename B, typename ... ARGS>
+    template<typename D, typename B, typename ... ARGS>
     Handle<B> alloc_and_construct_handle(ARGS&& ... args) {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        Blob blob = mHandleMap[mNextId] = malloc(sizeof(Dp));
-        Dp* addr = reinterpret_cast<Dp*>(blob);
-        new(addr) Dp(std::forward<ARGS>(args)...);
-        return Handle<B>(mNextId++);
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
     }
 
-    template<typename Dp, typename B>
-    Dp* handle_cast(HandleMap& handleMap, Handle<B> handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        return reinterpret_cast<Dp*>(blob);
+    template<typename D, typename B>
+    D* handle_cast(Handle<B> handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
     }
 
-    template<typename Dp, typename B>
-    const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        return reinterpret_cast<const Dp*>(blob);
+    template<typename D, typename B>
+    const D* handle_const_cast(const Handle<B>& handle) noexcept {
+        return mHandleAllocator.handle_cast<D*>(handle);
     }
 
-    template<typename Dp, typename B, typename ... ARGS>
-    Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
-        assert_invariant(handle);
-        if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        Dp* addr = reinterpret_cast<Dp*>(blob);
-        new(addr) Dp(std::forward<ARGS>(args)...);
-        return addr;
+    template<typename D, typename B, typename ... ARGS>
+    D* construct_handle(Handle<B>& handle, ARGS&& ... args) noexcept {
+        return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 
-    template<typename Dp, typename B>
-    void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
-        std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        assert_invariant(handle);
-        // Call the destructor, remove the blob, don't bother reclaiming the integer id.
-        auto iter = handleMap.find(handle.getId());
-        assert_invariant(iter != handleMap.end());
-        Blob& blob = iter.value();
-        reinterpret_cast<Dp*>(blob)->~Dp();
-        free(blob);
-        handleMap.erase(handle.getId());
+    template<typename D, typename B>
+    void destruct_handle(Handle<B>& handle) noexcept {
+        auto* p = mHandleAllocator.handle_cast<D*>(handle);
+        mHandleAllocator.deallocate(handle, p);
     }
 
     void enumerateSamplerGroups(const MetalProgram* program,
             const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
     void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
-            MetalUniformBuffer*, uint32_t)>& f);
+            MetalBuffer*, uint32_t)>& f);
 
 };
 

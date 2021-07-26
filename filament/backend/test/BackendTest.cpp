@@ -18,7 +18,10 @@
 
 #include "BackendTest.h"
 
+#include <utils/Hash.h>
+
 #include "ShaderGenerator.h"
+#include "TrianglePrimitive.h"
 
 static constexpr size_t CONFIG_MIN_COMMAND_BUFFERS_SIZE = 1 * 1024 * 1024;
 static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND_BUFFERS_SIZE;
@@ -94,6 +97,64 @@ void BackendTest::fullViewport(Viewport& viewport) {
     viewport.bottom = 0;
     viewport.width = view.width;
     viewport.height = view.height;
+}
+
+void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
+        Handle<HwSwapChain> swapChain, Handle<HwProgram> program) {
+    auto& api = getDriverApi();
+
+    TrianglePrimitive triangle(api);
+
+    RenderPassParams params = {};
+    fullViewport(params);
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.clearColor = {0.f, 0.f, 1.f, 1.f};
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.viewport.height = 512;
+    params.viewport.width = 512;
+
+    api.makeCurrent(swapChain, swapChain);
+
+    api.beginRenderPass(renderTarget, params);
+
+    PipelineState state;
+    state.program = program;
+    state.rasterState.colorWrite = true;
+    state.rasterState.depthWrite = false;
+    state.rasterState.depthFunc = RasterState::DepthFunc::A;
+    state.rasterState.culling = CullingMode::NONE;
+
+    api.draw(state, triangle.getRenderPrimitive());
+
+    api.endRenderPass();
+}
+
+void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
+        Handle<HwRenderTarget> rt, uint32_t expectedHash) {
+    void* buffer = calloc(1, width * height * 4);
+
+    struct Capture {
+        uint32_t expectedHash;
+        char* name;
+    };
+    Capture* c = new Capture();
+    c->expectedHash = expectedHash;
+    c->name = strdup(testName);
+
+    PixelBufferDescriptor pbd(buffer, width * height * 4, PixelDataFormat::RGBA, PixelDataType::UBYTE,
+            1, 0, 0, width, [](void* buffer, size_t size, void* user) {
+                Capture* c = (Capture*)user;
+
+                // Hash the contents of the buffer and check that they match.
+                uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
+                ASSERT_EQ(hash, c->expectedHash) << c->name << " failed: hashes do not match." << std::endl;
+
+                free(buffer);
+                free(c->name);
+                free(c);
+            }, (void*)c);
+    getDriverApi().readPixels(rt, 0, 0, 512, 512, std::move(pbd));
 }
 
 class Environment : public ::testing::Environment {

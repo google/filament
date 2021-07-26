@@ -89,14 +89,14 @@ struct MaterialParams {
     float unused;
 };
 
-static void uploadUniforms(DriverApi& dapi, Handle<HwUniformBuffer> ubh, MaterialParams params) {
+static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
     MaterialParams* tmp = new MaterialParams(params);
     auto cb = [](void* buffer, size_t size, void* user) {
         MaterialParams* sp = (MaterialParams*) buffer;
         delete sp;
     };
     BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-    dapi.loadUniformBuffer(ubh, std::move(bd));
+    dapi.updateBufferObject(ubh, std::move(bd), 0);
 }
 
 static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
@@ -187,7 +187,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             samplers.setSampler(0, texture, sparams);
             auto sgroup = api.createSamplerGroup(samplers.getSize());
             api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
-            auto ubuffer = api.createUniformBuffer(sizeof(MaterialParams), BufferUsage::STATIC);
+            auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
+                    BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0);
             api.bindSamplers(0, sgroup);

@@ -12,7 +12,14 @@
 
 ## Setup for Desktop
 
-First set an environment variable as follows. In Windows, use `set` instead of `export`.
+When using the easy build script, include the `-d` argument. For example:
+
+    ./build.sh -fd debug gltf_viewer
+
+The `d` enables a CMake option called FILAMENT_ENABLE_MATDBG and the `f` ensures that CMake gets
+re-run so that the option is honored.
+
+Next, set an environment variable as follows. In Windows, use `set` instead of `export`.
 
     export FILAMENT_MATDBG_PORT=8080
 
@@ -173,6 +180,9 @@ Returns an object that maps from material ids to their active shader variants. E
 {"b38d4ad0": ["opengl", 5] , "44ae2b62": ["opengl", 1, 4] }
 ```
 
+Each numeric element in the list is a variant mask. For example, at the time of this writing,
+Filament has 7-bit mask, so each number in the list is between 0 and 127.
+
 ---
 
 `/api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}`
@@ -209,9 +219,8 @@ not including the terminating null.
 
 ## Wish List
 
-- Allow SPIR-V edits.
-- Allow viewing GLSL transpiled from SPIR-V.
-    - Also stop piggybacking on `type=glsl` for Metal Shading Language.
+- Allow viewing and editing GLSL for Metal and Vulkan (use filamat or spirv-cross for this)
+- Stop piggybacking on `type=glsl` for Metal Shading Language.
 - Expose the entire `engine.debug` struct in the web UI.
 - When shader errors occur, send them back over the wire to the web client.
 - Resizing the Chrome window causes layout issues.

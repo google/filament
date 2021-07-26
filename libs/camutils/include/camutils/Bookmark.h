@@ -17,6 +17,8 @@
 #ifndef CAMUTILS_BOOKMARK_H
 #define CAMUTILS_BOOKMARK_H
 
+#include <camutils/compiler.h>
+
 #include <math/vec2.h>
 #include <math/vec3.h>
 
@@ -39,7 +41,7 @@ enum class Mode { ORBIT, MAP, FREE_FLIGHT };
  * @see Manipulator::getCurrentBookmark, Manipulator::jumpToBookmark
  */
 template <typename FLOAT>
-struct Bookmark {
+struct CAMUTILS_PUBLIC Bookmark {
     /**
      * Interpolates between two bookmarks. The t argument must be between 0 and 1 (inclusive), and
      * the two endpoints must have the same mode (ORBIT or MAP).

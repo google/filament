@@ -113,6 +113,21 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(Backend backend, bool isM
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);
 
+    // Add a target environment define after the #version declaration.
+    size_t pos = shader.find("#version");
+    pos += 8;
+    while (shader[pos] != '\n') {
+        pos++;
+    }
+    pos++;
+    if (backend == Backend::OPENGL) {
+        shader.insert(pos, "#define TARGET_OPENGL_ENVIRONMENT\n");
+    } else if (backend == Backend::METAL) {
+        shader.insert(pos, "#define TARGET_METAL_ENVIRONMENT\n");
+    } else if (backend == Backend::VULKAN) {
+        shader.insert(pos, "#define TARGET_VULKAN_ENVIRONMENT\n");
+    }
+
     const char* shaderCString = shader.c_str();
     tShader.setStrings(&shaderCString, 1);
 

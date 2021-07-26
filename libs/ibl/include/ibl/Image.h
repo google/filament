@@ -21,12 +21,14 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <utils/compiler.h>
+
 #include <memory>
 
 namespace filament {
 namespace ibl {
 
-class Image {
+class UTILS_PUBLIC Image {
 public:
     Image();
     Image(size_t w, size_t h, size_t stride = 0);

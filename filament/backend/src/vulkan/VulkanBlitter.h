@@ -28,7 +28,6 @@ class VulkanPipelineCache;
 class VulkanSamplerCache;
 
 struct VulkanProgram;
-struct VulkanUniformBuffer;
 
 class VulkanBlitter {
 public:
@@ -64,7 +63,7 @@ private:
             const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]);
 
     VulkanBuffer* mTriangleBuffer = nullptr;
-    VulkanUniformBuffer* mParamsBuffer = nullptr;
+    VulkanBuffer* mParamsBuffer = nullptr;
     VulkanProgram* mDepthResolveProgram = nullptr;
 
     VulkanContext& mContext;

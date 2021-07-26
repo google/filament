@@ -28,13 +28,13 @@
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
-#include "TextureReshaper.h"
 
 #include <utils/Panic.h>
 
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace filament {
@@ -117,11 +117,10 @@ public:
     MetalBufferObject(MetalContext& context, uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
-    MetalBuffer* getBuffer() const { return buffer.get(); }
+    MetalBuffer* getBuffer() { return &buffer; }
 
 private:
-    std::unique_ptr<MetalBuffer> buffer = nullptr;
-
+    MetalBuffer buffer;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
@@ -133,12 +132,6 @@ struct MetalVertexBuffer : public HwVertexBuffer {
 
 struct MetalIndexBuffer : public HwIndexBuffer {
     MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount);
-
-    MetalBuffer buffer;
-};
-
-struct MetalUniformBuffer : public HwUniformBuffer {
-    MetalUniformBuffer(MetalContext& context, size_t size);
 
     MetalBuffer buffer;
 };
@@ -164,6 +157,19 @@ struct MetalProgram : public HwProgram {
     bool isValid = false;
 };
 
+struct PixelBufferShape {
+    uint32_t bytesPerPixel;
+    uint32_t bytesPerRow;
+    uint32_t bytesPerSlice;
+    uint32_t totalBytes;
+
+    // Offset into the buffer where the pixel data begins.
+    uint32_t sourceOffset;
+
+    static PixelBufferShape compute(const PixelBufferDescriptor& data, TextureFormat format,
+            MTLSize size, uint32_t byteOffset);
+};
+
 struct MetalTexture : public HwTexture {
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
@@ -177,16 +183,17 @@ struct MetalTexture : public HwTexture {
 
     ~MetalTexture();
 
-    void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, PixelBufferDescriptor& p) noexcept;
-    void load3DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-            uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor& p) noexcept;
+    void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
     void loadCubeImage(const FaceOffsets& faceOffsets, int miplevel, PixelBufferDescriptor& p);
-    void loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-            uint32_t width, uint32_t height, uint32_t depth, uint32_t byteOffset, uint32_t slice,
-            PixelBufferDescriptor& data, id<MTLBlitCommandEncoder> blitCommandEncoder,
-            id<MTLCommandBuffer> blitCommandBuffer) noexcept;
+    void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
+            PixelBufferDescriptor& data) noexcept;
+    void loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor& data,
+            const PixelBufferShape& shape);
+    void loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDescriptor& data,
+            const PixelBufferShape& shape);
     void updateLodRange(uint32_t level);
+
+    static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat format);
 
     MetalContext& context;
     MetalExternalImage externalImage;
@@ -197,11 +204,7 @@ struct MetalTexture : public HwTexture {
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
 
-    uint8_t bytesPerElement; // The number of bytes per pixel, or block (for compressed texture formats).
-    uint8_t blockWidth; // The number of horizontal pixels per block (only for compressed texture formats).
-    uint8_t blockHeight; // The number of vertical pixels per block (only for compressed texture formats).
-    TextureReshaper reshaper;
-    MTLPixelFormat metalPixelFormat;
+    MTLPixelFormat devicePixelFormat;
     uint32_t minLod = UINT_MAX;
     uint32_t maxLod = 0;
 };
@@ -256,7 +259,10 @@ private:
     id<MTLTexture> multisampledDepth = nil;
 };
 
-class MetalFence : public HwFence {
+// MetalFence is used to implement both Fences and Syncs.
+// There's no diamond problem, because HwBase (superclass of HwFence and HwSync) is empty.
+static_assert(std::is_empty_v<HwBase>);
+class MetalFence : public HwFence, public HwSync {
 public:
 
     // MetalFence is special, as it gets constructed on the Filament thread. We must delay inserting

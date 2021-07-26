@@ -155,8 +155,8 @@ function queryActiveShaders() {
             const activeBackend = activeMaterials[matid][0];
             const activeShaders = activeMaterials[matid].slice(1);
             for (const shader of material[activeBackend]) {
-                const index = parseInt(shader.index);
-                shader.active = activeShaders.indexOf(index) > -1;
+                const variant = parseInt(shader.variant);
+                shader.active = activeShaders.indexOf(variant) > -1;
             }
         }
         renderMaterialList();

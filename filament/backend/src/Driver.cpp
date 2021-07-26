@@ -20,7 +20,6 @@
 #include "DriverBase.h"
 
 #include <math/half.h>
-#include <math/quat.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -33,6 +32,9 @@
 using namespace utils;
 
 namespace filament {
+
+using namespace math;
+
 namespace backend {
 
 DriverBase::DriverBase(Dispatcher* dispatcher) noexcept
@@ -113,31 +115,31 @@ void Driver::execute(std::function<void(void)> fn) noexcept {
 size_t Driver::getElementTypeSize(ElementType type) noexcept {
     switch (type) {
         case ElementType::BYTE:     return sizeof(int8_t);
-        case ElementType::BYTE2:    return sizeof(math::byte2);
-        case ElementType::BYTE3:    return sizeof(math::byte3);
-        case ElementType::BYTE4:    return sizeof(math::byte4);
+        case ElementType::BYTE2:    return sizeof(byte2);
+        case ElementType::BYTE3:    return sizeof(byte3);
+        case ElementType::BYTE4:    return sizeof(byte4);
         case ElementType::UBYTE:    return sizeof(uint8_t);
-        case ElementType::UBYTE2:   return sizeof(math::ubyte2);
-        case ElementType::UBYTE3:   return sizeof(math::ubyte3);
-        case ElementType::UBYTE4:   return sizeof(math::ubyte4);
+        case ElementType::UBYTE2:   return sizeof(ubyte2);
+        case ElementType::UBYTE3:   return sizeof(ubyte3);
+        case ElementType::UBYTE4:   return sizeof(ubyte4);
         case ElementType::SHORT:    return sizeof(int16_t);
-        case ElementType::SHORT2:   return sizeof(math::short2);
-        case ElementType::SHORT3:   return sizeof(math::short3);
-        case ElementType::SHORT4:   return sizeof(math::short4);
+        case ElementType::SHORT2:   return sizeof(short2);
+        case ElementType::SHORT3:   return sizeof(short3);
+        case ElementType::SHORT4:   return sizeof(short4);
         case ElementType::USHORT:   return sizeof(uint16_t);
-        case ElementType::USHORT2:  return sizeof(math::ushort2);
-        case ElementType::USHORT3:  return sizeof(math::ushort3);
-        case ElementType::USHORT4:  return sizeof(math::ushort4);
+        case ElementType::USHORT2:  return sizeof(ushort2);
+        case ElementType::USHORT3:  return sizeof(ushort3);
+        case ElementType::USHORT4:  return sizeof(ushort4);
         case ElementType::INT:      return sizeof(int32_t);
         case ElementType::UINT:     return sizeof(uint32_t);
         case ElementType::FLOAT:    return sizeof(float);
-        case ElementType::FLOAT2:   return sizeof(math::float2);
-        case ElementType::FLOAT3:   return sizeof(math::float3);
-        case ElementType::FLOAT4:   return sizeof(math::float4);
-        case ElementType::HALF:     return sizeof(math::half);
-        case ElementType::HALF2:    return sizeof(math::half2);
-        case ElementType::HALF3:    return sizeof(math::half3);
-        case ElementType::HALF4:    return sizeof(math::half4);
+        case ElementType::FLOAT2:   return sizeof(float2);
+        case ElementType::FLOAT3:   return sizeof(float3);
+        case ElementType::FLOAT4:   return sizeof(float4);
+        case ElementType::HALF:     return sizeof(half);
+        case ElementType::HALF2:    return sizeof(half2);
+        case ElementType::HALF3:    return sizeof(half3);
+        case ElementType::HALF4:    return sizeof(half4);
     }
 }
 

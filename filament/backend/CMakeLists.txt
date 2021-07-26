@@ -32,7 +32,6 @@ set(SRCS
         src/Platform.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
-        src/TextureReshaper.cpp
 )
 
 set(PRIVATE_HDRS
@@ -50,7 +49,6 @@ set(PRIVATE_HDRS
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
         src/DriverBase.h
-        src/TextureReshaper.h
 )
 
 # ==================================================================================================
@@ -305,14 +303,13 @@ if (MSVC)
     )
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
-    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
+    set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
-        -fvisibility=hidden
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
     )
@@ -378,6 +375,7 @@ if (APPLE)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_MRT.cpp
+        test/test_LoadImage.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

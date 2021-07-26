@@ -63,8 +63,8 @@ static VulkanLayoutTransition transitionHelper(VulkanLayoutTransition transition
 }
 
 void VulkanBlitter::blitColor(BlitArgs args) {
-    const VulkanAttachment src = args.srcTarget->getColor(args.targetIndex);
-    const VulkanAttachment dst = args.dstTarget->getColor(0);
+    const VulkanAttachment src = args.srcTarget->getColor(mContext.currentSurface, args.targetIndex);
+    const VulkanAttachment dst = args.dstTarget->getColor(mContext.currentSurface, 0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
@@ -82,13 +82,14 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     }
 #endif
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
-            args.dstRectPair);
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(mContext.currentSurface), src, dst,
+            args.srcRectPair, args.dstRectPair);
 }
 
 void VulkanBlitter::blitDepth(BlitArgs args) {
-    const VulkanAttachment src = args.srcTarget->getDepth();
-    const VulkanAttachment dst = args.dstTarget->getDepth();
+    VulkanSwapChain* const sc = mContext.currentSurface;
+    const VulkanAttachment src = args.srcTarget->getDepth(sc);
+    const VulkanAttachment dst = args.dstTarget->getDepth(sc);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 #if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
@@ -107,12 +108,12 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
 #endif
 
     if (src.texture && src.texture->samples > 1 && dst.texture && dst.texture->samples == 1) {
-        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
+        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
             args.dstRectPair);
         return;
     }
 
-    blitFast(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
+    blitFast(aspect, args.filter, args.srcTarget->getExtent(sc), src, dst, args.srcRectPair,
             args.dstRectPair);
 }
 
@@ -214,11 +215,17 @@ void VulkanBlitter::shutdown() noexcept {
         delete mDepthResolveProgram;
         mDepthResolveProgram = nullptr;
 
-        delete mTriangleBuffer;
-        mTriangleBuffer = nullptr;
+        if (mTriangleBuffer) {
+            mTriangleBuffer->terminate(mContext);
+            delete mTriangleBuffer;
+            mTriangleBuffer = nullptr;
+        }
 
-        delete mParamsBuffer;
-        mParamsBuffer = nullptr;
+        if (mParamsBuffer) {
+            mParamsBuffer->terminate(mContext);
+            delete mParamsBuffer;
+            mParamsBuffer = nullptr;
+        }
     }
 }
 
@@ -261,10 +268,11 @@ void VulkanBlitter::lazyInit() noexcept {
     mTriangleBuffer = new VulkanBuffer(mContext, mStagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             sizeof(kTriangleVertices));
 
-    mTriangleBuffer->loadFromCpu(kTriangleVertices, 0, sizeof(kTriangleVertices));
+    mTriangleBuffer->loadFromCpu(mContext, mStagePool,
+            kTriangleVertices, 0, sizeof(kTriangleVertices));
 
-    mParamsBuffer = new VulkanUniformBuffer(mContext, mStagePool,
-            sizeof(BlitterUniforms), backend::BufferUsage::STATIC);
+    mParamsBuffer = new VulkanBuffer(mContext, mStagePool, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            sizeof(BlitterUniforms));
 }
 
 // At a high level, the procedure for resolving depth looks like this:
@@ -281,7 +289,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .sampleCount = src.texture->samples,
         .inverseSampleCount = 1.0f / float(src.texture->samples),
     };
-    mParamsBuffer->loadFromCpu(&uniforms, sizeof(uniforms));
+    mParamsBuffer->loadFromCpu(mContext, mStagePool, &uniforms, 0, sizeof(uniforms));
 
     // BEGIN RENDER PASS
     // -----------------

@@ -39,6 +39,7 @@ struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
 
+// TODO: make this as lean as possible, it makes VulkanRenderTarget very big (currently 880 bytes).
 struct VulkanAttachment {
     VkFormat format;
     VkImage image;

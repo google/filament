@@ -55,7 +55,8 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
 MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
-        mContext(new MetalContext) {
+        mContext(new MetalContext),
+        mHandleAllocator("Handles", FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();
@@ -125,9 +126,6 @@ MetalDriver::~MetalDriver() noexcept {
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
-#if defined(FILAMENT_METAL_PROFILING)
-    os_release(mContext->log);
-#endif
     delete mContext->bufferPool;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
@@ -145,13 +143,13 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 
 void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
         backend::FrameScheduledCallback callback, void* user) {
-    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
     swapChain->setFrameScheduledCallback(callback, user);
 }
 
 void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
         backend::FrameCompletedCallback callback, void* user) {
-    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
     swapChain->setFrameCompletedCallback(callback, user);
 }
 
@@ -205,19 +203,19 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t buffer
         uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
         BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
-    construct_handle<MetalVertexBuffer>(mHandleMap, vbh, *mContext, bufferCount,
+    construct_handle<MetalVertexBuffer>(vbh, *mContext, bufferCount,
             attributeCount, vertexCount, attributes);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {
+        uint32_t indexCount, BufferUsage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    construct_handle<MetalIndexBuffer>(mHandleMap, ibh, *mContext, elementSize, indexCount);
+    construct_handle<MetalIndexBuffer>(ibh, *mContext, elementSize, indexCount);
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType) {
-    construct_handle<MetalBufferObject>(mHandleMap, boh, *mContext, byteCount);
+        BufferObjectBinding bindingType, BufferUsage) {
+    construct_handle<MetalBufferObject>(boh, *mContext, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -227,7 +225,7 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
 }
@@ -240,7 +238,7 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
             width, height, depth, usage, r, g, b, a);
 }
 
@@ -266,29 +264,24 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
             "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
             metalTexture.textureType, filamentMetalType);
-    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
+    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
         width, height, depth, usage, metalTexture);
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
-    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size));
-}
-
-void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, uint32_t size,
-        BufferUsage usage) {
-    construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
+    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size));
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int dummy) {
-    construct_handle<MetalRenderPrimitive>(mHandleMap, rph);
+    construct_handle<MetalRenderPrimitive>(rph);
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
-    construct_handle<MetalProgram>(mHandleMap, rph, mContext->device, program);
+    construct_handle<MetalProgram>(rph, mContext->device, program);
 }
 
 void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dummy) {
-    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext);
+    construct_handle<MetalRenderTarget>(rth, mContext);
 }
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
@@ -308,7 +301,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             continue;
         }
 
-        auto colorTexture = handle_cast<MetalTexture>(mHandleMap, buffer.handle);
+        auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->texture,
                 "Color texture passed to render target has no texture allocation");
         colorTexture->updateLodRange(buffer.level);
@@ -319,7 +312,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     MetalRenderTarget::Attachment depthAttachment = { nil };
     if (depth.handle) {
-        auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
+        auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
                 "Depth texture passed to render target has no texture allocation.");
         depthTexture->updateLodRange(depth.level);
@@ -330,7 +323,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
             "The DEPTH flag was specified, but no depth texture provided.");
 
-    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples,
+    construct_handle<MetalRenderTarget>(rth, mContext, width, height, samples,
             colorAttachments, depthAttachment);
 
     ASSERT_POSTCONDITION(
@@ -340,28 +333,28 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 }
 
 void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
-    auto* fence = handle_cast<MetalFence>(mHandleMap, fh);
+    auto* fence = handle_cast<MetalFence>(fh);
     fence->encode();
 }
 
 void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
-    auto* fence = handle_cast<MetalFence>(mHandleMap, sh);
+    auto* fence = handle_cast<MetalFence>(sh);
     fence->encode();
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
-        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, pixelBuffer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-        construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, metalLayer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
     }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(mHandleMap, sch, *mContext, width, height, flags);
+    construct_handle<MetalSwapChain>(sch, *mContext, width, height, flags);
 }
 
 void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
@@ -373,51 +366,47 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 }
 
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
-    return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
+    return alloc_handle<MetalVertexBuffer>();
 }
 
 Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
-    return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
+    return alloc_handle<MetalIndexBuffer>();
 }
 
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
-    return alloc_handle<MetalBufferObject, HwBufferObject>();
+    return alloc_handle<MetalBufferObject>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwTexture> MetalDriver::importTextureS() noexcept {
-    return alloc_handle<MetalTexture, HwTexture>();
+    return alloc_handle<MetalTexture>();
 }
 
 Handle<HwSamplerGroup> MetalDriver::createSamplerGroupS() noexcept {
-    return alloc_handle<MetalSamplerGroup, HwSamplerGroup>();
-}
-
-Handle<HwUniformBuffer> MetalDriver::createUniformBufferS() noexcept {
-    return alloc_handle<MetalUniformBuffer, HwUniformBuffer>();
+    return alloc_handle<MetalSamplerGroup>();
 }
 
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
-    return alloc_handle<MetalRenderPrimitive, HwRenderPrimitive>();
+    return alloc_handle<MetalRenderPrimitive>();
 }
 
 Handle<HwProgram> MetalDriver::createProgramS() noexcept {
-    return alloc_handle<MetalProgram, HwProgram>();
+    return alloc_handle<MetalProgram>();
 }
 
 Handle<HwRenderTarget> MetalDriver::createDefaultRenderTargetS() noexcept {
-    return alloc_handle<MetalRenderTarget, HwRenderTarget>();
+    return alloc_handle<MetalRenderTarget>();
 }
 
 Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
-    return alloc_handle<MetalRenderTarget, HwRenderTarget>();
+    return alloc_handle<MetalRenderTarget>();
 }
 
 Handle<HwFence> MetalDriver::createFenceS() noexcept {
@@ -433,11 +422,11 @@ Handle<HwSync> MetalDriver::createSyncS() noexcept {
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
-    return alloc_handle<MetalSwapChain, HwSwapChain>();
+    return alloc_handle<MetalSwapChain>();
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
-    return alloc_handle<MetalSwapChain, HwSwapChain>();
+    return alloc_handle<MetalSwapChain>();
 }
 
 Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
@@ -452,31 +441,39 @@ Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (vbh) {
-        destruct_handle<MetalVertexBuffer>(mHandleMap, vbh);
+        destruct_handle<MetalVertexBuffer>(vbh);
     }
 }
 
 void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
-        destruct_handle<MetalIndexBuffer>(mHandleMap, ibh);
+        destruct_handle<MetalIndexBuffer>(ibh);
     }
 }
 
 void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
-    if (boh) {
-        destruct_handle<MetalBufferObject>(mHandleMap, boh);
+    if (UTILS_UNLIKELY(!boh)) {
+        return;
     }
+    // TODO: we can skip this loop if we're not a uniform buffer
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    for (auto& thisUniform : mContext->uniformState) {
+        if (thisUniform.buffer == bo->getBuffer()) {
+            thisUniform.bound = false;
+        }
+    }
+    destruct_handle<MetalBufferObject>(boh);
 }
 
 void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
-        destruct_handle<MetalRenderPrimitive>(mHandleMap, rph);
+        destruct_handle<MetalRenderPrimitive>(rph);
     }
 }
 
 void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
     if (ph) {
-        destruct_handle<MetalProgram>(mHandleMap, ph);
+        destruct_handle<MetalProgram>(ph);
     }
 }
 
@@ -485,26 +482,14 @@ void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
         return;
     }
     // Unbind this sampler group from our internal state.
-    auto* metalSampler = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
+    auto* metalSampler = handle_cast<MetalSamplerGroup>(sbh);
     for (auto& samplerBinding : mContext->samplerBindings) {
         if (samplerBinding == metalSampler) {
             samplerBinding = {};
         }
     }
     mContext->samplerGroups.erase(metalSampler);
-    destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
-}
-
-void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    if (!ubh) {
-        return;
-    }
-    destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
-    for (auto& thisUniform : mContext->uniformState) {
-        if (thisUniform.ubh == ubh) {
-            thisUniform.bound = false;
-        }
-    }
+    destruct_handle<MetalSamplerGroup>(sbh);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
@@ -523,18 +508,18 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         }
     }
 
-    destruct_handle<MetalTexture>(mHandleMap, th);
+    destruct_handle<MetalTexture>(th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     if (rth) {
-        destruct_handle<MetalRenderTarget>(mHandleMap, rth);
+        destruct_handle<MetalRenderTarget>(rth);
     }
 }
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        destruct_handle<MetalSwapChain>(mHandleMap, sch);
+        destruct_handle<MetalSwapChain>(sch);
     }
 }
 
@@ -544,13 +529,13 @@ void MetalDriver::destroyStream(Handle<HwStream> sh) {
 
 void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     if (tqh) {
-        destruct_handle<MetalTimerQuery>(mHandleMap, tqh);
+        destruct_handle<MetalTimerQuery>(tqh);
     }
 }
 
 void MetalDriver::destroySync(Handle<HwSync> sh) {
     if (sh) {
-        destruct_handle<MetalFence>(mHandleMap, sh);
+        destruct_handle<MetalFence>(sh);
     }
 }
 
@@ -602,12 +587,12 @@ void MetalDriver::updateStreams(backend::DriverApi* driver) {
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        destruct_handle<MetalFence>(mHandleMap, fh);
+        destruct_handle<MetalFence>(fh);
     }
 }
 
 FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
-    auto* fence = handle_cast<MetalFence>(mHandleMap, fh);
+    auto* fence = handle_cast<MetalFence>(fh);
     if (!fence) {
         return FenceStatus::ERROR;
     }
@@ -615,8 +600,7 @@ FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
-    return getMetalFormat(format) != MTLPixelFormatInvalid ||
-           TextureReshaper::canReshapeTextureFormat(format);
+    return MetalTexture::decidePixelFormat(mContext->device, format) != MTLPixelFormatInvalid;
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
@@ -626,46 +610,40 @@ bool MetalDriver::isTextureSwizzleSupported() {
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     // Derived from the Metal 3.0 Feature Set Tables.
     // In order for a format to be mipmappable, it must be color-renderable and filterable.
-    auto isMipmappable = [](TextureFormat format) {
-        switch (format) {
-            // Mipmappable across all devices:
-            case TextureFormat::R8:
-            case TextureFormat::R8_SNORM:
-            case TextureFormat::R16F:
-            case TextureFormat::RG8:
-            case TextureFormat::RG8_SNORM:
-            case TextureFormat::RG16F:
-            case TextureFormat::RGBA8:
-            case TextureFormat::SRGB8_A8:
-            case TextureFormat::RGBA8_SNORM:
-            case TextureFormat::RGB10_A2:
-            case TextureFormat::R11F_G11F_B10F:
-            case TextureFormat::RGBA16F:
-                return true;
+    MTLPixelFormat metalFormat = MetalTexture::decidePixelFormat(mContext->device, format);
+    switch (metalFormat) {
+        // Mipmappable across all devices:
+        case MTLPixelFormatR8Unorm:
+        case MTLPixelFormatR8Snorm:
+        case MTLPixelFormatR16Float:
+        case MTLPixelFormatRG8Unorm:
+        case MTLPixelFormatRG8Snorm:
+        case MTLPixelFormatRG16Float:
+        case MTLPixelFormatRGBA8Unorm:
+        case MTLPixelFormatRGBA8Unorm_sRGB:
+        case MTLPixelFormatRGBA8Snorm:
+        case MTLPixelFormatRGB10A2Unorm:
+        case MTLPixelFormatRG11B10Float:
+        case MTLPixelFormatRGBA16Float:
+            return true;
 
 #if !defined(IOS)
-            // Mipmappable only on desktop:
-            case TextureFormat::R32F:
-            case TextureFormat::RG32F:
-            case TextureFormat::RGBA32F:
-                return true;
+        // Mipmappable only on desktop:
+        case MTLPixelFormatR32Float:
+        case MTLPixelFormatRG32Float:
+        case MTLPixelFormatRGBA32Float:
+            return true;
 #endif
 
 #if defined(IOS)
-            // Mipmappable only on iOS:
-            case TextureFormat::RGB9_E5:
-                return true;
+        // Mipmappable only on iOS:
+        case MTLPixelFormatRGB9E5Float:
+            return true;
 #endif
 
-            default:
-                return false;
-        }
-    };
-
-    // Certain Filament formats aren't natively supported by Metal, but can be reshaped into
-    // supported Formats.
-    TextureReshaper reshaper(format);
-    return isMipmappable(format) || isMipmappable(reshaper.getReshapedFormat());
+        default:
+            return false;
+    }
 }
 
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
@@ -702,24 +680,23 @@ uint8_t MetalDriver::getMaxDrawBuffers() {
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     assert_invariant(byteOffset == 0);    // TODO: handle byteOffset for index buffers
-    auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
+    auto* ib = handle_cast<MetalIndexBuffer>(ibh);
     ib->buffer.copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
-    auto* bo = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    auto* bo = handle_cast<MetalBufferObject>(boh);
     bo->updateBuffer(data.buffer, data.size, byteOffset);
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
-    auto* vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
-    auto* bufferObject = handle_cast<MetalBufferObject>(mHandleMap, boh);
+    auto* vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
+    auto* bufferObject = handle_cast<MetalBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    assert_invariant(bufferObject->getBuffer());
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
@@ -727,8 +704,8 @@ void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t x
         uint32_t yoffset, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update2DImage must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load2DImage(level, xoffset, yoffset, width, height, data);
+    auto tex = handle_cast<MetalTexture>(th);
+    tex->loadImage(level, MTLRegionMake2D(xoffset, yoffset, width, height), data);
     scheduleDestroy(std::move(data));
 }
 
@@ -741,8 +718,8 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "update3DImage must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
-    tex->load3DImage(level, xoffset, yoffset, zoffset, width, height, depth, data);
+    auto tex = handle_cast<MetalTexture>(th);
+    tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
     scheduleDestroy(std::move(data));
 }
 
@@ -750,7 +727,7 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "updateCubeImage must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
+    auto tex = handle_cast<MetalTexture>(th);
     tex->loadCubeImage(faceOffsets, level, data);
     scheduleDestroy(std::move(data));
 }
@@ -770,12 +747,12 @@ void MetalDriver::cancelExternalImage(void* image) {
 }
 
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    auto texture = handle_cast<MetalTexture>(mHandleMap, th);
+    auto texture = handle_cast<MetalTexture>(th);
     texture->externalImage.set((CVPixelBufferRef) image);
 }
 
 void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    auto texture = handle_cast<MetalTexture>(mHandleMap, th);
+    auto texture = handle_cast<MetalTexture>(th);
     texture->externalImage.set((CVPixelBufferRef) image, plane);
 }
 
@@ -783,12 +760,12 @@ void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
 bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    auto* tq = handle_cast<MetalTimerQuery>(tqh);
     return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
 }
 
 SyncStatus MetalDriver::getSyncStatus(Handle<HwSync> sh) {
-    auto* fence = handle_cast<MetalFence>(mHandleMap, sh);
+    auto* fence = handle_cast<MetalFence>(sh);
     FenceStatus status = fence->wait(0);
     if (status == FenceStatus::TIMEOUT_EXPIRED) {
         return SyncStatus::NOT_SIGNALED;
@@ -801,7 +778,7 @@ SyncStatus MetalDriver::getSyncStatus(Handle<HwSync> sh) {
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
                         "generateMipmaps must be called outside of a render pass.");
-    auto tex = handle_cast<MetalTexture>(mHandleMap, th);
+    auto tex = handle_cast<MetalTexture>(th);
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
     [blitEncoder generateMipmapsForTexture:tex->texture];
     [blitEncoder endEncoding];
@@ -813,27 +790,15 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
-        BufferDescriptor&& data) {
-    if (data.size <= 0) {
-       return;
-    }
-
-    auto uniform = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
-
-    uniform->buffer.copyIntoBuffer(data.buffer, data.size);
-    scheduleDestroy(std::move(data));
-}
-
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
-    auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
+    auto sb = handle_cast<MetalSamplerGroup>(sbh);
     *sb->sb = samplerGroup;
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
-    auto renderTarget = handle_cast<MetalRenderTarget>(mHandleMap, rth);
+    auto renderTarget = handle_cast<MetalRenderTarget>(rth);
     mContext->currentRenderTarget = renderTarget;
     mContext->currentRenderPassFlags = params.flags;
 
@@ -884,16 +849,16 @@ void MetalDriver::endRenderPass(int dummy) {
 
 void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
-    auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
-    auto vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
-    auto indexBuffer = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
+    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
+    auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
+    auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
     primitive->setBuffers(vertexBuffer, indexBuffer);
 }
 
 void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
         PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
         uint32_t count) {
-    auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
+    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     primitive->type = pt;
     primitive->offset = offset * primitive->indexBuffer->elementSize;
     primitive->count = count;
@@ -903,41 +868,43 @@ void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw, "A draw SwapChain must be set.");
-    auto* drawSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
+    auto* drawSwapChain = handle_cast<MetalSwapChain>(schDraw);
     mContext->currentDrawSwapChain = drawSwapChain;
 
     if (schRead) {
-        auto* readSwapChain = handle_cast<MetalSwapChain>(mHandleMap, schRead);
+        auto* readSwapChain = handle_cast<MetalSwapChain>(schRead);
         mContext->currentReadSwapChain = readSwapChain;
     }
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, sch);
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
     swapChain->present();
     submitPendingCommands(mContext);
     swapChain->releaseDrawable();
 }
 
-void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
-    mContext->uniformState[index] = UniformBufferState {
-        .offset = 0,
-        .ubh = ubh,
-        .bound = true
+void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    mContext->uniformState[index] = UniformBufferState{
+            .buffer = bo->getBuffer(),
+            .offset = 0,
+            .bound = true
     };
 }
 
-void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
-    mContext->uniformState[index] = UniformBufferState {
-        .offset = offset,
-        .ubh = ubh,
-        .bound = true
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    mContext->uniformState[index] = UniformBufferState{
+            .buffer = bo->getBuffer(),
+            .offset = offset,
+            .bound = true
     };
 }
 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
-    auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
+    auto sb = handle_cast<MetalSamplerGroup>(sbh);
     mContext->samplerBindings[index] = sb;
 }
 
@@ -981,7 +948,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
                         "readPixels must be called outside of a render pass.");
 
-    auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
+    auto srcTarget = handle_cast<MetalRenderTarget>(src);
     // We always readPixels from the COLOR0 attachment.
     MetalRenderTarget::Attachment color = srcTarget->getDrawColorAttachment(0);
     id<MTLTexture> srcTexture = color.texture;
@@ -1070,8 +1037,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         mContext->currentRenderPassEncoder = nil;
     }
 
-    auto srcTarget = handle_cast<MetalRenderTarget>(mHandleMap, src);
-    auto dstTarget = handle_cast<MetalRenderTarget>(mHandleMap, dst);
+    auto srcTarget = handle_cast<MetalRenderTarget>(src);
+    auto dstTarget = handle_cast<MetalRenderTarget>(dst);
 
     ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
                         dstRect.left >= 0 && dstRect.bottom >= 0,
@@ -1170,8 +1137,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
-    auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
-    auto program = handle_cast<MetalProgram>(mHandleMap, ps.program);
+    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
+    auto program = handle_cast<MetalProgram>(ps.program);
     const auto& rs = ps.rasterState;
 
     // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
@@ -1273,8 +1240,8 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     NSUInteger offsets[Program::BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
-            MetalUniformBuffer* uniform, uint32_t index) {
-        uniformsToBind[index] = &uniform->buffer;
+            MetalBuffer* buffer, uint32_t index) {
+        uniformsToBind[index] = buffer;
         offsets[index] = state.offset;
     });
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
@@ -1295,7 +1262,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         if (binding >= SAMPLER_BINDING_COUNT) {
             return;
         }
-        const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
+        const auto metalTexture = handle_const_cast<MetalTexture>(sampler->t);
         texturesToBind[binding] = metalTexture->swizzledTextureView ? metalTexture->swizzledTextureView
                                                                     : metalTexture->texture;
 
@@ -1383,14 +1350,14 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "beginTimerQuery must be called outside of a render pass.");
-    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    auto* tq = handle_cast<MetalTimerQuery>(tqh);
     mContext->timerQueryImpl->beginTimeElapsedQuery(tq);
 }
 
 void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "endTimerQuery must be called outside of a render pass.");
-    auto* tq = handle_cast<MetalTimerQuery>(mHandleMap, tqh);
+    auto* tq = handle_cast<MetalTimerQuery>(tqh);
     mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
@@ -1426,14 +1393,13 @@ void MetalDriver::enumerateSamplerGroups(
 }
 
 void MetalDriver::enumerateBoundUniformBuffers(
-        const std::function<void(const UniformBufferState&, MetalUniformBuffer*, uint32_t)>& f) {
+        const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
     for (uint32_t i = 0; i < Program::BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;
         }
-        auto* uniform = handle_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
-        f(thisUniform, uniform, i);
+        f(thisUniform, thisUniform.buffer, i);
     }
 }
 

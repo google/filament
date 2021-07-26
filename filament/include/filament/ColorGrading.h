@@ -64,6 +64,7 @@ class FColorGrading;
  * ========
  *
  * The various transforms held by ColorGrading are applied in the following order:
+ * - Exposure
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
@@ -73,11 +74,13 @@ class FColorGrading;
  * - Saturation
  * - Curves
  * - Tone mapping
+ * - Luminance scaling
  *
  * Defaults
  * ========
  *
  * Here are the default color grading options:
+ * - Exposure: 0.0
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
@@ -88,6 +91,7 @@ class FColorGrading;
  * - Saturation: 1.0
  * - Curves: gamma {1,1,1}, midPoint {1,1,1}, and scale {1,1,1}
  * - Tone mapping: ACES_LEGACY
+ * - Luminance scaling: false
  *
  * @see View
  */
@@ -109,7 +113,7 @@ public:
         ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
         ACES          = 2,     //!< ACES tone mapping
         FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        EVILS         = 4,     //!< Exposure value invariant luminance scaling tone mapping, offers the best behaviors in high intensity areas
+        RESERVED      = 4,     //!< Currently unused
         REINHARD      = 5,     //!< Reinhard luma-based tone mapping
         DISPLAY_RANGE = 6,     //!< Tone mapping used to validate/debug scene exposure
     };
@@ -151,6 +155,35 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
+
+        /**
+         * Enables or disables the luminance scaling component (LICH) from the exposure value
+         * invariant luminance system (EVILS). When this setting is enabled, pixels with high
+         * chromatic values will roll-off to white to offer a more natural rendering. This step
+         * also helps avoid undesirable hue skews caused by out of gamut colors clipped
+         * to the destination color gamut.
+         *
+         * When luminance scaling is enabled, tone mapping is performed on the luminance of each
+         * pixel instead of per-channel.
+         *
+         * @param luminanceScaling Enables or disables EVILS post-tone mapping
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& luminanceScaling(bool luminanceScaling) noexcept;
+
+        /**
+         * Adjusts the exposure of this image. The exposure is specified in stops:
+         * each stop brightens (positive values) or darkens (negative values) the image by
+         * a factor of 2. This means that an exposure of 3 will brighten the image 8 times
+         * more than an exposure of 0 (2^3 = 8 and 2^0 = 1). Contrary to the camera's exposure,
+         * this setting is applied after all post-processing (bloom, etc.) are applied.
+         *
+         * @param exposure Value in EV stops. Can be negative, 0, or positive.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& exposure(float exposure) noexcept;
 
         /**
          * Adjusts the while balance of the image. This can be used to remove color casts

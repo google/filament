@@ -1795,7 +1795,11 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
     FMaterialInstance* mi = material.getMaterialInstance();
     mi->setParameter("lut", colorGrading->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR
+            .filterMin = SamplerMinFilter::LINEAR,
+            .wrapS = SamplerWrapMode::CLAMP_TO_EDGE,
+            .wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
+            .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
+            .anisotropyLog2 = 0
     });
 
     const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());

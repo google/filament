@@ -32,6 +32,7 @@
 #include "details/RenderPrimitive.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
+#include "details/SkinningBuffer.h"
 #include "details/Stream.h"
 #include "details/SwapChain.h"
 #include "details/Texture.h"
@@ -330,6 +331,7 @@ void FEngine::shutdown() {
 
     cleanupResourceList(mBufferObjects);
     cleanupResourceList(mIndexBuffers);
+    cleanupResourceList(mSkinningBuffers);
     cleanupResourceList(mVertexBuffers);
     cleanupResourceList(mTextures);
     cleanupResourceList(mRenderTargets);
@@ -565,6 +567,10 @@ FIndexBuffer* FEngine::createIndexBuffer(const IndexBuffer::Builder& builder) no
     return create(mIndexBuffers, builder);
 }
 
+FSkinningBuffer* FEngine::createSkinningBuffer(const SkinningBuffer::Builder& builder) noexcept {
+    return create(mSkinningBuffers, builder);
+}
+
 FTexture* FEngine::createTexture(const Texture::Builder& builder) noexcept {
     return create(mTextures, builder);
 }
@@ -745,6 +751,10 @@ bool FEngine::destroy(const FVertexBuffer* p) {
 
 bool FEngine::destroy(const FIndexBuffer* p) {
     return terminateAndDestroy(p, mIndexBuffers);
+}
+
+bool FEngine::destroy(const FSkinningBuffer* p) {
+    return terminateAndDestroy(p, mSkinningBuffers);
 }
 
 inline bool FEngine::destroy(const FRenderer* p) {
@@ -1014,6 +1024,10 @@ void Engine::destroy(Entity e) {
 
 void Engine::flushAndWait() {
     upcast(this)->flushAndWait();
+}
+
+void Engine::flush() {
+    upcast(this)->flush();
 }
 
 utils::EntityManager& Engine::getEntityManager() noexcept {

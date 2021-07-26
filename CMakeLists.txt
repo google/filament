@@ -43,6 +43,10 @@ set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "4" CACHE STRING
     "Size of the OpenGL handle arena, default 4."
 )
 
+set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
+    "Size of the Metal handle arena, default 8."
+)
+
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
@@ -287,6 +291,12 @@ if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 endif()
 
+# Use hidden by default and expose what we need.
+if (NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+endif()
+
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
@@ -438,8 +448,9 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
+# Disable optimizations and enable debug info (preserves names in SPIR-V)
 if (FILAMENT_DISABLE_MATOPT)
-    set(MATC_OPT_FLAGS -g)
+    set(MATC_OPT_FLAGS -gd)
 endif()
 
 set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})

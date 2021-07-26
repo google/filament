@@ -19,6 +19,7 @@
 
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
+#include "GLUtils.h"
 #include "OpenGLContext.h"
 
 #include "private/backend/HandleAllocator.h"
@@ -65,20 +66,21 @@ public:
     };
 
     // OpenGLDriver specific fields
-    struct GLBuffer {
-        GLuint id = 0;
-        uint32_t capacity = 0;
-        uint32_t base = 0;
-        uint32_t size = 0;
-        backend::BufferUsage usage = {};
-    };
 
     struct GLBufferObject : public backend::HwBufferObject {
         using HwBufferObject::HwBufferObject;
-        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
+        GLBufferObject(uint32_t size,
+                backend::BufferObjectBinding bindingType, backend::BufferUsage usage) noexcept
+                : HwBufferObject(size), usage(usage) {
+            gl.binding = GLUtils::getBufferBindingType(bindingType);
+        }
         struct {
             GLuint id = 0;
+            GLenum binding = 0;
         } gl;
+        uint32_t base = 0;
+        uint32_t size = 0;
+        backend::BufferUsage usage = {};
     };
 
     struct GLVertexBuffer : public backend::HwVertexBuffer {
@@ -93,17 +95,6 @@ public:
         using HwIndexBuffer::HwIndexBuffer;
         struct {
             GLuint buffer{};
-        } gl;
-    };
-
-    struct GLUniformBuffer : public backend::HwUniformBuffer {
-        using HwUniformBuffer::HwUniformBuffer;
-        GLUniformBuffer(uint32_t capacity, backend::BufferUsage usage) noexcept {
-            gl.ubo.capacity = capacity;
-            gl.ubo.usage = usage;
-        }
-        struct {
-            GLBuffer ubo;
         } gl;
     };
 
@@ -249,17 +240,18 @@ private:
 
     // Memory management...
 
-    backend::HandleAllocator mHandleAllocator;
+    // See also the explicit template instantiation in HandleAllocator.cpp
+    backend::HandleAllocatorGL mHandleAllocator;
 
     template<typename D, typename ... ARGS>
     backend::Handle<D> initHandle(ARGS&& ... args) noexcept {
-        return mHandleAllocator.allocate<D>(std::forward<ARGS>(args) ...);
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
     }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
     construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept {
-        return mHandleAllocator.construct<D, B>(handle, std::forward<ARGS>(args) ...);
+        return mHandleAllocator.destroyAndConstruct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
     template<typename B, typename D,
@@ -386,7 +378,7 @@ private:
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStreamTexId(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateStreamAcquired(GLTexture* t, backend::DriverApi* driver) noexcept;
-    void updateBuffer(GLenum target, GLBuffer* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
+    void updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     void setExternalTexture(GLTexture* t, void* image);

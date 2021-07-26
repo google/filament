@@ -64,7 +64,8 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
+    mPerViewSb.setSampler(PerViewSib::FROXELS,{ mFroxelizer.getFroxelTexture() });
+
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
@@ -73,9 +74,12 @@ FView::FView(FEngine& engine)
     mPerViewSbh = driver.createSamplerGroup(mPerViewSb.getSize());
 
     // allocate ubos
-    mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), backend::BufferUsage::DYNAMIC);
-    mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), backend::BufferUsage::DYNAMIC);
-    mShadowUbh = driver.createUniformBuffer(mShadowUb.getSize(), backend::BufferUsage::DYNAMIC);
+    mPerViewUbh = driver.createBufferObject(mPerViewUb.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
@@ -91,11 +95,11 @@ FView::~FView() noexcept = default;
 void FView::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated or we own (currently none).
     DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mPerViewUbh);
-    driver.destroyUniformBuffer(mLightUbh);
-    driver.destroyUniformBuffer(mShadowUbh);
+    driver.destroyBufferObject(mPerViewUbh);
+    driver.destroyBufferObject(mLightUbh);
+    driver.destroyBufferObject(mShadowUbh);
     driver.destroySamplerGroup(mPerViewSbh);
-    driver.destroyUniformBuffer(mRenderableUbh);
+    driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
     mFroxelizer.terminate(driver);
 }
@@ -517,9 +521,9 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
                 // allocate 1/3 extra, with a minimum of 16 objects
                 const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
-                driver.destroyUniformBuffer(mRenderableUbh);
-                mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize,
-                        backend::BufferUsage::STREAM);
+                driver.destroyBufferObject(mRenderableUbh);
+                mRenderableUbh = driver.createBufferObject(mRenderableUBOSize,
+                        BufferObjectBinding::UNIFORM, backend::BufferUsage::STREAM);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
             }
@@ -569,10 +573,6 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     s.fogInscatteringStart = fogOptions.inScatteringStart;
     s.fogInscatteringSize  = fogOptions.inScatteringSize;
     s.fogColorFromIbl      = fogOptions.fogColorFromIbl ? 1.0f : 0.0f;
-
-    // upload the renderables's dirty UBOs
-    engine.getRenderableManager().prepare(driver,
-            renderableData.data<FScene::RENDERABLE_INSTANCE>(), merged);
 
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);
@@ -747,11 +747,11 @@ void FView::froxelize(FEngine& engine) const noexcept {
 
 void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
-        driver.loadUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
+        driver.updateBufferObject(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver), 0);
     }
 
     if (mShadowUb.isDirty()) {
-        driver.loadUniformBuffer(mShadowUbh, mShadowUb.toBufferDescriptor(driver));
+        driver.updateBufferObject(mShadowUbh, mShadowUb.toBufferDescriptor(driver), 0);
     }
 
     if (mPerViewSb.isDirty()) {

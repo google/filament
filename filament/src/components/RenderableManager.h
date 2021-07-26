@@ -35,14 +35,13 @@
 #include <utils/Slice.h>
 #include <utils/Range.h>
 
-// for gtest
-class FilamentTest_Bones_Test;
-
 namespace filament {
 
+class FBufferObject;
+class FIndexBuffer;
 class FMaterialInstance;
 class FRenderPrimitive;
-class FIndexBuffer;
+class FSkinningBuffer;
 class FVertexBuffer;
 
 class FRenderableManager : public RenderableManager {
@@ -84,12 +83,6 @@ public:
 
     void destroy(utils::Entity e) noexcept;
 
-    // - instances is a list of Instance (typically the list from a given scene)
-    // - list is a list of index in 'instances' (typically the visible ones)
-    void prepare(backend::DriverApi& driver,
-            RenderableManager::Instance const* instances,
-            utils::Range<uint32_t> list) const noexcept;
-
     void gc(utils::EntityManager& em) noexcept {
         mManager.gc(em);
     }
@@ -113,7 +106,8 @@ public:
     inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setMorphWeights(Instance instance, const math::float4& weights) noexcept;
-
+    inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
+            size_t count, size_t offset) noexcept;
 
     inline bool isShadowCaster(Instance instance) const noexcept;
     inline bool isShadowReceiver(Instance instance) const noexcept;
@@ -125,9 +119,14 @@ public:
     inline Visibility getVisibility(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
-    inline filament::math::float4 getMorphWeights(Instance instance) const noexcept;
+    inline math::float4 getMorphWeights(Instance instance) const noexcept;
 
-    inline backend::Handle<backend::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
+    struct SkinningBindingInfo {
+        backend::Handle<backend::HwBufferObject> handle;
+        uint32_t offset;
+    };
+
+    inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
     inline uint32_t getBoneCount(Instance instance) const noexcept;
 
 
@@ -152,14 +151,13 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        filament::backend::Handle<backend::HwUniformBuffer> handle;
-        UniformBuffer bones;
-        size_t count;
+        backend::Handle<backend::HwBufferObject> handle;
+        uint16_t count = 0;
+        uint16_t offset = 0;
+        bool skinningBufferMode = false;
     };
 
-    friend class ::FilamentTest_Bones_Test;
-
-    static void makeBone(PerRenderableUibBone* out, math::mat4f const& transforms) noexcept;
+    static_assert(sizeof(Bones) == 12);
 
     enum {
         AABB,               // user data
@@ -173,10 +171,10 @@ private:
     using Base = utils::SingleInstanceComponentManager<
             Box,                             // AABB
             uint8_t,                         // LAYERS
-            filament::math::float4,          // MORPH_WEIGHTS
+            math::float4,                    // MORPH_WEIGHTS
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
-            std::unique_ptr<Bones>           // BONES
+            Bones                            // BONES
     >;
 
     struct Sim : public Base {
@@ -315,7 +313,7 @@ uint8_t FRenderableManager::getPriority(Instance instance) const noexcept {
     return getVisibility(instance).priority;
 }
 
-filament::math::float4 FRenderableManager::getMorphWeights(Instance instance) const noexcept {
+math::float4 FRenderableManager::getMorphWeights(Instance instance) const noexcept {
     return mManager[instance].morphWeights;
 }
 
@@ -323,14 +321,15 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
 
-backend::Handle<backend::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
-    std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->handle : backend::Handle<backend::HwUniformBuffer>{};
+FRenderableManager::SkinningBindingInfo
+FRenderableManager::getSkinningBufferInfo(Instance instance) const noexcept {
+    Bones const& bones = mManager[instance].bones;
+    return { bones.handle, bones.offset };
 }
 
 inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {
-    std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->count : 0;
+    Bones const& bones = mManager[instance].bones;
+    return bones.count;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

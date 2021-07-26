@@ -85,12 +85,11 @@ Driver* OpenGLDriver::create(
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    GLBufferObject            :   8       moderate
     //    GLFence                   :   8       few
     //    GLIndexBuffer             :   8       moderate
     //    GLSamplerGroup            :   8       few
     // -- less than or equal 16 bytes
-    //    GLUniformBuffer           :  20       many
+    //    GLBufferObject            :  24       many
     //    GLSync                    :  24       few
     //    GLTimerQuery              :  32       few
     //    GLRenderPrimitive         :  48       many
@@ -107,7 +106,6 @@ Driver* OpenGLDriver::create(
            << "\nGLBufferObject: " << sizeof(GLBufferObject)
            << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
            << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
-           << "\nGLUniformBuffer: " << sizeof(GLUniformBuffer)
            << "\nGLSamplerGroup: " << sizeof(GLSamplerGroup)
            << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
            << "\nGLTexture: " << sizeof(GLTexture)
@@ -352,10 +350,6 @@ Handle<HwSamplerGroup> OpenGLDriver::createSamplerGroupS() noexcept {
     return initHandle<GLSamplerGroup>();
 }
 
-Handle<HwUniformBuffer> OpenGLDriver::createUniformBufferS() noexcept {
-    return initHandle<GLUniformBuffer>();
-}
-
 Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -429,22 +423,20 @@ void OpenGLDriver::createIndexBufferR(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createBufferObjectR(
-        Handle<HwBufferObject> boh,
-        uint32_t byteCount,
-        BufferObjectBinding bindingType) {
+void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
+        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
     DEBUG_MARKER()
+    assert_invariant(byteCount > 0);
 
     auto& gl = mContext;
-    GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount);
+    if (bindingType == BufferObjectBinding::VERTEX) {
+        gl.bindVertexArray(nullptr);
+    }
+
+    GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount, bindingType, usage);
     glGenBuffers(1, &bo->gl.id);
-    gl.bindVertexArray(nullptr);
-
-    assert_invariant(byteCount > 0);
-    assert_invariant(bindingType == BufferObjectBinding::VERTEX);
-
-    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferData(GL_ARRAY_BUFFER, byteCount, nullptr, GL_STATIC_DRAW);
+    gl.bindBuffer(bo->gl.binding, bo->gl.id);
+    glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -468,21 +460,6 @@ void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size
 
     construct<GLSamplerGroup>(sbh, size);
 }
-
-void OpenGLDriver::createUniformBufferR(
-        Handle<HwUniformBuffer> ubh,
-        uint32_t size,
-        BufferUsage usage) {
-    DEBUG_MARKER()
-
-    auto& gl = mContext;
-    GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size, usage);
-    glGenBuffers(1, &ub->gl.ubo.id);
-    gl.bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo.id);
-    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
 
 UTILS_NOINLINE
 void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
@@ -1218,11 +1195,10 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     DEBUG_MARKER()
-
     if (boh) {
         auto& gl = mContext;
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-        gl.deleteBuffers(1, &bo->gl.id, GL_ARRAY_BUFFER);
+        gl.deleteBuffers(1, &bo->gl.id, bo->gl.binding);
         destruct(boh, bo);
     }
 }
@@ -1251,16 +1227,6 @@ void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     if (sbh) {
         GLSamplerGroup* sb = handle_cast<GLSamplerGroup*>(sbh);
         destruct(sbh, sb);
-    }
-}
-
-void OpenGLDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    DEBUG_MARKER()
-    if (ubh) {
-        auto& gl = mContext;
-        GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
-        gl.deleteBuffers(1, &ub->gl.ubo.id, GL_UNIFORM_BUFFER);
-        destruct(ubh, ub);
     }
 }
 
@@ -1471,7 +1437,7 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
             // we can end-up here if:
             // - the platform doesn't support h/w fences
             // - wait() was called before the fence was asynchronously created.
-            //   This case is not handled in OpenGLDriver but is handle by FFence.
+            //   This case is not handled in OpenGLDriver but is handled by FFence.
             //   TODO: move FFence logic into the backend.
             return FenceStatus::ERROR;
         }
@@ -1637,6 +1603,8 @@ void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
     GLVertexBuffer* vb = handle_cast<GLVertexBuffer *>(vbh);
     GLBufferObject* bo = handle_cast<GLBufferObject *>(boh);
 
+    assert_invariant(bo->gl.binding == GL_ARRAY_BUFFER);
+
     // If the specified VBO handle is different from what's already in the slot, then update the
     // slot and bump the cyclical version number. Dependent VAOs use the version number to detect
     // when they should be updated.
@@ -1677,35 +1645,29 @@ void OpenGLDriver::updateBufferObject(
 
     assert_invariant(bd.size + byteOffset <= bo->byteCount);
 
-    gl.bindVertexArray(nullptr);
-    gl.bindBuffer(GL_ARRAY_BUFFER, bo->gl.id);
-    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, bd.size, bd.buffer);
+    if (bo->gl.binding == GL_UNIFORM_BUFFER) {
+        // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
+        updateBuffer(bo, bd, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
+    } else {
+        if (bo->gl.binding == GL_ARRAY_BUFFER) {
+            gl.bindVertexArray(nullptr);
+        }
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+    }
 
     scheduleDestroy(std::move(bd));
 
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& p) {
-    DEBUG_MARKER()
-
-    GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-
-    auto& gl = mContext;
-    if (p.size > 0) {
-        updateBuffer(GL_UNIFORM_BUFFER, &ub->gl.ubo, p,
-                (uint32_t)gl.gets.uniform_buffer_offset_alignment);
-    }
-    scheduleDestroy(std::move(p));
-}
-
-void OpenGLDriver::updateBuffer(GLenum target,
-        GLBuffer* buffer, BufferDescriptor const& p, uint32_t alignment) noexcept {
-    assert_invariant(buffer->capacity >= p.size);
-    assert_invariant(buffer->id);
+void OpenGLDriver::updateBuffer(GLBufferObject* buffer,
+        BufferDescriptor const& p, uint32_t alignment) noexcept {
+    assert_invariant(buffer->byteCount >= p.size);
+    assert_invariant(buffer->gl.id);
 
     auto& gl = mContext;
-    gl.bindBuffer(target, buffer->id);
+    gl.bindBuffer(buffer->gl.binding, buffer->gl.id);
     if (buffer->usage == BufferUsage::STREAM) {
 
         buffer->size = (uint32_t)p.size;
@@ -1717,21 +1679,21 @@ void OpenGLDriver::updateBuffer(GLenum target,
             uint32_t offset = buffer->base + buffer->size;
             offset = (offset + (alignment - 1u)) & ~(alignment - 1u);
 
-            if (offset + p.size > buffer->capacity) {
+            if (offset + p.size > buffer->byteCount) {
                 // if we've reached the end of the buffer, we orphan it and allocate a new one.
                 // this is assuming the driver actually does that as opposed to stalling. This is
                 // the case for Mali and Adreno -- we could use fences instead.
                 offset = 0;
-                glBufferData(target, buffer->capacity, nullptr, getBufferUsage(buffer->usage));
+                glBufferData(buffer->gl.binding, buffer->byteCount, nullptr, getBufferUsage(buffer->usage));
             }
     retry:
-            void* vaddr = glMapBufferRange(target, offset, p.size,
+            void* vaddr = glMapBufferRange(buffer->gl.binding, offset, p.size,
                     GL_MAP_WRITE_BIT |
                     GL_MAP_INVALIDATE_RANGE_BIT |
                     GL_MAP_UNSYNCHRONIZED_BIT);
             if (vaddr) {
                 memcpy(vaddr, p.buffer, p.size);
-                if (glUnmapBuffer(target) == GL_FALSE) {
+                if (glUnmapBuffer(buffer->gl.binding) == GL_FALSE) {
                     // According to the spec, UnmapBuffer can return FALSE in rare conditions (e.g.
                     // during a screen mode change). Note that is not a GL error, and we can handle
                     // it by simply making a second attempt.
@@ -1739,7 +1701,7 @@ void OpenGLDriver::updateBuffer(GLenum target,
                 }
             } else {
                 // handle mapping error, revert to glBufferSubData()
-                glBufferSubData(target, offset, p.size, p.buffer);
+                glBufferSubData(buffer->gl.binding, offset, p.size, p.buffer);
             }
             buffer->base = offset;
 
@@ -1748,15 +1710,15 @@ void OpenGLDriver::updateBuffer(GLenum target,
         }
     }
 
-    if (p.size == buffer->capacity) {
+    if (p.size == buffer->byteCount) {
         // it looks like it's generally faster (or not worse) to use glBufferData()
-        glBufferData(target, buffer->capacity, p.buffer, getBufferUsage(buffer->usage));
+        glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer, getBufferUsage(buffer->usage));
     } else {
         // when loading less that the buffer size, it's okay to assume the back of the buffer
         // is undefined. glBufferSubData() could be catastrophically inefficient if several are
         // issued during the same frame. Currently, we're not doing that though.
         // TODO: investigate if it'll be faster to use glBufferData().
-        glBufferSubData(target, 0, p.size, p.buffer);
+        glBufferSubData(buffer->gl.binding, 0, p.size, p.buffer);
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -2695,25 +2657,25 @@ void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwUniformBuffer> ubh) {
+void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
     DEBUG_MARKER()
     auto& gl = mContext;
-    GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    assert_invariant(ub->gl.ubo.base == 0);
-    gl.bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo.id, 0, ub->gl.ubo.capacity);
+    GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
+    assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
+    assert_invariant(ub->base == 0);
+    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, 0, ub->byteCount);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniformBufferRange(uint32_t index, Handle<HwUniformBuffer> ubh,
+void OpenGLDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> ubh,
         uint32_t offset, uint32_t size) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
-    // TODO: Is this assert really needed? Note that size is only populated for STREAM buffers.
-    assert_invariant(size <= ub->gl.ubo.size);
-    assert_invariant(ub->gl.ubo.base + offset + size <= ub->gl.ubo.capacity);
-    gl.bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo.id, ub->gl.ubo.base + offset, size);
+    GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
+    assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
+    assert_invariant(ub->base + offset + size <= ub->byteCount);
+    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, ub->base + offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }
 

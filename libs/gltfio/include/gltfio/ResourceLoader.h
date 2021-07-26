@@ -21,6 +21,8 @@
 
 #include <backend/BufferDescriptor.h>
 
+#include <utils/compiler.h>
+
 namespace filament {
     class Engine;
 }
@@ -66,7 +68,7 @@ struct ResourceConfiguration {
  * subsequent re-loads of the same asset. To fix this, we would need to enable shared ownership
  * of Texture objects between ResourceLoader and FilamentAsset.
  */
-class ResourceLoader {
+class UTILS_PUBLIC ResourceLoader {
 public:
     using BufferDescriptor = filament::backend::BufferDescriptor;
 

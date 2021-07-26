@@ -325,6 +325,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
     if (!optimizeShaders) {
         builder.optimization(MaterialBuilder::Optimization::NONE);
+        builder.generateDebugInfo(true);
     }
 
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");

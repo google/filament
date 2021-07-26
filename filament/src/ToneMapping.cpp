@@ -16,6 +16,8 @@
 
 #include "ToneMapping.h"
 
+using namespace filament::math;
+
 namespace filament {
 namespace aces {
 
@@ -103,7 +105,7 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
     float3 XYZ = AP1_to_XYZ * linearCV;
     float3 xyY = XYZ_to_xyY(XYZ);
 
-    xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<math::half>::max());
+    xyY.z = clamp(xyY.z, 0.0f, (float)std::numeric_limits<half>::max());
     xyY.z = std::pow(xyY.z, DIM_SURROUND_GAMMA);
 
     XYZ = xyY_to_XYZ(xyY);
@@ -147,7 +149,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     ap0.r += hueWeight * saturation * (RRT_RED_PIVOT - ap0.r) * (1.0f - RRT_RED_SCALE);
 
     // ACES to RGB rendering space
-    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<math::half>::max());
+    float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<half>::max());
 
     // Global desaturation
     ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);
@@ -186,8 +188,19 @@ float3 ACES_Legacy(float3 x) noexcept {
     return aces::ACES(x, 1.0f / 0.6f);
 }
 
-float genericTonemap(float x, float contrast, float shoulder,
-        float midGreyIn, float midGreyOut, float hdrMax) noexcept {
+// TODO: These constants were chosen to match our ACES tone mappers as closely as possible
+//       in terms of compression. We should expose these parameters to users via an API.
+//       We must however carefully validate exposed parameters as it is easy to get the
+//       generic tonemapper to produce invalid curves.
+// TODO: Expose this as a public tone mapper
+float genericTonemap(
+        float x,
+        float contrast = 1.6f,
+        float shoulder = 1.0f,
+        float midGreyIn = 0.18f,
+        float midGreyOut = 0.227f,
+        float hdrMax = 64.0f
+) noexcept {
     // Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines"
     // https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
     float mc = std::pow(midGreyIn, contrast);
@@ -206,42 +219,6 @@ float genericTonemap(float x, float contrast, float shoulder,
 
     float xc = std::pow(x, contrast);
     return saturate(xc / (std::pow(xc, shoulder) * b + c));
-}
-
-float3 EVILS(float3 x) noexcept {
-    // Troy Sobotka, 2021, "EVILS - Exposure Value Invariant Luminance Scaling"
-    // https://colab.research.google.com/drive/1iPJzNNKR7PynFmsqSnQm3bCZmQ3CvAJ-#scrollTo=psU43hb-BLzB
-
-    // TODO: These constants were chosen to match our ACES tone mappers as closely as possible
-    //       in terms of compression. We should expose these parameters to users via an API.
-    //       We must however carefully validate exposed parameters as it is easy to get the
-    //       generic tonemapper to produce invalid curves.
-    constexpr float contrast = 1.6f;
-    constexpr float shoulder = 1.0f;
-    constexpr float midGreyIn = 0.18f;
-    constexpr float midGreyOut = 0.227f;
-    constexpr float hdrMax = 64.0f;
-
-    // We assume an input compatible with Rec.709 luminance weights
-    float luminanceIn = dot(x, LUMA_REC709);
-    float luminanceOut = genericTonemap(luminanceIn, contrast, shoulder, midGreyIn, midGreyOut, hdrMax);
-
-    float peak = max(x);
-    float3 chromaRatio = max(x / peak, 0.0f);
-
-    float chromaRatioLuminance = dot(chromaRatio, LUMA_REC709);
-
-    float3 maxReserves = 1.0f - chromaRatio;
-    float maxReservesLuminance = dot(maxReserves, LUMA_REC709);
-
-    float luminanceDifference = std::max(luminanceOut - chromaRatioLuminance, 0.0f);
-    float scaledLuminanceDifference =
-            luminanceDifference / std::max(maxReservesLuminance, std::numeric_limits<float>::min());
-
-    float chromaScale = (luminanceOut - luminanceDifference) /
-            std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
-
-    return saturate(chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves);
 }
 
 float3 DisplayRange(float3 x) noexcept {

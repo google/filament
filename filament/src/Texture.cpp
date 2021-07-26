@@ -38,6 +38,7 @@ using namespace utils;
 namespace filament {
 
 using namespace backend;
+using namespace math;
 
 struct Texture::BuilderDetails {
     intptr_t mImportedId = 0;
@@ -615,8 +616,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
                                               static_cast<char const*>(buffer.buffer)
                                               + faceOffsets[j]) + y * stride;
                 for (size_t x = 0; x < size; x++, out++, src++) {
-                    using fp10 = math::fp<0, 5, 5>;
-                    using fp11 = math::fp<0, 5, 6>;
+                    using fp10 = fp<0, 5, 5>;
+                    using fp11 = fp<0, 5, 6>;
                     fp11 r{ uint16_t( *src         & 0x7FFu) };
                     fp11 g{ uint16_t((*src >> 11u) & 0x7FFu) };
                     fp10 b{ uint16_t((*src >> 22u) & 0x3FFu) };

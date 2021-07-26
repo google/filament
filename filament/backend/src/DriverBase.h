@@ -111,9 +111,6 @@ struct HwSamplerGroup : public HwBase {
     explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
-struct HwUniformBuffer : public HwBase {
-};
-
 struct HwTexture : public HwBase {
     uint32_t width{};
     uint32_t height{};

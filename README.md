@@ -31,39 +31,28 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.11.0'
+    implementation 'com.google.android.filament:filament-android:1.11.1'
 }
 ```
 
 Here are all the libraries available in the group `com.google.android.filament`:
 
-[![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  
-The Filament rendering engine itself.
-
-[![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android)  
-A glTF 2.0 loader for Filament, depends on `filament-android`  .
-
-[![gltfio-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite/badge.svg?subject=gltfio-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite)  
-Trimmed version of `gltfio` that does not support some glTF features.
-
-[![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android)  
-KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`.
-
-[![filament-utils-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite/badge.svg?subject=filament-utils-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite)  
-Trimmed version of `filament-utils` that does not support some glTF features.
-
-[![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android)  
-A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer.
-
-[![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite)  
-A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations.
+| Artifact      | Description   |
+| ------------- | ------------- |
+| [![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
+| [![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
+| [![gltfio-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite/badge.svg?subject=gltfio-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite) | Trimmed version of `gltfio` that does not support some glTF extensions. |
+| [![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
+| [![filament-utils-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite/badge.svg?subject=filament-utils-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite) | Trimmed version of `filament-utils` that does not support some glTF features. |
+| [![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
+| [![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite) | A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations. |
 
 ### iOS
 
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.11.0'
+pod 'Filament', '~> 1.11.1'
 ```
 
 ### Snapshots
@@ -96,19 +85,6 @@ steps:
 ![Materials](docs/images/samples/example_materials2.jpg)
 ![Helmet](docs/images/samples/example_helmet.jpg)
 ![Screen-space refraction](docs/images/samples/example_ssr.jpg)
-
-
-### Applications
-
-Here are a few screenshots of applications that use Filament in production:
-
-#### Google Maps AR Navigation
-
-![Google Maps AR Navigation](docs/images/samples/app_gmm_ar_nav.jpg)
-
-#### Google Search 3D/AR Viewer on Android
-
-![Google Search 3D/AR Viewer on Android](docs/images/samples/app_google_3d_viewer.jpg)
 
 ## Features
 
@@ -264,8 +240,11 @@ if (renderer->beginFrame(swapChain)) {
 ```
 
 For complete examples of Linux, macOS and Windows Filament applications, look at the source files
-in the `samples/` directory. These samples are all based on `samples/app/` which contains the code
-that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
+in the `samples/` directory. These samples are all based on `libs/filamentapp/` which contains the
+code that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
+
+For more information on how to prepare environment maps for image-based lighting please refer to
+[BUILDING.md](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples).
 
 ### Android
 
@@ -295,6 +274,10 @@ OpenGL ES.
 To get started you can use the textures and environment maps found respectively in
 `third_party/textures` and `third_party/environments`. These assets are under CC0 license. Please
 refer to their respective `URL.txt` files to know more about the original authors.
+
+Environments must be pre-processed using
+[`cmgen`](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples) or
+using the `libiblprefilter` library.
 
 ## How to make contributions
 

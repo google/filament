@@ -716,7 +716,8 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Indent();
             ImGui::Checkbox("Enabled##colorGrading", &params.colorGrading);
             ImGui::Combo("Tone-mapping", &colorGrading.toneMapping,
-                    "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
+                    "Linear\0ACES (legacy)\0ACES\0Filmic\0Reserved\0Reinhard\0Display Range\0\0");
+            ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
             if (ImGui::CollapsingHeader("While balance")) {
                 ImGui::SliderInt("Temperature", &colorGrading.temperature, -100, 100);
                 ImGui::SliderInt("Tint", &colorGrading.tint, -100, 100);
@@ -984,6 +985,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
                     .saturation(options.saturation)
                     .curves(options.gamma, options.midPoint, options.scale)
                     .toneMapping(static_cast<ColorGrading::ToneMapping>(options.toneMapping))
+                    .luminanceScaling(options.luminanceScaling)
                     .build(*engine);
 
             if (g_colorGrading) {

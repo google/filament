@@ -445,6 +445,8 @@ public:
      */
     void flushAndWait();
 
+    void flush();
+
     /**
      * Returns the default Material.
      *

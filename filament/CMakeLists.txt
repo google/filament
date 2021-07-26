@@ -32,6 +32,7 @@ set(PUBLIC_HDRS
         include/filament/RenderableManager.h
         include/filament/Renderer.h
         include/filament/Scene.h
+        include/filament/SkinningBuffer.h
         include/filament/Skybox.h
         include/filament/Stream.h
         include/filament/SwapChain.h
@@ -59,7 +60,6 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
-        src/GPUBuffer.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
@@ -74,6 +74,7 @@ set(SRCS
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
+        src/SkinningBuffer.cpp
         src/Skybox.cpp
         src/Stream.cpp
         src/SwapChain.cpp
@@ -101,7 +102,6 @@ set(PRIVATE_HDRS
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
-        src/GPUBuffer.h
         src/Intersections.h
         src/MaterialParser.h
         src/PostProcessManager.h
@@ -137,6 +137,7 @@ set(PRIVATE_HDRS
         src/details/ShadowMap.h
         src/details/ShadowMapManager.h
         src/details/Skybox.h
+        src/details/SkinningBuffer.h
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
@@ -223,6 +224,7 @@ add_definitions(
     -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
     -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
     -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
+    -DFILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB}
 )
 
 # ==================================================================================================
@@ -388,14 +390,13 @@ if (MSVC)
     )
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
-    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
+    set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
-        -fvisibility=hidden
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
     )

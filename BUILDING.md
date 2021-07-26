@@ -396,12 +396,13 @@ filamesh ./assets/models/monkey/monkey.obj monkey.filamesh
 ```
 
 Most samples accept an IBL that must be generated using the `cmgen` tool (`./tools/filamesh/cmgen`
-in your build directory). These sample apps expect a path to a directory containing the '.rgb32f'
-files for the IBL (which are PNGs containing `R11F_G11F_B10F` data). To generate an IBL simply use
-this command:
+in your build directory). These sample apps expect a path to a directory containing the `.rgb32f`
+files for the IBL (which are PNGs containing `R11F_G11F_B10F` data) or a path to a directory
+containing two `.ktx` files (one for the IBL itself, one for the skybox). To generate an IBL
+simply use this command:
 
 ```
-cmgen -x ./ibls/ my_ibl.exr
+cmgen -f ktx -x ./ibls/ my_ibl.exr
 ```
 
 The source environment map can be a PNG (8 or 16 bit), a PSD (16 or 32 bit), an HDR or an OpenEXR
