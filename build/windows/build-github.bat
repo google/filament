@@ -2,6 +2,8 @@
 
 setlocal
 
+systeminfo
+
 echo Disk info before building:
 call :ShowDiskInfo
 
