@@ -63,6 +63,8 @@ void MaterialKeyHelper::init(JNIEnv* env) {
     sheenColorUV = field("sheenColorUV", "I");
     hasSheenRoughnessTexture = field("hasSheenRoughnessTexture", "Z");
     sheenRoughnessUV = field("sheenRoughnessUV", "I");
+    hasVolumeThicknessTexture = field("hasVolumeThicknessTexture", "Z");
+    volumeThicknessUV = field("volumeThicknessUV", "I");
     hasSheen = field("hasSheen", "Z");
     hasIOR = field("hasIOR", "Z");
 }
@@ -104,6 +106,8 @@ void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
     dst.sheenColorUV = env->GetIntField(src, sheenColorUV);
     dst.hasSheenRoughnessTexture = env->GetBooleanField(src, hasSheenRoughnessTexture);
     dst.sheenRoughnessUV = env->GetIntField(src, sheenRoughnessUV);
+    dst.hasVolumeThicknessTexture = env->GetBooleanField(src, hasVolumeThicknessTexture);
+    dst.volumeThicknessUV = env->GetIntField(src, volumeThicknessUV);
     dst.hasSheen = env->GetBooleanField(src, hasSheen);
     dst.hasIOR = env->GetBooleanField(src, hasIOR);
 }
@@ -140,6 +144,8 @@ void MaterialKeyHelper::copy(JNIEnv* env, jobject dst, const MaterialKey& src) {
     env->SetIntField(dst, sheenColorUV, src.sheenColorUV);
     env->SetBooleanField(dst, hasSheenRoughnessTexture, src.hasSheenRoughnessTexture);
     env->SetIntField(dst, sheenRoughnessUV, src.sheenRoughnessUV);
+    env->SetBooleanField(dst, hasVolumeThicknessTexture, src.hasVolumeThicknessTexture);
+    env->SetIntField(dst, volumeThicknessUV, src.volumeThicknessUV);
     env->SetBooleanField(dst, hasSheen, src.hasSheen);
     env->SetBooleanField(dst, hasIOR, src.hasIOR);
 }

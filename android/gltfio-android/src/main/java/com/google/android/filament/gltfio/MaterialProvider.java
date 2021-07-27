@@ -62,6 +62,8 @@ public interface MaterialProvider {
         public int sheenColorUV;
         public boolean hasSheenRoughnessTexture;
         public int sheenRoughnessUV;
+        public boolean hasVolumeThicknessTexture;
+        public int volumeThicknessUV;
         public boolean hasSheen;
         public boolean hasIOR;
 
