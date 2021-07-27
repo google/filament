@@ -107,7 +107,7 @@ void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
     dst.hasSheenRoughnessTexture = env->GetBooleanField(src, hasSheenRoughnessTexture);
     dst.sheenRoughnessUV = env->GetIntField(src, sheenRoughnessUV);
     dst.hasVolumeThicknessTexture = env->GetBooleanField(src, hasVolumeThicknessTexture);
-    dst.thicknessVolumeUV = env->GetIntField(src, thicknessVolumeUV);
+    dst.volumeThicknessUV = env->GetIntField(src, volumeThicknessUV);
     dst.hasSheen = env->GetBooleanField(src, hasSheen);
     dst.hasIOR = env->GetBooleanField(src, hasIOR);
 }
