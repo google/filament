@@ -276,9 +276,7 @@ void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffse
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
-    buffers.resize(bufferCount);
-}
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes), buffers(bufferCount, nullptr) {}
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
