@@ -29,13 +29,13 @@
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <type_traits>
-#include <vector>
 
 namespace filament {
 namespace backend {
@@ -127,7 +127,7 @@ struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t vertexCount, AttributeArray const& attributes);
 
-    std::vector<MetalBuffer*> buffers;
+    utils::FixedCapacityVector<MetalBuffer*> buffers;
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
