@@ -290,7 +290,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{ nil }};
+    MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{}};
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& buffer = color[i];
         if (!buffer.handle) {
@@ -303,20 +303,16 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         ASSERT_PRECONDITION(colorTexture->texture,
                 "Color texture passed to render target has no texture allocation");
         colorTexture->updateLodRange(buffer.level);
-        colorAttachments[i].texture = colorTexture->texture;
-        colorAttachments[i].level = color[i].level;
-        colorAttachments[i].layer = color[i].layer;
+        colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
-    MetalRenderTarget::Attachment depthAttachment = { nil };
+    MetalRenderTarget::Attachment depthAttachment = {};
     if (depth.handle) {
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->texture,
                 "Depth texture passed to render target has no texture allocation.");
         depthTexture->updateLodRange(depth.level);
-        depthAttachment.texture = depthTexture->texture;
-        depthAttachment.level = depth.level;
-        depthAttachment.layer = depth.layer;
+        depthAttachment = { depthTexture, depth.level, depth.layer };
     }
     ASSERT_POSTCONDITION(!depth.handle || any(targetBufferFlags & TargetBufferFlags::DEPTH),
             "The DEPTH flag was specified, but no depth texture provided.");
@@ -948,7 +944,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     // We always readPixels from the COLOR0 attachment.
     MetalRenderTarget::Attachment color = srcTarget->getDrawColorAttachment(0);
-    id<MTLTexture> srcTexture = color.texture;
+    id<MTLTexture> srcTexture = color.getTexture();
     size_t miplevel = color.level;
 
     auto chooseMetalPixelFormat = [] (PixelDataFormat format, PixelDataType type) {
@@ -1078,12 +1074,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         MetalRenderTarget::Attachment dstColorAttachment = dstTarget->getDrawColorAttachment(0);
 
         if (srcColorAttachment && dstColorAttachment) {
-            ASSERT_PRECONDITION(isBlitableTextureType(srcColorAttachment.texture.textureType) &&
-                                isBlitableTextureType(dstColorAttachment.texture.textureType),
+            ASSERT_PRECONDITION(isBlitableTextureType(srcColorAttachment.getTexture().textureType) &&
+                                isBlitableTextureType(dstColorAttachment.getTexture().textureType),
                                "Metal does not support blitting to/from non-2D textures.");
 
-            args.source.color = srcColorAttachment.texture;
-            args.destination.color = dstColorAttachment.texture;
+            args.source.color = srcColorAttachment.getTexture();
+            args.destination.color = dstColorAttachment.getTexture();
             args.source.level = srcColorAttachment.level;
             args.destination.level = dstColorAttachment.level;
         }
@@ -1094,12 +1090,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         MetalRenderTarget::Attachment dstDepthAttachment = dstTarget->getDepthAttachment();
 
         if (srcDepthAttachment && dstDepthAttachment) {
-            ASSERT_PRECONDITION(isBlitableTextureType(srcDepthAttachment.texture.textureType) &&
-                                isBlitableTextureType(dstDepthAttachment.texture.textureType),
+            ASSERT_PRECONDITION(isBlitableTextureType(srcDepthAttachment.getTexture().textureType) &&
+                                isBlitableTextureType(dstDepthAttachment.getTexture().textureType),
                                "Metal does not support blitting to/from non-2D textures.");
 
-            args.source.depth = srcDepthAttachment.texture;
-            args.destination.depth = dstDepthAttachment.texture;
+            args.source.depth = srcDepthAttachment.getTexture();
+            args.destination.depth = dstDepthAttachment.getTexture();
 
             if (args.blitColor()) {
                 // If blitting color, we've already set the source and destination levels.
@@ -1143,12 +1139,12 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         if (!attachment) {
             continue;
         }
-        colorPixelFormat[i] = attachment.texture.pixelFormat;
+        colorPixelFormat[i] = attachment.getPixelFormat();
     }
     MTLPixelFormat depthPixelFormat = MTLPixelFormatInvalid;
     const auto& depthAttachment = mContext->currentRenderTarget->getDepthAttachment();
     if (depthAttachment) {
-        depthPixelFormat = depthAttachment.texture.pixelFormat;
+        depthPixelFormat = depthAttachment.getPixelFormat();
     }
     metal::PipelineState pipelineState {
         .vertexFunction = program->vertexFunction,

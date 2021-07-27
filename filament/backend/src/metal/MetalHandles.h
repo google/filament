@@ -200,6 +200,11 @@ struct MetalTexture : public HwTexture {
     MetalExternalImage externalImage;
     id<MTLTexture> texture = nil;
 
+    // A "sidecar" texture used to implement automatic MSAA resolve.
+    // This is created by MetalRenderTarget and stored here so it can be used with multiple
+    // render targets.
+    id<MTLTexture> msaaSidecar = nil;
+
     // If non-nil, a swizzled texture view to use instead of "texture".
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
@@ -217,14 +222,46 @@ struct MetalSamplerGroup : public HwSamplerGroup {
 class MetalRenderTarget : public HwRenderTarget {
 public:
 
-    struct Attachment {
-        id<MTLTexture> texture = nil;
-        uint8_t level = 0;
-        uint16_t layer = 0;
+    class Attachment {
+    public:
+
+        friend class MetalRenderTarget;
+
+        Attachment() = default;
+        Attachment(MetalTexture* metalTexture, uint8_t level = 0, uint16_t layer = 0) :
+                level(level), layer(layer),
+                texture(metalTexture->texture),
+                metalTexture(metalTexture) { }
+
+        id<MTLTexture> getTexture() const {
+            return texture;
+        }
+
+        NSUInteger getSampleCount() const {
+            return texture ? texture.sampleCount : 0u;
+        }
+
+        MTLPixelFormat getPixelFormat() const {
+            return texture ? texture.pixelFormat : MTLPixelFormatInvalid;
+        }
 
         explicit operator bool() const {
             return texture != nil;
         }
+
+        uint8_t level = 0;
+        uint16_t layer = 0;
+
+    private:
+
+        id<MTLTexture> getMSAASidecarTexture() const {
+            // This should only be called from render targets associated with a MetalTexture.
+            assert_invariant(metalTexture);
+            return metalTexture->msaaSidecar;
+        }
+
+        id<MTLTexture> texture = nil;
+        MetalTexture* metalTexture = nullptr;
     };
 
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
@@ -254,10 +291,6 @@ private:
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     Attachment depth = {};
-
-    // "Sidecar" textures used to implement automatic MSAA resolve.
-    id<MTLTexture> multisampledColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { 0 };
-    id<MTLTexture> multisampledDepth = nil;
 };
 
 // MetalFence is used to implement both Fences and Syncs.
