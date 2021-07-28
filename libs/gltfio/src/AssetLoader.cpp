@@ -124,16 +124,18 @@ struct FAssetLoader : public AssetLoader {
     }
 
     void createAsset(const cgltf_data* srcAsset, size_t numInstances);
-    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_scene* scene);
-    void createEntity(const cgltf_node* node, Entity parent, bool enableLight,
-            FFilamentInstance* instance);
-    void createRenderable(const cgltf_node* node, Entity entity, const char* name);
+    FFilamentInstance* createInstance(FFilamentAsset* primary, const cgltf_data* srcAsset,
+            const cgltf_scene* scene);
+    void createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
+            bool enableLight, FFilamentInstance* instance);
+    void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
+            const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
             const char* name);
     void createLight(const cgltf_light* light, Entity entity);
     void createCamera(const cgltf_camera* camera, Entity entity);
-    MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
-            bool vertexColor);
+    MaterialInstance* createMaterialInstance(const cgltf_data* srcAsset,
+            const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
@@ -240,7 +242,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         slog.e << "There is no scene in the asset." << io::endl;
         return nullptr;
     }
-    FFilamentInstance* instance = createInstance(primary, scene);
+    FFilamentInstance* instance = createInstance(primary, srcAsset, scene);
 
     // Import the skin data. This is normally done by ResourceLoader but dynamically created
     // instances are a bit special.
@@ -290,14 +292,14 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
         // For each scene root, recursively create all entities.
         for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
             cgltf_node** nodes = scene->nodes;
-            createEntity(nodes[i], mResult->mRoot, true, nullptr);
+            createEntity(srcAsset, nodes[i], mResult->mRoot, true, nullptr);
         }
     } else {
         // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
         // buffers and index buffers) and MatInstanceCache (materials and textures) help avoid
         // needless duplication of resources.
         for (size_t index = 0; index < numInstances; ++index) {
-            if (createInstance(mResult, scene) == nullptr) {
+            if (createInstance(mResult, srcAsset, scene) == nullptr) {
                 mError = true;
                 break;
             }
@@ -330,7 +332,8 @@ void FAssetLoader::createAsset(const cgltf_data* srcAsset, size_t numInstances) 
     }
 }
 
-FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary, const cgltf_scene* scene) {
+FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary,
+        const cgltf_data* srcAsset, const cgltf_scene* scene) {
     auto rootTransform = mTransformManager.getInstance(primary->mRoot);
     Entity instanceRoot = mEntityManager.create();
     mTransformManager.create(instanceRoot, rootTransform);
@@ -346,13 +349,13 @@ FFilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary, const c
     // For each scene root, recursively create all entities.
     for (cgltf_size i = 0, len = scene->nodes_count; i < len; ++i) {
         cgltf_node** nodes = scene->nodes;
-        createEntity(nodes[i], instanceRoot, false, instance);
+        createEntity(srcAsset, nodes[i], instanceRoot, false, instance);
     }
     return instance;
 }
 
-void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enableLight,
-        FFilamentInstance* instance) {
+void FAssetLoader::createEntity(const cgltf_data* srcAsset, const cgltf_node* node, Entity parent,
+        bool enableLight, FFilamentInstance* instance) {
     Entity entity = mEntityManager.create();
 
     // Always create a transform component to reflect the original hierarchy.
@@ -401,7 +404,7 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
 
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
-        createRenderable(node, entity, name);
+        createRenderable(srcAsset, node, entity, name);
     }
 
     if (node->light && enableLight) {
@@ -413,11 +416,12 @@ void FAssetLoader::createEntity(const cgltf_node* node, Entity parent, bool enab
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        createEntity(node->children[i], entity, enableLight, instance);
+        createEntity(srcAsset, node->children[i], entity, enableLight, instance);
     }
 }
 
-void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const char* name) {
+void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node* node,
+        Entity entity, const char* name) {
     const cgltf_mesh* mesh = node->mesh;
 
     // Compute the transform relative to the root.
@@ -459,7 +463,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         // Create a material instance for this primitive or fetch one from the cache.
         UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(inputPrim);
-        MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor);
+        MaterialInstance* mi = createMaterialInstance(srcAsset, inputPrim->material, &uvmap,
+                hasVertexColor);
         if (!mi) {
             mError = true;
             continue;
@@ -895,8 +900,8 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
     mResult->mCameraEntities.push_back(entity);
 }
 
-MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat,
-        UvMap* uvmap, bool vertexColor) {
+MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
+        const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
     intptr_t key = ((intptr_t) inputMat) ^ (vertexColor ? 1 : 0);
     auto iter = mResult->mMatInstanceCache.find(key);
     if (iter != mResult->mMatInstanceCache.end()) {
@@ -1012,9 +1017,17 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             break;
     }
 
+    // Check if this material has an extras string.
+    CString extras;
+    const cgltf_size extras_size = inputMat->extras.end_offset - inputMat->extras.start_offset;
+    if (extras_size > 0) {
+        extras = CString(srcAsset->json + inputMat->extras.start_offset, extras_size);
+    }
+
     // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
-    MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
+    MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name,
+            extras.c_str());
     if (!mi) {
         slog.e << "No material with the specified requirements exists." << io::endl;
         return nullptr;

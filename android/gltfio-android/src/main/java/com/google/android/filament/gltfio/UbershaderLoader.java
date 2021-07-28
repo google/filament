@@ -53,7 +53,7 @@ public class UbershaderLoader implements MaterialProvider {
     }
 
     public @Nullable MaterialInstance createMaterialInstance(MaterialKey config,
-            @NonNull @Size(min = 8) int[] uvmap, @Nullable String label) {
+            @NonNull @Size(min = 8) int[] uvmap, @Nullable String label, @Nullable String extras) {
         long nativeMaterialInstance = nCreateMaterialInstance(mNativeObject, config, uvmap, label);
         return nativeMaterialInstance == 0 ? null : new MaterialInstance(null, nativeMaterialInstance);
     }

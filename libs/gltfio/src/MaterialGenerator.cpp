@@ -37,7 +37,7 @@ public:
     ~MaterialGenerator() override;
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-            const char* label) override;
+            const char* label, const char* extras) override;
 
     size_t getMaterialsCount() const noexcept override;
     const Material* const* getMaterials() const noexcept override;
@@ -530,7 +530,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 }
 
 MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
-        const char* label) {
+        const char* label, const char* extras) {
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
