@@ -70,6 +70,12 @@ public interface MaterialProvider {
             nGlobalInit();
         }
         private static native void nGlobalInit();
+
+        public void constrainMaterial(@NonNull @Size(min = 8) int[] uvmap) {
+            nConstrainMaterial(this, uvmap);
+        }
+
+        private static native void nConstrainMaterial(MaterialKey materialKey, int[] uvmap);
     };
 
     /**
