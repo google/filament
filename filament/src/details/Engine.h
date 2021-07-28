@@ -432,6 +432,10 @@ public:
         } shadowmap;
         struct {
             bool enabled = true;
+            int sampleCount = 7;
+            int spiralTurns = 1;
+            int kernelSize = 23;
+            float stddev = 8.0f;
         } ssao;
         struct {
             bool camera_at_origin = true;

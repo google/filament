@@ -232,6 +232,12 @@ void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
+    //FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    //debugRegistry.registerProperty("d.ssao.sampleCount", &engine.debug.ssao.sampleCount);
+    //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
+    //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
+    //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+
     #pragma nounroll
     for (auto const& info : sMaterialList) {
         registerPostProcessMaterial(info.name, info.data, info.size);
@@ -407,23 +413,28 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
     float sampleCount{};
     float spiralTurns{};
+    float standardDeviation{};
     switch (options.quality) {
         default:
         case View::QualityLevel::LOW:
             sampleCount = 7.0f;
-            spiralTurns = 1.0f;
+            spiralTurns = 3.0f;
+            standardDeviation = 8.0;
             break;
         case View::QualityLevel::MEDIUM:
             sampleCount = 11.0f;
-            spiralTurns = 9.0f;
+            spiralTurns = 6.0f;
+            standardDeviation = 8.0;
             break;
         case View::QualityLevel::HIGH:
             sampleCount = 16.0f;
-            spiralTurns = 13.0f;
+            spiralTurns = 7.0f;
+            standardDeviation = 6.0;
             break;
         case View::QualityLevel::ULTRA:
             sampleCount = 32.0f;
             spiralTurns = 14.0f;
+            standardDeviation = 4.0;
             break;
     }
 
@@ -437,16 +448,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
             break;
         case View::QualityLevel::MEDIUM:
             config.kernelSize = 11;
-            config.standardDeviation = 4.0f;
+            config.standardDeviation = standardDeviation * 0.5f;
             config.scale = 2.0f;
             break;
         case View::QualityLevel::HIGH:
         case View::QualityLevel::ULTRA:
             config.kernelSize = 23;
-            config.standardDeviation = 8.0f;
+            config.standardDeviation = standardDeviation;
             config.scale = 1.0f;
             break;
     }
+
+    // for debugging
+    //config.kernelSize = engine.debug.ssao.kernelSize;
+    //config.standardDeviation = engine.debug.ssao.stddev;
+    //sampleCount = engine.debug.ssao.sampleCount;
+    //spiralTurns = engine.debug.ssao.spiralTurns;
 
     /*
      * Our main SSAO pass
@@ -670,10 +687,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // unnormalized gaussian half-kernel of a given standard deviation
-                // returns number of samples stored in array (max 32)
+                // returns number of samples stored in array (max 16)
+                constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
-                        [](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
-                    const size_t gaussianSampleCount = std::min(size_t(32), (gaussianWidth + 1u) / 2u);
+                        [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
+                    const size_t gaussianSampleCount = std::min(kernelArraySize, (gaussianWidth + 1u) / 2u);
                     for (size_t i = 0; i < gaussianSampleCount; i++) {
                         float x = i;
                         float g = std::exp(-(x * x) / (2.0f * stdDev * stdDev));
@@ -682,7 +700,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                     return uint32_t(gaussianSampleCount);
                 };
 
-                float kGaussianSamples[32];
+                float kGaussianSamples[kernelArraySize];
                 uint32_t kGaussianCount = gaussianKernel(kGaussianSamples,
                         config.kernelSize, config.standardDeviation);
 
