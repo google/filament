@@ -44,10 +44,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2.0.0
-      - uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: '11'
       - name: Run build script
         run: |
           cd build/android && printf "y" | ./build.sh presubmit
