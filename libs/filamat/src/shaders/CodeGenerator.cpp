@@ -111,6 +111,30 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
 
     out << SHADERS_COMMON_TYPES_FS_DATA;
 
+    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::GL_CORE_41) {
+        // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
+        // MacOS doesn't support GL_ARB_shading_language_packing
+
+        // TODO: inject this from the backend based on the GL version and extension presence
+
+        out << R"(
+
+float u16tofp32(highp uint v) {
+    // this doesn't handle denormals, NaNs or inf
+    v <<= 16u;
+    highp uint s = v & 0x80000000u;
+    highp uint n = v & 0x7FFFFFFFu;
+    highp uint nz = n == 0u ? 0u : 0xFFFFFFFF;
+    return uintBitsToFloat(s | ((((n >> 3u) + (0x70u << 23))) & nz));
+}
+
+vec2 unpackHalf2x16(highp uint v) {
+    return vec2(u16tofp32(v&0xFFFFu), u16tofp32(v>>16u));
+}
+
+)";
+    }
+
     out << "\n";
     return out;
 }
