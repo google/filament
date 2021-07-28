@@ -2,6 +2,8 @@
 
 setlocal
 
+systeminfo
+
 echo Disk info before building:
 call :ShowDiskInfo
 
@@ -112,7 +114,20 @@ cmake ..\.. ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
     || exit /b
+
+:: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
+:: Some resource libraries require significant heap space to compile, so first compile them serially.
+@echo on
+cmake --build . --target filagui --config %config% || exit /b
+cmake --build . --target gltfio_resources --config %config% || exit /b
+cmake --build . --target gltfio_resources_lite --config %config% || exit /b
+cmake --build . --target gltf-resources --config %config% || exit /b
+cmake --build . --target filamentapp-resources --config %config% || exit /b
+cmake --build . --target sample-resources --config %config% || exit /b
+cmake --build . --target suzanne-resources --config %config% || exit /b
+
 cmake --build . %INSTALL% --config %config% -- /m || exit /b
+@echo off
 
 echo Disk info after building variant: %variant%
 call :ShowDiskInfo
