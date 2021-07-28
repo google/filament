@@ -66,7 +66,7 @@ Java_com_google_android_filament_gltfio_UbershaderLoader_nCreateMaterialInstance
         for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
             elements[i] = nativeUvMap[i];
         }
-        env->ReleaseIntArrayElements(uvmap, elements, JNI_ABORT);
+        env->ReleaseIntArrayElements(uvmap, elements, 0);
     }
 
     // The config parameter is an in-out parameter so we need to copy the results back to Java.
