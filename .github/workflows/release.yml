@@ -95,6 +95,7 @@ jobs:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: actions/setup-java@v2
         with:
+          distribution: 'zulu'
           java-version: '11'
       - name: Run build script
         run: |
