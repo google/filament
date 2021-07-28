@@ -13,7 +13,7 @@ section below.
 
 To build Filament for Android you must also install the following:
 
-- Android Studio 4.2.0 or more recent
+- Android Studio Arctic Fox or more recent
 - Android SDK
 - Android NDK "side-by-side" 22.1 or higher
 
