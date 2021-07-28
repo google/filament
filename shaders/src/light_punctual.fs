@@ -123,13 +123,26 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
  * The light parameters used to compute the Light structure are fetched from the
  * lightsUniforms uniform buffer.
  */
+
 Light getLight(const uint index) {
     // retrieve the light data from the UBO
     uint lightIndex = getLightIndex(index);
-    highp vec4 positionFalloff       = lightsUniforms.lights[lightIndex][0];
-    highp vec4 colorIntensity        = lightsUniforms.lights[lightIndex][1];
-          vec4 directionIES          = lightsUniforms.lights[lightIndex][2];
-    highp vec4 scaleOffsetShadowType = lightsUniforms.lights[lightIndex][3];
+
+    highp mat4 data = lightsUniforms.lights[lightIndex];
+
+    highp vec4 positionFalloff = data[0];
+    vec4 color = vec4(
+        unpackHalf2x16(floatBitsToUint(data[1][0])),
+        unpackHalf2x16(floatBitsToUint(data[1][1]))
+    );
+    vec4 directionIES = vec4(
+        unpackHalf2x16(floatBitsToUint(data[1][2])),
+        unpackHalf2x16(floatBitsToUint(data[1][3]))
+    );
+    vec2 scaleOffset = unpackHalf2x16(floatBitsToUint(data[2][0]));
+    highp float intensity = data[2][1];
+    highp uint typeShadow = floatBitsToUint(data[2][2]);
+    highp uint channels = floatBitsToUint(data[2][3]);
 
     // poition-to-light vector
     highp vec3 worldPosition = vertex_worldPosition;
@@ -137,8 +150,8 @@ Light getLight(const uint index) {
 
     // and populate the Light structure
     Light light;
-    light.colorIntensity.rgb = colorIntensity.rgb;
-    light.colorIntensity.w = computePreExposedIntensity(colorIntensity.w, frameUniforms.exposure);
+    light.colorIntensity.rgb = color.rgb;
+    light.colorIntensity.w = computePreExposedIntensity(intensity, frameUniforms.exposure);
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
     light.NoL = saturate(dot(shading_normal, light.l));
@@ -148,14 +161,13 @@ Light getLight(const uint index) {
     light.shadowIndex = 0u;
     light.shadowLayer = 0u;
 
-    uint type = floatBitsToUint(scaleOffsetShadowType.w);
+    uint type = typeShadow & 0x1u;
     if (type == LIGHT_TYPE_SPOT) {
-        light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffsetShadowType.xy);
-        uint shadowBits = floatBitsToUint(scaleOffsetShadowType.z);
-        light.castsShadows = bool(shadowBits & 0x1u);
-        light.contactShadows = bool((shadowBits >> 1u) & 0x1u);
-        light.shadowIndex = (shadowBits >> 2u) & 0xFu;
-        light.shadowLayer = (shadowBits >> 6u) & 0xFu;
+        light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffset);
+        light.contactShadows = bool(typeShadow & 0x10u);
+        light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
+        light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
+        light.castsShadows   = bool(channels & 0x10000u);
     }
 
     return light;
