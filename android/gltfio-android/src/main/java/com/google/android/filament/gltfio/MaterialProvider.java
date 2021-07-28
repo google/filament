@@ -71,7 +71,25 @@ public interface MaterialProvider {
         static {
             nGlobalInit();
         }
+
+        /**
+         * Populate UV map according to the material key, altering latter if required.
+         *
+         * Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it
+         * allows implementations to support only 2 simultaneous sets. Here we build a mapping
+         * table with 1-based indices where 0 means unused. Note that the order in which we drop
+         * textures can affect the look of certain assets. This "order of degradation" is
+         * stipulated by the glTF 2.0 specification.
+         *
+         * @param uvmap Output argument that gets populated with a small table that maps from a
+         *              glTF uv index to a Filament uv index (0 = UNUSED, 1 = UV0, 2 = UV1).
+         */
+        public void constrainMaterial(@NonNull @Size(min = 8) int[] uvmap) {
+            nConstrainMaterial(this, uvmap);
+        }
+
         private static native void nGlobalInit();
+        private static native void nConstrainMaterial(MaterialKey materialKey, int[] uvmap);
     };
 
     /**
