@@ -396,6 +396,15 @@ public:
         Builder& operator=(Builder&& rhs) noexcept;
 
         /**
+         * Enables or disables a light channel. Light channel 0 is enabled by default.
+         *
+         * @param channel Light channel to enable or disable, between 0 and 7.
+         * @param enable Whether to enable or disable the light channel.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& lightChannel(unsigned int channel, bool enable = true) noexcept;
+
+        /**
          * Whether this Light casts shadows (disabled by default)
          *
          * @param enable Enables or disables casting shadows from this Light.
@@ -660,6 +669,21 @@ public:
         Type type = getType(i);
         return type == Type::SPOT || type == Type::FOCUSED_SPOT;
     }
+
+    /**
+     * Enables or disables a light channel. Light channel 0 is enabled by default.
+     * @param channel light channel to enable or disable, between 0 and 7.
+     * @param enable whether to enable (true) or disable (false) the specified light channel.
+     */
+    void setLightChannel(Instance i, unsigned int channel, bool enable = true) noexcept;
+
+    /**
+     * Returns whether a light channel is enabled on a specified light.
+     * @param i        Instance of the component obtained from getInstance().
+     * @param channel  Light channel to query
+     * @return         true if the light channel is enabled, false otherwise
+     */
+    bool getLightChannel(Instance i, unsigned int channel) const noexcept;
 
     /**
      * Dynamically updates the light's position.

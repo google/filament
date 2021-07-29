@@ -431,6 +431,18 @@ public class LightManager {
         }
 
         /**
+         * Enables or disables a light channel. Light channel 0 is enabled by default.
+         *
+         * @param channel Light channel to enable or disable, between 0 and 7.
+         * @param enable Whether to enable or disable the light channel.
+         */
+        @NonNull
+        public Builder lightChannel(@IntRange(from = 0, to = 7) int channel, boolean enable) {
+            nBuilderLightChannel(mNativeBuilder, channel, enable);
+            return this;
+        }
+
+        /**
          * Whether this Light casts shadows (disabled by default)
          *
          * <p>
@@ -786,6 +798,30 @@ public class LightManager {
     }
 
     /**
+     * Enables or disables a light channel.
+     * Light channel 0 is enabled by default.
+     *
+     * @param i        Instance of the component obtained from getInstance().
+     * @param channel  Light channel to set
+     * @param enable   true to enable, false to disable
+     *
+     * @see Builder#lightChannel
+     */
+    public void setLightChannel(@EntityInstance int i, @IntRange(from = 0, to = 7) int channel, boolean enable) {
+        nSetLightChannel(mNativeObject, i, channel, enable);
+    }
+
+    /**
+     * Returns whether a light channel is enabled on a specified renderable.
+     * @param i        Instance of the component obtained from getInstance().
+     * @param channel  Light channel to query
+     * @return         true if the light channel is enabled, false otherwise
+     */
+    public boolean getLightChannel(@EntityInstance int i, @IntRange(from = 0, to = 7) int channel) {
+        return nGetLightChannel(mNativeObject, i, channel);
+    }
+
+    /**
      * Dynamically updates the light's position.
      *
      * <p>
@@ -1108,6 +1144,7 @@ public class LightManager {
     private static native void nBuilderAngularRadius(long nativeBuilder, float angularRadius);
     private static native void nBuilderHaloSize(long nativeBuilder, float haloSize);
     private static native void nBuilderHaloFalloff(long nativeBuilder, float haloFalloff);
+    private static native void nBuilderLightChannel(long nativeBuilder, int channel, boolean enable);
 
     private static native void nComputeUniformSplits(float[] splitPositions, int cascades);
     private static native void nComputeLogSplits(float[] splitPositions, int cascades, float near, float far);
@@ -1137,4 +1174,6 @@ public class LightManager {
     private static native boolean nIsShadowCaster(long nativeLightManager, int i);
     private static native float nGetOuterConeAngle(long nativeLightManager, int i);
     private static native float nGetInnerConeAngle(long nativeLightManager, int i);
+    private static native void nSetLightChannel(long nativeLightManager, int i, int channel, boolean enable);
+    private static native boolean nGetLightChannel(long nativeLightManager, int i, int channel);
 }

@@ -355,6 +355,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
         s.lightDirection = l;
         s.lightColorIntensity = colorIntensity;
+        s.lightChannels = lcm.getLightChannels(directionalLight);
 
         const bool isSun = lcm.isSunLight(directionalLight);
         // The last parameter must be < 0.0f for regular directional lights

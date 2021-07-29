@@ -140,6 +140,7 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
                     worldAABB.center,               // WORLD_AABB_CENTER
                     0,                              // VISIBLE_MASK
                     rcm.getMorphWeights(ri),        // MORPH_WEIGHTS
+                    rcm.getChannels(ri),            // CHANNELS
                     rcm.getLayerMask(ri),           // LAYERS
                     worldAABB.halfExtent,           // WORLD_AABB_EXTENT
                     {},                             // PRIMITIVES
@@ -239,6 +240,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
 
         FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
+
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, flags),
                 PerRenderableUib::packFlags(
@@ -250,9 +252,14 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
                 offset + offsetof(PerRenderableUib, morphWeights),
                 sceneData.elementAt<MORPH_WEIGHTS>(i));
 
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, channels),
+                (uint32_t)sceneData.elementAt<CHANNELS>(i));
+
         // TODO: We need to find a better way to provide the scale information per object
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, userData), sceneData.elementAt<USER_DATA>(i));
+                offset + offsetof(PerRenderableUib, userData),
+                sceneData.elementAt<USER_DATA>(i));
     }
 
     // TODO: handle static objects separately
@@ -309,7 +316,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
                 shadowInfo[i].contactShadows,
                 shadowInfo[i].index,
                 shadowInfo[i].layer);
-        lp[gpuIndex].channels             = LightsUib::packChannels(1, shadowInfo[i].castsShadows);
+        lp[gpuIndex].channels             = LightsUib::packChannels(lcm.getLightChannels(li), shadowInfo[i].castsShadows);
         lp[gpuIndex].reserved             = {};
     }
 

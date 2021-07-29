@@ -8,6 +8,7 @@ struct Light {
     bool contactShadows;
     uint shadowIndex;
     uint shadowLayer;
+    uint channels;
 };
 
 struct PixelParams {
