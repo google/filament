@@ -69,14 +69,14 @@ vec4 getPosition() {
 
 #if defined(HAS_SKINNING_OR_MORPHING)
 
-    if (objectUniforms.morphingEnabled == 1) {
+    if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
         pos += objectUniforms.morphWeights.x * mesh_custom0;
         pos += objectUniforms.morphWeights.y * mesh_custom1;
         pos += objectUniforms.morphWeights.z * mesh_custom2;
         pos += objectUniforms.morphWeights.w * mesh_custom3;
     }
 
-    if (objectUniforms.skinningEnabled == 1) {
+    if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 
