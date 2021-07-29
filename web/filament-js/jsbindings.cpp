@@ -980,6 +980,10 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             (RenderableBuilder* builder, size_t index, uint16_t order), {
         return &builder->blendOrder(index, order); })
 
+    .BUILDER_FUNCTION("lightChannel", RenderableBuilder,
+            (RenderableBuilder* builder, unsigned int channel, bool enable), {
+        return &builder->lightChannel(channel, enable); })
+
     .function("_build", EMBIND_LAMBDA(int, (RenderableBuilder* builder,
             Engine* engine, utils::Entity entity), {
         return (int) builder->build(*engine, entity);
@@ -1006,6 +1010,8 @@ class_<RenderableManager>("RenderableManager")
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)
     .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
+    .function("setLightChannel", &RenderableManager::setLightChannel)
+    .function("getLightChannel", &RenderableManager::getLightChannel)
 
     .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
@@ -1144,7 +1150,10 @@ class_<LightBuilder>("LightManager$Builder")
     .BUILDER_FUNCTION("sunHaloSize", LightBuilder,
             (LightBuilder* builder, float value), { return &builder->sunHaloSize(value); })
     .BUILDER_FUNCTION("sunHaloFalloff", LightBuilder,
-            (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); });
+            (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); })
+    .BUILDER_FUNCTION("lightChannel", LightBuilder,
+            (LightBuilder* builder, unsigned int channel, bool enable), {
+        return &builder->lightChannel(channel, enable); });
 
 class_<LightManager>("LightManager")
     .function("hasComponent", &LightManager::hasComponent)
@@ -1191,6 +1200,8 @@ class_<LightManager>("LightManager")
     .function("getSunHaloFalloff", &LightManager::getSunHaloFalloff)
     .function("setShadowCaster", &LightManager::setShadowCaster)
     .function("isShadowCaster", &LightManager::isShadowCaster)
+    .function("setLightChannel", &LightManager::setLightChannel)
+    .function("getLightChannel", &LightManager::getLightChannel)
     ;
 
 /// LightManager$Instance ::class:: Component instance returned by [LightManager]

@@ -160,6 +160,7 @@ Light getLight(const uint index) {
     light.contactShadows = false;
     light.shadowIndex = 0u;
     light.shadowLayer = 0u;
+    light.channels = channels;
 
     uint type = typeShadow & 0x1u;
     if (type == LIGHT_TYPE_SPOT) {
@@ -198,6 +199,10 @@ void evaluatePunctualLights(const MaterialInputs material,
     // Iterate point lights
     for ( ; index < end; index++) {
         Light light = getLight(index);
+        if ((light.channels & channels) == 0u) {
+            continue;
+        }
+
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
             continue;

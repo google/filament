@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Option to automatically compute bent normals from SSAO & apply to specular AO
   [⚠️ **Material breakage**].
+- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at 
+  least one channel must match for lighting to occur [⚠️ **Material breakage**].
 
 ## v1.11.2
 

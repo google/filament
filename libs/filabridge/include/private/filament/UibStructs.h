@@ -64,7 +64,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
-    filament::math::float4 padding0;
+    filament::math::float3 padding0;
+    uint32_t lightChannels;
 
     filament::math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
@@ -142,7 +143,7 @@ struct alignas(256) PerRenderableUib {
     filament::math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
     alignas(16) filament::math::float4 morphWeights;    // morph weights (we could easily have 8 using half)
     uint32_t flags;                                     // see packFlags() below
-    uint32_t reserved0;                                 // 0
+    uint32_t channels;                                  // 0x000000ll
     uint32_t reserved1;                                 // 0
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
