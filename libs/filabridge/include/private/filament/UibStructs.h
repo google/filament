@@ -139,14 +139,19 @@ static_assert(sizeof(PerViewUib) == sizeof(filament::math::float4) * 128,
 struct alignas(256) PerRenderableUib {
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
     filament::math::mat4f worldFromModelMatrix;
-    filament::math::mat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
-    alignas(16) filament::math::float4 morphWeights;
-    // TODO: we can pack all the boolean bellow
-    int32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-    int32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-    uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+    filament::math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
+    alignas(16) filament::math::float4 morphWeights;    // morph weights (we could easily have 8 using half)
+    uint32_t flags;                                     // see packFlags() below
+    uint32_t reserved0;                                 // 0
+    uint32_t reserved1;                                 // 0
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
+
+    static uint32_t packFlags(bool skinning, bool morphing, bool contactShadows) noexcept {
+        return (skinning ? 1 : 0) |
+               (morphing ? 2 : 0) |
+               (contactShadows ? 4 : 0);
+    }
 };
 static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
 

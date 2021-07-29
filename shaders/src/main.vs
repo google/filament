@@ -12,7 +12,7 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
 
         #if defined(HAS_SKINNING_OR_MORPHING)
-        if (objectUniforms.morphingEnabled == 1) {
+        if ((objectUniforms.flags & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
             vec3 normal0, normal1, normal2, normal3;
             toTangentFrame(mesh_custom4, normal0);
             toTangentFrame(mesh_custom5, normal1);
@@ -25,7 +25,7 @@ void main() {
             material.worldNormal = normalize(material.worldNormal);
         }
 
-        if (objectUniforms.skinningEnabled == 1) {
+        if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
         }
@@ -43,7 +43,7 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal);
 
         #if defined(HAS_SKINNING_OR_MORPHING)
-            if (objectUniforms.skinningEnabled == 1) {
+            if ((objectUniforms.flags & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
                 skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             }
         #endif

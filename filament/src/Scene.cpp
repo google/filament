@@ -240,16 +240,11 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, skinningEnabled),
-                uint32_t(visibility.skinning));
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, morphingEnabled),
-                uint32_t(visibility.morphing));
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, screenSpaceContactShadows),
-                uint32_t(visibility.screenSpaceContactShadows));
+                offset + offsetof(PerRenderableUib, flags),
+                PerRenderableUib::packFlags(
+                        visibility.skinning,
+                        visibility.morphing,
+                        visibility.screenSpaceContactShadows));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, morphWeights),
