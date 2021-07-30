@@ -17,7 +17,10 @@
 #ifndef TNT_FILAMENT_DRIVER_DATARESHAPER_H
 #define TNT_FILAMENT_DRIVER_DATARESHAPER_H
 
+#include <backend/PixelBufferDescriptor.h>
+
 #include <stddef.h>
+#include <stdint.h>
 
 #include <math/scalar.h>
 
