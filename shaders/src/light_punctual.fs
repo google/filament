@@ -30,9 +30,19 @@ uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.resolution.xy *
             vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
-    froxelCoord.z = uint(max(0.0,
-            log2(frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y) *
-                    frameUniforms.zParams.z + frameUniforms.zParams.w));
+    // go from screen-space (non-inverted) Z to normalized view-space Z (i.e. scaled by 1/zLightFar)
+    // (see Froxelizer.cpp)
+    highp float viewSpaceNormalizedZ = frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y;
+
+    // frameUniforms.zParams.w is actually the number of z-slices, make sure it's mediump
+    float zSliceCount = frameUniforms.zParams.w;
+
+    // compute the sliceZ mapping in highp, store in mediump
+    float sliceZWithoutOffset = log2(viewSpaceNormalizedZ) * frameUniforms.zParams.z;
+
+    // finally discretize the mapping into slices
+    // We need to clamp because the far plane (z=1) is out of bounds, any smaller z is not.
+    froxelCoord.z = uint(clamp(sliceZWithoutOffset + zSliceCount, 0.0, zSliceCount - 1.0));
 
     return froxelCoord;
 }
