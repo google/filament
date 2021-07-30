@@ -194,7 +194,7 @@ struct MetalTexture : public HwTexture {
             const PixelBufferShape& shape);
     void updateLodRange(uint32_t level);
 
-    static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat format);
+    static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
     MetalContext& context;
     MetalExternalImage externalImage;

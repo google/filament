@@ -110,12 +110,13 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalBufferPool.mm
             src/metal/MetalContext.mm
             src/metal/MetalDriver.mm
+            src/metal/MetalEnums.mm
             src/metal/MetalExternalImage.mm
             src/metal/MetalHandles.mm
+            src/metal/MetalPlatform.mm
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
-            src/metal/MetalPlatform.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
