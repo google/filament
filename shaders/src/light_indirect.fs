@@ -386,7 +386,8 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 #endif
 }
 
-void evaluateSheenIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
+        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     // Albedo scaling of the base layer before we layer sheen on top
@@ -394,13 +395,17 @@ void evaluateSheenIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, 
     Fr *= pixel.sheenScaling;
 
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
+    reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
+
     Fr += reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
 #endif
 #endif
 }
 
-void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
+        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    float specularAO = specularAO(shading_NoV, diffuseAO, pixel.clearCoatRoughness, cache);
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
     return;
 #endif
@@ -415,11 +420,13 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
     vec3 clearCoatR = shading_reflected;
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
-    // TODO: Should we apply specularAO to the attenuation as well?
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
     Fr *= attenuation;
+
+    // TODO: Should we apply specularAO to the attenuation as well?
+    float specularAO = specularAO(clearCoatNoV, diffuseAO, pixel.clearCoatRoughness, cache);
     Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
 #endif
 }
@@ -574,14 +581,6 @@ void combineDiffuseAndSpecular(
 }
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
-    SSAOInterpolationCache interpolationCache;
-
-    highp vec2 uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
-    float ssao = evaluateSSAO(uv, interpolationCache);
-    float diffuseAO = min(material.ambientOcclusion, ssao);
-    float specularAO = computeSpecularAO(uv, shading_NoV, diffuseAO, pixel.roughness,
-            interpolationCache);
-
     // specular layer
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
@@ -592,6 +591,16 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
 #endif
+
+    SSAOInterpolationCache interpolationCache;
+#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
+    interpolationCache.uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+#endif
+
+    float ssao = evaluateSSAO(interpolationCache);
+    float diffuseAO = min(material.ambientOcclusion, ssao);
+    float specularAO = specularAO(shading_NoV, diffuseAO, pixel.roughness, interpolationCache);
+
     Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
 
     // diffuse layer
@@ -611,18 +620,18 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #endif
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
 
-    // sheen layer
-    evaluateSheenIBL(pixel, specularAO, Fd, Fr);
-
-    // clear coat layer
-    evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
-
     // subsurface layer
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
 
-    // extra ambient occlusion term
+    // extra ambient occlusion term for the base and subsurface layers
     multiBounceAO(diffuseAO, pixel.diffuseColor, Fd);
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
+
+    // sheen layer
+    evaluateSheenIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
+
+    // clear coat layer
+    evaluateClearCoatIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
     combineDiffuseAndSpecular(pixel, shading_normal, E, Fd, Fr, color);
