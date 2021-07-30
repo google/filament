@@ -415,6 +415,7 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
     vec3 clearCoatR = shading_reflected;
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
+    // TODO: Should we apply specularAO to the attenuation as well?
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
