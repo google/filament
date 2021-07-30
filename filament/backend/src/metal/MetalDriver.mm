@@ -62,29 +62,33 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
 
+    initializeSupportedGpuFamilies(mContext);
+
+    utils::slog.d << "Supported GPU families: " << utils::io::endl;
+    if (mContext->highestSupportedGpuFamily.common > 0) {
+        utils::slog.d << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
+    }
+    if (mContext->highestSupportedGpuFamily.apple > 0) {
+        utils::slog.d <<   "MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
+    }
+    if (mContext->highestSupportedGpuFamily.mac > 0) {
+        utils::slog.d << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
+    }
+
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // macOS 10.15+ / iOS 13+.
     mContext->supportsTextureSwizzling = false;
     if (@available(macOS 10.15, iOS 13, *)) {
-#if defined(IOS)
         mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
-#else
-        mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
-#endif
+            mContext->highestSupportedGpuFamily.apple >= 1 ||   // all Apple GPUs
+            mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
     mContext->maxColorRenderTargets = 4;
-#if defined(IOS)
-    if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
+    if (mContext->highestSupportedGpuFamily.apple >= 2 ||
+        mContext->highestSupportedGpuFamily.mac >= 1) {
         mContext->maxColorRenderTargets = 8;
     }
-#else
-    if ([mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v1]) {
-        mContext->maxColorRenderTargets = 8;
-    }
-#endif
 
     // Round requested sample counts down to the nearest device-supported sample count.
     auto& sc = mContext->sampleCountLookup;
@@ -254,7 +258,7 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.mipmapLevelCount == levels,
             "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
             metalTexture.mipmapLevelCount, levels);
-    MTLPixelFormat filamentMetalFormat = getMetalFormat(format);
+    MTLPixelFormat filamentMetalFormat = getMetalFormat(mContext, format);
     ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
             "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
             metalTexture.pixelFormat, filamentMetalFormat);
@@ -594,7 +598,7 @@ FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
-    return MetalTexture::decidePixelFormat(mContext->device, format) != MTLPixelFormatInvalid;
+    return MetalTexture::decidePixelFormat(mContext, format) != MTLPixelFormatInvalid;
 }
 
 bool MetalDriver::isTextureSwizzleSupported() {
@@ -604,7 +608,7 @@ bool MetalDriver::isTextureSwizzleSupported() {
 bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
     // Derived from the Metal 3.0 Feature Set Tables.
     // In order for a format to be mipmappable, it must be color-renderable and filterable.
-    MTLPixelFormat metalFormat = MetalTexture::decidePixelFormat(mContext->device, format);
+    MTLPixelFormat metalFormat = MetalTexture::decidePixelFormat(mContext, format);
     switch (metalFormat) {
         // Mipmappable across all devices:
         case MTLPixelFormatR8Unorm:
@@ -641,7 +645,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
-    MTLPixelFormat mtlFormat = getMetalFormat(format);
+    MTLPixelFormat mtlFormat = getMetalFormat(mContext, format);
     // RGB9E5 isn't supported on Mac as a color render target.
     return mtlFormat != MTLPixelFormatInvalid && mtlFormat != MTLPixelFormatRGB9E5Float;
 }

@@ -382,7 +382,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context) {
 
-    devicePixelFormat = decidePixelFormat(context.device, format);
+    devicePixelFormat = decidePixelFormat(&context, format);
     ASSERT_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid, "Texture format not supported.");
 
     const BOOL mipmapped = levels > 1;
@@ -513,15 +513,22 @@ MetalTexture::~MetalTexture() {
 }
 
 
-MTLPixelFormat MetalTexture::decidePixelFormat(id<MTLDevice> device, TextureFormat format) {
-    const MTLPixelFormat metalFormat = getMetalFormat(format);
-#if !defined(IOS)
-    // Some devices do not support the Depth24_Stencil8 format, so we'll fallback to Depth32.
-    if (metalFormat == MTLPixelFormatDepth24Unorm_Stencil8 &&
-        !device.depth24Stencil8PixelFormatSupported) {
-        return MTLPixelFormatDepth32Float;
+MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFormat format) {
+    const MTLPixelFormat metalFormat = getMetalFormat(context, format);
+
+    // If getMetalFormat can't find an exact match for the format, it returns MTLPixelFormatInvalid.
+    if (metalFormat == MTLPixelFormatInvalid) {
+        // These MTLPixelFormats are always supported.
+        if (format == TextureFormat::DEPTH24_STENCIL8) return MTLPixelFormatDepth32Float_Stencil8;
+        if (format == TextureFormat::DEPTH16) return MTLPixelFormatDepth32Float;
+        if (format == TextureFormat::DEPTH24) {
+            // DEPTH24 isn't supported at all by Metal. First try DEPTH24_STENCIL8. If that fails,
+            // we'll fallback to DEPTH32F.
+            MTLPixelFormat fallback = getMetalFormat(context, TextureFormat::DEPTH24_STENCIL8);
+            if (fallback != MTLPixelFormatInvalid) return fallback;
+            return MTLPixelFormatDepth32Float;
+        }
     }
-#endif
 
     // Metal does not natively support 3 component textures. We'll emulate support by using a 4
     // component texture and reshaping the pixel data during upload.
