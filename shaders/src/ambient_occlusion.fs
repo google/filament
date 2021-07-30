@@ -105,7 +105,7 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 }
 
 // This function could (should?) be implemented as a 3D LUT instead, but we need to save samplers
-float SpecularAO_Cones(vec3 bentNormal, float NoV, float visibility, float roughness) {
+float SpecularAO_Cones(vec3 bentNormal, float visibility, float roughness) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
 
     // aperture from ambient occlusion
@@ -126,7 +126,6 @@ float SpecularAO_Cones(vec3 bentNormal, float NoV, float visibility, float rough
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
-
 vec3 unpackBentNormal(vec3 bn) {
     // this must match src/materials/ssao/ssaoUtils.fs
     return bn * 2.0 - 1.0;
@@ -141,12 +140,13 @@ float computeSpecularAO(const highp vec2 uv, float NoV, float visibility, float 
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
 
 #if SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_SIMPLE
+    // TODO: Should we even bother computing this when screen space bent normals are enabled?
     specularAO = SpecularAO_Lagarde(NoV, visibility, roughness);
 #elif SPECULAR_AMBIENT_OCCLUSION == SPECULAR_AO_BENT_NORMALS
 #   if defined(MATERIAL_HAS_BENT_NORMAL)
-        specularAO = SpecularAO_Cones(shading_bentNormal, NoV, visibility, roughness);
+        specularAO = SpecularAO_Cones(shading_bentNormal, visibility, roughness);
 #   else
-        specularAO = SpecularAO_Cones(shading_normal, NoV, visibility, roughness);
+        specularAO = SpecularAO_Cones(shading_normal, visibility, roughness);
 #   endif
 #endif
 
@@ -172,11 +172,21 @@ float computeSpecularAO(const highp vec2 uv, float NoV, float visibility, float 
         } else {
             bn = textureLod(light_ssao, vec3(uv, 1.0), 0.0).xyz;
         }
+
         bn = unpackBentNormal(bn);
         bn = normalize(bn);
-        specularAO = min(specularAO, SpecularAO_Cones(bn, NoV, visibility, roughness));
-        // For now we don't use the AO bent normal for the diffuse because the AO bent normal
-        // is currently a face normal.
+
+        // Since our screen space specular AO uses normals reconstructed from the depth buffer,
+        // too much occlusion may be computed at grazing angles. This is an artistic hack to
+        // reduce the occlusion at grazing viewing angles.
+        float ssSpecularAO = SpecularAO_Cones(bn, visibility, roughness);
+        // TODO: Revisit this artistic choice after we find a better way to compute bent normals
+        ssSpecularAO = mix(1.0, ssSpecularAO, smoothstep(0.0, 0.2, NoV));
+
+        // Combine the specular AO from the texture with screen space specular AO
+        specularAO = min(specularAO, ssSpecularAO);
+        // For now we don't use the screen space AO bent normal for the diffuse because the
+        // AO bent normal is currently a face normal.
     }
 #endif
 
