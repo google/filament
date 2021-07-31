@@ -109,7 +109,8 @@ public:
 
     struct GLTexture : public backend::HwTexture {
         using HwTexture::HwTexture;
-        struct {
+        struct GL {
+            GL() noexcept : imported(false), sidecarSamples(1), reserved(0) {}
             GLuint id = 0;          // texture or renderbuffer id
             GLenum target = 0;
             GLenum internalFormat = 0;
@@ -121,7 +122,9 @@ public:
             int8_t baseLevel = 127;
             int8_t maxLevel = -1;
             uint8_t targetIndex = 0;    // optimization: index corresponding to target
-            bool imported = false;
+            bool imported           : 1;
+            uint8_t sidecarSamples  : 4;
+            uint8_t reserved        : 3;
         } gl;
 
         void* platformPImpl = nullptr;
@@ -181,7 +184,7 @@ public:
 
     struct GLRenderTarget : public backend::HwRenderTarget {
         using HwRenderTarget::HwRenderTarget;
-        struct GL {
+        struct {
             // field ordering to optimize size on 64-bits
             GLTexture* color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
             GLTexture* depth;
@@ -189,7 +192,7 @@ public:
             GLuint fbo = 0;
             mutable GLuint fbo_read = 0;
             mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
-            uint8_t samples : 4;
+            uint8_t samples = 1;
         } gl;
         backend::TargetBufferFlags targets = {};
     };
