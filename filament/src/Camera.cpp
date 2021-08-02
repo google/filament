@@ -356,11 +356,11 @@ void Camera::setShift(math::double2 shift) noexcept {
 }
 
 mat4 Camera::getProjectionMatrix() const noexcept {
-    return upcast(this)->getProjectionMatrix();
+    return upcast(this)->getUserProjectionMatrix();
 }
 
 mat4 Camera::getCullingProjectionMatrix() const noexcept {
-    return upcast(this)->getCullingProjectionMatrix();
+    return upcast(this)->getUserCullingProjectionMatrix();
 }
 
 math::double4 Camera::getScaling() const noexcept {

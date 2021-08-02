@@ -71,10 +71,18 @@ public:
 
     const math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
 
-    // returns the projection matrix
+    // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
+    // other transforms needed by the shaders
     math::mat4 getProjectionMatrix() const noexcept;
 
+    // culling the projection matrix to be used for culling, contains scaling/shift
     math::mat4 getCullingProjectionMatrix() const noexcept;
+
+    // viewing projection matrix set by the user
+    math::mat4 getUserProjectionMatrix() const noexcept { return mProjection; }
+
+    // culling projection matrix set by the user
+    math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
 
     float getNear() const noexcept { return mNear; }
 
