@@ -309,7 +309,7 @@ public:
          *          all other lights use the same value set for the directional/sun light.
          *
          */
-        float maxShadowDistance = 0.3;
+        float maxShadowDistance = 0.3f;
 
         /**
          * Options available when the View's ShadowType is set to VSM.
