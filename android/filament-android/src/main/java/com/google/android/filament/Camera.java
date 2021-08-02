@@ -254,6 +254,9 @@ public class Camera {
     /**
      * Sets a custom projection matrix.
      *
+     * <p>The projection matrix must define an NDC system that must match the OpenGL convention,
+     * that is all 3 axis are mapped to [-1, 1].</p>
+     *
      * @param inProjection  custom projection matrix for rendering and culling
      *
      * @param near          distance in world units from the camera to the near plane.
@@ -278,6 +281,9 @@ public class Camera {
 
     /**
      * Sets a custom projection matrix.
+     *
+     * <p>The projection matrices must define an NDC system that must match the OpenGL convention,
+     * that is all 3 axis are mapped to [-1, 1].</p>
      *
      * @param inProjection              custom projection matrix for rendering.
      *
