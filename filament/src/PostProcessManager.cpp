@@ -1859,9 +1859,9 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
             .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
             .anisotropyLog2 = 0
     });
+    const float lutDimension = float(colorGrading->getDimension());
     mi->setParameter("lutSize", float2{
-        float(colorGrading->getDimension()) - 1.0f,
-        1.0f / float(colorGrading->getDimension()),
+        0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
     });
 
     const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
@@ -1980,9 +1980,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                const float lutDimension = float(colorGrading->getDimension());
                 mi->setParameter("lutSize", float2{
-                    float(colorGrading->getDimension()) - 1.0f,
-                    1.0f / float(colorGrading->getDimension()),
+                    0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
                 });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
                 mi->setParameter("bloomBuffer", bloomTexture, {

@@ -132,7 +132,7 @@ vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
     vec3 logc = c * log2(a * x + b) + d;
 
     // Remap to sample pixel centers
-    logc = (0.5 + logc * materialParams.lutSize.x) * materialParams.lutSize.y;
+    logc = materialParams.lutSize.x + logc * materialParams.lutSize.y;
 
     return textureLod(lut, logc, 0.0).rgb;
 }
