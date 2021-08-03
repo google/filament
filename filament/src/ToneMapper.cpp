@@ -135,7 +135,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 
-    float3 ap0 = REC2020_to_AP0 * color;
+    float3 ap0 = sRGB_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -177,7 +177,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     // Apply desaturation to compensate for luminance difference
     linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    return AP1_to_REC2020 * linearCV;
+    return AP1_to_sRGB * linearCV;
 }
 
 } // namespace aces
