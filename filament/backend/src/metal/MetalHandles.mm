@@ -799,7 +799,6 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         // If we were given a single-sampled texture but the samples parameter is > 1, we create
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && depth.getSampleCount() == 1) {
-            // TODO: we only need to resolve depth if the depth texture is not SAMPLEABLE.
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
                 sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
