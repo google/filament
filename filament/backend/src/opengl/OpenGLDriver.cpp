@@ -1565,7 +1565,10 @@ bool OpenGLDriver::isFrameTimeSupported() {
 
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
-            math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };
+           // z-coordinate of virtual and physical clip-space is in [-w, 0]
+           math::float2{ 1.0f, 0.0f } :
+           // z-coordinate of virtual clip-space is in [-w,0], physical is in [-w, w]
+           math::float2{ 2.0f, -1.0f };
 }
 
 uint8_t OpenGLDriver::getMaxDrawBuffers() {

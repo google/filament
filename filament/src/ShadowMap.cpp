@@ -422,13 +422,13 @@ void ShadowMap::computeShadowCameraDirectional(
 
         // Computes St the transform to use in the shader to access the shadow map texture
         // i.e. it transform a world-space vertex to a texture coordinate in the shadow-map
-        const mat4f MbMt = getTextureCoordsMapping();
-        const mat4f St = MbMt * S;
+        const mat4 MbMt = getTextureCoordsMapping();
+        const mat4f St = mat4f(MbMt * S);
 
         // note: in texelSizeWorldSpace() below, we could use Mb * Mt * F * W because
         // L * Mp * Mv is a rigid transform (for directional lights)
         if (USE_LISPSM) {
-            mTexelSizeWs = texelSizeWorldSpace(Wp, MbMt * F);
+            mTexelSizeWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
         } else {
             // We know we're using an ortho projection
             mTexelSizeWs = texelSizeWorldSpace(St.upperLeft());
@@ -486,9 +486,9 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
     // Final shadow transform
     const mat4f S = MpMv;
 
-    const mat4f MbMt = getTextureCoordsMapping();
-    const mat4f St = MbMt * S;
-    mTexelSizeWs = texelSizeWorldSpace(Mp, MbMt);
+    const mat4 MbMt = getTextureCoordsMapping();
+    const mat4f St = mat4f(MbMt * S);
+    mTexelSizeWs = texelSizeWorldSpace(Mp, mat4f(MbMt));
 
     if (!mShadowMapInfo.vsm) {
         mLightSpace = St;
@@ -592,7 +592,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
 }
 
 
-mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
+// Apply these remapping in double to maintain a high precision for the depth axis
+mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
     const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
@@ -635,7 +636,7 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
     }) : mat4f();
 
     // Compute shadow-map texture access transform
-    return Mf * Mb * Mv * Mt;
+    return mat4(Mf * Mb * Mv * Mt);
 }
 
 math::mat4f ShadowMap::computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,

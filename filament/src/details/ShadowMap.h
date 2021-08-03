@@ -215,7 +215,7 @@ private:
 
     static math::mat4f directionalLightFrustum(float n, float f) noexcept;
 
-    math::mat4f getTextureCoordsMapping() const noexcept;
+    math::mat4 getTextureCoordsMapping() const noexcept;
 
     static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpace,
             const math::mat4f& Mv, float zfar) noexcept;
