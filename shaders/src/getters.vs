@@ -150,6 +150,6 @@ vec4 computeWorldPosition() {
     }
     return position * (1.0 / position.w);
 #else
-#error "Unknown Vertex Domain"
+#error Unknown Vertex Domain
 #endif
 }
