@@ -48,10 +48,6 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     // All textures can be blitted from, so they must have the UsageShaderRead flag.
     u |= MTLTextureUsageShaderRead;
 
-    // All textures can be blitted to, so they must have the UsageShaderRenderTarget flag.
-    // TODO: this isn't optimal.
-    u |= MTLTextureUsageRenderTarget;
-
     return MTLTextureUsage(u);
 }
 
@@ -271,12 +267,11 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
-MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(context, byteCount) {}
+MetalBufferObject::MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount)
+        : HwBufferObject(byteCount), buffer(context, usage, byteCount) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
-    assert_invariant(byteOffset + size <= byteCount);
-    buffer.copyIntoBuffer(data, size);
+    buffer.copyIntoBuffer(data, size, byteOffset);
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
@@ -285,8 +280,9 @@ MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
     buffers.resize(bufferCount);
 }
 
-MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount)
-    : HwIndexBuffer(elementSize, indexCount), buffer(context, elementSize * indexCount, true) { }
+MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
+        uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
+        buffer(context, usage, elementSize * indexCount, true) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer) {
@@ -930,11 +926,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.textureType = MTLTextureType2DMultisample;
     descriptor.sampleCount = samples;
     descriptor.usage = MTLTextureUsageRenderTarget;
-#if defined(IOS)
-    descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
-#else
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
-#endif
 
     return [device newTextureWithDescriptor:descriptor];
 }

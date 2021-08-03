@@ -1,6 +1,9 @@
 # matdbg
 
-1. [User Instructions](#user-instructions)
+1. [Capabilities](#capabilities)
+1. [Setup for Desktop](#setup-for-desktop)
+1. [Setup for Android](#setup-for-android)
+1. [Debugger Usage](#debugger-usage)
 1. [Architecture Overview](#architecture-overview)
 1. [C++ Server](#c-server)
 1. [JavaScript Client](#javascript-client)
@@ -9,6 +12,20 @@
 1. [Wish List](#wish-list)
 1. [Screenshot](#screenshot)
 1. [Material Chunks](#material-chunks)
+
+## Capabilities
+
+matdbg is a library and web application that enables debugging and live-editing of Filament shaders.
+At the time of this writing, the following capabilities are supported.
+
+- OpenGL: Editing GLSL
+- Metal: Editing MSL
+- Vulkan: Editing transpiled GLSL, displaying disassembled SPIR-V
+
+Note that a given material can be built with multiple backends, even though only one backend
+is active in a particular session. For example, if the current app is using Vulkan, it is still
+possible to inspect the Metal shaders, as long as the material has been built with Metal support
+included.
 
 ## Setup for Desktop
 
@@ -46,6 +63,10 @@ following:
     adb forward tcp:8081 tcp:8081
 
 This lets you go to http://localhost:8081 in Chrome on your host machine.
+
+Note that we generally use a release build of Filament when running on Android, so the shaders
+are optimized and very unreadable. This can be avoided by modifying the build such that `-g` is
+passed to matc even in release builds.
 
 ## Debugger Usage
 
@@ -185,7 +206,7 @@ Filament has 7-bit mask, so each number in the list is between 0 and 127.
 
 ---
 
-`/api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}`
+`/api/shader?matid={id}&type=[glsl|spirv|msl]&[glindex|vkindex|metalindex]={index}`
 
 Returns the entire shader code for the given variant. This is the only HTTP request that returns
 text instead of JSON.
@@ -219,14 +240,16 @@ not including the terminating null.
 
 ## Wish List
 
-- Allow viewing and editing GLSL for Metal and Vulkan (use filamat or spirv-cross for this)
-- Stop piggybacking on `type=glsl` for Metal Shading Language.
+- Allow editing of the original GLSL, perhaps by enhancing the `-g` option in matc and adding new chunk types.
+- Port the web side to TypeScript
+    - This will clarify the structure of the pseudo-database, which is currently a total hack.
+    - Allows us to use enums instead of strings in several places (e.g. getShaderAPI)
+    - Try using https://github.com/basarat/typescript-script because webpack etc is painful.
+    - If the above idea is too slow then use https://github.com/evanw/esbuild.
 - Expose the entire `engine.debug` struct in the web UI.
 - When shader errors occur, send them back over the wire to the web client.
 - Resizing the Chrome window causes layout issues.
 - The sidebar in the web app is not resizeable.
-- Refactor shader selection stuff to have "index" and "stage" attributes instead of glindex/vkindex/metalindex.
-    - Alternatively do something similar to makeKey in `MaterialChunk`.
 - For the material ids, SHA-1 would be better than murmur since the latter can easily have collisions.
 - It would be easy to add diff decorations to the editor in our `onEdit` function:
      1. Examine "changes" (IModelContentChange) to get a set of line numbers.

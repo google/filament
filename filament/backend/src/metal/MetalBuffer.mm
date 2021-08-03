@@ -22,12 +22,12 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-MetalBuffer::MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer)
+MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer)
         : mBufferSize(size), mContext(context) {
-    // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
-    // immediate command encoder methods like setVertexBytes:length:atIndex:.
-    // TODO: we shouldn't do this if the data persists for multiple uses.
-    if (size <= 4 * 1024 && !forceGpuBuffer) {   // 4K
+    // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
+    // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
+    const bool dynamicUsage = usage == BufferUsage::DYNAMIC || usage == BufferUsage::STREAM;
+    if (size <= 4 * 1024 && dynamicUsage && !forceGpuBuffer) {
         mBufferPoolEntry = nullptr;
         mCpuBuffer = malloc(size);
     }
@@ -44,16 +44,17 @@ MetalBuffer::~MetalBuffer() {
     }
 }
 
-void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
+void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     if (size <= 0) {
         return;
     }
-    ASSERT_PRECONDITION(size <= mBufferSize, "Attempting to copy %d bytes into a buffer of size %d",
-            size, mBufferSize);
+    ASSERT_PRECONDITION(size + byteOffset <= mBufferSize,
+            "Attempting to copy %d bytes into a buffer of size %d at offset %d",
+            size, mBufferSize, byteOffset);
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
-        memcpy(mCpuBuffer, src, size);
+        memcpy(static_cast<uint8_t*>(mCpuBuffer) + byteOffset, src, size);
         return;
     }
 
@@ -64,7 +65,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
     }
 
     mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents), src, size);
+    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + byteOffset, src, size);
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {

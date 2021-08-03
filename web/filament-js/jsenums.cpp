@@ -164,8 +164,6 @@ enum_<ColorGrading::ToneMapping>("ColorGrading$ToneMapping")
     .value("ACES_LEGACY", ColorGrading::ToneMapping::ACES_LEGACY)
     .value("ACES", ColorGrading::ToneMapping::ACES)
     .value("FILMIC", ColorGrading::ToneMapping::FILMIC)
-    .value("RESERVED", ColorGrading::ToneMapping::RESERVED)
-    .value("REINHARD", ColorGrading::ToneMapping::REINHARD)
     .value("DISPLAY_RANGE", ColorGrading::ToneMapping::DISPLAY_RANGE);
 
 enum_<Frustum::Plane>("Frustum$Plane")

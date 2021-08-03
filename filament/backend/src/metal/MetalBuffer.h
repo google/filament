@@ -20,6 +20,8 @@
 #include "MetalContext.h"
 #include "MetalBufferPool.h"
 
+#include <backend/DriverEnums.h>
+
 #include <Metal/Metal.h>
 
 namespace filament {
@@ -29,7 +31,7 @@ namespace metal {
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
@@ -41,7 +43,7 @@ public:
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
      */
-    void copyIntoBuffer(void* src, size_t size);
+    void copyIntoBuffer(void* src, size_t size, size_t byteOffset = 0);
 
     /**
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid

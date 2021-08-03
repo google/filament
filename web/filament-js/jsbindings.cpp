@@ -364,7 +364,9 @@ value_object<filament::View::AmbientOcclusionOptions>("View$AmbientOcclusionOpti
     .field("bias", &filament::View::AmbientOcclusionOptions::bias)
     .field("resolution", &filament::View::AmbientOcclusionOptions::resolution)
     .field("intensity", &filament::View::AmbientOcclusionOptions::intensity)
+    .field("bilateralThreshold", &filament::View::AmbientOcclusionOptions::bilateralThreshold)
     .field("quality", &filament::View::AmbientOcclusionOptions::quality);
+    // TODO: ssct options
 
 value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("cocScale", &filament::View::DepthOfFieldOptions::cocScale)

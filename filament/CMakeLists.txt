@@ -38,6 +38,7 @@ set(PUBLIC_HDRS
         include/filament/SwapChain.h
         include/filament/Texture.h
         include/filament/TextureSampler.h
+        include/filament/ToneMapper.h
         include/filament/TransformManager.h
         include/filament/VertexBuffer.h
         include/filament/View.h
@@ -79,7 +80,7 @@ set(SRCS
         src/Stream.cpp
         src/SwapChain.cpp
         src/Texture.cpp
-        src/ToneMapping.cpp
+        src/ToneMapper.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
@@ -107,7 +108,6 @@ set(PRIVATE_HDRS
         src/PostProcessManager.h
         src/RenderPass.h
         src/ResourceAllocator.h
-        src/ToneMapping.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h

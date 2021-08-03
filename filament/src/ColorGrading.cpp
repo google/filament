@@ -23,8 +23,6 @@
 
 #include "ColorSpace.h"
 
-#include "ToneMapping.h"
-
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -32,8 +30,6 @@
 #include <utils/JobSystem.h>
 #include <utils/SpinLock.h>
 #include <utils/Systrace.h>
-
-#include <functional>
 
 #include <math.h>
 #include <stdlib.h>
@@ -49,9 +45,17 @@ using namespace backend;
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
-    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
+    const ToneMapper* toneMapper = nullptr;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+#pragma clang diagnostic pop
+
+    bool hasAdjustments = false;
+
+    // Everything below must be part of the == comparison operator
+    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
     // Luminance scaling
     bool   luminanceScaling = false;
     // Exposure
@@ -79,17 +83,14 @@ struct ColorGrading::BuilderDetails {
     float3 shadowGamma      = {1.0f};
     float3 midPoint         = {1.0f};
     float3 highlightScale   = {1.0f};
-    // Keep last
-    bool hasAdjustments     = false;
 
     bool operator!=(const BuilderDetails &rhs) const {
         return !(rhs == *this);
     }
 
     bool operator==(const BuilderDetails &rhs) const {
-        // Note: Do NOT compare hasAdjustments
+        // Note: Do NOT compare hasAdjustments and toneMapper
         return quality == rhs.quality &&
-               toneMapping == rhs.toneMapping &&
                luminanceScaling == rhs.luminanceScaling &&
                exposure == rhs.exposure &&
                whiteBalance == rhs.whiteBalance &&
@@ -122,6 +123,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 
 ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel qualityLevel) noexcept {
     mImpl->quality = qualityLevel;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::toneMapper(const ToneMapper* toneMapper) noexcept {
+    mImpl->toneMapper = toneMapper;
     return *this;
 }
 
@@ -202,16 +208,47 @@ ColorGrading::Builder& ColorGrading::Builder::curves(
     return *this;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     // We want to see if any of the default adjustment values have been modified
     // We skip the tonemapping operator on purpose since we always want to apply it
     BuilderDetails defaults;
-    defaults.toneMapping = mImpl->toneMapping;
     bool hasAdjustments = defaults != *mImpl;
     mImpl->hasAdjustments = hasAdjustments;
 
-    return upcast(engine).createColorGrading(*this);
+    // Fallback for clients that still use the deprecated ToneMapping API
+    bool needToneMapper = mImpl->toneMapper == nullptr;
+    if (needToneMapper) {
+        switch (mImpl->toneMapping) {
+            case ToneMapping::LINEAR:
+                mImpl->toneMapper = new LinearToneMapper();
+                break;
+            case ToneMapping::ACES_LEGACY:
+                mImpl->toneMapper = new ACESLegacyToneMapper();
+                break;
+            case ToneMapping::ACES:
+                mImpl->toneMapper = new ACESToneMapper();
+                break;
+            case ToneMapping::FILMIC:
+                mImpl->toneMapper = new FilmicToneMapper();
+                break;
+            case ToneMapping::DISPLAY_RANGE:
+                mImpl->toneMapper = new DisplayRangeToneMapper();
+                break;
+        }
+    }
+
+    FColorGrading* colorGrading = upcast(engine).createColorGrading(*this);
+
+    if (needToneMapper) {
+        delete mImpl->toneMapper;
+        mImpl->toneMapper = nullptr;
+    }
+
+    return colorGrading;
 }
+#pragma clang diagnostic pop
 
 //------------------------------------------------------------------------------
 // White balance
@@ -254,74 +291,6 @@ inline float3 chromaticAdaptation(float3 v, float3 adaptationTransform) {
 //------------------------------------------------------------------------------
 
 using ColorTransform = float3(*)(float3);
-
-ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return linearAP1_to_ACEScct;
-        default:
-            return linear_to_LogC;
-    }
-}
-
-ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return ACEScct_to_linearAP1;
-        default:
-            return LogC_to_linear;
-    }
-}
-
-mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return sRGB_to_AP1;
-        case ColorGrading::ToneMapping::FILMIC:
-        case ColorGrading::ToneMapping::RESERVED:
-        case ColorGrading::ToneMapping::DISPLAY_RANGE:
-            return mat3f{}; // stay in sRGB
-        default:
-            return sRGB_to_REC2020;
-    }
-}
-
-mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return AP1_to_sRGB;
-        case ColorGrading::ToneMapping::FILMIC:
-        case ColorGrading::ToneMapping::RESERVED:
-        case ColorGrading::ToneMapping::DISPLAY_RANGE:
-            return mat3f{}; // stay in sRGB
-        default:
-            return REC2020_to_sRGB;
-    }
-}
-
-float3 selectLuminanceTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return LUMA_AP1;
-        default:
-            return LUMA_REC709;
-    }
-}
-
-float3 selectLuminanceScalingTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return LUMA_AP1;
-        default:
-            return LUMA_HK_REC709;
-    }
-}
 
 UTILS_ALWAYS_INLINE
 inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
@@ -403,8 +372,8 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 // Luminance scaling
 //------------------------------------------------------------------------------
 
-static float3 luminanceScaling(
-        float3 x, ColorTransform toneMapper, float3 luminanceWeights) noexcept {
+static float3 luminanceScaling(float3 x,
+        const ToneMapper& toneMapper, float3 luminanceWeights) noexcept {
 
     // Troy Sobotka, 2021, "EVILS - Exposure Value Invariant Luminance Scaling"
     // https://colab.research.google.com/drive/1iPJzNNKR7PynFmsqSnQm3bCZmQ3CvAJ-#scrollTo=psU43hb-BLzB
@@ -473,42 +442,11 @@ void selectLutTextureParams(ColorGrading::QualityLevel quality,
     }
 }
 
-
-//------------------------------------------------------------------------------
-// Tone mapping
-//------------------------------------------------------------------------------
-
-ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::LINEAR:
-            return tonemap::Linear;
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-            return tonemap::ACES_Legacy;
-        case ColorGrading::ToneMapping::ACES:
-            return tonemap::ACES;
-        case ColorGrading::ToneMapping::FILMIC:
-            return tonemap::Filmic;
-        case ColorGrading::ToneMapping::RESERVED:
-            return tonemap::Linear;
-        case ColorGrading::ToneMapping::REINHARD:
-            return tonemap::Reinhard;
-        case ColorGrading::ToneMapping::DISPLAY_RANGE:
-            return tonemap::DisplayRange;
-    }
-}
-
 //------------------------------------------------------------------------------
 // Color grading implementation
 //------------------------------------------------------------------------------
 
 struct Config {
-    mat3f colorGradingTransformIn;
-    mat3f colorGradingTransformOut;
-    float3 luminanceTransform;
-    float3 luminanceScalingTransform;
-    ColorTransform linearToLogTransform;
-    ColorTransform logToLinearTransform;
-    ColorTransform toneMapper;
     size_t lutDimension;
     float3 adaptationTransform;
 };
@@ -528,15 +466,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     utils::SpinLock configLock;
     {
         std::lock_guard<utils::SpinLock> lock(configLock);
-        c.colorGradingTransformIn   = selectColorGradingTransformIn(builder->toneMapping);
-        c.colorGradingTransformOut  = selectColorGradingTransformOut(builder->toneMapping);
-        c.luminanceTransform        = selectLuminanceTransform(builder->toneMapping);
-        c.luminanceScalingTransform = selectLuminanceScalingTransform(builder->toneMapping);
-        c.linearToLogTransform      = selectLinearToLogTransform(builder->toneMapping);
-        c.logToLinearTransform      = selectLogToLinearTransform(builder->toneMapping);
-        c.toneMapper                = selectToneMapping(builder->toneMapping);
-        c.lutDimension              = selectLutDimension(builder->quality);
-        c.adaptationTransform       = adaptationTransform(builder->whiteBalance);
+        c.lutDimension        = selectLutDimension(builder->quality);
+        c.adaptationTransform = adaptationTransform(builder->whiteBalance);
     }
 
     size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
@@ -586,8 +517,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = chromaticAdaptation(v, config.adaptationTransform);
                     }
 
-                    // Convert to color grading color space
-                    v = config.colorGradingTransformIn * v;
+                    // TODO: We should convert to a color grading color space here
 
                     if (builder->hasAdjustments) {
                         // Kill negative values before the next transforms
@@ -597,13 +527,13 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
                         // Shadows/mid-tones/highlights
-                        v = tonalRanges(v, config.luminanceTransform,
+                        v = tonalRanges(v, LUMA_REC709,
                                 builder->shadows, builder->midtones, builder->highlights,
                                 builder->tonalRanges);
 
                         // The adjustments below behave better in log space using the ACEScct
                         // color space.
-                        v = config.linearToLogTransform(v);
+                        v = linear_to_LogC(v);
 
                         // ASC CDL
                         v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
@@ -612,13 +542,13 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = contrast(v, builder->contrast);
 
                         // Back to linear space
-                        v = config.logToLinearTransform(v);
+                        v = LogC_to_linear(v);
 
                         // Vibrance in linear space
-                        v = vibrance(v, config.luminanceTransform, builder->vibrance);
+                        v = vibrance(v, LUMA_REC709, builder->vibrance);
 
                         // Saturation in linear space
-                        v = saturation(v, config.luminanceTransform, builder->saturation);
+                        v = saturation(v, LUMA_REC709, builder->saturation);
 
                         // Kill negative values before tone mapping
                         v = max(v, 0.0f);
@@ -630,14 +560,14 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 
                     // Tone mapping
                     if (builder->luminanceScaling) {
-                        v = luminanceScaling(v, config.toneMapper, config.luminanceScalingTransform);
+                        v = luminanceScaling(v, *builder->toneMapper, LUMA_HK_REC709);
                     } else {
-                        v = config.toneMapper(v);
+                        v = (*builder->toneMapper)(v);
                     }
 
-                    // Convert to output color space
-                    // TODO: allow to customize the output color space,
-                    v = config.colorGradingTransformOut * v;
+                    // TODO: We should convert to the output color space if we use a working
+                    //       color space that's not sRGB
+                    // TODO: Allow the user to customize the output color space
 
                     v = saturate(v);
 

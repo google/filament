@@ -96,8 +96,8 @@ Driver* OpenGLDriver::create(
     //    OpenGLProgram             :  48       moderate
     // -- less than or equal 64 bytes
     //    GLTexture                 :  72       moderate
+    //    GLRenderTarget            : 112       few
     //    GLStream                  : 168       few
-    //    GLRenderTarget            : 192       few
     //    GLVertexBuffer            : 200       moderate
     // -- less than or equal to 208 bytes
 
@@ -399,8 +399,7 @@ void OpenGLDriver::createVertexBufferR(
         uint8_t bufferCount,
         uint8_t attributeCount,
         uint32_t elementCount,
-        AttributeArray attributes,
-        BufferUsage usage) {
+        AttributeArray attributes) {
     DEBUG_MARKER()
     construct<GLVertexBuffer>(vbh, bufferCount, attributeCount, elementCount, attributes);
 }
@@ -733,7 +732,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
     TargetBufferFlags resolveFlags = {};
 
-    GLRenderTarget::GL::RenderBuffer const* pRenderBuffer = nullptr;
+    GLTexture* pAttachmentTexture = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
         case GL_COLOR_ATTACHMENT1:
@@ -745,26 +744,26 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         case GL_COLOR_ATTACHMENT7:
             static_assert(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT == 8);
             resolveFlags = getTargetBufferFlagsAt(attachment - GL_COLOR_ATTACHMENT0);
-            pRenderBuffer = &rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
+            pAttachmentTexture = rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
             break;
         case GL_DEPTH_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
-            pRenderBuffer = &rt->gl.depth;
+            pAttachmentTexture = rt->gl.depth;
             break;
         case GL_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::STENCIL;
-            pRenderBuffer = &rt->gl.stencil;
+            pAttachmentTexture = rt->gl.stencil;
             break;
         case GL_DEPTH_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
             resolveFlags |= TargetBufferFlags::STENCIL;
-            pRenderBuffer = &rt->gl.depth;
+            pAttachmentTexture = rt->gl.depth;
             break;
         default:
             break;
     }
 
-    assert_invariant(pRenderBuffer);
+    assert_invariant(pAttachmentTexture);
 
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
@@ -895,21 +894,26 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         resolveFlags = TargetBufferFlags::NONE;
 
     } else {
-        assert_invariant(rt->gl.samples > 1);
-        assert_invariant(pRenderBuffer->rb == 0);
-
         // Here we emulate EXT_multisampled_render_to_texture.
         //
         // This attachment needs to be explicitly resolved in endRenderPass().
         // The first step is to create a sidecar multi-sampled renderbuffer, which is where drawing
         // will actually take place, and use that in lieu of the requested attachment.
         // The sidecar will be destroyed when the render target handle is destroyed.
-        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        glGenRenderbuffers(1, &pRenderBuffer->rb);
-        renderBufferStorage(pRenderBuffer->rb,
-                t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
 
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, pRenderBuffer->rb);
+        assert_invariant(rt->gl.samples > 1);
+        assert_invariant(pAttachmentTexture);
+
+        gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+
+        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0)) {
+            glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+            renderBufferStorage(pAttachmentTexture->gl.sidecarRenderBufferMS,
+                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
+        }
+
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
+                pAttachmentTexture->gl.sidecarRenderBufferMS);
 
         // Here we lazily create a "read" sidecar FBO, used later as the resolve target. Note that
         // at least one of the render target's attachments needs to be both MSAA and sampleable in
@@ -1061,8 +1065,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
-                rt->gl.color[i].texture = handle_cast<GLTexture*>(color[i].handle);
-                rt->gl.color[i].level = color[i].level;
+                rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
             }
@@ -1075,9 +1078,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         assert_invariant(!stencil.handle || stencil.handle == depth.handle);
-        rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
-        rt->gl.depth.level = depth.level;
-        if (any(rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) ||
+        rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
+        if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
             (!depth.handle && !stencil.handle)) {
             // special case: depth & stencil requested, and both provided as the same texture
             // special case: depth & stencil requested, but both not provided
@@ -1088,13 +1090,11 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
-            rt->gl.depth.level = depth.level;
+            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
-            rt->gl.stencil.level = stencil.level;
+            rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
         }
     }
@@ -1254,6 +1254,9 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
             if (t->gl.fence) {
                 glDeleteSync(t->gl.fence);
             }
+            if (t->gl.sidecarRenderBufferMS) {
+                glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
+            }
         }
         destruct(th, t);
     }
@@ -1274,19 +1277,6 @@ void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &rt->gl.fbo_read);
-        }
-
-        // free the sidecar renderbuffers if any
-        for (auto& renderBuffer : rt->gl.color) {
-            if (renderBuffer.rb) {
-                glDeleteRenderbuffers(1, &renderBuffer.rb);
-            }
-        }
-        if (rt->gl.depth.rb) {
-            glDeleteRenderbuffers(1, &rt->gl.depth.rb);
-        }
-        if (rt->gl.stencil.rb) {
-            glDeleteRenderbuffers(1, &rt->gl.stencil.rb);
         }
         destruct(rth, rt);
     }
@@ -1449,13 +1439,18 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     const auto& ext = mContext.ext;
     if (isETC2Compression(format)) {
-        return ext.EXT_texture_compression_etc2;
+        return ext.EXT_texture_compression_etc2 ||
+               ext.WEBGL_compressed_texture_etc; // WEBGL specific, apparently contains ETC2
     }
     if (isS3TCSRGBCompression(format)) {
-        return ext.EXT_texture_compression_s3tc_srgb || ext.WEBGL_texture_compression_s3tc_srgb;
+        // see https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_texture_sRGB.txt
+        return  ext.WEBGL_compressed_texture_s3tc_srgb || // this is WEBGL specific
+                ext.EXT_texture_compression_s3tc_srgb || // this is ES specific
+               (ext.EXT_texture_compression_s3tc && ext.EXT_texture_sRGB);
     }
     if (isS3TCCompression(format)) {
-        return ext.EXT_texture_compression_s3tc || ext.WEBGL_texture_compression_s3tc;
+        return  ext.EXT_texture_compression_s3tc || // this is ES specific
+                ext.WEBGL_compressed_texture_s3tc; // this is WEBGL specific
     }
     return getInternalFormat(format) != 0;
 }
@@ -1647,13 +1642,20 @@ void OpenGLDriver::updateBufferObject(
 
     if (bo->gl.binding == GL_UNIFORM_BUFFER) {
         // TODO: use updateBuffer() for all types of buffer? Make sure GL supports that.
-        updateBuffer(bo, bd, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
+        updateBuffer(bo, bd, byteOffset, (uint32_t)gl.gets.uniform_buffer_offset_alignment);
     } else {
         if (bo->gl.binding == GL_ARRAY_BUFFER) {
             gl.bindVertexArray(nullptr);
         }
         gl.bindBuffer(bo->gl.binding, bo->gl.id);
-        glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+        if (byteOffset == 0 && bd.size == bo->byteCount) {
+            // it looks like it's generally faster (or not worse) to use glBufferData()
+            glBufferData(bo->gl.binding, bd.size, bd.buffer, getBufferUsage(bo->usage));
+        } else {
+            // glBufferSubData() could be catastrophically inefficient if several are
+            // issued during the same frame. Currently, we're not doing that though.
+            glBufferSubData(bo->gl.binding, byteOffset, bd.size, bd.buffer);
+        }
     }
 
     scheduleDestroy(std::move(bd));
@@ -1661,14 +1663,17 @@ void OpenGLDriver::updateBufferObject(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateBuffer(GLBufferObject* buffer,
-        BufferDescriptor const& p, uint32_t alignment) noexcept {
+void OpenGLDriver::updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p,
+        uint32_t byteOffset, uint32_t alignment) noexcept {
     assert_invariant(buffer->byteCount >= p.size);
     assert_invariant(buffer->gl.id);
 
     auto& gl = mContext;
     gl.bindBuffer(buffer->gl.binding, buffer->gl.id);
     if (buffer->usage == BufferUsage::STREAM) {
+
+        // in streaming mode it's meaningless to have an offset specified
+        assert_invariant(byteOffset == 0);
 
         buffer->size = (uint32_t)p.size;
 
@@ -1706,19 +1711,20 @@ void OpenGLDriver::updateBuffer(GLBufferObject* buffer,
             buffer->base = offset;
 
             CHECK_GL_ERROR(utils::slog.e)
-            return;
+        } else {
+            // In stream mode we're allowed to allocate a whole new buffer
+            glBufferData(buffer->gl.binding, p.size, p.buffer, getBufferUsage(buffer->usage));
         }
-    }
-
-    if (p.size == buffer->byteCount) {
-        // it looks like it's generally faster (or not worse) to use glBufferData()
-        glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer, getBufferUsage(buffer->usage));
     } else {
-        // when loading less that the buffer size, it's okay to assume the back of the buffer
-        // is undefined. glBufferSubData() could be catastrophically inefficient if several are
-        // issued during the same frame. Currently, we're not doing that though.
-        // TODO: investigate if it'll be faster to use glBufferData().
-        glBufferSubData(buffer->gl.binding, 0, p.size, p.buffer);
+        if (byteOffset == 0 && p.size == buffer->byteCount) {
+            // it looks like it's generally faster (or not worse) to use glBufferData()
+            glBufferData(buffer->gl.binding, buffer->byteCount, p.buffer,
+                    getBufferUsage(buffer->usage));
+        } else {
+            // glBufferSubData() could be catastrophically inefficient if several are
+            // issued during the same frame. Currently, we're not doing that though.
+            glBufferSubData(buffer->gl.binding, byteOffset, p.size, p.buffer);
+        }
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -2312,6 +2318,11 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
     GLbitfield mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
+
+        // we can only resolve COLOR0 at the moment
+        assert_invariant(!(rt->targets &
+                (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+
         GLint read = rt->gl.fbo_read;
         GLint draw = rt->gl.fbo;
         if (action == ResolveAction::STORE) {
@@ -3023,6 +3034,14 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // reverse-resolve, but that wouldn't buy us anything.
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
+
+        // blit operations are only supported from RenderTargets that have only COLOR0 (or
+        // no color buffer at all)
+        assert_invariant(
+                !(s->targets & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+
+        assert_invariant(
+                !(d->targets & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
 
         // With GLES 3.x, GL_INVALID_OPERATION is generated if the value of GL_SAMPLE_BUFFERS
         // for the draw buffer is greater than zero. This works with OpenGL, so we want to

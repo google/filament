@@ -147,8 +147,9 @@ public:
         bool GOOGLE_cpp_style_line_directive = false;
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
-        bool WEBGL_texture_compression_s3tc = false;
-        bool WEBGL_texture_compression_s3tc_srgb = false;
+        bool WEBGL_compressed_texture_s3tc = false;
+        bool WEBGL_compressed_texture_s3tc_srgb = false;
+        bool WEBGL_compressed_texture_etc = false;
     } ext;
 
     struct {

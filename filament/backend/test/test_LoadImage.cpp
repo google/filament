@@ -89,6 +89,25 @@ void main() {
 
 )");
 
+std::string fragmentUpdateImageMip (R"(#version 450 core
+
+layout(location = 0) out vec4 fragColor;
+
+// Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
+// This parameter is ignored for other backends.
+layout(location = 0, set = 1) uniform sampler2D tex;
+
+void main() {
+    vec2 fbsize = vec2(512);
+    vec2 uv = gl_FragCoord.xy / fbsize;
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+    uv.y = 1.0 - uv.y;
+#endif
+    fragColor = vec4(textureLod(tex, uv, 1.0f).rgb, 1.0f);
+}
+
+)");
+
 }
 
 namespace test {
@@ -369,15 +388,14 @@ TEST_F(BackendTest, UpdateImage2D) {
     // TODO: Vulkan crashes with "Assertion failed: (offset + size <= allocationSize)"
     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u);
     testCases.emplace_back("RGBA, FLOAT -> RGBA16F (with buffer padding)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 64u);
-    // TODO: Metal fails this one:
-    // testCases.emplace_back("RGB, FLOAT -> RGB32F (with buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u);
+    testCases.emplace_back("RGB, FLOAT -> RGB32F (with buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u);
 
     // Upload subregions separately.
     // TODO: Vulkan crashes with "Offsets not yet supported"
     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 0u, true);
+    testCases.emplace_back("RGBA, FLOAT -> RGBA16F (subregions)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 0u, true);
     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions, buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
-    // TODO: Metal fails this one:
-    // testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
+    testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
 
     // Test compresseed format upload.
 #ifndef IOS
@@ -539,6 +557,76 @@ TEST_F(BackendTest, UpdateImageSRGB) {
 
     static const uint32_t expectedHash = 519370995;
     readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
+
+    api.flush();
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    api.destroySamplerGroup(sgroup);
+    api.destroyProgram(program);
+    api.destroySwapChain(swapChain);
+    api.destroyRenderTarget(defaultRenderTarget);
+
+    // This ensures all driver commands have finished before exiting the test.
+    api.finish();
+
+    api.stopCapture();
+
+    executeCommands();
+
+    getDriver().purge();
+}
+
+TEST_F(BackendTest, UpdateImageMipLevel) {
+    auto& api = getDriverApi();
+    api.startCapture();
+
+    PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
+    PixelDataType pixelType = PixelDataType::HALF;
+    TextureFormat textureFormat = TextureFormat::RGBA32F;
+
+    // Create a platform-specific SwapChain and make it current.
+    auto swapChain = createSwapChain();
+    api.makeCurrent(swapChain, swapChain);
+    auto defaultRenderTarget = api.createDefaultRenderTarget(0);
+
+    // Create a program.
+    std::string fragment = stringReplace("{samplerType}",
+            getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    Program prog = shaderGen.getProgram();
+    Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
+    prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    ProgramHandle program = api.createProgram(std::move(prog));
+
+    // Create a texture with 3 mip levels.
+    // Base level: 1024
+    // Level 1:     512     <-- upload data and sample from this level
+    // Level 2:     256
+    Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_2D, 3,
+            textureFormat, 1, 1024, 1024, 1, TextureUsage::SAMPLEABLE);
+
+    // Create image data.
+    PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
+    api.update2DImage(texture, 1, 0, 0, 512, 512, std::move(descriptor));
+
+    api.beginFrame(0, 0);
+
+    // Update samplers.
+    SamplerGroup samplers(1);
+    SamplerParams sparams = {};
+    sparams.filterMag = SamplerMagFilter::LINEAR;
+    sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+    samplers.setSampler(0, texture, sparams);
+    auto sgroup = api.createSamplerGroup(samplers.getSize());
+    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+
+    api.bindSamplers(0, sgroup);
+
+    renderTriangle(defaultRenderTarget, swapChain, program);
+
+    static const uint32_t expectedHash = 3644679986;
+    readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
 
     api.flush();
     api.commit(swapChain);

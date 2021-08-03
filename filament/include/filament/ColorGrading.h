@@ -20,6 +20,7 @@
 #define TNT_FILAMENT_COLOR_GRADING_H
 
 #include <filament/FilamentAPI.h>
+#include <filament/ToneMapper.h>
 
 #include <utils/compiler.h>
 
@@ -90,7 +91,7 @@ class FColorGrading;
  * - Vibrance: 1.0
  * - Saturation: 1.0
  * - Curves: gamma {1,1,1}, midPoint {1,1,1}, and scale {1,1,1}
- * - Tone mapping: ACES_LEGACY
+ * - Tone mapping: ACESLegacyToneMapper
  * - Luminance scaling: false
  *
  * @see View
@@ -107,15 +108,15 @@ public:
 
     /**
      * List of available tone-mapping operators.
+     *
+     * @deprecated Use Builder::toneMapper(ToneMapper*) instead
      */
-    enum class ToneMapping : uint8_t {
+    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
         LINEAR        = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES_LEGACY   = 1,     //!< ACES tone mapping, with a brightness modifier to match Filament's legacy tone mapper
         ACES          = 2,     //!< ACES tone mapping
         FILMIC        = 3,     //!< Filmic tone mapping, modelled after ACES but applied in sRGB space
-        RESERVED      = 4,     //!< Currently unused
-        REINHARD      = 5,     //!< Reinhard luma-based tone mapping
-        DISPLAY_RANGE = 6,     //!< Tone mapping used to validate/debug scene exposure
+        DISPLAY_RANGE = 4,     //!< Tone mapping used to validate/debug scene exposure
     };
 
     //! Use Builder to construct a ColorGrading object instance
@@ -148,12 +149,31 @@ public:
          * Selects the tone mapping operator to apply to the HDR color buffer as the last
          * operation of the color grading post-processing step.
          *
+         * The default tone mapping operator is ACESLegacyToneMapper.
+         *
+         * The specified tone mapper must have a lifecycle that exceeds the lifetime of
+         * this builder. Since the build(Engine&) method is synchronous, it is safe to
+         * delete the tone mapper object after that finishes executing.
+         *
+         * @param toneMapper The tone mapping operator to apply to the HDR color buffer
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& toneMapper(const ToneMapper* toneMapper) noexcept;
+
+        /**
+         * Selects the tone mapping operator to apply to the HDR color buffer as the last
+         * operation of the color grading post-processing step.
+         *
          * The default tone mapping operator is ACES_LEGACY.
          *
          * @param toneMapping The tone mapping operator to apply to the HDR color buffer
          *
          * @return This Builder, for chaining calls
+         *
+         * @deprecated Use toneMapper(ToneMapper*) instead
          */
+        UTILS_DEPRECATED
         Builder& toneMapping(ToneMapping toneMapping) noexcept;
 
         /**

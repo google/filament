@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-#include "ToneMapping.h"
+#include <filament/ToneMapper.h>
 
-using namespace filament::math;
+#include "ColorSpace.h"
+
+#include <math/vec3.h>
+#include <math/scalar.h>
 
 namespace filament {
+
+using namespace math;
+
 namespace aces {
 
 inline float rgb_2_saturation(float3 rgb) {
@@ -114,8 +120,6 @@ inline float3 darkSurround_to_dimSurround(float3 linearCV) {
 
 float3 ACES(float3 color, float brightness) noexcept {
     // Some bits were removed to adapt to our desired output
-    // Input:  ACEScg (AP1)
-    // Output: ACEScg (AP1)
 
     // "Glow" module constants
     constexpr float RRT_GLOW_GAIN = 0.05f;
@@ -131,7 +135,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 
-    float3 ap0 = AP1_to_AP0 * color;
+    float3 ap0 = sRGB_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -173,57 +177,67 @@ float3 ACES(float3 color, float brightness) noexcept {
     // Apply desaturation to compensate for luminance difference
     linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    return linearCV;
+    return AP1_to_sRGB * linearCV;
 }
 
 } // namespace aces
 
-namespace tonemap {
+//------------------------------------------------------------------------------
+// Tone mappers
+//------------------------------------------------------------------------------
 
-float3 ACES(float3 x) noexcept {
-    return aces::ACES(x, 1.0f);
+#define DEFAULT_CONSTRUCTORS(A) \
+        A::A() noexcept = default; \
+        A::~A() noexcept = default;
+
+DEFAULT_CONSTRUCTORS(ToneMapper)
+
+//------------------------------------------------------------------------------
+// Linear tone mapper
+//------------------------------------------------------------------------------
+
+DEFAULT_CONSTRUCTORS(LinearToneMapper)
+
+float3 LinearToneMapper::operator()(float3 v) const noexcept {
+    return saturate(v);
 }
 
-float3 ACES_Legacy(float3 x) noexcept {
-    return aces::ACES(x, 1.0f / 0.6f);
+//------------------------------------------------------------------------------
+// ACES tone mappers
+//------------------------------------------------------------------------------
+
+DEFAULT_CONSTRUCTORS(ACESToneMapper)
+
+float3 ACESToneMapper::operator()(math::float3 c) const noexcept {
+    return aces::ACES(c, 1.0f);
 }
 
-// TODO: These constants were chosen to match our ACES tone mappers as closely as possible
-//       in terms of compression. We should expose these parameters to users via an API.
-//       We must however carefully validate exposed parameters as it is easy to get the
-//       generic tonemapper to produce invalid curves.
-// TODO: Expose this as a public tone mapper
-float genericTonemap(
-        float x,
-        float contrast = 1.6f,
-        float shoulder = 1.0f,
-        float midGreyIn = 0.18f,
-        float midGreyOut = 0.227f,
-        float hdrMax = 64.0f
-) noexcept {
-    // Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines"
-    // https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
-    float mc = std::pow(midGreyIn, contrast);
-    float mcs = std::pow(mc, shoulder);
+DEFAULT_CONSTRUCTORS(ACESLegacyToneMapper)
 
-    float hc = std::pow(hdrMax, contrast);
-    float hcs = std::pow(hc, shoulder);
-
-    float b1 = -mc + hc * midGreyOut;
-    float b2 = (hcs - mcs) * midGreyOut;
-    float b = b1 / b2;
-
-    float c1 = hcs * mc - hc * mcs * midGreyOut;
-    float c2 = (hcs - mcs) * midGreyOut;
-    float c = c1 / c2;
-
-    float xc = std::pow(x, contrast);
-    return saturate(xc / (std::pow(xc, shoulder) * b + c));
+float3 ACESLegacyToneMapper::operator()(math::float3 c) const noexcept {
+    return aces::ACES(c, 1.0f / 0.6f);
 }
 
-float3 DisplayRange(float3 x) noexcept {
+DEFAULT_CONSTRUCTORS(FilmicToneMapper)
+
+float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    constexpr float a = 2.51f;
+    constexpr float b = 0.03f;
+    constexpr float c = 2.43f;
+    constexpr float d = 0.59f;
+    constexpr float e = 0.14f;
+    return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
+//------------------------------------------------------------------------------
+// Display range tone mapper
+//------------------------------------------------------------------------------
+
+DEFAULT_CONSTRUCTORS(DisplayRangeToneMapper)
+
+float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
     // 16 debug colors + 1 duplicated at the end for easy indexing
-
     constexpr float3 debugColors[17] = {
             {0.0,     0.0,     0.0},         // black
             {0.0,     0.0,     0.1647},      // darkest blue
@@ -246,12 +260,159 @@ float3 DisplayRange(float3 x) noexcept {
 
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(x, LUMA_REC709) / 0.18f);
+    float v = log2(dot(c, LUMA_REC709) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
     size_t index = size_t(v);
     return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
 }
 
-} // namespace tonemap
+//------------------------------------------------------------------------------
+// Generic tone mapper
+//------------------------------------------------------------------------------
+
+// Lottes, 2016,"Advanced Techniques and Optimization of VDR Color Pipelines":
+// https://gpuopen.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
+// Includes fix from Bart Wronski:
+// https://bartwronski.com/2016/09/01/dynamic-range-and-evs/
+
+struct GenericToneMapper::Options {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+    void setParameters(
+            float contrast,
+            float shoulder,
+            float midGrayIn,
+            float midGrayOut,
+            float hdrMax
+    ) {
+        contrast = max(contrast, 1e-5f);
+        shoulder = saturate(shoulder);
+        midGrayIn = clamp(midGrayIn, 1e-5f, 1.0f);
+        midGrayOut = clamp(midGrayOut, 1e-5f, 1.0f);
+        hdrMax = max(hdrMax, 1.0f);
+
+        this->contrast = contrast;
+        this->shoulder = shoulder;
+        this->midGrayIn = midGrayIn;
+        this->midGrayOut = midGrayOut;
+        this->hdrMax = hdrMax;
+
+        // remap shoulder
+        d = 0.8f + 0.4f * shoulder;
+
+        float mc = std::pow(midGrayIn, contrast);
+        float mcs = std::pow(mc, d);
+
+        float hc = std::pow(hdrMax, contrast);
+        float hcs = std::pow(hc, d);
+
+        float u = (hcs - mcs) * midGrayOut;
+        float v = mcs * midGrayOut;
+
+        b = -((-mc + (midGrayOut * (hcs * mc - hc * v)) / u) / v);
+        c = (hcs * mc - hc * v) / u;
+    }
+#pragma clang diagnostic pop
+
+    float contrast;
+    float shoulder;
+    float midGrayIn;
+    float midGrayOut;
+    float hdrMax;
+
+    // Computed fields, do not modify
+    float b;
+    float c;
+    float d;
+};
+
+GenericToneMapper::GenericToneMapper(
+        float contrast,
+        float shoulder,
+        float midGrayIn,
+        float midGrayOut,
+        float hdrMax
+) noexcept {
+    mOptions = new Options();
+    mOptions->setParameters(contrast, shoulder, midGrayIn, midGrayOut, hdrMax);
+}
+
+GenericToneMapper::~GenericToneMapper() noexcept {
+    delete mOptions;
+}
+
+GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs)  noexcept : mOptions(rhs.mOptions) {
+    rhs.mOptions = nullptr;
+}
+
+GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper& rhs) noexcept {
+    mOptions = rhs.mOptions;
+    rhs.mOptions = nullptr;
+    return *this;
+}
+
+float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
+    float3 xc = pow(clamp(x, 0.0f, mOptions->hdrMax), mOptions->contrast);
+    return saturate(xc / (pow(xc, mOptions->d) * mOptions->b + mOptions->c));
+}
+
+float GenericToneMapper::getContrast() const noexcept { return  mOptions->contrast; }
+float GenericToneMapper::getShoulder() const noexcept { return  mOptions->shoulder; }
+float GenericToneMapper::getMidGrayIn() const noexcept { return  mOptions->midGrayIn; }
+float GenericToneMapper::getMidGrayOut() const noexcept { return  mOptions->midGrayOut; }
+float GenericToneMapper::getHdrMax() const noexcept { return  mOptions->hdrMax; }
+
+void GenericToneMapper::setContrast(float contrast) noexcept {
+    mOptions->setParameters(
+            contrast,
+            mOptions->shoulder,
+            mOptions->midGrayIn,
+            mOptions->midGrayOut,
+            mOptions->hdrMax
+    );
+}
+
+void GenericToneMapper::setShoulder(float shoulder) noexcept {
+    mOptions->setParameters(
+            mOptions->contrast,
+            shoulder,
+            mOptions->midGrayIn,
+            mOptions->midGrayOut,
+            mOptions->hdrMax
+    );
+}
+
+void GenericToneMapper::setMidGrayIn(float midGrayIn) noexcept {
+    mOptions->setParameters(
+            mOptions->contrast,
+            mOptions->shoulder,
+            midGrayIn,
+            mOptions->midGrayOut,
+            mOptions->hdrMax
+    );
+}
+
+void GenericToneMapper::setMidGrayOut(float midGrayOut) noexcept {
+    mOptions->setParameters(
+            mOptions->contrast,
+            mOptions->shoulder,
+            mOptions->midGrayIn,
+            midGrayOut,
+            mOptions->hdrMax
+    );
+}
+
+void GenericToneMapper::setHdrMax(float hdrMax) noexcept {
+    mOptions->setParameters(
+            mOptions->contrast,
+            mOptions->shoulder,
+            mOptions->midGrayIn,
+            mOptions->midGrayOut,
+            hdrMax
+    );
+}
+
+#undef DEFAULT_CONSTRUCTORS
+
 } // namespace filament

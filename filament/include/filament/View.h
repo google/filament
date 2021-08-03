@@ -283,6 +283,7 @@ public:
         float bias = 0.0005f;   //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
         float resolution = 0.5f;//!< How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
         float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
+        float bilateralThreshold = 0.05f; //!< depth distance that constitute an edge for filtering
         QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
         QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
         QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
@@ -873,17 +874,6 @@ public:
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
     Camera const* getDirectionalLightCamera() const noexcept;
 
-
-    /**
-     * List of available tone-mapping operators
-     *
-     * @deprecated See ColorGrading
-     */
-    enum class UTILS_DEPRECATED ToneMapping : uint8_t {
-        LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
-        ACES = 1,       //!< ACES tone mapping
-    };
-
     /**
      * List of available ambient occlusion techniques
      * @deprecated use AmbientOcclusionOptions::enabled instead
@@ -892,27 +882,6 @@ public:
         NONE = 0,       //!< No Ambient Occlusion
         SSAO = 1        //!< Basic, sampling SSAO
     };
-
-    /**
-      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
-      *
-      * @param type Tone-mapping function.
-      *
-      * @deprecated Use setColorGrading instead
-      * @see setColorGrading
-      */
-    UTILS_DEPRECATED
-    void setToneMapping(ToneMapping type) noexcept;
-
-    /**
-     * Returns the tone-mapping function.
-     * @return tone-mapping function.
-     *
-     * @deprecated Use getColorGrading instead
-     * @see getColorGrading
-     */
-    UTILS_DEPRECATED
-    ToneMapping getToneMapping() const noexcept;
 
     /**
      * Activates or deactivates ambient occlusion.

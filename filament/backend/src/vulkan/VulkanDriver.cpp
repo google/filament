@@ -412,8 +412,7 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
-        BufferUsage usage) {
+        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes) {
     auto vertexBuffer = construct<VulkanVertexBuffer>(vbh, mContext, mStagePool,
             bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
@@ -807,6 +806,13 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
+    // TODO: We might need a better way to handle vendor-specific workaround
+    // Disable framebuffer fetch on APPLE M1 (vendor 0x106b, device 0xa140)
+    // Subpasses, don't seen to work on M1, this possibly needs more investigation.
+    VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
+    if ((deviceProperties.vendorID == 0x106b) && (deviceProperties.deviceID == 0xa140)) {
+        return false;
+    }
     return true;
 }
 
@@ -1602,7 +1608,11 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
     assert_invariant(mContext.currentRenderPass.renderPass == VK_NULL_HANDLE);
 
-    if (mContext.currentRenderPass.renderPass) {
+    // blit operation only support COLOR0 color buffer
+    assert_invariant(
+            !(buffers & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+
+    if (UTILS_UNLIKELY(mContext.currentRenderPass.renderPass)) {
         utils::slog.e << "Blits cannot be invoked inside a render pass." << utils::io::endl;
         return;
     }
@@ -1630,10 +1640,8 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
         mBlitter.blitDepth({dstTarget, dstOffsets, srcTarget, srcOffsets});
     }
 
-    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (any(buffers & getTargetBufferFlagsAt(i))) {
-            mBlitter.blitColor({ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(i) });
-        }
+    if (any(buffers & TargetBufferFlags::COLOR0)) {
+        mBlitter.blitColor({ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(0) });
     }
 }
 

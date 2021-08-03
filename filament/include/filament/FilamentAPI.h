@@ -81,7 +81,7 @@ public:
     }
 
 protected:
-    T* mImpl;
+    T* mImpl = nullptr;
     inline T* operator->() noexcept { return mImpl; }
     inline T const* operator->() const noexcept { return mImpl; }
 };

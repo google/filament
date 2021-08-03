@@ -1038,14 +1038,6 @@ const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() 
     return upcast(this)->getTemporalAntiAliasingOptions();
 }
 
-void View::setToneMapping(ToneMapping type) noexcept {
-    upcast(this)->setToneMapping(type);
-}
-
-View::ToneMapping View::getToneMapping() const noexcept {
-    return upcast(this)->getToneMapping();
-}
-
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
     return upcast(this)->setColorGrading(upcast(colorGrading));
 }

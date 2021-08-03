@@ -61,7 +61,11 @@ constexpr uint8_t BLENDING_SOLID_REFRACTION = 4;
 using namespace filament;
 
 struct ColorGradingOptions {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     int toneMapping = static_cast<int>(ColorGrading::ToneMapping::ACES_LEGACY);
+#pragma clang diagnostic pop
+
     bool luminanceScaling = false;
     int temperature = 0;
     int tint = 0;

@@ -41,7 +41,8 @@ public:
     PrimitiveHandle getRenderPrimitive() const noexcept;
 
     void updateVertices(const filament::math::float2 vertices[3]) noexcept;
-    void updateIndices(const short indices[3]) noexcept;
+    void updateIndices(const short* indices) noexcept;
+    void updateIndices(const short* indices, int count, int offset) noexcept;
 
 private:
 

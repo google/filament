@@ -343,10 +343,6 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
-static LinearColor inverseTonemapSRGB(sRGBColor x) {
-    return (x * -0.155) / (x - 1.019);
-}
-
 static float sGlobalScale = 1.0f;
 static float sGlobalScaleAnamorphism = 0.0f;
 

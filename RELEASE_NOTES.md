@@ -3,7 +3,19 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.11.2 (currently main branch)
+## v1.11.3 (currently main branch)
+
+## v1.11.2
+
+- engine: New API: `ColorGrading::Builder::toneMapper(const ToneMapper*)`.
+- engine: New tone mapper: `GenericToneMapper`, a configurable tone mapper.
+- engine: `ColorGrading::Builder::toneMapping(ColorGrading::ToneMapping)` is now deprecated.
+- engine: Removed `REINHARD` tonemap operator[⚠️ **API Change**].
+- engine: Improve s3tc_srgb detection on desktop.
+- engine: Add bilateral threshold in SSAO options.
+- gltfio: Fix AssetLoader leak, remove unwanted destructor.
+- Metal/Vulkan: Fix uploading texture data with padding or offset.
+- Metal: fix GPU crash seen with large amounts of geometry.
 
 ## v1.11.1
 

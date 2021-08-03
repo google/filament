@@ -245,6 +245,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
 }
 
 VulkanTexture::~VulkanTexture() {
+    delete mSidecarMSAA;
     vkDestroyImage(mContext.device, mTextureImage, VKALLOC);
     vkFreeMemory(mContext.device, mTextureImageMemory, VKALLOC);
     for (auto entry : mCachedImageViews) {

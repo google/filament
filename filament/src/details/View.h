@@ -52,7 +52,7 @@ namespace utils {
 class JobSystem;
 } // namespace utils;
 
-// Avoid warnings for using the ToneMapping API, which has been publicly deprecated.
+// Avoid warnings for using the deprecated APIs.
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -235,14 +235,6 @@ public:
         return mTemporalAntiAliasingOptions;
     }
 
-    void setToneMapping(ToneMapping type) noexcept {
-        mToneMapping = type;
-    }
-
-    ToneMapping getToneMapping() const noexcept {
-        return mToneMapping;
-    }
-
     void setColorGrading(FColorGrading* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
@@ -295,12 +287,13 @@ public:
 
     void setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
         options.radius = math::max(0.0f, options.radius);
-        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
         options.power = std::max(0.0f, options.power);
+        options.bias = math::clamp(options.bias, 0.0f, 0.1f);
         // snap to the closer of 0.5 or 1.0
         options.resolution = std::floor(
                 math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
         options.intensity = std::max(0.0f, options.intensity);
+        options.bilateralThreshold = std::max(0.0f, options.bilateralThreshold);
         options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
         options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
         options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);
@@ -496,7 +489,6 @@ private:
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
-    ToneMapping mToneMapping = ToneMapping::ACES;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mScreenSpaceRefractionEnabled = true;

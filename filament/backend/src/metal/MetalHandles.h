@@ -114,7 +114,7 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
-    MetalBufferObject(MetalContext& context, uint32_t byteCount);
+    MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
@@ -131,7 +131,8 @@ struct MetalVertexBuffer : public HwVertexBuffer {
 };
 
 struct MetalIndexBuffer : public HwIndexBuffer {
-    MetalIndexBuffer(MetalContext& context, uint8_t elementSize, uint32_t indexCount);
+    MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
+            uint32_t indexCount);
 
     MetalBuffer buffer;
 };

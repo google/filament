@@ -113,7 +113,8 @@ public:
             GLuint id = 0;          // texture or renderbuffer id
             GLenum target = 0;
             GLenum internalFormat = 0;
-            mutable GLsync fence = nullptr;
+            GLuint sidecarRenderBufferMS = 0;  // multi-sample sidecar renderbuffer
+            mutable GLsync fence = {};
 
             // texture parameters go here too
             GLfloat anisotropy = 1.0;
@@ -181,15 +182,10 @@ public:
     struct GLRenderTarget : public backend::HwRenderTarget {
         using HwRenderTarget::HwRenderTarget;
         struct GL {
-            struct RenderBuffer {
-                GLTexture* texture = nullptr;
-                mutable GLuint rb = 0;  // multi-sample sidecar renderbuffer
-                uint8_t level = 0; // level when attached to a texture
-            };
             // field ordering to optimize size on 64-bits
-            RenderBuffer color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
-            RenderBuffer depth;
-            RenderBuffer stencil;
+            GLTexture* color[backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
+            GLTexture* depth;
+            GLTexture* stencil;
             GLuint fbo = 0;
             mutable GLuint fbo_read = 0;
             mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
@@ -378,7 +374,8 @@ private:
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStreamTexId(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateStreamAcquired(GLTexture* t, backend::DriverApi* driver) noexcept;
-    void updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
+    void updateBuffer(GLBufferObject* buffer, backend::BufferDescriptor const& p,
+            uint32_t byteOffset, uint32_t alignment = 16) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     void setExternalTexture(GLTexture* t, void* image);
