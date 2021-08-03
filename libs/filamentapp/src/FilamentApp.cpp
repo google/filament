@@ -544,6 +544,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)
+        ::prepareNativeWindow(mWindow);
 
         void* metalLayer = nullptr;
         if (config.backend == filament::Engine::Backend::METAL) {
