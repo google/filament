@@ -566,7 +566,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 mi->setParameter("projectionScaleRadius",
                         projectionScale * options.radius);
                 mi->setParameter("depthParams",
-                        cameraInfo.projection[3][2] * 0.5f);
+                        -cameraInfo.projection[3][2]);  // z_v = -near / z_s
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);
@@ -935,12 +935,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      *  -------------------------------
      *
      *  1/d is computed from the depth buffer value as:
-     *  (note: our z-buffer is encoded as reversed-z, so we use 1-z below)
+     *  (note: our Z clip space is 1 to 0 (inverted DirectX NDC))
      *
-     *          screen-space -> clip-space -> view-space -> distance (x-1)
+     *          screen-space -> clip-space -> view-space -> distance (*-1)
      *
-     *   v_s = { x, y, 1 - z, 1 }                 // screen space (reversed-z)
-     *   v_c = 2 * v_s - 1                        // clip space
+     *   v_s = { x, y, z, 1 }                     // screen space (reversed-z)
+     *   v_c = v_s                                // clip space (matches screen space)
      *   v   = inverse(projection) * v_c          // view space
      *   d   = -v.z / v.w                         // view space distance to camera
      *   1/d = -v.w / v.z
@@ -954,23 +954,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      *
      * It comes that:
      *
-     *          -2C         C - A
-     *    1/d = --- . z  + -------
-     *           B            B
+     *           C          A
+     *    1/d = --- . z  - ---
+     *           B          B
      *
      * note: Here the result doesn't depend on {x, y}. This wouldn't be the case with a
      *       tilt-shift lens.
      *
      * Mathematica code:
      *      p = {{a, 0, b, 0}, {0, c, d, 0}, {0, 0, m22, m32}, {0, 0, m23, 0}};
-     *      v = {x, y, (1 - z)*2 - 1, 1};
+     *      v = {x, y, z, 1};
      *      f = Inverse[p].v;
      *      Simplify[f[[4]]/f[[3]]]
      *
      * Plugging this back into the expression of: coc(z) = Kc . Ks . (1 - S / d)
      * We get that:  coc(z) = C0 * z + C1
-     * With: C0 = - Kc * Ks * S * 2 * C / B
-     *       C1 =   Kc * Ks * (1 - S * (C - A) / B)
+     * With: C0 = - Kc * Ks * S * -C / B
+     *       C1 =   Kc * Ks * (1 + S * A / B)
      *
      * It's just a madd!
      */
@@ -982,8 +982,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     auto const& p = cameraInfo.projection;
     const float2 cocParams = {
-              -K * focusDistance * 2.0 * p[2][3] / p[3][2],
-               K * (1.0 - focusDistance * (p[2][3] - p[2][2]) / p[3][2])
+              K * focusDistance * p[2][3] / p[3][2],
+              K * (1.0 + focusDistance * p[2][2] / p[3][2])
     };
 
     Blackboard& blackboard = fg.getBlackboard();

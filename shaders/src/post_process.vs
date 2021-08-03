@@ -13,9 +13,14 @@ void main() {
 #endif
 
     gl_Position = getPosition();
+    // GL convention to inverted DX convention
+    gl_Position.z = gl_Position.z * -0.5 + 0.5;
 
     // Adjust clip-space
-    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl.xy);
+#if !defined(TARGET_VULKAN_ENVIRONMENT) && !defined(TARGET_METAL_ENVIRONMENT)
+    // This is not needed in Vulkan or Metal because clipControl is always (1, 0)
+    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl);
+#endif
 
     // Invoke user code
     postProcessVertex(inputs);

@@ -95,6 +95,8 @@ void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
     gl_Position = getPosition();
+    // GL convention to inverted DX convention
+    gl_Position.z = gl_Position.z * -0.5 + 0.5;
 #else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
@@ -111,5 +113,8 @@ void main() {
     gl_Position.y = -gl_Position.y;
 #endif
 
-    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl.xy);
+#if !defined(TARGET_VULKAN_ENVIRONMENT) && !defined(TARGET_METAL_ENVIRONMENT)
+    // This is not needed in Vulkan or Metal because clipControl is always (1, 0)
+    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl);
+#endif
 }
