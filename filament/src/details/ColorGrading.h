@@ -43,8 +43,11 @@ public:
 
     backend::TextureHandle getHwHandle() const noexcept { return mLutHandle; }
 
+    uint32_t getDimension() const noexcept { return mDimension; }
+
 private:
     backend::TextureHandle mLutHandle;
+    uint32_t mDimension;
 };
 
 FILAMENT_UPCAST(ColorGrading)

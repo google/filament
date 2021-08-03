@@ -470,6 +470,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         c.adaptationTransform = adaptationTransform(builder->whiteBalance);
     }
 
+    mDimension = c.lutDimension;
+
     size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
     size_t elementSize = sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);

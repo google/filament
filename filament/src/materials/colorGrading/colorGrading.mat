@@ -12,6 +12,10 @@ material {
             precision: medium
         },
         {
+            type : float2,
+            name : lutSize
+        },
+        {
             type : sampler2d,
             name : bloomBuffer,
             precision: medium
@@ -126,6 +130,10 @@ vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
     const float c = 0.244161 / log2(10.0);
     const float d = 0.386036;
     vec3 logc = c * log2(a * x + b) + d;
+
+    // Remap to sample pixel centers
+    logc = (0.5 + logc * materialParams.lutSize.x) * materialParams.lutSize.y;
+
     return textureLod(lut, logc, 0.0).rgb;
 }
 

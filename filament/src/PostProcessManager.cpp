@@ -1850,6 +1850,7 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
 
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterialInstance* mi = material.getMaterialInstance();
+
     mi->setParameter("lut", colorGrading->getHwHandle(), {
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR,
@@ -1857,6 +1858,10 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
             .wrapT = SamplerWrapMode::CLAMP_TO_EDGE,
             .wrapR = SamplerWrapMode::CLAMP_TO_EDGE,
             .anisotropyLog2 = 0
+    });
+    mi->setParameter("lutSize", float2{
+        float(colorGrading->getDimension()) - 1.0f,
+        1.0f / float(colorGrading->getDimension()),
     });
 
     const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
@@ -1970,9 +1975,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("colorGrading");
                 FMaterialInstance* mi = material.getMaterialInstance();
+
                 mi->setParameter("lut", colorGrading->getHwHandle(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
+                });
+                mi->setParameter("lutSize", float2{
+                    float(colorGrading->getDimension()) - 1.0f,
+                    1.0f / float(colorGrading->getDimension()),
                 });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
                 mi->setParameter("bloomBuffer", bloomTexture, {
