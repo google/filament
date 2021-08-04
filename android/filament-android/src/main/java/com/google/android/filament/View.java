@@ -209,6 +209,11 @@ public class View {
         public boolean enabled = false;
 
         /**
+         * enables bent normals computation from AO, and specular AO
+         */
+        public boolean bentNormals = false;
+
+        /**
          * Minimal angle to consider in radian. This is used to reduce the creases that can
          * appear due to insufficiently tessellated geometry.
          * For e.g. a good values to try could be around 0.2.
@@ -1390,7 +1395,7 @@ public class View {
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
                 options.resolution, options.intensity, options.bilateralThreshold,
                 options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
-                options.enabled, options.minHorizonAngleRad);
+                options.enabled, options.bentNormals, options.minHorizonAngleRad);
         nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance,
                 options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
@@ -1567,7 +1572,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad);
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);

@@ -84,7 +84,7 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const math::mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
+    void prepare(const math::mat4& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena,
             backend::Handle<backend::HwBufferObject> lightUbh) noexcept;
 
@@ -108,6 +108,7 @@ public:
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //  1 | each bit represents a visibility in a pass
         MORPH_WEIGHTS,          //  4 | floats for morphing
+        CHANNELS,               //  1 | currently light channels only
 
         // These are not needed anymore after culling
         LAYERS,                 //  1 | layers
@@ -130,6 +131,7 @@ public:
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             math::float4,                               // MORPH_WEIGHTS
+            uint8_t,                                    // CHANNELS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
             utils::Slice<FRenderPrimitive>,             // PRIMITIVES
@@ -165,21 +167,6 @@ public:
         bool contactShadows = false;    // whether this light casts contact shadows
         uint8_t index = 0;              // an index into the arrays in the Shadows uniform buffer
         uint8_t layer = 0;              // which layer of the shadow texture array to sample from
-
-        //  -- LSB -------------
-        //  castsShadows     : 1
-        //  contactShadows   : 1
-        //  index            : 4
-        //  layer            : 4
-        //  -- MSB -------------
-        uint32_t pack() const {
-            assert_invariant(index < 16);
-            assert_invariant(layer < 16);
-            return uint8_t(castsShadows)   << 0u    |
-                   uint8_t(contactShadows) << 1u    |
-                   index                   << 2u    |
-                   layer                   << 6u;
-        }
     };
 
     enum {

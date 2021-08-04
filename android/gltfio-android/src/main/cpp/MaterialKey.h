@@ -61,6 +61,8 @@ private:
     jfieldID sheenColorUV;
     jfieldID hasSheenRoughnessTexture;
     jfieldID sheenRoughnessUV;
+    jfieldID hasVolumeThicknessTexture;
+    jfieldID volumeThicknessUV;
     jfieldID hasSheen;
     jfieldID hasIOR;
 };

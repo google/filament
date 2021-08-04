@@ -276,9 +276,7 @@ void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffse
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
-    buffers.resize(bufferCount);
-}
+    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes), buffers(bufferCount, nullptr) {}
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
@@ -384,7 +382,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context) {
 
-    devicePixelFormat = decidePixelFormat(context.device, format);
+    devicePixelFormat = decidePixelFormat(&context, format);
     ASSERT_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid, "Texture format not supported.");
 
     const BOOL mipmapped = levels > 1;
@@ -515,15 +513,22 @@ MetalTexture::~MetalTexture() {
 }
 
 
-MTLPixelFormat MetalTexture::decidePixelFormat(id<MTLDevice> device, TextureFormat format) {
-    const MTLPixelFormat metalFormat = getMetalFormat(format);
-#if !defined(IOS)
-    // Some devices do not support the Depth24_Stencil8 format, so we'll fallback to Depth32.
-    if (metalFormat == MTLPixelFormatDepth24Unorm_Stencil8 &&
-        !device.depth24Stencil8PixelFormatSupported) {
-        return MTLPixelFormatDepth32Float;
+MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFormat format) {
+    const MTLPixelFormat metalFormat = getMetalFormat(context, format);
+
+    // If getMetalFormat can't find an exact match for the format, it returns MTLPixelFormatInvalid.
+    if (metalFormat == MTLPixelFormatInvalid) {
+        // These MTLPixelFormats are always supported.
+        if (format == TextureFormat::DEPTH24_STENCIL8) return MTLPixelFormatDepth32Float_Stencil8;
+        if (format == TextureFormat::DEPTH16) return MTLPixelFormatDepth32Float;
+        if (format == TextureFormat::DEPTH24) {
+            // DEPTH24 isn't supported at all by Metal. First try DEPTH24_STENCIL8. If that fails,
+            // we'll fallback to DEPTH32F.
+            MTLPixelFormat fallback = getMetalFormat(context, TextureFormat::DEPTH24_STENCIL8);
+            if (fallback != MTLPixelFormatInvalid) return fallback;
+            return MTLPixelFormatDepth32Float;
+        }
     }
-#endif
 
     // Metal does not natively support 3 component textures. We'll emulate support by using a 4
     // component texture and reshaping the pixel data during upload.
@@ -763,42 +768,42 @@ void MetalTexture::updateLodRange(uint32_t level) {
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
         uint8_t samples, Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], Attachment depthAttachment) :
         HwRenderTarget(width, height), context(context), samples(samples) {
-    // If we were given a single-sampled texture but the samples parameter is > 1, we create
-    // multisampled sidecar textures and do a resolve automatically.
-    const bool msaaResolve = samples > 1;
-
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (!colorAttachments[i]) {
             continue;
         }
-        this->color[i] = colorAttachments[i];
+        color[i] = colorAttachments[i];
 
-        const auto textureSampleCount = this->color[i].texture.sampleCount;
-
-        ASSERT_PRECONDITION(textureSampleCount <= samples,
+        ASSERT_PRECONDITION(color[i].getSampleCount() <= samples,
                 "MetalRenderTarget was initialized with a MSAA COLOR%d texture, but sample count is %d.",
                 i, samples);
 
-        if (msaaResolve && textureSampleCount == 1) {
-            multisampledColor[i] =
-                    createMultisampledTexture(context->device, color[0].texture.pixelFormat,
-                            width, height, samples);
+        // If we were given a single-sampled texture but the samples parameter is > 1, we create
+        // a multisampled sidecar texture and do a resolve automatically.
+        if (samples > 1 && color[i].getSampleCount() == 1) {
+            auto& sidecar = color[i].metalTexture->msaaSidecar;
+            if (!sidecar) {
+                sidecar = createMultisampledTexture(context->device, color[i].getPixelFormat(),
+                        width, height, samples);
+            }
         }
     }
 
     if (depthAttachment) {
-        this->depth = depthAttachment;
+        depth = depthAttachment;
 
-        const auto textureSampleCount = this->depth.texture.sampleCount;
-
-        ASSERT_PRECONDITION(textureSampleCount <= samples,
+        ASSERT_PRECONDITION(depth.getSampleCount() <= samples,
                 "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count is %d.",
                 samples);
 
-        if (msaaResolve && this->depth.texture.sampleCount == 1) {
-            // TODO: we only need to resolve depth if the depth texture is not SAMPLEABLE.
-            multisampledDepth = createMultisampledTexture(context->device, depth.texture.pixelFormat,
-                    width, height, samples);
+        // If we were given a single-sampled texture but the samples parameter is > 1, we create
+        // a multisampled sidecar texture and do a resolve automatically.
+        if (samples > 1 && depth.getSampleCount() == 1) {
+            auto& sidecar = depth.metalTexture->msaaSidecar;
+            if (!sidecar) {
+                sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
+                        width, height, samples);
+            }
         }
     }
 }
@@ -814,7 +819,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             continue;
         }
 
-        descriptor.colorAttachments[i].texture = attachment.texture;
+        descriptor.colorAttachments[i].texture = attachment.getTexture();
         descriptor.colorAttachments[i].level = attachment.level;
         descriptor.colorAttachments[i].slice = attachment.layer;
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
@@ -823,12 +828,17 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
                 params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
-        if (multisampledColor[i]) {
+        const bool automaticResolve = samples > 1 && attachment.getSampleCount() == 1;
+        if (automaticResolve) {
             // We're rendering into our temporary MSAA texture and doing an automatic resolve.
             // We should not be attempting to load anything into the MSAA texture.
             assert_invariant(descriptor.colorAttachments[i].loadAction != MTLLoadActionLoad);
+            assert_invariant(!defaultRenderTarget);
 
-            descriptor.colorAttachments[i].texture = multisampledColor[i];
+            id<MTLTexture> sidecar = attachment.getMSAASidecarTexture();
+            assert_invariant(sidecar);
+
+            descriptor.colorAttachments[i].texture = sidecar;
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
             const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
@@ -842,24 +852,29 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 
     Attachment depthAttachment = getDepthAttachment();
-    descriptor.depthAttachment.texture = depthAttachment.texture;
+    descriptor.depthAttachment.texture = depthAttachment.getTexture();
     descriptor.depthAttachment.level = depthAttachment.level;
     descriptor.depthAttachment.slice = depthAttachment.layer;
     descriptor.depthAttachment.loadAction = getLoadAction(params, TargetBufferFlags::DEPTH);
     descriptor.depthAttachment.storeAction = getStoreAction(params, TargetBufferFlags::DEPTH);
     descriptor.depthAttachment.clearDepth = params.clearDepth;
 
-    if (multisampledDepth) {
+    const bool automaticResolve = samples > 1 && depthAttachment.getSampleCount() == 1;
+    if (automaticResolve) {
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         assert_invariant(descriptor.depthAttachment.loadAction != MTLLoadActionLoad);
+        assert_invariant(!defaultRenderTarget);
 
-        descriptor.depthAttachment.texture = multisampledDepth;
+        id<MTLTexture> sidecar = depthAttachment.getMSAASidecarTexture();
+        assert_invariant(sidecar);
+
+        descriptor.depthAttachment.texture = sidecar;
         descriptor.depthAttachment.level = 0;
         descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
-            descriptor.depthAttachment.resolveTexture = depthAttachment.texture;
+            descriptor.depthAttachment.resolveTexture = depthAttachment.getTexture();
             descriptor.depthAttachment.resolveLevel = depthAttachment.level;
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
             descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;

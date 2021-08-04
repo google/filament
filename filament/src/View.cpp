@@ -355,6 +355,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
         s.lightDirection = l;
         s.lightColorIntensity = colorIntensity;
+        s.lightChannels = lcm.getLightChannels(directionalLight);
 
         const bool isSun = lcm.isSunLight(directionalLight);
         // The last parameter must be < 0.0f for regular directional lights
@@ -393,13 +394,13 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * The "world origin" could also be useful for other things, like keeping the origin
      * close to the camera position to improve fp precision in the shader for large scenes.
      */
-    mat4f worldOriginScene;
+    mat4 worldOriginScene;
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
         // the IBL transformation must be a rigid transform
         mat3f rotation{ scene->getIndirectLight()->getRotation() };
         // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4f{ transpose(rotation) };
+        worldOriginScene = mat4{ transpose(rotation) };
     }
 
     /*
@@ -682,10 +683,12 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
                          SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
     });
 
-    const float edgeDistance = 1.0 / 0.0625;// TODO: don't hardcode this
+    const float edgeDistance = 1.0f / mAmbientOcclusionOptions.bilateralThreshold;
     auto& s = mPerViewUb.edit();
     s.aoSamplingQualityAndEdgeDistance =
             mAmbientOcclusionOptions.enabled && highQualitySampling ? edgeDistance : 0.0f;
+    s.aoBentNormals =
+            mAmbientOcclusionOptions.enabled && mAmbientOcclusionOptions.bentNormals ? 1.0f : 0.0f;
 }
 
 void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {

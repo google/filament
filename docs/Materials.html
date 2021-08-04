@@ -1444,7 +1444,9 @@ non-shader data.
 </p><dl><dt>Type</dt><dd><p>     array of parameter objects
 
 </p></dd><dt>Value</dt><dd><p>      Each entry is an object with the properties <code>name</code> and <code>type</code>, both of <code>string</code> type. The
-      name must be a valid GLSL identifier. The type must be one of the types described in
+      name must be a valid GLSL identifier. Entries also have an optional <code>precision</code>, which can be
+      one of <code>default</code> (best precision for the platform, typically <code>high</code> on desktop, <code>medium</code> on
+      mobile), <code>low</code>, <code>medium</code>, <code>high</code>. The type must be one of the types described in
       <a href="#table_materialparamstypes">table&nbsp;13</a>.
 
 </p></dd></dl><div class="table">
@@ -1474,10 +1476,8 @@ non-shader data.
 
 <p></p><p>
 
-</p><dl><dt>Samplers</dt><dd><p>      Sampler types can also specify a <code>format</code> (defaults to <code>float</code>) and a <code>precision</code> (defaults
-      to <code>default</code>). The format can be one of <code>int</code>, <code>float</code>. The precision can be one of <code>default</code>
-      (best precision for the platform, typically <code>high</code> on desktop, <code>medium</code> on mobile),
-      <code>low</code>, <code>medium</code>, <code>high</code>.
+</p><dl><dt>Samplers</dt><dd><p>      Sampler types can also specify a <code>format</code> which can be either <code>int</code> or <code>float</code> (defaults to
+      <code>float</code>).
 
 </p></dd><dt>Arrays</dt><dd><p>      A parameter can define an array of values by appending <code>[size]</code> after the type name, where
       <code>size</code> is a positive integer. For instance: <code>float[9]</code> declares an array of nine <code>float</code>
@@ -2022,7 +2022,7 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre><p>
 
-</p><center><div class="image" style=""><a href="images/screenshot_transparent_shadows.jpg" target="_blank"><img class="markdeep" src="images/screenshot_transparent_shadows.jpg"></a><center><span class="imagecaption"><a class="target" name="figure_transparentshadows">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;36:</b> Objects rendered with transparent shadows and blurry VSM with a
+</p><center><div class="image" style=""><a href="images/screenshot_transparent_shadows.jpg" target="_blank"><img class="markdeep" src="images/screenshot_transparent_shadows.jpg"></a><center><span class="imagecaption"><a class="target" name="figure_transparentshadow">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;36:</b> Objects rendered with transparent shadows and blurry VSM with a
 radius of 4. Model <a href="https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff">Bottle of Water</a>
 by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></center>
 
@@ -2094,9 +2094,7 @@ occclusion enabled and disabled.</span></center></div></center>
      This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;40</a>.
      When this value is set to <code>simple</code>, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to <code>bentNormals</code>, Filament will use
-     a much more accurate but much more expensive method. <code>bentNormals</code> only works if the material
-     sets the <code>bentNormal</code> property inside the fragment shader. If that property isn't set,
-     <code>bentNormals</code> will behave like <code>simple</code>.
+     a much more accurate but much more expensive method.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAmbientOcclusion : simple</span>
@@ -2641,8 +2639,8 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv0 attribute is required </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUV1()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv1 attribute is required </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getMaskThreshold()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Returns the mask threshold, only available when <code>blending</code> is set to <code>masked</code> </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">inverseTonemap(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">inverseTonemap(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the “Filmic” tone mapping operator </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the “Filmic” tone mapping operator </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">luminance(float3)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes the luminance of the specified linear sRGB color </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">ycbcrToRgb(float, float2)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Converts a luminance and CbCr pair to a sRGB color </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">uvToRenderTargetUV(float2)</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> Transforms a UV coordinate to allow sampling from a <code>RenderTarget</code> attachment </td></tr>

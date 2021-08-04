@@ -27,6 +27,7 @@ Light getDirectionalLight() {
     light.l = sampleSunAreaLight(frameUniforms.lightDirection);
     light.attenuation = 1.0;
     light.NoL = saturate(dot(shading_normal, light.l));
+    light.channels = frameUniforms.lightChannels & 0xFFu;
     return light;
 }
 
@@ -34,6 +35,11 @@ void evaluateDirectionalLight(const MaterialInputs material,
         const PixelParams pixel, inout vec3 color) {
 
     Light light = getDirectionalLight();
+
+    uint channels = objectUniforms.channels & 0xFFu;
+    if ((light.channels & channels) == 0u) {
+        return;
+    }
 
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
     if (light.NoL <= 0.0) {
@@ -54,7 +60,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-            if (objectUniforms.screenSpaceContactShadows != 0u) {
+            if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
             }
         }

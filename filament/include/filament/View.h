@@ -288,6 +288,7 @@ public:
         QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
         QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
         bool enabled = false;    //!< enables or disables screen-space ambient occlusion
+        bool bentNormals = false; //!< enables bent normals computation from AO, and specular AO
         float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
         /**
          * Screen Space Cone Tracing (SSCT) options

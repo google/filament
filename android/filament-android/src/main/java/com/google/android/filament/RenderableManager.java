@@ -267,6 +267,18 @@ public class RenderableManager {
         }
 
         /**
+         * Enables or disables a light channel. Light channel 0 is enabled by default.
+         *
+         * @param channel Light channel to enable or disable, between 0 and 7.
+         * @param enable Whether to enable or disable the light channel.
+         */
+        @NonNull
+        public Builder lightChannel(@IntRange(from = 0, to = 7) int channel, boolean enable) {
+            nBuilderLightChannel(mNativeBuilder, channel, enable);
+            return this;
+        }
+
+        /**
          * Controls if this renderable casts shadows, false by default.
          *
          * If the View's shadow type is set to {@link View.ShadowType#VSM}, castShadows should only
@@ -532,6 +544,30 @@ public class RenderableManager {
     }
 
     /**
+     * Enables or disables a light channel.
+     * Light channel 0 is enabled by default.
+     *
+     * @param i        Instance of the component obtained from getInstance().
+     * @param channel  Light channel to set
+     * @param enable   true to enable, false to disable
+     *
+     * @see Builder#lightChannel
+     */
+    public void setLightChannel(@EntityInstance int i, @IntRange(from = 0, to = 7) int channel, boolean enable) {
+        nSetLightChannel(mNativeObject, i, channel, enable);
+    }
+
+    /**
+     * Returns whether a light channel is enabled on a specified renderable.
+     * @param i        Instance of the component obtained from getInstance().
+     * @param channel  Light channel to query
+     * @return         true if the light channel is enabled, false otherwise
+     */
+    public boolean getLightChannel(@EntityInstance int i, @IntRange(from = 0, to = 7) int channel) {
+        return nGetLightChannel(mNativeObject, i, channel);
+    }
+
+    /**
      * Changes whether or not the renderable casts shadows.
      *
      * @see Builder#castShadows
@@ -718,6 +754,7 @@ public class RenderableManager {
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, boolean enabled);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
+    private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
@@ -727,6 +764,8 @@ public class RenderableManager {
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
     private static native void nSetCulling(long nativeRenderableManager, int i, boolean enabled);
+    private static native void nSetLightChannel(long nativeRenderableManager, int i, int channel, boolean enable);
+    private static native boolean nGetLightChannel(long nativeRenderableManager, int i, int channel);
     private static native void nSetCastShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetReceiveShadows(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetScreenSpaceContactShadows(long nativeRenderableManager, int i, boolean enabled);

@@ -620,7 +620,20 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
                 ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
+                ImGui::SliderFloat("Bilateral Threshold", &params.ssaoOptions.bilateralThreshold, 0.0f, 0.5f);
+                ImGui::Checkbox("Bent Normals", &params.ssaoOptions.bentNormals);
                 ImGui::Checkbox("High quality upsampling", &upsampling);
+// Can be used to debug SSAO
+//                ImGui::SliderInt("SampleCount",
+//                        debug.getPropertyAddress<int>("d.ssao.sampleCount"), 1, 128);
+//                ImGui::SliderInt("spiralTurns",
+//                        debug.getPropertyAddress<int>("d.ssao.spiralTurns"), 1,
+//                                *debug.getPropertyAddress<int>("d.ssao.sampleCount"));
+//                ImGui::SliderInt("kernelSize",
+//                        debug.getPropertyAddress<int>("d.ssao.kernelSize"), 1, 23);
+//                ImGui::SliderFloat("stddev",
+//                        debug.getPropertyAddress<float>("d.ssao.stddev"), 0.0f, 8.0f);
+
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
                 params.ssaoOptions.quality = (View::QualityLevel)quality;
                 params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
@@ -654,7 +667,6 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Halo falloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
             ImGuiExt::DirectionWidget("Direction", params.lightDirection.v);
             if (ImGui::CollapsingHeader("Contact Shadows")) {
-                DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##contactShadows", &params.screenSpaceContactShadows);
                 ImGui::SliderInt("Steps", &params.stepCount, 0, 255);
                 ImGui::SliderFloat("Distance", &params.maxShadowDistance, 0.0f, 10.0f);

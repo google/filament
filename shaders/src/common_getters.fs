@@ -2,6 +2,10 @@
 // Uniforms access
 //------------------------------------------------------------------------------
 
+#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x1u
+#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x2u
+#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x4u
+
 /** @public-api */
 highp mat4 getViewFromWorldMatrix() {
     return frameUniforms.viewFromWorldMatrix;

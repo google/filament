@@ -47,8 +47,8 @@ vec3 ycbcrToRgb(float luminance, vec2 cbcr) {
 /*
  * The input must be in the [0, 1] range.
  */
-vec3 Inverse_Tonemap_Unreal(const vec3 x) {
-    return (x * -0.155) / (x - 1.019);
+vec3 Inverse_Tonemap_Filmic(const vec3 x) {
+    return (0.03 - 0.59 * x - sqrt(0.0009 + 1.3702 * x - 1.0127 * x * x)) / (-5.02 + 4.86 * x);
 }
 
 /**
@@ -61,7 +61,7 @@ vec3 Inverse_Tonemap_Unreal(const vec3 x) {
 vec3 inverseTonemapSRGB(vec3 color) {
     // sRGB input
     color = clamp(color, 0.0, 1.0);
-    return Inverse_Tonemap_Unreal(color);
+    return Inverse_Tonemap_Filmic(pow(color, vec3(2.2)));
 }
 
 /**
@@ -73,8 +73,7 @@ vec3 inverseTonemapSRGB(vec3 color) {
  */
 vec3 inverseTonemap(vec3 linear) {
     // Linear input
-    linear = clamp(linear, 0.0, 1.0);
-    return Inverse_Tonemap_Unreal(pow(linear, vec3(1.0 / 2.2)));
+    return Inverse_Tonemap_Filmic(clamp(linear, 0.0, 1.0));
 }
 
 //------------------------------------------------------------------------------

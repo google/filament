@@ -215,6 +215,15 @@ Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderLightChannel(JNIEnv*, jclass,
+        jlong nativeBuilder, jint channel, jboolean enable) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->lightChannel(channel, (bool)enable);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetSkinningBuffer(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jlong nativeSkinningBuffer, jint count, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
@@ -403,4 +412,18 @@ Java_com_google_android_filament_RenderableManager_nGetEnabledAttributesAt(JNIEn
     RenderableManager const *rm = (RenderableManager const *) nativeRenderableManager;
     AttributeBitset enabled = rm->getEnabledAttributesAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
     return enabled.getValue();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetLightChannel(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint channel, jboolean enable) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setLightChannel((RenderableManager::Instance) i, channel, (bool)enable);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_RenderableManager_nGetLightChannel(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint channel) {
+    RenderableManager const *rm = (RenderableManager const *) nativeRenderableManager;
+    return rm->getLightChannel((RenderableManager::Instance) i, channel);
 }

@@ -168,10 +168,14 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
 }
 
 math::mat4 FCamera::getProjectionMatrix() const noexcept {
+    // This is where we transform the user clip-space (GL convention) to our virtual clip-space
+    // (inverted DX convention)
+    // Note that this math, ends up setting the projection matrix' p33 to 0, which is where we're
+    // getting back a lot of precision in the depth buffer.
     const mat4 m{ mat4::row_major_init{
             mScaling.x, 0.0, 0.0, mShiftCS.x,
             0.0, mScaling.y, 0.0, mShiftCS.y,
-            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, -0.5, 0.5,    // GL to inverted DX convention
             0.0, 0.0, 0.0, 1.0
     }};
     return m * mProjection;
@@ -192,16 +196,26 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
 }
 
+void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
+    FTransformManager& transformManager = mEngine.getTransformManager();
+    // TODO: eventually setTransform() will accept mat4 directly
+    transformManager.setTransform(transformManager.getInstance(mEntity), mat4f(modelMatrix));
+}
+
 void FCamera::lookAt(const float3& eye, const float3& center, const float3& up) noexcept {
-    setModelMatrix(mat4f::lookAt(eye, center, up));
+    FTransformManager& transformManager = mEngine.getTransformManager();
+    // TODO: eventually setTransform() will accept mat4
+    transformManager.setTransform(transformManager.getInstance(mEntity),
+            mat4f::lookAt(eye, center, up));
 }
 
-mat4f const& FCamera::getModelMatrix() const noexcept {
+mat4 FCamera::getModelMatrix() const noexcept {
     FTransformManager const& transformManager = mEngine.getTransformManager();
-    return transformManager.getWorldTransform(transformManager.getInstance(mEntity));
+    // TODO: eventually getWorldTransform() will return mat4 directly
+    return (mat4)transformManager.getWorldTransform(transformManager.getInstance(mEntity));
 }
 
-mat4f UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
+mat4 UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
     return FCamera::getViewMatrix(getModelMatrix());
 }
 
@@ -271,13 +285,13 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 }
 
 UTILS_NOINLINE
-mat4f FCamera::getViewMatrix(mat4f const& model) noexcept {
+mat4 FCamera::getViewMatrix(mat4 const& model) noexcept {
     // We can't use rigidTransformInverse here. The camera's model matrix might have scaling, which
     // would make it non-rigid.
     return inverse(model);
 }
 
-Frustum FCamera::getFrustum(mat4 const& projection, mat4f const& viewMatrix) noexcept {
+Frustum FCamera::getFrustum(mat4 const& projection, mat4 const& viewMatrix) noexcept {
     return Frustum(mat4f{ projection * viewMatrix });
 }
 
@@ -286,8 +300,8 @@ Frustum FCamera::getFrustum(mat4 const& projection, mat4f const& viewMatrix) noe
 CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
-    model              = camera.getModelMatrix();
-    view               = camera.getViewMatrix();
+    model              = mat4f{ camera.getModelMatrix() };
+    view               = mat4f{camera.getViewMatrix() };
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
@@ -296,12 +310,12 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     d                  = std::max(zn, camera.getFocusDistance());
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept {
-    const mat4f modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
+CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
+    const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
-    model              = modelMatrix;
-    view               = FCamera::getViewMatrix(model);
+    model              = mat4f{ modelMatrix };
+    view               = mat4f{ FCamera::getViewMatrix(modelMatrix) };
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
@@ -309,7 +323,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCame
     A                  = f / camera.getAperture();
     d                  = std::max(zn, camera.getFocusDistance());
     worldOffset        = camera.getPosition();
-    worldOrigin        = worldOriginCamera;
+    worldOrigin        = mat4f{ worldOriginCamera };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -356,11 +370,11 @@ void Camera::setShift(math::double2 shift) noexcept {
 }
 
 mat4 Camera::getProjectionMatrix() const noexcept {
-    return upcast(this)->getProjectionMatrix();
+    return upcast(this)->getUserProjectionMatrix();
 }
 
 mat4 Camera::getCullingProjectionMatrix() const noexcept {
-    return upcast(this)->getCullingProjectionMatrix();
+    return upcast(this)->getUserCullingProjectionMatrix();
 }
 
 math::double4 Camera::getScaling() const noexcept {
@@ -379,6 +393,10 @@ float Camera::getCullingFar() const noexcept {
     return upcast(this)->getCullingFar();
 }
 
+void Camera::setModelMatrix(const mat4& modelMatrix) noexcept {
+    upcast(this)->setModelMatrix(modelMatrix);
+}
+
 void Camera::setModelMatrix(const mat4f& modelMatrix) noexcept {
     upcast(this)->setModelMatrix(modelMatrix);
 }
@@ -391,11 +409,11 @@ void Camera::lookAt(const float3& eye, const float3& center) noexcept {
     upcast(this)->lookAt(eye, center, {0, 1, 0});
 }
 
-mat4f Camera::getModelMatrix() const noexcept {
+mat4 Camera::getModelMatrix() const noexcept {
     return upcast(this)->getModelMatrix();
 }
 
-mat4f Camera::getViewMatrix() const noexcept {
+mat4 Camera::getViewMatrix() const noexcept {
     return upcast(this)->getViewMatrix();
 }
 

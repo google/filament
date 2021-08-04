@@ -63,7 +63,22 @@ final class Asserts {
         return out;
     }
 
+    @NonNull @Size(min = 16)
+    static double[] assertMat4(@Nullable double[] out) {
+        if (out == null) out = new double[16];
+        else if (out.length < 16) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
+        }
+        return out;
+    }
+
     static void assertMat4fIn(@NonNull @Size(min = 16) float[] in) {
+        if (in.length < 16) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
+        }
+    }
+
+    static void assertMat4In(@NonNull @Size(min = 16) double[] in) {
         if (in.length < 16) {
             throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
         }

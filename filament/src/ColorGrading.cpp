@@ -470,6 +470,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         c.adaptationTransform = adaptationTransform(builder->whiteBalance);
     }
 
+    mDimension = c.lutDimension;
+
     size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
     size_t elementSize = sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
@@ -517,8 +519,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = chromaticAdaptation(v, config.adaptationTransform);
                     }
 
-                    // Convert to color grading color space
-                    v = sRGB_to_REC2020 * v;
+                    // TODO: We should convert to a color grading color space here
 
                     if (builder->hasAdjustments) {
                         // Kill negative values before the next transforms
@@ -528,7 +529,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
                         // Shadows/mid-tones/highlights
-                        v = tonalRanges(v, LUMA_REC2020,
+                        v = tonalRanges(v, LUMA_REC709,
                                 builder->shadows, builder->midtones, builder->highlights,
                                 builder->tonalRanges);
 
@@ -546,10 +547,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = LogC_to_linear(v);
 
                         // Vibrance in linear space
-                        v = vibrance(v, LUMA_REC2020, builder->vibrance);
+                        v = vibrance(v, LUMA_REC709, builder->vibrance);
 
                         // Saturation in linear space
-                        v = saturation(v, LUMA_REC2020, builder->saturation);
+                        v = saturation(v, LUMA_REC709, builder->saturation);
 
                         // Kill negative values before tone mapping
                         v = max(v, 0.0f);
@@ -566,9 +567,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = (*builder->toneMapper)(v);
                     }
 
-                    // Convert to output color space
-                    // TODO: allow to customize the output color space,
-                    v = REC2020_to_sRGB * v;
+                    // TODO: We should convert to the output color space if we use a working
+                    //       color space that's not sRGB
+                    // TODO: Allow the user to customize the output color space
 
                     v = saturate(v);
 

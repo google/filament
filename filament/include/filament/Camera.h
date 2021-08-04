@@ -207,6 +207,9 @@ public:
      *       0 0 tz c              0 0 c tz
      *       0 0 -1 0              0 0 0 1
      *
+     * The projection matrix must define an NDC system that must match the OpenGL convention,
+     * that is all 3 axis are mapped to [-1, 1].
+     *
      * @param projection  custom projection matrix used for rendering and culling
      * @param near        distance in world units from the camera to the near plane. \p near > 0.
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
@@ -220,6 +223,9 @@ public:
      *       0 b ty 0              0 b 0 ty
      *       0 0 tz c              0 0 c tz
      *       0 0 -1 0              0 0 0 1
+     *
+     * The projection matrices must define an NDC system that must match the OpenGL convention,
+     * that is all 3 axis are mapped to [-1, 1].
      *
      * @param projection  custom projection matrix used for rendering
      * @param projectionForCulling  custom projection matrix used for culling
@@ -323,7 +329,8 @@ public:
      *
      * @warning \p view must be a rigid transform
      */
-    void setModelMatrix(const math::mat4f& view) noexcept;
+    void setModelMatrix(const math::mat4& view) noexcept;
+    void setModelMatrix(const math::mat4f& view) noexcept; //!< \overload
 
     /** Sets the camera's view matrix
      *
@@ -356,10 +363,10 @@ public:
      * @return The camera's pose in world space as a rigid transform. Parent transforms, if any,
      * are taken into account.
      */
-    math::mat4f getModelMatrix() const noexcept;
+    math::mat4 getModelMatrix() const noexcept;
 
     //! Returns the camera's view matrix (inverse of the model matrix)
-    math::mat4f getViewMatrix() const noexcept;
+    math::mat4 getViewMatrix() const noexcept;
 
     //! Returns the camera's position in world space
     math::float3 getPosition() const noexcept;

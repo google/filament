@@ -184,6 +184,8 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetLoader(JNIEnv* e
     jmethodID getNativeObject = env->GetMethodID(klass, "getNativeObject", "()J");
     if (getNativeObject) {
         materialProvider = (MaterialProvider*) env->CallLongMethod(provider, getNativeObject);
+    } else {
+        env->ExceptionClear();
     }
 
     if (materialProvider == nullptr) {

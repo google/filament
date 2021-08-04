@@ -352,9 +352,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }, viewRenderTarget);
 
     const bool blendModeTranslucent = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
-    const bool hasCustomRenderTarget = viewRenderTarget != mRenderTarget;
-    // "blending" is meaningless when the view has a custom rendertarget because it's not composited
-    const bool blending = !hasCustomRenderTarget && blendModeTranslucent;
+    const bool blending = blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
     const bool needsAlphaChannel = (mSwapChain ? mSwapChain->isTransparent() : false) || blendModeTranslucent;
@@ -830,7 +828,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // set samplers and uniforms
                 PostProcessManager& ppm = getEngine().getPostProcessManager();
                 view.prepareSSAO(data.ssao ?
-                        resources.getTexture(data.ssao) : ppm.getOneTexture());
+                        resources.getTexture(data.ssao) : ppm.getOneTextureArray());
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?

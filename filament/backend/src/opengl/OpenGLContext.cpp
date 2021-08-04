@@ -273,6 +273,7 @@ void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet co
 
 void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
+    ext.ARB_shading_language_packing = hasExtension(exts, "GL_ARB_shading_language_packing") || (major == 4 && minor >= 2);
     ext.EXT_clip_control = hasExtension(exts, "GL_ARB_clip_control") || (major == 4 && minor >= 5);
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.

@@ -241,6 +241,15 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     Path path(g_pbrConfig.materialDir);
     std::string name(path.getName());
 
+    view->setAmbientOcclusionOptions({
+        .radius = 0.01f,
+        .bilateralThreshold = 0.005f,
+        .quality = View::QualityLevel::ULTRA,
+        .lowPassFilter = View::QualityLevel::MEDIUM,
+        .upsampling = View::QualityLevel::HIGH,
+        .enabled = true
+    });
+
     bool hasUV = false;
     for (auto& map: g_maps) {
         loadTexture(engine, path.concat(name + map.suffix + ".png"), &map.texture, map.sRGB);
@@ -377,6 +386,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .targetApi(MaterialBuilder::TargetApi::ALL)
 #ifndef NDEBUG
             .optimization(MaterialBuilderBase::Optimization::NONE)
+            .generateDebugInfo(true)
 #endif
             .material(shader.c_str())
             .multiBounceAmbientOcclusion(true)

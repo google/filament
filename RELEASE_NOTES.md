@@ -3,7 +3,17 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.11.3 (currently main branch)
+## v1.12.1 (currently main branch)
+
+- engine: `double` precision model (and view) matrix on `Camera`. This is only an
+  API change, internal precision is still `float` [⚠️ **API Change**].
+
+## v1.12.0
+
+- engine: Option to automatically compute bent normals from SSAO & apply to specular AO
+  [⚠️ **Material breakage**].
+- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at 
+  least one channel must match for lighting to occur [⚠️ **Material breakage**].
 
 ## v1.11.2
 
@@ -11,6 +21,11 @@ A new header is inserted each time a *tag* is created.
 - engine: New tone mapper: `GenericToneMapper`, a configurable tone mapper.
 - engine: `ColorGrading::Builder::toneMapping(ColorGrading::ToneMapping)` is now deprecated.
 - engine: Removed `REINHARD` tonemap operator[⚠️ **API Change**].
+- engine: Improve s3tc_srgb detection on desktop.
+- engine: Add bilateral threshold in SSAO options.
+- gltfio: Fix AssetLoader leak, remove unwanted destructor.
+- Metal/Vulkan: Fix uploading texture data with padding or offset.
+- Metal: fix GPU crash seen with large amounts of geometry.
 
 ## v1.11.1
 
