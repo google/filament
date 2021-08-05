@@ -396,7 +396,7 @@ static float3 luminanceScaling(float3 x,
             luminanceDifference / std::max(maxReservesLuminance, std::numeric_limits<float>::min());
 
     float chromaScale = (luminanceOut - luminanceDifference) /
-                        std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
+            std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
 
     return chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves;
 }
