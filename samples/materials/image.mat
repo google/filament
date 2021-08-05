@@ -39,12 +39,16 @@ fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
+        vec4 bg = vec4(materialParams.backgroundColor, 1.0);
         highp vec2 uv = (materialParams.transform * vec3(saturate(variable_imageUV.st), 1.0)).st;
         if (materialParams.showImage == 0 || uv.s > 1.0 || uv.s < 0.0 || uv.t < 0.0 || uv.t > 1.0) {
-            material.baseColor = vec4(materialParams.backgroundColor, 1.0);
+            material.baseColor = bg;
         } else {
             uv.t = 1.0 - uv.t;
-            material.baseColor = texture(materialParams_image, uv.st);
+            vec4 color = texture(materialParams_image, uv.st);
+            color.rgb *= color.a;
+            // Manual, pre-multiplied srcOver with opaque destination optimization
+            material.baseColor.rgb = color.rgb + bg.rgb * (1.0 - color.a);
         }
     }
 }
