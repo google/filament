@@ -51,6 +51,7 @@ set(SRCS
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
+        src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
         src/DebugRegistry.cpp
@@ -100,6 +101,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        src/ColorSpace.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
