@@ -265,7 +265,7 @@ inline float3 adjustExposure(float3 v, float exposure) {
 
 // Return the chromatic adaptation coefficients in LMS space for the given
 // temperature/tint offsets. The chromatic adaption is perfomed following
-// the von Kries method, using the CIECAT02 transform.
+// the von Kries method, using the CIECAT16 transform.
 // See https://en.wikipedia.org/wiki/Chromatic_adaptation
 // See https://en.wikipedia.org/wiki/CIECAM02#Chromatic_adaptation
 UTILS_ALWAYS_INLINE
@@ -277,13 +277,13 @@ inline float3 adaptationTransform(float2 whiteBalance) {
     float x = ILLUMINANT_D65_xyY.x - k * (k < 0.0f ? 0.0214f : 0.066f);
     float y = chromaticityCoordinateIlluminantD(x) + t * 0.066f;
 
-    float3 lms = XYZ_to_CIECAT02 * xyY_to_XYZ({x, y, 1.0f});
-    return ILLUMINANT_D65_LMS / lms;
+    float3 lms = XYZ_to_CIECAT16 * xyY_to_XYZ({x, y, 1.0f});
+    return ILLUMINANT_D65_LMS_CAT16 / lms;
 }
 
 UTILS_ALWAYS_INLINE
 inline float3 chromaticAdaptation(float3 v, float3 adaptationTransform) {
-    return LMS_to_sRGB * (adaptationTransform * (sRGB_to_LMS * v));
+    return LMS_CAT16_to_sRGB * (adaptationTransform * (sRGB_to_LMS_CAT16 * v));
 }
 
 //------------------------------------------------------------------------------
@@ -381,7 +381,7 @@ static float3 luminanceScaling(float3 x,
     float luminanceIn = dot(x, luminanceWeights);
 
     // TODO: We could optimize for the case of single-channel luminance
-    float luminanceOut = toneMapper(luminanceIn).x;
+    float luminanceOut = toneMapper(luminanceIn).y;
 
     float peak = max(x);
     float3 chromaRatio = max(x / peak, 0.0f);
@@ -512,6 +512,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     v = LogC_to_linear(v);
 
                     // TODO: Performed in sRGB, should be in Rec.2020 or AP1
+
                     if (builder->hasAdjustments) {
                         // Exposure
                         v = adjustExposure(v, builder->exposure);
@@ -570,7 +571,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // TODO: We should convert to the output color space if we use a working
                     //       color space that's not sRGB
                     // TODO: Allow the user to customize the output color space
+                    // TODO: Gamut mapping
 
+                    // We need to clamp for the output transfer function
                     v = saturate(v);
 
                     // Apply OECF
@@ -591,10 +594,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 #pragma clang loop vectorize_width(8)
                 for (size_t i = 0; i < count; ++i) {
                     float4 v{src[i]};
-                    uint32_t r = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
-                    uint32_t g = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
-                    uint32_t b = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
-                    dst[i] = (b << 20u) | (g << 10u) | r;
+                    uint32_t pr = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
+                    uint32_t pg = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
+                    uint32_t pb = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
+                    dst[i] = (pb << 20u) | (pg << 10u) | pr;
                 }
             }
 

@@ -379,9 +379,9 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         .intensity(mSettings.lighting.sunlightIntensity)
         .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
-        .sunAngularRadius(1.9)
-        .sunHaloSize(10.0)
-        .sunHaloFalloff(80.0)
+        .sunAngularRadius(1.0f)
+        .sunHaloSize(2.0f)
+        .sunHaloFalloff(80.0f)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
