@@ -2147,12 +2147,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
             },
             [=, &frameHistory](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
-                constexpr mat4f normalizedToClip = {
-                        float4{  2,  0,  0, 0 },
-                        float4{  0,  2,  0, 0 },
-                        float4{  0,  0,  -2, 0 },
-                        float4{ -1, -1, 1, 1 },
-                };
+                constexpr mat4f normalizedToClip{mat4f::row_major_init{
+                        2, 0, 0, -1,
+                        0, 2, 0, -1,
+                        0, 0, 1,  0,
+                        0, 0, 0,  1
+                }};
 
                 constexpr float2 sampleOffsets[9] = {
                         { -1.0f, -1.0f }, {  0.0f, -1.0f }, {  1.0f, -1.0f },
