@@ -563,9 +563,13 @@ const DebugServer::MaterialRecord* DebugServer::getRecord(const MaterialKey& key
 
 void DebugServer::updateActiveVariants() {
     if (mQueryCallback) {
-        for (auto& pair : mMaterialRecords) {
-            VariantList& result = mMaterialRecords[pair.first].activeVariants;
-            mQueryCallback(pair.second.userdata, &result);
+        auto curr = mMaterialRecords.begin();
+        auto end = mMaterialRecords.end();
+        while (curr != end) {
+            auto& value = curr.value();
+            VariantList& result = value.activeVariants;
+            mQueryCallback(value.userdata, &result);
+            ++curr;
         }
     }
 }
