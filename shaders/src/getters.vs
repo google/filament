@@ -144,7 +144,10 @@ vec4 computeWorldPosition() {
     return mulMat4x4Float3(transform, position);
 #elif defined(VERTEX_DOMAIN_DEVICE)
     mat4 transform = getWorldFromClipMatrix();
-    vec4 position = transform * getPosition();
+    vec4 p = getPosition();
+    // GL convention to inverted DX convention
+    p.z = p.z * -0.5 + 0.5;
+    vec4 position = transform * p;
     if (abs(position.w) < MEDIUMP_FLT_MIN) {
         position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
     }
