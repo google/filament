@@ -279,20 +279,20 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     highp float dt = 1.0 / float(kStepCount);
 
     // tolerance
-    float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
+    highp float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
 
     // dither the ray with interleaved gradient noise
     const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
     float dither = fract(m.z * fract(dot(gl_FragCoord.xy, m.xy))) - 0.5;
 
     // normalized position on the ray (0 to 1)
-    float t = dt * dither + dt;
+    highp float t = dt * dither + dt;
 
     highp vec3 ray;
     for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
-        float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
-        float dz = z - ray.z;
+        highp float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+        highp float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion = 1.0;
             break;
