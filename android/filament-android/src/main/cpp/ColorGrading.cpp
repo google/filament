@@ -77,6 +77,13 @@ Java_com_google_android_filament_ColorGrading_nBuilderLuminanceScaling(JNIEnv*, 
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderGamutMapping(JNIEnv*, jclass,
+        jlong nativeBuilder, jboolean gamutMapping) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->gamutMapping(gamutMapping);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderExposure(JNIEnv*, jclass,
         jlong nativeBuilder, jfloat exposure) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;

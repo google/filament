@@ -135,7 +135,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float RRT_SAT_FACTOR = 0.96f;
     constexpr float ODT_SAT_FACTOR = 0.93f;
 
-    float3 ap0 = sRGB_to_AP0 * color;
+    float3 ap0 = REC2020_to_AP0 * color;
 
     // Glow module
     float saturation = rgb_2_saturation(ap0);
@@ -156,7 +156,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<half>::max());
 
     // Global desaturation
-    ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);
+    ap1 = mix(float3(dot(ap1, LUMINANCE_AP1)), ap1, RRT_SAT_FACTOR);
 
     // NOTE: This is specific to Filament and added only to match ACES to our legacy tone mapper
     //       which was a fit of ACES in Rec.709 but with a brightness boost.
@@ -175,9 +175,9 @@ float3 ACES(float3 color, float brightness) noexcept {
     float3 linearCV = darkSurround_to_dimSurround(rgbPost);
 
     // Apply desaturation to compensate for luminance difference
-    linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
+    linearCV = mix(float3(dot(linearCV, LUMINANCE_AP1)), linearCV, ODT_SAT_FACTOR);
 
-    return AP1_to_sRGB * linearCV;
+    return AP1_to_REC2020 * linearCV;
 }
 
 } // namespace aces
@@ -260,7 +260,7 @@ float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
 
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(c, LUMA_REC709) / 0.18f);
+    float v = log2(dot(c, LUMINANCE_REC709) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
     size_t index = size_t(v);

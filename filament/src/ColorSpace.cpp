@@ -45,6 +45,10 @@ using namespace math;
  * SOFTWARE.
  */
 
+// TODO: Replace compute_max_saturation() with solution from
+//       https://simonstechblog.blogspot.com/2021/06/implementing-gamut-mapping.html to
+//       target arbitrary output gamuts. The solution below works only for sRGB/Rec.709
+
 // Finds the maximum saturation possible for a given hue that fits in sRGB
 // Saturation here is defined as S = C/L
 // a and b must be normalized so a^2 + b^2 == 1
@@ -231,8 +235,15 @@ constexpr float sgn(float x) noexcept {
     return (float) (0.f < x) - (float) (x < 0.f);
 }
 
-inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb, float alpha = 0.05f) noexcept {
-    if (all(lessThanEqual(rgb, float3{1.0f})) && all(greaterThanEqual(rgb, float3{0.0f}))) {
+// Adaptive L0 = 0.5, with alpha set to 0.05 by default
+// The threshold parameters defines a flexible range above 1.0 and below 0.0 where out-of-gamut
+// values are still considered in-gamut. This helps control for inaccuracies in the previous
+// color grading steps that may slightly deviate from in-gamut values when they shouldn't.
+inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb,
+        float alpha = 0.05f, float threshold = 0.03f) noexcept {
+
+    if (all(lessThanEqual(rgb, float3{1.0f + threshold})) &&
+            all(greaterThanEqual(rgb, float3{-threshold}))) {
         return rgb;
     }
 
@@ -256,7 +267,7 @@ inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb, float alpha = 0.05f) noexce
 }
 
 float3 gamutMapping_sRGB(float3 rgb) noexcept {
-    return gamut_clip_adaptive_L0_0_5(rgb, 0.5f);
+    return gamut_clip_adaptive_L0_0_5(rgb);
 }
 
 /*
