@@ -123,15 +123,15 @@ public class ToneMapper {
          * the {@link ACESLegacy} tone mapper. The default values are:
          *
          * <ul>
-         * <li>contrast = 1.4f</li>
+         * <li>contrast = 1.585f</li>
          * <li>shoulder = 0.5f</li>
          * <li>midGrayIn = 0.18f</li>
-         * <li>midGrayOut = 0.266f</li>
+         * <li>midGrayOut = 0.268f</li>
          * <li>hdrMax = 10.0f</li>
          * </ul>
          */
         public Generic() {
-            this(1.4f, 0.5f, 0.18f, 0.266f, 10.0f);
+            this(1.585f, 0.5f, 0.18f, 0.268f, 10.0f);
         }
 
         /**
