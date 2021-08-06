@@ -64,6 +64,11 @@ blitterVertex(uint vid [[vertex_id]],
     return out;
 }
 
+struct FragmentArgs {
+    uint8_t lod;
+    uint32_t depthPlane;
+};
+
 fragment FragmentOut
 blitterFrag(VertexOut in [[stage_in]],
             sampler sourceSampler [[sampler(0)]],
@@ -71,20 +76,24 @@ blitterFrag(VertexOut in [[stage_in]],
 #ifdef BLIT_COLOR
 #ifdef MSAA_COLOR_SOURCE
             texture2d_ms<float, access::read> sourceColor [[texture(0)]],
+#elif SOURCES_3D
+            texture3d<float, access::read> sourceColor [[texture(0)]],
 #else
             texture2d<float, access::read> sourceColor [[texture(0)]],
-#endif
-#endif
+#endif  // MSAA_COLOR_SOURCE
+#endif  // BLIT_COLOR
 
 #ifdef BLIT_DEPTH
 #ifdef MSAA_DEPTH_SOURCE
             texture2d_ms<float, access::read> sourceDepth [[texture(1)]],
+#elif SOURCES_3D
+            texture3d<float, access::read> sourceDepth [[texture(1)]],
 #else
             texture2d<float, access::read> sourceDepth [[texture(1)]],
-#endif
-#endif
+#endif  // MSAA_DEPTH_SOURCE
+#endif  // BLIT_DEPTH
 
-            constant uint8_t* lod [[buffer(0)]])
+            constant FragmentArgs* args [[buffer(0)]])
 {
     FragmentOut out = {};
 #ifdef BLIT_COLOR
@@ -94,10 +103,13 @@ blitterFrag(VertexOut in [[stage_in]],
         out.color += sourceColor.read(static_cast<uint2>(in.uv), s);
     }
     out.color /= sourceColor.get_num_samples();
+#elif SOURCES_3D
+    uint3 coords = uint3(static_cast<uint2>(in.uv), args->depthPlane);
+    out.color += sourceColor.read(coords, args->lod);
 #else
-    out.color += sourceColor.read(static_cast<uint2>(in.uv), *lod);
-#endif
-#endif
+    out.color += sourceColor.read(static_cast<uint2>(in.uv), args->lod);
+#endif  // MSAA_COLOR_SOURCE
+#endif  // BLIT_COLOR
 
 #ifdef BLIT_DEPTH
 #ifdef MSAA_DEPTH_SOURCE
@@ -106,10 +118,13 @@ blitterFrag(VertexOut in [[stage_in]],
         out.depth += sourceDepth.read(static_cast<uint2>(in.uv), s).r;
     }
     out.depth /= sourceDepth.get_num_samples();
+#elif SOURCES_3D
+    uint3 coords = uint3(static_cast<uint2>(in.uv), args->depthPlane);
+    out.depth = sourceDepth.read(coords, args->lod).r;
 #else
-    out.depth = sourceDepth.read(static_cast<uint2>(in.uv), *lod).r;
-#endif
-#endif
+    out.depth = sourceDepth.read(static_cast<uint2>(in.uv), args->lod).r;
+#endif  // MSAA_DEPTH_SOURCE
+#endif  // BLIT_DEPTH
     return out;
 }
 )";
@@ -121,6 +136,14 @@ MetalBlitter::MetalBlitter(MetalContext& context) noexcept : mContext(context) {
 void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     bool blitColor = args.blitColor();
     bool blitDepth = args.blitDepth();
+
+    ASSERT_PRECONDITION(args.source.region.size.depth == args.destination.region.size.depth,
+            "Blitting requires the source and destination regions to have the same depth.");
+
+    ASSERT_PRECONDITION(
+            (args.source.color.textureType == MTLTextureType3D) ==
+            (args.source.depth.textureType == MTLTextureType3D),
+            "Blitting requires color and depth sources both be 3D or both be 2D.");
 
     // Determine if the blit for color or depth are eligible to use a MTLBlitCommandEncoder.
     // blitColor and / or blitDepth are set to false upon success, to indicate that no more work is
@@ -146,8 +169,9 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     BlitArgs slowBlit = args;
     BlitArgs finalBlit = args;
 
-    MTLRegion sourceRegionNoOffset = MTLRegionMake2D(0, 0,
-            args.source.region.size.width, args.source.region.size.height);
+    MTLRegion sourceRegionNoOffset = MTLRegionMake3D(0, 0, 0,
+            args.source.region.size.width, args.source.region.size.height,
+            args.source.region.size.depth);
 
     if (blitColor && !(args.destination.color.usage & MTLTextureUsageRenderTarget)) {
         intermediateColor = createIntermediateTexture(args.destination.color, args.source.region.size);
@@ -216,14 +240,30 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
 
 void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
         const BlitArgs& args) {
+
+    uint32_t depthPlaneSource = args.source.region.origin.z;
+    uint32_t depthPlaneDest = args.destination.region.origin.z;
+
+    assert_invariant(args.source.region.size.depth == args.destination.region.size.depth);
+    uint32_t depthPlaneCount = args.source.region.size.depth;
+    for (NSUInteger d = 0; d < depthPlaneCount; d++) {
+        blitDepthPlane(cmdBuffer, blitColor, blitDepth, args, depthPlaneSource++, depthPlaneDest++);
+    }
+
+    blitColor = false;
+    blitDepth = false;
+}
+
+void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor, bool blitDepth,
+        const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest) {
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     if (blitColor) {
-        setupColorAttachment(args, descriptor);
+        setupColorAttachment(args, descriptor, depthPlaneDest);
     }
 
     if (blitDepth) {
-        setupDepthAttachment(args, descriptor);
+        setupDepthAttachment(args, descriptor, depthPlaneDest);
     }
 
     id<MTLRenderCommandEncoder> encoder = [cmdBuffer renderCommandEncoderWithDescriptor:descriptor];
@@ -234,6 +274,8 @@ void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
     key.blitDepth = blitDepth;
     key.msaaColorSource = args.source.color.textureType == MTLTextureType2DMultisample;
     key.msaaDepthSource = args.source.depth.textureType == MTLTextureType2DMultisample;
+    key.sources3D = args.source.color.textureType == MTLTextureType3D;
+    assert_invariant(args.source.depth.textureType == MTLTextureType3D || !key.sources3D);
     id<MTLFunction> fragmentFunction = getBlitFragmentFunction(key);
 
     PipelineState pipelineState {
@@ -326,26 +368,32 @@ void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
         {  3.0f, -1.0f,  2.0f * right - left,  bottom },
     };
 
+    struct FragmentArgs {
+        uint8_t lod;
+        uint32_t depthPlane;
+    };
+
+    FragmentArgs fargs = {
+            .lod = args.source.level,
+            .depthPlane = static_cast<uint32_t>(depthPlaneSource)
+    };
+
     [encoder setVertexBytes:vertices length:(sizeof(math::float4) * 3) atIndex:0];
-    [encoder setFragmentBytes:&args.source.level length:sizeof(uint8_t) atIndex:0];
+    [encoder setFragmentBytes:&fargs length:sizeof(FragmentArgs) atIndex:0];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [encoder endEncoding];
-
-    blitColor = false;
-    blitDepth = false;
 }
 
 id<MTLTexture> MetalBlitter::createIntermediateTexture(id<MTLTexture> t, MTLSize size) {
-    assert_invariant(t.textureType == MTLTextureType2D);
-    MTLTextureDescriptor* descriptor =
-            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:t.pixelFormat
-                                                              width:size.width
-                                                             height:size.height
-                                                          mipmapped:NO];
+    MTLTextureDescriptor* descriptor = [MTLTextureDescriptor new];
+    descriptor.textureType = size.depth == 1 ? MTLTextureType2D : MTLTextureType3D;
+    descriptor.pixelFormat = t.pixelFormat;
+    descriptor.width = size.width;
+    descriptor.height = size.height;
+    descriptor.depth = size.depth;
     descriptor.usage = t.usage & MTLTextureUsageRenderTarget;
     return [mContext.device newTextureWithDescriptor:descriptor];
 }
-
 
 void MetalBlitter::shutdown() noexcept {
     mBlitFunctions.clear();
@@ -353,9 +401,10 @@ void MetalBlitter::shutdown() noexcept {
 }
 
 void MetalBlitter::setupColorAttachment(const BlitArgs& args,
-        MTLRenderPassDescriptor* descriptor) {
+        MTLRenderPassDescriptor* descriptor, uint32_t depthPlane) {
     descriptor.colorAttachments[0].texture = args.destination.color;
     descriptor.colorAttachments[0].level = args.destination.level;
+    descriptor.colorAttachments[0].depthPlane = depthPlane;
 
     descriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
     // We don't need to load the contents of the attachment if we're blitting over all of it.
@@ -366,9 +415,11 @@ void MetalBlitter::setupColorAttachment(const BlitArgs& args,
     descriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 }
 
-void MetalBlitter::setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor) {
+void MetalBlitter::setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor,
+        uint32_t depthPlane) {
     descriptor.depthAttachment.texture = args.destination.depth;
     descriptor.depthAttachment.level = args.destination.level;
+    descriptor.depthAttachment.depthPlane = depthPlane;
 
     descriptor.depthAttachment.loadAction = MTLLoadActionLoad;
     // We don't need to load the contents of the attachment if we're blitting over all of it.
@@ -393,6 +444,9 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
     }
     if (key.msaaDepthSource) {
         macros[@"MSAA_DEPTH_SOURCE"] = @"1";
+    }
+    if (key.sources3D) {
+        macros[@"SOURCES_3D"] = @"1";
     }
     options.preprocessorMacros = macros;
     NSString* objcSource = [NSString stringWithCString:functionLibrary
@@ -427,6 +481,7 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
 }
 
 id<MTLFunction> MetalBlitter::getBlitFragmentFunction(BlitFunctionKey key) {
+    assert_invariant(key.isValid());
     auto iter = mBlitFunctions.find(key);
     if (iter != mBlitFunctions.end()) {
         return iter.value();

@@ -651,9 +651,9 @@ TEST_F(BackendTest, UpdateImage3D) {
     auto& api = getDriverApi();
     api.startCapture();
 
-    PixelDataFormat pixelFormat = PixelDataFormat::RGB;
-    PixelDataType pixelType = PixelDataType::UBYTE;
-    TextureFormat textureFormat = TextureFormat::RGBA8;
+    PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
+    PixelDataType pixelType = PixelDataType::FLOAT;
+    TextureFormat textureFormat = TextureFormat::RGBA16F;
 
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = createSwapChain();
@@ -684,7 +684,7 @@ TEST_F(BackendTest, UpdateImage3D) {
 
     // Only add checkerboard data to the 3rd layer, which we'll sample from.
     uint8_t* thirdLayer = (uint8_t*) buffer + (bpl * 2);
-    fillCheckerboard<uint8_t>(thirdLayer, 512, 512, components, 0xFF);
+    fillCheckerboard<float>(thirdLayer, 512, 512, components, 1.0f);
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
 
