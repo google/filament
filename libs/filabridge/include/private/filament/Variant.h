@@ -23,9 +23,10 @@
 #include <utils/bitset.h>
 
 namespace filament {
-    static constexpr size_t VARIANT_COUNT = 128;
+    static constexpr size_t VARIANT_BITS = 7;
+    static constexpr size_t VARIANT_COUNT = 1 << VARIANT_BITS;
 
-    using VariantList = utils::bitset<uint64_t, VARIANT_COUNT>;
+    using VariantList = utils::bitset<uint64_t, VARIANT_COUNT / 64>;
 
     // IMPORTANT: update filterVariant() when adding more variants
     // Also be sure to update formatVariantString inside CommonWriter.cpp
