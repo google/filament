@@ -30,8 +30,9 @@ uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.resolution.xy *
             vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
-    // go from screen-space (non-inverted) Z to normalized view-space Z (i.e. scaled by 1/zLightFar)
-    // (see Froxelizer.cpp)
+    // go from screen-space to reciprocal of normalized view-space Z (i.e. scaled by 1/zLightFar)
+    // we get away with the reciprocal because 1/z is handled by the log2() below.
+    // see Froxelizer.cpp
     highp float viewSpaceNormalizedZ = frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y;
 
     // frameUniforms.zParams.w is actually the number of z-slices, make sure it's mediump
@@ -184,7 +185,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     // Fetch the light information stored in the froxel that contains the
     // current fragment
-    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord()));
+    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord2()));
 
     // Each froxel contains how many lights can influence
     // the current fragment. A froxel also contains a record offset that
