@@ -375,7 +375,7 @@ bool Froxelizer::update() noexcept {
             // the camera.
             minp.z = -planesZ[iz+1];
             maxp.z = -planesZ[iz];
-            assert_invariant(minp.z < maxp.z);
+            assert_invariant(minp.z <= maxp.z);
 
             for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
                 // left, right planes for all froxels at ix
@@ -391,7 +391,7 @@ bool Froxelizer::update() noexcept {
                     minp.x = std::min(minp.x, px);
                     maxp.x = std::max(maxp.x, px);
                 }
-                assert_invariant(minp.x < maxp.x);
+                assert_invariant(minp.x <= maxp.x);
                 minMaxX[ix] = float2{ minp.x, maxp.x };
             }
 
