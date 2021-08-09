@@ -152,7 +152,7 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
     if (params.options.shadowFar > 0.0f) {
         float n = camera.zn;
         float f = params.options.shadowFar;
-        if (std::abs(projection[2].w) <= std::numeric_limits<float>::epsilon()) {
+        if (std::abs(projection[2].w) > std::numeric_limits<float>::epsilon()) {
             // perspective projection
             projection[2].z =     (f + n) / (n - f);
             projection[3].z = (2 * f * n) / (n - f);
