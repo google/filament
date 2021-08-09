@@ -213,7 +213,7 @@ mat4 FCamera::getModelMatrix() const noexcept {
 }
 
 mat4 UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
-    return FCamera::getViewMatrix(getModelMatrix());
+    return inverse(getModelMatrix());
 }
 
 Frustum FCamera::getFrustum() const noexcept {
@@ -281,13 +281,6 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
     return r;
 }
 
-UTILS_NOINLINE
-mat4 FCamera::getViewMatrix(mat4 const& model) noexcept {
-    // We can't use rigidTransformInverse here. The camera's model matrix might have scaling, which
-    // would make it non-rigid.
-    return inverse(model);
-}
-
 Frustum FCamera::getFrustum(mat4 const& projection, mat4 const& viewMatrix) noexcept {
     return Frustum(mat4f{ projection * viewMatrix });
 }
@@ -298,7 +291,7 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ camera.getModelMatrix() };
-    view               = mat4f{camera.getViewMatrix() };
+    view               = mat4f{ camera.getViewMatrix() };
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
@@ -312,7 +305,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamer
     projection         = mat4f{ camera.getProjectionMatrix() };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
-    view               = mat4f{ FCamera::getViewMatrix(modelMatrix) };
+    view               = mat4f{ inverse(modelMatrix) };
     zn                 = camera.getNear();
     zf                 = camera.getCullingFar();
     ev100              = Exposure::ev100(camera);
