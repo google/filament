@@ -421,9 +421,9 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     // is set
     mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
 
-    mCullingFrustum = FCamera::getFrustum(
-            mCullingCamera->getCullingProjectionMatrix(),
-            inverse(worldOriginScene * mCullingCamera->getModelMatrix()));
+    mCullingFrustum = Frustum(mat4f{
+                    mCullingCamera->getCullingProjectionMatrix() *
+                    inverse(worldOriginScene * mCullingCamera->getModelMatrix()) });
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all

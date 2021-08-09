@@ -144,8 +144,8 @@ public:
         return getFieldOfView(direction) * math::f::RAD_TO_DEG;
     }
 
-    // returns a Frustum object in world space
-    Frustum getFrustum() const noexcept;
+    // Returns the camera's culling Frustum in world space
+    Frustum getCullingFrustum() const noexcept;
 
     // sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
     void setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept;
@@ -182,8 +182,6 @@ public:
     utils::Entity getEntity() const noexcept {
         return mEntity;
     }
-
-    static Frustum getFrustum(math::mat4 const& projection, math::mat4 const& viewMatrix) noexcept;
 
 private:
     FEngine& mEngine;

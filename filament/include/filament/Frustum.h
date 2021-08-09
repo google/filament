@@ -52,8 +52,9 @@ public:
     Frustum& operator=(Frustum&& rhs) noexcept = default;
 
     /**
-     * Creates a frustum from a projection matrix (usually the projection * view matrix)
-     * @param pv a 4x4 projection matrix
+     * Creates a frustum from a projection matrix in GL convention
+     * (usually the projection * view matrix)
+     * @param pv a 4x4 projection matrix in GL convention
      */
     explicit Frustum(const math::mat4f& pv);
 

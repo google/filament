@@ -148,29 +148,29 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
     // Note: we keep the polygon offset even with VSM as it seems to help.
 
     // Adjust the camera's projection for the light's shadowFar
-    mat4f projection(camera.cullingProjection);
+    mat4f cullingProjection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {
         float n = camera.zn;
         float f = params.options.shadowFar;
-        if (std::abs(projection[2].w) > std::numeric_limits<float>::epsilon()) {
+        if (std::abs(cullingProjection[2].w) > std::numeric_limits<float>::epsilon()) {
             // perspective projection
-            projection[2].z =     (f + n) / (n - f);
-            projection[3].z = (2 * f * n) / (n - f);
+            cullingProjection[2].z = (f + n) / (n - f);
+            cullingProjection[3].z = (2 * f * n) / (n - f);
         } else {
             // ortho projection
-            projection[2].z =    2.0f / (n - f);
-            projection[3].z = (f + n) / (n - f);
+            cullingProjection[2].z = 2.0f / (n - f);
+            cullingProjection[3].z = (f + n) / (n - f);
         }
     }
 
     const CameraInfo cameraInfo = {
-            .projection = projection,
+            .projection = cullingProjection,
             .model = camera.model,
             .view = camera.view,
             .worldOrigin = camera.worldOrigin,
             .zn = camera.zn,
             .zf = camera.zf,
-            .frustum = Frustum(projection * camera.view)
+            .frustum = Frustum(cullingProjection * camera.view)
     };
 
     // debugging...

@@ -356,7 +356,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
 
         map.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
 
-        Frustum const& frustum = map.getCamera().getFrustum();
+        Frustum const& frustum = map.getCamera().getCullingFrustum();
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                 VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
 
@@ -502,7 +502,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
         if (shadowMap.hasVisibleShadows()) {
             // Cull shadow casters
             auto& s = shadowUb.edit();
-            Frustum const& frustum = shadowMap.getCamera().getFrustum();
+            Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(i));
 
