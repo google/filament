@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.1 (currently main branch)
+## v1.12.2 (currently main branch)
+
+## v1.12.1
 
 - engine: `double` precision translation support in TransformManager. Disabled by default. 
   Augment model (and view) matrix on `Camera` to accept double precision matrices. When enabled,
@@ -14,8 +16,11 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Option to automatically compute bent normals from SSAO & apply to specular AO
   [⚠️ **Material breakage**].
-- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at 
+- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at
   least one channel must match for lighting to occur [⚠️ **Material breakage**].
+- engine: Fix potential GPU crash with punctual lights near the far clipping plane.
+- materials: The `inverseTonemap` API is now an exact inverse of the Filmic tonemapper.
+- Metal: Better support for texture formats on M1 Macs.
 
 ## v1.11.2
 
