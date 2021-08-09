@@ -565,8 +565,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         projectionScale);
                 mi->setParameter("projectionScaleRadius",
                         projectionScale * options.radius);
-                mi->setParameter("depthParams",
-                        -cameraInfo.projection[3][2]);  // z_v = -near / z_s
                 mi->setParameter("positionParams", float2{
                         invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("peak2", peak * peak);

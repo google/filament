@@ -29,7 +29,6 @@ float dominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal) {
     cone.contactDistanceMaxInv = materialParams.ssctContactDistanceMaxInv;
 
     cone.screenFromViewMatrix = materialParams.screenFromViewMatrix;
-    cone.depthParams = materialParams.depthParams;
     cone.projectionScale = materialParams.projectionScale;
     cone.resolution = materialParams.resolution;
     cone.maxLevel = float(materialParams.maxLevel);

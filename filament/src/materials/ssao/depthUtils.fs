@@ -17,12 +17,15 @@
 #ifndef FILAMENT_MATERIALS_DEPTH_UTILS
 #define FILAMENT_MATERIALS_DEPTH_UTILS
 
-highp float linearizeDepth(highp float depth, highp float depthParams) {
+highp float linearizeDepth(highp float depth) {
     // Our far plane is at infinity, which causes a division by zero below, which in turn
     // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
     // value representable in  a 24 bit depth buffer.
     const float preventDiv0 = 1.0 / 16777216.0;
-    return depthParams / max(depth, preventDiv0);
+    mat4 p = getViewFromClipMatrix();
+    // this works with perspective and ortho projections, for a perspective projection
+    // this resolves to -near/depth, for an ortho projection this resolves to depth*(far - near) - far
+    return (depth * p[2].z + p[3].z) / max(depth * p[2].w + p[3].w, preventDiv0);
 }
 
 highp float sampleDepth(const highp sampler2D depthTexture, const highp vec2 uv, float lod) {
@@ -36,8 +39,8 @@ highp float sampleDepth(const highp sampler2D depthTexture, const highp vec2 uv,
 }
 
 highp float sampleDepthLinear(const highp sampler2D depthTexture,
-        const highp vec2 uv, float lod, highp float depthParams) {
-    return linearizeDepth(sampleDepth(depthTexture, uv, lod), depthParams);
+        const highp vec2 uv, float lod) {
+    return linearizeDepth(sampleDepth(depthTexture, uv, lod));
 }
 
 #endif // #define FILAMENT_MATERIALS_DEPTH_UTILS
