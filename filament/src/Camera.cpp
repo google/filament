@@ -110,7 +110,7 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     switch (projection) {
         case Projection::PERSPECTIVE:
             /*
-             * The general perspective projection looks like this:
+             * The general perspective projection in GL convention looks like this:
              *
              * P =  2N/r-l    0      r+l/r-l        0
              *       0      2N/t-b   t+b/t-b        0
@@ -121,37 +121,20 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
             mProjectionForCulling = p;
 
             /*
-             * we're using a far plane at infinity
+             * but we're using a far plane at infinity
              *
              * P =  2N/r-l      0    r+l/r-l        0
              *       0      2N/t-b   t+b/t-b        0
              *       0       0         -1        -2*N    <-- far at infinity
              *       0       0         -1           0
              */
-            p[2][2] = -1;           // lim(far->inf) = -1
-            p[3][2] = -2 * near;    // lim(far->inf) = -2*near
-
-            /*
-             * e.g.: A symmetrical frustum with far plane at infinity
-             *
-             * P =  N/r      0       0      0
-             *       0      N/t      0      0
-             *       0       0      -1    -2*N
-             *       0       0      -1      0
-             *
-             * v(CC) = P*v
-             * v(NDC) = v(CC) * (1 / v(CC).w)
-             *
-             * for v in the frustum, P generates v(CC).xyz in [-1, 1]
-             *
-             * v(WC).z = v(NDC).z * (f-n)*0.5 + (n+f)*0.5
-             *         = v(NDC).z * 0.5 + 0.5
-             */
+            p[2][2] = -1.0f;           // lim(far->inf) = -1
+            p[3][2] = -2.0f * near;    // lim(far->inf) = -2*near
             break;
 
         case Projection::ORTHO:
             /*
-             * The general orthographic projection looks like this:
+             * The general orthographic projection in GL convention looks like this:
              *
              * P =  2/r-l    0         0       - r+l/r-l
              *       0      2/t-b      0       - t+b/t-b
@@ -170,7 +153,7 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
 math::mat4 FCamera::getProjectionMatrix() const noexcept {
     // This is where we transform the user clip-space (GL convention) to our virtual clip-space
     // (inverted DX convention)
-    // Note that this math, ends up setting the projection matrix' p33 to 0, which is where we're
+    // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're
     // getting back a lot of precision in the depth buffer.
     const mat4 m{ mat4::row_major_init{
             mScaling.x, 0.0, 0.0, mShiftCS.x,
@@ -182,6 +165,7 @@ math::mat4 FCamera::getProjectionMatrix() const noexcept {
 }
 
 math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
+    // The culling projection matrix stays in the GL convention
     const mat4 m{ mat4::row_major_init{
             mScaling.x, 0.0, 0.0, mShiftCS.x,
             0.0, mScaling.y, 0.0, mShiftCS.y,
@@ -216,9 +200,9 @@ mat4 UTILS_NOINLINE FCamera::getViewMatrix() const noexcept {
     return inverse(getModelMatrix());
 }
 
-Frustum FCamera::getFrustum() const noexcept {
+Frustum FCamera::getCullingFrustum() const noexcept {
     // for culling purposes we keep the far plane where it is
-    return FCamera::getFrustum(getCullingProjectionMatrix(), getViewMatrix());
+    return Frustum(mat4f{ getCullingProjectionMatrix() * getViewMatrix() });
 }
 
 void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept {
@@ -279,10 +263,6 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
         r[3][2] = -p[3][2] * C;
     }
     return r;
-}
-
-Frustum FCamera::getFrustum(mat4 const& projection, mat4 const& viewMatrix) noexcept {
-    return Frustum(mat4f{ projection * viewMatrix });
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -428,7 +408,7 @@ float Camera::getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
 }
 
 Frustum Camera::getFrustum() const noexcept {
-    return upcast(this)->getFrustum();
+    return upcast(this)->getCullingFrustum();
 }
 
 utils::Entity Camera::getEntity() const noexcept {
