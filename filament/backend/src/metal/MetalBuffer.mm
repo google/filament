@@ -18,6 +18,8 @@
 
 #include <utils/Panic.h>
 
+#include <array>
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -101,8 +103,11 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
         size_t count) {
     const NSRange bufferRange = NSMakeRange(bufferStart, count);
 
-    std::vector<id<MTLBuffer>> metalBuffers(count, nil);
-    std::vector<size_t> metalOffsets(count, 0);
+    constexpr size_t MAX_BUFFERS = 16;
+    assert_invariant(count <= MAX_BUFFERS);
+
+    std::array<id<MTLBuffer>, MAX_BUFFERS> metalBuffers = {};
+    std::array<size_t, MAX_BUFFERS> metalOffsets = {};
 
     for (size_t b = 0; b < count; b++) {
         MetalBuffer* const buffer = buffers[b];

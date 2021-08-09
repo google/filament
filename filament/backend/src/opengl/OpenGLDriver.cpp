@@ -514,7 +514,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     DEBUG_MARKER()
 
     auto& gl = mContext;
-    samples = std::min(samples, uint8_t(gl.gets.max_samples));
+    samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
@@ -590,7 +590,7 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
 
     // WebGL does not support swizzling. We assert for this in the Texture builder,
     // so it is probably fine to silently ignore the swizzle state here.
-    #if !defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__)
 
     // the texture is still bound and active from createTextureR
     GLTexture* t = handle_cast<GLTexture *>(th);
@@ -600,7 +600,7 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
     glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, getSwizzleChannel(b));
     glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, getSwizzleChannel(a));
 
-    #endif
+#endif
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -611,6 +611,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     DEBUG_MARKER()
 
     auto& gl = mContext;
+    samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
 
     t->gl.id = (GLuint)id;
@@ -906,10 +907,14 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
 
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0)) {
-            glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0 ||
+                rt->gl.samples != pAttachmentTexture->gl.sidecarSamples)) {
+            if (pAttachmentTexture->gl.sidecarRenderBufferMS == 0) {
+                glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+            }
             renderBufferStorage(pAttachmentTexture->gl.sidecarRenderBufferMS,
                     t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
+            pAttachmentTexture->gl.sidecarSamples = rt->gl.samples;
         }
 
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
@@ -1055,7 +1060,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
      *  undefined after execution of a rendering command.
      */
 
-    samples = std::min(samples, uint8_t(mContext.gets.max_samples));
+    samples = std::clamp(samples, uint8_t(1u), uint8_t(mContext.gets.max_samples));
 
     rt->gl.samples = samples;
     rt->targets = targets;
@@ -3026,7 +3031,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
             glFilterMode = GL_NEAREST;
         }
 
-        // note: for msaa RenderTargets withh non-msaa attachments, we copy from the msaa sidecar
+        // note: for msaa RenderTargets with non-msaa attachments, we copy from the msaa sidecar
         // buffer -- this should produce the same output that if we copied from the resolved
         // texture. EXT_multisampled_render_to_texture seems to allow both behaviours, and this
         // is an emulation of that.  We cannot use the resolved texture easily because it's not

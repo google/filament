@@ -24,6 +24,8 @@
 #include <math/scalar.h>
 
 #include <utils/debug.h>
+#include <filament/LightManager.h>
+
 
 using namespace filament::math;
 using namespace utils;
@@ -36,6 +38,7 @@ struct LightManager::BuilderDetails {
     Type mType = Type::DIRECTIONAL;
     bool mCastShadows = false;
     bool mCastLight = true;
+    uint8_t mChannels = 1u;
     float3 mPosition = {};
     float mFalloff = 1.0f;
     LinearColor mColor = LinearColor{ 1.0f };
@@ -134,6 +137,15 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
     return *this;
 }
 
+LightManager::Builder& LightManager::Builder::lightChannel(unsigned int channel, bool enable) noexcept {
+    if (channel < 8) {
+        const uint8_t mask = 1u << channel;
+        mImpl->mChannels &= ~mask;
+        mImpl->mChannels |= enable ? mask : 0u;
+    }
+    return *this;
+}
+
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
     upcast(engine).createLight(*this, entity);
     return Success;
@@ -170,6 +182,8 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         lightType.type = builder->mType;
         lightType.shadowCaster = builder->mCastShadows;
         lightType.lightCaster = builder->mCastLight;
+
+        mManager[i].channels = builder->mChannels;
 
         // set default values by calling the setters
         setShadowOptions(i, builder->mShadowOptions);
@@ -227,16 +241,40 @@ void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) n
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
 }
 
+void FLightManager::setLightChannel(Instance i, unsigned int channel, bool enable) noexcept {
+    if (i) {
+        if (channel < 8) {
+            auto& manager = mManager;
+            const uint8_t mask = 1u << channel;
+            manager[i].channels &= ~mask;
+            manager[i].channels |= enable ? mask : 0u;
+        }
+    }
+}
+
+bool FLightManager::getLightChannel(Instance i, unsigned int channel) const noexcept {
+    if (i) {
+        if (channel < 8) {
+            auto& manager = mManager;
+            const uint8_t mask = 1u << channel;
+            return bool(manager[i].channels & mask);
+        }
+    }
+    return false;
+}
+
 void FLightManager::setLocalPosition(Instance i, const float3& position) noexcept {
-    assert_invariant(i);
-    auto& manager = mManager;
-    manager[i].position = position;
+    if (i) {
+        auto& manager = mManager;
+        manager[i].position = position;
+    }
 }
 
 void FLightManager::setLocalDirection(Instance i, float3 direction) noexcept {
-    assert_invariant(i);
-    auto& manager = mManager;
-    manager[i].direction = direction;
+    if (i) {
+        auto& manager = mManager;
+        manager[i].direction = direction;
+    }
 }
 
 void FLightManager::setColor(Instance i, const LinearColor& color) noexcept {
@@ -438,8 +476,16 @@ void LightManager::destroy(Entity e) noexcept {
     return upcast(this)->destroy(e);
 }
 
+void LightManager::setLightChannel(Instance i, unsigned int channel, bool enable) noexcept {
+    upcast(this)->setLightChannel(i, channel, enable);
+}
+
+bool LightManager::getLightChannel(LightManager::Instance i, unsigned int channel) const noexcept {
+    return upcast(this)->getLightChannel(i, channel);
+}
+
 void LightManager::setPosition(Instance i, const float3& position) noexcept {
-    return upcast(this)->setLocalPosition(i, position);
+    upcast(this)->setLocalPosition(i, position);
 }
 
 const float3& LightManager::getPosition(Instance i) const noexcept {

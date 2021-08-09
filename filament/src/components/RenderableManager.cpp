@@ -45,6 +45,7 @@ struct RenderableManager::BuilderDetails {
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
+    uint8_t mChannels = 1;
     bool mCulling : 1;
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
@@ -130,6 +131,15 @@ RenderableManager::Builder& RenderableManager::Builder::priority(uint8_t priorit
 
 RenderableManager::Builder& RenderableManager::Builder::culling(bool enable) noexcept {
     mImpl->mCulling = enable;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::lightChannel(unsigned int channel, bool enable) noexcept {
+    if (channel < 8) {
+        const uint8_t mask = 1u << channel;
+        mImpl->mChannels &= ~mask;
+        mImpl->mChannels |= enable ? mask : 0u;
+    }
     return *this;
 }
 
@@ -307,6 +317,7 @@ void FRenderableManager::create(
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphingEnabled);
         setMorphWeights(ci, {0, 0, 0, 0});
+        mManager[ci].channels = builder->mChannels;
 
         const uint32_t count = builder->mSkinningBoneCount;
         if (builder->mSkinningBufferMode) {
@@ -557,6 +568,26 @@ void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noe
     }
 }
 
+void FRenderableManager::setLightChannel(Instance ci, unsigned int channel, bool enable) noexcept {
+    if (ci) {
+        if (channel < 8) {
+            const uint8_t mask = 1u << channel;
+            mManager[ci].channels &= ~mask;
+            mManager[ci].channels |= enable ? mask : 0u;
+        }
+    }
+}
+
+bool FRenderableManager::getLightChannel(Instance ci, unsigned int channel) const noexcept {
+    if (ci) {
+        if (channel < 8) {
+            const uint8_t mask = 1u << channel;
+            return bool(mManager[ci].channels & mask);
+        }
+    }
+    return false;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -666,9 +697,17 @@ void RenderableManager::setMorphWeights(Instance instance, float4 const& weights
     upcast(this)->setMorphWeights(instance, weights);
 }
 
-void RenderableManager::setSkinningBuffer(RenderableManager::Instance instance,
+void RenderableManager::setSkinningBuffer(Instance instance,
         SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
+}
+
+void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {
+    upcast(this)->setLightChannel(instance, channel, enable);
+}
+
+bool RenderableManager::getLightChannel(Instance instance, unsigned int channel) const noexcept {
+    return upcast(this)->getLightChannel(instance, channel);
 }
 
 } // namespace filament

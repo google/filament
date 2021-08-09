@@ -96,6 +96,7 @@ public:
 
     UTILS_NOINLINE void setLocalPosition(Instance i, const math::float3& position) noexcept;
     UTILS_NOINLINE void setLocalDirection(Instance i, math::float3 direction) noexcept;
+    UTILS_NOINLINE void setLightChannel(Instance i, unsigned int channel, bool enable) noexcept;
     UTILS_NOINLINE void setColor(Instance i, const LinearColor& color) noexcept;
     UTILS_NOINLINE void setSpotLightCone(Instance i, float inner, float outer) noexcept;
     UTILS_NOINLINE void setIntensity(Instance i, float intensity, IntensityUnit unit) noexcept;
@@ -104,6 +105,8 @@ public:
     UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
+
+    UTILS_NOINLINE bool getLightChannel(Instance i, unsigned int channel) const noexcept;
 
     LightType const& getLightType(Instance i) const noexcept {
         return mManager[i].lightType;
@@ -209,6 +212,10 @@ public:
         return getSpotParams(i).radius;
     }
 
+    uint8_t getLightChannels(Instance i) const noexcept {
+        return mManager[i].channels;
+    }
+
     const math::float3& getLocalPosition(Instance i) const noexcept {
         return mManager[i].position;
     }
@@ -238,6 +245,7 @@ private:
         SUN_HALO_FALLOFF,   // state for the directional light sun
         INTENSITY,
         FALLOFF,
+        CHANNELS,
     };
 
     using Base = utils::SingleInstanceComponentManager<  // 120 bytes
@@ -251,7 +259,8 @@ private:
             float,          //  4
             float,          //  4
             float,          //  4
-            float           //  4
+            float,          //  4
+            uint8_t         //  1
     >;
 
     struct Sim : public Base {
@@ -277,6 +286,7 @@ private:
                 Field<SUN_HALO_FALLOFF>     sunHaloFalloff;
                 Field<INTENSITY>            intensity;
                 Field<FALLOFF>              squaredFallOffInv;
+                Field<CHANNELS>             channels;
             };
         };
 

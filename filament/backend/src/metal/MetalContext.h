@@ -62,6 +62,11 @@ struct MetalContext {
     // Supported features.
     bool supportsTextureSwizzling = false;
     uint8_t maxColorRenderTargets = 4;
+    struct {
+        uint8_t common;
+        uint8_t apple;
+        uint8_t mac;
+    } highestSupportedGpuFamily;
 
     // sampleCountLookup[requestedSamples] gives a <= sample count supported by the device.
     std::array<uint8_t, MAX_SAMPLE_COUNT + 1> sampleCountLookup;
@@ -118,6 +123,8 @@ struct MetalContext {
     os_signpost_id_t signpostId;
 #endif
 };
+
+void initializeSupportedGpuFamilies(MetalContext* context);
 
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context);
 

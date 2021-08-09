@@ -201,6 +201,7 @@ struct MaterialInfo {
 
 static const MaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
+        { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
         { "blitHigh",                   MATERIAL(BLITHIGH) },
         { "blitLow",                    MATERIAL(BLITLOW) },
         { "blitMedium",                 MATERIAL(BLITMEDIUM) },
@@ -221,6 +222,7 @@ static const MaterialInfo sMaterialList[] = {
         { "fxaa",                       MATERIAL(FXAA) },
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
+        { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
         { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
@@ -229,6 +231,12 @@ static const MaterialInfo sMaterialList[] = {
 void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
+
+    //FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    //debugRegistry.registerProperty("d.ssao.sampleCount", &engine.debug.ssao.sampleCount);
+    //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
+    //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
+    //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
 
     #pragma nounroll
     for (auto const& info : sMaterialList) {
@@ -399,28 +407,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     // (see en.wikipedia.org/wiki/Gaussian_filter)
     // More intuitively, 2q is the width of the filter in pixels.
     BilateralPassConfig config = {
-            .bilateralThreshold = options.bilateralThreshold
+            .bentNormals = options.bentNormals,
+            .bilateralThreshold = options.bilateralThreshold,
     };
 
     float sampleCount{};
     float spiralTurns{};
+    float standardDeviation{};
     switch (options.quality) {
         default:
         case View::QualityLevel::LOW:
             sampleCount = 7.0f;
-            spiralTurns = 1.0f;
+            spiralTurns = 3.0f;
+            standardDeviation = 8.0;
             break;
         case View::QualityLevel::MEDIUM:
             sampleCount = 11.0f;
-            spiralTurns = 9.0f;
+            spiralTurns = 6.0f;
+            standardDeviation = 8.0;
             break;
         case View::QualityLevel::HIGH:
             sampleCount = 16.0f;
-            spiralTurns = 13.0f;
+            spiralTurns = 7.0f;
+            standardDeviation = 6.0;
             break;
         case View::QualityLevel::ULTRA:
             sampleCount = 32.0f;
             spiralTurns = 14.0f;
+            standardDeviation = 4.0;
             break;
     }
 
@@ -434,16 +448,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
             break;
         case View::QualityLevel::MEDIUM:
             config.kernelSize = 11;
-            config.standardDeviation = 4.0f;
+            config.standardDeviation = standardDeviation * 0.5f;
             config.scale = 2.0f;
             break;
         case View::QualityLevel::HIGH:
         case View::QualityLevel::ULTRA:
             config.kernelSize = 23;
-            config.standardDeviation = 8.0f;
+            config.standardDeviation = standardDeviation;
             config.scale = 1.0f;
             break;
     }
+
+    // for debugging
+    //config.kernelSize = engine.debug.ssao.kernelSize;
+    //config.standardDeviation = engine.debug.ssao.stddev;
+    //sampleCount = engine.debug.ssao.sampleCount;
+    //spiralTurns = engine.debug.ssao.spiralTurns;
 
     /*
      * Our main SSAO pass
@@ -452,7 +472,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     struct SSAOPassData {
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphId<FrameGraphTexture> ao;
+        FrameGraphId<FrameGraphTexture> bn;
     };
+
+    const bool computeBentNormals = options.bentNormals;
 
     const bool highQualityUpsampling =
             options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
@@ -467,8 +491,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 data.ssao = builder.createTexture("SSAO Buffer", {
                         .width = desc.width,
                         .height = desc.height,
-                        .format = (lowPassFilterEnabled || highQualityUpsampling) ? TextureFormat::RGB8 : TextureFormat::R8
+                        .depth = computeBentNormals ? 2u : 1u,
+                        .type = Texture::Sampler::SAMPLER_2D_ARRAY,
+                        .format = (lowPassFilterEnabled || highQualityUpsampling || computeBentNormals) ?
+                                TextureFormat::RGB8 : TextureFormat::R8
                 });
+
+                if (computeBentNormals) {
+                    data.ao = builder.createSubresource(data.ssao, "SSAO attachment", { .layer = 0 });
+                    data.bn = builder.createSubresource(data.ssao, "Bent Normals attachment", { .layer = 1 });
+                    data.ao = builder.write(data.ao, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    data.bn = builder.write(data.bn, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                } else {
+                    data.ao = data.ssao;
+                    data.ao = builder.write(data.ao, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                }
 
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
                 // Note that we have to clear the SAO buffer because blended objects will end-up
@@ -476,18 +513,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // The bilateral filter in the blur pass will ignore pixels at infinity.
 
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                data.ssao = builder.write(data.ssao, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass("SSAO Target", {
-                        .attachments = { .color = { data.ssao }, .depth = data.depth },
+                        .attachments = { .color = { data.ao, data.bn }, .depth = data.depth },
                         .clearColor = { 1.0f },
-                        .clearFlags = TargetBufferFlags::COLOR
+                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderPassInfo();
-                auto const& desc = resources.getDescriptor(data.ssao);
+                auto const& desc = resources.getDescriptor(data.depth);
 
                 // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
                 const float projectionScale = std::min(
@@ -510,7 +546,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.0, 0.0, 0.0, 1.0
                 }};
 
-                auto& material = getPostProcessMaterial("sao");
+                auto& material = computeBentNormals ?
+                            getPostProcessMaterial("saoBentNormals") :
+                            getPostProcessMaterial("sao");
+
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("depth", depth, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
@@ -582,7 +621,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 config);
 
         ssao = bilateralBlurPass(fg, ssao, { 0, config.scale }, cameraInfo.zf,
-                highQualityUpsampling ? TextureFormat::RGB8 : TextureFormat::R8,
+                (highQualityUpsampling || computeBentNormals) ? TextureFormat::RGB8 : TextureFormat::R8,
                 config);
     }
 
@@ -599,6 +638,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
     struct BlurPassData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> blurred;
+        FrameGraphId<FrameGraphTexture> ao;
+        FrameGraphId<FrameGraphTexture> bn;
     };
 
     auto& blurPass = fg.addPass<BlurPassData>("Separable Blur Pass",
@@ -609,19 +650,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 data.input = builder.sample(input);
 
                 data.blurred = builder.createTexture("Blurred output", {
-                        .width = desc.width, .height = desc.height, .format = format });
+                        .width = desc.width,
+                        .height = desc.height,
+                        .depth = desc.depth,
+                        .type = desc.type,
+                        .format = format });
 
                 FrameGraphId<FrameGraphTexture> depth = fg.getBlackboard().get<FrameGraphTexture>("structure");
                 assert_invariant(depth);
                 depth = builder.read(depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
+                if (config.bentNormals) {
+                    data.ao = builder.createSubresource(data.blurred, "SSAO attachment", { .layer = 0 });
+                    data.bn = builder.createSubresource(data.blurred, "Bent Normals attachment", { .layer = 1 });
+                    data.ao = builder.write(data.ao, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    data.bn = builder.write(data.bn, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                } else {
+                    data.ao = data.blurred;
+                    data.ao = builder.write(data.ao, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                }
+
                 // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
                 // We need to clear the buffers because we are skipping pixels at infinity (skybox)
                 data.blurred = builder.write(data.blurred, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
                 builder.declareRenderPass("Blurred target", {
-                        .attachments = { .color = { data.blurred }, . depth = depth },
+                        .attachments = { .color = { data.ao, data.bn }, .depth = depth },
                         .clearColor = { 1.0f },
-                        .clearFlags = TargetBufferFlags::COLOR
+                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
             [=](FrameGraphResources const& resources,
@@ -631,10 +687,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // unnormalized gaussian half-kernel of a given standard deviation
-                // returns number of samples stored in array (max 32)
+                // returns number of samples stored in array (max 16)
+                constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
-                        [](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
-                    const size_t gaussianSampleCount = std::min(size_t(32), (gaussianWidth + 1u) / 2u);
+                        [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
+                    const size_t gaussianSampleCount = std::min(kernelArraySize, (gaussianWidth + 1u) / 2u);
                     for (size_t i = 0; i < gaussianSampleCount; i++) {
                         float x = i;
                         float g = std::exp(-(x * x) / (2.0f * stdDev * stdDev));
@@ -643,11 +700,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(
                     return uint32_t(gaussianSampleCount);
                 };
 
-                float kGaussianSamples[32];
+                float kGaussianSamples[kernelArraySize];
                 uint32_t kGaussianCount = gaussianKernel(kGaussianSamples,
                         config.kernelSize, config.standardDeviation);
 
-                auto& material = getPostProcessMaterial("bilateralBlur");
+                auto& material = config.bentNormals ?
+                        getPostProcessMaterial("bilateralBlurBentNormals") :
+                        getPostProcessMaterial("bilateralBlur");
                 FMaterialInstance* const mi = material.getMaterialInstance();
                 mi->setParameter("ssao", ssao, { /* only reads level 0 */ });
                 mi->setParameter("axis", axis / float2{desc.width, desc.height});

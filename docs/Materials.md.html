@@ -1647,9 +1647,7 @@ Description
      This effect helps remove unwanted specular reflections as shown in figure [specularAO].
      When this value is set to `simple`, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to `bentNormals`, Filament will use
-     a much more accurate but much more expensive method. `bentNormals` only works if the material
-     sets the `bentNormal` property inside the fragment shader. If that property isn't set,
-     `bentNormals` will behave like `simple`.
+     a much more accurate but much more expensive method.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {

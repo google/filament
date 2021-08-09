@@ -208,7 +208,7 @@ inline bool JobSystem::hasActiveJobs() const noexcept {
 }
 
 inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
-    return job->runningJobCount.load(std::memory_order_relaxed) <= 0;
+    return job->runningJobCount.load(std::memory_order_acquire) <= 0;
 }
 
 void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
