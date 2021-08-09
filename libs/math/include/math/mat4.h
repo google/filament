@@ -557,6 +557,26 @@ constexpr typename TMat44<T>::col_type MATH_PURE operator*(const TMat44<T>& lhs,
 typedef details::TMat44<double> mat4;
 typedef details::TMat44<float> mat4f;
 
+// mat4 * float4, with double precision intermediates
+constexpr float4 highPrecisionMultiply(mat4f const& lhs, float4 const& rhs) noexcept {
+    double4 result{};
+    result += lhs[0] * rhs[0];
+    result += lhs[1] * rhs[1];
+    result += lhs[2] * rhs[2];
+    result += lhs[3] * rhs[3];
+    return float4{ result };
+}
+
+// mat4 * mat4, with double precision intermediates
+constexpr mat4f highPrecisionMultiply(mat4f const& lhs, mat4f const& rhs) noexcept {
+    return {
+            highPrecisionMultiply(lhs, rhs[0]),
+            highPrecisionMultiply(lhs, rhs[1]),
+            highPrecisionMultiply(lhs, rhs[2]),
+            highPrecisionMultiply(lhs, rhs[3])
+    };
+}
+
 // ----------------------------------------------------------------------------------------
 }  // namespace math
 }  // namespace filament

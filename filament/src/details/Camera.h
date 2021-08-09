@@ -183,7 +183,6 @@ public:
         return mEntity;
     }
 
-    static math::mat4 getViewMatrix(math::mat4 const& model) noexcept;
     static Frustum getFrustum(math::mat4 const& projection, math::mat4 const& viewMatrix) noexcept;
 
 private:

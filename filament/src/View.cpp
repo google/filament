@@ -423,7 +423,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
 
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
-            FCamera::getViewMatrix(worldOriginScene * mCullingCamera->getModelMatrix()));
+            inverse(worldOriginScene * mCullingCamera->getModelMatrix()));
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
@@ -639,23 +639,22 @@ UTILS_NOINLINE
 void FView::prepareCamera(const CameraInfo& camera) const noexcept {
     SYSTRACE_CALL();
 
-    const mat4f viewFromWorld(camera.view);
-    const mat4f worldFromView(camera.model);
-    const mat4f projectionMatrix(camera.projection);
+    mat4f const& viewFromWorld = camera.view;
+    mat4f const& worldFromView = camera.model;
+    mat4f const& clipFromView  = camera.projection;
 
-    const mat4f clipFromView(projectionMatrix);
-    const mat4f viewFromClip(inverse(clipFromView));
-    const mat4f clipFromWorld(clipFromView * viewFromWorld);
-    const mat4f worldFromClip(worldFromView * viewFromClip);
+    const mat4f viewFromClip{ inverse((mat4)camera.projection) };
+    const mat4f clipFromWorld{ highPrecisionMultiply(clipFromView, viewFromWorld) };
+    const mat4f worldFromClip{ highPrecisionMultiply(worldFromView, viewFromClip) };
 
     auto& s = mPerViewUb.edit();
     s.viewFromWorldMatrix = viewFromWorld;    // view
     s.worldFromViewMatrix = worldFromView;    // model
-    s.clipFromViewMatrix = clipFromView;      // projection
-    s.viewFromClipMatrix = viewFromClip;      // 1/projection
+    s.clipFromViewMatrix  = clipFromView;     // projection
+    s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.clipFromWorldMatrix = clipFromWorld;    // projection * view
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.cameraPosition = float3{camera.getPosition()};
+    s.cameraPosition = float3{ camera.getPosition() };
     s.worldOffset = camera.worldOffset;
     s.cameraFar = camera.zf;
     s.clipControl = mClipControl;
