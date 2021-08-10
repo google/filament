@@ -69,7 +69,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         utils::slog.d << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.apple > 0) {
-        utils::slog.d <<   "MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
+        utils::slog.d << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.mac > 0) {
         utils::slog.d << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
