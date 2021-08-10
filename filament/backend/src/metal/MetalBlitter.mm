@@ -140,10 +140,16 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     ASSERT_PRECONDITION(args.source.region.size.depth == args.destination.region.size.depth,
             "Blitting requires the source and destination regions to have the same depth.");
 
-    ASSERT_PRECONDITION(
-            (args.source.color.textureType == MTLTextureType3D) ==
-            (args.source.depth.textureType == MTLTextureType3D),
-            "Blitting requires color and depth sources both be 3D or both be 2D.");
+    if (args.source.color && args.source.depth) {
+        MTLTextureType colorType = args.source.color.textureType;
+        MTLTextureType depthType = args.source.depth.textureType;
+
+        if (colorType == MTLTextureType2DMultisample) colorType = MTLTextureType2D;
+        if (depthType == MTLTextureType2DMultisample) depthType = MTLTextureType2D;
+
+        ASSERT_PRECONDITION(colorType == depthType,
+                "Blitting requires color and depth sources to be the same texture type.");
+    }
 
     // Determine if the blit for color or depth are eligible to use a MTLBlitCommandEncoder.
     // blitColor and / or blitDepth are set to false upon success, to indicate that no more work is
@@ -156,8 +162,11 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
 
     // If the destination is MSAA and we weren't able to use the fast path, report an error, as
     // blitting to a MSAA texture isn't supported through the "slow path" yet.
-    ASSERT_PRECONDITION(args.destination.color.textureType != MTLTextureType2DMultisample &&
-        args.destination.depth.textureType != MTLTextureType2DMultisample,
+    const bool colorDestinationIsMultisample =
+            blitColor && args.destination.color.textureType == MTLTextureType2DMultisample;
+    const bool depthDestinationIsMultisample =
+            blitDepth && args.destination.depth.textureType == MTLTextureType2DMultisample;
+    ASSERT_PRECONDITION(!colorDestinationIsMultisample && !depthDestinationIsMultisample,
         "Blitting between MSAA render targets with differing pixel formats and/or regions is not supported.");
 
     // If the destination texture doesn't have the MTLTextureUsageRenderTarget flag, we have to blit
@@ -272,10 +281,12 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
     BlitFunctionKey key;
     key.blitColor = blitColor;
     key.blitDepth = blitDepth;
-    key.msaaColorSource = args.source.color.textureType == MTLTextureType2DMultisample;
-    key.msaaDepthSource = args.source.depth.textureType == MTLTextureType2DMultisample;
-    key.sources3D = args.source.color.textureType == MTLTextureType3D;
-    assert_invariant(args.source.depth.textureType == MTLTextureType3D || !key.sources3D);
+    key.msaaColorSource = blitColor && args.source.color.textureType == MTLTextureType2DMultisample;
+    key.msaaDepthSource = blitDepth && args.source.depth.textureType == MTLTextureType2DMultisample;
+    key.sources3D       = blitColor && args.source.color.textureType == MTLTextureType3D;
+    if (key.sources3D && blitDepth) {
+        assert_invariant(args.source.depth.textureType == MTLTextureType3D);
+    }
     id<MTLFunction> fragmentFunction = getBlitFragmentFunction(key);
 
     PipelineState pipelineState {
