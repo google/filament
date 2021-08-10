@@ -37,7 +37,7 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
     highestSupportedFamily.apple = 0u;
     highestSupportedFamily.mac = 0u;
 
-    if (@available(iOS 13.0, macOS 10.15, *)) {
+    if (@available(iOS 13.0, *)) {
         if ([device supportsFamily:MTLGPUFamilyApple7]) {
             highestSupportedFamily.apple = 7;
         } else if ([device supportsFamily:MTLGPUFamilyApple6]) {
@@ -68,6 +68,7 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
             highestSupportedFamily.mac = 1;
         }
     } else {
+#if TARGET_OS_IOS
         using FeatureSet = std::pair<MTLFeatureSet, uint8_t>;
         auto testFeatureSets = [device] (const auto& featureSets,
                 uint8_t& outHighestSupported) {
@@ -79,7 +80,6 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
             }
         };
 
-#if TARGET_OS_IOS
         // Apple GPUs
         auto appleFeatureSets = utils::FixedCapacityVector<FeatureSet>::with_capacity(5);
         if (@available(iOS 12.0, *)) {
@@ -91,13 +91,6 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
         appleFeatureSets.emplace_back(MTLFeatureSet_iOS_GPUFamily1_v4, 1u);
 
         testFeatureSets(appleFeatureSets, highestSupportedFamily.apple);
-#elif TARGET_OS_OSX
-        // macOS GPUS
-        auto macFeatureSets = utils::FixedCapacityVector<FeatureSet>::with_capacity(2);
-        macFeatureSets.emplace_back(MTLFeatureSet_macOS_GPUFamily2_v1, 2u);
-        macFeatureSets.emplace_back(MTLFeatureSet_macOS_GPUFamily1_v4, 1u);
-
-        testFeatureSets(macFeatureSets, highestSupportedFamily.mac);
 #endif
     }
 }

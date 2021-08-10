@@ -76,9 +76,9 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     }
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
-    // macOS 10.15+ / iOS 13+.
+    // iOS 13+.
     mContext->supportsTextureSwizzling = false;
-    if (@available(macOS 10.15, iOS 13, *)) {
+    if (@available(iOS 13, *)) {
         mContext->supportsTextureSwizzling =
             mContext->highestSupportedGpuFamily.apple >= 1 ||   // all Apple GPUs
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
@@ -104,7 +104,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->bufferPool = new MetalBufferPool(*mContext);
     mContext->blitter = new MetalBlitter(*mContext);
 
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         mContext->timerQueryImpl = new TimerQueryFence(*mContext);
     } else {
         mContext->timerQueryImpl = new TimerQueryNoop();
@@ -114,7 +114,7 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
             nullptr, &mContext->textureCache);
     ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
 
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0);
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
@@ -660,7 +660,7 @@ bool MetalDriver::isFrameBufferFetchSupported() {
 
 bool MetalDriver::isFrameTimeSupported() {
     // Frame time is calculated via hard fences, which are only available on iOS 12 and above.
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         return true;
     }
     return false;
@@ -921,21 +921,24 @@ void MetalDriver::popGroupMarker(int) {
 }
 
 void MetalDriver::startCapture(int) {
-#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000) || \
-    (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500)
-    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
-#else
-    MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
-    descriptor.captureObject = mContext->device;
-    descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
-    descriptor.outputURL = [[NSURL alloc] initFileURLWithPath:@"filament.gputrace"];
-    NSError* error = nil;
-    [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
-                                                                       error:&error];
-    if (error) {
-        NSLog(@"%@", [error localizedDescription]);
-    }
+    if (@available(iOS 13, *)) {
+        MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
+        descriptor.captureObject = mContext->device;
+        descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
+        descriptor.outputURL = [[NSURL alloc] initFileURLWithPath:@"filament.gputrace"];
+        NSError* error = nil;
+        [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
+                                                                           error:&error];
+        if (error) {
+            NSLog(@"%@", [error localizedDescription]);
+        }
+    } else {
+        // This compile-time check is used to silence deprecation warnings when compiling for the
+        // iOS simulator, which only supports Metal on iOS 13.0+.
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_13_0)
+        [[MTLCaptureManager sharedCaptureManager] startCaptureWithDevice:mContext->device];
 #endif
+    }
 }
 
 void MetalDriver::stopCapture(int) {
