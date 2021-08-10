@@ -598,15 +598,36 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
         data = &reshapedData;
     }
 
-    uint32_t slice = 0u;
-    if (target == SamplerType::SAMPLER_2D_ARRAY) {
-        // Metal uses 'slice' (not z offset) to index into individual layers of the texture array.
-        slice = region.origin.z;
-        region.origin.z = 0;
-        loadSlice(level, region, 0, slice, *data);
-    }
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_3D: {
+            loadSlice(level, region, 0, 0, *data);
+            break;
+        }
 
-    loadSlice(level, region, 0, slice, *data);
+        case SamplerType::SAMPLER_2D_ARRAY: {
+            // Metal uses 'slice' (not z offset) to index into individual layers of a texture array.
+            const uint32_t slice = region.origin.z;
+            const uint32_t sliceCount = region.size.depth;
+            region.origin.z = 0;
+            region.size.depth = 1;
+
+            const PixelBufferShape shape = PixelBufferShape::compute(*data, format, region.size, 0);
+
+            uint32_t byteOffset = 0;
+            for (uint32_t s = slice; s < slice + sliceCount; s++) {
+                loadSlice(level, region, byteOffset, s, *data);
+                byteOffset += shape.bytesPerSlice;
+            }
+
+            break;
+        }
+
+        case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_EXTERNAL: {
+            assert_invariant(false);
+        }
+    }
 
     updateLodRange(level);
 }
@@ -647,34 +668,18 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
     // - allocate a staging buffer and perform a buffer copy
     // - allocate a staging texture and perform a texture blit
     // The buffer copy is preferred, but it cannot perform format conversions or handle large uploads.
-    // The texture blit strategy does not have those limitations, however, it cannot handle 3D
-    // or cubemap texture uploads.
+    // The texture blit strategy does not have those limitations.
 
     MTLPixelFormat stagingPixelFormat = getMetalFormat(data.format, data.type);
     const bool conversionNecessary =
             stagingPixelFormat != getMetalFormatLinear(devicePixelFormat) &&
             data.type != PixelDataType::COMPRESSED;     // compressed formats should never need conversion
 
-    const bool nonBlittableTexture =
-            target == SamplerType::SAMPLER_2D_ARRAY ||
-            target == SamplerType::SAMPLER_CUBEMAP;
-
     const size_t stagingBufferSize = shape.totalBytes;
     const bool largeUpload = stagingBufferSize > deviceMaxBufferLength;
 
-    // TODO: these two assertions can be removed once MetalBlitter supports blitting into 3D
-    // textures.
-
-    ASSERT_PRECONDITION(!nonBlittableTexture || !conversionNecessary,
-            "SAMPLER_2D_ARRAY and SAMPLER_CUBEMAP texture uploads "
-            "do not support format conversions.");
-
-    ASSERT_PRECONDITION(!nonBlittableTexture || !largeUpload,
-            "SAMPLER_2D_ARRAY and SAMPLER_CUBEMAP texture uploads "
-            "have a max size of %d bytes.", deviceMaxBufferLength);
-
     if (conversionNecessary || largeUpload) {
-        loadWithBlit(level, region, data, shape);
+        loadWithBlit(level, slice, region, data, shape);
     } else {
         loadWithCopyBuffer(level, slice, region, data, shape);
     }
@@ -708,8 +713,8 @@ void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion 
     [blitCommandEncoder endEncoding];
 }
 
-void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDescriptor& data,
-        const PixelBufferShape& shape) {
+void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region,
+        PixelBufferDescriptor& data, const PixelBufferShape& shape) {
     MTLPixelFormat stagingPixelFormat = getMetalFormat(data.format, data.type);
     MTLTextureDescriptor* descriptor = [MTLTextureDescriptor new];
     descriptor.textureType = region.size.depth == 1 ? MTLTextureType2D : MTLTextureType3D;
@@ -754,8 +759,10 @@ void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDes
     MetalBlitter::BlitArgs args;
     args.filter = SamplerMagFilter::NEAREST;
     args.source.level = 0;
+    args.source.slice = 0;
     args.source.region = sourceRegion;
     args.destination.level = level;
+    args.destination.slice = slice;
     args.destination.region = region;
     args.source.color = stagingTexture;
     args.destination.color = destinationTexture;

@@ -70,13 +70,16 @@ void main() {
 
 )");
 
-std::string fragmentUpdateImage3D (R"(#version 450 core
+std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform sampler3D tex;
+layout(location = 0, set = 1) uniform {samplerType} tex;
+
+float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
+float getLayer(in sampler2DArray s) { return 2.0f; }
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -84,7 +87,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(texture(tex, vec3(uv, 2.5f / 4.0f)).rgb, 1.0f);
+    fragColor = vec4(texture(tex, vec3(uv, getLayer(tex))).rgb, 1.0f);
 }
 
 )");
@@ -288,6 +291,20 @@ inline std::string stringReplace(const std::string& find, const std::string& rep
         source.replace(pos, find.length(), replace);
     }
     return source;
+}
+
+static const char* getSamplerTypeName(SamplerType samplerType) {
+    switch (samplerType) {
+        case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_2D:
+            return "sampler2D";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "sampler2DArray";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "samplerCube";
+        case SamplerType::SAMPLER_3D:
+            return "sampler3D";
+    }
 }
 
 static const char* getSamplerTypeName(TextureFormat textureFormat) {
@@ -654,6 +671,8 @@ TEST_F(BackendTest, UpdateImage3D) {
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::FLOAT;
     TextureFormat textureFormat = TextureFormat::RGBA16F;
+    SamplerType samplerType = SamplerType::SAMPLER_2D_ARRAY;
+    TextureUsage usage = TextureUsage::SAMPLEABLE;
 
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = createSwapChain();
@@ -661,15 +680,17 @@ TEST_F(BackendTest, UpdateImage3D) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
-    ShaderGenerator shaderGen(vertex, fragmentUpdateImage3D, sBackend, sIsMobilePlatform);
+    std::string fragment = stringReplace("{samplerType}",
+            getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
     Program prog = shaderGen.getProgram();
     Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
     prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture.
-    Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_3D, 1,
-            textureFormat, 1, 512, 512, 4, TextureUsage::SAMPLEABLE);
+    Handle<HwTexture> texture = api.createTexture(samplerType, 1,
+            textureFormat, 1, 512, 512, 4, usage);
 
     // Create image data for all 4 layers.
     size_t components; int bpp;

@@ -137,6 +137,8 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     bool blitColor = args.blitColor();
     bool blitDepth = args.blitDepth();
 
+    ASSERT_PRECONDITION(args.source.slice == 0u, "Source attachment must have slice of 0.");
+
     ASSERT_PRECONDITION(args.source.region.size.depth == args.destination.region.size.depth,
             "Blitting requires the source and destination regions to have the same depth.");
 
@@ -186,12 +188,14 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         intermediateColor = createIntermediateTexture(args.destination.color, args.source.region.size);
         slowBlit.destination.color = finalBlit.source.color = intermediateColor;
         slowBlit.destination.level = finalBlit.source.level = 0;
+        slowBlit.destination.slice = finalBlit.source.slice = 0;
         slowBlit.destination.region = finalBlit.source.region = sourceRegionNoOffset;
     }
     if (blitDepth && !(args.destination.depth.usage & MTLTextureUsageRenderTarget)) {
         intermediateDepth = createIntermediateTexture(args.destination.depth, args.source.region.size);
         slowBlit.destination.depth = finalBlit.source.depth = intermediateDepth;
         slowBlit.destination.level = finalBlit.source.level = 0;
+        slowBlit.destination.slice = finalBlit.source.slice = 0;
         slowBlit.destination.region = finalBlit.source.region = sourceRegionNoOffset;
     }
 
@@ -216,7 +220,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
                             sourceOrigin:args.source.region.origin
                               sourceSize:args.source.region.size
                                toTexture:args.destination.color
-                        destinationSlice:0
+                        destinationSlice:args.destination.slice
                         destinationLevel:args.destination.level
                        destinationOrigin:args.destination.region.origin];
             [blitEncoder endEncoding];
@@ -237,7 +241,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
                             sourceOrigin:args.source.region.origin
                               sourceSize:args.source.region.size
                                toTexture:args.destination.depth
-                        destinationSlice:0
+                        destinationSlice:args.destination.slice
                         destinationLevel:args.destination.level
                        destinationOrigin:args.destination.region.origin];
             [blitEncoder endEncoding];
@@ -415,6 +419,7 @@ void MetalBlitter::setupColorAttachment(const BlitArgs& args,
         MTLRenderPassDescriptor* descriptor, uint32_t depthPlane) {
     descriptor.colorAttachments[0].texture = args.destination.color;
     descriptor.colorAttachments[0].level = args.destination.level;
+    descriptor.colorAttachments[0].slice = args.destination.slice;
     descriptor.colorAttachments[0].depthPlane = depthPlane;
 
     descriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
@@ -430,6 +435,7 @@ void MetalBlitter::setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescr
         uint32_t depthPlane) {
     descriptor.depthAttachment.texture = args.destination.depth;
     descriptor.depthAttachment.level = args.destination.level;
+    descriptor.depthAttachment.slice = args.destination.slice;
     descriptor.depthAttachment.depthPlane = depthPlane;
 
     descriptor.depthAttachment.loadAction = MTLLoadActionLoad;
