@@ -42,8 +42,11 @@ public:
             id<MTLTexture> depth = nil;
             MTLRegion region = {};
             uint8_t level = 0;
+            uint32_t slice = 0;      // must be 0 on source attachment
         };
 
+        // Valid source formats:       2D, 2DMultisample, 3D
+        // Valid destination formats:  2D, 2DArray, 3D, Cube
         Attachment source, destination;
         SamplerMagFilter filter;
 

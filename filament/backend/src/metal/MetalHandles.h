@@ -190,7 +190,7 @@ struct MetalTexture : public HwTexture {
             PixelBufferDescriptor& data) noexcept;
     void loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor& data,
             const PixelBufferShape& shape);
-    void loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDescriptor& data,
+    void loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor& data,
             const PixelBufferShape& shape);
     void updateLodRange(uint32_t level);
 
