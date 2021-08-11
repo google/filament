@@ -481,7 +481,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         // Even though we've already checked context.supportsTextureSwizzling, we still need to
         // guard these calls with @availability, otherwise the API usage will generate compiler
         // warnings.
-        if (@available(macOS 10.15, iOS 13, *)) {
+        if (@available(iOS 13, *)) {
             NSUInteger slices = texture.arrayLength;
             if (texture.textureType == MTLTextureTypeCube ||
                 texture.textureType == MTLTextureTypeCubeArray) {
@@ -660,7 +660,7 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 
     // Earlier versions of iOS don't have the maxBufferLength query, but 256 MB is a safe bet.
     NSUInteger deviceMaxBufferLength = 256 * 1024 * 1024;   // 256 MB
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         deviceMaxBufferLength = context.device.maxBufferLength;
     }
 
@@ -958,7 +958,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
 MetalFence::MetalFence(MetalContext& context) : context(context), value(context.signalId++) { }
 
 void MetalFence::encode() {
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         event = [context.device newSharedEvent];
         [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
@@ -980,7 +980,7 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
-    if (@available(macOS 10.14, iOS 12, *)) {
+    if (@available(iOS 12, *)) {
         using ns = std::chrono::nanoseconds;
         std::unique_lock<std::mutex> guard(state->mutex);
         while (state->status == FenceStatus::TIMEOUT_EXPIRED) {

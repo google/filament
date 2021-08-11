@@ -308,10 +308,10 @@ public:
 
     FenceStatus wait(uint64_t timeoutNs);
 
-    API_AVAILABLE(macos(10.14), ios(12.0))
+    API_AVAILABLE(ios(12.0))
     typedef void (^MetalFenceSignalBlock)(id<MTLSharedEvent>, uint64_t value);
 
-    API_AVAILABLE(macos(10.14), ios(12.0))
+    API_AVAILABLE(ios(12.0))
     void onSignal(MetalFenceSignalBlock block);
 
 private:
@@ -325,9 +325,9 @@ private:
     };
     std::shared_ptr<State> state { std::make_shared<State>() };
 
-    // MTLSharedEvent is only available on macOS 10.14 and iOS 12.0 and above.
+    // MTLSharedEvent is only available on iOS 12.0 and above.
     // The availability annotation ensures we wrap all usages of event in an @availability check.
-    API_AVAILABLE(macos(10.14), ios(12.0))
+    API_AVAILABLE(ios(12.0))
     id<MTLSharedEvent> event = nil;
 
     uint64_t value;
