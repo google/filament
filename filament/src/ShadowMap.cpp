@@ -775,11 +775,9 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
     // compute shadow-caster bounds in light space
     Aabb box = compute2DBounds(lightView, wsClippedShadowCasterVolumeVertices.data(), vertexCount);
 
-    if (!box.isEmpty()) {
-        // intersect shadow-caster and current light frustum bounds
-        lightFrustum.min.xy = max(box.min.xy, lightFrustum.min.xy);
-        lightFrustum.max.xy = min(box.max.xy, lightFrustum.max.xy);
-    }
+    // intersect shadow-caster and current light frustum bounds
+    lightFrustum.min.xy = max(box.min.xy, lightFrustum.min.xy);
+    lightFrustum.max.xy = min(box.max.xy, lightFrustum.max.xy);
 }
 
 void ShadowMap::computeFrustumCorners(float3* UTILS_RESTRICT out,
