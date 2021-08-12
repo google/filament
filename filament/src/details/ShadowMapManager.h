@@ -50,8 +50,19 @@ class FrameGraph;
 class ShadowMap;
 class RenderPass;
 
+struct ShadowMappingUniforms {
+    std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
+    math::float4 cascadeSplits;
+    math::float3 shadowBias;
+    float ssContactShadowDistance;
+    uint32_t directionalShadows;
+    uint32_t cascades;
+};
+
 class ShadowMapManager {
 public:
+
+    using ShadowMappingUniforms = ShadowMappingUniforms;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,
@@ -72,8 +83,13 @@ public:
     // Updates all of the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
     ShadowTechnique update(FEngine& engine, FView& view,
-            TypedUniformBuffer<PerViewUib>& perViewUb, TypedUniformBuffer<ShadowUib>& shadowUb,
+            TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
+
+    // valid after calling update() above
+    ShadowMappingUniforms getShadowMappingUniforms() const noexcept {
+        return mShadowMappingUniforms;
+    }
 
     // Renders all of the shadow maps.
     void render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
@@ -94,7 +110,6 @@ private:
     } mTextureRequirements;
 
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view,
-            TypedUniformBuffer<PerViewUib>& perViewUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
@@ -174,6 +189,8 @@ private:
     // TODO: iOS does not support the DEPTH16 texture format.
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
     float mTextureZResolution = 1.0f / (1u << 16u);
+
+    ShadowMappingUniforms mShadowMappingUniforms;
 
     utils::FixedCapacityVector<ShadowMapEntry> mCascadeShadowMaps{
             utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(

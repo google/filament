@@ -54,12 +54,12 @@ ShadowMapManager::~ShadowMapManager() {
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::update(
-        FEngine& engine, FView& view, TypedUniformBuffer<PerViewUib>& perViewUb,
+        FEngine& engine, FView& view,
         TypedUniformBuffer<ShadowUib>& shadowUb, FScene::RenderableSoa& renderableData,
         FScene::LightSoa& lightData) noexcept {
     calculateTextureRequirements(engine, view, lightData);
     ShadowTechnique shadowTechnique = {};
-    shadowTechnique |= updateCascadeShadowMaps(engine, view, perViewUb, renderableData, lightData);
+    shadowTechnique |= updateCascadeShadowMaps(engine, view, renderableData, lightData);
     shadowTechnique |= updateSpotShadowMaps(engine, view, shadowUb, renderableData, lightData);
     return shadowTechnique;
 }
@@ -321,8 +321,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
-        FEngine& engine, FView& view,
-        TypedUniformBuffer<PerViewUib>& perViewUb, FScene::RenderableSoa& renderableData,
+        FEngine& engine, FView& view, FScene::RenderableSoa& renderableData,
         FScene::LightSoa& lightData) noexcept {
     FScene* scene = view.getScene();
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
@@ -364,8 +363,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         const float normalBias = lcm.getShadowNormalBias(0);
         // Set shadowBias, using the first directional cascade.
         const float texelSizeWorldSpace = map.getTexelSizeWorldSpace();
-        auto& s = perViewUb.edit();
-        s.shadowBias = float3{0, normalBias * texelSizeWorldSpace, 0};
+        mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * texelSizeWorldSpace, 0 };
     }
 
     // Adjust the near and far planes to tightly bound the scene.
@@ -410,9 +408,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
     float csSplitPosition[CONFIG_MAX_SHADOW_CASCADES + 1];
     std::copy(splits.beginCs(), splits.endCs(), csSplitPosition);
 
-    // Update cascade split uniform.
-    auto& s = perViewUb.edit();
-    s.cascadeSplits = wsSplitPositionUniform;
+    mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
     ShadowTechnique shadowTechnique{};
     uint32_t directionalShadowsMask = 0;
@@ -436,7 +432,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
         shadowMap.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
         if (shadowMap.hasVisibleShadows()) {
-            s.lightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
+            mShadowMappingUniforms.lightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
             cascadeHasVisibleShadows |= 0x1u << i;
         }
@@ -456,16 +452,16 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         directionalShadowsMask |= 0x2u;
     }
 
-    s.directionalShadows = directionalShadowsMask;
-    s.ssContactShadowDistance = screenSpaceShadowDistance;
-
     uint32_t cascades = 0;
     if (engine.debug.shadowmap.visualize_cascades) {
         cascades |= 0x10u;
     }
     cascades |= uint32_t(mCascadeShadowMaps.size());
     cascades |= cascadeHasVisibleShadows << 8u;
-    s.cascades = cascades;
+
+    mShadowMappingUniforms.directionalShadows = directionalShadowsMask;
+    mShadowMappingUniforms.ssContactShadowDistance = screenSpaceShadowDistance;
+    mShadowMappingUniforms.cascades = cascades;
 
     return shadowTechnique;
 }

@@ -132,7 +132,7 @@ float exposure(float ev100) noexcept {
     // with the maximum luminance Lmax
     //
     // Reference: https://en.wikipedia.org/wiki/Film_speed
-    return static_cast<float>(1.0 / (1.2 * std::pow(2.0, ev100)));
+    return 1.0f / (1.2f * std::pow(2.0f, ev100));
 }
 
 float luminance(const Camera& c) noexcept {
