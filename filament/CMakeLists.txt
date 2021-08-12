@@ -68,6 +68,7 @@ set(SRCS
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -108,6 +109,7 @@ set(PRIVATE_HDRS
         src/FrameInfo.h
         src/Intersections.h
         src/MaterialParser.h
+        src/PerViewUniforms.h
         src/PostProcessManager.h
         src/RenderPass.h
         src/ResourceAllocator.h

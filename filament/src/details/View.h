@@ -23,6 +23,7 @@
 
 #include "FrameInfo.h"
 #include "FrameHistory.h"
+#include "PerViewUniforms.h"
 #include "TypedUniformBuffer.h"
 
 #include "details/Allocators.h"
@@ -415,9 +416,7 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    auto& getViewUniforms() const { return mPerViewUb; }
     auto& getShadowUniforms() const { return mShadowUb; }
-    backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -446,11 +445,10 @@ private:
             size_t count, bool hasVsm);
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-        driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
+        mPerViewUniforms.bind(driver);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
         driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
         driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
-        driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 
     // Clean-up the whole history, free all resources. This is typically called when the View is
@@ -465,8 +463,6 @@ private:
             uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
-    backend::Handle<backend::HwBufferObject> mPerViewUbh;
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
@@ -504,7 +500,6 @@ private:
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
-    math::float2 mClipControl{};
 
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;
@@ -512,9 +507,8 @@ private:
 
     RenderQuality mRenderQuality;
 
-    mutable TypedUniformBuffer<PerViewUib> mPerViewUb;
+    mutable PerViewUniforms mPerViewUniforms;
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
-    mutable backend::SamplerGroup mPerViewSb;
 
     mutable FrameHistory mFrameHistory{};
 
