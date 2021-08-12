@@ -28,6 +28,7 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
+        include/filament/Options.h
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
         include/filament/Renderer.h
