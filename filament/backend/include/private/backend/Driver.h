@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_DRIVER_H
-#define TNT_FILAMENT_DRIVER_DRIVER_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
 
 #include <backend/BufferDescriptor.h>
 #include <backend/Handle.h>
@@ -143,4 +143,4 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend:
 
 #endif
 
-#endif // TNT_FILAMENT_DRIVER_DRIVER_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H

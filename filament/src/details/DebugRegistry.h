@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_DEBUG_H
-#define TNT_FILAMENT_DETAILS_DEBUG_H
+#ifndef TNT_FILAMENT_DETAILS_DEBUGREGISTRY_H
+#define TNT_FILAMENT_DETAILS_DEBUGREGISTRY_H
 
 #include "upcast.h"
 
@@ -68,4 +68,4 @@ FILAMENT_UPCAST(DebugRegistry)
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_DEBUG_H
+#endif // TNT_FILAMENT_DETAILS_DEBUGREGISTRY_H

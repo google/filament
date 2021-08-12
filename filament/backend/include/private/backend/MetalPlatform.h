@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
-#define TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -63,4 +63,4 @@ private:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
