@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MATH_MATHFWD_H_
-#define MATH_MATHFWD_H_
+#ifndef TNT_MATH_MATHFWD_H
+#define TNT_MATH_MATHFWD_H
 
 #ifdef _MSC_VER
 
@@ -91,4 +91,4 @@ using mat4f     = details::TMat44<float>;
 
 #endif // _MSC_VER
 
-#endif  // MATH_MATHFWD_H_
+#endif  // TNT_MATH_MATHFWD_H

@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_COLOR_GRADING_H
-#define TNT_FILAMENT_COLOR_GRADING_H
+#ifndef TNT_FILAMENT_COLORGRADING_H
+#define TNT_FILAMENT_COLORGRADING_H
 
 #include <filament/FilamentAPI.h>
 #include <filament/ToneMapper.h>
@@ -402,4 +402,4 @@ public:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_COLOR_GRADING_H
+#endif // TNT_FILAMENT_COLORGRADING_H

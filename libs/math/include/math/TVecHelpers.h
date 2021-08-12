@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MATH_TVECHELPERS_H_
-#define MATH_TVECHELPERS_H_
+#ifndef TNT_MATH_TVECHELPERS_H
+#define TNT_MATH_TVECHELPERS_H
 
 #include <math/compiler.h>
 
@@ -622,4 +622,4 @@ private:
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_TVECHELPERS_H_
+#endif  // TNT_MATH_TVECHELPERS_H

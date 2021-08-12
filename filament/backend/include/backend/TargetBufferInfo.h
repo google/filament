@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
-#define TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
+#ifndef TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
+#define TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -104,4 +104,4 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif //TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
+#endif //TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
