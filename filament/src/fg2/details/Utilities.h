@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_UTILITIES_H
-#define TNT_FILAMENT_FG2_UTILITIES_H
+#ifndef TNT_FILAMENT_FG2_DETAILS_UTILITIES_H
+#define TNT_FILAMENT_FG2_DETAILS_UTILITIES_H
 
 #include "details/Allocators.h"
 
@@ -39,4 +39,4 @@ template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_UTILITIES_H
+#endif // TNT_FILAMENT_FG2_DETAILS_UTILITIES_H

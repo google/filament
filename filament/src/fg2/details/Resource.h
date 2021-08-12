@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_RESOURCE_H
-#define TNT_FILAMENT_FG2_RESOURCE_H
+#ifndef TNT_FILAMENT_FG2_DETAILS_RESOURCE_H
+#define TNT_FILAMENT_FG2_DETAILS_RESOURCE_H
 
 #include "fg2/FrameGraphId.h"
 #include "fg2/FrameGraphTexture.h"
@@ -344,4 +344,4 @@ extern template class ImportedResource<FrameGraphTexture>;
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_RESOURCE_H
+#endif // TNT_FILAMENT_FG2_DETAILS_RESOURCE_H
