@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
-#define TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
+#ifndef TNT_FILAMENT_RENDERABLEMANAGER_H
+#define TNT_FILAMENT_RENDERABLEMANAGER_H
 
 #include <filament/Box.h>
 #include <filament/FilamentAPI.h>
@@ -582,4 +582,4 @@ Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices,
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
+#endif // TNT_FILAMENT_RENDERABLEMANAGER_H

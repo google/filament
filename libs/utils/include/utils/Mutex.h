@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_MUTEX_H
-#define UTILS_MUTEX_H
+#ifndef TNT_UTILS_MUTEX_H
+#define TNT_UTILS_MUTEX_H
 
 #if defined(__linux__) && !defined(__SANITIZE_THREAD__)
 #include <utils/linux/Mutex.h>
@@ -23,4 +23,4 @@
 #include <utils/generic/Mutex.h>
 #endif
 
-#endif // UTILS_MUTEX_H
+#endif // TNT_UTILS_MUTEX_H

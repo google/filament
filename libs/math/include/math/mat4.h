@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef MATH_MAT4_H_
-#define MATH_MAT4_H_
+#ifndef TNT_MATH_MAT4_H
+#define TNT_MATH_MAT4_H
 
+#include <math/TMatHelpers.h>
 #include <math/compiler.h>
 #include <math/mat3.h>
 #include <math/quat.h>
 #include <math/scalar.h>
-#include <math/TMatHelpers.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -648,4 +648,4 @@ constexpr void swap(filament::math::details::TMat44<T>& lhs,
 }
 }
 
-#endif  // MATH_MAT4_H_
+#endif  // TNT_MATH_MAT4_H

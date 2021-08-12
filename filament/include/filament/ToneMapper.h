@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_TONE_MAPPER_H
-#define TNT_FILAMENT_TONE_MAPPER_H
+#ifndef TNT_FILAMENT_TONEMAPPER_H
+#define TNT_FILAMENT_TONEMAPPER_H
 
 #include <utils/compiler.h>
 
@@ -232,4 +232,4 @@ struct UTILS_PUBLIC DisplayRangeToneMapper final : public ToneMapper {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_TONE_MAPPER_H
+#endif // TNT_FILAMENT_TONEMAPPER_H

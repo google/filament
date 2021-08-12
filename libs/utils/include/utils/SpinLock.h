@@ -87,4 +87,4 @@ using SpinLock = details::SpinLock;
 
 } // namespace utils
 
-#endif //TNT_UTILS_SPINLOCK_H
+#endif // TNT_UTILS_SPINLOCK_H

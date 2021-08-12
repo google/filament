@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_API_H
-#define TNT_UTILS_API_H
+#ifndef TNT_UTILS_APILEVEL_H
+#define TNT_UTILS_APILEVEL_H
 
 #include <utils/compiler.h>
 
@@ -31,4 +31,4 @@ int api_level();
 
 } // namespace utils
 
-#endif // TNT_UTILS_ARCHITECTURE_H
+#endif // TNT_UTILS_APILEVEL_H
