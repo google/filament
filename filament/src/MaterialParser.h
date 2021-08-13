@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_MATERIAL_PARSER_H
-#define TNT_FILAMENT_MATERIAL_PARSER_H
+#ifndef TNT_FILAMENT_MATERIALPARSER_H
+#define TNT_FILAMENT_MATERIALPARSER_H
 
 #include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
@@ -149,4 +149,4 @@ struct ChunkSubpassInterfaceBlock {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_MATERIAL_PARSER_H
+#endif // TNT_FILAMENT_MATERIALPARSER_H

@@ -25,8 +25,6 @@
 #include "private/backend/DriverApiForward.h"
 #include "private/backend/SamplerGroup.h"
 
-#include <filament/Viewport.h>
-
 #include <math/mat4.h>
 #include <math/vec4.h>
 
@@ -100,7 +98,7 @@ public:
             filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, const SceneInfo& cascadeParams) noexcept;
 
-    void render(backend::DriverApi& driver, utils::Range<uint32_t> const& range,
+    void render(backend::DriverApi& driver, utils::Range<uint32_t> range,
             RenderPass* pass, FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().

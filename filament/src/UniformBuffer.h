@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_UNIFORMBUFFER_H
-#define TNT_FILAMENT_DRIVER_UNIFORMBUFFER_H
+#ifndef TNT_FILAMENT_UNIFORMBUFFER_H
+#define TNT_FILAMENT_UNIFORMBUFFER_H
 
 #include <algorithm>
 
@@ -229,4 +229,4 @@ inline math::mat3f UniformBuffer::getUniform(size_t offset) const noexcept {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_UNIFORMBUFFER_H
+#endif // TNT_FILAMENT_UNIFORMBUFFER_H

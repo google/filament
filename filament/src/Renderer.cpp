@@ -141,11 +141,11 @@ TextureFormat FRenderer::getHdrFormat(const View& view, bool translucent) const 
         return mHdrTranslucent;
     }
     switch (view.getRenderQuality().hdrColorBuffer) {
-        case View::QualityLevel::LOW:
-        case View::QualityLevel::MEDIUM:
+        case QualityLevel::LOW:
+        case QualityLevel::MEDIUM:
             return mHdrQualityMedium;
-        case View::QualityLevel::HIGH:
-        case View::QualityLevel::ULTRA: {
+        case QualityLevel::HIGH:
+        case QualityLevel::ULTRA: {
             return mHdrQualityHigh;
         }
     }
@@ -226,26 +226,27 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
-    bool colorGrading = hasPostProcess;
-    bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
-    bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
-    uint8_t msaa = view.getSampleCount();
+    bool hasColorGrading = hasPostProcess;
+    bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
+    bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
+    uint8_t msaaSampleCount = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
-    const View::QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
+    const QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
-    auto vignetteOptions = view.getVignetteOptions();
     auto taaOptions = view.getTemporalAntiAliasingOptions();
+    auto vignetteOptions = view.getVignetteOptions();
+    auto colorGrading = view.getColorGrading();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
         bloomOptions.enabled = false;
         vignetteOptions.enabled = false;
         taaOptions.enabled = false;
-        colorGrading = false;
-        dithering = false;
-        fxaa = false;
+        hasColorGrading = false;
+        hasDithering = false;
+        hasFXAA = false;
         scale = 1.0f;
     }
 
@@ -351,7 +352,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .keepOverrideEnd = keepOverrideEndFlags
             }, viewRenderTarget);
 
-    const bool blendModeTranslucent = view.getBlendMode() == View::BlendMode::TRANSLUCENT;
+    const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;
     const bool blending = blendModeTranslucent;
     // If the swapchain is transparent or if we blend into it, we need to allocate our intermediate
     // buffers with an alpha channel.
@@ -363,7 +364,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .svp = svp,
             .scale = scale,
             .hdrFormat = hdrFormat,
-            .msaa = msaa,
+            .msaa = msaaSampleCount,
             .clearFlags = clearFlags,
             .clearColor = clearColor,
             .hasContactShadows = scene.hasContactShadows()
@@ -373,13 +374,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
-                    colorGrading &&
-                    msaa <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
+                    hasColorGrading &&
+                    msaaSampleCount <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
             .translucent = needsAlphaChannel,
-            .fxaa = fxaa,
-            .dithering = dithering,
-            .ldrFormat = (colorGrading && fxaa) ? TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
+            .fxaa = hasFXAA,
+            .dithering = hasDithering,
+            .ldrFormat = (hasColorGrading && hasFXAA) ? TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
 
     /*
@@ -460,8 +461,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // prepare color grading as subpass material
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
-                            view.getColorGrading(), colorGradingConfig,
-                            view.getVignetteOptions(),
+                            colorGrading, colorGradingConfig, vignetteOptions,
                             config.svp.width, config.svp.height);
                 }
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
@@ -534,23 +534,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (bloomOptions.enabled) {
             // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
             // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
-            ppm.bloom(fg, input, TextureFormat::R11F_G11F_B10F, bloomOptions, scale);
+            ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
         }
 
-        if (colorGrading) {
+        if (hasColorGrading) {
             if (!colorGradingConfig.asSubpass) {
-                input = ppm.colorGrading(fg, input, scale,
-                        view.getColorGrading(), colorGradingConfig,
-                        bloomOptions, vignetteOptions);
+                input = ppm.colorGrading(fg, input,
+                        colorGrading, colorGradingConfig,
+                        bloomOptions, vignetteOptions, scale);
             }
         }
-        if (fxaa) {
+        if (hasFXAA) {
             input = ppm.fxaa(fg, input, colorGradingConfig.ldrFormat,
-                    !colorGrading || needsAlphaChannel);
+                    !hasColorGrading || needsAlphaChannel);
         }
         if (scaled) {
             mightNeedFinalBlit = false;
-            if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
+            if (UTILS_LIKELY(!blending && upscalingQuality == QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
             } else {
                 input = ppm.blendBlit(fg, true, upscalingQuality, input,
@@ -572,15 +572,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTarget);
     if (mightNeedFinalBlit &&
-            ((outputIsSwapChain && (msaa > 1 || colorGradingConfig.asSubpass)) ||
-            blending)) {
-        if (UTILS_LIKELY(!blending && upscalingQuality == View::QualityLevel::LOW)) {
+            ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
+             blending)) {
+        if (UTILS_LIKELY(!blending && upscalingQuality == QualityLevel::LOW)) {
             input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
         } else {
             input = ppm.blendBlit(fg, true, upscalingQuality, input,
                     { .format = colorGradingConfig.ldrFormat });
         }
     }
+
 
 //    auto debug = fg.getBlackboard().get<FrameGraphTexture>("structure");
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
@@ -847,7 +848,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 out.params.clearColor = data.clearColor;
                 out.params.flags.clear = data.clearFlags;
-                if (view.getBlendMode() == View::BlendMode::TRANSLUCENT) {
+                if (view.getBlendMode() == BlendMode::TRANSLUCENT) {
                     if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
                         // if the buffer is discarded (e.g. it's new) and we're blending,
                         // then clear it to transparent

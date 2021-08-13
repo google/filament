@@ -392,7 +392,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::structure(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const& svp, const CameraInfo& cameraInfo,
-        View::AmbientOcclusionOptions options) noexcept {
+        AmbientOcclusionOptions const& options) noexcept {
 
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
@@ -416,22 +416,22 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     float standardDeviation{};
     switch (options.quality) {
         default:
-        case View::QualityLevel::LOW:
+        case QualityLevel::LOW:
             sampleCount = 7.0f;
             spiralTurns = 3.0f;
             standardDeviation = 8.0;
             break;
-        case View::QualityLevel::MEDIUM:
+        case QualityLevel::MEDIUM:
             sampleCount = 11.0f;
             spiralTurns = 6.0f;
             standardDeviation = 8.0;
             break;
-        case View::QualityLevel::HIGH:
+        case QualityLevel::HIGH:
             sampleCount = 16.0f;
             spiralTurns = 7.0f;
             standardDeviation = 6.0;
             break;
-        case View::QualityLevel::ULTRA:
+        case QualityLevel::ULTRA:
             sampleCount = 32.0f;
             spiralTurns = 14.0f;
             standardDeviation = 4.0;
@@ -440,19 +440,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
     switch (options.lowPassFilter) {
         default:
-        case View::QualityLevel::LOW:
+        case QualityLevel::LOW:
             // no filtering, values don't matter
             config.kernelSize = 1;
             config.standardDeviation = 1.0f;
             config.scale = 1.0f;
             break;
-        case View::QualityLevel::MEDIUM:
+        case QualityLevel::MEDIUM:
             config.kernelSize = 11;
             config.standardDeviation = standardDeviation * 0.5f;
             config.scale = 2.0f;
             break;
-        case View::QualityLevel::HIGH:
-        case View::QualityLevel::ULTRA:
+        case QualityLevel::HIGH:
+        case QualityLevel::ULTRA:
             config.kernelSize = 23;
             config.standardDeviation = standardDeviation;
             config.scale = 1.0f;
@@ -479,9 +479,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
     const bool computeBentNormals = options.bentNormals;
 
     const bool highQualityUpsampling =
-            options.upsampling >= View::QualityLevel::HIGH && options.resolution < 1.0f;
+            options.upsampling >= QualityLevel::HIGH && options.resolution < 1.0f;
 
-    const bool lowPassFilterEnabled = options.lowPassFilter != View::QualityLevel::LOW;
+    const bool lowPassFilterEnabled = options.lowPassFilter != QualityLevel::LOW;
 
     auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
@@ -882,7 +882,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, const View::DepthOfFieldOptions& dofOptions,
+        FrameGraphId<FrameGraphTexture> input, const DepthOfFieldOptions& dofOptions,
         bool translucent, const CameraInfo& cameraInfo, float2 scale) noexcept {
 
     FEngine& engine = mEngine;
@@ -1361,7 +1361,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     auto outColor = ppDoFMedian->outColor;
     auto outAlpha = ppDoFMedian->outAlpha;
-    if (dofOptions.filter == View::DepthOfFieldOptions::Filter::NONE) {
+    if (dofOptions.filter == DepthOfFieldOptions::Filter::NONE) {
         outColor = ppDoF->outColor;
         outAlpha = ppDoF->outAlpha;
     }
@@ -1414,11 +1414,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::bloom(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        View::BloomOptions& bloomOptions, float2 scale) noexcept {
+        FrameGraphId<FrameGraphTexture> input,
+        BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
+        math::float2 scale) noexcept {
 
     FrameGraphId<FrameGraphTexture> bloom = bloomPass(fg, input,
-            outFormat, bloomOptions, scale);
+            outFormat, inoutBloomOptions, scale);
 
     fg.getBlackboard().put("bloom", bloom);
 
@@ -1427,7 +1428,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloom(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        View::BloomOptions& bloomOptions, float2 scale) noexcept {
+        BloomOptions& inoutBloomOptions, float2 scale) noexcept {
     // Chrome does not support feedback loops in WebGL 2.0. See also:
     // https://bugs.chromium.org/p/chromium/issues/detail?id=1066201
 #if defined(__EMSCRIPTEN__)
@@ -1445,17 +1446,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     const float aspect = (desc.width * scale.y) / (desc.height * scale.x);
 
     // compute the desired bloom buffer size
-    float bloomHeight = bloomOptions.resolution;
+    float bloomHeight = inoutBloomOptions.resolution;
     float bloomWidth  = bloomHeight * aspect;
 
     // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
     // to scaling up) so that the amount of blooming doesn't decrease. However, the resolution
     // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
     // BloomOptions::levels.
-    if (bloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0 / bloomOptions.anamorphism;
+    if (inoutBloomOptions.anamorphism >= 1.0f) {
+        bloomWidth *= 1.0 / inoutBloomOptions.anamorphism;
     } else {
-        bloomHeight *= bloomOptions.anamorphism;
+        bloomHeight *= inoutBloomOptions.anamorphism;
     }
 
     // convert back to integer width/height
@@ -1465,8 +1466,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     // we might need to adjust the max # of levels
     const uint32_t major = std::max(bloomWidth,  bloomHeight);
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
-    bloomOptions.levels = std::min(bloomOptions.levels, maxLevels);
-    bloomOptions.levels = std::min(bloomOptions.levels, kMaxBloomLevels);
+    inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, maxLevels);
+    inoutBloomOptions.levels = std::min(inoutBloomOptions.levels, kMaxBloomLevels);
 
     if (2 * width < desc.width || 2 * height < desc.height) {
         // if we're scaling down by more than 2x, prescale the image with a blit to improve
@@ -1492,12 +1493,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     data.out = builder.createTexture("Bloom Texture", {
                             .width = width,
                             .height = height,
-                            .levels = bloomOptions.levels,
+                            .levels = inoutBloomOptions.levels,
                             .format = outFormat
                     });
 
                     data.out = builder.sample(data.out);
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto out = builder.createSubresource(data.out, "Bloom Texture mip",
                                 { .level = uint8_t(i) });
                         builder.declareRenderPass(out);
@@ -1521,12 +1522,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                             .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
                     });
                     mi->setParameter("level", 0.0f);
-                    mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
+                    mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
                     mi->setParameter("invHighlight",
-                            std::isinf(bloomOptions.highlight) ? 0.0f : 1.0f
-                                                                        / bloomOptions.highlight);
+                            std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
+                                                                             / inoutBloomOptions.highlight);
 
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto hwOutRT = resources.getRenderPassInfo(i);
 
                         auto w = FTexture::valueForLevel(i, outDesc.width);
@@ -1549,7 +1550,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         driver.setMinMaxLevels(hwOut, i,
                                 i); // safe because we're using LINEAR_MIPMAP_NEAREST
                     }
-                    driver.setMinMaxLevels(hwOut, 0, bloomOptions.levels - 1);
+                    driver.setMinMaxLevels(hwOut, 0, inoutBloomOptions.levels - 1);
                 });
 
         input = bloomDownsamplePass->out;
@@ -1583,13 +1584,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     mi->setParameter("aspectRatio",
                             float2{ aspectRatio, 1.0f / aspectRatio });
                     mi->setParameter("threshold",
-                            float2{ bloomOptions.ghostThreshold, bloomOptions.haloThreshold });
+                            float2{ inoutBloomOptions.ghostThreshold, inoutBloomOptions.haloThreshold });
                     mi->setParameter("chromaticAberration",
-                            bloomOptions.chromaticAberration);
-                    mi->setParameter("ghostCount", (float)bloomOptions.ghostCount);
-                    mi->setParameter("ghostSpacing", bloomOptions.ghostSpacing);
-                    mi->setParameter("haloRadius", bloomOptions.haloRadius);
-                    mi->setParameter("haloThickness", bloomOptions.haloThickness);
+                            inoutBloomOptions.chromaticAberration);
+                    mi->setParameter("ghostCount", (float)inoutBloomOptions.ghostCount);
+                    mi->setParameter("ghostSpacing", inoutBloomOptions.ghostSpacing);
+                    mi->setParameter("haloRadius", inoutBloomOptions.haloRadius);
+                    mi->setParameter("haloThickness", inoutBloomOptions.haloThickness);
 
                     commitAndRender(out, material, driver);
                 });
@@ -1606,7 +1607,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.in = builder.sample(input);
                     data.out = input;
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto out = builder.createSubresource(data.out, "Bloom Texture mip",
                                 { .level = uint8_t(i) });
                         builder.declareRenderPass(out);
@@ -1626,7 +1627,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                     mi->use(driver);
 
-                    for (size_t i = bloomOptions.levels - 1; i >= 1; i--) {
+                    for (size_t i = inoutBloomOptions.levels - 1; i >= 1; i--) {
                         auto hwDstRT = resources.getRenderPassInfo(i - 1);
                         hwDstRT.params
                                .flags
@@ -1649,7 +1650,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                         driver.endRenderPass();
                     }
 
-                    driver.setMinMaxLevels(hwIn, 0, bloomOptions.levels - 1);
+                    driver.setMinMaxLevels(hwIn, 0, inoutBloomOptions.levels - 1);
                 });
 
         return bloomUpsamplePass->out;
@@ -1671,7 +1672,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     data.out = builder.createTexture("Bloom Out Texture", {
                             .width = width,
                             .height = height,
-                            .levels = bloomOptions.levels,
+                            .levels = inoutBloomOptions.levels,
                             .format = outFormat
                     });
                     data.out = builder.sample(data.out);
@@ -1679,12 +1680,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     data.stage = builder.createTexture("Bloom Stage Texture", {
                             .width = width,
                             .height = height,
-                            .levels = bloomOptions.levels,
+                            .levels = inoutBloomOptions.levels,
                             .format = outFormat
                     });
                     data.stage = builder.sample(data.stage);
 
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
                                 { .level = uint8_t(i) });
                         auto stage = builder.createSubresource(data.stage,
@@ -1712,12 +1713,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                             .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
                     });
                     mi->setParameter("level", 0.0f);
-                    mi->setParameter("threshold", bloomOptions.threshold ? 1.0f : 0.0f);
+                    mi->setParameter("threshold", inoutBloomOptions.threshold ? 1.0f : 0.0f);
                     mi->setParameter("invHighlight",
-                            std::isinf(bloomOptions.highlight) ? 0.0f : 1.0f
-                                                                        / bloomOptions.highlight);
+                            std::isinf(inoutBloomOptions.highlight) ? 0.0f : 1.0f
+                                                                             / inoutBloomOptions.highlight);
 
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         const bool parity = (i % 2) == 0;
                         auto hwDstRT = resources.getRenderPassInfo(
                                 parity ? data.outRT[i] : data.stageRT[i]);
@@ -1750,7 +1751,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.out = builder.sample(output);
                     data.stage = builder.sample(stage);
-                    for (size_t i = 0; i < bloomOptions.levels; i++) {
+                    for (size_t i = 0; i < inoutBloomOptions.levels; i++) {
                         auto out = builder.createSubresource(data.out, "Bloom Out Texture mip",
                                 { .level = uint8_t(i) });
                         auto stage = builder.createSubresource(data.stage,
@@ -1773,7 +1774,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
 
                     mi->use(driver);
 
-                    for (size_t j = bloomOptions.levels, i = j - 1; i >= 1; i--, j++) {
+                    for (size_t j = inoutBloomOptions.levels, i = j - 1; i >= 1; i--, j++) {
                         const bool parity = (j % 2) == 0;
 
                         auto hwDstRT = resources.getRenderPassInfo(
@@ -1801,7 +1802,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
                     // Every other level is missing from the out texture, so we need to do
                     // blits to complete the chain.
                     const SamplerMagFilter filter = SamplerMagFilter::NEAREST;
-                    for (size_t i = 1; i < bloomOptions.levels; i += 2) {
+                    for (size_t i = 1; i < inoutBloomOptions.levels; i += 2) {
                         auto in = resources.getRenderPassInfo(data.stageRT[i]);
                         auto out = resources.getRenderPassInfo(data.outRT[i]);
                         driver.blit(TargetBufferFlags::COLOR, out.target, out.params.viewport,
@@ -1812,7 +1813,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     }
 }
 
-static float4 getVignetteParameters(View::VignetteOptions options, uint32_t width, uint32_t height) {
+UTILS_NOINLINE
+static float4 getVignetteParameters(VignetteOptions const& options,
+        uint32_t width, uint32_t height) noexcept {
     if (options.enabled) {
         // Vignette params
         // From 0.0 to 0.5 the vignette is a rounded rect that turns into an oval
@@ -1842,7 +1845,7 @@ static float4 getVignetteParameters(View::VignetteOptions options, uint32_t widt
 
 void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        View::VignetteOptions vignetteOptions, uint32_t width, uint32_t height) noexcept {
+        VignetteOptions const& vignetteOptions, uint32_t width, uint32_t height) noexcept {
 
     float4 vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
 
@@ -1889,9 +1892,10 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, float2 scale,
-        const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions) noexcept
+        FrameGraphId<FrameGraphTexture> input,
+        FColorGrading const* colorGrading, ColorGradingConfig const& colorGradingConfig,
+        BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
+        float2 scale) noexcept
 {
     Blackboard& blackboard = fg.getBlackboard();
 
@@ -1980,7 +1984,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 });
                 const float lutDimension = float(colorGrading->getDimension());
                 mi->setParameter("lutSize", float2{
-                    0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
+                        0.5f / lutDimension, (lutDimension - 1.0f) / lutDimension,
                 });
                 mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
                 mi->setParameter("bloomBuffer", bloomTexture, {
@@ -2009,7 +2013,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     (bloomOptions.enabled && bloomOptions.dirt) ? bloomOptions.dirtStrength : 0.0f,
                     bloomOptions.lensFlare ? bloomStrength : 0.0f
                 };
-                if (bloomOptions.blendMode == View::BloomOptions::BlendMode::INTERPOLATE) {
+                if (bloomOptions.blendMode == BloomOptions::BlendMode::INTERPOLATE) {
                     bloomParameters.y = 1.0f - bloomParameters.x;
                 }
 
@@ -2079,7 +2083,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
 
 void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
         CameraInfo const& cameraInfo,
-        View::TemporalAntiAliasingOptions const& taaOptions) const noexcept {
+        TemporalAntiAliasingOptions const& taaOptions) const noexcept {
     auto const& previous = frameHistory[0];
     auto& current = frameHistory.getCurrent();
     // get sample position within a pixel [-0.5, 0.5]
@@ -2094,7 +2098,7 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-        View::TemporalAntiAliasingOptions taaOptions,
+        TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
@@ -2221,7 +2225,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+        FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
 
     struct PostProcessScaling {
@@ -2263,9 +2267,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
-        FrameGraph& fg, bool translucent, View::QualityLevel quality,
+        FrameGraph& fg, bool translucent, QualityLevel quality,
         FrameGraphId<FrameGraphTexture> input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
+        FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 

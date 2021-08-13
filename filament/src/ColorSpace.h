@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_COLOR_SPACE_H
-#define TNT_FILAMENT_COLOR_SPACE_H
+#ifndef TNT_FILAMENT_COLORSPACE_H
+#define TNT_FILAMENT_COLORSPACE_H
 
 #include <utils/compiler.h>
 
@@ -328,4 +328,4 @@ float3 gamutMapping_sRGB(float3 rgb) noexcept;
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_COLOR_SPACE_H
+#endif // TNT_FILAMENT_COLORSPACE_H
