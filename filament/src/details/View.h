@@ -21,18 +21,18 @@
 
 #include "upcast.h"
 
-#include "FrameInfo.h"
+#include "Allocators.h"
 #include "FrameHistory.h"
+#include "FrameInfo.h"
+#include "Froxelizer.h"
 #include "PerViewUniforms.h"
+#include "ShadowMap.h"
+#include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
 
-#include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
-#include "details/Froxelizer.h"
 #include "details/RenderTarget.h"
-#include "details/ShadowMap.h"
-#include "details/ShadowMapManager.h"
 #include "details/Scene.h"
 
 #include <private/filament/EngineEnums.h>
@@ -44,8 +44,8 @@
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 #include <utils/StructureOfArrays.h>
-#include <utils/Slice.h>
 #include <utils/Range.h>
+#include <utils/Slice.h>
 
 #include <math/scalar.h>
 

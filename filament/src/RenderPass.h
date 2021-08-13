@@ -17,7 +17,8 @@
 #ifndef TNT_FILAMENT_RENDERPASS_H
 #define TNT_FILAMENT_RENDERPASS_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
@@ -28,11 +29,11 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/Allocator.h>
+#include <utils/Range.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Allocator.h>
-#include <utils/Range.h>
 
 #include <functional>
 #include <limits>

@@ -16,14 +16,14 @@
 
 #include "RenderPass.h"
 
+#include "RenderPrimitive.h"
+#include "ShadowMap.h"
+
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
-#include "details/RenderPrimitive.h"
-#include "details/ShadowMap.h"
-#include "details/View.h"
-
 // NOTE: We only need Renderer.h here because the definition of some FRenderer methods are here
 #include "details/Renderer.h"
+#include "details/View.h"
 
 #include <private/filament/UibStructs.h>
 

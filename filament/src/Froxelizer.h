@@ -17,7 +17,8 @@
 #ifndef TNT_FILAMENT_DETAILS_FROXELIZER_H
 #define TNT_FILAMENT_DETAILS_FROXELIZER_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
+
 #include "details/Scene.h"
 #include "details/Engine.h"
 

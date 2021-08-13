@@ -16,19 +16,20 @@
 
 #include "PerViewUniforms.h"
 
+#include "DFG.h"
+#include "Froxelizer.h"
+#include "ShadowMapManager.h"
+
+#include "details/Camera.h"
+#include "details/Engine.h"
+#include "details/IndirectLight.h"
+#include "details/Texture.h"
+
 #include <filament/Exposure.h>
 #include <filament/Options.h>
 #include <filament/TextureSampler.h>
 
 #include <private/filament/SibGenerator.h>
-
-#include "details/Camera.h"
-#include "details/DFG.h"
-#include "details/Engine.h"
-#include "details/Froxelizer.h"
-#include "details/IndirectLight.h"
-#include "details/ShadowMapManager.h"
-#include "details/Texture.h"
 
 #include <math/mat4.h>
 

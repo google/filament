@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "details/ShadowMapManager.h"
+#include "ShadowMapManager.h"
 
-#include "details/ShadowMap.h"
+#include "RenderPass.h"
+#include "ShadowMap.h"
+
 #include "details/Texture.h"
 #include "details/View.h"
 
-#include "fg2/FrameGraph.h"
-
-#include "RenderPass.h"
+#include <fg2/FrameGraph.h>
 
 #include <private/filament/SibGenerator.h>
 

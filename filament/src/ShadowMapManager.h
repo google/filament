@@ -19,8 +19,8 @@
 
 #include <filament/Viewport.h>
 
-#include "TypedUniformBuffer.h"
 #include "ShadowMap.h"
+#include "TypedUniformBuffer.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
@@ -29,7 +29,6 @@
 
 #include <private/backend/DriverApi.h>
 #include <private/backend/DriverApiForward.h>
-#include <private/backend/SamplerGroup.h>
 #include <private/backend/SamplerGroup.h>
 
 #include <backend/DriverEnums.h>

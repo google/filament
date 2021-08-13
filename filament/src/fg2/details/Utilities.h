@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FG2_DETAILS_UTILITIES_H
 #define TNT_FILAMENT_FG2_DETAILS_UTILITIES_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
 
 #include <vector>
 #include <memory>

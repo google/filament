@@ -95,54 +95,54 @@ set(SRCS
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
-        src/fg2/FrameGraphResources.cpp
         src/fg2/FrameGraphPass.cpp
+        src/fg2/FrameGraphResources.cpp
+        src/fg2/FrameGraphTexture.cpp
         src/fg2/PassNode.cpp
         src/fg2/ResourceNode.cpp
-        src/fg2/FrameGraphTexture.cpp
 )
 
 set(PRIVATE_HDRS
+        src/Allocators.h
         src/ColorSpace.h
+        src/Culler.h
+        src/DFG.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
+        src/FrameSkipper.h
+        src/Froxelizer.h
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
         src/PostProcessManager.h
         src/RenderPass.h
+        src/RenderPrimitive.h
         src/ResourceAllocator.h
+        src/ResourceList.h
+        src/ShadowMap.h
+        src/ShadowMapManager.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
-        src/details/Allocators.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
-        src/details/Culler.h
-        src/details/DFG.h
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
-        src/details/FrameSkipper.h
-        src/details/Froxelizer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/Material.h
         src/details/MaterialInstance.h
-        src/details/RenderPrimitive.h
         src/details/RenderTarget.h
         src/details/Renderer.h
-        src/details/ResourceList.h
         src/details/Scene.h
-        src/details/ShadowMap.h
-        src/details/ShadowMapManager.h
-        src/details/Skybox.h
         src/details/SkinningBuffer.h
+        src/details/Skybox.h
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
@@ -151,11 +151,11 @@ set(PRIVATE_HDRS
         src/fg2/Blackboard.h
         src/fg2/FrameGraph.h
         src/fg2/FrameGraphId.h
-        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphPass.h
         src/fg2/FrameGraphRenderPass.h
-        src/fg2/Resource.cpp
+        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphTexture.h
+        src/fg2/Resource.cpp
         src/fg2/details/DependencyGraph.h
         src/fg2/details/PassNode.h
         src/fg2/details/Resource.h
