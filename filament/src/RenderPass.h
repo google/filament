@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_RENDERPASS_H
-#define TNT_UTILS_RENDERPASS_H
+#ifndef TNT_FILAMENT_RENDERPASS_H
+#define TNT_FILAMENT_RENDERPASS_H
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
@@ -423,4 +423,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_UTILS_RENDERPASS_H
+#endif // TNT_FILAMENT_RENDERPASS_H

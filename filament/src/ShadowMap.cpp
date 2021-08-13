@@ -69,7 +69,7 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, FView::Range const& range, 
+void ShadowMap::render(DriverApi& driver, utils::Range<uint32_t> range,
         RenderPass* const pass, FView& view) noexcept {
     FEngine& engine = mEngine;
 
