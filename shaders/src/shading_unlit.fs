@@ -43,7 +43,7 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #if defined(HAS_SHADOWING)
     float visibility = 1.0;
     uint cascade = getShadowCascade();
-    bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & (1u << cascade << 8u));
+    bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
     bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
     if (hasDirectionalShadows && cascadeHasVisibleShadows) {
         uint layer = cascade;

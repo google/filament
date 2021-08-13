@@ -53,7 +53,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         float ssContactShadowOcclusion = 0.0;
 
         uint cascade = getShadowCascade();
-        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & (1u << cascade << 8u));
+        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
