@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/Culler.h"
+#include "Culler.h"
 
 #include <filament/Box.h>
 

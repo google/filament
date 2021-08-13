@@ -36,10 +36,10 @@
 #include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
-#include "details/Allocators.h"
+#include "Allocators.h"
 #include "details/Material.h"
 #include "details/Camera.h"
-#include "details/Froxelizer.h"
+#include "Froxelizer.h"
 #include "details/Engine.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "details/ShadowMap.h"
+#include "ShadowMap.h"
+
+#include "RenderPass.h"
 
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
 #include "details/View.h"
-
-#include "RenderPass.h"
 
 #include <backend/DriverEnums.h>
 

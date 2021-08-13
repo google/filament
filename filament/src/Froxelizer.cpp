@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/Froxelizer.h"
+#include "Froxelizer.h"
 
 #include "Intersections.h"
 

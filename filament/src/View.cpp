@@ -16,15 +16,15 @@
 
 #include "details/View.h"
 
+#include "Culler.h"
+#include "DFG.h"
+#include "Froxelizer.h"
 #include "ResourceAllocator.h"
 
 #include "details/Engine.h"
-#include "details/Culler.h"
-#include "details/DFG.h"
-#include "details/Froxelizer.h"
 #include "details/IndirectLight.h"
-#include "details/Renderer.h"
 #include "details/RenderTarget.h"
+#include "details/Renderer.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
 

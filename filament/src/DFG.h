@@ -17,16 +17,15 @@
 #ifndef TNT_FILAMENT_DETAILS_DFG_H
 #define TNT_FILAMENT_DETAILS_DFG_H
 
-#include "details/Texture.h"
-
 #include <backend/Handle.h>
+
+#include "details/Texture.h"
 
 #include <utils/compiler.h>
 
 namespace filament {
 
 class FEngine;
-class FTexture;
 
 #if !defined(FILAMENT_DFG_LUT_SIZE)
 #define FILAMENT_DFG_LUT_SIZE 128

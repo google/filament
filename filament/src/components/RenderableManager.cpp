@@ -16,20 +16,20 @@
 
 #include "FilamentAPI-impl.h"
 
+#include "RenderPrimitive.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/Material.h"
-#include "details/RenderPrimitive.h"
 
 #include <backend/DriverEnums.h>
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
-#include <filament/RenderableManager.h>
 
 
 using namespace filament::math;

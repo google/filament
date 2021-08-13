@@ -18,13 +18,13 @@
 #define TNT_FILAMENT_DETAILS_SCENE_H
 
 #include "upcast.h"
+
+#include "Allocators.h"
+#include "Culler.h"
+
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
-
-#include "details/Culler.h"
-
-#include "Allocators.h"
 
 #include <filament/Box.h>
 #include <filament/Scene.h>
@@ -36,7 +36,8 @@
 #include <utils/Range.h>
 #include <utils/debug.h>
 
-#include <cstddef>
+#include <stddef.h>
+
 #include <tsl/robin_set.h>
 
 namespace filament {
