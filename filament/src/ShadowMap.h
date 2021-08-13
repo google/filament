@@ -98,8 +98,7 @@ public:
             filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, const SceneInfo& cascadeParams) noexcept;
 
-    void render(backend::DriverApi& driver, utils::Range<uint32_t> range,
-            RenderPass* pass, FView& view) noexcept;
+    void render(FScene const& scene, utils::Range<uint32_t> range, RenderPass* pass) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }

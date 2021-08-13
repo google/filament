@@ -22,7 +22,6 @@
 
 #include "details/Engine.h"
 #include "details/Scene.h"
-#include "details/View.h"
 
 #include <backend/DriverEnums.h>
 
@@ -69,20 +68,11 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, utils::Range<uint32_t> range,
-        RenderPass* const pass, FView& view) noexcept {
-    FEngine& engine = mEngine;
-
+void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
+        RenderPass* const pass) noexcept {
     filament::CameraInfo cameraInfo(getCamera());
-
-    FScene& scene = *view.getScene();
-    FScene::RenderableSoa& renderableData = scene.getRenderableData();
-
     pass->setCamera(cameraInfo);
-    pass->setGeometry(renderableData, range, scene.getRenderableUBO());
-    // updatePrimitivesLod must be run before appendCommands.
-    view.updatePrimitivesLod(engine, cameraInfo, renderableData, range);
-
+    pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mPolygonOffset);
     pass->appendCommands(RenderPass::SHADOW);
     pass->sortCommands();
