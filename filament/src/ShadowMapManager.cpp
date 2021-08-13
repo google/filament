@@ -108,6 +108,9 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
     auto passList = utils::FixedCapacityVector<ShadowPass>::with_capacity(MAX_SHADOW_LAYERS);
 
+    FScene* scene = view.getScene();
+    assert_invariant(scene);
+
     // These loops fill render passes with appropriate rendering commands for each shadow map.
     // The actual render pass execution is deferred to the frame graph.
     // Directional, cascaded shadowmaps
@@ -116,8 +119,13 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
         if (!map.hasVisibleShadows() || range.empty()) {
             continue;
         }
+
+        // updatePrimitivesLod must be run before RenderPass::appendCommands.
+        filament::CameraInfo cameraInfo(map.getShadowMap().getCamera());
+        view.updatePrimitivesLod(engine, cameraInfo, scene->getRenderableData(), range);
+
         auto& entry = passList.emplace_back(&map, pass);
-        map.getShadowMap().render(driver, range, &entry.pass, view);
+        map.getShadowMap().render(*scene, range, &entry.pass);
     }
 
     // Spotlight shadowmaps
@@ -127,9 +135,13 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
         if (!map.hasVisibleShadows() || range.empty()) {
             continue;
         }
+        // updatePrimitivesLod must be run before RenderPass::appendCommands.
+        filament::CameraInfo cameraInfo(map.getShadowMap().getCamera());
+        view.updatePrimitivesLod(engine, cameraInfo, scene->getRenderableData(), range);
+
         auto& entry = passList.emplace_back(&map, pass);
         entry.pass.setVisibilityMask(VISIBLE_SPOT_SHADOW_RENDERABLE_N(i));
-        map.getShadowMap().render(driver, range, &entry.pass, view);
+        map.getShadowMap().render(*scene, range, &entry.pass);
     }
 
     const float vsmMoment2 = std::numeric_limits<half>::max();
