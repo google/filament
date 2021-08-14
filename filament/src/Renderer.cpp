@@ -716,7 +716,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass,
-        FView const& view) const noexcept {
+        FView& view) const noexcept {
 
     auto& blackboard = fg.getBlackboard();
     auto input = blackboard.get<FrameGraphTexture>("color");
@@ -833,7 +833,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass::Executor const& passExecutor, FView const& view) const noexcept {
+        RenderPass::Executor const& passExecutor, FView& view) const noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
@@ -850,13 +850,12 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
     FrameGraphId<FrameGraphTexture> colorHistory;
     mat4f const* historyProjection = nullptr;
     if (config.hasScreenSpaceReflections) {
-        const FrameHistory& frameHistory = view.getFrameHistory();
-        FrameHistoryEntry const& entry = frameHistory[0];
-        if (UTILS_UNLIKELY(!entry.color.handle)) {
+        colorHistory = getColorHistory(fg, view.getFrameHistory());
+        if (UTILS_UNLIKELY(!colorHistory)) {
             // if we don't have a history yet, don't render reflections this frame
         } else {
-            colorHistory = fg.import("Screen-space reflections history", entry.colorDesc,
-                    FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
+            const FrameHistory& frameHistory = view.getFrameHistory();
+            FrameHistoryEntry const& entry = frameHistory[0];
             historyProjection = &entry.projection;
         }
     }
@@ -1006,6 +1005,10 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // this point, so flushing now allows us to start the GPU earlier and reduce
                 // latency, without creating bubbles.
                 driver.flush();
+
+                FrameHistory& frameHistory = view.getFrameHistory();
+                FrameHistoryEntry& current = frameHistory.getCurrent();
+                resources.detach(data.color, &current.color, &current.colorDesc);
             }
     );
 
