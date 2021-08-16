@@ -85,19 +85,31 @@ public:
             TypedUniformBuffer<ShadowUib>& shadowUb,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
-    // valid after calling update() above
-    ShadowMappingUniforms getShadowMappingUniforms() const noexcept {
-        return mShadowMappingUniforms;
-    }
-
     // Renders all of the shadow maps.
     void render(FrameGraph& fg, FEngine& engine, backend::DriverApi& driver,
             RenderPass const& pass, FView& view) noexcept;
 
-    const ShadowMap* getCascadeShadowMap(size_t cascade) const noexcept {
+    ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
         assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
-        auto shadowMap = std::launder(reinterpret_cast<ShadowMap const*>(&mShadowMapCache[cascade]));
-        return shadowMap;
+        return std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[cascade]));
+    }
+
+    ShadowMap const* getCascadeShadowMap(size_t cascade) const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getCascadeShadowMap(cascade);
+    }
+
+    ShadowMap* getSpotShadowMap(size_t spot) noexcept {
+        assert_invariant(spot < CONFIG_MAX_SHADOW_CASTING_SPOTS);
+        return std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + spot]));
+    }
+
+    ShadowMap const* getSpotShadowMap(size_t spot) const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getSpotShadowMap(spot);
+    }
+
+    // valid after calling update() above
+    ShadowMappingUniforms getShadowMappingUniforms() const noexcept {
+        return mShadowMappingUniforms;
     }
 
 private:
