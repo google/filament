@@ -98,7 +98,9 @@ public:
             filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, const SceneInfo& cascadeParams) noexcept;
 
-    void render(FScene const& scene, utils::Range<uint32_t> range, RenderPass* pass) noexcept;
+    void render(FScene const& scene, utils::Range<uint32_t> range,
+            FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
+            RenderPass* pass) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -119,16 +121,13 @@ public:
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
 private:
-    struct CameraInfo {
+    struct ShadowCameraInfo {
         math::mat4f projection;
         math::mat4f model;
         math::mat4f view;
         math::mat4f worldOrigin;
         float zn = 0;
         float zf = 0;
-        Frustum frustum;
-        float getNear() const noexcept { return zn; }
-        float getFar() const noexcept { return zf; }
         math::float3 const& getPosition() const noexcept { return model[3].xyz; }
         math::float3 getForwardVector() const noexcept {
             return -normalize(model[2].xyz);   // the camera looks towards -z
@@ -148,14 +147,14 @@ private:
 
     void computeShadowCameraDirectional(
             math::float3 const& direction,
-            CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
             SceneInfo cascadeParams) noexcept;
     void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
-            float outerConeAngle, float radius, CameraInfo const& camera,
+            float outerConeAngle, float radius, ShadowCameraInfo const& camera,
             FLightManager::ShadowParams const& params) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
-            CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMpMv,
             FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
             const math::float3& dir);

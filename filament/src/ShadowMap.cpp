@@ -69,9 +69,10 @@ ShadowMap::~ShadowMap() {
 }
 
 void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
+        FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
         RenderPass* const pass) noexcept {
-    filament::CameraInfo cameraInfo(getCamera());
     pass->setCamera(cameraInfo);
+    pass->setVisibilityMask(visibilityMask);
     pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mPolygonOffset);
     pass->appendCommands(RenderPass::SHADOW);
@@ -153,14 +154,13 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
         }
     }
 
-    const CameraInfo cameraInfo = {
+    const ShadowCameraInfo cameraInfo = {
             .projection = cullingProjection,
             .model = camera.model,
             .view = camera.view,
             .worldOrigin = camera.worldOrigin,
             .zn = camera.zn,
-            .zf = camera.zf,
-            .frustum = Frustum(cullingProjection * camera.view)
+            .zf = camera.zf
     };
 
     // debugging...
@@ -193,7 +193,7 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
 }
 
 void ShadowMap::computeShadowCameraDirectional(
-        float3 const& dir, CameraInfo const& camera,
+        float3 const& dir, ShadowCameraInfo const& camera,
         FLightManager::ShadowParams const& params,
         SceneInfo cascadeParams) noexcept {
 
@@ -452,7 +452,7 @@ void ShadowMap::computeShadowCameraDirectional(
 }
 
 void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
-        float outerConeAngle, float radius, CameraInfo const& camera,
+        float outerConeAngle, float radius, ShadowCameraInfo const& camera,
         FLightManager::ShadowParams const& params) noexcept {
 
     // TODO: correctly compute if this spot light has any visible shadows.
@@ -506,7 +506,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
 }
 
 mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
-        CameraInfo const& camera, FLightManager::ShadowParams const& params,
+        ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
         mat4f const& LMpMv,
         FrustumBoxIntersection const& wsShadowReceiversVolume, size_t vertexCount,
         float3 const& dir) {
