@@ -119,8 +119,14 @@ public:
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
+    // Flags that this BufferObject is used as a uniform buffer.
+    // If this isn't set, we can skip a check when destroying this BufferObject.
+    void flagUniformUsage() { isUniform = true; }
+    bool isUsedAsUniform() const { return isUniform; }
+
 private:
     MetalBuffer buffer;
+    bool isUniform;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {

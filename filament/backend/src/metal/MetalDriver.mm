@@ -453,11 +453,13 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (UTILS_UNLIKELY(!boh)) {
         return;
     }
-    // TODO: we can skip this loop if we're not a uniform buffer
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    for (auto& thisUniform : mContext->uniformState) {
-        if (thisUniform.buffer == bo->getBuffer()) {
-            thisUniform.bound = false;
+    // If this BufferObject was ever used as a uniform, ensure that it isn't still bound.
+    if (bo->isUsedAsUniform()) {
+        for (auto& thisUniform : mContext->uniformState) {
+            if (thisUniform.buffer == bo->getBuffer()) {
+                thisUniform.bound = false;
+            }
         }
     }
     destruct_handle<MetalBufferObject>(boh);
@@ -885,6 +887,7 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 
 void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
+    bo->flagUniformUsage();
     mContext->uniformState[index] = UniformBufferState{
             .buffer = bo->getBuffer(),
             .offset = 0,
@@ -895,6 +898,7 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
 void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
+    bo->flagUniformUsage();
     mContext->uniformState[index] = UniformBufferState{
             .buffer = bo->getBuffer(),
             .offset = offset,
