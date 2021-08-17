@@ -181,7 +181,7 @@ public:
         /**
          * Specifies how a texture's channels map to color components
          *
-         * Texture Swizzle is only supported is isTextureSwizzleSupported() returns true.
+         * Texture Swizzle is only supported if isTextureSwizzleSupported() returns true.
          *
          * @param r  texture channel for red component
          * @param g  texture channel for green component

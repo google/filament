@@ -18,6 +18,7 @@
 
 #include "MetalBlitter.h"
 #include "MetalEnums.h"
+#include "MetalUtils.h"
 
 #include <filament/SwapChain.h>
 
@@ -380,7 +381,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
         TextureSwizzle a) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
-        externalImage(context) {
+        externalImage(context, r, g, b, a) {
 
     devicePixelFormat = decidePixelFormat(&context, format);
     ASSERT_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid, "Texture format not supported.");
@@ -475,25 +476,15 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             g == TextureSwizzle::CHANNEL_1 &&
             b == TextureSwizzle::CHANNEL_2 &&
             a == TextureSwizzle::CHANNEL_3;
-    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture. We'll ignore this case for now.
-    // TODO: implement swizzling for external textures.
+    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture.
+    // Swizzling for external textures is handled inside MetalExternalImage.
     if (!isDefaultSwizzle && texture && context.supportsTextureSwizzling) {
         // Even though we've already checked context.supportsTextureSwizzling, we still need to
         // guard these calls with @availability, otherwise the API usage will generate compiler
         // warnings.
         if (@available(iOS 13, *)) {
-            NSUInteger slices = texture.arrayLength;
-            if (texture.textureType == MTLTextureTypeCube ||
-                texture.textureType == MTLTextureTypeCubeArray) {
-                slices *= 6;
-            }
-            NSUInteger mips = texture.mipmapLevelCount;
-            MTLTextureSwizzleChannels swizzle = getSwizzleChannels(r, g, b, a);
-            swizzledTextureView = [texture newTextureViewWithPixelFormat:texture.pixelFormat
-                                                             textureType:texture.textureType
-                                                                  levels:NSMakeRange(0, mips)
-                                                                  slices:NSMakeRange(0, slices)
-                                                                 swizzle:swizzle];
+            swizzledTextureView =
+                    createTextureViewWithSwizzle(texture, getSwizzleChannels(r, g, b, a));
         }
     }
 }
