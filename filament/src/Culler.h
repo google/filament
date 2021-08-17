@@ -37,13 +37,10 @@ namespace filament {
 class Culler {
 public:
     // Culler can only process buffers with a size multiple of MODULO
-    static constexpr size_t MODULO = 8;
+    static constexpr size_t MODULO = 8u;
     static inline size_t round(size_t count) noexcept {
         return (count + (MODULO - 1)) & ~(MODULO - 1);
     }
-
-    // A good loop value to use to amortize the loop overhead
-    static constexpr size_t MIN_LOOP_COUNT_HINT = 8;
 
     using result_type = uint8_t;
 

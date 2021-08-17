@@ -196,7 +196,7 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
+void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -320,7 +320,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     mHasDirectionalLight = directionalLight.isValid();
 }
 
-void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
+void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport, float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
@@ -436,7 +436,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
         auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
         computeVisibilityMasks(getVisibleLayers(), layers, visibility, cullingMask.begin(),
-                renderableData.size(), hasVsm());
+                renderableData.size());
 
         auto const beginRenderables = renderableData.begin();
         auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
@@ -466,7 +466,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
                 driver.destroyBufferObject(mRenderableUbh);
                 mRenderableUbh = driver.createBufferObject(mRenderableUBOSize,
-                        BufferObjectBinding::UNIFORM, backend::BufferUsage::STREAM);
+                        BufferObjectBinding::UNIFORM, BufferUsage::STREAM);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
             }
@@ -498,7 +498,7 @@ void FView::computeVisibilityMasks(
         uint8_t visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
-        uint8_t* UTILS_RESTRICT visibleMask, size_t count, bool hasVsm) {
+        Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
     // __restrict__ seems to only be taken into account as function parameters. This is very
     // important here, otherwise, this loop doesn't get vectorized.
     // This is vectorized 16x.
@@ -565,16 +565,16 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {
+void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
 }
 
-void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept {
+void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
     // sampler must be NEAREST
     mPerViewUniforms.prepareStructure(structure);
 }
 
-void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
+void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     if (hasVsm()) {
         mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
     } else {
@@ -597,14 +597,14 @@ void FView::froxelize(FEngine& engine) const noexcept {
     mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
 }
 
-void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
+void FView::commitUniforms(DriverApi& driver) const noexcept {
     mPerViewUniforms.commit(driver);
     if (mShadowUb.isDirty()) {
         driver.updateBufferObject(mShadowUbh, mShadowUb.toBufferDescriptor(driver), 0);
     }
 }
 
-void FView::commitFroxels(backend::DriverApi& driverApi) const noexcept {
+void FView::commitFroxels(DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
         mFroxelizer.commit(driverApi);
     }

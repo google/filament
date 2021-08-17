@@ -88,19 +88,19 @@ static constexpr size_t VISIBLE_RENDERABLE_BIT = 0u;
 static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT = 1u;
 static constexpr size_t VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(size_t n) { return n + 2; }
 
-static constexpr uint8_t VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
+static constexpr Culler::result_type VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
     return 1u << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(n);
 }
 
 // ORing of all the VISIBLE_SPOT_SHADOW_RENDERABLE bits
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE =
-        (0xFFu >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE =
+        (0xFFu >> (sizeof(Culler::result_type) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
 // Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
 // (2 of the bits are used for visible renderables + directional light shadow casters).
-static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= 6,
+static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= sizeof(Culler::result_type) * 8 - 2,
         "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 6.");
 
 // ------------------------------------------------------------------------------------------------
@@ -441,8 +441,9 @@ private:
 
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
-            FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
-            size_t count, bool hasVsm);
+            FRenderableManager::Visibility const* visibility,
+            Culler::result_type* visibleMask,
+            size_t count);
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
         mPerViewUniforms.bind(driver);

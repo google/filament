@@ -121,6 +121,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
             const Box worldAABB = rigidTransform(rcm.getAABB(ri), worldTransform);
 
             auto visibility = rcm.getVisibility(ri);
+            visibility.reversedWindingOrder = reversedWindingOrder;
             if (shadowReceiversAreCasters && visibility.receiveShadows) {
                 visibility.castShadows = true;
             }
@@ -135,7 +136,6 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
             sceneData.push_back_unsafe(
                     ri,                             // RENDERABLE_INSTANCE
                     worldTransform,                 // WORLD_TRANSFORM
-                    reversedWindingOrder,           // REVERSED_WINDING_ORDER
                     visibility,                     // VISIBILITY_STATE
                     rcm.getSkinningBufferInfo(ri),  // SKINNING_BUFFER
                     worldAABB.center,               // WORLD_AABB_CENTER
@@ -207,6 +207,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     auto& sceneData = mRenderableData;
     for (uint32_t i : visibleRenderables) {
         mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
+        FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         const size_t offset = i * sizeof(PerRenderableUib);
 
         UniformBuffer::setUniform(buffer,
@@ -229,7 +230,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         // The shading normal must be flipped for mirror transformations.
         // Basically we're shading the other side of the polygon and therefore need to negate the
         // normal, similar to what we already do to support double-sided lighting.
-        if (sceneData.elementAt<REVERSED_WINDING_ORDER>(i)) {
+        if (visibility.reversedWindingOrder) {
             m = -m;
         }
 
@@ -239,7 +240,6 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         // Note that we cast bool to uint32_t. Booleans are byte-sized in C++, but we need to
         // initialize all 32 bits in the UBO field.
 
-        FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         hasContactShadows = hasContactShadows || visibility.screenSpaceContactShadows;
 
         UniformBuffer::setUniform(buffer,
