@@ -103,7 +103,6 @@ public:
     enum {
         RENDERABLE_INSTANCE,    //  4 | instance of the Renderable component
         WORLD_TRANSFORM,        // 16 | instance of the Transform component
-        REVERSED_WINDING_ORDER, //  1 | det(WORLD_TRANSFORM)<0
         VISIBILITY_STATE,       //  1 | visibility data of the component
         SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
@@ -126,7 +125,6 @@ public:
     using RenderableSoa = utils::StructureOfArrays<
             utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
             math::mat4f,                                // WORLD_TRANSFORM
-            bool,                                       // REVERSED_WINDING_ORDER
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             math::float3,                               // WORLD_AABB_CENTER
