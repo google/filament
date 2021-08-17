@@ -30,19 +30,19 @@ namespace filament {
 /*
  * This is where culling is implemented.
  *
- * The implementation assumes 'count' below is multiple of 8
+ * The implementation assumes 'count' below is multiple of MODULO
  *
  */
 
 class Culler {
 public:
     // Culler can only process buffers with a size multiple of MODULO
-    static constexpr size_t MODULO = 8u;
+    static constexpr size_t MODULO = 4u;
     static inline size_t round(size_t count) noexcept {
         return (count + (MODULO - 1)) & ~(MODULO - 1);
     }
 
-    using result_type = uint8_t;
+    using result_type = uint16_t;
 
     /*
      * returns whether each AABB in an array intersects with the frustum
