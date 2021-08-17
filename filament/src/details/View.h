@@ -72,12 +72,13 @@ class FScene;
 // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
 // (either camera or light).
 //
-// bits                               7 6 5 4 3 2 1 0
-// +------------------------------------------------+
-// VISIBLE_RENDERABLE                               X
-// VISIBLE_DIR_SHADOW_RENDERABLE                  X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_0             X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_1           X
+//                                    1
+// bits                               5 ... 7 6 5 4 3 2 1 0
+// +------------------------------------------------------+
+// VISIBLE_RENDERABLE                                     X
+// VISIBLE_DIR_SHADOW_RENDERABLE                        X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_0                   X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_1                 X
 // ...
 
 // A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
@@ -98,10 +99,10 @@ static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) 
 static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE =
         (0xFFu >> (sizeof(Culler::result_type) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
-// Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
+// Because we're using a uint16_t for the visibility mask, we're limited to 14 spot light shadows.
 // (2 of the bits are used for visible renderables + directional light shadow casters).
 static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= sizeof(Culler::result_type) * 8 - 2,
-        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 6.");
+        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 14.");
 
 // ------------------------------------------------------------------------------------------------
 

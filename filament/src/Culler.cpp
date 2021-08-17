@@ -22,11 +22,9 @@
 
 using namespace filament::math;
 
-// We use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
-// 8-bits results in one go. Without this it has to do 4 separate byte writes, which
-// ends-up being slower.
-
-#define FILAMENT_CULLER_VECTORIZE_HINT 8
+// use 8 if Culler::result_type is 8-bits, on ARMv8 it allows the compiler to write eight
+// results in one go.
+#define FILAMENT_CULLER_VECTORIZE_HINT 4
 
 namespace filament {
 
