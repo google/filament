@@ -29,6 +29,7 @@
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
@@ -119,14 +120,12 @@ public:
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
-    // Flags that this BufferObject is used as a uniform buffer.
-    // If this isn't set, we can skip a check when destroying this BufferObject.
-    void flagUniformUsage() { isUniform = true; }
-    bool isUsedAsUniform() const { return isUniform; }
+    // Tracks which uniform buffers this buffer object is bound into.
+    static_assert(Program::BINDING_COUNT <= 32);
+    utils::bitset32 boundUniformBuffers;
 
 private:
     MetalBuffer buffer;
-    bool isUniform;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
