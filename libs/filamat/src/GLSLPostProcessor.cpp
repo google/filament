@@ -344,6 +344,11 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         CompilerGLSL glslCompiler(move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
+        if (tShader.getStage() == EShLangFragment && !glslOptions.es) {
+            // enable GL_ARB_shading_language_packing if available
+            glslCompiler.add_header_line("#extension GL_ARB_shading_language_packing : enable");
+        }
+
         if (tShader.getStage() == EShLangFragment && glslOptions.es) {
             for (auto i : config.glsl.subpassInputToColorLocation) {
                 glslCompiler.remap_ext_framebuffer_fetch(i.first, i.second, true);

@@ -64,6 +64,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
                 out << "#version 450 core\n\n";
             } else {
                 out << "#version 410 core\n\n";
+                out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
             break;
     }
