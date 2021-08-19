@@ -27,6 +27,7 @@ import android.widget.Toast
 import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
+import com.google.android.filament.View
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -97,6 +98,10 @@ class MainActivity : Activity() {
         val view = modelViewer.view
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = true
+            quality = View.QualityLevel.ULTRA
+            homogeneousScaling = true
+            minScale = 0.5f
+            maxScale = 0.5f
         }
 
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {

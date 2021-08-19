@@ -63,6 +63,7 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/fsr.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
@@ -161,10 +162,15 @@ set(PRIVATE_HDRS
         src/fg2/details/Resource.h
         src/fg2/details/ResourceNode.h
         src/fg2/details/Utilities.h
+        src/fsr.h
+        src/materials/fsr/ffx_a.h
+        src/materials/fsr/ffx_fsr1.h
         src/upcast.h
 )
 
 set(MATERIAL_SRCS
+        src/materials/fsr/fsr_easu.mat
+        src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
@@ -349,6 +355,20 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/bilateralBlurBentNormals.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
         APPEND
 )
 

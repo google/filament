@@ -29,6 +29,7 @@
 #include "fg2/FrameGraph.h"
 #include "fg2/FrameGraphResources.h"
 
+#include "fsr.h"
 #include "RenderPass.h"
 
 #include "details/Camera.h"
@@ -226,6 +227,8 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
+        { "fsr_easu",                  MATERIAL(FSR_EASU) },
+        { "fsr_rcas",                  MATERIAL(FSR_RCAS) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -2267,11 +2270,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
-        FrameGraph& fg, bool translucent, QualityLevel quality,
+        FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphTexture::Descriptor const& outDesc) noexcept {
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    if (translucent && dsrOptions.quality == QualityLevel::ULTRA) {
+        // FidelityFX-FSR doesn't support the alpha channel currently
+        dsrOptions.quality = QualityLevel::MEDIUM;
+    }
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2289,23 +2297,41 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
                 auto color = resources.getTexture(data.input);
                 auto out = resources.getRenderPassInfo();
-                auto const& desc = resources.getDescriptor(data.input);
+                auto const& inputDesc = resources.getDescriptor(data.input);
+                auto const& outputDesc = resources.getDescriptor(data.output);
 
-                const StaticString blitterNames[3] = { "blitLow", "blitMedium", "blitHigh" };
-                unsigned index = std::min(2u, (unsigned)quality);
+                const StaticString blitterNames[4] = { "blitLow", "blitMedium", "blitHigh", "fsr_easu" };
+                unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
                 auto& material = getPostProcessMaterial(blitterNames[index]);
                 FMaterialInstance* const mi = material.getMaterialInstance();
+
+                if (dsrOptions.quality == QualityLevel::ULTRA) {
+                    FSRUniforms uniforms;
+                    FSR_ScalingSetup(&uniforms, {
+                            .inputWidth = inputDesc.width,
+                            .inputHeight = inputDesc.height,
+                            .outputWidth = outputDesc.width,
+                            .outputHeight = outputDesc.height,
+                    });
+                    mi->setParameter("EasuCon0", uniforms.EasuCon0);
+                    mi->setParameter("EasuCon1", uniforms.EasuCon1);
+                    mi->setParameter("EasuCon2", uniforms.EasuCon2);
+                    mi->setParameter("EasuCon3", uniforms.EasuCon3);
+                }
+
                 mi->setParameter("color", color, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR
                 });
                 mi->setParameter("resolution",
-                        float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                        float4{ outputDesc.width, outputDesc.height,
+                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
                 mi->commit(driver);
                 mi->use(driver);
 
                 PipelineState pipeline(material.getPipelineState());
                 if (translucent) {
+                    assert_invariant(dsrOptions.quality != QualityLevel::ULTRA);
                     pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
                     pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
@@ -2316,8 +2342,48 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                 driver.endRenderPass();
             });
 
+    auto output = ppQuadBlit->output;
+
+    if (dsrOptions.quality == QualityLevel::ULTRA) {
+
+        auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.input = builder.sample(output);
+                    data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
+                    data.output = builder.declareRenderPass(data.output);
+                },
+                [=](FrameGraphResources const& resources,
+                        auto const& data, DriverApi& driver) {
+
+                    auto color = resources.getTexture(data.input);
+                    auto out = resources.getRenderPassInfo();
+                    auto const& outputDesc = resources.getDescriptor(data.output);
+
+                    auto& material = getPostProcessMaterial("fsr_rcas");
+                    FMaterialInstance* const mi = material.getMaterialInstance();
+
+                    FSRUniforms uniforms;
+                    FSR_SharpeningSetup(&uniforms, { .sharpness = dsrOptions.sharpness });
+                    mi->setParameter("RcasCon", uniforms.RcasCon);
+                    mi->setParameter("color", color, { }); // uses texelFetch
+                    mi->setParameter("resolution", float4{
+                            outputDesc.width, outputDesc.height,
+                            1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->commit(driver);
+                    mi->use(driver);
+
+                    PipelineState pipeline(material.getPipelineState());
+                    assert_invariant(!translucent);
+                    driver.beginRenderPass(out.target, out.params);
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                    driver.endRenderPass();
+                });
+
+        output = ppFsrRcas->output;
+    }
+
     // we rely on automatic culling of unused render passes
-    return ppQuadBlit->output;
+    return output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,

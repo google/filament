@@ -115,6 +115,8 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
         // clamp maxScale to 2x because we're doing bilinear filtering, so super-sampling
         // is not useful above that.
         dynamicResolution.maxScale = min(dynamicResolution.maxScale, float2(2.0f));
+
+        dynamicResolution.sharpness = clamp(dynamicResolution.sharpness, 0.0f, 2.0f);
     }
 }
 
