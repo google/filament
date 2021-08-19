@@ -453,13 +453,12 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (UTILS_UNLIKELY(!boh)) {
         return;
     }
-    // TODO: we can skip this loop if we're not a uniform buffer
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    for (auto& thisUniform : mContext->uniformState) {
-        if (thisUniform.buffer == bo->getBuffer()) {
-            thisUniform.bound = false;
-        }
-    }
+    // Unbind this buffer object from any uniform slots it's still bound to.
+    bo->boundUniformBuffers.forEachSetBit([this](size_t index) {
+        mContext->uniformState[index].buffer = nullptr;
+        mContext->uniformState[index].bound = false;
+    });
     destruct_handle<MetalBufferObject>(boh);
 }
 
@@ -885,8 +884,13 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 
 void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
+    auto* currentBo = mContext->uniformState[index].buffer;
+    if (currentBo) {
+        currentBo->boundUniformBuffers.unset(index);
+    }
+    bo->boundUniformBuffers.set(index);
     mContext->uniformState[index] = UniformBufferState{
-            .buffer = bo->getBuffer(),
+            .buffer = bo,
             .offset = 0,
             .bound = true
     };
@@ -895,8 +899,12 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
 void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> boh,
         uint32_t offset, uint32_t size) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
+    auto* currentBo = mContext->uniformState[index].buffer;
+    if (currentBo) {
+        currentBo->boundUniformBuffers.unset(index);
+    }
     mContext->uniformState[index] = UniformBufferState{
-            .buffer = bo->getBuffer(),
+            .buffer = bo,
             .offset = offset,
             .bound = true
     };
@@ -1390,7 +1398,7 @@ void MetalDriver::enumerateBoundUniformBuffers(
         if (!thisUniform.bound) {
             continue;
         }
-        f(thisUniform, thisUniform.buffer, i);
+        f(thisUniform, thisUniform.buffer->getBuffer(), i);
     }
 }
 

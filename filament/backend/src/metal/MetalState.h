@@ -289,13 +289,13 @@ using DepthStencilStateCache = StateCache<DepthStencilState, id<MTLDepthStencilS
 
 // Uniform buffers
 
-class MetalBuffer;
+class MetalBufferObject;
 
 struct UniformBufferState {
-    MetalBuffer* buffer = nullptr;  // 8 bytes
-    uint32_t offset = 0;            // 4 bytes
-    bool bound = false;             // 1 byte
-    char padding[3] = { 0 };        // 3 bytes
+    MetalBufferObject* buffer = nullptr;  // 8 bytes
+    uint32_t offset = 0;                  // 4 bytes
+    bool bound = false;                   // 1 byte
+    char padding[3] = { 0 };              // 3 bytes
 
     bool operator==(const UniformBufferState& rhs) const noexcept {
         return this->bound == rhs.bound &&

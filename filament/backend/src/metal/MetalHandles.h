@@ -29,6 +29,7 @@
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
@@ -118,6 +119,10 @@ public:
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
+
+    // Tracks which uniform buffers this buffer object is bound into.
+    static_assert(Program::BINDING_COUNT <= 32);
+    utils::bitset32 boundUniformBuffers;
 
 private:
     MetalBuffer buffer;
