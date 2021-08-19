@@ -122,7 +122,7 @@ public:
             backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     FrameGraphId<FrameGraphTexture> blendBlit(
-            FrameGraph& fg, bool translucent, QualityLevel quality,
+            FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc) noexcept;
 

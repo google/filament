@@ -1,0 +1,114 @@
+material {
+    name : fsr_easu,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : uint4,
+            name : EasuCon0,
+            precision: high
+        },
+        {
+            type : uint4,
+            name : EasuCon1,
+            precision: high
+        },
+        {
+            type : uint4,
+            name : EasuCon2,
+            precision: high
+        },
+        {
+            type : uint4,
+            name : EasuCon3,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
+    }
+}
+
+fragment {
+
+    precision mediump float;
+    precision highp int;
+
+    #define A_GPU 1
+    #define A_GLSL 1
+    #include "ffx_a.h"
+    #define FSR_EASU_F 1
+    #include "ffx_fsr1.h"
+
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+    AF4 FsrEasuRF(AF2 p) {
+        return textureGather(materialParams_color, p, 0);
+    }
+
+    AF4 FsrEasuGF(AF2 p) {
+        return textureGather(materialParams_color, p, 1);
+    }
+
+    AF4 FsrEasuBF(AF2 p) {
+        return textureGather(materialParams_color, p, 2);
+    }
+#else
+    AF4 FsrEasuRF(AF2 p) {
+        vec4 d;
+        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).r;
+        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).r;
+        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).r;
+        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).r;
+        return AF4(d);
+    }
+
+    AF4 FsrEasuGF(AF2 p) {
+        vec4 d;
+        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).g;
+        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).g;
+        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).g;
+        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).g;
+        return AF4(d);
+    }
+
+    AF4 FsrEasuBF(AF2 p) {
+        vec4 d;
+        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).b;
+        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).b;
+        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).b;
+        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).b;
+        return AF4(d);
+    }
+#endif
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp uvec2 p = uvec2(variable_vertex.xy);
+
+        AF3 pix;
+        FsrEasuF(pix, p,
+            materialParams.EasuCon0,
+            materialParams.EasuCon1,
+            materialParams.EasuCon2,
+            materialParams.EasuCon3);
+
+        postProcess.color.rgb = pix;
+        postProcess.color.a = 1.0; // TODO: FSR doesn't support transparency.
+    }
+}

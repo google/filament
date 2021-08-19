@@ -131,8 +131,20 @@ public class View {
         public float maxScale = 1.0f;
 
         /**
-         * Upscaling quality. LOW: 1 bilinear tap, MEDIUM: 4 bilinear taps, HIGH: 9 bilinear taps.
-         * If minScale needs to be very low, it might help to use MEDIUM or HIGH here.
+         * Sharpness when QualityLevel.ULTRA is used [0, 2].
+         * 0 is the sharpest setting, 2 is the smoothest setting.
+         * The default is set to 0.2
+         */
+        public float sharpness = 0.2f;
+
+        /**
+         * Upscaling quality
+         * LOW: bilinear filtered blit. Fastest, poor quality
+         * MEDIUM: 16-tap optimized tent filter.
+         * HIGH: 36-tap optimized tent filter.
+         * ULTRA: AMD FidelityFX FSR1. Slowest, very high quality.
+         *      Requires a well anti-aliased (MSAA or TAA), noise free scene.
+         *
          * The default upscaling quality is set to LOW.
          */
         @NonNull
@@ -1188,6 +1200,7 @@ public class View {
                 options.homogeneousScaling,
                 options.minScale,
                 options.maxScale,
+                options.sharpness,
                 options.quality.ordinal());
     }
 
@@ -1560,7 +1573,7 @@ public class View {
     private static native int nGetAntiAliasing(long nativeView);
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
-    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
+    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, float sharpness, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);

@@ -119,13 +119,14 @@ Java_com_google_android_filament_View_nGetDithering(JNIEnv*, jclass,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jclass, jlong nativeView,
         jboolean enabled, jboolean homogeneousScaling,
-        jfloat minScale, jfloat maxScale, jint quality) {
+        jfloat minScale, jfloat maxScale, jfloat sharpness, jint quality) {
     View* view = (View*)nativeView;
     View::DynamicResolutionOptions options;
     options.enabled = enabled;
     options.homogeneousScaling = homogeneousScaling;
     options.minScale = filament::math::float2{ minScale };
     options.maxScale = filament::math::float2{ maxScale };
+    options.sharpness = sharpness;
     options.quality = (View::QualityLevel)quality;
     view->setDynamicResolutionOptions(options);
 }

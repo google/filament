@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.2
 
+- engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
+
 ## v1.12.1
 
 - engine: `double` precision translation support in TransformManager. Disabled by default.
