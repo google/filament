@@ -260,7 +260,8 @@ float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
 
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(c, LUMINANCE_REC709) / 0.18f);
+    // TODO: This should depend on the working color grading color space
+    float v = log2(dot(c, LUMINANCE_REC2020) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
     size_t index = size_t(v);

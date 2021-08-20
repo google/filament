@@ -552,10 +552,6 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // LogC encoding
                     v = LogC_to_linear(v);
 
-                    // In this section we perform a few adjustments in sRGB
-                    if (builder->hasAdjustments) {
-                    }
-
                     // Move to color grading color space
                     v = c.colorGradingIn * v;
 
@@ -577,8 +573,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                                 builder->shadows, builder->midtones, builder->highlights,
                                 builder->tonalRanges);
 
-                        // The adjustments below behave better in log space using the ACEScct
-                        // color space.
+                        // The adjustments below behave better in log space
                         v = linear_to_LogC(v);
 
                         // ASC CDL
@@ -596,7 +591,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         // Saturation in linear space
                         v = saturation(v, c.colorGradingLuminance, builder->saturation);
 
-                        // Kill negative values before tone mapping
+                        // Kill negative values before curves
                         v = max(v, 0.0f);
 
                         // RGB curves
@@ -611,9 +606,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = (*builder->toneMapper)(v);
                     }
 
+                    // Go back to display color space
                     v = c.colorGradingOut * v;
 
+                    // Apply gamut mapping
                     if (builder->gamutMapping) {
+                        // TODO: This should depend on the output color space
                         v = gamutMapping_sRGB(v);
                     }
 
