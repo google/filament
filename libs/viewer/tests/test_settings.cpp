@@ -45,6 +45,7 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
                 "hdrMax": 16.0
             },
             "luminanceScaling": false,
+            "gamutMapping": false,
             "exposure": 0,
             "temperature": 0,
             "tint": 0,

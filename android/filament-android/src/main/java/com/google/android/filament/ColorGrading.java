@@ -65,6 +65,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Curves</li>
  * <li>Tone mapping</li>
  * <li>Luminance scaling</li>
+ * <li>Gamut mapping</li>
  * </ul>
  *
  * <h1>Defaults</h1>
@@ -83,6 +84,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * <li>Curves: gamma <code>{1,1,1}</code>, midPoint <code>{1,1,1}</code>, and scale <code>{1,1,1}</code></li>
  * <li>Tone mapping: {@link ToneMapper.ACESLegacy}</li>
  * <li>Luminance scaling: false</li>
+ * <li>Gamut mapping: false</li>
  * </ul>
  *
  * @see View
@@ -210,6 +212,22 @@ public class ColorGrading {
          */
         public Builder luminanceScaling(boolean luminanceScaling) {
             nBuilderLuminanceScaling(mNativeBuilder, luminanceScaling);
+            return this;
+        }
+
+        /**
+         * Enables or disables gamut mapping to the destination color space's gamut. When gamut
+         * mapping is turned off, out-of-gamut colors are clipped to the destination's gamut,
+         * which may produce hue skews (blue skewing to purple, green to yellow, etc.). When
+         * gamut mapping is enabled, out-of-gamut colors are brought back in gamut by trying to
+         * preserve the perceived chroma and lightness of the original values.
+         *
+         * @param gamutMapping Enables or disables gamut mapping
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder gamutMapping(boolean gamutMapping) {
+            nBuilderGamutMapping(mNativeBuilder, gamutMapping);
             return this;
         }
 
@@ -524,6 +542,7 @@ public class ColorGrading {
     private static native void nBuilderToneMapper(long nativeBuilder, long toneMapper);
     private static native void nBuilderToneMapping(long nativeBuilder, int toneMapping);
     private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
+    private static native void nBuilderGamutMapping(long nativeBuilder, boolean gamutMapping);
     private static native void nBuilderExposure(long nativeBuilder, float exposure);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
     private static native void nBuilderChannelMixer(long nativeBuilder, float[] outRed, float[] outGreen, float[] outBlue);

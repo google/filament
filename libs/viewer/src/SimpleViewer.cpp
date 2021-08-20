@@ -211,6 +211,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         ImGui::PopStyleColor();
 
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
+        ImGui::Checkbox("Gamut mapping", &colorGrading.gamutMapping);
 
         ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
 
