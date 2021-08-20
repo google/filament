@@ -51,8 +51,18 @@ public:
      *
      * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
      * is no device allocation.
+     *
+     * For STREAM buffers, getGpuBufferStreamOffset() should be called to retrieve the correct
+     * buffer offset.
+     *
      */
     id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
+
+    /**
+     * Returns the offset into the buffer returned by getGpuBufferForDraw. This is always 0 for
+     * non-STREAM buffers.
+     */
+    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamOffset; }
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
@@ -73,11 +83,14 @@ public:
 
 private:
 
+    BufferUsage mUsage;
     size_t mBufferSize = 0;
+    size_t mCurrentStreamOffset = 0;
     const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
 
+    void copyIntoStreamBuffer(void* src, size_t size);
 };
 
 } // namespace metal
