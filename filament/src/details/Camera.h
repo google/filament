@@ -112,7 +112,7 @@ public:
         return math::details::TMat44<T>(rt, -t);
     }
 
-    math::double3 const& getPosition() const noexcept {
+    math::double3 getPosition() const noexcept {
         return getModelMatrix()[3].xyz;
     }
 
