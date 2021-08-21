@@ -66,6 +66,7 @@ class FColorGrading;
  *
  * The various transforms held by ColorGrading are applied in the following order:
  * - Exposure
+ * - Night adaptation
  * - White balance
  * - Channel mixer
  * - Shadows/mid-tones/highlights
@@ -83,6 +84,7 @@ class FColorGrading;
  *
  * Here are the default color grading options:
  * - Exposure: 0.0
+ * - Night adaptation: 0.0
  * - White balance: temperature 0, and tint 0
  * - Channel mixer: red {1,0,0}, green {0,1,0}, blue {0,0,1}
  * - Shadows/mid-tones/highlights: shadows {1,1,1,0}, mid-tones {1,1,1,0}, highlights {1,1,1,0},
@@ -219,6 +221,19 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& exposure(float exposure) noexcept;
+
+        /**
+         * Controls the amount of night adaptation to replicate a more natural representation of
+         * low-light conditions as perceived by the human vision system. In low-light conditions,
+         * peak luminance sensitivity of the eye shifts toward the blue end of the color spectrum:
+         * darker tones appear brighter, reducing contrast, and colors are blue shifted (the darker
+         * the more intense the effect).
+         *
+         * @param adaptation Amount of adaptation, between 0 (no adaptation) and 1 (full adaptation).
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& nightAdaptation(float adaptation) noexcept;
 
         /**
          * Adjusts the while balance of the image. This can be used to remove color casts

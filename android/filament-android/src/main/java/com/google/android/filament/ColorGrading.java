@@ -248,6 +248,22 @@ public class ColorGrading {
         }
 
         /**
+         * Controls the amount of night adaptation to replicate a more natural representation of
+         * low-light conditions as perceived by the human vision system. In low-light conditions,
+         * peak luminance sensitivity of the eye shifts toward the blue end of the color spectrum:
+         * darker tones appear brighter, reducing contrast, and colors are blue shifted (the darker
+         * the more intense the effect).
+         *
+         * @param adaptation Amount of adaptation, between 0 (no adaptation) and 1 (full adaptation).
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder nightAdaptation(float adaptation) {
+            nBuilderNightAdaptation(mNativeBuilder, adaptation);
+            return this;
+        }
+
+        /**
          * Adjusts the while balance of the image. This can be used to remove color casts
          * and correct the appearance of the white point in the scene, or to alter the
          * overall chromaticity of the image for artistic reasons (to make the image appear
@@ -544,6 +560,7 @@ public class ColorGrading {
     private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
     private static native void nBuilderGamutMapping(long nativeBuilder, boolean gamutMapping);
     private static native void nBuilderExposure(long nativeBuilder, float exposure);
+    private static native void nBuilderNightAdaptation(long nativeBuilder, float adaptation);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
     private static native void nBuilderChannelMixer(long nativeBuilder, float[] outRed, float[] outGreen, float[] outBlue);
     private static native void nBuilderShadowsMidtonesHighlights(long nativeBuilder, float[] shadows, float[] midtones, float[] highlights, float[] ranges);
