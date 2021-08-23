@@ -32,6 +32,14 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
     return view;
 }
 
+void prepareNativeWindow(SDL_Window* sdlWindow) {
+    SDL_SysWMinfo wmi;
+    SDL_VERSION(&wmi.version);
+    ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
+    NSWindow* win = wmi.info.cocoa.window;
+    [win setColorSpace:[NSColorSpace sRGBColorSpace]];
+}
+
 void* setUpMetalLayer(void* nativeView) {
     NSView* view = (NSView*) nativeView;
     [view setWantsLayer:YES];

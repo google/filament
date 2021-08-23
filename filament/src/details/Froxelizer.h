@@ -237,7 +237,6 @@ private:
 
     math::mat4f mProjection;
     float mLinearizer = 0.0f;
-    float mLog2ZLightFar = 0.0f;
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
     math::float2 mOneOverDimension = {};

@@ -1565,7 +1565,10 @@ bool OpenGLDriver::isFrameTimeSupported() {
 
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
-            math::float2{ -0.5f, 0.5f } : math::float2{ -1.0f, 0.0f };
+           // z-coordinate of virtual and physical clip-space is in [-w, 0]
+           math::float2{ 1.0f, 0.0f } :
+           // z-coordinate of virtual clip-space is in [-w,0], physical is in [-w, w]
+           math::float2{ 2.0f, -1.0f };
 }
 
 uint8_t OpenGLDriver::getMaxDrawBuffers() {
@@ -2229,6 +2232,13 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             }
             CHECK_GL_ERROR(utils::slog.e)
         }
+    } else {
+        // on GL desktop we assume we don't have glInvalidateFramebuffer, but even if the GPU is
+        // not a tiler, it's important to clear the framebuffer before drawing, as it resets
+        // the fb to a known state (resets fb compression and possibly other things).
+        // So we use glClear instead of glInvalidateFramebuffer
+        gl.disable(GL_SCISSOR_TEST);
+        clearWithRasterPipe(discardFlags & ~clearFlags, { 0.0f }, 0.0f, 0);
     }
 
     if (rt->gl.fbo_read) {
@@ -2259,8 +2269,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    mContext.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-    mContext.disable(GL_SCISSOR_TEST);
+    gl.disable(GL_SCISSOR_TEST);
     clearWithRasterPipe(discardFlags & ~clearFlags,
             { 1, 0, 0, 1 }, 1.0, 0);
 #endif

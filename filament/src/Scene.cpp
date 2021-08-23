@@ -47,7 +47,7 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreCasters) noexcept {
+void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCasters) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
@@ -110,7 +110,8 @@ void FScene::prepare(const mat4f& worldOriginTransform, bool shadowReceiversAreC
 
         // get the world transform
         auto ti = tcm.getInstance(e);
-        const mat4f worldTransform = worldOriginTransform * tcm.getWorldTransform(ti);
+        // this is where we go from double to float for our transforms
+        const mat4f worldTransform{ worldOriginTransform * tcm.getWorldTransformAccurate(ti) };
         const bool reversedWindingOrder = det(worldTransform.upperLeft()) < 0;
 
         // don't even draw this object if it doesn't have a transform (which shouldn't happen

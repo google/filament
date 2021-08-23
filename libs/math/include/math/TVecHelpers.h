@@ -463,6 +463,13 @@ private:
         return v;
     }
 
+    friend inline VECTOR<T> MATH_PURE cbrt(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::cbrt(v[i]);
+        }
+        return v;
+    }
+
     friend inline VECTOR<T> MATH_PURE exp(VECTOR<T> v) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::exp(v[i]);

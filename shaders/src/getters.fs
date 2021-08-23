@@ -105,6 +105,12 @@ highp vec3 getNormalizedViewportCoord() {
     return vec3(shading_normalizedViewportCoord, 1.0 - gl_FragCoord.z);
 }
 
+// This new version doesn't invert Z.
+// TODO: Should we make it public?
+highp vec3 getNormalizedViewportCoord2() {
+    return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
+}
+
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
 highp vec3 getSpotLightSpacePosition(uint index) {
     vec3 dir = shadowUniforms.directionShadowBias[index].xyz;

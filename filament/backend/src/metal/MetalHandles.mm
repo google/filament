@@ -657,7 +657,6 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 
     const bool nonBlittableTexture =
             target == SamplerType::SAMPLER_2D_ARRAY ||
-            target == SamplerType::SAMPLER_3D ||
             target == SamplerType::SAMPLER_CUBEMAP;
 
     const size_t stagingBufferSize = shape.totalBytes;
@@ -667,11 +666,11 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
     // textures.
 
     ASSERT_PRECONDITION(!nonBlittableTexture || !conversionNecessary,
-            "SAMPLER_2D_ARRAY, SAMPLER_3D, and SAMPLER_CUBEMAP texture uploads"
+            "SAMPLER_2D_ARRAY and SAMPLER_CUBEMAP texture uploads "
             "do not support format conversions.");
 
     ASSERT_PRECONDITION(!nonBlittableTexture || !largeUpload,
-            "SAMPLER_2D_ARRAY, SAMPLER_3D, and SAMPLER_CUBEMAP texture uploads"
+            "SAMPLER_2D_ARRAY and SAMPLER_CUBEMAP texture uploads "
             "have a max size of %d bytes.", deviceMaxBufferLength);
 
     if (conversionNecessary || largeUpload) {
@@ -712,11 +711,13 @@ void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion 
 void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDescriptor& data,
         const PixelBufferShape& shape) {
     MTLPixelFormat stagingPixelFormat = getMetalFormat(data.format, data.type);
-    MTLTextureDescriptor* descriptor =
-            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:stagingPixelFormat
-                                                               width:region.size.width
-                                                              height:region.size.height
-                                                           mipmapped:NO];
+    MTLTextureDescriptor* descriptor = [MTLTextureDescriptor new];
+    descriptor.textureType = region.size.depth == 1 ? MTLTextureType2D : MTLTextureType3D;
+    descriptor.pixelFormat = stagingPixelFormat;
+    descriptor.width = region.size.width;
+    descriptor.height = region.size.height;
+    descriptor.depth = region.size.depth;
+
 #if defined(IOS)
     descriptor.storageMode = MTLStorageModeShared;
 #else
@@ -724,7 +725,8 @@ void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDes
 #endif
 
     id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
-    MTLRegion sourceRegion = MTLRegionMake2D(0, 0, region.size.width, region.size.height);
+    MTLRegion sourceRegion = MTLRegionMake3D(0, 0, 0,
+            region.size.width, region.size.height, region.size.depth);
     [stagingTexture replaceRegion:sourceRegion
                       mipmapLevel:0
                             slice:0
@@ -744,9 +746,9 @@ void MetalTexture::loadWithBlit(uint32_t level, MTLRegion region, PixelBufferDes
         }
         NSUInteger mips = texture.mipmapLevelCount;
         destinationTexture = [texture newTextureViewWithPixelFormat:linearFormat
-                                                               textureType:texture.textureType
-                                                                    levels:NSMakeRange(0, mips)
-                                                                    slices:NSMakeRange(0, slices)];
+                                                        textureType:texture.textureType
+                                                             levels:NSMakeRange(0, mips)
+                                                             slices:NSMakeRange(0, slices)];
     }
 
     MetalBlitter::BlitArgs args;
@@ -799,7 +801,6 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         // If we were given a single-sampled texture but the samples parameter is > 1, we create
         // a multisampled sidecar texture and do a resolve automatically.
         if (samples > 1 && depth.getSampleCount() == 1) {
-            // TODO: we only need to resolve depth if the depth texture is not SAMPLEABLE.
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
                 sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
