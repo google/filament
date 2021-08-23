@@ -194,7 +194,7 @@ private:
     AssociativeContainer<backend::TextureHandle, TextureKey> mInUseTextures;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
-    const bool mEnabled = true;
+    static constexpr bool mEnabled = true;
 };
 
 } // namespace filament
