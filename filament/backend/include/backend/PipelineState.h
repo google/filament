@@ -24,8 +24,7 @@
 
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 //! \privatesection
 
@@ -39,8 +38,10 @@ struct PipelineState {
     };
 };
 
+} // namespace filament::backend
 
-} // namespace backend
-} // namespace filament
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
+#endif
 
 #endif //TNT_FILAMENT_BACKEND_PIPELINESTATE_H

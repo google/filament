@@ -24,6 +24,8 @@
 
 #include <backend/PresentCallable.h>
 
+#include <utils/ostream.h>
+
 #include <math/vec4.h>
 
 #include <array>    // FIXME: STL headers are not allowed in public headers
@@ -925,5 +927,37 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferF
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
+
+
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CullingMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ElementType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TargetBufferFlags f);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMagFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMinFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerParams params);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerWrapMode wrap);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderModel model);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureCubemapFace face);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+#endif
 
 #endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H

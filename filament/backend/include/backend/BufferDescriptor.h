@@ -20,12 +20,12 @@
 #define TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /**
  * A CPU memory-buffer descriptor, typically used to transfer data from the CPU to the GPU.
@@ -126,7 +126,10 @@ private:
     void* user = nullptr;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
+
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::BufferDescriptor& b);
+#endif
 
 #endif // TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H

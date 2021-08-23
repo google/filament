@@ -213,4 +213,8 @@ public:
 } // namespace backend
 } // namespace filament
 
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PixelBufferDescriptor& b);
+#endif
+
 #endif // TNT_FILAMENT_BACKEND_PIXELBUFFERDESCRIPTOR_H
