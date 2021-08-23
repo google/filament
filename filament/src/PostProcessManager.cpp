@@ -227,8 +227,8 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                  MATERIAL(FSR_EASU) },
-        { "fsr_rcas",                  MATERIAL(FSR_RCAS) },
+        { "fsr_easu",                   MATERIAL(FSR_EASU) },
+        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -1457,7 +1457,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
     // BloomOptions::levels.
     if (inoutBloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0 / inoutBloomOptions.anamorphism;
+        bloomWidth *= 1.0f / inoutBloomOptions.anamorphism;
     } else {
         bloomHeight *= inoutBloomOptions.anamorphism;
     }
@@ -2308,6 +2308,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                 if (dsrOptions.quality == QualityLevel::ULTRA) {
                     FSRUniforms uniforms;
                     FSR_ScalingSetup(&uniforms, {
+                            .viewportWidth = inputDesc.width,
+                            .viewportHeight = inputDesc.height,
                             .inputWidth = inputDesc.width,
                             .inputHeight = inputDesc.height,
                             .outputWidth = outputDesc.width,

@@ -42,7 +42,7 @@ void FSR_ScalingSetup(FSRUniforms* outUniforms, FSRScalingConfig config) noexcep
     FsrEasuCon( outUniforms->EasuCon0.v, outUniforms->EasuCon1.v,
                 outUniforms->EasuCon2.v, outUniforms->EasuCon3.v,
             // Viewport size (top left aligned) in the input image which is to be scaled.
-            config.inputWidth, config.inputHeight,
+            config.viewportWidth, config.viewportHeight,
             // The size of the input image.
             config.inputWidth, config.inputHeight,
             // The output resolution.

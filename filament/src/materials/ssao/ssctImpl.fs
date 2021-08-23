@@ -39,6 +39,6 @@ float dominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal) {
     cone.sampleCount = materialParams.ssctSampleCount;
 
     return ssctDominantLightShadowing(uv, origin, normal,
-            materialParams_depth, getFragCoord(materialParams.resolution),
+            materialParams_depth, getFragCoord(materialParams.resolution.xy),
             materialParams.ssctRayCount, cone);
 }
