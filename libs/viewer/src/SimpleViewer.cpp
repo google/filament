@@ -700,11 +700,16 @@ void SimpleViewer::updateUserInterface() {
             int lowpass = (int) ssao.lowPassFilter;
             bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
 
+            bool halfRes = ssao.resolution == 1.0f ? false : true;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
             ImGui::Checkbox("High quality upsampling", &upsampling);
             ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+            ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
+            ImGui::Checkbox("Half resolution", &halfRes);
+            ssao.resolution = halfRes ? 0.5f : 1.0f;
+
 
             ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             ssao.lowPassFilter = (View::QualityLevel) lowpass;

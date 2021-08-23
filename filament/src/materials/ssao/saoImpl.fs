@@ -107,7 +107,7 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
 
 void scalableAmbientObscurance(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
-    float noise = random(getFragCoord(materialParams.resolution));
+    float noise = random(getFragCoord(materialParams.resolution.xy));
     highp vec2 tapPosition = startPosition(noise);
     highp mat2 angleStep = tapAngleStep();
 

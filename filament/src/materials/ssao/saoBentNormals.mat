@@ -160,7 +160,7 @@ fragment {
         highp vec3 origin = computeViewSpacePositionFromDepth(uv, z, materialParams.positionParams);
 
         vec3 normal = computeViewSpaceNormal(materialParams_depth, uv, depth, origin,
-                materialParams.resolution,
+                materialParams.resolution.zw,
                 materialParams.positionParams);
 
         float occlusion = 0.0;

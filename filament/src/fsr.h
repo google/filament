@@ -24,6 +24,8 @@
 namespace filament {
 
 struct FSRScalingConfig {
+    uint32_t viewportWidth;
+    uint32_t viewportHeight;
     uint32_t inputWidth;
     uint32_t inputHeight;
     uint32_t outputWidth;
