@@ -903,6 +903,7 @@ void MetalDriver::bindUniformBufferRange(uint32_t index, Handle<HwBufferObject> 
     if (currentBo) {
         currentBo->boundUniformBuffers.unset(index);
     }
+    bo->boundUniformBuffers.set(index);
     mContext->uniformState[index] = UniformBufferState{
             .buffer = bo,
             .offset = offset,
