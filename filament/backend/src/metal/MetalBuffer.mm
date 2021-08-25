@@ -93,9 +93,13 @@ void MetalBuffer::copyIntoStreamBuffer(void* src, size_t size) {
     assert_invariant(size <= mBufferSize);
     assert_invariant(!mCpuBuffer);
 
-    if (mCurrentStreamOffset + size > mBufferSize) {
+    mCurrentStreamStart = mCurrentStreamEnd;
+    mCurrentStreamEnd += size;
+
+    if (mCurrentStreamEnd > mBufferSize) {
         // Allocate a new buffer and reset the stream offset.
-        mCurrentStreamOffset = 0;
+        mCurrentStreamStart = 0;
+        mCurrentStreamEnd = size;
 
         if (mBufferPoolEntry) { mContext.bufferPool->releaseBuffer(mBufferPoolEntry); }
         mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
@@ -106,7 +110,7 @@ void MetalBuffer::copyIntoStreamBuffer(void* src, size_t size) {
         mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
     }
 
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + mCurrentStreamOffset, src, size);
+    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + mCurrentStreamStart, src, size);
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
@@ -160,7 +164,7 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
             continue;
         }
         metalBuffers[b] = gpuBuffer;
-        metalOffsets[b] = offsets[b] + buffer->mCurrentStreamOffset;
+        metalOffsets[b] = offsets[b] + buffer->mCurrentStreamStart;
     }
 
     if (stages & Stage::VERTEX) {

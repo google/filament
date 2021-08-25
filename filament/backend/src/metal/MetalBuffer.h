@@ -62,7 +62,7 @@ public:
      * Returns the offset into the buffer returned by getGpuBufferForDraw. This is always 0 for
      * non-STREAM buffers.
      */
-    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamOffset; }
+    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamStart; }
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
@@ -85,7 +85,8 @@ private:
 
     BufferUsage mUsage;
     size_t mBufferSize = 0;
-    size_t mCurrentStreamOffset = 0;
+    size_t mCurrentStreamStart = 0;
+    size_t mCurrentStreamEnd = 0;
     const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
