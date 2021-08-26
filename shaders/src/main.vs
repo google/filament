@@ -95,14 +95,17 @@ void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
     gl_Position = getPosition();
-    // GL convention to inverted DX convention
-    gl_Position.z = gl_Position.z * -0.5 + 0.5;
 #else
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
 #if defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM)
     gl_Position = getClipSpaceTransform(material) * gl_Position;
+#endif
+
+#if defined(VERTEX_DOMAIN_DEVICE)
+    // GL convention to inverted DX convention (must happen after clipSpaceTransform)
+    gl_Position.z = gl_Position.z * -0.5 + 0.5;
 #endif
 
     // this must happen before we compensate for vulkan below
