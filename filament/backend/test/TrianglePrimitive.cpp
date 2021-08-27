@@ -35,23 +35,20 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
         bool allocateLargeBuffers) : mDriverApi(driverApi) {
     mVertexCount = allocateLargeBuffers ? 2048 : 3;
     mIndexCount = allocateLargeBuffers ? 4096 : 3;
-    AttributeArray attributes = {
-            Attribute {
-                    .offset = 0,
-                    .stride = sizeof(filament::math::float2),
-                    .buffer = 0,
-                    .type = ElementType::FLOAT2,
-                    .flags = 0
-            }
+
+    AttributeArray attributes;
+    attributes[POSITION] = Attribute {
+        .offset = 0,
+        .stride = sizeof(filament::math::float2),
+        .buffer = 0,
+        .type = ElementType::FLOAT2,
+        .flags = 0
     };
 
    // Backends do not (and should not) know the semantics of each vertex attribute, but they
    // need to know whether the vertex shader consumes them as integers or as floats.
    // NOTE: This flag needs to be set regardless of whether the attribute is actually declared.
    attributes[BONE_INDICES].flags |= Attribute::FLAG_INTEGER_TARGET;
-
-    AttributeBitset enabledAttributes;
-    enabledAttributes.set(VertexAttribute::POSITION);
 
     const size_t size = sizeof(math::float2) * 3;
     mBufferObject = mDriverApi.createBufferObject(size, BufferObjectBinding::VERTEX, BufferUsage::STATIC);
