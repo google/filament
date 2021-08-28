@@ -55,6 +55,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * The various transforms held by ColorGrading are applied in the following order:
  * <ul>
  * <li>Exposure</li>
+ * <li>Night adaptation</li>
  * <li>White balance</li>
  * <li>Channel mixer</li>
  * <li>Shadows/mid-tones/highlights</li>
@@ -73,6 +74,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * Here are the default color grading options:
  * <ul>
  * <li>Exposure: 0.0</li>
+ * <li>Night adaptation: 0.0</li>
  * <li>White balance: temperature <code>0.0</code>, and tint <code>0.0</code></li>
  * <li>Channel mixer: red <code>{1,0,0}</code>, green <code>{0,1,0}</code>, blue <code>{0,0,1}</code></li>
  * <li>Shadows/mid-tones/highlights: shadows <code>{1,1,1,0}</code>, mid-tones <code>{1,1,1,0}</code>,
