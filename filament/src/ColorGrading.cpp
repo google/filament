@@ -308,9 +308,9 @@ float3 scotopicAdaptation(float3 v, float nightAdaptation) noexcept {
     //     Ei(lambda): response curve of the corresponding receptor
     //     I(lambda): relative spectral power of the CIE illuminant D65
     //     Rj(lambda): spectral power of the corresponding Rec.709 color
-    constexpr float3 L{7.696847f, 18.424824f, 2.068096f};
-    constexpr float3 M{2.431137f, 18.697937f, 3.012463f};
-    constexpr float3 S{0.289117f, 1.401833f, 13.792292f};
+    constexpr float3 L{7.696847f, 18.424824f,  2.068096f};
+    constexpr float3 M{2.431137f, 18.697937f,  3.012463f};
+    constexpr float3 S{0.289117f,  1.401833f, 13.792292f};
     constexpr float3 R{0.466386f, 15.564362f, 10.059963f};
 
     constexpr mat3f LMS_to_RGB = inverse(transpose(mat3f{L, M, S}));
@@ -333,9 +333,9 @@ float3 scotopicAdaptation(float3 v, float nightAdaptation) noexcept {
 
     // The constants below follow Cao et al, using the KC pathway
     // Scaling constant
-    constexpr float K_  = 45.0f;
+    constexpr float K_ = 45.0f;
     // Static saturation
-    constexpr float S_  = 10.0f;
+    constexpr float S_ = 10.0f;
     // Surround strength of opponent signal
     constexpr float k3 = 0.6f;
     // Radio of responses for white light
