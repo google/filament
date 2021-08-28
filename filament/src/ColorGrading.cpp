@@ -323,7 +323,6 @@ inline float3 scotopicAdaptation(float3 v, float nightAdaptation) {
     // who propose to adapt those values based on retinal illuminance. We instead offer
     // artistic control at the end of the process
     // The vector below is {k1, k1, k2} in Kirk & O'Brien, but {k5, k5, k6} in Cao et al.
-
     constexpr float3 k{0.2f, 0.2f, 0.3f};
 
     // Transform from opponent space back to LMS
@@ -345,6 +344,9 @@ inline float3 scotopicAdaptation(float3 v, float nightAdaptation) {
     // Relative weight of L cones
     constexpr float p  = 0.6189f;
 
+    // Weighted cone response as described in Cao et al., section 3.3
+    // The approximately linear relation defined in the paper is represented here
+    // in matrix form to simplify the code
     constexpr mat3f weightedRodResponse = (K_ / S_) * mat3f{
        -(k3 + rw),       p * k3,          p * S_,
         1.0f + k3 * rw, (1.0f - p) * k3, (1.0f - p) * S_,
