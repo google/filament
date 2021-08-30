@@ -407,4 +407,4 @@ private:
 
 } // namespace utils
 
-#endif //TNT_UTILS_FIXEDCAPACITYVECTOR_H
+#endif // TNT_UTILS_FIXEDCAPACITYVECTOR_H

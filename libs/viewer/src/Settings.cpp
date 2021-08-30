@@ -310,6 +310,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->genericToneMapper);
         } else if (compare(tok, jsonChunk, "luminanceScaling") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->luminanceScaling);
+        } else if (compare(tok, jsonChunk, "gamutMapping") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->gamutMapping);
         } else if (compare(tok, jsonChunk, "exposure") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->exposure);
         } else if (compare(tok, jsonChunk, "temperature") == 0) {
@@ -1034,6 +1036,7 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
             .curves(settings.gamma, settings.midPoint, settings.scale)
             .toneMapper(toneMapper)
             .luminanceScaling(settings.luminanceScaling)
+            .gamutMapping(settings.gamutMapping)
             .build(*engine);
     delete toneMapper;
     return colorGrading;
@@ -1156,6 +1159,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
         << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
         << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
+        << "\"gamutMapping\": " << to_string(in.gamutMapping) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
@@ -1427,6 +1431,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
             toneMapping == rhs.toneMapping &&
             genericToneMapper == rhs.genericToneMapper &&
             luminanceScaling == rhs.luminanceScaling &&
+            gamutMapping == rhs.gamutMapping &&
             exposure == rhs.exposure &&
             temperature == rhs.temperature &&
             tint == rhs.tint &&

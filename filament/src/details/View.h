@@ -21,17 +21,18 @@
 
 #include "upcast.h"
 
-#include "FrameInfo.h"
+#include "Allocators.h"
 #include "FrameHistory.h"
+#include "FrameInfo.h"
+#include "Froxelizer.h"
+#include "PerViewUniforms.h"
+#include "ShadowMap.h"
+#include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
 
-#include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
-#include "details/Froxelizer.h"
 #include "details/RenderTarget.h"
-#include "details/ShadowMap.h"
-#include "details/ShadowMapManager.h"
 #include "details/Scene.h"
 
 #include <private/filament/EngineEnums.h>
@@ -43,8 +44,8 @@
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 #include <utils/StructureOfArrays.h>
-#include <utils/Slice.h>
 #include <utils/Range.h>
+#include <utils/Slice.h>
 
 #include <math/scalar.h>
 
@@ -71,12 +72,13 @@ class FScene;
 // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
 // (either camera or light).
 //
-// bits                               7 6 5 4 3 2 1 0
-// +------------------------------------------------+
-// VISIBLE_RENDERABLE                               X
-// VISIBLE_DIR_SHADOW_RENDERABLE                  X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_0             X
-// VISIBLE_SPOT_SHADOW_RENDERABLE_1           X
+//                                    1
+// bits                               5 ... 7 6 5 4 3 2 1 0
+// +------------------------------------------------------+
+// VISIBLE_RENDERABLE                                     X
+// VISIBLE_DIR_SHADOW_RENDERABLE                        X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_0                   X
+// VISIBLE_SPOT_SHADOW_RENDERABLE_1                 X
 // ...
 
 // A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
@@ -87,20 +89,20 @@ static constexpr size_t VISIBLE_RENDERABLE_BIT = 0u;
 static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT = 1u;
 static constexpr size_t VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(size_t n) { return n + 2; }
 
-static constexpr uint8_t VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
+static constexpr Culler::result_type VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE_N(size_t n) {
     return 1u << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(n);
 }
 
 // ORing of all the VISIBLE_SPOT_SHADOW_RENDERABLE bits
-static constexpr uint8_t VISIBLE_SPOT_SHADOW_RENDERABLE =
-        (0xFFu >> (sizeof(uint8_t) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
+static constexpr Culler::result_type VISIBLE_SPOT_SHADOW_RENDERABLE =
+        (0xFFu >> (sizeof(Culler::result_type) * 8u - CONFIG_MAX_SHADOW_CASTING_SPOTS)) << 2u;
 
-// Because we're using a uint8_t for the visibility mask, we're limited to 6 spot light shadows.
+// Because we're using a uint16_t for the visibility mask, we're limited to 14 spot light shadows.
 // (2 of the bits are used for visible renderables + directional light shadow casters).
-static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= 6,
-        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 6.");
+static_assert(CONFIG_MAX_SHADOW_CASTING_SPOTS <= sizeof(Culler::result_type) * 8 - 2,
+        "CONFIG_MAX_SHADOW_CASTING_SPOTS cannot be higher than 14.");
 
 // ------------------------------------------------------------------------------------------------
 
@@ -415,9 +417,7 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    auto& getViewUniforms() const { return mPerViewUb; }
     auto& getShadowUniforms() const { return mShadowUb; }
-    backend::SamplerGroup& getViewSamplers() const { return mPerViewSb; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -442,15 +442,15 @@ private:
 
     static void computeVisibilityMasks(
             uint8_t visibleLayers, uint8_t const* layers,
-            FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
-            size_t count, bool hasVsm);
+            FRenderableManager::Visibility const* visibility,
+            Culler::result_type* visibleMask,
+            size_t count);
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-        driver.bindUniformBuffer(BindingPoints::PER_VIEW, mPerViewUbh);
+        mPerViewUniforms.bind(driver);
         driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
         driver.bindUniformBuffer(BindingPoints::SHADOW, mShadowUbh);
         driver.bindUniformBuffer(BindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
-        driver.bindSamplers(BindingPoints::PER_VIEW, mPerViewSbh);
     }
 
     // Clean-up the whole history, free all resources. This is typically called when the View is
@@ -465,8 +465,6 @@ private:
             uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
-    backend::Handle<backend::HwBufferObject> mPerViewUbh;
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
@@ -504,7 +502,6 @@ private:
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
-    math::float2 mClipControl{};
 
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;
@@ -512,9 +509,8 @@ private:
 
     RenderQuality mRenderQuality;
 
-    mutable TypedUniformBuffer<PerViewUib> mPerViewUb;
+    mutable PerViewUniforms mPerViewUniforms;
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
-    mutable backend::SamplerGroup mPerViewSb;
 
     mutable FrameHistory mFrameHistory{};
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_LINUX_MUTEX_H
-#define UTILS_LINUX_MUTEX_H
+#ifndef TNT_UTILS_LINUX_MUTEX_H
+#define TNT_UTILS_LINUX_MUTEX_H
 
 #include <atomic>
 
@@ -61,4 +61,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_LINUX_MUTEX_H
+#endif // TNT_UTILS_LINUX_MUTEX_H

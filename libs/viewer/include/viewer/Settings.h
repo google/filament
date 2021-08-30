@@ -118,6 +118,7 @@ struct ColorGradingSettings {
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     GenericToneMapperSettings genericToneMapper;
     bool luminanceScaling = false;
+    bool gamutMapping = false;
     float exposure = 0.0f;
     float temperature = 0.0f;
     float tint = 0.0f;

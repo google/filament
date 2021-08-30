@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#ifndef TNT_FILAMENT_DETAILS_SKYBOX_H
+#define TNT_FILAMENT_DETAILS_SKYBOX_H
+
 #include "upcast.h"
 
 #include <filament/Skybox.h>
@@ -22,9 +25,6 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
-
-#ifndef TNT_FILAMENT_DETAILS_SKYBOX_H
-#define TNT_FILAMENT_DETAILS_SKYBOX_H
 
 namespace filament {
 

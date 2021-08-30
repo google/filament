@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
-#define TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
+#ifndef TNT_FILAMENT_BACKEND_PIXELBUFFERDESCRIPTOR_H
+#define TNT_FILAMENT_BACKEND_PIXELBUFFERDESCRIPTOR_H
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
@@ -213,4 +213,4 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
+#endif // TNT_FILAMENT_BACKEND_PIXELBUFFERDESCRIPTOR_H

@@ -19,28 +19,30 @@
 #include "MaterialParser.h"
 #include "ResourceAllocator.h"
 
-#include "backend/DriverEnums.h"
+#include "DFG.h"
+#include "RenderPrimitive.h"
+
 #include "details/BufferObject.h"
-#include "details/DFG.h"
-#include "details/VertexBuffer.h"
-#include "details/Fence.h"
 #include "details/Camera.h"
+#include "details/Fence.h"
 #include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
 #include "details/Renderer.h"
-#include "details/RenderPrimitive.h"
 #include "details/Scene.h"
-#include "details/Skybox.h"
 #include "details/SkinningBuffer.h"
+#include "details/Skybox.h"
 #include "details/Stream.h"
 #include "details/SwapChain.h"
 #include "details/Texture.h"
+#include "details/VertexBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/SibGenerator.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Log.h>

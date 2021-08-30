@@ -60,18 +60,7 @@ You should then see the following output when running a sample with the Metal ba
 
 To capture Metal frames from within gltf_viewer:
 
-### 1. Update deployment target
-
-`CMAKE_OSX_DEPLOYMENT_TARGET` in `CMakeCache.txt` must be set to at least 10.15. You can manually
-edit it or run:
-
-```
-cmake . -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.15
-```
-
-inside your CMake build directory (the build.sh script only sets it to 10.14).
-
-### 2. Create an Info.plist file
+### 1. Create an Info.plist file
 
 Create an `Info.plist` file in the same directory as `gltf_viewer` (`cmake/samples`). Set its
 contents to:
@@ -87,7 +76,7 @@ contents to:
 </plist>
 ```
 
-### 3. Capture a frame
+### 2. Capture a frame
 
 Run gltf_viewer as normal, and hit the "Capture frame" button under the Debug menu. The captured
 frame will be saved to `filament.gputrace` in the current working directory. This file can then be

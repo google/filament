@@ -3,7 +3,16 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.2 (currently main branch)
+## v1.12.3 (currently main branch)
+
+## v1.12.2
+
+- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New Api**].
+- engine: Fix typo causing ShadowOptions::shadowFar to not work properly.
+- engine: Fix, CSM glitch when using shadowMultiplier materials.
+- engine: Improve precision when computing camera projection.
+- engine: Increase the number of supported spot shadows to 14 (from 6).
+- Metal: Add texture swizzling support for external textures.
 
 ## v1.12.1
 

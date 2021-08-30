@@ -55,9 +55,9 @@ constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // The maximum number of spot lights in a scene that can cast shadows.
-// There is currently a limit to 6 spot shadow due to how we store the culling result
+// There is currently a limit to 14 spot shadow due to how we store the culling result
 // (see View.h).
-constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 6;
+constexpr size_t CONFIG_MAX_SHADOW_CASTING_SPOTS = 14;
 
 // The maximum number of shadow cascades that can be used for directional lights.
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;

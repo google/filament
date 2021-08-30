@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+#include "FrameSkipper.h"
+
+#include "details/Engine.h"
+
 #include <utils/Log.h>
 #include <utils/debug.h>
-
-#include "details/FrameSkipper.h"
-#include "details/Engine.h"
 
 namespace filament {
 

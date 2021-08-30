@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_COLOR_SPACE_H
-#define TNT_FILAMENT_COLOR_SPACE_H
+#ifndef TNT_FILAMENT_COLORSPACE_H
+#define TNT_FILAMENT_COLORSPACE_H
 
 #include <utils/compiler.h>
 
@@ -53,15 +53,15 @@ constexpr mat3f sRGB_to_XYZ{
 };
 
 constexpr mat3f REC2020_to_XYZ{
-     0.6369580f,  0.2627002f,  0.0000000f,
-     0.1446169f,  0.6779981f,  0.0280727f,
-     0.1688810f,  0.0593017f,  1.0609851f
+     0.6369530f,  0.2626983f,  0.0000000f,
+     0.1446169f,  0.6780088f,  0.0280731f,
+     0.1688558f,  0.0592929f,  1.0608272f
 };
 
 constexpr mat3f XYZ_to_REC2020{
-     1.7166512f, -0.6666844f,  0.0176399f,
-    -0.3556708f,  1.6164812f, -0.0427706f,
-    -0.2533663f,  0.0157685f,  0.9421031f
+    1.7166634f,  -0.6666738f,  0.0176425f,
+    -0.3556733f,  1.6164557f, -0.0427770f,
+    -0.2533681f,  0.0157683f,  0.9422433f
 };
 
 constexpr mat3f XYZ_to_CIECAT16{
@@ -156,6 +156,10 @@ constexpr mat3f sRGB_to_LMS_CAT16 = XYZ_to_CIECAT16 * sRGB_to_XYZ;
 
 constexpr mat3f LMS_CAT16_to_sRGB = XYZ_to_sRGB * CIECAT16_to_XYZ;
 
+constexpr mat3f REC2020_to_LMS_CAT16 = XYZ_to_CIECAT16 * REC2020_to_XYZ;
+
+constexpr mat3f LMS_CAT16_to_REC2020 = XYZ_to_REC2020 * CIECAT16_to_XYZ;
+
 constexpr mat3f REC2020_to_AP0 = AP1_to_AP0 * XYZ_to_AP1 * REC2020_to_XYZ;
 
 constexpr mat3f AP1_to_REC2020 = XYZ_to_REC2020 * AP1_to_XYZ;
@@ -172,16 +176,16 @@ constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 constexpr float3 ILLUMINANT_D65_LMS_CAT16{0.975533f, 1.016483f, 1.084837f};
 
 // RGB to luminance coefficients for Rec.2020, from REC2020_to_XYZ
-constexpr float3 LUMA_REC2020{0.2627002f, 0.6779981f, 0.0593017f};
+constexpr float3 LUMINANCE_REC2020{0.2627002f, 0.6779981f, 0.0593017f};
 
 // RGB to luminance coefficients for ACEScg (AP1), from AP1_to_XYZ
-constexpr float3 LUMA_AP1{0.272229f, 0.674082f, 0.0536895f};
+constexpr float3 LUMINANCE_AP1{0.272229f, 0.674082f, 0.0536895f};
 
 // RGB to luminance coefficients for Rec.709, from sRGB_to_XYZ
-constexpr float3 LUMA_REC709{0.2126730f, 0.7151520f, 0.0721750f};
+constexpr float3 LUMINANCE_REC709{0.2126730f, 0.7151520f, 0.0721750f};
 
 // RGB to luminance coefficients for Rec.709 with HK-like weighting
-constexpr float3 LUMA_HK_REC709{0.13913043f, 0.73043478f, 0.13043478f};
+constexpr float3 LUMINANCE_HK_REC709{0.13913043f, 0.73043478f, 0.13043478f};
 
 constexpr float MIDDLE_GRAY_ACEScg = 0.18f;
 
@@ -328,4 +332,4 @@ float3 gamutMapping_sRGB(float3 rgb) noexcept;
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_COLOR_SPACE_H
+#endif // TNT_FILAMENT_COLORSPACE_H

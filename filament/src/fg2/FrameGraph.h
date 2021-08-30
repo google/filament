@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_FG2_FRAMEGRAPH_H
 #define TNT_FILAMENT_FG2_FRAMEGRAPH_H
 
+#include "Allocators.h"
+
 #include "fg2/Blackboard.h"
 #include "fg2/FrameGraphId.h"
 #include "fg2/FrameGraphPass.h"
@@ -26,8 +28,6 @@
 #include "fg2/details/DependencyGraph.h"
 #include "fg2/details/Resource.h"
 #include "fg2/details/Utilities.h"
-
-#include "details/Allocators.h"
 
 #include "private/backend/DriverApiForward.h"
 

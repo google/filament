@@ -94,7 +94,7 @@ vec2 unpackHalf2x16(highp uint v) {
 }
 
 )"};
-                // a good point for insertion is just before the first occurence of an uniform block
+                // a good point for insertion is just before the first occurrence of an uniform block
                 auto pos = temp.find("layout(std140)");
                 if (pos != std::string_view::npos) {
                     temp.insert(pos, unpackHalf2x16);

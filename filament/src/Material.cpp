@@ -16,14 +16,12 @@
 
 #include "details/Material.h"
 
-#include "details/Engine.h"
-#include "details/DFG.h"
+#include "DFG.h"
+#include "MaterialParser.h"
 
-#include "private/backend/Program.h"
+#include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
-
-#include <backend/DriverEnums.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibStructs.h>
@@ -32,7 +30,9 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
-#include <MaterialParser.h>
+#include "private/backend/Program.h"
+
+#include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/Panic.h>

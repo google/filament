@@ -45,10 +45,14 @@ using namespace math;
  * SOFTWARE.
  */
 
+// TODO: Replace compute_max_saturation() with solution from
+//       https://simonstechblog.blogspot.com/2021/06/implementing-gamut-mapping.html to
+//       target arbitrary output gamuts. The solution below works only for sRGB/Rec.709
+
 // Finds the maximum saturation possible for a given hue that fits in sRGB
 // Saturation here is defined as S = C/L
 // a and b must be normalized so a^2 + b^2 == 1
-float compute_max_saturation(float a, float b) noexcept {
+static float compute_max_saturation(float a, float b) noexcept {
     // Max saturation will be when one of r, g or b goes below zero.
 
     // Select different coefficients depending on which component goes below zero first
@@ -127,13 +131,13 @@ float compute_max_saturation(float a, float b) noexcept {
 
 // finds L_cusp and C_cusp for a given hue
 // a and b must be normalized so a^2 + b^2 == 1
-float2 find_cusp(float a, float b) noexcept {
+static float2 find_cusp(float a, float b) noexcept {
     // First, find the maximum saturation (saturation S = C/L)
     float S_cusp = compute_max_saturation(a, b);
 
     // Convert to linear sRGB to find the first point where at least one of r,g or b >= 1:
     float3 rgb_at_max = OkLab_to_sRGB({1.0f, S_cusp * a, S_cusp * b});
-    float L_cusp = std::cbrt(1.f / max(max(rgb_at_max.r, rgb_at_max.g), rgb_at_max.b));
+    float L_cusp = std::cbrt(1.0f / max(rgb_at_max));
     float C_cusp = L_cusp * S_cusp;
 
     return {L_cusp, C_cusp};
@@ -143,11 +147,11 @@ float2 find_cusp(float a, float b) noexcept {
 // L = L0 * (1 - t) + t * L1;
 // C = t * C1;
 // a and b must be normalized so a^2 + b^2 == 1
-float find_gamut_intersection(float a, float b, float L1, float C1, float L0) noexcept {
+static float find_gamut_intersection(float a, float b, float L1, float C1, float L0) noexcept {
     // Find the cusp of the gamut triangle
     float2 cusp = find_cusp(a, b);
 
-    // Find the intersection for upper and lower half seprately
+    // Find the intersection for upper and lower half separately
     float t;
     if (((L1 - L0) * cusp.y - (cusp.x - L0) * C1) <= 0.f) {
         // Lower half
@@ -231,8 +235,15 @@ constexpr float sgn(float x) noexcept {
     return (float) (0.f < x) - (float) (x < 0.f);
 }
 
-inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb, float alpha = 0.05f) noexcept {
-    if (all(lessThanEqual(rgb, float3{1.0f})) && all(greaterThanEqual(rgb, float3{0.0f}))) {
+// Adaptive L0 = 0.5, with alpha set to 0.05 by default
+// The threshold parameters defines a flexible range above 1.0 and below 0.0 where out-of-gamut
+// values are still considered in-gamut. This helps control for inaccuracies in the previous
+// color grading steps that may slightly deviate from in-gamut values when they shouldn't.
+inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb,
+        float alpha = 0.05f, float threshold = 0.03f) noexcept {
+
+    if (all(lessThanEqual(rgb, float3{1.0f + threshold})) &&
+            all(greaterThanEqual(rgb, float3{-threshold}))) {
         return rgb;
     }
 
@@ -246,7 +257,7 @@ inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb, float alpha = 0.05f) noexce
 
     float Ld = L - 0.5f;
     float e1 = 0.5f + std::abs(Ld) + alpha * C;
-    float L0 = 0.5f * (1.f + sgn(Ld) * (e1 - std::sqrt(e1 * e1 - 2.f * std::abs(Ld))));
+    float L0 = 0.5f * (1.0f + sgn(Ld) * (e1 - std::sqrt(e1 * e1 - 2.0f * std::abs(Ld))));
 
     float t = find_gamut_intersection(a_, b_, L, C, L0);
     float L_clipped = L0 * (1.f - t) + t * L;
@@ -256,7 +267,7 @@ inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb, float alpha = 0.05f) noexce
 }
 
 float3 gamutMapping_sRGB(float3 rgb) noexcept {
-    return gamut_clip_adaptive_L0_0_5(rgb, 0.5f);
+    return gamut_clip_adaptive_L0_0_5(rgb);
 }
 
 /*

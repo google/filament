@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DEBUG_H
-#define TNT_FILAMENT_DEBUG_H
+#ifndef TNT_FILAMENT_DEBUGREGISTRY_H
+#define TNT_FILAMENT_DEBUGREGISTRY_H
 
 #include <filament/FilamentAPI.h>
 
@@ -128,4 +128,4 @@ public:
 
 } // namespace filament
 
-#endif /* TNT_FILAMENT_DEBUG_H */
+#endif /* TNT_FILAMENT_DEBUGREGISTRY_H */

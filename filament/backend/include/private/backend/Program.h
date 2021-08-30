@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_PROGRAM_H
-#define TNT_FILAMENT_DRIVER_PROGRAM_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
@@ -115,4 +115,4 @@ private:
 } // namespace backend;
 } // namespace filament;
 
-#endif // TNT_FILAMENT_DRIVER_PROGRAM_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H

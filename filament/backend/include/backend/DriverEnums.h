@@ -16,8 +16,8 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_DRIVERENUMS_H
-#define TNT_FILAMENT_DRIVER_DRIVERENUMS_H
+#ifndef TNT_FILAMENT_BACKEND_DRIVERENUMS_H
+#define TNT_FILAMENT_BACKEND_DRIVERENUMS_H
 
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
@@ -926,4 +926,4 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferF
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
 
-#endif // TNT_FILAMENT_DRIVER_DRIVERENUMS_H
+#endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H

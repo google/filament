@@ -383,7 +383,7 @@ public:
     //! Returns the camera's field of view in degrees
     float getFieldOfViewInDegrees(Fov direction) const noexcept;
 
-    //! Returns a Frustum object in world space
+    //! Returns the camera's culling Frustum in world space
     class Frustum getFrustum() const noexcept;
 
     //! Returns the entity representing this camera

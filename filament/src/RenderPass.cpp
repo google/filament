@@ -16,14 +16,14 @@
 
 #include "RenderPass.h"
 
+#include "RenderPrimitive.h"
+#include "ShadowMap.h"
+
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
-#include "details/RenderPrimitive.h"
-#include "details/ShadowMap.h"
-#include "details/View.h"
-
 // NOTE: We only need Renderer.h here because the definition of some FRenderer methods are here
 #include "details/Renderer.h"
+#include "details/View.h"
 
 #include <private/filament/UibStructs.h>
 
@@ -275,7 +275,6 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     const bool depthFilterAlphaMaskedObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
-    auto const* const UTILS_RESTRICT soaReversedWinding = soa.data<FScene::REVERSED_WINDING_ORDER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
@@ -347,7 +346,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const uint32_t distanceBits = reinterpret_cast<uint32_t&>(distance);
 
         // calculate the per-primitive face winding order inversion
-        const bool inverseFrontFaces = viewInverseFrontFaces ^ soaReversedWinding[i];
+        const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;

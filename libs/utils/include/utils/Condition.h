@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_CONDITION_H
-#define UTILS_CONDITION_H
+#ifndef TNT_UTILS_CONDITION_H
+#define TNT_UTILS_CONDITION_H
 
 #if defined(__linux__) && !defined(__SANITIZE_THREAD__)
 #include <utils/linux/Condition.h>
@@ -23,4 +23,4 @@
 #include <utils/generic/Condition.h>
 #endif
 
-#endif // UTILS_CONDITION_H
+#endif // TNT_UTILS_CONDITION_H

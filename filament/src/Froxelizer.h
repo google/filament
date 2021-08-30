@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_FROXEL_H
-#define TNT_FILAMENT_DETAILS_FROXEL_H
+#ifndef TNT_FILAMENT_DETAILS_FROXELIZER_H
+#define TNT_FILAMENT_DETAILS_FROXELIZER_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
+
 #include "details/Scene.h"
 #include "details/Engine.h"
 
@@ -261,4 +262,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_FROXEL_H
+#endif // TNT_FILAMENT_DETAILS_FROXELIZER_H

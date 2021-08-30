@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_RENDERABLECOMPONENTMANAGER_H
-#define TNT_FILAMENT_DETAILS_RENDERABLECOMPONENTMANAGER_H
+#ifndef TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H
+#define TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H
 
 #include "upcast.h"
 
@@ -57,6 +57,7 @@ public:
         bool skinning                   : 1;
         bool morphing                   : 1;
         bool screenSpaceContactShadows  : 1;
+        bool reversedWindingOrder       : 1;
     };
 
     static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
@@ -359,4 +360,4 @@ size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) c
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_RENDERABLECOMPONENTMANAGER_H
+#endif // TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_COUNTDOWNLATCH_H_
-#define UTILS_COUNTDOWNLATCH_H_
+#ifndef TNT_UTILS_COUNTDOWNLATCH_H
+#define TNT_UTILS_COUNTDOWNLATCH_H
 
 #include <stddef.h>
 
@@ -88,4 +88,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_COUNTDOWNLATCH_H_
+#endif // TNT_UTILS_COUNTDOWNLATCH_H

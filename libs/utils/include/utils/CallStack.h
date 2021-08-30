@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_CALLSTACK_H_
-#define UTILS_CALLSTACK_H_
+#ifndef UTILS_CALLSTACK_H
+#define UTILS_CALLSTACK_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -124,4 +124,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_CALLSTACK_H_
+#endif // UTILS_CALLSTACK_H

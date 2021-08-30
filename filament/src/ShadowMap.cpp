@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#include "details/ShadowMap.h"
+#include "ShadowMap.h"
+
+#include "RenderPass.h"
 
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
-#include "details/View.h"
-
-#include "RenderPass.h"
 
 #include <backend/DriverEnums.h>
 
@@ -69,20 +68,12 @@ ShadowMap::~ShadowMap() {
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
 }
 
-void ShadowMap::render(DriverApi& driver, FView::Range const& range, 
-        RenderPass* const pass, FView& view) noexcept {
-    FEngine& engine = mEngine;
-
-    filament::CameraInfo cameraInfo(getCamera());
-
-    FScene& scene = *view.getScene();
-    FScene::RenderableSoa& renderableData = scene.getRenderableData();
-
+void ShadowMap::render(FScene const& scene, utils::Range<uint32_t> range,
+        FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
+        RenderPass* const pass) noexcept {
     pass->setCamera(cameraInfo);
-    pass->setGeometry(renderableData, range, scene.getRenderableUBO());
-    // updatePrimitivesLod must be run before appendCommands.
-    view.updatePrimitivesLod(engine, cameraInfo, renderableData, range);
-
+    pass->setVisibilityMask(visibilityMask);
+    pass->setGeometry(scene.getRenderableData(), range, scene.getRenderableUBO());
     pass->overridePolygonOffset(&mPolygonOffset);
     pass->appendCommands(RenderPass::SHADOW);
     pass->sortCommands();
@@ -148,29 +139,28 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
     // Note: we keep the polygon offset even with VSM as it seems to help.
 
     // Adjust the camera's projection for the light's shadowFar
-    mat4f projection(camera.cullingProjection);
+    mat4f cullingProjection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {
         float n = camera.zn;
         float f = params.options.shadowFar;
-        if (std::abs(projection[2].w) <= std::numeric_limits<float>::epsilon()) {
+        if (std::abs(cullingProjection[2].w) > std::numeric_limits<float>::epsilon()) {
             // perspective projection
-            projection[2].z =     (f + n) / (n - f);
-            projection[3].z = (2 * f * n) / (n - f);
+            cullingProjection[2].z = (f + n) / (n - f);
+            cullingProjection[3].z = (2 * f * n) / (n - f);
         } else {
             // ortho projection
-            projection[2].z =    2.0f / (n - f);
-            projection[3].z = (f + n) / (n - f);
+            cullingProjection[2].z = 2.0f / (n - f);
+            cullingProjection[3].z = (f + n) / (n - f);
         }
     }
 
-    const CameraInfo cameraInfo = {
-            .projection = projection,
+    const ShadowCameraInfo cameraInfo = {
+            .projection = cullingProjection,
             .model = camera.model,
             .view = camera.view,
             .worldOrigin = camera.worldOrigin,
             .zn = camera.zn,
-            .zf = camera.zf,
-            .frustum = Frustum(projection * camera.view)
+            .zf = camera.zf
     };
 
     // debugging...
@@ -203,7 +193,7 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
 }
 
 void ShadowMap::computeShadowCameraDirectional(
-        float3 const& dir, CameraInfo const& camera,
+        float3 const& dir, ShadowCameraInfo const& camera,
         FLightManager::ShadowParams const& params,
         SceneInfo cascadeParams) noexcept {
 
@@ -462,7 +452,7 @@ void ShadowMap::computeShadowCameraDirectional(
 }
 
 void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
-        float outerConeAngle, float radius, CameraInfo const& camera,
+        float outerConeAngle, float radius, ShadowCameraInfo const& camera,
         FLightManager::ShadowParams const& params) noexcept {
 
     // TODO: correctly compute if this spot light has any visible shadows.
@@ -516,7 +506,7 @@ void ShadowMap::computeShadowCameraSpot(math::float3 const& position, math::floa
 }
 
 mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
-        CameraInfo const& camera, FLightManager::ShadowParams const& params,
+        ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
         mat4f const& LMpMv,
         FrustumBoxIntersection const& wsShadowReceiversVolume, size_t vertexCount,
         float3 const& dir) {
