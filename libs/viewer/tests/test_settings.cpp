@@ -47,6 +47,7 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "luminanceScaling": false,
             "gamutMapping": false,
             "exposure": 0,
+            "nightAdaptation": 0,
             "temperature": 0,
             "tint": 0,
             "outRed": [1.0, 0.0, 0.0],

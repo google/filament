@@ -134,9 +134,10 @@ steps:
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: ACES, filmic, etc.
-- Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
-  contrast, saturation, etc.
+- Multiple tone mappers: generic (customizable), ACES, filmic, etc.
+- Color and tone management: luminance scaling, gamut mapping
+- Color grading: exposure, night adaptation, white balance, channel mixer,
+  shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
 - TAA, FXAA, MSAA
 - Screen-space lens flares
 

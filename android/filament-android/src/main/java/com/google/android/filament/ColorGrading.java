@@ -55,6 +55,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * The various transforms held by ColorGrading are applied in the following order:
  * <ul>
  * <li>Exposure</li>
+ * <li>Night adaptation</li>
  * <li>White balance</li>
  * <li>Channel mixer</li>
  * <li>Shadows/mid-tones/highlights</li>
@@ -73,6 +74,7 @@ import static com.google.android.filament.Asserts.assertFloat4In;
  * Here are the default color grading options:
  * <ul>
  * <li>Exposure: 0.0</li>
+ * <li>Night adaptation: 0.0</li>
  * <li>White balance: temperature <code>0.0</code>, and tint <code>0.0</code></li>
  * <li>Channel mixer: red <code>{1,0,0}</code>, green <code>{0,1,0}</code>, blue <code>{0,0,1}</code></li>
  * <li>Shadows/mid-tones/highlights: shadows <code>{1,1,1,0}</code>, mid-tones <code>{1,1,1,0}</code>,
@@ -244,6 +246,22 @@ public class ColorGrading {
          */
         public Builder exposure(float exposure) {
             nBuilderExposure(mNativeBuilder, exposure);
+            return this;
+        }
+
+        /**
+         * Controls the amount of night adaptation to replicate a more natural representation of
+         * low-light conditions as perceived by the human vision system. In low-light conditions,
+         * peak luminance sensitivity of the eye shifts toward the blue end of the color spectrum:
+         * darker tones appear brighter, reducing contrast, and colors are blue shifted (the darker
+         * the more intense the effect).
+         *
+         * @param adaptation Amount of adaptation, between 0 (no adaptation) and 1 (full adaptation).
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder nightAdaptation(float adaptation) {
+            nBuilderNightAdaptation(mNativeBuilder, adaptation);
             return this;
         }
 
@@ -544,6 +562,7 @@ public class ColorGrading {
     private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);
     private static native void nBuilderGamutMapping(long nativeBuilder, boolean gamutMapping);
     private static native void nBuilderExposure(long nativeBuilder, float exposure);
+    private static native void nBuilderNightAdaptation(long nativeBuilder, float adaptation);
     private static native void nBuilderWhiteBalance(long nativeBuilder, float temperature, float tint);
     private static native void nBuilderChannelMixer(long nativeBuilder, float[] outRed, float[] outGreen, float[] outBlue);
     private static native void nBuilderShadowsMidtonesHighlights(long nativeBuilder, float[] shadows, float[] midtones, float[] highlights, float[] ranges);

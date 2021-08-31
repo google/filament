@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.4 (currently main branch)
 
+- engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
+  that simulates color and brightness shits in human vision in low-light conditions.
+
 ## v1.12.3
 
 - engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
@@ -22,8 +25,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: `double` precision translation support in TransformManager. Disabled by default.
   Augment model (and view) matrix on `Camera` to accept double precision matrices. When enabled,
-  double precision translations allow filament to handle a very large world space.
-  [**New API**].
+  double precision translations allow filament to handle a very large world space [**New API**].
 - engine: Fix, Views with custom render targets are now blendable.
 
 ## v1.12.0

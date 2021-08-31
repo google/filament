@@ -214,6 +214,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         ImGui::Checkbox("Gamut mapping", &colorGrading.gamutMapping);
 
         ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
+        ImGui::SliderFloat("Night adaptation", &colorGrading.nightAdaptation, 0.0f, 1.0f);
 
         if (ImGui::CollapsingHeader("White balance")) {
             int temperature = colorGrading.temperature * 100.0f;

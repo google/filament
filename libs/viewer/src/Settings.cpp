@@ -314,6 +314,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->gamutMapping);
         } else if (compare(tok, jsonChunk, "exposure") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->exposure);
+        } else if (compare(tok, jsonChunk, "nightAdaptation") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->nightAdaptation);
         } else if (compare(tok, jsonChunk, "temperature") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->temperature);
         } else if (compare(tok, jsonChunk, "tint") == 0) {
@@ -1021,6 +1023,7 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
     ColorGrading *colorGrading = ColorGrading::Builder()
             .quality(settings.quality)
             .exposure(settings.exposure)
+            .nightAdaptation(settings.nightAdaptation)
             .whiteBalance(settings.temperature, settings.tint)
             .channelMixer(settings.outRed, settings.outGreen, settings.outBlue)
             .shadowsMidtonesHighlights(
@@ -1161,6 +1164,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
         << "\"gamutMapping\": " << to_string(in.gamutMapping) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
+        << "\"nightAdaptation\": " << (in.nightAdaptation) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
         << "\"outRed\": " << (in.outRed) << ",\n"
@@ -1425,7 +1429,7 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 228, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 232, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
@@ -1433,6 +1437,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
             luminanceScaling == rhs.luminanceScaling &&
             gamutMapping == rhs.gamutMapping &&
             exposure == rhs.exposure &&
+            nightAdaptation == rhs.nightAdaptation &&
             temperature == rhs.temperature &&
             tint == rhs.tint &&
             outRed == rhs.outRed &&

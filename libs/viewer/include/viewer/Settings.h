@@ -120,6 +120,7 @@ struct ColorGradingSettings {
     bool luminanceScaling = false;
     bool gamutMapping = false;
     float exposure = 0.0f;
+    float nightAdaptation = 0.0f;
     float temperature = 0.0f;
     float tint = 0.0f;
     math::float3 outRed{1.0f, 0.0f, 0.0f};
