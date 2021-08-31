@@ -504,11 +504,9 @@ const double3 REC_709_REFLECTANCE[REC_709_REFLECTANCE_COUNT] = { // NOLINT
         {0.976087481, 0.012684050, 0.011228468}
 };
 
-// CIE "physiologically-relevant" luminous efficiency functions consistent with the
-// Stockman & Sharpe cone fundamentals; 2-deg at 1nm interval from 390nm to 790nm
-//
-// Data source:
-//     http://www.cvrl.org/lumindex.htm
+// Cone (LMS) data from: Stockman & Sharpe (2000) / 2-deg fundamentals based on the
+// Stiles & Burch 10-deg CMFs (adjusted to 2-deg). Data source: http://www.cvrl.org/cones.htm
+// Rod (R)  data from: CIE (1951) Scotopic V'(λ). Data source: http://www.cvrl.org/lumindex.htm
 const size_t CIE_LMSR_COUNT = 401;
 const float4 CIE_LMSR[CIE_LMSR_COUNT] = { // NOLINT
         {4.15003E-04, 3.68349E-04, 9.54729E-03, 0.0022090000},
