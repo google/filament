@@ -49,7 +49,7 @@ a mobile-friendly page with a full-screen canvas.</p>
 </ul>
 <p>Go ahead and create <code>triangle.js</code> with the following content.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">class</span> App {
-  constructor() {
+  <span style="color: #008000; font-weight: bold">constructor</span>() {
     <span style="color: #408080; font-style: italic">// TODO: create entities</span>
     <span style="color: #008000; font-weight: bold">this</span>.render <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
     <span style="color: #008000; font-weight: bold">this</span>.resize <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);
@@ -65,7 +65,7 @@ a mobile-friendly page with a full-screen canvas.</p>
   }
 }
 
-Filament.init([<span style="color: #BA2121">&#39;triangle.filamat&#39;</span>], () =&gt; { <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> App() } );
+Filament.init([<span style="color: #BA2121">&#39;triangle.filamat&#39;</span>], () =&gt; { <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> App() } );
 </pre></div>
 
 <p>The two calls to <code>bind()</code> allow us to pass instance methods as callbacks for animation and resize
@@ -114,13 +114,13 @@ calls.</p>
 <h2>Construct typed arrays</h2>
 <p>Next we'll create two typed arrays: a positions array with XY coordinates for each vertex, and a
 colors array with a 32-bit word for each vertex.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> TRIANGLE_POSITIONS <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Float32Array([
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span> TRIANGLE_POSITIONS <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> <span style="color: #008000">Float32Array</span>([
     <span style="color: #666666">1</span>, <span style="color: #666666">0</span>,
     <span style="color: #008000">Math</span>.cos(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">2</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>), <span style="color: #008000">Math</span>.sin(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">2</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>),
     <span style="color: #008000">Math</span>.cos(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">4</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>), <span style="color: #008000">Math</span>.sin(<span style="color: #008000">Math</span>.PI <span style="color: #666666">*</span> <span style="color: #666666">4</span> <span style="color: #666666">/</span> <span style="color: #666666">3</span>),
 ]);
 
-<span style="color: #008000; font-weight: bold">const</span> TRIANGLE_COLORS <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Uint32Array([<span style="color: #666666">0xffff0000</span>, <span style="color: #666666">0xff00ff00</span>, <span style="color: #666666">0xff0000ff</span>]);
+<span style="color: #008000; font-weight: bold">const</span> TRIANGLE_COLORS <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> <span style="color: #008000">Uint32Array</span>([<span style="color: #666666">0xffff0000</span>, <span style="color: #666666">0xff00ff00</span>, <span style="color: #666666">0xff0000ff</span>]);
 </pre></div>
 
 <p>Next we'll use the positions and colors buffers to create a single <code>VertexBuffer</code> object.</p>
@@ -154,7 +154,7 @@ the integers 0,1,2.</p>
     .bufferType(Filament.IndexBuffer$IndexType.USHORT)
     .build(engine);
 
-<span style="color: #008000; font-weight: bold">this</span>.ib.setBuffer(engine, <span style="color: #008000; font-weight: bold">new</span> Uint16Array([<span style="color: #666666">0</span>, <span style="color: #666666">1</span>, <span style="color: #666666">2</span>]));
+<span style="color: #008000; font-weight: bold">this</span>.ib.setBuffer(engine, <span style="color: #AA22FF; font-weight: bold">new</span> <span style="color: #008000">Uint16Array</span>([<span style="color: #666666">0</span>, <span style="color: #666666">1</span>, <span style="color: #666666">2</span>]));
 </pre></div>
 
 <p>Note that constructing an index buffer is similar to constructing a vertex buffer, but it only has
@@ -211,7 +211,7 @@ code to the top of the render method.</p>
 <span style="color: #008000; font-weight: bold">const</span> tcm <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.getTransformManager();
 <span style="color: #008000; font-weight: bold">const</span> inst <span style="color: #666666">=</span> tcm.getInstance(<span style="color: #008000; font-weight: bold">this</span>.triangle);
 tcm.setTransform(inst, transform);
-inst.<span style="color: #008000; font-weight: bold">delete</span>();
+inst.<span style="color: #AA22FF; font-weight: bold">delete</span>();
 
 <span style="color: #408080; font-style: italic">// Render the frame.</span>
 <span style="color: #008000; font-weight: bold">this</span>.renderer.render(<span style="color: #008000; font-weight: bold">this</span>.swapChain, <span style="color: #008000; font-weight: bold">this</span>.view);
