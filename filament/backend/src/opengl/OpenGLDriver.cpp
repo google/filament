@@ -906,7 +906,7 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 glGenRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
             renderBufferStorage(t->gl.sidecarRenderBufferMS,
-                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
+                    t->gl.internalFormat, t->width, t->height, rt->gl.samples);
             t->gl.sidecarSamples = rt->gl.samples;
         }
 
