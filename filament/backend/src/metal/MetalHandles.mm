@@ -784,7 +784,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
             auto& sidecar = color[i].metalTexture->msaaSidecar;
             if (!sidecar) {
                 sidecar = createMultisampledTexture(context->device, color[i].getPixelFormat(),
-                        width, height, samples);
+                        color[i].metalTexture->width, color[i].metalTexture->height, samples);
             }
         }
     }
@@ -802,7 +802,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
                 sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
-                        width, height, samples);
+                        depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
     }
