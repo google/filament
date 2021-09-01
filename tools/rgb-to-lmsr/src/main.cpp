@@ -1730,14 +1730,14 @@ int main(int argc, char* argv[]) {
 
     handleArguments(argc, argv);
 
-    double norm = 1.0;
+    double norm = CIE_LMSR_COUNT;
     if (g_normalize) {
         norm = 0.0;
         for (size_t i = 0; i < CIE_D65_COUNT; i++) {
-            norm += CIE_Y[i] * CIE_D65[i] / double(CIE_D65_COUNT);
+            norm += CIE_Y[i] * CIE_D65[i];
         }
     }
-    norm = 1.0 / (norm * CIE_LMSR_COUNT);
+    norm = 1.0 / norm;
 
     double3 l{0.0};
     double3 m{0.0};
