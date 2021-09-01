@@ -39,8 +39,7 @@ using namespace metal;
 
 struct VertexOut
 {
-    float4 vertexPosition [[position]];
-    float2 uv;
+    float4 position [[position]];
 };
 
 struct FragmentOut
@@ -56,17 +55,19 @@ struct FragmentOut
 
 vertex VertexOut
 blitterVertex(uint vid [[vertex_id]],
-              constant float4* vertices [[buffer(0)]])
+              constant float2* vertices [[buffer(0)]])
 {
     VertexOut out = {};
-    out.vertexPosition = float4(vertices[vid].xy, 0.0, 1.0);
-    out.uv = vertices[vid].zw;
+    out.position = float4(vertices[vid], 0.0, 1.0);
     return out;
 }
 
 struct FragmentArgs {
     uint8_t lod;
     uint32_t depthPlane;
+    float2 scale;
+    float2 dstOffset;
+    float2 srcOffset;
 };
 
 fragment FragmentOut
@@ -77,9 +78,9 @@ blitterFrag(VertexOut in [[stage_in]],
 #ifdef MSAA_COLOR_SOURCE
             texture2d_ms<float, access::read> sourceColor [[texture(0)]],
 #elif SOURCES_3D
-            texture3d<float, access::read> sourceColor [[texture(0)]],
+            texture3d<float, access::sample> sourceColor [[texture(0)]],
 #else
-            texture2d<float, access::read> sourceColor [[texture(0)]],
+            texture2d<float, access::sample> sourceColor [[texture(0)]],
 #endif  // MSAA_COLOR_SOURCE
 #endif  // BLIT_COLOR
 
@@ -87,27 +88,38 @@ blitterFrag(VertexOut in [[stage_in]],
 #ifdef MSAA_DEPTH_SOURCE
             texture2d_ms<float, access::read> sourceDepth [[texture(1)]],
 #elif SOURCES_3D
-            texture3d<float, access::read> sourceDepth [[texture(1)]],
+            texture3d<float, access::sample> sourceDepth [[texture(1)]],
 #else
-            texture2d<float, access::read> sourceDepth [[texture(1)]],
+            texture2d<float, access::sample> sourceDepth [[texture(1)]],
 #endif  // MSAA_DEPTH_SOURCE
 #endif  // BLIT_DEPTH
 
             constant FragmentArgs* args [[buffer(0)]])
 {
     FragmentOut out = {};
+
+    // These coordinates match the Vulkan vkCmdBlitImage spec:
+    // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/vkCmdBlitImage.html
+    float2 uvbase = in.position.xy; // unnormalized coordinates at center of texel: (1.5, 2.5, etc)
+    float2 uvoffset = uvbase - args->dstOffset;
+    float2 uvscaled = uvoffset * args->scale;
+    float2 uv = uvscaled + args->srcOffset;
+
 #ifdef BLIT_COLOR
 #ifdef MSAA_COLOR_SOURCE
     out.color = float4(0.0);
     for (uint s = 0; s < sourceColor.get_num_samples(); s++) {
-        out.color += sourceColor.read(static_cast<uint2>(in.uv), s);
+        out.color += sourceColor.read(static_cast<uint2>(uv), s);
     }
     out.color /= sourceColor.get_num_samples();
 #elif SOURCES_3D
-    uint3 coords = uint3(static_cast<uint2>(in.uv), args->depthPlane);
-    out.color += sourceColor.read(coords, args->lod);
+    float2 uvnorm = uv / float2(sourceColor.get_width(args->lod), sourceColor.get_height(args->lod));
+    float3 coords = float3(uvnorm, (static_cast<float>(args->depthPlane) + 0.5) /
+            sourceColor.get_depth(args->lod));
+    out.color += sourceColor.sample(sourceSampler, coords, level(args->lod));
 #else
-    out.color += sourceColor.read(static_cast<uint2>(in.uv), args->lod);
+    float2 uvnorm = uv / float2(sourceColor.get_width(args->lod), sourceColor.get_height(args->lod));
+    out.color += sourceColor.sample(sourceSampler, uvnorm, level(args->lod));
 #endif  // MSAA_COLOR_SOURCE
 #endif  // BLIT_COLOR
 
@@ -115,14 +127,17 @@ blitterFrag(VertexOut in [[stage_in]],
 #ifdef MSAA_DEPTH_SOURCE
     out.depth = 0.0;
     for (uint s = 0; s < sourceDepth.get_num_samples(); s++) {
-        out.depth += sourceDepth.read(static_cast<uint2>(in.uv), s).r;
+        out.depth += sourceDepth.read(static_cast<uint2>(uv), s).r;
     }
     out.depth /= sourceDepth.get_num_samples();
 #elif SOURCES_3D
-    uint3 coords = uint3(static_cast<uint2>(in.uv), args->depthPlane);
-    out.depth = sourceDepth.read(coords, args->lod).r;
+    float2 uvnormd = uv / float2(sourceDepth.get_width(args->lod), sourceDepth.get_height(args->lod));
+    float3 coords = float3(uvnormd, (static_cast<float>(args->depthPlane) + 0.5) /
+            sourceDepth.get_depth(args->lod));
+    out.depth = sourceDepth.sample(sourceSampler, coords, level(args->lod)).r;
 #else
-    out.depth = sourceDepth.read(static_cast<uint2>(in.uv), args->lod).r;
+    float2 uvnormd = uv / float2(sourceDepth.get_width(args->lod), sourceDepth.get_height(args->lod));
+    out.depth = sourceDepth.sample(sourceSampler, uvnormd, level(args->lod)).r;
 #endif  // MSAA_DEPTH_SOURCE
 #endif  // BLIT_DEPTH
     return out;
@@ -323,10 +338,17 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
         [encoder setFragmentTexture:args.source.depth atIndex:1];
     }
 
+    SamplerMinFilter filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+    if (args.filter == SamplerMagFilter::NEAREST) {
+        filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+    } else if (args.filter == SamplerMagFilter::LINEAR) {
+        filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+    }
+
     SamplerState s {
         .samplerParams = {
             .filterMag = args.filter,
-            .filterMin = static_cast<SamplerMinFilter>(args.filter)
+            .filterMin = filterMin
         }
     };
     id<MTLSamplerState> sampler = mContext.samplerStateCache.getOrCreateState(s);
@@ -349,48 +371,30 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
             mContext.depthStencilStateCache.getOrCreateState(depthStencilState);
     [encoder setDepthStencilState:depthStencil];
 
-    /*
-     *  We blit by rendering a single triangle that covers the entire viewport. The UV coordinates
-     *  are chosen so that, when interpolated across the viewport, they correctly sample the
-     *  desired region of the source texture:
-     *
-     *  (the Xs denote the 3 vertices)
-     *
-     *  (l, 2 * t - b)
-     *  X
-     *
-     *
-     *
-     *  (l, t)     (r, t)
-     *  . . . . . .
-     *  . . . . . .
-     *  . . . . . .
-     *  . . . . . .
-     *  X . . . . .           X
-     *  (l, b)     (r, b)     (2 * r - l, b)
-     *
-     */
-
-    const auto& sourceRegion = args.source.region;
-    const float left   = sourceRegion.origin.x;
-    const float top    = sourceRegion.origin.y;
-    const float right  = (sourceRegion.origin.x + sourceRegion.size.width);
-    const float bottom = (sourceRegion.origin.y + sourceRegion.size.height);
-
-    const math::float4 vertices[3] = {
-        { -1.0f, -1.0f,  left,  bottom },
-        { -1.0f,  3.0f,  left, 2.0f * top - bottom },
-        {  3.0f, -1.0f,  2.0f * right - left,  bottom },
+    // We blit by rendering a single triangle that covers the entire viewport.
+    const math::float2 vertices[3] = {
+        { -1.0f, -1.0f },
+        { -1.0f,  3.0f },
+        {  3.0f, -1.0f },
     };
 
     struct FragmentArgs {
         uint8_t lod;
         uint32_t depthPlane;
+        math::float2 scale;
+        math::float2 dstOffset;
+        math::float2 srcOffset;
     };
 
+    const auto& sourceRegion = args.source.region;
+    const auto& destinationRegion = args.destination.region;
     FragmentArgs fargs = {
             .lod = args.source.level,
-            .depthPlane = static_cast<uint32_t>(depthPlaneSource)
+            .depthPlane = static_cast<uint32_t>(depthPlaneSource),
+            .scale = { static_cast<float>(sourceRegion.size.width) / args.destination.region.size.width,
+                       static_cast<float>(sourceRegion.size.height) / args.destination.region.size.height },
+            .dstOffset = { destinationRegion.origin.x, destinationRegion.origin.y },
+            .srcOffset = { sourceRegion.origin.x, sourceRegion.origin.y }
     };
 
     [encoder setVertexBytes:vertices length:(sizeof(math::float4) * 3) atIndex:0];
