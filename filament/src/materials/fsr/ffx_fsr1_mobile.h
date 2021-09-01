@@ -6,13 +6,19 @@
 // -- FsrEasuSampleH should be implemented by calling shader, like following:
 //    half3 FsrEasuSampleH(float2 p) { return MyTex.SampleLevel(LinearSampler, p, 0).xyz; }
 //==============================================================================================================================
+
+#define rcp(x) (1.0/(x))
+#define rsqrt inversesqrt
+
+AF3 FsrEasuSampleF(AF2 p);
+
 void FsrEasuL(
-        out AH3 pix,
-        AF2 ip,
-        AF4 con0,
-        AF4 con1,
-        AF4 con2,
-        AF4 con3){
+        out AF3 pix,
+        highp AF2 ip,
+        highp AF4 con0,
+        highp AF4 con1,
+        highp AF4 con2,
+        highp AF4 con3){
     //------------------------------------------------------------------------------------------------------------------------------
     // Direction is the '+' diff.
     //    A
@@ -20,83 +26,97 @@ void FsrEasuL(
     //    E
     AF2 pp=(ip)*(con0.xy)+(con0.zw);
     AF2 tc=(pp+AF2_(0.5))*con1.xy;
-    AH3 sA=FsrEasuSampleH(tc-AF2(0, con1.y));
-    AH3 sB=FsrEasuSampleH(tc-AF2(con1.x, 0));
-    AH3 sC=FsrEasuSampleH(tc);
-    AH3 sD=FsrEasuSampleH(tc+AF2(con1.x, 0));
-    AH3 sE=FsrEasuSampleH(tc+AF2(0, con1.y));
-    AH1 lA=sA.r*AH1_(0.5)+sA.g;
-    AH1 lB=sB.r*AH1_(0.5)+sB.g;
-    AH1 lC=sC.r*AH1_(0.5)+sC.g;
-    AH1 lD=sD.r*AH1_(0.5)+sD.g;
-    AH1 lE=sE.r*AH1_(0.5)+sE.g;
+    AF3 sA=FsrEasuSampleF(tc-AF2(0, con1.y));
+    AF3 sB=FsrEasuSampleF(tc-AF2(con1.x, 0));
+    AF3 sC=FsrEasuSampleF(tc);
+    AF3 sD=FsrEasuSampleF(tc+AF2(con1.x, 0));
+    AF3 sE=FsrEasuSampleF(tc+AF2(0, con1.y));
+    AF1 lA=sA.r*AF1_(0.5)+sA.g;
+    AF1 lB=sB.r*AF1_(0.5)+sB.g;
+    AF1 lC=sC.r*AF1_(0.5)+sC.g;
+    AF1 lD=sD.r*AF1_(0.5)+sD.g;
+    AF1 lE=sE.r*AF1_(0.5)+sE.g;
     // Then takes magnitude from abs average of both sides of 'C'.
     // Length converts gradient reversal to 0, smoothly to non-reversal at 1, shaped, then adding horz and vert terms.
-    AH1 dc=lD-lC;
-    AH1 cb=lC-lB;
-    AH1 lenX=max(abs(dc),abs(cb));
-    lenX=ARcpH1(lenX);
-    AH1 dirX=lD-lB;
-    lenX=ASatH1(abs(dirX)*lenX);
+    AF1 dc=lD-lC;
+    AF1 cb=lC-lB;
+    AF1 lenX=max(abs(dc),abs(cb));
+    lenX=ARcpF1(lenX);
+    AF1 dirX=lD-lB;
+    lenX=ASatF1(abs(dirX)*lenX);
     lenX*=lenX;
     // Repeat for the y axis.
-    AH1 ec=lE-lC;
-    AH1 ca=lC-lA;
-    AH1 lenY=max(abs(ec),abs(ca));
-    lenY=ARcpH1(lenY);
-    AH1 dirY=lE-lA;
-    lenY=ASatH1(abs(dirY)*lenY);
-    AH1 len = lenY * lenY + lenX;
-    AH2 dir = AH2(dirX, dirY);
-    //------------------------------------------------------------------------------------------------------------------------------
-    AH2 dir2=dir*dir;
-    AH1 dirR=dir2.x+dir2.y;
-    if (dirR<AH1_(1.0/64.0)) {
+    AF1 ec=lE-lC;
+    AF1 ca=lC-lA;
+    AF1 lenY=max(abs(ec),abs(ca));
+    lenY=ARcpF1(lenY);
+    AF1 dirY=lE-lA;
+    lenY=ASatF1(abs(dirY)*lenY);
+    AF1 len = lenY * lenY + lenX;
+    AF2 dir = AF2(dirX, dirY);
+    //------------------------------------------------------------------------------------------------------------------------------ 
+    AF2 dir2=dir*dir;
+    AF1 dirR=dir2.x+dir2.y;
+    if (dirR<AF1_(1.0/64.0)) {
         pix = sC;
         return;
     }
     dirR=rsqrt(dirR);
-    dir*=AH2_(dirR);
-    len=len*AH1_(0.5);
+    dir*=AF2_(dirR);
+    len=len*AF1_(0.5);
     len*=len;
-    AH1 stretch=(dir.x*dir.x+dir.y*dir.y)*rcp(max(abs(dir.x),abs(dir.y)));
-    AH2 len2=AH2(AH1_(1.0)+(stretch-AH1_(1.0))*len,AH1_(1.0)+AH1_(-0.5)*len);
-    AH1 lob=AH1_(0.5)+AH1_((1.0/4.0-0.04)-0.5)*len;
-    AH1 clp=rcp(lob);
+    AF1 stretch=(dir.x*dir.x+dir.y*dir.y)*rcp(max(abs(dir.x),abs(dir.y)));
+    AF2 len2=AF2(AF1_(1.0)+(stretch-AF1_(1.0))*len,AF1_(1.0)+AF1_(-0.5)*len);
+    AF1 lob=AF1_(0.5)+AF1_((1.0/4.0-0.04)-0.5)*len;
+    AF1 clp=rcp(lob);
     //------------------------------------------------------------------------------------------------------------------------------
     AF2 fp=floor(pp);
     pp-=fp;
-    AH2 ppp=AH2(pp);
+    AF2 ppp=AF2(pp);
     AF2 p0=fp*(con1.xy)+(con1.zw);
     AF2 p1=p0+(con2.xy);
     AF2 p2=p0+(con2.zw);
     AF2 p3=p0+(con3.xy);
     p0.y-=con1.w; p3.y+=con1.w;
-    AH4 fgcbR=FsrEasuRH(p0);
-    AH4 fgcbG=FsrEasuGH(p0);
-    AH4 fgcbB=FsrEasuBH(p0);
-    AH4 ijfeR=FsrEasuRH(p1);
-    AH4 ijfeG=FsrEasuGH(p1);
-    AH4 ijfeB=FsrEasuBH(p1);
-    AH4 klhgR=FsrEasuRH(p2);
-    AH4 klhgG=FsrEasuGH(p2);
-    AH4 klhgB=FsrEasuBH(p2);
-    AH4 nokjR=FsrEasuRH(p3);
-    AH4 nokjG=FsrEasuGH(p3);
-    AH4 nokjB=FsrEasuBH(p3);
+    AF4 bczzR=FsrEasuRF(p0);
+    AF4 bczzG=FsrEasuGF(p0);
+    AF4 bczzB=FsrEasuBF(p0);
+    AF4 ijfeR=FsrEasuRF(p1);
+    AF4 ijfeG=FsrEasuGF(p1);
+    AF4 ijfeB=FsrEasuBF(p1);
+    AF4 klhgR=FsrEasuRF(p2);
+    AF4 klhgG=FsrEasuGF(p2);
+    AF4 klhgB=FsrEasuBF(p2);
+    AF4 zzonR=FsrEasuRF(p3);
+    AF4 zzonG=FsrEasuGF(p3);
+    AF4 zzonB=FsrEasuBF(p3);
     //------------------------------------------------------------------------------------------------------------------------------
     // This part is different for FP16, working pairs of taps at a time.
-    AH2 pR=AH2_(0.0);
-    AH2 pG=AH2_(0.0);
-    AH2 pB=AH2_(0.0);
-    AH2 pW=AH2_(0.0);
-    FsrEasuTapH(pR,pG,pB,pW,AH2( 1.0, 0.0)-ppp.xx,AH2(-1.0,-1.0)-ppp.yy,dir,len2,lob,clp,fgcbR.zw,fgcbG.zw,fgcbB.zw);
-    FsrEasuTapH(pR,pG,pB,pW,AH2(-1.0, 0.0)-ppp.xx,AH2( 1.0, 1.0)-ppp.yy,dir,len2,lob,clp,ijfeR.xy,ijfeG.xy,ijfeB.xy);
-    FsrEasuTapH(pR,pG,pB,pW,AH2( 0.0,-1.0)-ppp.xx,AH2( 0.0, 0.0)-ppp.yy,dir,len2,lob,clp,ijfeR.zw,ijfeG.zw,ijfeB.zw);
-    FsrEasuTapH(pR,pG,pB,pW,AH2( 1.0, 2.0)-ppp.xx,AH2( 1.0, 1.0)-ppp.yy,dir,len2,lob,clp,klhgR.xy,klhgG.xy,klhgB.xy);
-    FsrEasuTapH(pR,pG,pB,pW,AH2( 2.0, 1.0)-ppp.xx,AH2( 0.0, 0.0)-ppp.yy,dir,len2,lob,clp,klhgR.zw,klhgG.zw,klhgB.zw);
-    FsrEasuTapH(pR,pG,pB,pW,AH2( 0.0, 1.0)-ppp.xx,AH2( 2.0, 2.0)-ppp.yy,dir,len2,lob,clp,nokjR.xy,nokjG.xy,nokjB.xy);
-    AH3 aC=AH3(pR.x+pR.y,pG.x+pG.y,pB.x+pB.y);
-    AH1 aW=pW.x+pW.y;
+
+    AF3 min4=min(AMin3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
+            AF3(klhgR.x,klhgG.x,klhgB.x));
+    AF3 max4=max(AMax3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
+            AF3(klhgR.x,klhgG.x,klhgB.x));
+
+    AF3 aC=AF3_(0.0);
+    AF1 aW=AF1_(0.0);
+    FsrEasuTapF(aC,aW,AF2( 0.0,-1.0)-pp,dir,len2,lob,clp,AF3(bczzR.x,bczzG.x,bczzB.x)); // b
+    FsrEasuTapF(aC,aW,AF2( 1.0,-1.0)-pp,dir,len2,lob,clp,AF3(bczzR.y,bczzG.y,bczzB.y)); // c
+    FsrEasuTapF(aC,aW,AF2(-1.0, 1.0)-pp,dir,len2,lob,clp,AF3(ijfeR.x,ijfeG.x,ijfeB.x)); // i
+    FsrEasuTapF(aC,aW,AF2( 0.0, 1.0)-pp,dir,len2,lob,clp,AF3(ijfeR.y,ijfeG.y,ijfeB.y)); // j
+    FsrEasuTapF(aC,aW,AF2( 0.0, 0.0)-pp,dir,len2,lob,clp,AF3(ijfeR.z,ijfeG.z,ijfeB.z)); // f
+    FsrEasuTapF(aC,aW,AF2(-1.0, 0.0)-pp,dir,len2,lob,clp,AF3(ijfeR.w,ijfeG.w,ijfeB.w)); // e
+    FsrEasuTapF(aC,aW,AF2( 1.0, 1.0)-pp,dir,len2,lob,clp,AF3(klhgR.x,klhgG.x,klhgB.x)); // k
+    FsrEasuTapF(aC,aW,AF2( 2.0, 1.0)-pp,dir,len2,lob,clp,AF3(klhgR.y,klhgG.y,klhgB.y)); // l
+    FsrEasuTapF(aC,aW,AF2( 2.0, 0.0)-pp,dir,len2,lob,clp,AF3(klhgR.z,klhgG.z,klhgB.z)); // h
+    FsrEasuTapF(aC,aW,AF2( 1.0, 0.0)-pp,dir,len2,lob,clp,AF3(klhgR.w,klhgG.w,klhgB.w)); // g
+    FsrEasuTapF(aC,aW,AF2( 1.0, 2.0)-pp,dir,len2,lob,clp,AF3(zzonR.z,zzonG.z,zzonB.z)); // o
+    FsrEasuTapF(aC,aW,AF2( 0.0, 2.0)-pp,dir,len2,lob,clp,AF3(zzonR.w,zzonG.w,zzonB.w)); // n
     //------------------------------------------------------------------------------------------------------------------------------
-    pix=aC*AH3_(ARcpH1(aW));} 
+
+#if defined(FILAMENT_FSR_DERINGING)
+    pix=min(max4,max(min4,aC*AF3_(ARcpF1(aW))));
+#else
+    pix=aC*AF3_(ARcpF1(aW));
+#endif
+}

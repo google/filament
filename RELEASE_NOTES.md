@@ -8,6 +8,8 @@ A new header is inserted each time a *tag* is created.
 - engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
   that simulates color and brightness shits in human vision in low-light conditions.
 
+- engine: improved performance of AMD FidelityFX FSR1 by 4.6x, it now runs in about 2ms in 4K.
+
 ## v1.12.3
 
 - engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
