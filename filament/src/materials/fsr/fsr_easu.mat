@@ -22,22 +22,22 @@ material {
             precision: high
         },
         {
-            type : uint4,
+            type : float4,
             name : EasuCon0,
             precision: high
         },
         {
-            type : uint4,
+            type : float4,
             name : EasuCon1,
             precision: high
         },
         {
-            type : uint4,
+            type : float4,
             name : EasuCon2,
             precision: high
         },
         {
-            type : uint4,
+            type : float4,
             name : EasuCon3,
             precision: high
         }
@@ -94,7 +94,7 @@ fragment {
     }
 
     void postProcess(inout PostProcessInputs postProcess) {
-        highp uvec2 p = uvec2(variable_vertex.xy);
+        highp vec2 p = floor(variable_vertex.xy);
 
         AF3 pix;
         FsrEasuF(pix, p,
