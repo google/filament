@@ -546,7 +546,10 @@ void applyRefraction(
     // perceptualRoughness to LOD
     // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
     // cubemap and screen-space modes match at perceptualRoughness 0.125
-    float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    // TODO: Remove this factor temporarily until we find a better solution
+    //       This overblurs many scenes and needs a more principled approach
+    // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    float tweakedPerceptualRoughness = perceptualRoughness;
     float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
 
     vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
