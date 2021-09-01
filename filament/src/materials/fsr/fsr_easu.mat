@@ -64,8 +64,12 @@ fragment {
     #define A_GPU 1
     #define A_GLSL 1
     #include "ffx_a.h"
+
     #define FSR_EASU_F 1
     #include "ffx_fsr1.h"
+
+    #define FILAMENT_FSR_DERINGING
+    #include "ffx_fsr1_mobile.h"
 
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     #define gather textureGather
@@ -93,11 +97,17 @@ fragment {
         return gather(materialParams_colorNearest, p, 2);
     }
 
+    AF3 FsrEasuSampleF(AF2 p) {
+        return textureLod(materialParams_color, p, 0.0).rgb;
+    }
+
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 p = floor(variable_vertex.xy);
 
         AF3 pix;
-        FsrEasuF(pix, p,
+
+        // just use FsrEasuF() for the original full quality EASU
+        FsrEasuL(pix, p,
             materialParams.EasuCon0,
             materialParams.EasuCon1,
             materialParams.EasuCon2,
