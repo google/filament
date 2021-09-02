@@ -64,6 +64,8 @@ private:
     void release() noexcept;
     CVOpenGLESTextureRef createTextureFromImage(CVPixelBufferRef image, GLuint glFormat,
             size_t plane) noexcept;
+    CVOpenGLESTextureRef createTextureFromImage(CVPixelBufferRef image, GLuint glFormat, 
+            GLuint pixelFormat, size_t plane) noexcept;
     GLuint encodeColorConversionPass(GLuint yPlaneTexture, GLuint colorTexture, size_t width,
             size_t height) noexcept;
 
