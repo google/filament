@@ -7,6 +7,16 @@ material {
             precision: medium
         },
         {
+            type : sampler2d,
+            name : colorNearest,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : colorHalfTexelOffset,
+            precision: high
+        },
+        {
             type : float4,
             name : resolution,
             precision: high
@@ -58,45 +68,30 @@ fragment {
     #include "ffx_fsr1.h"
 
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-    AF4 FsrEasuRF(AF2 p) {
-        return textureGather(materialParams_color, p, 0);
-    }
-
-    AF4 FsrEasuGF(AF2 p) {
-        return textureGather(materialParams_color, p, 1);
-    }
-
-    AF4 FsrEasuBF(AF2 p) {
-        return textureGather(materialParams_color, p, 2);
-    }
+    #define gather textureGather
 #else
-    AF4 FsrEasuRF(AF2 p) {
+    vec4 gather(const mediump sampler2D colorNearest, highp vec2 p, const int comp) {
+        p -= materialParams.colorHalfTexelOffset;
         vec4 d;
-        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).r;
-        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).r;
-        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).r;
-        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).r;
-        return AF4(d);
-    }
-
-    AF4 FsrEasuGF(AF2 p) {
-        vec4 d;
-        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).g;
-        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).g;
-        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).g;
-        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).g;
-        return AF4(d);
-    }
-
-    AF4 FsrEasuBF(AF2 p) {
-        vec4 d;
-        d[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 1)).b;
-        d[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 1)).b;
-        d[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(1, 0)).b;
-        d[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(0, 0)).b;
-        return AF4(d);
+        d[0] = textureLodOffset(colorNearest, p, 0.0, ivec2(0, 1))[comp];
+        d[1] = textureLodOffset(colorNearest, p, 0.0, ivec2(1, 1))[comp];
+        d[2] = textureLodOffset(colorNearest, p, 0.0, ivec2(1, 0))[comp];
+        d[3] = textureLodOffset(colorNearest, p, 0.0, ivec2(0, 0))[comp];
+        return d;
     }
 #endif
+
+    AF4 FsrEasuRF(AF2 p) {
+        return gather(materialParams_colorNearest, p, 0);
+    }
+
+    AF4 FsrEasuGF(AF2 p) {
+        return gather(materialParams_colorNearest, p, 1);
+    }
+
+    AF4 FsrEasuBF(AF2 p) {
+        return gather(materialParams_colorNearest, p, 2);
+    }
 
     void postProcess(inout PostProcessInputs postProcess) {
         highp uvec2 p = uvec2(variable_vertex.xy);

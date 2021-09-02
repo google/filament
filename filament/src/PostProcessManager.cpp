@@ -2319,6 +2319,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     mi->setParameter("EasuCon1", uniforms.EasuCon1);
                     mi->setParameter("EasuCon2", uniforms.EasuCon2);
                     mi->setParameter("EasuCon3", uniforms.EasuCon3);
+                    mi->setParameter("colorNearest", color, {}); // NEAREST
+                    mi->setParameter("colorHalfTexelOffset",
+                            0.5f / float2{ inputDesc.width, inputDesc.height });
                 }
 
                 mi->setParameter("color", color, {
