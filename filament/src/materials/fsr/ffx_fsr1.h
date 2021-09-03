@@ -231,9 +231,9 @@ A_STATIC void FsrEasuConOffset(
 //==============================================================================================================================
 #if defined(A_GPU)&&defined(FSR_EASU_F)
  // Input callback prototypes, need to be implemented by calling shader
- AF4 FsrEasuRF(AF2 p);
- AF4 FsrEasuGF(AF2 p);
- AF4 FsrEasuBF(AF2 p);
+ AF4 FsrEasuRF(highp AF2 p);
+ AF4 FsrEasuGF(highp AF2 p);
+ AF4 FsrEasuBF(highp AF2 p);
 //------------------------------------------------------------------------------------------------------------------------------
  // Filtering for a given tap for the scalar.
  void FsrEasuTapF(
