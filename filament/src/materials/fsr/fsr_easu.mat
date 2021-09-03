@@ -102,6 +102,7 @@ fragment {
         AF3 pix;
 
         // just use FsrEasuF() for the original full quality EASU
+        // note that FsrEasuF() also technically needs "precision highp float" currently
         FsrEasuL(pix, p,
             materialParams.EasuCon0,
             materialParams.EasuCon1,
