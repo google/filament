@@ -129,7 +129,7 @@ struct FAssetLoader : public AssetLoader {
             FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
-            const char* name);
+            const char* name, MaterialInstance* mi);
     void createLight(const cgltf_light* light, Entity entity);
     void createCamera(const cgltf_camera* camera, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
@@ -469,7 +469,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name)) {
+        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name, mi)) {
             mError = true;
             continue;
         }
@@ -532,7 +532,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 }
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
-        const UvMap& uvmap, const char* name) {
+        const UvMap& uvmap, const char* name, MaterialInstance* mi) {
     outPrim->uvmap = uvmap;
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
@@ -678,7 +678,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     // If the model is lit but does not have normals, we'll need to generate flat normals.
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+    auto const* const material = mi->getMaterial();
+    if (material->getRequiredAttributes().test(VertexAttribute::TANGENTS) && !hasNormals) {
         vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
         vbb.normalized(VertexAttribute::TANGENTS);
         cgltf_attribute_type atype = cgltf_attribute_type_normal;
