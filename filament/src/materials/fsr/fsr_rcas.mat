@@ -40,6 +40,9 @@ fragment {
     #define A_GLSL 1
     #include "ffx_a.h"
     #define FSR_RCAS_F 1
+    #if !POST_PROCESS_OPAQUE
+    #   define FSR_RCAS_PASSTHROUGH_ALPHA
+    #endif
     #include "ffx_fsr1.h"
 
     AF4 FsrRcasLoadF(ASU2 p) {
@@ -52,8 +55,13 @@ fragment {
         highp uvec2 p = uvec2(variable_vertex.xy);
 
         FsrRcasF(postProcess.color.r, postProcess.color.g, postProcess.color.b,
+#if !POST_PROCESS_OPAQUE
+            postProcess.color.a,
+#endif
             p, materialParams.RcasCon);
 
-        postProcess.color.a = 1.0; // TODO: FSR doesn't support transparency.
+#if POST_PROCESS_OPAQUE
+        postProcess.color.a = 1.0;
+#endif
     }
 }

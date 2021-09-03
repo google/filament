@@ -100,11 +100,11 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
     const duration targetWithHeadroom = config.targetFrameTime * (1.0f - config.headRoomRatio);
     const duration measured = denoisedFrameTime;
 
-    // We use a P.I.D. controller below to figure out the scaling factor to apply. In practice we
+    // We use a P.I.D. controller below to figure out the scaling factor to apply. In practice, we
     // don't use the Derivative gain (so it's really a PI controller).
     const float Kp = (1.0f - std::exp(-config.oneOverTau));
     const float Ki = Kp / 10.0f;
-    const float Kd = 0.0;
+    const float Kd = 0.0f;
 
     history[0].pid.error = (targetWithHeadroom - measured) / targetWithHeadroom;
     history[0].pid.integral = history[1].pid.integral + Ki * history[0].pid.error;
@@ -113,7 +113,7 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
     const float derivative = Kd * (history[0].pid.error - history[1].pid.error);
     const float out = Kp * history[0].pid.error + history[0].pid.integral + derivative;
 
-    // maps the command to a ratio, it really doesn't mater much how the conversion is done
+    // maps the command to a ratio, it really doesn't matter much how the conversion is done
     // the system will find the right value automatically
     const float scale = std::exp2(out);
     history[0].scale = scale;

@@ -128,7 +128,8 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
         if (!UTILS_UNLIKELY(info.valid)) {
-            mScale = 1.0f;
+            // always clamp to the min/max scale range
+            mScale = clamp(1.0f, options.minScale, options.maxScale);
             return mScale;
         }
 

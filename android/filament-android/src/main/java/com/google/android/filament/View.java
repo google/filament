@@ -131,19 +131,19 @@ public class View {
         public float maxScale = 1.0f;
 
         /**
-         * Sharpness when QualityLevel.ULTRA is used [0, 2].
-         * 0 is the sharpest setting, 2 is the smoothest setting.
-         * The default is set to 0.2
+         * Sharpness when QualityLevel.MEDIUM or higher is used [0, 1].
+         * 0 is disabled, 1 is the sharpest setting.
+         * The default is set to 0.9
          */
-        public float sharpness = 0.2f;
+        public float sharpness = 0.9f;
 
         /**
          * Upscaling quality
          * LOW: bilinear filtered blit. Fastest, poor quality
-         * MEDIUM: 16-tap optimized tent filter.
-         * HIGH: 36-tap optimized tent filter.
-         * ULTRA: AMD FidelityFX FSR1. Slowest, very high quality.
-         *      Requires a well anti-aliased (MSAA or TAA), noise free scene.
+         * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations no RCAS sharpening pass
+         * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations + RCAS
+         * ULTRA:  AMD FidelityFX FSR1
+         *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
          *
          * The default upscaling quality is set to LOW.
          */
