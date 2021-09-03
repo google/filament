@@ -24,18 +24,18 @@ void FsrEasuL(
     //    A
     //  B C D
     //    E
-    AF2 pp=(ip)*(con0.xy)+(con0.zw);
-    AF2 tc=(pp+AF2_(0.5))*con1.xy;
+    highp AF2 pp=(ip)*(con0.xy)+(con0.zw);
+    highp AF2 tc=(pp+AF2_(0.5))*con1.xy;
     AF3 sA=FsrEasuSampleF(tc-AF2(0, con1.y));
     AF3 sB=FsrEasuSampleF(tc-AF2(con1.x, 0));
     AF3 sC=FsrEasuSampleF(tc);
     AF3 sD=FsrEasuSampleF(tc+AF2(con1.x, 0));
     AF3 sE=FsrEasuSampleF(tc+AF2(0, con1.y));
-    AF1 lA=sA.r*AF1_(0.5)+sA.g;
-    AF1 lB=sB.r*AF1_(0.5)+sB.g;
-    AF1 lC=sC.r*AF1_(0.5)+sC.g;
-    AF1 lD=sD.r*AF1_(0.5)+sD.g;
-    AF1 lE=sE.r*AF1_(0.5)+sE.g;
+    AF1 lA=sA.r*0.5+sA.g;
+    AF1 lB=sB.r*0.5+sB.g;
+    AF1 lC=sC.r*0.5+sC.g;
+    AF1 lD=sD.r*0.5+sD.g;
+    AF1 lE=sE.r*0.5+sE.g;
     // Then takes magnitude from abs average of both sides of 'C'.
     // Length converts gradient reversal to 0, smoothly to non-reversal at 1, shaped, then adding horz and vert terms.
     AF1 dc=lD-lC;
@@ -70,13 +70,13 @@ void FsrEasuL(
     AF1 lob=AF1_(0.5)+AF1_((1.0/4.0-0.04)-0.5)*len;
     AF1 clp=rcp(lob);
     //------------------------------------------------------------------------------------------------------------------------------
-    AF2 fp=floor(pp);
+    highp AF2 fp=floor(pp);
     pp-=fp;
     AF2 ppp=AF2(pp);
-    AF2 p0=fp*(con1.xy)+(con1.zw);
-    AF2 p1=p0+(con2.xy);
-    AF2 p2=p0+(con2.zw);
-    AF2 p3=p0+(con3.xy);
+    highp AF2 p0=fp*(con1.xy)+(con1.zw);
+    highp AF2 p1=p0+(con2.xy);
+    highp AF2 p2=p0+(con2.zw);
+    highp AF2 p3=p0+(con3.xy);
     p0.y-=con1.w; p3.y+=con1.w;
     AF4 bczzR=FsrEasuRF(p0);
     AF4 bczzG=FsrEasuGF(p0);
@@ -93,10 +93,12 @@ void FsrEasuL(
     //------------------------------------------------------------------------------------------------------------------------------
     // This part is different for FP16, working pairs of taps at a time.
 
+#if defined(FILAMENT_FSR_DERINGING)
     AF3 min4=min(AMin3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
             AF3(klhgR.x,klhgG.x,klhgB.x));
     AF3 max4=max(AMax3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
             AF3(klhgR.x,klhgG.x,klhgB.x));
+#endif
 
     AF3 aC=AF3_(0.0);
     AF1 aW=AF1_(0.0);
