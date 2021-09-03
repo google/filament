@@ -165,7 +165,7 @@ set(PRIVATE_HDRS
         src/fsr.h
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
-        src/materials/fsr/ffx_fsr1_mobile.h
+        src/materials/fsr/ffx_fsr1_mobile.fs
         src/upcast.h
 )
 
@@ -363,7 +363,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_easu.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
-        DEPENDS src/materials/fsr/ffx_fsr1_mobile.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
         APPEND
 )
 
