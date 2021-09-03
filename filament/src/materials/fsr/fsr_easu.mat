@@ -7,13 +7,8 @@ material {
             precision: medium
         },
         {
-            type : sampler2d,
-            name : colorNearest,
-            precision: medium
-        },
-        {
             type : float2,
-            name : colorHalfTexelOffset,
+            name : textureSize,
             precision: high
         },
         {
@@ -74,27 +69,27 @@ fragment {
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     #define gather textureGather
 #else
-    vec4 gather(const mediump sampler2D colorNearest, highp vec2 p, const int comp) {
-        p -= materialParams.colorHalfTexelOffset;
+    vec4 gather(const mediump sampler2D color, highp vec2 p, const int comp) {
+        highp ivec2 i = ivec2(p * materialParams.textureSize - 0.5);
         vec4 d;
-        d[0] = textureLodOffset(colorNearest, p, 0.0, ivec2(0, 1))[comp];
-        d[1] = textureLodOffset(colorNearest, p, 0.0, ivec2(1, 1))[comp];
-        d[2] = textureLodOffset(colorNearest, p, 0.0, ivec2(1, 0))[comp];
-        d[3] = textureLodOffset(colorNearest, p, 0.0, ivec2(0, 0))[comp];
+        d[0] = texelFetchOffset(color, i, 0, ivec2(0, 1))[comp];
+        d[1] = texelFetchOffset(color, i, 0, ivec2(1, 1))[comp];
+        d[2] = texelFetchOffset(color, i, 0, ivec2(1, 0))[comp];
+        d[3] = texelFetchOffset(color, i, 0, ivec2(0, 0))[comp];
         return d;
     }
 #endif
 
     AF4 FsrEasuRF(AF2 p) {
-        return gather(materialParams_colorNearest, p, 0);
+        return gather(materialParams_color, p, 0);
     }
 
     AF4 FsrEasuGF(AF2 p) {
-        return gather(materialParams_colorNearest, p, 1);
+        return gather(materialParams_color, p, 1);
     }
 
     AF4 FsrEasuBF(AF2 p) {
-        return gather(materialParams_colorNearest, p, 2);
+        return gather(materialParams_color, p, 2);
     }
 
     AF3 FsrEasuSampleF(AF2 p) {
