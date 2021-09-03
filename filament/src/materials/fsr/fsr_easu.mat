@@ -80,19 +80,19 @@ fragment {
     }
 #endif
 
-    AF4 FsrEasuRF(AF2 p) {
+    AF4 FsrEasuRF(highp AF2 p) {
         return gather(materialParams_color, p, 0);
     }
 
-    AF4 FsrEasuGF(AF2 p) {
+    AF4 FsrEasuGF(highp AF2 p) {
         return gather(materialParams_color, p, 1);
     }
 
-    AF4 FsrEasuBF(AF2 p) {
+    AF4 FsrEasuBF(highp AF2 p) {
         return gather(materialParams_color, p, 2);
     }
 
-    AF3 FsrEasuSampleF(AF2 p) {
+    AF3 FsrEasuSampleF(highp AF2 p) {
         return textureLod(materialParams_color, p, 0.0).rgb;
     }
 

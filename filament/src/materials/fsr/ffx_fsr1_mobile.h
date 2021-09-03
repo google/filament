@@ -10,7 +10,7 @@
 #define rcp(x) (1.0/(x))
 #define rsqrt inversesqrt
 
-AF3 FsrEasuSampleF(AF2 p);
+AF3 FsrEasuSampleF(highp AF2 p);
 
 void FsrEasuL(
         out AF3 pix,
