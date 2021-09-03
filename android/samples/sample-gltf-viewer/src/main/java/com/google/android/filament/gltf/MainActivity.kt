@@ -98,10 +98,7 @@ class MainActivity : Activity() {
         val view = modelViewer.view
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = true
-            quality = View.QualityLevel.ULTRA
-            homogeneousScaling = true
-            minScale = 0.5f
-            maxScale = 0.5f
+            quality = View.QualityLevel.MEDIUM
         }
 
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
