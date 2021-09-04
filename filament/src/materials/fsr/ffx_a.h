@@ -1839,6 +1839,28 @@
 // Used FP16 normal range for testing with +4096 32-bit step size for sampling error.
 // So these match up well with the half approximations.
 //==============================================================================================================================
+#ifdef TARGET_MOBILE
+ // filament: these approximations don't work in mediump
+ AF1 APrxLoSqrtF1(AF1 a){return sqrt(a);}
+ AF1 APrxLoRcpF1(AF1 a){return 1.0/a;}
+ AF1 APrxMedRcpF1(AF1 a){return 1.0/a;}
+ AF1 APrxLoRsqF1(AF1 a){return inversesqrt(a);}
+//------------------------------------------------------------------------------------------------------------------------------
+ AF2 APrxLoSqrtF2(AF2 a){return sqrt(a);}
+ AF2 APrxLoRcpF2(AF2 a){return 1.0/a;}
+ AF2 APrxMedRcpF2(AF2 a){return 1.0/a;}
+ AF2 APrxLoRsqF2(AF2 a){return inversesqrt(a);}
+//------------------------------------------------------------------------------------------------------------------------------
+ AF3 APrxLoSqrtF3(AF3 a){return sqrt(a);}
+ AF3 APrxLoRcpF3(AF3 a){return 1.0/a;}
+ AF3 APrxMedRcpF3(AF3 a){return 1.0/a;}
+ AF3 APrxLoRsqF3(AF3 a){return inversesqrt(a);}
+//------------------------------------------------------------------------------------------------------------------------------
+ AF4 APrxLoSqrtF4(AF4 a){return sqrt(a);}
+ AF4 APrxLoRcpF4(AF4 a){return 1.0/a;}
+ AF4 APrxMedRcpF4(AF4 a){return 1.0/a;}
+ AF4 APrxLoRsqF4(AF4 a){return inversesqrt(a);}
+#else
  AF1 APrxLoSqrtF1(AF1 a){return AF1_AU1((AU1_AF1(a)>>AU1_(1))+AU1_(0x1fbc4639));}
  AF1 APrxLoRcpF1(AF1 a){return AF1_AU1(AU1_(0x7ef07ebb)-AU1_AF1(a));}
  AF1 APrxMedRcpF1(AF1 a){AF1 b=AF1_AU1(AU1_(0x7ef19fff)-AU1_AF1(a));return b*(-b*a+AF1_(2.0));}
@@ -1858,6 +1880,7 @@
  AF4 APrxLoRcpF4(AF4 a){return AF4_AU4(AU4_(0x7ef07ebb)-AU4_AF4(a));}
  AF4 APrxMedRcpF4(AF4 a){AF4 b=AF4_AU4(AU4_(0x7ef19fff)-AU4_AF4(a));return b*(-b*a+AF4_(2.0));}
  AF4 APrxLoRsqF4(AF4 a){return AF4_AU4(AU4_(0x5f347d74)-(AU4_AF4(a)>>AU4_(1)));}
+#endif
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //_____________________________________________________________/\_______________________________________________________________
