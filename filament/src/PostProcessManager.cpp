@@ -227,6 +227,7 @@ static const MaterialInfo sMaterialList[] = {
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
         { "fsr_easu",                   MATERIAL(FSR_EASU) },
         { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
+        { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
         { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
 };
 
@@ -2282,68 +2283,142 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         lowQualityFallback = true;
     }
 
+    const bool bugs_easu_needs_split = true;  // FIXME: this should depend on the GPU or backend
+    const bool twoPassesEASU = bugs_easu_needs_split &&
+            (dsrOptions.quality == QualityLevel::MEDIUM
+                || dsrOptions.quality == QualityLevel::HIGH);
+
+    // helper to set the EASU uniforms
+    auto setEasuUniforms = [](FMaterialInstance* mi,
+            FrameGraphTexture::Descriptor const& inputDesc,
+            FrameGraphTexture::Descriptor const& outputDesc) {
+        FSRUniforms uniforms{};
+        FSR_ScalingSetup(&uniforms, {
+                .viewportWidth = inputDesc.width,
+                .viewportHeight = inputDesc.height,
+                .inputWidth = inputDesc.width,
+                .inputHeight = inputDesc.height,
+                .outputWidth = outputDesc.width,
+                .outputHeight = outputDesc.height,
+        });
+        mi->setParameter("EasuCon0", uniforms.EasuCon0);
+        mi->setParameter("EasuCon1", uniforms.EasuCon1);
+        mi->setParameter("EasuCon2", uniforms.EasuCon2);
+        mi->setParameter("EasuCon3", uniforms.EasuCon3);
+        mi->setParameter("textureSize",
+                float2{ inputDesc.width, inputDesc.height });
+    };
+
+    // helper to enable blending
+    auto enableTranslucentBlending = [](PipelineState& pipeline) {
+        pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+        pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+        pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+        pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+    };
+
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> depth;
     };
 
     auto& ppQuadBlit = fg.addPass<QuadBlitData>("quad scaling",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("scaled output", outDesc);
-                data.output = builder.declareRenderPass(data.output);
+
+                if (twoPassesEASU) {
+                    // FIXME: it would be better to use the stencil buffer in this case
+                    data.depth = builder.createTexture("scaled output depth", {
+                        .width = outDesc.width,
+                        .height = outDesc.height,
+                        .format = TextureFormat::DEPTH16
+                    });
+                    data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                }
+
+                data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .color = { data.output }, .depth = { data.depth }},
+                        .clearFlags = TargetBufferFlags::DEPTH });
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
                 auto color = resources.getTexture(data.input);
-                auto out = resources.getRenderPassInfo();
                 auto const& inputDesc = resources.getDescriptor(data.input);
                 auto const& outputDesc = resources.getDescriptor(data.output);
 
-                const StaticString blitterNames[4] = { "blitLow", "fsr_easu_mobile", "fsr_easu_mobile", "fsr_easu" };
-                unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
-                auto& material = getPostProcessMaterial(blitterNames[index]);
-                FMaterialInstance* const mi = material.getMaterialInstance();
+                // --------------------------------------------------------------------------------
+                // set uniforms
 
-                if (dsrOptions.quality != QualityLevel::LOW) {
-                    FSRUniforms uniforms;
-                    FSR_ScalingSetup(&uniforms, {
-                            .viewportWidth = inputDesc.width,
-                            .viewportHeight = inputDesc.height,
-                            .inputWidth = inputDesc.width,
-                            .inputHeight = inputDesc.height,
-                            .outputWidth = outputDesc.width,
-                            .outputHeight = outputDesc.height,
+                PostProcessMaterial* splitEasuMaterial = nullptr;
+                PostProcessMaterial* easuMaterial = nullptr;
+
+                if (twoPassesEASU) {
+                    splitEasuMaterial = &getPostProcessMaterial("fsr_easu_mobileF");
+                    auto* mi = splitEasuMaterial->getMaterialInstance();
+                    setEasuUniforms(mi, inputDesc, outputDesc);
+                    mi->setParameter("color", color, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
                     });
-                    mi->setParameter("EasuCon0", uniforms.EasuCon0);
-                    mi->setParameter("EasuCon1", uniforms.EasuCon1);
-                    mi->setParameter("EasuCon2", uniforms.EasuCon2);
-                    mi->setParameter("EasuCon3", uniforms.EasuCon3);
-                    mi->setParameter("textureSize",
-                            float2{ inputDesc.width, inputDesc.height });
+                    mi->setParameter("resolution",
+                            float4{ outputDesc.width, outputDesc.height,
+                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->commit(driver);
                 }
 
-                mi->setParameter("color", color, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR
-                });
-                mi->setParameter("resolution",
-                        float4{ outputDesc.width, outputDesc.height,
-                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                mi->commit(driver);
-                mi->use(driver);
-
-                PipelineState pipeline(material.getPipelineState());
-                if (translucent) {
-                    assert_invariant(dsrOptions.quality == QualityLevel::LOW);
-                    pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                { // just a scope to not leak local variables
+                    const StaticString blitterNames[4] = {
+                            "blitLow", "fsr_easu_mobile", "fsr_easu_mobile", "fsr_easu" };
+                    unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
+                    easuMaterial = &getPostProcessMaterial(blitterNames[index]);
+                    auto* mi = easuMaterial->getMaterialInstance();
+                    if (dsrOptions.quality != QualityLevel::LOW) {
+                        setEasuUniforms(mi, inputDesc, outputDesc);
+                    }
+                    mi->setParameter("color", color, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                    });
+                    mi->setParameter("resolution",
+                            float4{ outputDesc.width, outputDesc.height,
+                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->commit(driver);
                 }
+
+                // --------------------------------------------------------------------------------
+                // render pass with draw calls
+
+                auto out = resources.getRenderPassInfo();
                 driver.beginRenderPass(out.target, out.params);
-                driver.draw(pipeline, fullScreenRenderPrimitive);
+
+                if (twoPassesEASU) {
+                    auto* mi = splitEasuMaterial->getMaterialInstance();
+                    mi->use(driver);
+                    PipelineState pipeline(splitEasuMaterial->getPipelineState());
+                    if (translucent) {
+                        enableTranslucentBlending(pipeline);
+                    }
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                }
+
+                { // scope to not leak local variables
+                    auto* mi = easuMaterial->getMaterialInstance();
+                    mi->use(driver);
+
+                    PipelineState pipeline(easuMaterial->getPipelineState());
+                    if (translucent) {
+                        enableTranslucentBlending(pipeline);
+                    }
+                    if (twoPassesEASU) {
+                        pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
+                    }
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                }
+
                 driver.endRenderPass();
             });
 
