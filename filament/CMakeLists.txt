@@ -172,6 +172,7 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/fsr/fsr_easu.mat
         src/materials/fsr/fsr_easu_mobile.mat
+        src/materials/fsr/fsr_easu_mobileF.mat
         src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
@@ -367,6 +368,14 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_easu_mobile.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobileF.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
         DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
