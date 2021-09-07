@@ -188,6 +188,10 @@ public:
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
         bool disable_sidecar_blit_into_texture_array = false;
+
+        // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
+        // case we need an alternative algorithm
+        bool split_easu = false;
     } bugs;
 
     // state getters -- as needed.

@@ -665,6 +665,14 @@ bool MetalDriver::isFrameTimeSupported() {
     return false;
 }
 
+bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
+    switch (workaround) {
+        case Workaround::SPLIT_EASU:
+            return false;
+    }
+    return false;
+}
+
 math::float2 MetalDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
     // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
