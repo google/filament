@@ -919,6 +919,9 @@ using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
 using FrameCompletedCallback = void(*)(void* user);
 
+enum class Workaround : uint16_t {
+    SPLIT_EASU
+};
 
 } // namespace backend
 } // namespace filament

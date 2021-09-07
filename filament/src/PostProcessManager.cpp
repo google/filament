@@ -178,7 +178,8 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
                   { filament::halton(12, 2), filament::halton(12, 3) },
                   { filament::halton(13, 2), filament::halton(13, 3) },
                   { filament::halton(14, 2), filament::halton(14, 3) },
-                  { filament::halton(15, 2), filament::halton(15, 3) }}
+                  { filament::halton(15, 2), filament::halton(15, 3) }},
+         mWorkaroundSplitEasu(false)
 {
 }
 
@@ -240,6 +241,8 @@ void PostProcessManager::init() noexcept {
     //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+
+    mWorkaroundSplitEasu = driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
 
     #pragma nounroll
     for (auto const& info : sMaterialList) {
@@ -2283,8 +2286,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         lowQualityFallback = true;
     }
 
-    const bool bugs_easu_needs_split = true;  // FIXME: this should depend on the GPU or backend
-    const bool twoPassesEASU = bugs_easu_needs_split &&
+    const bool twoPassesEASU = mWorkaroundSplitEasu &&
             (dsrOptions.quality == QualityLevel::MEDIUM
                 || dsrOptions.quality == QualityLevel::HIGH);
 

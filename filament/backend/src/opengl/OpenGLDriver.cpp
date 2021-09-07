@@ -1556,6 +1556,14 @@ bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
 
+bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
+    switch (workaround) {
+        case Workaround::SPLIT_EASU:
+            return mContext.bugs.split_easu;
+    }
+    return false;
+}
+
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
            // z-coordinate of virtual and physical clip-space is in [-w, 0]

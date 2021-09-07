@@ -77,10 +77,12 @@ OpenGLContext::OpenGLContext() noexcept {
 
     // Figure out which driver bugs we need to workaround
     if (strstr(renderer, "Adreno")) {
-        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the
-        // GPU time.
+        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
         bugs.dont_use_timer_query = true;
+        // Blits to texture arrays are failing
         bugs.disable_sidecar_blit_into_texture_array = true;
+        // early exit condition is flattened in EASU code
+        bugs.split_easu = true;
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
