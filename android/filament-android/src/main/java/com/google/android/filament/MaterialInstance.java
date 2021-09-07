@@ -56,6 +56,7 @@ public class MaterialInstance {
 
     MaterialInstance(@NonNull Material material, long nativeMaterialInstance) {
         mMaterial = material;
+        mNativeMaterial = material.getNativeObject();
         mNativeObject = nativeMaterialInstance;
     }
 
