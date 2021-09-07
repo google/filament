@@ -12,6 +12,30 @@
 
 AF3 FsrEasuSampleF(highp AF2 p);
 
+void FsrEasuTapF2(
+        inout AF2 aCR,inout AF2 aCG,inout AF2 aCB,
+        inout AF2 aW,
+        AF2 offX,AF2 offY,
+        AF2 dir,
+        AF2 len,
+        AF1 lob,
+        AF1 clp,
+        AF2 cR,AF2 cG,AF2 cB) {
+    AF2 vX,vY;
+    vX=offX*  dir.xx +offY*dir.yy;
+    vY=offX*(-dir.yy)+offY*dir.xx;
+    vX*=len.x;vY*=len.y;
+    AF2 d2=vX*vX+vY*vY;
+    d2=min(d2,AF2_(clp));
+    AF2 wB=AF2_(2.0/5.0)*d2+AF2_(-1.0);
+    AF2 wA=AF2_(lob)*d2+AF2_(-1.0);
+    wB*=wB;
+    wA*=wA;
+    wB=AF2_(25.0/16.0)*wB+AF2_(-(25.0/16.0-1.0));
+    AF2 w=wB*wA;
+    aCR+=cR*w;aCG+=cG*w;aCB+=cB*w;aW+=w;
+}
+
 void FsrEasuL(
         out AF3 pix,
         highp AF2 ip,
@@ -78,42 +102,40 @@ void FsrEasuL(
     highp AF2 p2=p0+(con2.zw);
     highp AF2 p3=p0+(con3.xy);
     p0.y-=con1.w; p3.y+=con1.w;
-    AF4 bczzR=FsrEasuRF(p0);
-    AF4 bczzG=FsrEasuGF(p0);
-    AF4 bczzB=FsrEasuBF(p0);
+    AF4 fgcbR=FsrEasuRF(p0);
+    AF4 fgcbG=FsrEasuGF(p0);
+    AF4 fgcbB=FsrEasuBF(p0);
     AF4 ijfeR=FsrEasuRF(p1);
     AF4 ijfeG=FsrEasuGF(p1);
     AF4 ijfeB=FsrEasuBF(p1);
     AF4 klhgR=FsrEasuRF(p2);
     AF4 klhgG=FsrEasuGF(p2);
     AF4 klhgB=FsrEasuBF(p2);
-    AF4 zzonR=FsrEasuRF(p3);
-    AF4 zzonG=FsrEasuGF(p3);
-    AF4 zzonB=FsrEasuBF(p3);
+    AF4 nokjR=FsrEasuRF(p3);
+    AF4 nokjG=FsrEasuGF(p3);
+    AF4 nokjB=FsrEasuBF(p3);
     //------------------------------------------------------------------------------------------------------------------------------
     // This part is different for FP16, working pairs of taps at a time.
 
 #if defined(FILAMENT_FSR_DERINGING)
     AF3 min4=min(AMin3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
-            AF3(klhgR.x,klhgG.x,klhgB.x));
+    AF3(klhgR.x,klhgG.x,klhgB.x));
     AF3 max4=max(AMax3F3(AF3(ijfeR.z,ijfeG.z,ijfeB.z),AF3(klhgR.w,klhgG.w,klhgB.w),AF3(ijfeR.y,ijfeG.y,ijfeB.y)),
-            AF3(klhgR.x,klhgG.x,klhgB.x));
+    AF3(klhgR.x,klhgG.x,klhgB.x));
 #endif
 
-    AF3 aC=AF3_(0.0);
-    AF1 aW=AF1_(0.0);
-    FsrEasuTapF(aC,aW,AF2( 0.0,-1.0)-pp,dir,len2,lob,clp,AF3(bczzR.x,bczzG.x,bczzB.x)); // b
-    FsrEasuTapF(aC,aW,AF2( 1.0,-1.0)-pp,dir,len2,lob,clp,AF3(bczzR.y,bczzG.y,bczzB.y)); // c
-    FsrEasuTapF(aC,aW,AF2(-1.0, 1.0)-pp,dir,len2,lob,clp,AF3(ijfeR.x,ijfeG.x,ijfeB.x)); // i
-    FsrEasuTapF(aC,aW,AF2( 0.0, 1.0)-pp,dir,len2,lob,clp,AF3(ijfeR.y,ijfeG.y,ijfeB.y)); // j
-    FsrEasuTapF(aC,aW,AF2( 0.0, 0.0)-pp,dir,len2,lob,clp,AF3(ijfeR.z,ijfeG.z,ijfeB.z)); // f
-    FsrEasuTapF(aC,aW,AF2(-1.0, 0.0)-pp,dir,len2,lob,clp,AF3(ijfeR.w,ijfeG.w,ijfeB.w)); // e
-    FsrEasuTapF(aC,aW,AF2( 1.0, 1.0)-pp,dir,len2,lob,clp,AF3(klhgR.x,klhgG.x,klhgB.x)); // k
-    FsrEasuTapF(aC,aW,AF2( 2.0, 1.0)-pp,dir,len2,lob,clp,AF3(klhgR.y,klhgG.y,klhgB.y)); // l
-    FsrEasuTapF(aC,aW,AF2( 2.0, 0.0)-pp,dir,len2,lob,clp,AF3(klhgR.z,klhgG.z,klhgB.z)); // h
-    FsrEasuTapF(aC,aW,AF2( 1.0, 0.0)-pp,dir,len2,lob,clp,AF3(klhgR.w,klhgG.w,klhgB.w)); // g
-    FsrEasuTapF(aC,aW,AF2( 1.0, 2.0)-pp,dir,len2,lob,clp,AF3(zzonR.z,zzonG.z,zzonB.z)); // o
-    FsrEasuTapF(aC,aW,AF2( 0.0, 2.0)-pp,dir,len2,lob,clp,AF3(zzonR.w,zzonG.w,zzonB.w)); // n
+    AF2 pR=AF2_(0.0);
+    AF2 pG=AF2_(0.0);
+    AF2 pB=AF2_(0.0);
+    AF2 pW=AF2_(0.0);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2( 1.0, 0.0)-ppp.xx,AF2(-1.0,-1.0)-ppp.yy,dir,len2,lob,clp,fgcbR.zw,fgcbG.zw,fgcbB.zw);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2(-1.0, 0.0)-ppp.xx,AF2( 1.0, 1.0)-ppp.yy,dir,len2,lob,clp,ijfeR.xy,ijfeG.xy,ijfeB.xy);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2( 0.0,-1.0)-ppp.xx,AF2( 0.0, 0.0)-ppp.yy,dir,len2,lob,clp,ijfeR.zw,ijfeG.zw,ijfeB.zw);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2( 1.0, 2.0)-ppp.xx,AF2( 1.0, 1.0)-ppp.yy,dir,len2,lob,clp,klhgR.xy,klhgG.xy,klhgB.xy);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2( 2.0, 1.0)-ppp.xx,AF2( 0.0, 0.0)-ppp.yy,dir,len2,lob,clp,klhgR.zw,klhgG.zw,klhgB.zw);
+    FsrEasuTapF2(pR,pG,pB,pW,AF2( 0.0, 1.0)-ppp.xx,AF2( 2.0, 2.0)-ppp.yy,dir,len2,lob,clp,nokjR.xy,nokjG.xy,nokjB.xy);
+    AF3 aC=AF3(pR.x+pR.y,pG.x+pG.y,pB.x+pB.y);
+    AF1 aW=pW.x+pW.y;
     //------------------------------------------------------------------------------------------------------------------------------
 
 #if defined(FILAMENT_FSR_DERINGING)
