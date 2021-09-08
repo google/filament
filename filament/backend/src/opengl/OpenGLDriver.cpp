@@ -3003,6 +3003,18 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
     if (any(clearFlags & TargetBufferFlags::COLOR3)) {
         glClearBufferfv(GL_COLOR, 3, linearColor.v);
     }
+    if (any(clearFlags & TargetBufferFlags::COLOR4)) {
+        glClearBufferfv(GL_COLOR, 4, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR5)) {
+        glClearBufferfv(GL_COLOR, 5, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR6)) {
+        glClearBufferfv(GL_COLOR, 6, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR7)) {
+        glClearBufferfv(GL_COLOR, 7, linearColor.v);
+    }
 
     if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
         glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
