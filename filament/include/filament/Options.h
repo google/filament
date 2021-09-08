@@ -71,9 +71,21 @@ enum class BlendMode : uint8_t {
 struct DynamicResolutionOptions {
     math::float2 minScale = math::float2(0.5f);     //!< minimum scale factors in x and y
     math::float2 maxScale = math::float2(1.0f);     //!< maximum scale factors in x and y
+    float sharpness = 0.2f;                         //!< sharpness when QualityLevel::ULTRA is used [0 (sharpest), 2 (smoothest)]
     bool enabled = false;                           //!< enable or disable dynamic resolution
     bool homogeneousScaling = false;                //!< set to true to force homogeneous scaling
-    QualityLevel quality = QualityLevel::LOW;       //!< Upscaling quality
+
+    /**
+     * Upscaling quality
+     * LOW: bilinear filtered blit. Fastest, poor quality
+     * MEDIUM: 16-tap optimized tent filter.
+     * HIGH: 36-tap optimized tent filter.
+     * ULTRA: AMD FidelityFX FSR1. Slowest, very high quality.
+     *      Requires a well anti-aliased (MSAA or TAA), noise free scene.
+     *
+     * The default upscaling quality is set to LOW.
+     */
+    QualityLevel quality = QualityLevel::LOW;
 };
 
 /**

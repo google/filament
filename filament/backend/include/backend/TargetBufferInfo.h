@@ -104,4 +104,9 @@ public:
 } // namespace backend
 } // namespace filament
 
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::MRT& mrt);
+#endif
+
 #endif //TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H

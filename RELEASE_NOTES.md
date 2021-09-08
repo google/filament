@@ -3,7 +3,11 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.3 (currently main branch)
+## v1.12.4 (currently main branch)
+
+## v1.12.3
+
+- engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
 
 ## v1.12.2
 

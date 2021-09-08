@@ -231,7 +231,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
     uint8_t msaaSampleCount = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
-    const QualityLevel upscalingQuality = view.getDynamicResolutionOptions().quality;
+    auto dsrOptions = view.getDynamicResolutionOptions();
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
     auto aoOptions = view.getAmbientOcclusionOptions();
@@ -550,11 +550,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
         if (scaled) {
             mightNeedFinalBlit = false;
-            if (UTILS_LIKELY(!blending && upscalingQuality == QualityLevel::LOW)) {
-                input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
+            if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
+                input = ppm.opaqueBlit(fg, input, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             } else {
-                input = ppm.blendBlit(fg, true, upscalingQuality, input,
-                        { .format = colorGradingConfig.ldrFormat });
+                input = ppm.blendBlit(fg, blending, dsrOptions, input, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat });
             }
         }
     }
@@ -574,11 +577,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (mightNeedFinalBlit &&
             ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
              blending)) {
-        if (UTILS_LIKELY(!blending && upscalingQuality == QualityLevel::LOW)) {
-            input = ppm.opaqueBlit(fg, input, { .format = colorGradingConfig.ldrFormat });
+        if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
+            input = ppm.opaqueBlit(fg, input, {
+                    .width = vp.width, .height = vp.height,
+                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
         } else {
-            input = ppm.blendBlit(fg, true, upscalingQuality, input,
-                    { .format = colorGradingConfig.ldrFormat });
+            input = ppm.blendBlit(fg, blending, dsrOptions, input, {
+                    .width = vp.width, .height = vp.height,
+                    .format = colorGradingConfig.ldrFormat });
         }
     }
 

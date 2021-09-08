@@ -345,6 +345,8 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 
 static float sGlobalScale = 1.0f;
 static float sGlobalScaleAnamorphism = 0.0f;
+static int sGlobalScaleQuality = 0;
+static float sGlobalScaleSharpness = 0.2f;
 
 int main(int argc, char** argv) {
     App app;
@@ -575,6 +577,9 @@ int main(int argc, char** argv) {
                 }
                 ImGui::SliderFloat("scale", &sGlobalScale, 0.25f, 1.0f);
                 ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
+                ImGui::SliderInt("quality", &sGlobalScaleQuality, 0, 3);
+                ImGui::SliderFloat("sharpness", &sGlobalScaleSharpness, 0.0f, 2.0f);
+
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -700,7 +705,9 @@ int main(int argc, char** argv) {
                         lerp(sGlobalScale, 1.0f,
                                 sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
                 },
+                .sharpness = sGlobalScaleSharpness,
                 .enabled = sGlobalScale != 1.0f,
+                .quality = (QualityLevel)sGlobalScaleQuality
         });
     };
 
