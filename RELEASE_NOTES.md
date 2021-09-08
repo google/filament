@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.4 (currently main branch)
+## v1.12.5 (currently main branch)
+
+## v1.12.4
 
 - engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
   that simulates color and brightness shifts in human vision in low-light conditions.
