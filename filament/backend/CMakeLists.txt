@@ -379,6 +379,7 @@ if (APPLE)
         test/test_BufferUpdates.cpp
         test/test_MRT.cpp
         test/test_LoadImage.cpp
+        test/test_RenderExternalImage.cpp
         )
 
     target_link_libraries(backend_test PRIVATE
