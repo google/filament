@@ -18,7 +18,7 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.2
 
-- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New Api**].
+- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New API**].
 - engine: Fix typo causing ShadowOptions::shadowFar to not work properly.
 - engine: Fix, CSM glitch when using shadowMultiplier materials.
 - engine: Improve precision when computing camera projection.
