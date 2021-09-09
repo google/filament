@@ -128,7 +128,7 @@ steps:
 - Screen-space ambient occlusion
 - Screen-space refraction
 - Global fog
-- Dynamic resolution
+- Dynamic resolution (with support for AMD FidelityFX FSR)
 
 ### Post processing
 
