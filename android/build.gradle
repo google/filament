@@ -63,7 +63,7 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 30,
         'compileSdk': 30,
-        'kotlin': '1.5.21',
+        'kotlin': '1.5.30',
         'buildTools': '30.0.3',
         'ndk': '22.1.7171670'
     ]
@@ -77,7 +77,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.0.0'
+        classpath 'com.android.tools.build:gradle:7.0.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
