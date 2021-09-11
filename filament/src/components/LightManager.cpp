@@ -45,7 +45,7 @@ struct LightManager::BuilderDetails {
     float mIntensity = 100000.0f;
     FLightManager::IntensityUnit mIntensityUnit = FLightManager::IntensityUnit::LUMEN_LUX;
     float3 mDirection = { 0.0f, -1.0f, 0.0f };
-    float2 mSpotInnerOuter = { f::PI, f::PI };
+    float2 mSpotInnerOuter = { f::PI_4 , f::PI_4 };
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
