@@ -350,24 +350,9 @@ private:
     Job* steal(JobSystem::ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
-    void put(WorkQueue& workQueue, Job* job) noexcept {
-        assert(job);
-        size_t index = job - mJobStorageBase;
-        assert(index >= 0 && index < MAX_JOB_COUNT);
-        workQueue.push(uint16_t(index + 1));
-    }
-
-    Job* pop(WorkQueue& workQueue) noexcept {
-        size_t index = workQueue.pop();
-        assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : &mJobStorageBase[index - 1];
-    }
-
-    Job* steal(WorkQueue& workQueue) noexcept {
-        size_t index = workQueue.steal();
-        assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : &mJobStorageBase[index - 1];
-    }
+    void put(WorkQueue& workQueue, Job* job) noexcept;
+    Job* pop(WorkQueue& workQueue) noexcept;
+    Job* steal(WorkQueue& workQueue) noexcept;
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
     void wakeAll() noexcept;
