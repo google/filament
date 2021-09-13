@@ -323,11 +323,6 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     if (job) {
         assert(job->runningJobCount.load(std::memory_order_relaxed) >= 1);
 
-        UTILS_UNUSED_IN_RELEASE
-        uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
-        assert(activeJobs); // whoops, we were already at 0
-        HEAVY_SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs - 1);
-
         if (UTILS_LIKELY(job->function)) {
             HEAVY_SYSTRACE_NAME("job->function");
             job->function(job->storage, *this, job);
@@ -446,17 +441,7 @@ void JobSystem::run(Job*& job) noexcept {
 
     ThreadState& state(getState());
 
-    // increase the active job count before we add the job to the queue, because otherwise
-    // the job could run and finish before the counter is incremented, which would trigger
-    // an assert() in execute(). Either way, it's not "wrong", but the assert() is useful.
-    uint32_t activeJobs = mActiveJobs.fetch_add(1, std::memory_order_relaxed);
-
     put(state.workQueue, job);
-
-    HEAVY_SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs + 1);
-
-    // wake-up a thread if needed...
-    wakeOne();
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
     job = nullptr;

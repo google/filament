@@ -354,19 +354,56 @@ private:
         assert(job);
         size_t index = job - mJobStorageBase;
         assert(index >= 0 && index < MAX_JOB_COUNT);
+
+        // put the job into the queue first
         workQueue.push(uint16_t(index + 1));
+        // then increase our active job count
+        uint32_t oldActiveJobs = mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+        // but it's possible that the job has already been picked-up, so oldActiveJobs could be
+        // negative for instance. We signal only if that's not the case.
+        if (oldActiveJobs >= 0) {
+            wakeOne(); // wake-up a thread if needed...
+        }
     }
 
     Job* pop(WorkQueue& workQueue) noexcept {
+        // decrement mActiveJobs first, this is to ensure that if there is only a single job left
+        // (and we're about to pick it up), other threads don't loop trying to do the same.
+        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
+
         size_t index = workQueue.pop();
         assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : &mJobStorageBase[index - 1];
+        Job* job = !index ? nullptr : &mJobStorageBase[index - 1];
+
+        // if our guess was wrong, i.e. we couldn't pick-up a job (b/c our queue was empty), we
+        // need to correct mActiveJobs.
+        if (!job) {
+            if (mActiveJobs.fetch_add(1, std::memory_order_relaxed) >= 0) {
+                // and if there are some active jobs, then we need to wake someone up. We know it
+                // can't be us, because we failed taking a job and we know another thread can't
+                // have added one in our queue.
+                wakeOne();
+            }
+        }
+        return job;
     }
 
     Job* steal(WorkQueue& workQueue) noexcept {
+        // decrement mActiveJobs first, this is to ensure that if there is only a single job left
+        // (and we're about to pick it up), other threads don't loop trying to do the same.
+        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
+
         size_t index = workQueue.steal();
         assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : &mJobStorageBase[index - 1];
+        Job* job = !index ? nullptr : &mJobStorageBase[index - 1];
+
+        // if we failed taking a job, we need to correct mActiveJobs
+        if (!job) {
+            mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+            // we don't need to signal here, because we're going to loop back into this thread to
+            // try again.
+        }
+        return job;
     }
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
