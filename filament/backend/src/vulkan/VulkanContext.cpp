@@ -131,7 +131,7 @@ void VulkanContext::selectPhysicalDevice() {
         // Print out some properties of the GPU for diagnostic purposes.
         //
         // Ideally, the vendors register their vendor ID's with Khronos so that apps can make an
-        // id => string mapping. However in practice this hasn't happened. At the time of this
+        // id => string mapping. However, in practice this hasn't happened. At the time of this
         // writing the gpuinfo database has the following ID's:
         //
         //     0x1002 - AMD

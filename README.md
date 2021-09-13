@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.12.3'
+    implementation 'com.google.android.filament:filament-android:1.12.4'
 }
 ```
 
@@ -52,7 +52,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.12.3'
+pod 'Filament', '~> 1.12.4'
 ```
 
 ### Snapshots
@@ -134,9 +134,10 @@ steps:
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: ACES, filmic, etc.
-- Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
-  contrast, saturation, etc.
+- Multiple tone mappers: generic (customizable), ACES, filmic, etc.
+- Color and tone management: luminance scaling, gamut mapping
+- Color grading: exposure, night adaptation, white balance, channel mixer,
+  shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
 - TAA, FXAA, MSAA
 - Screen-space lens flares
 

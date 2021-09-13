@@ -733,7 +733,6 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
     // Declare a small mask of bits that will later be OR'd into the texture's resolve mask.
     TargetBufferFlags resolveFlags = {};
 
-    GLTexture* pAttachmentTexture = nullptr;
     switch (attachment) {
         case GL_COLOR_ATTACHMENT0:
         case GL_COLOR_ATTACHMENT1:
@@ -745,26 +744,20 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         case GL_COLOR_ATTACHMENT7:
             static_assert(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT == 8);
             resolveFlags = getTargetBufferFlagsAt(attachment - GL_COLOR_ATTACHMENT0);
-            pAttachmentTexture = rt->gl.color[attachment - GL_COLOR_ATTACHMENT0];
             break;
         case GL_DEPTH_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
-            pAttachmentTexture = rt->gl.depth;
             break;
         case GL_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::STENCIL;
-            pAttachmentTexture = rt->gl.stencil;
             break;
         case GL_DEPTH_STENCIL_ATTACHMENT:
             resolveFlags = TargetBufferFlags::DEPTH;
             resolveFlags |= TargetBufferFlags::STENCIL;
-            pAttachmentTexture = rt->gl.depth;
             break;
         default:
             break;
     }
-
-    assert_invariant(pAttachmentTexture);
 
     // depth/stencil attachment must match the rendertarget sample count
     // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
@@ -903,22 +896,22 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         // The sidecar will be destroyed when the render target handle is destroyed.
 
         assert_invariant(rt->gl.samples > 1);
-        assert_invariant(pAttachmentTexture);
 
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        if (UTILS_UNLIKELY(pAttachmentTexture->gl.sidecarRenderBufferMS == 0 ||
-                rt->gl.samples != pAttachmentTexture->gl.sidecarSamples)) {
-            if (pAttachmentTexture->gl.sidecarRenderBufferMS == 0) {
-                glGenRenderbuffers(1, &pAttachmentTexture->gl.sidecarRenderBufferMS);
+        if (UTILS_UNLIKELY(t->gl.sidecarRenderBufferMS == 0 ||
+                rt->gl.samples != t->gl.sidecarSamples))
+        {
+            if (t->gl.sidecarRenderBufferMS == 0) {
+                glGenRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
-            renderBufferStorage(pAttachmentTexture->gl.sidecarRenderBufferMS,
-                    t->gl.internalFormat, rt->width, rt->height, rt->gl.samples);
-            pAttachmentTexture->gl.sidecarSamples = rt->gl.samples;
+            renderBufferStorage(t->gl.sidecarRenderBufferMS,
+                    t->gl.internalFormat, t->width, t->height, rt->gl.samples);
+            t->gl.sidecarSamples = rt->gl.samples;
         }
 
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER,
-                pAttachmentTexture->gl.sidecarRenderBufferMS);
+                t->gl.sidecarRenderBufferMS);
 
         // Here we lazily create a "read" sidecar FBO, used later as the resolve target. Note that
         // at least one of the render target's attachments needs to be both MSAA and sampleable in
@@ -1561,6 +1554,14 @@ bool OpenGLDriver::isFrameBufferFetchSupported() {
 
 bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
+}
+
+bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
+    switch (workaround) {
+        case Workaround::SPLIT_EASU:
+            return mContext.bugs.split_easu;
+    }
+    return false;
 }
 
 math::float2 OpenGLDriver::getClipSpaceParams() {
@@ -3009,6 +3010,18 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
     }
     if (any(clearFlags & TargetBufferFlags::COLOR3)) {
         glClearBufferfv(GL_COLOR, 3, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR4)) {
+        glClearBufferfv(GL_COLOR, 4, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR5)) {
+        glClearBufferfv(GL_COLOR, 5, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR6)) {
+        glClearBufferfv(GL_COLOR, 6, linearColor.v);
+    }
+    if (any(clearFlags & TargetBufferFlags::COLOR7)) {
+        glClearBufferfv(GL_COLOR, 7, linearColor.v);
     }
 
     if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {

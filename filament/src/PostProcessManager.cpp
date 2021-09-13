@@ -178,7 +178,8 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
                   { filament::halton(12, 2), filament::halton(12, 3) },
                   { filament::halton(13, 2), filament::halton(13, 3) },
                   { filament::halton(14, 2), filament::halton(14, 3) },
-                  { filament::halton(15, 2), filament::halton(15, 3) }}
+                  { filament::halton(15, 2), filament::halton(15, 3) }},
+         mWorkaroundSplitEasu(false)
 {
 }
 
@@ -203,9 +204,7 @@ struct MaterialInfo {
 static const MaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
         { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitHigh",                   MATERIAL(BLITHIGH) },
         { "blitLow",                    MATERIAL(BLITLOW) },
-        { "blitMedium",                 MATERIAL(BLITMEDIUM) },
         { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
         { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
         { "colorGrading",               MATERIAL(COLORGRADING) },
@@ -227,8 +226,10 @@ static const MaterialInfo sMaterialList[] = {
         { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                  MATERIAL(FSR_EASU) },
-        { "fsr_rcas",                  MATERIAL(FSR_RCAS) },
+        { "fsr_easu",                   MATERIAL(FSR_EASU) },
+        { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
+        { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
+        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -240,6 +241,8 @@ void PostProcessManager::init() noexcept {
     //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+
+    mWorkaroundSplitEasu = driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
 
     #pragma nounroll
     for (auto const& info : sMaterialList) {
@@ -267,7 +270,7 @@ void PostProcessManager::init() noexcept {
     *static_cast<uint32_t *>(dataZero.buffer) = 0;
     std::generate_n((uint8_t*)dataStarburst.buffer, 256,
             [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
-        float r = 0.5 + 0.5 * dist(gen);
+        float r = 0.5f + 0.5f * dist(gen);
         return uint8_t(r * 255.0f);
     });
     driver.update2DImage(mDummyOneTexture, 0, 0, 0, 1, 1, std::move(dataOne));
@@ -1457,7 +1460,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bloomPass(FrameGraph& fg,
     // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
     // BloomOptions::levels.
     if (inoutBloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0 / inoutBloomOptions.anamorphism;
+        bloomWidth *= 1.0f / inoutBloomOptions.anamorphism;
     } else {
         bloomHeight *= inoutBloomOptions.anamorphism;
     }
@@ -2276,76 +2279,155 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
 
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
 
-    if (translucent && dsrOptions.quality == QualityLevel::ULTRA) {
+    bool lowQualityFallback = false;
+    if (translucent && dsrOptions.quality != QualityLevel::LOW) {
         // FidelityFX-FSR doesn't support the alpha channel currently
-        dsrOptions.quality = QualityLevel::MEDIUM;
+        dsrOptions.quality = QualityLevel::LOW;
+        lowQualityFallback = true;
     }
+
+    const bool twoPassesEASU = mWorkaroundSplitEasu &&
+            (dsrOptions.quality == QualityLevel::MEDIUM
+                || dsrOptions.quality == QualityLevel::HIGH);
+
+    // helper to set the EASU uniforms
+    auto setEasuUniforms = [](FMaterialInstance* mi,
+            FrameGraphTexture::Descriptor const& inputDesc,
+            FrameGraphTexture::Descriptor const& outputDesc) {
+        FSRUniforms uniforms{};
+        FSR_ScalingSetup(&uniforms, {
+                .viewportWidth = inputDesc.width,
+                .viewportHeight = inputDesc.height,
+                .inputWidth = inputDesc.width,
+                .inputHeight = inputDesc.height,
+                .outputWidth = outputDesc.width,
+                .outputHeight = outputDesc.height,
+        });
+        mi->setParameter("EasuCon0", uniforms.EasuCon0);
+        mi->setParameter("EasuCon1", uniforms.EasuCon1);
+        mi->setParameter("EasuCon2", uniforms.EasuCon2);
+        mi->setParameter("EasuCon3", uniforms.EasuCon3);
+        mi->setParameter("textureSize",
+                float2{ inputDesc.width, inputDesc.height });
+    };
+
+    // helper to enable blending
+    auto enableTranslucentBlending = [](PipelineState& pipeline) {
+        pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+        pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+        pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+        pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+    };
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
+        FrameGraphId<FrameGraphTexture> depth;
     };
 
     auto& ppQuadBlit = fg.addPass<QuadBlitData>("quad scaling",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("scaled output", outDesc);
-                data.output = builder.declareRenderPass(data.output);
+
+                if (twoPassesEASU) {
+                    // FIXME: it would be better to use the stencil buffer in this case
+                    data.depth = builder.createTexture("scaled output depth", {
+                        .width = outDesc.width,
+                        .height = outDesc.height,
+                        .format = TextureFormat::DEPTH16
+                    });
+                    data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                }
+
+                data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .color = { data.output }, .depth = { data.depth }},
+                        .clearFlags = TargetBufferFlags::DEPTH });
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
                 auto color = resources.getTexture(data.input);
-                auto out = resources.getRenderPassInfo();
                 auto const& inputDesc = resources.getDescriptor(data.input);
                 auto const& outputDesc = resources.getDescriptor(data.output);
 
-                const StaticString blitterNames[4] = { "blitLow", "blitMedium", "blitHigh", "fsr_easu" };
-                unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
-                auto& material = getPostProcessMaterial(blitterNames[index]);
-                FMaterialInstance* const mi = material.getMaterialInstance();
+                // --------------------------------------------------------------------------------
+                // set uniforms
 
-                if (dsrOptions.quality == QualityLevel::ULTRA) {
-                    FSRUniforms uniforms;
-                    FSR_ScalingSetup(&uniforms, {
-                            .inputWidth = inputDesc.width,
-                            .inputHeight = inputDesc.height,
-                            .outputWidth = outputDesc.width,
-                            .outputHeight = outputDesc.height,
+                PostProcessMaterial* splitEasuMaterial = nullptr;
+                PostProcessMaterial* easuMaterial = nullptr;
+
+                if (twoPassesEASU) {
+                    splitEasuMaterial = &getPostProcessMaterial("fsr_easu_mobileF");
+                    auto* mi = splitEasuMaterial->getMaterialInstance();
+                    setEasuUniforms(mi, inputDesc, outputDesc);
+                    mi->setParameter("color", color, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
                     });
-                    mi->setParameter("EasuCon0", uniforms.EasuCon0);
-                    mi->setParameter("EasuCon1", uniforms.EasuCon1);
-                    mi->setParameter("EasuCon2", uniforms.EasuCon2);
-                    mi->setParameter("EasuCon3", uniforms.EasuCon3);
+                    mi->setParameter("resolution",
+                            float4{ outputDesc.width, outputDesc.height,
+                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->commit(driver);
                 }
 
-                mi->setParameter("color", color, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR
-                });
-                mi->setParameter("resolution",
-                        float4{ outputDesc.width, outputDesc.height,
-                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                mi->commit(driver);
-                mi->use(driver);
-
-                PipelineState pipeline(material.getPipelineState());
-                if (translucent) {
-                    assert_invariant(dsrOptions.quality != QualityLevel::ULTRA);
-                    pipeline.rasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                { // just a scope to not leak local variables
+                    const StaticString blitterNames[4] = {
+                            "blitLow", "fsr_easu_mobile", "fsr_easu_mobile", "fsr_easu" };
+                    unsigned index = std::min(3u, (unsigned)dsrOptions.quality);
+                    easuMaterial = &getPostProcessMaterial(blitterNames[index]);
+                    auto* mi = easuMaterial->getMaterialInstance();
+                    if (dsrOptions.quality != QualityLevel::LOW) {
+                        setEasuUniforms(mi, inputDesc, outputDesc);
+                    }
+                    mi->setParameter("color", color, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR
+                    });
+                    mi->setParameter("resolution",
+                            float4{ outputDesc.width, outputDesc.height,
+                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                    mi->commit(driver);
                 }
+
+                // --------------------------------------------------------------------------------
+                // render pass with draw calls
+
+                auto out = resources.getRenderPassInfo();
                 driver.beginRenderPass(out.target, out.params);
-                driver.draw(pipeline, fullScreenRenderPrimitive);
+
+                if (twoPassesEASU) {
+                    auto* mi = splitEasuMaterial->getMaterialInstance();
+                    mi->use(driver);
+                    PipelineState pipeline(splitEasuMaterial->getPipelineState());
+                    if (translucent) {
+                        enableTranslucentBlending(pipeline);
+                    }
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                }
+
+                { // scope to not leak local variables
+                    auto* mi = easuMaterial->getMaterialInstance();
+                    mi->use(driver);
+
+                    PipelineState pipeline(easuMaterial->getPipelineState());
+                    if (translucent) {
+                        enableTranslucentBlending(pipeline);
+                    }
+                    if (twoPassesEASU) {
+                        pipeline.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
+                    }
+                    driver.draw(pipeline, fullScreenRenderPrimitive);
+                }
+
                 driver.endRenderPass();
             });
 
     auto output = ppQuadBlit->output;
 
-    if (dsrOptions.quality == QualityLevel::ULTRA) {
-
+    // if we had to take the low quality fallback, we still do the "sharpen pass"
+    if (dsrOptions.sharpness > 0.0f && (dsrOptions.quality != QualityLevel::LOW || lowQualityFallback)) {
         auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     data.input = builder.sample(output);
@@ -2363,7 +2445,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     FMaterialInstance* const mi = material.getMaterialInstance();
 
                     FSRUniforms uniforms;
-                    FSR_SharpeningSetup(&uniforms, { .sharpness = dsrOptions.sharpness });
+                    FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * dsrOptions.sharpness });
                     mi->setParameter("RcasCon", uniforms.RcasCon);
                     mi->setParameter("color", color, { }); // uses texelFetch
                     mi->setParameter("resolution", float4{
@@ -2372,8 +2454,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
                     mi->commit(driver);
                     mi->use(driver);
 
-                    PipelineState pipeline(material.getPipelineState());
-                    assert_invariant(!translucent);
+                    const uint8_t variant = uint8_t(translucent ?
+                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+
+                    PipelineState pipeline(material.getPipelineState(variant));
                     driver.beginRenderPass(out.target, out.params);
                     driver.draw(pipeline, fullScreenRenderPrimitive);
                     driver.endRenderPass();

@@ -24,6 +24,8 @@
 namespace filament {
 
 struct FSRScalingConfig {
+    uint32_t viewportWidth;
+    uint32_t viewportHeight;
     uint32_t inputWidth;
     uint32_t inputHeight;
     uint32_t outputWidth;
@@ -37,10 +39,10 @@ struct FSRSharpeningConfig {
 };
 
 struct FSRUniforms {
-    math::uint4 EasuCon0;
-    math::uint4 EasuCon1;
-    math::uint4 EasuCon2;
-    math::uint4 EasuCon3;
+    math::float4 EasuCon0;
+    math::float4 EasuCon1;
+    math::float4 EasuCon2;
+    math::float4 EasuCon3;
     math::uint4 RcasCon;
 };
 

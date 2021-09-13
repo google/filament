@@ -165,11 +165,14 @@ set(PRIVATE_HDRS
         src/fsr.h
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
+        src/materials/fsr/ffx_fsr1_mobile.fs
         src/upcast.h
 )
 
 set(MATERIAL_SRCS
         src/materials/fsr/fsr_easu.mat
+        src/materials/fsr/fsr_easu_mobile.mat
+        src/materials/fsr/fsr_easu_mobileF.mat
         src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
@@ -185,8 +188,6 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMedian.mat
         src/materials/flare/flare.mat
         src/materials/blitLow.mat
-        src/materials/blitMedium.mat
-        src/materials/blitHigh.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomUpsample.mat
         src/materials/ssao/bilateralBlur.mat
@@ -362,6 +363,22 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_easu.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobile.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobileF.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
         APPEND
 )
 
