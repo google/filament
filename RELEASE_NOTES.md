@@ -10,7 +10,9 @@ A new header is inserted each time a *tag* is created.
 - engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
   that simulates color and brightness shifts in human vision in low-light conditions.
 - engine: improved performance of AMD FidelityFX FSR1 by 4.6x, it now runs in about 2ms in 4K.
-- engine: Dynamic resolution quality `MEDIUM`, `HIGH` and `ULTRA` now all use AMD FidelityFX FSR1
+- engine: Dynamic resolution quality `MEDIUM`, `HIGH` and `ULTRA` now all use AMD FidelityFX FSR1.
+- engine: Fix crash when duplicating material instances.
+- gltfio: generate tangents if requested by the material.
 
 ## v1.12.3
 
