@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.5
 
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+
 ## v1.12.4
 
 - engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
