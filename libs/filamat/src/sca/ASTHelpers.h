@@ -73,7 +73,7 @@ void getFunctionParameters(glslang::TIntermAggregate* func, std::vector<Function
 
 // add lod bias to texture() calls
 void textureLodBias(glslang::TIntermediate* intermediate, TIntermNode* root,
-        const char* lodBiasSymbolName);
+        const char* entryPointSignatureish, const char* lodBiasSymbolName);
 
 
 } // namespace ASTutils
