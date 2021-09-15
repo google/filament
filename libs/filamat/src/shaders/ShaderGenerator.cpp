@@ -434,6 +434,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
+    fs << "float filament_lodBias;\n";
+
     // shading code
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generateGetters(fs, ShaderType::FRAGMENT);

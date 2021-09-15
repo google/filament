@@ -554,6 +554,11 @@ UTILS_NOINLINE
     });
 }
 
+void FView::prepareUpscaler(float2 scale) const noexcept {
+    SYSTRACE_CALL();
+    mPerViewUniforms.prepareUpscaler(scale, mDynamicResolution);
+}
+
 void FView::prepareCamera(const CameraInfo& camera) const noexcept {
     SYSTRACE_CALL();
     mPerViewUniforms.prepareCamera(camera);

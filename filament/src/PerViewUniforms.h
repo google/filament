@@ -31,6 +31,7 @@
 namespace filament {
 
 struct FogOptions;
+struct DynamicResolutionOptions;
 struct AmbientOcclusionOptions;
 struct VsmShadowOptions;
 
@@ -53,6 +54,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepareCamera(const CameraInfo& camera) noexcept;
+    void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
     void prepareViewport(const filament::Viewport& viewport) noexcept;
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareExposure(float ev100) noexcept;

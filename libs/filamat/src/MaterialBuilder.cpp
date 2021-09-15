@@ -726,7 +726,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 GLSLPostProcessor::Config config{
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
-                        .glsl = {}
+                        .domain = mMaterialDomain,
+                        .glsl = {},
                 };
 
                 config.hasFramebufferFetch = mEnableFramebufferFetch;
