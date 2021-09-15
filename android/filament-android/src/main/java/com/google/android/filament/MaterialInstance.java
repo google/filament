@@ -78,7 +78,7 @@ public class MaterialInstance {
     public static MaterialInstance duplicate(@NonNull MaterialInstance other, String name) {
         long nativeInstance = nDuplicate(other.mNativeObject, name);
         if (nativeInstance == 0) throw new IllegalStateException("Couldn't duplicate MaterialInstance");
-        return new MaterialInstance(other.mMaterial, nativeInstance);
+        return new MaterialInstance(other.getMaterial(), nativeInstance);
     }
 
     /** @return the {@link Material} associated with this instance */
