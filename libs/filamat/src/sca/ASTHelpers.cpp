@@ -373,77 +373,91 @@ public:
 };
 
 void textureLodBias(TIntermediate* intermediate, TIntermNode* root,
-        const char* lodBiasSymbolName) {
-    // we need to run this only from the user's main entry point
+        const char* entryPointSignatureish, const char* lodBiasSymbolName) {
 
-    // First, find the "lodBias" symbol
+    // First, find the "lodBias" symbol and entry point
+    const std::string functionName{ entryPointSignatureish };
     TIntermSymbol* pIntermSymbolLodBias = nullptr;
+    TIntermNode* pEntryPointRoot = nullptr;
     TraverserAdapter findLodBiasSymbol(
-            [&, done = false](TVisit visit, TIntermAggregate* node) mutable {
-        if (node->getOp() == glslang::EOpSequence) {
-            return !done;
-        }
-        if (node->getOp() == glslang::EOpLinkerObjects) {
-            for (TIntermNode* item : node->getSequence()) {
-                TIntermSymbol* symbol = item->getAsSymbolNode();
-                if (symbol && symbol->getBasicType() == TBasicType::EbtFloat) {
-                    if (symbol->getName() == lodBiasSymbolName) {
-                        pIntermSymbolLodBias = symbol;
-                        done = true;
-                        break;
+            [&](TVisit visit, TIntermAggregate* node) {
+                if (node->getOp() == glslang::EOpSequence) {
+                    return true;
+                }
+                if (node->getOp() == glslang::EOpFunction) {
+                    if (node->getName().rfind(functionName, 0) == 0) {
+                        pEntryPointRoot = node;
+                    }
+                    return false;
+                }
+                if (node->getOp() == glslang::EOpLinkerObjects) {
+                    for (TIntermNode* item: node->getSequence()) {
+                        TIntermSymbol* symbol = item->getAsSymbolNode();
+                        if (symbol && symbol->getBasicType() == TBasicType::EbtFloat) {
+                            if (symbol->getName() == lodBiasSymbolName) {
+                                pIntermSymbolLodBias = symbol;
+                                break;
+                            }
+                        }
                     }
                 }
-            }
-        }
-        return false;
-    });
+                return true;
+            });
     root->traverse(&findLodBiasSymbol);
+
+    if (!pEntryPointRoot) {
+        // This can happen if the material doesn't have user defined code,
+        // e.g. with the depth material. We just do nothing then.
+        return;
+    }
 
     if (!pIntermSymbolLodBias) {
         // something went wrong
-        utils::slog.e << "lod bias ignored because \"" << lodBiasSymbolName << "\" was not found!" << utils::io::endl;
+        utils::slog.e << "lod bias ignored because \"" << lodBiasSymbolName << "\" was not found!"
+                      << utils::io::endl;
         return;
     }
 
     // add lod bias to texture calls
     TraverserAdapter addLodBiasToTextureCalls(
             [&](TVisit visit, TIntermAggregate* node) {
-        // skip everything that's not a texture() call
-        if (node->getOp() != glslang::EOpTexture) {
-            return true;
-        }
+                // skip everything that's not a texture() call
+                if (node->getOp() != glslang::EOpTexture) {
+                    return true;
+                }
 
-        TIntermSequence& sequence = node->getSequence();
+                TIntermSequence& sequence = node->getSequence();
 
-        // first check that we have the correct sampler
-        TIntermTyped* pTyped = sequence[0]->getAsTyped();
-        if (!pTyped) {
-            return false;
-        }
+                // first check that we have the correct sampler
+                TIntermTyped* pTyped = sequence[0]->getAsTyped();
+                if (!pTyped) {
+                    return false;
+                }
 
-        TSampler const& sampler = pTyped->getType().getSampler();
-        if (sampler.isArrayed() && sampler.isShadow()) {
-            // sampler2DArrayShadow is not supported
-            return false;
-        }
+                TSampler const& sampler = pTyped->getType().getSampler();
+                if (sampler.isArrayed() && sampler.isShadow()) {
+                    // sampler2DArrayShadow is not supported
+                    return false;
+                }
 
-        // Then add the lod bias to the texture() call
-        if (sequence.size() == 2) {
-            // we only have 2 parameters, add the 3rd one
-            TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
-            sequence.push_back(symbol);
-        } else if (sequence.size() == 3) {
-            // load bias is already specified
-            TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
-            TIntermTyped* pAdd = intermediate->addBinaryMath(TOperator::EOpAdd,
-                    sequence[2]->getAsTyped(), symbol,
-                    node->getLoc());
-            sequence[2] = pAdd;
-        }
+                // Then add the lod bias to the texture() call
+                if (sequence.size() == 2) {
+                    // we only have 2 parameters, add the 3rd one
+                    TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
+                    sequence.push_back(symbol);
+                } else if (sequence.size() == 3) {
+                    // load bias is already specified
+                    TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
+                    TIntermTyped* pAdd = intermediate->addBinaryMath(TOperator::EOpAdd,
+                            sequence[2]->getAsTyped(), symbol,
+                            node->getLoc());
+                    sequence[2] = pAdd;
+                }
 
-        return false;
-    });
-    root->traverse(&addLodBiasToTextureCalls);
+                return false;
+            });
+    // we need to run this only from the user's main entry point
+    pEntryPointRoot->traverse(&addLodBiasToTextureCalls);
 }
 
 } // namespace ASTHelpers
