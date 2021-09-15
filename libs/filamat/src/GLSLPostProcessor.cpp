@@ -30,6 +30,7 @@
 #include "sca/GLSLTools.h"
 
 #include <utils/Log.h>
+#include <filament/MaterialEnums.h>
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -201,6 +202,12 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     if (!ok) {
         utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return false;
+    }
+
+    // add texture lod bias
+    if (config.shaderType == filament::backend::FRAGMENT &&
+        config.domain == filament::MaterialDomain::SURFACE) {
+        GLSLTools::textureLodBias(tShader);
     }
 
     program.addShader(&tShader);

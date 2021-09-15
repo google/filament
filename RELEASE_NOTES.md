@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.6 (currently main branch)
 
+- engine: Added concept of lod bias to materials. 
+  [⚠️ **Materials need to be rebuilt to access this new feature**].
+
 ## v1.12.5
 
 - engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.

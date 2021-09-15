@@ -71,5 +71,10 @@ struct FunctionParameter {
 void getFunctionParameters(glslang::TIntermAggregate* func, std::vector<FunctionParameter>& output)
         noexcept;
 
+// add lod bias to texture() calls
+void textureLodBias(glslang::TIntermediate* intermediate, TIntermNode* root,
+        const char* lodBiasSymbolName);
+
+
 } // namespace ASTutils
 #endif //TNT_SCAHELPERS_H_H

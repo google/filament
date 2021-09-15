@@ -159,6 +159,7 @@ public:
         return mName.c_str();
     }
 
+    void prepareUpscaler(math::float2 scale) const noexcept;
     void prepareCamera(const CameraInfo& camera) const noexcept;
     void prepareViewport(const Viewport& viewport) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
