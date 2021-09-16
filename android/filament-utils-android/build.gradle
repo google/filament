@@ -9,6 +9,13 @@ android {
 
         lite {
             dimension "functionality"
+            externalNativeBuild {
+                cmake {
+                    // hack: this is needed because filament-utils-android/CMakeLists.txt builds
+                    // gltfio from source, which needs this defined
+                    arguments.add("-DGLTFIO_LITE=ON")
+                }
+            }
         }
     }
 
