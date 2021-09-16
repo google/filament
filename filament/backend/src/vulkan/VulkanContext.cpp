@@ -54,8 +54,8 @@ void VulkanContext::selectPhysicalDevice() {
         }
 
         // Does the device have any command queues that support graphics?
-        // In theory we should also ensure that the device supports presentation of our
-        // particular VkSurface, but we don't have a VkSurface yet so we'll skip this requirement.
+        // In theory, we should also ensure that the device supports presentation of our
+        // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
         uint32_t queueFamiliesCount;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
         if (queueFamiliesCount == 0) {
