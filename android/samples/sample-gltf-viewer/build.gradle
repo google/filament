@@ -10,6 +10,7 @@ filamentTools {
     iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
 }
 
+// don't forget to update MainACtivity.kt when/if changing this.
 task copyMesh(type: Copy) {
     from "../../../third_party/models/BusterDrone"
     into "src/main/assets/models"
