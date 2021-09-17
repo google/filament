@@ -32,9 +32,13 @@ import com.google.android.filament.Texture;
  * Texture equirect = HDRLoader.createTexture("foo.hdr");
  * Texture skyboxTexture = equirectangularToCubemap.run(equirect);
  * engine.destroy(equirect);
+ * equirectangularToCubemap.destroy();
  *
  * specularFilter = new IBLPrefilterContext.SpecularFilter(context);
  * Texture reflections = specularFilter.run(skyboxTexture);
+ * specularFilter.destroy();
+ *
+ * context.destroy();
  *
  * IndirectLight ibl = IndirectLight.Builder()
  *         .reflections(reflections)
@@ -43,81 +47,74 @@ import com.google.android.filament.Texture;
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 public class IBLPrefilterContext {
-    private final long mNativeObject;
+    private long mNativeObject;
 
     public IBLPrefilterContext(Engine engine) {
         mNativeObject = nCreate(engine.getNativeObject());
         if (mNativeObject == 0) throw new IllegalStateException("Couldn't create IBLPrefilterContext");
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        nDestroy(mNativeObject);
-        super.finalize();
+    public void destroy() {
+        nDestroy(getNativeObject());
+        mNativeObject = 0;
     }
 
     public static class EquirectangularToCubemap {
-        @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
-        private final HelperFinalizer mFinalizer;
-        private final long mNativeHelper;
+        private long mNativeObject;
 
         public EquirectangularToCubemap(IBLPrefilterContext context) {
-            mNativeHelper = nCreateEquirectHelper(context.mNativeObject);
-            mFinalizer = new HelperFinalizer(mNativeHelper);
+            mNativeObject = nCreateEquirectHelper(context.getNativeObject());
         }
 
         public Texture run(Texture equirect) {
-            long nativeTexture = nEquirectHelperRun(mNativeHelper, equirect.getNativeObject());
+            long nativeTexture = nEquirectHelperRun(getNativeObject(), equirect.getNativeObject());
             return new Texture(nativeTexture);
         }
 
-        private static class HelperFinalizer {
-            private final long mNativeObject;
+        public void destroy() {
+            nDestroyEquirectHelper(getNativeObject());
+            mNativeObject = 0;
+        }
 
-            HelperFinalizer(long nativeObject) { mNativeObject = nativeObject; }
-
-            @Override
-            public void finalize() {
-                try {
-                    super.finalize();
-                } catch (Throwable t) { // Ignore
-                } finally {
-                    nDestroyEquirectHelper(mNativeObject);
-                }
+        protected long getNativeObject() {
+            if (mNativeObject == 0) {
+                throw new IllegalStateException("Calling method on destroyed EquirectangularToCubemap");
             }
+            return mNativeObject;
         }
     }
 
     public static class SpecularFilter {
-        @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
-        private final HelperFinalizer mFinalizer;
-        private final long mNativeHelper;
+        private long mNativeObject;
 
         public SpecularFilter(IBLPrefilterContext context) {
-            mNativeHelper = nCreateSpecularFilter(context.mNativeObject);
-            mFinalizer = new HelperFinalizer(mNativeHelper);
+            mNativeObject = nCreateSpecularFilter(context.getNativeObject());
         }
 
         public Texture run(Texture skybox) {
-            long nativeTexture = nSpecularFilterRun(mNativeHelper, skybox.getNativeObject());
+            long nativeTexture = nSpecularFilterRun(getNativeObject(), skybox.getNativeObject());
             return new Texture(nativeTexture);
         }
 
-        private static class HelperFinalizer {
-            private final long mNativeObject;
-
-            HelperFinalizer(long nativeObject) { mNativeObject = nativeObject; }
-
-            @Override
-            public void finalize() {
-                try {
-                    super.finalize();
-                } catch (Throwable t) { // Ignore
-                } finally {
-                    nDestroySpecularFilter(mNativeObject);
-                }
-            }
+        public void destroy() {
+            nDestroySpecularFilter(getNativeObject());
+            mNativeObject = 0;
         }
+
+        protected long getNativeObject() {
+            if (mNativeObject == 0) {
+                throw new IllegalStateException("Calling method on destroyed SpecularFilter");
+            }
+            return mNativeObject;
+        }
+    }
+
+
+    protected long getNativeObject() {
+        if (mNativeObject == 0) {
+            throw new IllegalStateException("Calling method on destroyed IBLPrefilterContext");
+        }
+        return mNativeObject;
     }
 
     private static native long nCreate(long nativeEngine);
