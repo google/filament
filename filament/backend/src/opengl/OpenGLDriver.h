@@ -71,12 +71,15 @@ public:
         backend::BufferUsage usage = {};
     };
 
+    struct GLBufferHandle {
+        GLuint id = 0;
+        bool isExternal = false;
+    };
+
     struct GLBufferObject : public backend::HwBufferObject {
         using HwBufferObject::HwBufferObject;
         GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
-        struct {
-            GLuint id = 0;
-        } gl;
+        GLBufferHandle gl;
     };
 
     struct GLVertexBuffer : public backend::HwVertexBuffer {
@@ -89,9 +92,7 @@ public:
 
     struct GLIndexBuffer : public backend::HwIndexBuffer {
         using HwIndexBuffer::HwIndexBuffer;
-        struct {
-            GLuint buffer{};
-        } gl;
+        GLBufferHandle gl;
     };
 
     struct GLUniformBuffer : public backend::HwUniformBuffer {

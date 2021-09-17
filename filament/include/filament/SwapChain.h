@@ -180,6 +180,8 @@ public:
 
     void* getNativeWindow() const noexcept;
 
+    void setSwapInterval(int32_t interval);
+
     /**
      * FrameScheduledCallback is a callback function that notifies an application when Filament has
      * completed processing a frame and that frame is ready to be scheduled for presentation.

@@ -59,6 +59,8 @@ public:
       return mSwapChain;
     }
 
+    void setSwapInterval(int32_t interval);
+
     void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
 
     void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);

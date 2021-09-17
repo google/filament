@@ -54,7 +54,7 @@ BufferObject* BufferObject::Builder::build(Engine& engine) {
 FBufferObject::FBufferObject(FEngine& engine, const BufferObject::Builder& builder)
         : mByteCount(builder->mByteCount), mBindingType(builder->mBindingType) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    mHandle = driver.createBufferObject(builder->mByteCount, builder->mBindingType);
+    mHandle = driver.createBufferObject(builder->mByteCount, builder->mBindingType, false);
 }
 
 void FBufferObject::terminate(FEngine& engine) {

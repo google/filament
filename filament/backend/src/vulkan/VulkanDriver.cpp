@@ -379,6 +379,9 @@ void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 
 }
 
+void VulkanDriver::setSwapInterval(Handle<HwSwapChain> sch, int32_t interval) {
+}
+
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
@@ -449,8 +452,8 @@ void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     }
 }
 
-void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
-        ElementType elementType, uint32_t indexCount, BufferUsage usage) {
+void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, BufferUsage usage, bool wrapsExternalBuffer) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
             elementSize, indexCount);
@@ -466,8 +469,8 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     }
 }
 
-void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh,
-        uint32_t byteCount, BufferObjectBinding bindingType) {
+void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, bool wrapsExternalBuffer) {
     auto bufferObject = construct_handle<VulkanBufferObject>(mHandleMap, boh, mContext, mStagePool,
             byteCount);
     mDisposer.createDisposable(bufferObject, [this, boh] () {
@@ -837,6 +840,14 @@ math::float2 VulkanDriver::getClipSpaceParams() {
 
 uint8_t VulkanDriver::getMaxDrawBuffers() {
     return backend::MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
+}
+
+void VulkanDriver::setExternalIndexBuffer(Handle<HwIndexBuffer> ibh, void* externalBuffer) {
+    ASSERT_PRECONDITION(false, "setExternalIndexBuffer() is not implemented for backend!");
+}
+
+void VulkanDriver::setExternalBuffer(Handle<HwBufferObject> boh, void* externalBuffer) {
+    ASSERT_PRECONDITION(false, "setExternalBuffer() is not implemented for backend!");
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,

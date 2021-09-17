@@ -59,11 +59,11 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext) {
+FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLContext, void* nativeDevice) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, nativeDevice);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -72,7 +72,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
         if (platform == nullptr) {
-            platform = DefaultPlatform::create(&instance->mBackend);
+            platform = DefaultPlatform::create(&instance->mBackend, instance->mNativeDevice);
             instance->mPlatform = platform;
             instance->mOwnPlatform = true;
         }
@@ -107,11 +107,11 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
 
 #if UTILS_HAS_THREADING
 
-void FEngine::createAsync(CreateCallback callback, void* user,
-        Backend backend, Platform* platform, void* sharedGLContext) {
+void FEngine::createAsync(CreateCallback callback, void* user, Backend backend, 
+        Platform* platform, void* sharedGLContext, void* nativeDevice) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
-    FEngine* instance = new FEngine(backend, platform, sharedGLContext);
+    FEngine* instance = new FEngine(backend, platform, sharedGLContext, nativeDevice);
 
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
@@ -162,10 +162,11 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
+FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext, void* nativeDevice) :
         mBackend(backend),
         mPlatform(platform),
         mSharedGLContext(sharedGLContext),
+        mNativeDevice(nativeDevice),
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
         mRenderableManager(*this),
@@ -461,7 +462,7 @@ void FEngine::flushAndWait() {
 
 int FEngine::loop() {
     if (mPlatform == nullptr) {
-        mPlatform = DefaultPlatform::create(&mBackend);
+        mPlatform = DefaultPlatform::create(&mBackend, mNativeDevice);
         mOwnPlatform = true;
         const char* const backend = backendToString(mBackend);
         slog.d << "FEngine resolved backend: " << backend << io::endl;
@@ -865,8 +866,8 @@ void FEngine::destroy(FEngine* engine) {
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext) {
-    return FEngine::create(backend, platform, sharedGLContext);
+Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext, void* nativeDevice) {
+    return FEngine::create(backend, platform, sharedGLContext, nativeDevice);
 }
 
 void Engine::destroy(Engine* engine) {
@@ -875,8 +876,8 @@ void Engine::destroy(Engine* engine) {
 
 #if UTILS_HAS_THREADING
 void Engine::createAsync(Engine::CreateCallback callback, void* user, Backend backend,
-        Platform* platform, void* sharedGLContext) {
-    FEngine::createAsync(callback, user, backend, platform, sharedGLContext);
+        Platform* platform, void* sharedGLContext, void* nativeDevice) {
+    FEngine::createAsync(callback, user, backend, platform, sharedGLContext, nativeDevice);
 }
 
 Engine* Engine::getEngine(void* token) {

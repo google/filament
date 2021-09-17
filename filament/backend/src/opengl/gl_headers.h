@@ -61,6 +61,10 @@
         #define GL_ZERO_TO_ONE GL_ZERO_TO_ONE_EXT
         #endif
 #endif
+#ifdef GL_EXT_external_buffer
+        extern PFNGLBUFFERSTORAGEEXTERNALEXTPROC glBufferStorageExternalEXT;
+        extern PFNGLNAMEDBUFFERSTORAGEEXTERNALEXTPROC glNamedBufferStorageExternalEXT;
+#endif
     }
 
     // Prevent lots of #ifdef's between desktop and mobile by providing some suffix-free constants:

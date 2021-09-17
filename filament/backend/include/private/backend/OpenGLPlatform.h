@@ -63,6 +63,7 @@ public:
     // swap draw buffers (i.e. for double-buffered rendering).
     virtual void commit(SwapChain* swapChain) noexcept = 0;
 
+    virtual void setSwapInterval(int32_t swapInterval) noexcept = 0;
     virtual void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept = 0;
 
     virtual bool canCreateFence() noexcept { return false; }

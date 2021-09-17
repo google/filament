@@ -34,6 +34,10 @@ void FSwapChain::terminate(FEngine& engine) noexcept {
     engine.getDriverApi().destroySwapChain(mSwapChain);
 }
 
+void FSwapChain::setSwapInterval(int32_t interval) {
+    mEngine.getDriverApi().setSwapInterval(mSwapChain, interval);
+}
+
 void FSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
     mEngine.getDriverApi().setFrameScheduledCallback(mSwapChain, callback, user);
 }
@@ -44,6 +48,10 @@ void FSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void
 
 void* SwapChain::getNativeWindow() const noexcept {
     return upcast(this)->getNativeWindow();
+}
+
+void SwapChain::setSwapInterval(int32_t interval) {
+    upcast(this)->setSwapInterval(interval);
 }
 
 void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {

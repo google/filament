@@ -38,6 +38,16 @@ public:
     size_t getSize() const noexcept { return mBufferSize; }
 
     /**
+     * Wrap an external Metal buffer. Stores a strong reference to it.
+     */
+    void wrapExternalBuffer(id<MTLBuffer> buffer);
+
+    /**
+     * Release the external Metal buffer, if wrapping any.
+     */
+    bool releaseExternalBuffer();
+
+    /**
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
      */
@@ -72,6 +82,7 @@ public:
 private:
 
     size_t mBufferSize = 0;
+    id<MTLBuffer> mExternalBuffer = nil;
     const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;

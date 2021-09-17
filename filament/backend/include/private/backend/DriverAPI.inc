@@ -145,6 +145,10 @@ DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::FrameCompletedCallback, callback,
         void*, user)
 
+DECL_DRIVER_API_N(setSwapInterval,
+        backend::SwapChainHandle, sch,
+        int32_t, interval)
+
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
 
@@ -173,11 +177,13 @@ DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
         uint32_t, indexCount,
-        backend::BufferUsage, usage)
+        backend::BufferUsage, usage,
+        bool, wrapsExternalBuffer)
 
 DECL_DRIVER_API_R_N(backend::BufferObjectHandle, createBufferObject,
         uint32_t, byteCount,
-        backend::BufferObjectBinding, bindingType)
+        backend::BufferObjectBinding, bindingType,
+        bool, wrapsExternalBuffer)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         backend::SamplerType, target,
@@ -309,6 +315,14 @@ DECL_DRIVER_API_SYNCHRONOUS_N(backend::SyncStatus, getSyncStatus, backend::SyncH
  * Updating driver objects
  * -----------------------
  */
+
+DECL_DRIVER_API_N(setExternalIndexBuffer,
+        backend::IndexBufferHandle, ibh,
+        void*, externalBuffer)
+
+DECL_DRIVER_API_N(setExternalBuffer,
+        backend::BufferObjectHandle, boh,
+        void*, externalBuffer)
 
 DECL_DRIVER_API_N(setVertexBufferObject,
         backend::VertexBufferHandle, vbh,

@@ -172,6 +172,7 @@ public:
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
+     *  @param nativeDevice     A platform-dependant native graphics device.
      *
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
@@ -187,7 +188,7 @@ public:
      * This method is thread-safe.
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr, void* nativeDevice = nullptr);
 
 #if UTILS_HAS_THREADING
     /**
@@ -229,10 +230,11 @@ public:
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
+     *  @param nativeDevice     A platform-dependant native graphics device.
      */
     static void createAsync(CreateCallback callback, void* user,
-            Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Backend backend = Backend::DEFAULT, Platform* platform = nullptr,
+            void* sharedGLContext = nullptr, void* nativeDevice = nullptr);
 
     /**
      * Retrieve an Engine* from createAsync(). This must be called from the same thread than

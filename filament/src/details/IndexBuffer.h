@@ -42,10 +42,13 @@ public:
 
     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
+    void setExternalBuffer(FEngine& engine, void* externalBuffer);
+
 private:
     friend class IndexBuffer;
     backend::Handle<backend::HwIndexBuffer> mHandle;
     uint32_t mIndexCount;
+    bool mExternalBuffersEnabled = false;
 };
 
 FILAMENT_UPCAST(IndexBuffer)

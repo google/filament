@@ -84,7 +84,7 @@ public:
      *
      * @see destroy
      */
-    static DefaultPlatform* create(backend::Backend* backendHint) noexcept;
+    static DefaultPlatform* create(backend::Backend* backendHint, void* nativeDevice = nullptr) noexcept;
 
     /**
      * Destroys a Platform object returned by create()

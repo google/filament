@@ -18,6 +18,8 @@
 
 #include <utils/Panic.h>
 
+#include <TargetConditionals.h> // TARGET_OS_IOS
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -34,6 +36,8 @@ MetalBuffer::MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer
 }
 
 MetalBuffer::~MetalBuffer() {
+    releaseExternalBuffer();
+
     if (mCpuBuffer) {
         free(mCpuBuffer);
     }
@@ -42,6 +46,25 @@ MetalBuffer::~MetalBuffer() {
     if (mBufferPoolEntry) {
         mContext.bufferPool->releaseBuffer(mBufferPoolEntry);
     }
+}
+
+void MetalBuffer::wrapExternalBuffer(id <MTLBuffer> buffer) {
+    ASSERT_PRECONDITION(!mExternalBuffer, "A external buffer is already wrapped. Call releaseExternalBuffer()");
+    ASSERT_PRECONDITION(buffer, "External buffer cannot be nil");
+    ASSERT_PRECONDITION(!mCpuBuffer, "This buffer is backed by CPU memory");
+    mExternalBuffer = buffer;
+}
+
+bool MetalBuffer::releaseExternalBuffer() {
+    if (!mExternalBuffer) {
+        return false;
+    }
+
+#if !__has_feature(objc_arc)
+    [mExternalBuffer release];
+#endif
+    mExternalBuffer = nil;
+    return true;
 }
 
 void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
@@ -57,6 +80,16 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
         return;
     }
 
+    if (mExternalBuffer) {
+        memcpy(static_cast<uint8_t*>(mExternalBuffer.contents), src, size);
+#if !TARGET_OS_IOS
+        if (mExternalBuffer.storageMode == MTLStorageModeManaged) {
+            [mExternalBuffer didModifyRange:NSMakeRange(0, size)];
+        }
+#endif
+        return;
+    }
+
     // We're about to acquire a new buffer to hold the new contents. If we previously had obtained a
     // buffer we release it, decrementing its reference count, as we no longer needs it.
     if (mBufferPoolEntry) {
@@ -68,6 +101,10 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size) {
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
+    if (mExternalBuffer) {
+        return mExternalBuffer;
+    }
+
     if (!mBufferPoolEntry) {
         // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
         // separately.

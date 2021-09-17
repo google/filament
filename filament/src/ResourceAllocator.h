@@ -90,7 +90,7 @@ public:
 
 private:
     // TODO: these should be settings of the engine
-    static constexpr size_t CACHE_CAPACITY = 64u << 20u;   // 64 MiB
+    static constexpr size_t CACHE_CAPACITY = 150u << 20u;   // 150 MiB (should cover at least 4K resolution)
     static constexpr size_t CACHE_MAX_AGE  = 30u;
 
     struct TextureKey {

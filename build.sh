@@ -42,6 +42,8 @@ function print_help {
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
+    echo "    -g"
+    echo "        Exclude OpenGL support from the iOS build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
     echo "    -t"
@@ -156,6 +158,8 @@ INSTALL_COMMAND=
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
+
+OPENGL_IOS_OPTION="-DFILAMENT_SUPPORTS_OPENGL=ON"
 
 SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
 
@@ -578,6 +582,7 @@ function build_ios_target {
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
+            ${OPENGL_IOS_OPTION} \
             ../..
     fi
 
@@ -696,7 +701,7 @@ function validate_build_command {
     fi
     # Make sure we have Java
     local javac_binary=$(command -v javac)
-    if [[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]; then
+    if [[ "${ISSUE_DESKTOP_BUILD}" == "true" ]] && ([[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]); then
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
         FILAMENT_ENABLE_JAVA=OFF
     fi
@@ -748,7 +753,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
+while getopts ":hacCfijmp:q:uvgslwtdk:" opt; do
     case ${opt} in
         h)
             print_help
@@ -848,6 +853,10 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
             VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_exclude_vulkan"
             echo "Disabling support for Vulkan in the core Filament library."
             echo "Consider using -c after changing this option to clear the Gradle cache."
+            ;;
+        g)
+            OPENGL_IOS_OPTION="-DFILAMENT_SUPPORTS_OPENGL=OFF"
+            echo "Disabling support for OpenGL in the core Filament library."
             ;;
         s)
             IOS_BUILD_SIMULATOR=true

@@ -20,9 +20,6 @@
 #include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
@@ -370,6 +367,12 @@ void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
 void PlatformEGL::destroyExternalImage(void* texture) noexcept {
     auto* t = (OpenGLDriver::GLTexture*) texture;
     glDeleteTextures(1, &t->gl.id);
+}
+
+void PlatformEGL::setSwapInterval(int32_t interval) noexcept {
+    if (eglSwapInterval(mEGLDisplay, interval) == EGL_FALSE) {
+        logEglError("eglSwapInterval");
+    }
 }
 
 void PlatformEGL::initializeGlExtensions() noexcept {

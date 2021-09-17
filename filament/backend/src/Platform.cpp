@@ -80,7 +80,7 @@ Platform::~Platform() noexcept = default;
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
+DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
 

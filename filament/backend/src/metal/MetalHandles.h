@@ -114,7 +114,7 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
-    MetalBufferObject(MetalContext& context, uint32_t byteCount);
+    MetalBufferObject(MetalContext& context, uint32_t byteCount, bool wrapsExternalBuffer);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() const { return buffer.get(); }

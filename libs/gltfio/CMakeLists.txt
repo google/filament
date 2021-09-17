@@ -172,7 +172,7 @@ target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
 target_link_libraries(gltfio_core PUBLIC dracodec)
 
-if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
+if (NOT WEBGL AND NOT ANDROID)
 
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library

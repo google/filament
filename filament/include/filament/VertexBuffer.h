@@ -99,6 +99,16 @@ public:
         Builder& enableBufferObjects(bool enabled = true) noexcept;
 
         /**
+         * Allows buffers to wrap external (backend-specific) buffers.
+         *
+         * If external buffer mode is enabled, clients must call setExternalBufferAt rather than
+         * setBufferAt.
+         *
+         * @param enabled If true, enables external buffer mode.  False by default.
+         */
+        Builder& enableExternalBuffer(bool enabled = true) noexcept;
+
+        /**
          * Sets up an attribute for this vertex buffer set.
          *
          * Using \p byteOffset and \p byteStride, attributes can be interleaved in the same buffer.
@@ -194,6 +204,18 @@ public:
      * @param bufferObject The handle to the GPU data that will be used in this buffer slot.
      */
     void setBufferObjectAt(Engine& engine, uint8_t bufferIndex, BufferObject const* bufferObject);
+
+    /**
+     * Wraps the given external buffer (stores a strong reference to it).
+     *
+     * To use this, you must first call enableExternalBuffer() on the Builder.
+     *
+     * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
+     * @param bufferIndex Index of the buffer to initialize. Must be between 0
+     *                    and Builder::bufferCount() - 1.
+     * @param externalBuffer Pointer to the external buffer that will be used in this buffer slot.
+     */
+    void setExternalBufferAt(Engine& engine, uint8_t bufferIndex, void* externalBuffer);
 };
 
 } // namespace filament

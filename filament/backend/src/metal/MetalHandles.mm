@@ -266,8 +266,8 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
-MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(std::make_unique<MetalBuffer>(context, byteCount)) {}
+MetalBufferObject::MetalBufferObject(MetalContext& context, uint32_t byteCount, bool wrapsExternalBuffer)
+        : HwBufferObject(byteCount), buffer(std::make_unique<MetalBuffer>(context, byteCount, wrapsExternalBuffer)) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     assert_invariant(byteOffset + size <= byteCount);
