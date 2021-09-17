@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: Added concept of lod bias to materials. 
   [⚠️ **Materials need to be rebuilt to access this new feature**].
+- gltfio: Improved handling of transparent materials.
 
 ## v1.12.5
 
