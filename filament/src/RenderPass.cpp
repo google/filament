@@ -392,7 +392,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     cmdColor.key |= makeField(primitive.getBlendOrder(),
                             BLEND_ORDER_MASK, BLEND_ORDER_SHIFT);
 
-                    const TransparencyMode mode = mi->getMaterial()->getTransparencyMode();
+                    const TransparencyMode mode = mi->getTransparencyMode();
 
                     // handle transparent objects, two techniques:
                     //
