@@ -321,6 +321,9 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .clearCoatIorChange(false)
             .material(shader.c_str())
             .doubleSided(config.doubleSided)
+            .transparencyMode(config.doubleSided ?
+                    MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
+                    MaterialBuilder::TransparencyMode::DEFAULT)
             .targetApi(filamat::targetApiFromBackend(engine->getBackend()));
 
     if (!optimizeShaders) {
@@ -483,7 +486,6 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
                 break;
             case AlphaMode::BLEND:
                 builder.blending(MaterialBuilder::BlendingMode::FADE);
-                builder.depthWrite(true);
                 break;
             default:
                 // Ignore

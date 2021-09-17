@@ -4,6 +4,7 @@ material {
     shadingModel : ${SHADINGMODEL},
     blending : masked,
     doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
