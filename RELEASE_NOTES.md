@@ -3,7 +3,12 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.5 (currently main branch)
+## v1.12.6 (currently main branch)
+
+## v1.12.5
+
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
 
 ## v1.12.4
 
@@ -20,7 +25,7 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.2
 
-- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New Api**].
+- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New API**].
 - engine: Fix typo causing ShadowOptions::shadowFar to not work properly.
 - engine: Fix, CSM glitch when using shadowMultiplier materials.
 - engine: Improve precision when computing camera projection.

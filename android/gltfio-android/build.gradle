@@ -27,7 +27,8 @@ android {
 
 dependencies {
     implementation deps.androidx.annotations
-    implementation project(':filament-android')
+
+    api project(':filament-android')
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
