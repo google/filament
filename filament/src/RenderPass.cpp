@@ -456,24 +456,24 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
             if (isDepthPass) {
                 FMaterial const* const ma = mi->getMaterial();
-                RasterState rs = ma->getRasterState();
+                const RasterState rs = ma->getRasterState();
+                const TransparencyMode mode = mi->getTransparencyMode();
+                const BlendingMode blendingMode = ma->getBlendingMode();
+                const bool translucent = (blendingMode != BlendingMode::OPAQUE
+                                          && blendingMode != BlendingMode::MASKED);
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
-                *curr = cmdDepth;
 
-                BlendingMode blendingMode = ma->getBlendingMode();
-                bool translucent = (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
-
-                // FIXME: should writeDepthForShadowCasters take precedence over rs.depthWrite?
-                bool issueDepth = (rs.depthWrite
+                // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
+                cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
+                        & (mi->getDepthWrite() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
                         & !(depthFilterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
-                                | writeDepthForShadowCasters;
-
-                curr->key |= select(!issueDepth);
+                            | writeDepthForShadowCasters;
+                *curr = cmdDepth;
 
                 // handle the case where this primitive is empty / no-op
                 curr->key |= select(primitive.getPrimitiveType() == PrimitiveType::NONE);
