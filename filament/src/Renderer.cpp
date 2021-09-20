@@ -467,6 +467,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 });
     }
 
+    // Store this frame's camera projection in the frame history.
+    if (taaOptions.enabled || ssReflectionsOptions.enabled) {
+        auto& history = view.getFrameHistory();
+        auto const& previous = history[0];
+        auto& current = history.getCurrent();
+        current.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+        // update frame id
+        current.frameId = previous.frameId + 1;
+    }
+
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
     if (taaOptions.enabled) {
         auto& history = view.getFrameHistory();
