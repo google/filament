@@ -255,6 +255,14 @@ public:
         return mMultiSampleAntiAliasingOptions;
     }
 
+    void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+        mScreenSpaceReflectionsOptions = options;
+    }
+
+    const ScreenSpaceReflectionsOptions& getScreenSpaceReflectionsOptions() const noexcept {
+        return mScreenSpaceReflectionsOptions;
+    }
+
     void setColorGrading(FColorGrading* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
@@ -570,6 +578,7 @@ private:
     VignetteOptions mVignetteOptions;
     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+    ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;

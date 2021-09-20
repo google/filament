@@ -316,6 +316,10 @@ struct TemporalAntiAliasingOptions {
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
 };
 
+struct ScreenSpaceReflectionsOptions {
+    bool enabled = false;
+};
+
 /**
  * List of available post-processing anti-aliasing techniques.
  * @see setAntiAliasing, getAntiAliasing, setSampleCount

@@ -1016,6 +1016,14 @@ const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOpti
     return upcast(this)->getMultiSampleAntiAliasingOptions();
 }
 
+void View::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+    upcast(this)->setScreenSpaceReflectionsOptions(options);
+}
+
+const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOptions() const noexcept {
+    return upcast(this)->getScreenSpaceReflectionsOptions();
+}
+
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
     return upcast(this)->setColorGrading(upcast(colorGrading));
 }
