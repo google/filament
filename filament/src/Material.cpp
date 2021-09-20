@@ -357,8 +357,7 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
     }
 }
 
-Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey)
-    const noexcept {
+Handle<HwProgram> FMaterial::getSurfaceProgramSlow(uint8_t variantKey) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
     assert_invariant( variantKey == Variant::filterVariant(variantKey, isVariantLit()) );
