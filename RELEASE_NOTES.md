@@ -8,10 +8,12 @@ A new header is inserted each time a *tag* is created.
 - engine: Added concept of lod bias to materials. 
   [⚠️ **Materials need to be rebuilt to access this new feature**].
 - gltfio: Improved handling of transparent materials.
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
 
 ## v1.12.5
 
-- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
 
 ## v1.12.4
 
