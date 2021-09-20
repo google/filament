@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.5
 
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
+
 ## v1.12.4
 
 - engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
