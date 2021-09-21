@@ -80,6 +80,13 @@ FView::~FView() noexcept = default;
 void FView::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated or we own (currently none).
 
+    while (mActivePickingQueriesList) {
+        FPickingQuery* const pQuery = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery->next;
+        pQuery->callback(pQuery->result, pQuery);
+        FPickingQuery::put(pQuery);
+    }
+
     mPerViewUniforms.terminate(engine);
 
     DriverApi& driver = engine.getDriverApi();
@@ -798,6 +805,31 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
     }
 }
 
+void FView::executePickingQueries(backend::DriverApi& driver,
+        backend::RenderTargetHandle handle, float scale) noexcept {
+
+    while (mActivePickingQueriesList) {
+        FPickingQuery* const pQuery = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery->next;
+
+        // adjust for dynamic resolution and structure buffer scale
+        const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
+        const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
+        driver.readPixels(handle, x, y, 1, 1, {
+                &pQuery->result.renderable, 4*4, // 4*uint
+                // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
+                backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
+                [](void* buffer, size_t size, void* user) {
+                    FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
+                    pQuery->result.fragCoords = {
+                            pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };
+                    pQuery->callback(pQuery->result, pQuery);
+                    FPickingQuery::put(pQuery);
+                }, pQuery
+        });
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -1025,6 +1057,11 @@ void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
 
 bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return upcast(this)->isScreenSpaceRefractionEnabled();
+}
+
+View::PickingQuery& View::pick(uint32_t x, uint32_t y,
+        View::PickingQueryResultCallback callback) noexcept {
+    return upcast(this)->pick(x, y, callback);
 }
 
 } // namespace filament

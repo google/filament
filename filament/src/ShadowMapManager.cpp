@@ -194,7 +194,6 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                         auto depth = builder.createTexture("Temporary VSM Depth Texture", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
                                 .samples = options->vsm.msaaSamples,
-                                .type = SamplerType::SAMPLER_2D,
                                 .format = mTextureFormat,
                         });
 
@@ -202,7 +201,6 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                         // is needed -- it'll be used as the source of the blur.
                         data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
-                                .type = SamplerType::SAMPLER_2D,
                                 .format = vsmTextureFormat
                         });
 

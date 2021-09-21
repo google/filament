@@ -244,7 +244,7 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateGetters(vs, ShaderType::VERTEX);
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
-    if (variant.isDepthPass() &&
+    if (filament::Variant::isValidDepthVariant(variantKey) &&
             material.blendingMode != BlendingMode::MASKED &&
             !material.hasTransparentShadow &&
             !hasCustomDepthShader()) {
@@ -347,10 +347,11 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    cg.generateDefine(fs, "HAS_FOG", variant.hasFog() && !variant.hasDepth());
+    cg.generateDefine(fs, "HAS_PICKING", variant.hasPicking() && variant.hasDepth());
+    cg.generateDefine(fs, "HAS_VSM", variant.hasVsm());
     cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
     cg.generateDefine(fs, "HAS_TRANSPARENT_SHADOW", material.hasTransparentShadow);
-    cg.generateDefine(fs, "HAS_FOG", variant.hasFog());
-    cg.generateDefine(fs, "HAS_VSM", variant.hasVsm());
 
     // material defines
     cg.generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);
@@ -444,7 +445,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateFog(fs, ShaderType::FRAGMENT);
 
     // shading model
-    if (variant.isDepthPass()) {
+    if (filament::Variant::isValidDepthVariant(variantKey)) {
         if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
             appendShader(fs, mMaterialCode, mMaterialLineOffset);
         }

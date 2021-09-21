@@ -135,6 +135,10 @@ public:
     inline uint32_t getBoneCount(Instance instance) const noexcept;
 
 
+    utils::Entity getEntity(Instance instance) const noexcept {
+        return mManager.getEntity(instance);
+    }
+
     inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
     inline size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,

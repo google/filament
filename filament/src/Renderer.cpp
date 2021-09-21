@@ -280,14 +280,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
     RenderPass pass(engine, commandArena);
-    RenderPass::RenderFlags renderFlags = 0;
-    if (view.hasShadowing())               renderFlags |= RenderPass::HAS_SHADOWING;
-    if (view.hasDirectionalLight())        renderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view.hasDynamicLighting())         renderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
-    if (view.hasFog())                     renderFlags |= RenderPass::HAS_FOG;
-    if (view.isFrontFaceWindingInverted()) renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
-    if (view.hasVsm())                     renderFlags |= RenderPass::HAS_VSM;
-    pass.setRenderFlags(renderFlags);
+    RenderPass::RenderFlags baseRenderFlags = 0;
+    if (view.hasShadowing())               baseRenderFlags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())        baseRenderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())         baseRenderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasFog())                     baseRenderFlags |= RenderPass::HAS_FOG;
+    if (view.isFrontFaceWindingInverted()) baseRenderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
+
+    RenderPass::RenderFlags colorRenderFlags = baseRenderFlags;
+    if (view.hasVsm())                     colorRenderFlags |= RenderPass::HAS_VSM;
+
+    RenderPass::RenderFlags structureRenderFlags = baseRenderFlags;
+    if (view.hasPicking())                 structureRenderFlags |= RenderPass::HAS_PICKING;
 
     /*
      * Frame graph
@@ -300,7 +304,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     if (view.needsShadowMap()) {
-        view.renderShadowMaps(fg, engine, driver, pass);
+        RenderPass shadowPass(pass);
+        shadowPass.setRenderFlags(colorRenderFlags);
+        view.renderShadowMaps(fg, engine, driver, shadowPass);
     }
 
     // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
@@ -414,11 +420,37 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
     RenderPass structurePass(pass);
+    structurePass.setRenderFlags(structureRenderFlags);
     structurePass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
     structurePass.sortCommands();
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    ppm.structure(fg, structurePass, svp.width, svp.height, aoOptions.resolution);
+    ppm.structure(fg, structurePass, svp.width, svp.height, {
+            .scale = aoOptions.resolution,
+            .picking = view.hasPicking()
+    });
+
+    if (view.hasPicking()) {
+        struct PickingResolvePassData {
+            FrameGraphId<FrameGraphTexture> picking;
+        };
+        auto& blackboard = fg.getBlackboard();
+        auto picking = blackboard.get<FrameGraphTexture>("picking");
+        fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.picking = builder.read(picking,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    builder.declareRenderPass("Picking Resolve Target", {
+                            .attachments = { .color = { data.picking }}
+                    });
+                    builder.sideEffect();
+                },
+                [=, &view](FrameGraphResources const& resources,
+                        auto const& data, DriverApi& driver) mutable {
+                    auto out = resources.getRenderPassInfo();
+                    view.executePickingQueries(driver, out.target, aoOptions.resolution);
+                });
+    }
 
     // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
     if (taaOptions.enabled) {
@@ -448,6 +480,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Color passes
 
     // TODO: ideally this should be a FrameGraph pass to participate to automatic culling
+    pass.setRenderFlags(colorRenderFlags);
     pass.appendCommands(RenderPass::COLOR);
     pass.sortCommands();
 
