@@ -660,6 +660,10 @@ void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const n
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
 }
 
+void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr, math::mat4f historyProjection) const noexcept {
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection);
+}
+
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
     // sampler must be NEAREST
     mPerViewUniforms.prepareStructure(structure);

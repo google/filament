@@ -240,6 +240,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     auto vignetteOptions = view.getVignetteOptions();
     auto colorGrading = view.getColorGrading();
+    auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
@@ -384,7 +385,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .msaa = msaaSampleCount,
             .clearFlags = clearFlags,
             .clearColor = clearColor,
-            .hasContactShadows = scene.hasContactShadows()
+            .hasContactShadows = scene.hasContactShadows(),
+            .hasScreenSpaceReflections = ssReflectionsOptions.enabled
     };
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
@@ -845,6 +847,20 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         TargetBufferFlags clearFlags{};
     };
 
+    FrameGraphId<FrameGraphTexture> colorHistory;
+    mat4f const* historyProjection = nullptr;
+    if (config.hasScreenSpaceReflections) {
+        const FrameHistory& frameHistory = view.getFrameHistory();
+        FrameHistoryEntry const& entry = frameHistory[0];
+        if (UTILS_UNLIKELY(!entry.color.handle)) {
+            // if we don't have a history yet, don't render reflections this frame
+        } else {
+            colorHistory = fg.import("Screen-space reflections history", entry.colorDesc,
+                    FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
+            historyProjection = &entry.projection;
+        }
+    }
+
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
@@ -853,12 +869,22 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
-                data.ssr  = blackboard.get<FrameGraphTexture>("ssr");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
                 data.color = blackboard.get<FrameGraphTexture>("color");
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
-                if (config.hasContactShadows) {
+                if (config.hasScreenSpaceReflections && colorHistory) {
+                    // Screen-space reflections
+                    data.ssr = builder.sample(colorHistory);
+                } else {
+                    // Screen-space refractions
+                    data.ssr = blackboard.get<FrameGraphTexture>("ssr");
+                    if (data.ssr) {
+                        data.ssr = builder.sample(data.ssr);
+                    }
+                }
+
+                if (config.hasContactShadows || config.hasScreenSpaceReflections) {
                     data.structure = blackboard.get<FrameGraphTexture>("structure");
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
@@ -866,10 +892,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (data.shadows) {
                     data.shadows = builder.sample(data.shadows);
-                }
-
-                if (data.ssr) {
-                    data.ssr = builder.sample(data.ssr);
                 }
 
                 if (data.ssao) {
@@ -950,7 +972,15 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                         resources.getTexture(data.structure) : ppm.getOneTexture());
 
                 if (data.ssr) {
-                    view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    if (config.hasScreenSpaceReflections) {
+                        auto& cameraInfo = view.getCameraInfo();
+                        auto reprojection =
+                                *historyProjection *
+                                inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection);
+                    } else {
+                        view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    }
                 }
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));

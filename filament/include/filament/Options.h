@@ -317,7 +317,7 @@ struct TemporalAntiAliasingOptions {
 };
 
 struct ScreenSpaceReflectionsOptions {
-    bool enabled = false;
+    bool enabled = true;
 };
 
 /**

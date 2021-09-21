@@ -730,6 +730,8 @@ void SimpleViewer::updateUserInterface() {
                 ssao.ssct.sampleCount = sampleCount;
             }
         }
+
+        ImGui::Checkbox("Screen-space reflections", &mSettings.view.screenSpaceReflections.enabled);
         ImGui::Unindent();
     }
 

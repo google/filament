@@ -152,6 +152,7 @@ private:
         math::float4 clearColor = {};
         float refractionLodOffset;
         bool hasContactShadows;
+        bool hasScreenSpaceReflections;
     };
 
     FrameGraphId<FrameGraphTexture> colorPass(FrameGraph& fg, const char* name,

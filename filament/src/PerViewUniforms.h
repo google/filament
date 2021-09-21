@@ -72,6 +72,7 @@ public:
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
+    void prepareSSReflections(TextureHandle ssr, math::mat4f historyProjection) noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;
 

@@ -177,6 +177,15 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffse
     s.refractionLodOffset = refractionLodOffset;
 }
 
+void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f historyProjection) noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
+            .filterMag = SamplerMagFilter::LINEAR,
+            .filterMin = SamplerMinFilter::LINEAR
+    });
+    auto& s = mPerViewUb.edit();
+    s.ssrReprojection = historyProjection;
+}
+
 void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
     // sampler must be NEAREST
     mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
