@@ -136,10 +136,15 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float nearOverFarMinusNear;         // n / (f-n), always positive
     float temporalNoise;                // noise [0,1] when TAA is used, 0 otherwise
 
+    // Screen-space reflections
     math::mat4f ssrReprojection;
+    float ssrThickness;
+    float reserved4;
+    float reserved5;
+    float reserved6;
 
     // bring PerViewUib to 2 KiB
-    math::float4 padding2[54];
+    math::float4 padding2[53];
 };
 
 // 2 KiB == 128 float4s

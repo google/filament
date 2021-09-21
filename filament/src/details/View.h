@@ -172,7 +172,8 @@ public:
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept;
-    void prepareSSReflections(backend::Handle<backend::HwTexture> ssr, math::mat4f historyProjection) const noexcept;
+    void prepareSSReflections(backend::Handle<backend::HwTexture> ssr, math::mat4f historyProjection,
+            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMap() const noexcept;

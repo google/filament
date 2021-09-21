@@ -972,11 +972,13 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
 
                 if (data.ssr) {
                     if (config.hasScreenSpaceReflections) {
-                        auto& cameraInfo = view.getCameraInfo();
+                        const auto& ssrOptions = view.getScreenSpaceReflectionsOptions();
+                        const auto& cameraInfo = view.getCameraInfo();
                         auto reprojection =
                                 *historyProjection *
                                 inverse(cameraInfo.view * cameraInfo.worldOrigin);
-                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection);
+                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
+                                ssrOptions);
                     } else {
                         view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                     }

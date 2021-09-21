@@ -318,6 +318,7 @@ struct TemporalAntiAliasingOptions {
 
 struct ScreenSpaceReflectionsOptions {
     bool enabled = true;
+    float thickness = 0.5f;     //!< ray thickness, in world units
 };
 
 /**

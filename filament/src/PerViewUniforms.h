@@ -38,6 +38,7 @@ struct FogOptions;
 struct SoftShadowOptions;
 struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
+struct ScreenSpaceReflectionsOptions;
 
 struct CameraInfo;
 struct ShadowMappingUniforms;
@@ -72,7 +73,8 @@ public:
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
-    void prepareSSReflections(TextureHandle ssr, math::mat4f historyProjection) noexcept;
+    void prepareSSReflections(TextureHandle ssr, math::mat4f historyProjection,
+            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;
 

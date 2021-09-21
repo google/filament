@@ -660,8 +660,9 @@ void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const n
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
 }
 
-void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr, math::mat4f historyProjection) const noexcept {
-    mPerViewUniforms.prepareSSReflections(ssr, historyProjection);
+void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr, math::mat4f historyProjection,
+        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {

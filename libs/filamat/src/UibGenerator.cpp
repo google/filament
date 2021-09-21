@@ -118,9 +118,13 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
 
             .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved4",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved5",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved6",               1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding2", 54, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 53, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

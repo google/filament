@@ -603,7 +603,7 @@ void evaluateScreenSpaceReflections(const PixelParams pixel, inout vec3 Fr) {
     highp vec3 csOrigin = csRayStart.xyz;
     highp vec3 csDirection = csRayDirection.xyz;
     highp mat4x4 projectToPixelMatrix;
-    highp float csZThickness = 0.5f;
+    highp float csZThickness = frameUniforms.ssrThickness;
     const bool csZBufferIsHyperbolic = true;
     highp float nearPlaneZ = -0.1f;
     highp float stride = 1.0;
