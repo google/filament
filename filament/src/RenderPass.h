@@ -239,6 +239,7 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
     static constexpr RenderFlags HAS_FOG                 = 0x10;
     static constexpr RenderFlags HAS_VSM                 = 0x20;
+    static constexpr RenderFlags HAS_PICKING             = 0x40;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -270,7 +271,7 @@ public:
     // specifies camera information (e.g. used for sorting commands)
     void setCamera(const CameraInfo& camera) noexcept { mCamera = camera; }
 
-    //  flags controling how commands are generated
+    //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
 
     // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine

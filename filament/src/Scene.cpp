@@ -198,6 +198,8 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
 
 void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwBufferObject> renderableUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
+    FRenderableManager& rcm = mEngine.getRenderableManager();
+
     const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
 
     // allocate space into the command stream directly
@@ -208,6 +210,8 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     for (uint32_t i : visibleRenderables) {
         mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
         FRenderableManager::Visibility visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
+        auto ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
+
         const size_t offset = i * sizeof(PerRenderableUib);
 
         UniformBuffer::setUniform(buffer,
@@ -256,6 +260,10 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, channels),
                 (uint32_t)sceneData.elementAt<CHANNELS>(i));
+
+        UniformBuffer::setUniform(buffer,
+                offset + offsetof(PerRenderableUib, objectId),
+                rcm.getEntity(ri).getId()); // we could also store the entity in sceneData
 
         // TODO: We need to find a better way to provide the scale information per object
         UniformBuffer::setUniform(buffer,

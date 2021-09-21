@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.8 (currently main branch)
 
+- engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
+
 ## v1.12.7
 
 ## v1.12.6

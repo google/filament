@@ -1,9 +1,15 @@
 #if defined(HAS_VSM)
 layout(location = 0) out vec4 fragColor;
+#elif defined(HAS_PICKING)
+layout(location = 0) out highp uint2 outPicking;
+#else
+// not color output
 #endif
 
 //------------------------------------------------------------------------------
 // Depth
+//
+// note: HAS_VSM and HAS_PICKING are mutually exclusive
 //------------------------------------------------------------------------------
 
 void main() {
@@ -58,5 +64,10 @@ void main() {
     moments.y = depth * depth + 0.25 * (dx * dx + dy * dy);
 
     fragColor = vec4(moments, 0.0, 0.0);
+#elif defined(HAS_PICKING)
+    outPicking.x = objectUniforms.objectId;
+    outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
+#else
+    // that's it
 #endif
 }

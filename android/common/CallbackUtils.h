@@ -78,6 +78,9 @@ struct JniCallback {
 
     static void invoke(void* user);
 
+    jobject getCallbackObject() { return mCallback; }
+    JNIEnv* getJniEnv() { return mEnv; }
+
 private:
     JniCallback(JNIEnv* env, jobject handler, jobject runnable);
     JniCallback(JniCallback const &) = delete;

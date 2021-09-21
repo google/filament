@@ -184,6 +184,7 @@ public:
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
             RenderPass const& pass) noexcept;
@@ -430,7 +431,43 @@ public:
     // (e.g.: after the FrameFraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
+    // create the picking query
+    View::PickingQuery& pick(uint32_t x, uint32_t y,
+            View::PickingQueryResultCallback callback) noexcept {
+        FPickingQuery* pQuery = FPickingQuery::get(x, y, callback);
+        pQuery->next = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery;
+        return *pQuery;
+    }
+
+    void executePickingQueries(backend::DriverApi& driver,
+            backend::RenderTargetHandle handle, float scale) noexcept;
+
 private:
+
+    struct FPickingQuery : public PickingQuery {
+    private:
+        FPickingQuery(uint32_t x, uint32_t y, View::PickingQueryResultCallback callback) noexcept
+                : PickingQuery{}, x(x), y(y), callback(callback) {}
+        ~FPickingQuery() noexcept = default;
+    public:
+        // TODO: use a small pool
+        static FPickingQuery* get(uint32_t x, uint32_t y,
+                View::PickingQueryResultCallback callback) noexcept {
+            return new FPickingQuery(x, y, callback);
+        }
+        static void put(FPickingQuery* pQuery) noexcept {
+            delete pQuery;
+        }
+        mutable FPickingQuery* next = nullptr;
+        // picking query parameters
+        const uint32_t x;
+        const uint32_t y;
+        const View::PickingQueryResultCallback callback;
+        // picking query result
+        PickingQueryResult result;
+    };
+
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
@@ -514,6 +551,8 @@ private:
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
 
     mutable FrameHistory mFrameHistory{};
+
+    FPickingQuery* mActivePickingQueriesList = nullptr;
 
     utils::CString mName;
 

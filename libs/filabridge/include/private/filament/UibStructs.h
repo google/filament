@@ -147,9 +147,9 @@ struct alignas(256) PerRenderableUib {
     math::mat4f worldFromModelMatrix;
     math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
     alignas(16) math::float4 morphWeights;    // morph weights (we could easily have 8 using half)
-    uint32_t flags;                                     // see packFlags() below
-    uint32_t channels;                                  // 0x000000ll
-    uint32_t reserved1;                                 // 0
+    uint32_t flags;                           // see packFlags() below
+    uint32_t channels;                        // 0x000000ll
+    uint32_t objectId;                        // used for picking
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 

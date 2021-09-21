@@ -28,6 +28,9 @@ void main() {
     vertex_worldPosition = material.worldPosition.xyz;
 #endif
 
+    // this must happen before we compensate for vulkan below
+    vertex_position = gl_Position;
+
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
