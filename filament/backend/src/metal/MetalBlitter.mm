@@ -20,13 +20,6 @@
 
 #include <utils/Panic.h>
 
-#define NSERROR_CHECK(message)                                                                     \
-    if (error) {                                                                                   \
-        auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]; \
-        utils::slog.e << description << utils::io::endl;                                           \
-    }                                                                                              \
-    ASSERT_POSTCONDITION(error == nil, message);
-
 namespace filament {
 namespace backend {
 namespace metal {
@@ -477,7 +470,14 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
                                                             options:options
                                                               error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterFrag"];
-    NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
+
+    if (!library || !function) {
+        if (error) {
+            auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+            utils::slog.e << description << utils::io::endl;
+        }
+    }
+    ASSERT_POSTCONDITION(library && function, "Unable to compile fragment shader for MetalBlitter.");
 
     return function;
 }
@@ -494,7 +494,14 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
                                                            options:nil
                                                              error:&error];
     id<MTLFunction> function = [library newFunctionWithName:@"blitterVertex"];
-    NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
+
+    if (!library || !function) {
+        if (error) {
+            auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+            utils::slog.e << description << utils::io::endl;
+        }
+    }
+    ASSERT_POSTCONDITION(library && function, "Unable to compile vertex shader for MetalBlitter.");
 
     mVertexFunction = function;
 
