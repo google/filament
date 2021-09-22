@@ -83,9 +83,15 @@ Pod::Spec.new do |spec|
   end
 
   spec.subspec "utils" do |ss|
-    ss.source_files = "include/utils/*.h"
+    ss.source_files = "include/utils/**/*.h"
+    ss.header_mappings_dir = "include"
     ss.vendored_libraries = "lib/universal/libutils.a"
-    ss.header_dir = "utils"
+    ss.dependency "Filament/tsl"
+  end
+
+  spec.subspec "tsl" do |ss|
+    ss.source_files = "include/tsl/*.h"
+    ss.header_dir = "tsl"
   end
 
   spec.subspec "math" do |ss|
