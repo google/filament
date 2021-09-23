@@ -75,7 +75,9 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     }
 
     mContext->maxColorRenderTargets = 4;
-#if defined(IOS)
+#if TARGET_OS_MACCATALYST
+    mContext->maxColorRenderTargets = 8;
+#elif defined(IOS)
     if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
         mContext->maxColorRenderTargets = 8;
     }
