@@ -857,7 +857,11 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.sampleCount = samples;
     descriptor.usage = MTLTextureUsageRenderTarget;
 #if defined(IOS)
-    descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+    if (@available(macCatalyst 14.0, *)) {
+        descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+    } else {
+        descriptor.resourceOptions = MTLResourceStorageModePrivate;        
+    }
 #else
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 #endif
