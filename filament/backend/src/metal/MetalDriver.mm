@@ -662,11 +662,11 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
-    return true;
-#else
+    // Newer Intel cards support it too, but it's not documented
+    if (@available(macOS 10.15, iOS 13, *)) {
+        return [mContext->device supportsFamily:MTLGPUFamilyApple1];
+    }
     return false;
-#endif
 }
 
 bool MetalDriver::isFrameTimeSupported() {
