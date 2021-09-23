@@ -128,22 +128,24 @@ constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalize
 
 inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
 #if defined(IOS)
-    switch (format) {
-        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4: return MTLPixelFormatASTC_4x4_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_5x4: return MTLPixelFormatASTC_5x4_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_5x5: return MTLPixelFormatASTC_5x5_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_6x5: return MTLPixelFormatASTC_6x5_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_6x6: return MTLPixelFormatASTC_6x6_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_8x5: return MTLPixelFormatASTC_8x5_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_8x6: return MTLPixelFormatASTC_8x6_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_8x8: return MTLPixelFormatASTC_8x8_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_10x5: return MTLPixelFormatASTC_10x5_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_10x6: return MTLPixelFormatASTC_10x6_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_10x8: return MTLPixelFormatASTC_10x8_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_10x10: return MTLPixelFormatASTC_10x10_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_12x10: return MTLPixelFormatASTC_12x10_sRGB;
-        case TextureFormat::SRGB8_ALPHA8_ASTC_12x12: return MTLPixelFormatASTC_12x12_sRGB;
-        default: break;
+    if (@available(iOS 8, macCatalyst 14, *)) {
+        switch (format) {
+            case TextureFormat::SRGB8_ALPHA8_ASTC_4x4: return MTLPixelFormatASTC_4x4_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_5x4: return MTLPixelFormatASTC_5x4_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_5x5: return MTLPixelFormatASTC_5x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_6x5: return MTLPixelFormatASTC_6x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_6x6: return MTLPixelFormatASTC_6x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x5: return MTLPixelFormatASTC_8x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x6: return MTLPixelFormatASTC_8x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x8: return MTLPixelFormatASTC_8x8_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x5: return MTLPixelFormatASTC_10x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x6: return MTLPixelFormatASTC_10x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x8: return MTLPixelFormatASTC_10x8_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x10: return MTLPixelFormatASTC_10x10_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_12x10: return MTLPixelFormatASTC_12x10_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_12x12: return MTLPixelFormatASTC_12x12_sRGB;
+            default: break;
+        }
     }
     // Only iOS 13.0 and above supports the ASTC HDR profile. Older versions of iOS fallback to LDR.
     // The HDR profile is a superset of the LDR profile.
@@ -181,6 +183,25 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
             case TextureFormat::RGBA_ASTC_10x10: return MTLPixelFormatASTC_10x10_LDR;
             case TextureFormat::RGBA_ASTC_12x10: return MTLPixelFormatASTC_12x10_LDR;
             case TextureFormat::RGBA_ASTC_12x12: return MTLPixelFormatASTC_12x12_LDR;
+            default: break;
+        }
+    }
+#endif
+
+#if defined(IOS)
+    if (@available(iOS 8, macCatalyst 14, *)) {
+        switch (format) {
+            // EAC / ETC2 formats are only available on iPhone.
+            case TextureFormat::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
+            case TextureFormat::EAC_R11_SIGNED: return MTLPixelFormatEAC_R11Snorm;
+            case TextureFormat::EAC_RG11: return MTLPixelFormatEAC_RG11Unorm;
+            case TextureFormat::EAC_RG11_SIGNED: return MTLPixelFormatEAC_RG11Snorm;
+            case TextureFormat::ETC2_RGB8: return MTLPixelFormatETC2_RGB8;
+            case TextureFormat::ETC2_SRGB8: return MTLPixelFormatETC2_RGB8_sRGB;
+            case TextureFormat::ETC2_RGB8_A1: return MTLPixelFormatETC2_RGB8A1;
+            case TextureFormat::ETC2_SRGB8_A1: return MTLPixelFormatETC2_RGB8A1_sRGB;
+            case TextureFormat::ETC2_EAC_RGBA8: return MTLPixelFormatEAC_RGBA8;
+            case TextureFormat::ETC2_EAC_SRGBA8: return MTLPixelFormatEAC_RGBA8_sRGB;        
             default: break;
         }
     }
@@ -275,20 +296,6 @@ inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA32F: return MTLPixelFormatRGBA32Float;
         case TextureFormat::RGBA32UI: return MTLPixelFormatRGBA32Uint;
         case TextureFormat::RGBA32I: return MTLPixelFormatRGBA32Sint;
-
-#if defined(IOS)
-        // EAC / ETC2 formats are only available on iPhone.
-        case TextureFormat::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
-        case TextureFormat::EAC_R11_SIGNED: return MTLPixelFormatEAC_R11Snorm;
-        case TextureFormat::EAC_RG11: return MTLPixelFormatEAC_RG11Unorm;
-        case TextureFormat::EAC_RG11_SIGNED: return MTLPixelFormatEAC_RG11Snorm;
-        case TextureFormat::ETC2_RGB8: return MTLPixelFormatETC2_RGB8;
-        case TextureFormat::ETC2_SRGB8: return MTLPixelFormatETC2_RGB8_sRGB;
-        case TextureFormat::ETC2_RGB8_A1: return MTLPixelFormatETC2_RGB8A1;
-        case TextureFormat::ETC2_SRGB8_A1: return MTLPixelFormatETC2_RGB8A1_sRGB;
-        case TextureFormat::ETC2_EAC_RGBA8: return MTLPixelFormatEAC_RGBA8;
-        case TextureFormat::ETC2_EAC_SRGBA8: return MTLPixelFormatEAC_RGBA8_sRGB;
-#endif
 
 #if !defined(IOS)
         // DXT (BC) formats are only available on macOS desktop.
