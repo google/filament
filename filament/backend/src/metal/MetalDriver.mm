@@ -65,12 +65,12 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     // macOS 10.15+ / iOS 13+.
     mContext->supportsTextureSwizzling = false;
     if (@available(macOS 10.15, iOS 13, *)) {
-#if defined(IOS)
-        mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
+#if TARGET_OS_MACCATALYST
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyMacCatalyst2];
+#elif defined(IOS)
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyApple1];
 #else
-        mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyMac2];
 #endif
     }
 
