@@ -126,11 +126,6 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         textureDescriptor.height = headlessHeight;
         // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
         textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-#if defined(IOS)
-        textureDescriptor.storageMode = MTLStorageModeShared;
-#else
-        textureDescriptor.storageMode = MTLStorageModeManaged;
-#endif
         headlessDrawable = [context.device newTextureWithDescriptor:textureDescriptor];
         return headlessDrawable;
     }
@@ -671,11 +666,6 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
             descriptor.textureType = MTLTextureType3D;
             descriptor.depth = depth;
         }
-#if defined(IOS)
-        descriptor.storageMode = MTLStorageModeShared;
-#else
-        descriptor.storageMode = MTLStorageModeManaged;
-#endif
         id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
         [stagingTexture replaceRegion:MTLRegionMake3D(0, 0, 0, width, height, depth)
                           mipmapLevel:0

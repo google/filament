@@ -1008,11 +1008,6 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                                                                width:(srcTexture.width >> miplevel)
                                                               height:(srcTexture.height >> miplevel)
                                                            mipmapped:NO];
-#if defined(IOS)
-    textureDescriptor.storageMode = MTLStorageModeShared;
-#else
-    textureDescriptor.storageMode = MTLStorageModeManaged;
-#endif
     textureDescriptor.usage = MTLTextureUsageShaderWrite | MTLTextureUsageRenderTarget;
     id<MTLTexture> readPixelsTexture = [mContext->device newTextureWithDescriptor:textureDescriptor];
 
