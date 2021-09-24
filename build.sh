@@ -257,6 +257,19 @@ function build_desktop {
     fi
 }
 
+function build_desktop_tools_for_ios {
+    # Supress intermediate desktop tools install and Java
+    local old_install_command=${INSTALL_COMMAND}
+    local old_java_flag=${FILAMENT_ENABLE_JAVA}
+    INSTALL_COMMAND=
+    FILAMENT_ENABLE_JAVA=OFF
+
+    build_desktop $1
+
+    INSTALL_COMMAND=${old_install_command}
+    FILAMENT_ENABLE_JAVA=${old_java_flag}
+}
+
 function build_webgl_with_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
@@ -620,13 +633,7 @@ function archive_ios {
 }
 
 function build_ios {
-    # Supress intermediate desktop tools install
-    local old_install_command=${INSTALL_COMMAND}
-    INSTALL_COMMAND=
-
-    build_desktop "${MOBILE_HOST_TOOLS}"
-
-    INSTALL_COMMAND=${old_install_command}
+    build_desktop_tools_for_ios "${MOBILE_HOST_TOOLS}"
 
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
@@ -669,13 +676,7 @@ function build_ios {
 }
 
 function build_mac_catalyst {
-    # Supress intermediate desktop tools install
-    local old_install_command=${INSTALL_COMMAND}
-    INSTALL_COMMAND=
-
-    build_desktop "${MOBILE_HOST_TOOLS}"
-
-    INSTALL_COMMAND=${old_install_command}
+    build_desktop_tools_for_ios "${MOBILE_HOST_TOOLS}"
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_ios_target "Debug" "x86_64" "macosx"
