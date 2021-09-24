@@ -204,6 +204,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
