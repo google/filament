@@ -1452,6 +1452,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
+    // TODO: don't flush/wait here, this should be asynchronous
+
     mContext.commands->flush();
     mContext.commands->wait();
 
@@ -1577,6 +1579,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    // TODO: don't flush/wait here -- we should do this asynchronously
 
     // Flush and wait.
     mContext.commands->flush();
