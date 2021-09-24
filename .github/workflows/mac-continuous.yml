@@ -21,3 +21,6 @@ jobs:
         with:
           name: filament-mac
           path: out/filament-release-darwin.tgz
+      - name: Check public headers
+        run: |
+          build/common/check-headers.sh out/release/filament/include
