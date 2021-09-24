@@ -32,7 +32,7 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|webgl|all]."
+    echo "        Where platformN is [desktop|android|ios|catalyst|webgl|all]."
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
@@ -130,6 +130,7 @@ ISSUE_RELEASE_BUILD=false
 # Default: build desktop only
 ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
+ISSUE_CATALYST_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
 
@@ -566,20 +567,27 @@ function build_ios_target {
     local arch=$2
     local platform=$3
 
-    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    if [[ "${platform}" == "macosx" ]]; then
+        local install_dir="catalyst-${lc_target}"
+    else
+        local install_dir="ios-${lc_target}"
+    fi
 
-    cd "out/cmake-ios-${lc_target}-${arch}"
+    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
+    mkdir -p "out/cmake-${install_dir}-${arch}"
+
+    cd "out/cmake-${install_dir}-${arch}"
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
-            -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
+            -DCMAKE_INSTALL_PREFIX="../${install_dir}/filament" \
             -DIOS_ARCH="${arch}" \
             -DPLATFORM_NAME="${platform}" \
             -DIOS=1 \
+            -DCATALYST="${platform}" == "macosx" \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
             ${OPENGL_IOS_OPTION} \
@@ -589,7 +597,7 @@ function build_ios_target {
     ${BUILD_COMMAND}
 
     if [[ "${INSTALL_COMMAND}" ]]; then
-        echo "Installing ${lc_target} in out/${lc_target}/filament..."
+        echo "Installing ${lc_target} in out/${install_dir}/filament..."
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
@@ -598,12 +606,14 @@ function build_ios_target {
 
 function archive_ios {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    local archive_suffix=$2
+    local archive_filename="filament-${archive_suffix}.tgz"
 
     if [[ -d "out/ios-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
-            echo "Generating out/filament-${lc_target}-ios.tgz..."
+            echo "Generating out/${archive_filename}..."
             cd "out/ios-${lc_target}"
-            tar -czvf "../filament-${lc_target}-ios.tgz" filament
+            tar -czvf "../${archive_filename}" filament
             cd ../..
         fi
     fi
@@ -636,7 +646,7 @@ function build_ios {
             rm -rf out/ios-debug/filament/lib/x86_64
         fi
 
-        archive_ios "Debug"
+        archive_ios "Debug" "ios"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
@@ -654,7 +664,27 @@ function build_ios {
             rm -rf out/ios-release/filament/lib/x86_64
         fi
 
-        archive_ios "Release"
+        archive_ios "Release" "ios"
+    fi
+}
+
+function build_mac_catalyst {
+    # Supress intermediate desktop tools install
+    local old_install_command=${INSTALL_COMMAND}
+    INSTALL_COMMAND=
+
+    build_desktop "${MOBILE_HOST_TOOLS}"
+
+    INSTALL_COMMAND=${old_install_command}
+
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        build_ios_target "Debug" "x86_64" "macosx"
+        archive_ios "Debug" "catalyst"
+    fi
+
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        build_ios_target "Release" "x86_64" "macosx"
+        archive_ios "Release" "catalyst"
     fi
 }
 
@@ -801,12 +831,16 @@ while getopts ":hacCfijmp:q:uvgslwtdk:" opt; do
                     ios)
                         ISSUE_IOS_BUILD=true
                     ;;
+                    catalyst)
+                        ISSUE_CATALYST_BUILD=true
+                    ;;
                     webgl)
                         ISSUE_WEBGL_BUILD=true
                     ;;
                     all)
                         ISSUE_ANDROID_BUILD=true
                         ISSUE_IOS_BUILD=true
+                        ISSUE_CATALYST_BUILD=true
                         ISSUE_DESKTOP_BUILD=true
                         ISSUE_WEBGL_BUILD=false
                     ;;
@@ -930,6 +964,10 @@ fi
 
 if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
     build_ios
+fi
+
+if [[ "${ISSUE_CATALYST_BUILD}" == "true" ]]; then
+    build_mac_catalyst
 fi
 
 if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
