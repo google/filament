@@ -52,6 +52,7 @@ public:
     // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.
     VulkanStage const* acquireStage(uint32_t numBytes);
 
+    // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,
             uint32_t width, uint32_t height);
 
