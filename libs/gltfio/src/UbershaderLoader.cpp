@@ -208,6 +208,9 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
 
     mi->setDoubleSided(config->doubleSided);
     mi->setCullingMode(config->doubleSided ? CullingMode::NONE : CullingMode::BACK);
+    mi->setTransparencyMode(config->doubleSided ?
+            MaterialInstance::TransparencyMode::TWO_PASSES_TWO_SIDES :
+            MaterialInstance::TransparencyMode::DEFAULT);
 
     #if !GLTFIO_LITE
 

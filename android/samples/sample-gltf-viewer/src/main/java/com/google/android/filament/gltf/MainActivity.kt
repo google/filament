@@ -196,6 +196,10 @@ class MainActivity : Activity() {
 
                 val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
 
+                specularFilter.destroy();
+                equirectToCubemap.destroy();
+                context.destroy();
+
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl
             }

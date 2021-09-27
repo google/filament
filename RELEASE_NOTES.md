@@ -5,6 +5,16 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.6 (currently main branch)
 
+- engine: Added concept of lod bias to materials.
+  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: Use more sensible defaults for spot light inner outer cone angles.
+- engine: Fix potential race condition that caused stalls in `endFrame`.
+- gltfio: Improved handling of transparent materials.
+- Metal: Fix potential crash on earlier versions of iOS (<= 13.0).
+- Android: Fix `filament-utils-android` 'lite' flavor.
+- Java: Fix potential crash with `IBLPrefilter`.
+
 ## v1.12.5
 
 - engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android

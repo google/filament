@@ -72,7 +72,7 @@ ycbcrToRgb(texture2d<half, access::read>  inYTexture    [[texture(0)]],
 )";
 
 MetalExternalImage::MetalExternalImage(MetalContext& context, TextureSwizzle r, TextureSwizzle g,
-        TextureSwizzle b, TextureSwizzle a) noexcept : mContext(context), swizzle{r, g, b ,a} { }
+        TextureSwizzle b, TextureSwizzle a) noexcept : mContext(context), mSwizzle{r, g, b, a} { }
 
 bool MetalExternalImage::isValid() const noexcept {
     return mRgbTexture != nil || mImage != nullptr;
@@ -113,13 +113,12 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
         mHeight = CVPixelBufferGetHeightOfPlane(image, Y_PLANE);
 
         id<MTLTexture> rgbTexture = createRgbTexture(mWidth, mHeight);
-        id <MTLCommandBuffer> commandBuffer = encodeColorConversionPass(
+        id<MTLCommandBuffer> commandBuffer = encodeColorConversionPass(
                 CVMetalTextureGetTexture(yPlane),
                 CVMetalTextureGetTexture(cbcrPlane),
                 rgbTexture);
 
-        mRgbTexture = createTextureViewWithSwizzle(rgbTexture,
-                getSwizzleChannels(swizzle.r, swizzle.g, swizzle.b, swizzle.a));
+        mRgbTexture = createSwizzledTextureView(rgbTexture);
 
         [commandBuffer addCompletedHandler:^(id <MTLCommandBuffer> o) {
             CVBufferRelease(yPlane);
@@ -230,22 +229,26 @@ id<MTLTexture> MetalExternalImage::createRgbTexture(size_t width, size_t height)
     return [mContext.device newTextureWithDescriptor:descriptor];
 }
 
-id<MTLTexture> MetalExternalImage::createSwizzledTextureView(CVMetalTextureRef ref) const {
-    id<MTLTexture> texture = CVMetalTextureGetTexture(ref);
+id<MTLTexture> MetalExternalImage::createSwizzledTextureView(id<MTLTexture> texture) const {
     const bool isDefaultSwizzle =
-            swizzle.r == TextureSwizzle::CHANNEL_0 &&
-            swizzle.g == TextureSwizzle::CHANNEL_1 &&
-            swizzle.b == TextureSwizzle::CHANNEL_2 &&
-            swizzle.a == TextureSwizzle::CHANNEL_3;
+            mSwizzle.r == TextureSwizzle::CHANNEL_0 &&
+            mSwizzle.g == TextureSwizzle::CHANNEL_1 &&
+            mSwizzle.b == TextureSwizzle::CHANNEL_2 &&
+            mSwizzle.a == TextureSwizzle::CHANNEL_3;
     if (!isDefaultSwizzle && mContext.supportsTextureSwizzling) {
         // Even though we've already checked supportsTextureSwizzling, we still need to guard these
         // calls with @availability, otherwise the API usage will generate compiler warnings.
         if (@available(iOS 13, *)) {
             texture = createTextureViewWithSwizzle(texture,
-                    getSwizzleChannels(swizzle.r, swizzle.g, swizzle.b, swizzle.a));
+                    getSwizzleChannels(mSwizzle.r, mSwizzle.g, mSwizzle.b, mSwizzle.a));
         }
     }
     return texture;
+}
+
+id<MTLTexture> MetalExternalImage::createSwizzledTextureView(CVMetalTextureRef ref) const {
+    id<MTLTexture> texture = CVMetalTextureGetTexture(ref);
+    return createSwizzledTextureView(texture);
 }
 
 void MetalExternalImage::ensureComputePipelineState() {

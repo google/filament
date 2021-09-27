@@ -87,6 +87,16 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.clipControl = mClipControl;
 }
 
+void PerViewUniforms::prepareUpscaler(math::float2 scale,
+        DynamicResolutionOptions const& options) noexcept {
+    auto& s = mPerViewUb.edit();
+    if (options.quality >= QualityLevel::HIGH) {
+        s.lodBias = std::log2(std::min(scale.x, scale.y));
+    } else {
+        s.lodBias = 0.0f;
+    }
+}
+
 void PerViewUniforms::prepareExposure(float ev100) noexcept {
     const float exposure = Exposure::exposure(ev100);
     auto& s = mPerViewUb.edit();

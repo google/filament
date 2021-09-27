@@ -258,6 +258,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
 
+    view.prepareUpscaler(scale);
+
     // start froxelization immediately, it has no dependencies
     JobSystem::Job* jobFroxelize = nullptr;
     if (view.hasDynamicLighting()) {

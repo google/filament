@@ -109,8 +109,13 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
 
+            .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved1",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved2",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+
             // bring PerViewUib to 2 KiB
-            .add("padding2", 59, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

@@ -7,6 +7,8 @@ layout(location = 0) out vec4 fragColor;
 //------------------------------------------------------------------------------
 
 void main() {
+    filament_lodBias = frameUniforms.lodBias;
+
 #if defined(BLEND_MODE_MASKED) || (defined(BLEND_MODE_TRANSPARENT) && defined(HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);

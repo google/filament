@@ -128,8 +128,13 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmLightBleedReduction;
     float vsmReserved0;
 
+    float lodBias;
+    float reserved1;
+    float reserved2;
+    float reserved3;
+
     // bring PerViewUib to 2 KiB
-    math::float4 padding2[59];
+    math::float4 padding2[58];
 };
 
 // 2 KiB == 128 float4s
