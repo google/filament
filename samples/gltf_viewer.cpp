@@ -347,6 +347,7 @@ static float sGlobalScale = 1.0f;
 static float sGlobalScaleAnamorphism = 0.0f;
 static int sGlobalScaleQuality = 0;
 static float sGlobalScaleSharpness = 0.9f;
+static Texture* sGlobalTexture;
 
 int main(int argc, char** argv) {
     App app;
@@ -438,6 +439,11 @@ int main(int argc, char** argv) {
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = !app.actualSize;
+
+        sGlobalTexture = Texture::Builder().width(100)
+                                           .height(100)
+                                           .format(Texture::InternalFormat::RGBA8)
+                                           .build(*engine);
 
         const bool batchMode = !app.batchFile.empty();
 
@@ -579,7 +585,7 @@ int main(int argc, char** argv) {
                 ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
                 ImGui::SliderInt("quality", &sGlobalScaleQuality, 0, 3);
                 ImGui::SliderFloat("sharpness", &sGlobalScaleSharpness, 0.0f, 1.0f);
-
+                ImGui::Image(sGlobalTexture, {100, 100});
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -712,6 +718,22 @@ int main(int argc, char** argv) {
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+
+        renderer->readPixels(app.viewer->getSidebarWidth(), 0, 100, 100, {
+                malloc(100 * 100 * 4), 100 * 100 * 4,
+                backend::PixelDataFormat::RGBA, backend::PixelDataType::UBYTE,
+                [](void* buffer, size_t size, void* user) {
+                    Engine* engine = (Engine*)user;
+                    sGlobalTexture->setImage(*engine, 0, {
+                            buffer, 100 * 100 * 4,
+                            backend::PixelDataFormat::RGBA, backend::PixelDataType::UBYTE,
+                            [](void* buffer, size_t size, void* user) {
+                                free(buffer);
+                            }
+                    });
+                }, engine
+        });
+
         if (app.automationEngine->shouldClose()) {
             FilamentApp::get().close();
             return;
