@@ -72,6 +72,12 @@ private:
     filament::backend::Handle<filament::backend::HwBufferObject> uniform;
 };
 
+
+// Utilities
+
+void getPixelInfo(filament::backend::PixelDataFormat format, filament::backend::PixelDataType type,
+        size_t& outComponents, int& outBpp);
+
 } // namespace test
 
 #endif

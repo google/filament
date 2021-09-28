@@ -973,23 +973,19 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     id<MTLTexture> srcTexture = color.getTexture();
     size_t miplevel = color.level;
 
-    auto chooseMetalPixelFormat = [] (PixelDataFormat format, PixelDataType type) {
-        // TODO: Add support for UINT and INT
-        if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                return MTLPixelFormatRGBA8Unorm;
-        }
-
-        if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
-                return MTLPixelFormatRGBA32Float;
-        }
-
-        return MTLPixelFormatInvalid;
-    };
-
-    const MTLPixelFormat format = chooseMetalPixelFormat(data.format, data.type);
+    const MTLPixelFormat format = getMetalFormat(data.format, data.type);
     ASSERT_PRECONDITION(format != MTLPixelFormatInvalid,
-            "The chosen combination of PixelDataFormat and PixelDataType is not supported for "
-            "readPixels.");
+            "The chosen combination of PixelDataFormat (%d) and PixelDataType (%d) is not supported for "
+            "readPixels.", (int) data.format, (int) data.type);
+
+    const bool formatConversionNecessary = srcTexture.pixelFormat != format;
+
+    // TODO: MetalBlitter does not currently support format conversions to integer types.
+    // The format and type must match the source pixel format exactly.
+    ASSERT_PRECONDITION(!formatConversionNecessary || !isMetalFormatInteger(format),
+            "readPixels does not support integer format conversions from MTLPixelFormat (%d) to (%d).",
+            (int) srcTexture.pixelFormat, (int) format);
+
     MTLTextureDescriptor* textureDescriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
                                                                width:(srcTexture.width >> miplevel)
