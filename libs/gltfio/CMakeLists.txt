@@ -198,12 +198,17 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # Installation
     # ==================================================================================================
     install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
-
+    # The Image.h header is only needed within Filament and does not need to be distributed.
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
+        DESTINATION include
+        PATTERN "Image.h" EXCLUDE)
 else()
 
     install(TARGETS gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+    # The Image.h header is only needed within Filament and does not need to be distributed.
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
+        DESTINATION include
+        PATTERN "Image.h" EXCLUDE)
     install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
     install(FILES ${LITE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 
