@@ -179,6 +179,7 @@ int runTests() {
 }
 
 void getPixelInfo(PixelDataFormat format, PixelDataType type, size_t& outComponents, int& outBpp) {
+    assert_invariant(type != PixelDataType::COMPRESSED);
     switch (format) {
         case PixelDataFormat::UNUSED:
         case PixelDataFormat::R:
@@ -204,7 +205,7 @@ void getPixelInfo(PixelDataFormat format, PixelDataType type, size_t& outCompone
 
     outBpp = outComponents;
     switch (type) {
-        case PixelDataType::COMPRESSED:
+        case PixelDataType::COMPRESSED: // Impossible -- to squash the IDE warnings
         case PixelDataType::UBYTE:
         case PixelDataType::BYTE:
             // nothing to do
