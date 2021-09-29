@@ -320,7 +320,7 @@ enum class PixelDataType : uint8_t {
     BYTE,                 //!< signed byte
     USHORT,               //!< unsigned short (16-bit)
     SHORT,                //!< signed short (16-bit)
-    UINT,                 //!< unsigned int (16-bit)
+    UINT,                 //!< unsigned int (32-bit)
     INT,                  //!< signed int (32-bit)
     HALF,                 //!< half-float (16-bit float)
     FLOAT,                //!< float (32-bits float)
@@ -558,6 +558,48 @@ static constexpr bool isDepthFormat(TextureFormat format) noexcept {
         case TextureFormat::DEPTH32F_STENCIL8:
         case TextureFormat::DEPTH24_STENCIL8:
             return true;
+        default:
+            return false;
+    }
+}
+
+static constexpr bool isUnsignedIntFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8UI:
+        case TextureFormat::R16UI:
+        case TextureFormat::R32UI:
+        case TextureFormat::RG8UI:
+        case TextureFormat::RG16UI:
+        case TextureFormat::RG32UI:
+        case TextureFormat::RGB8UI:
+        case TextureFormat::RGB16UI:
+        case TextureFormat::RGB32UI:
+        case TextureFormat::RGBA8UI:
+        case TextureFormat::RGBA16UI:
+        case TextureFormat::RGBA32UI:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static constexpr bool isSignedIntFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8I:
+        case TextureFormat::R16I:
+        case TextureFormat::R32I:
+        case TextureFormat::RG8I:
+        case TextureFormat::RG16I:
+        case TextureFormat::RG32I:
+        case TextureFormat::RGB8I:
+        case TextureFormat::RGB16I:
+        case TextureFormat::RGB32I:
+        case TextureFormat::RGBA8I:
+        case TextureFormat::RGBA16I:
+        case TextureFormat::RGBA32I:
+            return true;
+
         default:
             return false;
     }

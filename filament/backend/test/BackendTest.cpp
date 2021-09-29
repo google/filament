@@ -178,5 +178,66 @@ int runTests() {
     return RUN_ALL_TESTS();
 }
 
+void getPixelInfo(PixelDataFormat format, PixelDataType type, size_t& outComponents, int& outBpp) {
+    assert_invariant(type != PixelDataType::COMPRESSED);
+    switch (format) {
+        case PixelDataFormat::UNUSED:
+        case PixelDataFormat::R:
+        case PixelDataFormat::R_INTEGER:
+        case PixelDataFormat::DEPTH_COMPONENT:
+        case PixelDataFormat::ALPHA:
+            outComponents = 1;
+            break;
+        case PixelDataFormat::RG:
+        case PixelDataFormat::RG_INTEGER:
+        case PixelDataFormat::DEPTH_STENCIL:
+            outComponents = 2;
+            break;
+        case PixelDataFormat::RGB:
+        case PixelDataFormat::RGB_INTEGER:
+            outComponents = 3;
+            break;
+        case PixelDataFormat::RGBA:
+        case PixelDataFormat::RGBA_INTEGER:
+            outComponents = 4;
+            break;
+    }
+
+    outBpp = outComponents;
+    switch (type) {
+        case PixelDataType::COMPRESSED: // Impossible -- to squash the IDE warnings
+        case PixelDataType::UBYTE:
+        case PixelDataType::BYTE:
+            // nothing to do
+            break;
+        case PixelDataType::USHORT:
+        case PixelDataType::SHORT:
+        case PixelDataType::HALF:
+            outBpp *= 2;
+            break;
+        case PixelDataType::UINT:
+        case PixelDataType::INT:
+        case PixelDataType::FLOAT:
+            outBpp *= 4;
+            break;
+        case PixelDataType::UINT_10F_11F_11F_REV:
+            // Special case, format must be RGB and uses 4 bytes
+            assert_invariant(format == PixelDataFormat::RGB);
+            outBpp = 4;
+            break;
+        case PixelDataType::UINT_2_10_10_10_REV:
+            // Special case, format must be RGBA and uses 4 bytes
+            assert_invariant(format == PixelDataFormat::RGBA);
+            outBpp = 4;
+            break;
+        case PixelDataType::USHORT_565:
+            // Special case, format must be RGB and uses 2 bytes
+            assert_invariant(format == PixelDataFormat::RGB);
+            outBpp = 2;
+            break;
+    }
+}
+
+
 } // namespace test
 
