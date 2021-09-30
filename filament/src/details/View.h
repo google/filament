@@ -432,9 +432,9 @@ public:
     void commitFrameHistory(FEngine& engine) noexcept;
 
     // create the picking query
-    View::PickingQuery& pick(uint32_t x, uint32_t y,
+    View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
             View::PickingQueryResultCallback callback) noexcept {
-        FPickingQuery* pQuery = FPickingQuery::get(x, y, callback);
+        FPickingQuery* pQuery = FPickingQuery::get(x, y, handler, callback);
         pQuery->next = mActivePickingQueriesList;
         mActivePickingQueriesList = pQuery;
         return *pQuery;
@@ -447,23 +447,26 @@ private:
 
     struct FPickingQuery : public PickingQuery {
     private:
-        FPickingQuery(uint32_t x, uint32_t y, View::PickingQueryResultCallback callback) noexcept
-                : PickingQuery{}, x(x), y(y), callback(callback) {}
+        FPickingQuery(uint32_t x, uint32_t y,
+                backend::CallbackHandler* handler,
+                View::PickingQueryResultCallback callback) noexcept
+                : PickingQuery{}, x(x), y(y), handler(handler), callback(callback) {}
         ~FPickingQuery() noexcept = default;
     public:
         // TODO: use a small pool
-        static FPickingQuery* get(uint32_t x, uint32_t y,
+        static FPickingQuery* get(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
                 View::PickingQueryResultCallback callback) noexcept {
-            return new FPickingQuery(x, y, callback);
+            return new FPickingQuery(x, y, handler, callback);
         }
         static void put(FPickingQuery* pQuery) noexcept {
             delete pQuery;
         }
         mutable FPickingQuery* next = nullptr;
         // picking query parameters
-        const uint32_t x;
-        const uint32_t y;
-        const View::PickingQueryResultCallback callback;
+        uint32_t const x;
+        uint32_t const y;
+        backend::CallbackHandler* const handler;
+        View::PickingQueryResultCallback const callback;
         // picking query result
         PickingQueryResult result;
     };

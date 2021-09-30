@@ -117,8 +117,8 @@ Handle<HwStream> NoopDriver::createStreamAcquired() {
     return {};
 }
 
-void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image, backend::StreamCallback cb,
-        void* userData) {
+void NoopDriver::setAcquiredImage(Handle<HwStream> sh, void* image,
+        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
 }
 
 void NoopDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {

@@ -10,6 +10,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
+        include/backend/CallbackHandler.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
@@ -21,6 +22,7 @@ set(PUBLIC_HDRS
 set(SRCS
         src/BackendUtils.cpp
         src/Callable.cpp
+        src/CallbackHandler.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
