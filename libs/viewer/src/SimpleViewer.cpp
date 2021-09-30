@@ -735,6 +735,7 @@ void SimpleViewer::updateUserInterface() {
         if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
             auto& ssrefl = mSettings.view.screenSpaceReflections;
             ImGui::SliderFloat("Ray thickness", &ssrefl.thickness, 0.001f, 0.2f);
+            ImGui::SliderFloat("Bias", &ssrefl.bias, 0.001f, 0.5f);
         }
         ImGui::Unindent();
     }

@@ -186,6 +186,7 @@ void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f histor
     auto& s = mPerViewUb.edit();
     s.ssrReprojection = historyProjection;
     s.ssrThickness = ssrOptions.thickness;
+    s.ssrBias = ssrOptions.bias;
 }
 
 void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {

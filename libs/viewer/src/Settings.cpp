@@ -478,6 +478,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "thickness") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->thickness);
+        } else if (compare(tok, jsonChunk, "bias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bias);
         } else {
             slog.w << "Invalid screen-space reflections key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1348,7 +1350,8 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
 static std::ostream& operator<<(std::ostream& out, const ScreenSpaceReflectionsOptions& in) {
     return out << "{\n"
                << "\"enabled\": " << to_string(in.enabled) << ",\n"
-               << "\"thickness\": " << to_string(in.thickness) << ",\n"
+               << "\"thickness\": " << in.thickness << ",\n"
+               << "\"bias\": " << in.bias << ",\n"
                << "}";
 }
 
