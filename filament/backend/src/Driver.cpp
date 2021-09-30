@@ -45,29 +45,61 @@ DriverBase::~DriverBase() noexcept {
     delete mDispatcher;
 }
 
-void DriverBase::purge() noexcept {
-    std::vector<BufferDescriptor> buffersToPurge;
-    std::vector<AcquiredImage> imagesToPurge;
-    std::unique_lock<std::mutex> lock(mPurgeLock);
-    std::swap(buffersToPurge, mBufferToPurge);
-    std::swap(imagesToPurge, mImagesToPurge);
-    lock.unlock(); // don't remove this, it ensures mBufferToPurge is destroyed without lock held
-    for (auto& image : imagesToPurge) {
-        image.callback(image.image, image.userData);
-    }
-    // When the BufferDescriptors go out of scope, their destructors invoke their callbacks.
+// ------------------------------------------------------------------------------------------------
+
+
+class DriverBase::CallbackDataDetails : public DriverBase::CallbackData {
+    UTILS_UNUSED DriverBase* mAllocator;
+public:
+    explicit CallbackDataDetails(DriverBase* allocator) : mAllocator(allocator) {}
+};
+
+DriverBase::CallbackData* DriverBase::CallbackData::obtain(DriverBase* allocator) {
+    // todo: use a pool
+    return new CallbackDataDetails(allocator);
 }
 
+void DriverBase::CallbackData::release(CallbackData* data) {
+    // todo: use a pool
+    delete static_cast<CallbackDataDetails*>(data);
+}
+
+
+void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
+    if (handler) {
+        // TODO: since we're calling user-code here, we might want to do this from a
+        //       dedicated thread, so they can't mess with our GL state for instance.
+        handler->post(user, callback);
+    } else {
+        std::lock_guard<std::mutex> lock(mPurgeLock);
+        mCallbacks.emplace_back(user, callback);
+    }
+}
+
+void DriverBase::purge() noexcept {
+    decltype(mCallbacks) callbacks;
+    std::unique_lock<std::mutex> lock(mPurgeLock);
+    std::swap(callbacks, mCallbacks);
+    lock.unlock(); // don't remove this, it ensures callbacks are called without lock held
+    for (auto& item : callbacks) {
+        item.second(item.first);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
 void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
-    std::lock_guard<std::mutex> lock(mPurgeLock);
-    mBufferToPurge.push_back(std::move(buffer));
+    scheduleCallback(buffer.getHandler(), [buffer = std::move(buffer)]() {
+        // user callback is called when BufferDescriptor gets destroyed
+    });
 }
 
 // This is called from an async driver method so it's in the GL thread, but purge is called
 // on the user thread. This is typically called 0 or 1 times per frame.
-void DriverBase::scheduleRelease(AcquiredImage&& image) noexcept {
-    std::lock_guard<std::mutex> lock(mPurgeLock);
-    mImagesToPurge.push_back(std::move(image));
+void DriverBase::scheduleRelease(AcquiredImage const& image) noexcept {
+    scheduleCallback(image.handler, [image]() {
+        image.callback(image.image, image.userData);
+    });
 }
 
 void DriverBase::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
