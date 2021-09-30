@@ -93,7 +93,7 @@ vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
 
 /**
  * Dithers the specified RGBA color based on the current time and fragment
- * coordinates the input must be in the final color space (including OECF).
+ * coordinates the input must be in the final color space (including OETF).
  * This dithering function assumes we are dithering to an 8-bit target.
  * This function dithers the alpha channel assuming premultiplied output
  */

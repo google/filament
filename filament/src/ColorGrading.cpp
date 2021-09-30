@@ -746,8 +746,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     // We need to clamp for the output transfer function
                     v = saturate(v);
 
-                    // Apply OECF
-                    v = OECF_sRGB(v);
+                    // Apply OETF
+                    v = OETF_sRGB(v);
 
                     *p++ = half4{v, 0.0f};
                 }
