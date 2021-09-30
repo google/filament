@@ -1066,4 +1066,8 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
 }
 
+void Engine::pumpMessageQueues() {
+    upcast(this)->pumpMessageQueues();
+}
+
 } // namespace filament

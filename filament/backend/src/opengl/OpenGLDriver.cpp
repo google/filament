@@ -2750,7 +2750,7 @@ void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string,  uint32_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
