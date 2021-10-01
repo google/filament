@@ -21,7 +21,7 @@
 
 #include "android/ExternalTextureManagerAndroid.h"
 #include "android/ExternalStreamManagerAndroid.h"
-#include "android/VirtualMachineEnv.h"
+#include "private/backend/VirtualMachineEnv.h"
 
 #include <android/api-level.h>
 
@@ -236,7 +236,7 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     return { eglImage, patchedCallback, closure, source.handler };
 }
 
-// This must called when the library is loaded. We need this to get a reference to the global VM
+// This must be called when the library is loaded. We need this to get a reference to the global VM
 void JNI_OnLoad(JavaVM* vm, void* reserved) {
     ::filament::VirtualMachineEnv::JNI_OnLoad(vm);
 }

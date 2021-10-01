@@ -22,6 +22,8 @@
 
 #include "common/CallbackUtils.h"
 
+#include "private/backend/VirtualMachineEnv.h"
+
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
@@ -387,7 +389,7 @@ Java_com_google_android_filament_View_nIsScreenSpaceRefractionEnabled(JNIEnv *, 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass clazz,
+Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass,
         jlong nativeView,
         jint x, jint y, jobject handler, jobject internalCallback) {
 
@@ -412,13 +414,14 @@ Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass clazz,
     View* view = (View*) nativeView;
     JniCallback *callback = JniCallback::make(env, handler, internalCallback);
     view->pick(x, y, [callback](View::PickingQueryResult const& result) {
+        // this is executed on the backend/service thread
         jobject obj = callback->getCallbackObject();
-        JNIEnv* const env = callback->getJniEnv();
+        JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
         env->SetIntField(obj, jniState.renderableFieldId, (jint)result.renderable.getId());
         env->SetFloatField(obj, jniState.depthFieldId, result.depth);
         env->SetFloatField(obj, jniState.fragCoordXFieldId, result.fragCoords.x);
         env->SetFloatField(obj, jniState.fragCoordYFieldId, result.fragCoords.y);
         env->SetFloatField(obj, jniState.fragCoordZFieldId, result.fragCoords.z);
-        JniCallback::invoke(callback);  // this destroys JniCallback
-    });
+        JniCallback::postToJavaAndDestroy(callback);
+    }, callback->getHandler());
 }

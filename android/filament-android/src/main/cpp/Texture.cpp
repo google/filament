@@ -210,7 +210,8 @@ Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong na
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
             (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+            (uint32_t) stride,
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
             (uint32_t) width, (uint32_t) height, std::move(desc));
@@ -240,7 +241,7 @@ Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
             (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
-            &JniBufferCallback::invoke, callback);
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
             (uint32_t) width, (uint32_t) height, std::move(desc));
@@ -274,7 +275,8 @@ Java_com_google_android_filament_Texture_nSetImage3D(JNIEnv* env, jclass, jlong 
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
             (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+            (uint32_t) stride,
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level,
             (uint32_t) xoffset, (uint32_t) yoffset, (uint32_t) zoffset,
@@ -308,7 +310,7 @@ Java_com_google_android_filament_Texture_nSetImage3DCompressed(JNIEnv *env, jcla
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
             (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
-            &JniBufferCallback::invoke, callback);
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level,
             (uint32_t) xoffset, (uint32_t) yoffset, (uint32_t) zoffset,
@@ -346,7 +348,8 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
             (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+            (uint32_t) stride,
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
 
@@ -381,7 +384,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
             (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
-            &JniBufferCallback::invoke, callback);
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
 
@@ -454,7 +457,7 @@ Java_com_google_android_filament_Texture_nGeneratePrefilterMipmap(JNIEnv *env, j
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
             (backend::PixelDataType) type, (uint8_t) alignment,
             (uint32_t) left, (uint32_t) top, (uint32_t) stride,
-            &JniBufferCallback::invoke, callback);
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     Texture::PrefilterOptions options;
     options.sampleCount = sampleCount;
@@ -563,7 +566,7 @@ private:
     jobject mBitmap = nullptr;
     jobject mHandler = nullptr;
     jobject mCallback = nullptr;
-    AndroidBitmapInfo mInfo;
+    AndroidBitmapInfo mInfo{};
     CallbackJni mCallbackUtils;
 };
 

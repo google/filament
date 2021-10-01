@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_TEXTURE_MANAGER_ANDROID_H
 #define TNT_FILAMENT_DRIVER_ANDROID_EXTERNAL_TEXTURE_MANAGER_ANDROID_H
 
-#include "android/VirtualMachineEnv.h"
+#include "private/backend/VirtualMachineEnv.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
