@@ -30,9 +30,12 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <array>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <utility>
+#include <vector>
 
 #include <stdint.h>
 
@@ -231,6 +234,12 @@ protected:
 private:
     std::mutex mPurgeLock;
     std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
+
+    std::thread mServiceThread;
+    std::mutex mServiceThreadLock;
+    std::condition_variable mServiceThreadCondition;
+    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
+    bool mExitRequested = false;
 };
 
 
