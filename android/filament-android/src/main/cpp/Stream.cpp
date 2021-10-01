@@ -169,7 +169,8 @@ Java_com_google_android_filament_Stream_nReadPixels(JNIEnv *env, jclass,
 
     PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
             (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+            (uint32_t) stride,
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     stream->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
             std::move(desc));
@@ -221,5 +222,6 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
 
 #endif
 
-    stream->setAcquiredImage((void*) nativeBuffer, &JniImageCallback::invoke, callback);
+    stream->setAcquiredImage((void*) nativeBuffer,
+            callback->getHandler(), &JniImageCallback::postToJavaAndDestroy, callback);
 }

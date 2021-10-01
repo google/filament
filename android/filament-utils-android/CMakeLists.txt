@@ -50,6 +50,7 @@ target_compile_definitions(filament-utils-jni PUBLIC IMAGEIO_LITE=1)
 target_include_directories(filament-utils-jni PRIVATE
         ${FILAMENT_DIR}/include
         ..
+        ../../filament/backend/include
         ${IMAGEIO_DIR}/include
         ../../libs/utils/include)
 

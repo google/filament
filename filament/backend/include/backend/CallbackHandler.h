@@ -36,6 +36,22 @@ namespace filament::backend {
  *
  * CallbackHandler* can always be nullptr in which case the default handler is used. The
  * default handler always dispatches callbacks on filament's main thread opportunistically.
+ *
+ * Life time:
+ * ---------
+ *
+ * Filament make no attempts to manage the life time of the CallbackHandler* and never takes
+ * ownership.
+ * In particular, this means that the CallbackHandler instance must stay valid until all
+ * pending callbacks are been dispatched.
+ *
+ * Similarly, when shutting down filament, care must be taken to ensure that all pending callbacks
+ * that might access filament's state have been dispatched. Filament can no longer ensure this
+ * because callback execution is the responsibility of the CallbackHandler, which is external to
+ * filament.
+ * Typically, the concrete CallbackHandler would have a mechanism to drain and/or wait for all
+ * callbacks to be processed.
+ *
  */
 class CallbackHandler {
 public:
@@ -44,6 +60,8 @@ public:
     /**
      * Schedules the callback to be called onto the appropriate thread.
      * Typically this will be the application's main thead.
+     *
+     * Must be thread-safe.
      */
     virtual void post(void* user, Callback callback) = 0;
 
