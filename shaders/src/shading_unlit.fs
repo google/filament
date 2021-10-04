@@ -37,8 +37,6 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     }
 #endif
 
-    addEmissive(material, color);
-
 #if defined(HAS_DIRECTIONAL_LIGHTING)
 #if defined(HAS_SHADOWING)
     float visibility = 1.0;
@@ -61,6 +59,8 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #elif defined(HAS_SHADOW_MULTIPLIER)
     color = vec4(0.0);
 #endif
+
+    addEmissive(material, color);
 
     return color;
 }

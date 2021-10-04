@@ -3,7 +3,13 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.6 (currently main branch)
+## v1.12.8 (currently main branch)
+
+## v1.12.7
+
+- engine: Fix, apply emissive after shadowing.
+
+## v1.12.6
 
 - engine: Added concept of lod bias to materials.
   [⚠️ **Materials need to be rebuilt to access this new feature**].
