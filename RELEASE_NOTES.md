@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.7
 
+- engine: Fix, apply emissive after shadowing.
+
 ## v1.12.6
 
 - engine: Added concept of lod bias to materials.
