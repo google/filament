@@ -3,11 +3,15 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.8 (currently main branch)
+## v1.12.9 (currently main branch)
+
+## v1.12.8
 
 - engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
 
 ## v1.12.7
+
+- engine: Fix, apply emissive after shadowing.
 
 ## v1.12.6
 
