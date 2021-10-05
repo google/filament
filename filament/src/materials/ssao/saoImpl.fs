@@ -25,7 +25,7 @@
 #include "geometry.fs"
 
 #ifndef COMPUTE_BENT_NORMAL
-#error "COMPUTE_BENT_NORMAL must be set"
+#error COMPUTE_BENT_NORMAL must be set
 #endif
 
 const float kLog2LodRate = 3.0;
