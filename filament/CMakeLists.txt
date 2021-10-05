@@ -273,6 +273,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
@@ -280,6 +281,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
