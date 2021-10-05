@@ -612,12 +612,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (mightNeedFinalBlit &&
             ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
              blending)) {
-        if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
+        assert_invariant(!scaled);
+        if (UTILS_LIKELY(!blending)) {
             input = ppm.opaqueBlit(fg, input, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
         } else {
-            input = ppm.blendBlit(fg, blending, dsrOptions, input, {
+            input = ppm.blendBlit(fg, blending, {
+                    .quality = QualityLevel::LOW
+            }, input, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat });
         }

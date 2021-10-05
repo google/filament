@@ -2342,7 +2342,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blendBlit(
         FrameGraphId<FrameGraphTexture> depth;
     };
 
-    auto& ppQuadBlit = fg.addPass<QuadBlitData>("quad scaling",
+    auto& ppQuadBlit = fg.addPass<QuadBlitData>(dsrOptions.enabled ? "quad scaling" : "blendBlit",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("scaled output", outDesc);
