@@ -209,6 +209,7 @@ static const MaterialInfo sMaterialList[] = {
         { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
         { "colorGrading",               MATERIAL(COLORGRADING) },
         { "colorGradingAsSubpass",      MATERIAL(COLORGRADINGASSUBPASS) },
+        { "customResolveAsSubpass",     MATERIAL(CUSTOMRESOLVEASSUBPASS) },
         { "dof",                        MATERIAL(DOF) },
         { "dofCoc",                     MATERIAL(DOFCOC) },
         { "dofCombine",                 MATERIAL(DOFCOMBINE) },
@@ -1914,6 +1915,49 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     driver.draw(material.getPipelineState(variant), fullScreenRenderPrimitive);
 }
 
+
+void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp op) noexcept {
+    auto const& material = getPostProcessMaterial("customResolveAsSubpass");
+    FMaterialInstance* mi = material.getMaterialInstance();
+    mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
+    mi->commit(driver);
+}
+
+void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
+    FEngine& engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
+    auto const& material = getPostProcessMaterial("customResolveAsSubpass");
+    // the UBO has been set and committed in colorGradingPrepareSubpass()
+    FMaterialInstance* mi = material.getMaterialInstance();
+    mi->use(driver);
+    driver.nextSubpass();
+    driver.draw(material.getPipelineState(), fullScreenRenderPrimitive);
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> inout) noexcept {
+    struct UncompressData {
+        FrameGraphId<FrameGraphTexture> inout;
+    };
+    auto& detonemapPass = fg.addPass<UncompressData>("Uncompress Pass",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.inout = builder.read(inout, FrameGraphTexture::Usage::SUBPASS_INPUT);
+                data.inout = builder.write(data.inout, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass("Uncompress target", {
+                        .attachments = { .color = { data.inout }}
+                });
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                customResolvePrepareSubpass(driver, CustomResolveOp::UNCOMPRESS);
+                auto out = resources.getRenderPassInfo();
+                out.params.subpassMask = 1;
+                driver.beginRenderPass(out.target, out.params);
+                customResolveSubpass(driver);
+                driver.endRenderPass();
+            });
+    return detonemapPass->inout;
+}
+
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FColorGrading const* colorGrading, ColorGradingConfig const& colorGradingConfig,
@@ -2624,5 +2668,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 
     return depthMipmapPass->in;
 }
+
 
 } // namespace filament
