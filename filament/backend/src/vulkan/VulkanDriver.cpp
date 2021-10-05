@@ -809,6 +809,10 @@ bool VulkanDriver::isFrameBufferFetchSupported() {
     return true;
 }
 
+bool VulkanDriver::isFrameBufferFetchMultiSampleSupported() {
+    return false;
+}
+
 bool VulkanDriver::isFrameTimeSupported() {
     return true;
 }

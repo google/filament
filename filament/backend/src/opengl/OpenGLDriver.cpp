@@ -1553,6 +1553,10 @@ bool OpenGLDriver::isFrameBufferFetchSupported() {
     return gl.ext.EXT_shader_framebuffer_fetch;
 }
 
+bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
+    return isFrameBufferFetchSupported();
+}
+
 bool OpenGLDriver::isFrameTimeSupported() {
     return mFrameTimeSupported;
 }
