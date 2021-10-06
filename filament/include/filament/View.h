@@ -80,6 +80,7 @@ public:
     using RenderQuality = RenderQuality;
     using AmbientOcclusionOptions = AmbientOcclusionOptions;
     using TemporalAntiAliasingOptions = TemporalAntiAliasingOptions;
+    using MultiSampleAntiAliasingOptions = MultiSampleAntiAliasingOptions;
     using VsmShadowOptions = VsmShadowOptions;
 
     /**
@@ -279,7 +280,9 @@ public:
      *       cost. See setAntialiasing.
      *
      * @see setAntialiasing
+     * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
+    UTILS_DEPRECATED
     void setSampleCount(uint8_t count = 1) noexcept;
 
     /**
@@ -287,7 +290,9 @@ public:
      * A value of 0 or 1 means MSAA is disabled.
      *
      * @return value set by setSampleCount().
+     * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    UTILS_DEPRECATED
     uint8_t getSampleCount() const noexcept;
 
     /**
@@ -323,6 +328,20 @@ public:
      * @return temporal anti-aliasing options
      */
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
+
+    /**
+     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     *
+     * @param options multi-sample anti-aliasing options
+     */
+    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
+
+    /**
+     * Returns multi-sample anti-aliasing options.
+     *
+     * @return multi-sample anti-aliasing options
+     */
+    MultiSampleAntiAliasingOptions const& getMultiSampleAntiAliasingOptions() const noexcept;
 
     /**
      * Sets this View's color grading transforms.

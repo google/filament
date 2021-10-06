@@ -75,6 +75,7 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
 
     /**
@@ -290,6 +291,29 @@ public class View {
         */
        public boolean ssctEnabled = false;
     }
+
+    /**
+     * Options for Multi-sample Anti-aliasing (MSAA)
+     * @see View#setMultiSampleAntiAliasingOptions
+     */
+    public static class MultiSampleAntiAliasingOptions {
+        /** enables or disables temporal anti-aliasing */
+        public boolean enabled = false;
+
+        /**
+         * number of samples to use for multi-sampled anti-aliasing.\n
+         *      0: treated as 1
+         *      1: no anti-aliasing
+         *      n: sample count. Effective sample could be different depending on the
+         *         GPU capabilities.
+         */
+        public int sampleCount = 4;
+
+        /**
+         * custom resolve improves quality for HDR scenes, but may impact performance.
+         */
+        public boolean customResolve = false;
+    };
 
     /**
      * Options for Temporal Anti-aliasing (TAA)
@@ -1047,7 +1071,10 @@ public class View {
      * </p>
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.
+     *
+     * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public void setSampleCount(int count) {
         nSetSampleCount(getNativeObject(), count);
     }
@@ -1060,7 +1087,10 @@ public class View {
      * </p>
      *
      * @return value set by {@link #setSampleCount}
+     *
+     * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public int getSampleCount() {
         return nGetSampleCount(getNativeObject());
     }
@@ -1087,6 +1117,30 @@ public class View {
     @NonNull
     public AntiAliasing getAntiAliasing() {
         return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+    }
+
+    /**
+     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     *
+     * @param options multi-sample anti-aliasing options
+     */
+    public void setMultiSampleAntiAliasingOptions(@NonNull MultiSampleAntiAliasingOptions options) {
+        mMultiSampleAntiAliasingOptions = options;
+        nSetMultiSampleAntiAliasingOptions(getNativeObject(),
+                options.enabled, options.sampleCount, options.customResolve);
+    }
+
+    /**
+     * Returns multi-sample anti-aliasing options.
+     *
+     * @return multi-sample anti-aliasing options
+     */
+    @NonNull
+    public MultiSampleAntiAliasingOptions getMultiSampleAntiAliasingOptions() {
+        if (mMultiSampleAntiAliasingOptions == null) {
+            mMultiSampleAntiAliasingOptions = new MultiSampleAntiAliasingOptions();
+        }
+        return mMultiSampleAntiAliasingOptions;
     }
 
     /**
@@ -1660,6 +1714,7 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);

@@ -923,6 +923,14 @@ const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() 
     return upcast(this)->getTemporalAntiAliasingOptions();
 }
 
+void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
+    upcast(this)->setMultiSampleAntiAliasingOptions(options);
+}
+
+const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
+    return upcast(this)->getMultiSampleAntiAliasingOptions();
+}
+
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
     return upcast(this)->setColorGrading(upcast(colorGrading));
 }

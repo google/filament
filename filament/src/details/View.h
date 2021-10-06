@@ -214,11 +214,13 @@ public:
     }
 
     void setSampleCount(uint8_t count) noexcept {
-        mSampleCount = uint8_t(count < 1u ? 1u : count);
+        count = uint8_t(count < 1u ? 1u : count);
+        mMultiSampleAntiAliasingOptions.sampleCount = count;
+        mMultiSampleAntiAliasingOptions.enabled = count > 1u;
     }
 
     uint8_t getSampleCount() const noexcept {
-        return mSampleCount;
+        return mMultiSampleAntiAliasingOptions.sampleCount;
     }
 
     void setAntiAliasing(AntiAliasing type) noexcept {
@@ -237,6 +239,15 @@ public:
 
     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
         return mTemporalAntiAliasingOptions;
+    }
+
+    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
+        options.sampleCount = uint8_t(options.sampleCount < 1u ? 1u : options.sampleCount);
+        mMultiSampleAntiAliasingOptions = options;
+    }
+
+    const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
+        return mMultiSampleAntiAliasingOptions;
     }
 
     void setColorGrading(FColorGrading* colorGrading) noexcept {
@@ -526,7 +537,6 @@ private:
     FRenderTarget* mRenderTarget = nullptr;
 
     uint8_t mVisibleLayers = 0x1;
-    uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
@@ -540,6 +550,7 @@ private:
     DepthOfFieldOptions mDepthOfFieldOptions;
     VignetteOptions mVignetteOptions;
     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;

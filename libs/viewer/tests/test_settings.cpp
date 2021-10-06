@@ -159,7 +159,7 @@ static const char* JSON_TEST_AUTOMATION = R"TXT([{
 
 TEST_F(ViewSettingsTest, JsonTestDefaults) {
     JsonSerializer serializer;
-    Settings settings1 = {0};
+    Settings settings1;
     ASSERT_TRUE(serializer.readJson(JSON_TEST_DEFAULTS, strlen(JSON_TEST_DEFAULTS), &settings1));
 
     ASSERT_TRUE(settings1.view.bloom.threshold);
@@ -191,7 +191,7 @@ TEST_F(ViewSettingsTest, JsonTestSerialization) {
 
 TEST_F(ViewSettingsTest, JsonTestMaterial) {
     JsonSerializer serializer;
-    Settings settings = {0};
+    Settings settings;
     std::string js = "{" + std::string(JSON_TEST_MATERIAL) + "}";
     ASSERT_TRUE(serializer.readJson(js.c_str(), js.size(), &settings));
     std::string serialized = serializer.writeJson(settings);

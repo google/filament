@@ -177,7 +177,10 @@ public:
      * Enables hardware-based MSAA antialiasing.
      * Defaults to true.
      */
-    void enableMsaa(bool b) { mSettings.view.sampleCount = b ? 4 : 1; }
+    void enableMsaa(bool b) {
+        mSettings.view.msaa.sampleCount = 4;
+        mSettings.view.msaa.enabled = b;
+    }
 
     /**
      * Enables screen-space ambient occlusion in the post-process pipeline.

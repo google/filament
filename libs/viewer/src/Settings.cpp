@@ -242,6 +242,31 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
 }
 
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        MultiSampleAntiAliasingOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "sampleCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sampleCount);
+        } else if (compare(tok, jsonChunk, "customResolve") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->customResolve);
+        } else {
+            slog.w << "Invalid msaa key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid msaa value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         TemporalAntiAliasingOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -664,10 +689,10 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (compare(tok, jsonChunk, "sampleCount") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sampleCount);
-        } else if (compare(tok, jsonChunk, "antiAliasing") == 0) {
+        if (compare(tok, jsonChunk, "antiAliasing") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->antiAliasing);
+        } else if (compare(tok, jsonChunk, "msaa") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->msaa);
         } else if (compare(tok, jsonChunk, "taa") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->taa);
         } else if (compare(tok, jsonChunk, "colorGrading") == 0) {
@@ -916,9 +941,9 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Settings* out) 
 }
 
 void applySettings(const ViewSettings& settings, View* dest) {
-    dest->setSampleCount(settings.sampleCount);
     dest->setAntiAliasing(settings.antiAliasing);
     dest->setTemporalAntiAliasingOptions(settings.taa);
+    dest->setMultiSampleAntiAliasingOptions(settings.msaa);
     dest->setAmbientOcclusionOptions(settings.ssao);
     dest->setBloomOptions(settings.bloom);
     dest->setFogOptions(settings.fog);
@@ -1135,6 +1160,14 @@ static std::ostream& operator<<(std::ostream& out, math::float3 v) {
 
 static std::ostream& operator<<(std::ostream& out, math::float4 v) {
     return writeJson(out, &v.x, 4);
+}
+
+static std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"sampleCount\": " << (in.sampleCount) << ",\n"
+        << "\"customResolve\": " << to_string(in.customResolve) << "\n"
+        << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& in) {
@@ -1390,8 +1423,8 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
 
 static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
     return out << "{\n"
-        << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
         << "\"antiAliasing\": " << in.antiAliasing << ",\n"
+        << "\"msaa\": " << in.msaa << ",\n"
         << "\"taa\": " << in.taa << ",\n"
         << "\"colorGrading\": " << (in.colorGrading) << ",\n"
         << "\"ssao\": " << (in.ssao) << ",\n"
