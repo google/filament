@@ -21,6 +21,9 @@ if(PLATFORM_NAME STREQUAL "iphonesimulator")
     add_definitions(-DFILAMENT_IOS_SIMULATOR)
     # The simulator only supports iOS >= 13.0
     set(IOS_MIN_TARGET "13.0")
+elseif(PLATFORM_NAME STREQUAL "macosx")
+    # Mac Catalyst only supports iOS >= 13.0
+    set(IOS_MIN_TARGET "13.0")
 endif()
 
 SET(CMAKE_SYSTEM_NAME Darwin)
@@ -104,6 +107,9 @@ IF (NOT DEFINED IOS_MIN_TARGET)
 ENDIF()
 
 SET(IOS_COMMON_FLAGS "-m${PLATFORM_FLAG_NAME}-version-min=${IOS_MIN_TARGET}")
+if(PLATFORM_NAME STREQUAL "macosx")
+  SET(IOS_COMMON_FLAGS "${IOS_COMMON_FLAGS} -target ${IOS_ARCH}-apple-ios${IOS_MIN_TARGET}-macabi")
+endif()
 
 SET(CMAKE_C_FLAGS_INIT "${IOS_COMMON_FLAGS}")
 SET(CMAKE_CXX_FLAGS_INIT "${IOS_COMMON_FLAGS}")

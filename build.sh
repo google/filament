@@ -32,9 +32,10 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|webgl|all]."
+    echo "        Where platformN is [desktop|android|ios|catalyst|webgl|all]."
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building for iOS will automatically perform a partial desktop build."
+    echo "        Building for iOS/Catalyst/WebGL will automatically perform a partial desktop build."
+    echo "        Building for Catalyst will exclude OpenGL support (same as -g)."
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
@@ -43,7 +44,7 @@ function print_help {
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
     echo "    -g"
-    echo "        Exclude OpenGL support from the iOS build."
+    echo "        Exclude OpenGL support from the iOS/Catalyst build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
     echo "    -t"
@@ -51,7 +52,7 @@ function print_help {
     echo "    -l"
     echo "        Build arm64/x86_64 universal libraries."
     echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
-    echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
+    echo "        For macOS/Catalyst, this builds universal binaries for both Apple silicon and Intel-based Macs."
     echo "    -w"
     echo "        Build Web documents (compiles .md.html files to .html)."
     echo "    -k sample1,sample2,..."
@@ -130,6 +131,7 @@ ISSUE_RELEASE_BUILD=false
 # Default: build desktop only
 ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
+ISSUE_CATALYST_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
 
@@ -254,6 +256,19 @@ function build_desktop {
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_desktop_target "Release" "$1"
     fi
+}
+
+function build_desktop_tools_for_ios {
+    # Supress intermediate desktop tools install and Java
+    local old_install_command=${INSTALL_COMMAND}
+    local old_java_flag=${FILAMENT_ENABLE_JAVA}
+    INSTALL_COMMAND=
+    FILAMENT_ENABLE_JAVA=OFF
+
+    build_desktop "$1"
+
+    INSTALL_COMMAND=${old_install_command}
+    FILAMENT_ENABLE_JAVA=${old_java_flag}
 }
 
 function build_webgl_with_target {
@@ -566,17 +581,23 @@ function build_ios_target {
     local arch=$2
     local platform=$3
 
-    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    if [[ "${platform}" == "macosx" ]]; then
+        local install_dir="catalyst-${lc_target}"
+    else
+        local install_dir="ios-${lc_target}"
+    fi
 
-    cd "out/cmake-ios-${lc_target}-${arch}"
+    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
+    mkdir -p "out/cmake-${install_dir}-${arch}"
+
+    cd "out/cmake-${install_dir}-${arch}"
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
-            -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
+            -DCMAKE_INSTALL_PREFIX="../${install_dir}/filament" \
             -DIOS_ARCH="${arch}" \
             -DPLATFORM_NAME="${platform}" \
             -DIOS=1 \
@@ -589,7 +610,7 @@ function build_ios_target {
     ${BUILD_COMMAND}
 
     if [[ "${INSTALL_COMMAND}" ]]; then
-        echo "Installing ${lc_target} in out/${lc_target}/filament..."
+        echo "Installing ${lc_target} in out/${install_dir}/filament..."
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
@@ -598,25 +619,22 @@ function build_ios_target {
 
 function archive_ios {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    local platform_name=$2
+    local archive_filename="filament-${lc_target}-${platform_name}.tgz"
+    local install_dir="out/${platform_name}-${lc_target}"
 
-    if [[ -d "out/ios-${lc_target}/filament" ]]; then
+    if [[ -d "${install_dir}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
-            echo "Generating out/filament-${lc_target}-ios.tgz..."
-            cd "out/ios-${lc_target}"
-            tar -czvf "../filament-${lc_target}-ios.tgz" filament
+            echo "Generating out/${archive_filename}..."
+            cd "${install_dir}"
+            tar -czvf "../${archive_filename}" filament
             cd ../..
         fi
     fi
 }
 
 function build_ios {
-    # Supress intermediate desktop tools install
-    local old_install_command=${INSTALL_COMMAND}
-    INSTALL_COMMAND=
-
-    build_desktop "${MOBILE_HOST_TOOLS}"
-
-    INSTALL_COMMAND=${old_install_command}
+    build_desktop_tools_for_ios "${MOBILE_HOST_TOOLS}"
 
     # In theory, we could support iPhone architectures older than arm64, but
     # only arm64 devices support OpenGL 3.0 / Metal
@@ -628,15 +646,16 @@ function build_ios {
         fi
 
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            local installed_libs_dir="out/ios-debug/filament/lib"
             build/ios/create-universal-libs.sh \
-                -o out/ios-debug/filament/lib/universal \
-                out/ios-debug/filament/lib/arm64 \
-                out/ios-debug/filament/lib/x86_64
-            rm -rf out/ios-debug/filament/lib/arm64
-            rm -rf out/ios-debug/filament/lib/x86_64
+                -o "${installed_libs_dir}/universal" \
+                "${installed_libs_dir}/arm64" \
+                "${installed_libs_dir}/x86_64"
+            rm -rf "${installed_libs_dir}/arm64"
+            rm -rf "${installed_libs_dir}/x86_64"
         fi
 
-        archive_ios "Debug"
+        archive_ios "Debug" "ios"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
@@ -646,16 +665,60 @@ function build_ios {
         fi
 
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            local installed_libs_dir="out/ios-release/filament/lib"
             build/ios/create-universal-libs.sh \
-                -o out/ios-release/filament/lib/universal \
-                out/ios-release/filament/lib/arm64 \
-                out/ios-release/filament/lib/x86_64
-            rm -rf out/ios-release/filament/lib/arm64
-            rm -rf out/ios-release/filament/lib/x86_64
+                -o "${installed_libs_dir}/universal" \
+                "${installed_libs_dir}/arm64" \
+                "${installed_libs_dir}/x86_64"
+            rm -rf "${installed_libs_dir}/arm64"
+            rm -rf "${installed_libs_dir}/x86_64"
         fi
 
-        archive_ios "Release"
+        archive_ios "Release" "ios"
     fi
+}
+
+function build_mac_catalyst {
+    local old_ogl_ios_option=${OPENGL_IOS_OPTION}
+    OPENGL_IOS_OPTION="-DFILAMENT_SUPPORTS_OPENGL=OFF"
+
+    build_desktop_tools_for_ios "${MOBILE_HOST_TOOLS}"
+
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        build_ios_target "Debug" "arm64" "macosx"
+        build_ios_target "Debug" "x86_64" "macosx"
+
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            local installed_libs_dir="out/catalyst-debug/filament/lib"
+            build/ios/create-universal-libs.sh \
+                -o "${installed_libs_dir}/universal" \
+                "${installed_libs_dir}/arm64" \
+                "${installed_libs_dir}/x86_64"
+            rm -rf "${installed_libs_dir}/arm64"
+            rm -rf "${installed_libs_dir}/x86_64"
+        fi
+
+        archive_ios "Debug" "catalyst"
+    fi
+
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        build_ios_target "Release" "arm64" "macosx"
+        build_ios_target "Release" "x86_64" "macosx"
+
+        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+            local installed_libs_dir="out/catalyst-release/filament/lib"
+            build/ios/create-universal-libs.sh \
+                -o "${installed_libs_dir}/universal" \
+                "${installed_libs_dir}/arm64" \
+                "${installed_libs_dir}/x86_64"
+            rm -rf "${installed_libs_dir}/arm64"
+            rm -rf "${installed_libs_dir}/x86_64"
+        fi
+
+        archive_ios "Release" "catalyst"
+    fi
+
+    OPENGL_IOS_OPTION=${old_ogl_ios_option}
 }
 
 function build_web_docs {
@@ -801,12 +864,16 @@ while getopts ":hacCfijmp:q:uvgslwtdk:" opt; do
                     ios)
                         ISSUE_IOS_BUILD=true
                     ;;
+                    catalyst)
+                        ISSUE_CATALYST_BUILD=true
+                    ;;
                     webgl)
                         ISSUE_WEBGL_BUILD=true
                     ;;
                     all)
                         ISSUE_ANDROID_BUILD=true
                         ISSUE_IOS_BUILD=true
+                        ISSUE_CATALYST_BUILD=true
                         ISSUE_DESKTOP_BUILD=true
                         ISSUE_WEBGL_BUILD=false
                     ;;
@@ -867,7 +934,6 @@ while getopts ":hacCfijmp:q:uvgslwtdk:" opt; do
             echo "SwiftShader support enabled."
             ;;
         l)
-            IOS_BUILD_SIMULATOR=true
             BUILD_UNIVERSAL_LIBRARIES=true
             echo "Building universal libraries."
             ;;
@@ -929,7 +995,14 @@ if [[ "${ISSUE_ANDROID_BUILD}" == "true" ]]; then
 fi
 
 if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
+    if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+        IOS_BUILD_SIMULATOR=true
+    fi
     build_ios
+fi
+
+if [[ "${ISSUE_CATALYST_BUILD}" == "true" ]]; then
+    build_mac_catalyst
 fi
 
 if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then

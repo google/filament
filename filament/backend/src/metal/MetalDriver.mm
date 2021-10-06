@@ -65,17 +65,19 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     // macOS 10.15+ / iOS 13+.
     mContext->supportsTextureSwizzling = false;
     if (@available(macOS 10.15, iOS 13, *)) {
-#if defined(IOS)
-        mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily1_v1];
+#if TARGET_OS_MACCATALYST
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyMacCatalyst2];
+#elif defined(IOS)
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyApple1];
 #else
-        mContext->supportsTextureSwizzling =
-                [mContext->device supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily2_v1];
+        mContext->supportsTextureSwizzling = [mContext->device supportsFamily:MTLGPUFamilyMac2];
 #endif
     }
 
     mContext->maxColorRenderTargets = 4;
-#if defined(IOS)
+#if TARGET_OS_MACCATALYST
+    mContext->maxColorRenderTargets = 8;
+#elif defined(IOS)
     if ([mContext->device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1]) {
         mContext->maxColorRenderTargets = 8;
     }
@@ -245,7 +247,7 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.mipmapLevelCount == levels,
             "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
             metalTexture.mipmapLevelCount, levels);
-    MTLPixelFormat filamentMetalFormat = getMetalFormat(format);
+    MTLPixelFormat filamentMetalFormat = getMetalFormat(mContext->device, format);
     ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
             "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
             metalTexture.pixelFormat, filamentMetalFormat);
@@ -602,7 +604,7 @@ FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
-    return getMetalFormat(format) != MTLPixelFormatInvalid ||
+    return getMetalFormat(mContext->device, format) != MTLPixelFormatInvalid ||
            TextureReshaper::canReshapeTextureFormat(format);
 }
 
@@ -656,15 +658,20 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
-    MTLPixelFormat mtlFormat = getMetalFormat(format);
+    MTLPixelFormat mtlFormat = getMetalFormat(mContext->device, format);
     // RGB9E5 isn't supported on Mac as a color render target.
     return mtlFormat != MTLPixelFormatInvalid && mtlFormat != MTLPixelFormatRGB9E5Float;
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
+#if defined(FILAMENT_IOS_SIMULATOR)
+    return false;
+#elif defined(IOS) && !TARGET_OS_MACCATALYST
     return true;
 #else
+    if (@available(macOS 10.15, *)) {
+        return [mContext->device supportsFamily:MTLGPUFamilyApple1];
+    }
     return false;
 #endif
 }
@@ -1008,11 +1015,6 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                                                                width:(srcTexture.width >> miplevel)
                                                               height:(srcTexture.height >> miplevel)
                                                            mipmapped:NO];
-#if defined(IOS)
-    textureDescriptor.storageMode = MTLStorageModeShared;
-#else
-    textureDescriptor.storageMode = MTLStorageModeManaged;
-#endif
     textureDescriptor.usage = MTLTextureUsageShaderWrite | MTLTextureUsageRenderTarget;
     id<MTLTexture> readPixelsTexture = [mContext->device newTextureWithDescriptor:textureDescriptor];
 
@@ -1027,11 +1029,13 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
 
-#if !defined(IOS)
+#if !defined(IOS) || TARGET_OS_MACCATALYST
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
-    id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
-    [blitEncoder synchronizeResource:readPixelsTexture];
-    [blitEncoder endEncoding];
+    if (readPixelsTexture.storageMode == MTLStorageModeManaged) {
+        id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
+        [blitEncoder synchronizeResource:readPixelsTexture];
+        [blitEncoder endEncoding];
+    }
 #endif
 
     PixelBufferDescriptor* p = new PixelBufferDescriptor(std::move(data));

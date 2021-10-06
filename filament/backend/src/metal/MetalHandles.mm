@@ -126,11 +126,6 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         textureDescriptor.height = headlessHeight;
         // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
         textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-#if defined(IOS)
-        textureDescriptor.storageMode = MTLStorageModeShared;
-#else
-        textureDescriptor.storageMode = MTLStorageModeManaged;
-#endif
         headlessDrawable = [context.device newTextureWithDescriptor:textureDescriptor];
         return headlessDrawable;
     }
@@ -380,7 +375,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
 }
 
 static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat format) {
-    const MTLPixelFormat metalFormat = getMetalFormat(format);
+    const MTLPixelFormat metalFormat = getMetalFormat(device, format);
 #if !defined(IOS)
     // Some devices do not support the Depth24_Stencil8 format, so we'll fallback to Depth32.
     if (metalFormat == MTLPixelFormatDepth24Unorm_Stencil8 &&
@@ -671,11 +666,6 @@ void MetalTexture::loadSlice(uint32_t level, uint32_t xoffset, uint32_t yoffset,
             descriptor.textureType = MTLTextureType3D;
             descriptor.depth = depth;
         }
-#if defined(IOS)
-        descriptor.storageMode = MTLStorageModeShared;
-#else
-        descriptor.storageMode = MTLStorageModeManaged;
-#endif
         id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
         [stagingTexture replaceRegion:MTLRegionMake3D(0, 0, 0, width, height, depth)
                           mipmapLevel:0
@@ -866,10 +856,17 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.textureType = MTLTextureType2DMultisample;
     descriptor.sampleCount = samples;
     descriptor.usage = MTLTextureUsageRenderTarget;
-#if defined(IOS)
+    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+#if !defined(FILAMENT_IOS_SIMULATOR)
+#if defined(IOS) && !TARGET_OS_MACCATALYST
     descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
 #else
-    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+    if (@available(macOS 11.0, macCatalyst 14.0, *)) {
+        if ([device supportsFamily:MTLGPUFamilyApple1]) {
+            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+        }
+    }
+#endif
 #endif
 
     return [device newTextureWithDescriptor:descriptor];

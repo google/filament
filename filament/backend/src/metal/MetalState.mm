@@ -120,7 +120,7 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
             params.compareMode == SamplerCompareMode::NONE ?
                 MTLCompareFunctionNever : getCompareFunction(params.compareFunc);
 
-#if defined(IOS)
+#if defined(IOS) && !TARGET_OS_MACCATALYST
     // Older Apple devices (and the simulator) don't support setting a comparison function in
     // MTLSamplerDescriptor.
     // In practice, this means shadows are not supported when running in the simulator.
