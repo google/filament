@@ -121,6 +121,13 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, bool* va
     return -1;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float2* val) {
+    float values[2];
+    i = parse(tokens, i, jsonChunk, values, 2);
+    *val = {values[0], values[1]};
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float3* val) {
     float values[3];
     i = parse(tokens, i, jsonChunk, values, 3);
@@ -235,6 +242,37 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         }
         if (i < 0) {
             slog.e << "Invalid shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        DynamicResolutionOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "minScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minScale);
+        } else if (compare(tok, jsonChunk, "maxScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxScale);
+        } else if (compare(tok, jsonChunk, "sharpness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sharpness);
+        } else if (compare(tok, jsonChunk, "quality") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->quality);
+        } else if (compare(tok, jsonChunk, "homogeneousScaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->homogeneousScaling);
+        } else {
+            slog.w << "Invalid dsr key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid dsr value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
         }
     }
@@ -695,6 +733,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->msaa);
         } else if (compare(tok, jsonChunk, "taa") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->taa);
+        } else if (compare(tok, jsonChunk, "dsr") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->dsr);
         } else if (compare(tok, jsonChunk, "colorGrading") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->colorGrading);
         } else if (compare(tok, jsonChunk, "ssao") == 0) {
@@ -944,6 +984,7 @@ void applySettings(const ViewSettings& settings, View* dest) {
     dest->setAntiAliasing(settings.antiAliasing);
     dest->setTemporalAntiAliasingOptions(settings.taa);
     dest->setMultiSampleAntiAliasingOptions(settings.msaa);
+    dest->setDynamicResolutionOptions(settings.dsr);
     dest->setAmbientOcclusionOptions(settings.ssao);
     dest->setBloomOptions(settings.bloom);
     dest->setFogOptions(settings.fog);
@@ -1154,12 +1195,27 @@ static std::ostream& writeJson(std::ostream& oss, const float* v, int count) {
     return oss;
 }
 
+static std::ostream& operator<<(std::ostream& out, math::float2 v) {
+    return writeJson(out, v.v, 2);
+}
+
 static std::ostream& operator<<(std::ostream& out, math::float3 v) {
-    return writeJson(out, &v.x, 3);
+    return writeJson(out, v.v, 3);
 }
 
 static std::ostream& operator<<(std::ostream& out, math::float4 v) {
-    return writeJson(out, &v.x, 4);
+    return writeJson(out, v.v, 4);
+}
+
+static std::ostream& operator<<(std::ostream& out, const DynamicResolutionOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"minScale\": " << in.minScale << ",\n"
+        << "\"maxScale\": " << in.maxScale << ",\n"
+        << "\"sharpness\": " << in.sharpness << ",\n"
+        << "\"quality\": " << in.quality << ",\n"
+        << "\"homogeneousScaling\": " << to_string(in.homogeneousScaling) << "\n"
+        << "}";
 }
 
 static std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions& in) {
@@ -1426,6 +1482,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"antiAliasing\": " << in.antiAliasing << ",\n"
         << "\"msaa\": " << in.msaa << ",\n"
         << "\"taa\": " << in.taa << ",\n"
+        << "\"dsr\": " << in.dsr << ",\n"
         << "\"colorGrading\": " << (in.colorGrading) << ",\n"
         << "\"ssao\": " << (in.ssao) << ",\n"
         << "\"bloom\": " << (in.bloom) << ",\n"

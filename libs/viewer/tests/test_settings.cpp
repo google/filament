@@ -37,6 +37,15 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "sampleCount": 4,
             "customResolve": false
         },
+        "dsr": {
+            "enabled": false,
+            "minScale": [0.25, 0.25],
+            "maxScale": [1.0, 1.0],
+            "sharpness": 0.9,
+            "enabled": false,
+            "homogeneousScaling": false,
+            "quality": "MEDIUM"
+        },
         "colorGrading": {
             "enabled": true,
             "quality": "MEDIUM",
