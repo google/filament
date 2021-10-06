@@ -689,6 +689,9 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
 
         ImGui::Checkbox("MSAA 4x", &mSettings.view.msaa.enabled);
+        ImGui::Indent();
+            ImGui::Checkbox("Custom resolve", &mSettings.view.msaa.customResolve);
+        ImGui::Unindent();
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
         if (ImGui::CollapsingHeader("SSAO Options")) {

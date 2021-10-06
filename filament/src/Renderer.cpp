@@ -385,8 +385,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
                     hasColorGrading &&
-                    msaaSampleCount <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
+                    msaaSampleCount <= 1 &&
+                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
+            .customResolve =
+                    msaaOptions.customResolve &&
+                    msaaSampleCount > 1 &&
+                    hasColorGrading &&
+                    driver.isFrameBufferFetchMultiSampleSupported(),
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
             .dithering = hasDithering,
@@ -500,7 +506,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
                             config.svp.width, config.svp.height);
+                } else if (colorGradingConfig.customResolve) {
+                    ppm.customResolvePrepareSubpass(driver,
+                            PostProcessManager::CustomResolveOp::COMPRESS);
                 }
+
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
                 if (jobFroxelize) {
@@ -520,8 +530,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         pass.appendCustomCommand(
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
-                0, [&ppm, &driver, colorGradingConfigForColor](){
+                0, [&ppm, &driver, colorGradingConfigForColor]() {
                     ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
+                });
+    } if (colorGradingConfig.customResolve) {
+        // append custom resolve subpass after all other passes
+        pass.appendCustomCommand(
+                RenderPass::Pass::BLENDED,
+                RenderPass::CustomCommand::EPILOG,
+                0, [&ppm, &driver]() {
+                    ppm.customResolveSubpass(driver);
                 });
     }
 
@@ -533,6 +551,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // this cancels the colorPass() call above if refraction is active.
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
+    }
+
+    if (colorGradingConfig.customResolve) {
+        // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's  used
+        //       by many other passes (Bloom, TAA, DoF, etc...). We could make this more
+        //       efficient by using ARM_shader_framebuffer_fetch. We use a load/store (i.e.
+        //       subpass) here because it's more convenient.
+        colorPassOutput = ppm.customResolveUncompressPass(fg, colorPassOutput);
     }
 
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
@@ -848,6 +874,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     });
                     data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                } else if (colorGradingConfig.customResolve) {
+                    data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
                 }
 
                 // We set a "read" constraint on these attachments here because we need to preserve them
@@ -903,7 +931,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     }
                 }
 
-                if (colorGradingConfig.asSubpass) {
+                if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
                     out.params.subpassMask = 1;
                 }
                 passExecutor.execute(resources.getPassName(), out.target, out.params);

@@ -160,6 +160,10 @@ bool NoopDriver::isFrameBufferFetchSupported() {
     return false;
 }
 
+bool NoopDriver::isFrameBufferFetchMultiSampleSupported() {
+    return false; // TODO: add support for MS framebuffer_fetch
+}
+
 bool NoopDriver::isFrameTimeSupported() {
     return true;
 }
