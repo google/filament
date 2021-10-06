@@ -26,12 +26,16 @@ class ViewSettingsTest : public testing::Test {};
 static const char* JSON_TEST_DEFAULTS = R"TXT(
 {
     "view": {
-        "sampleCount": 1,
         "antiAliasing": "FXAA",
         "taa": {
             "enabled": false,
             "filterWidth": 1.0,
             "feedback": 0.04
+        },
+        "msaa": {
+            "enabled": false,
+            "sampleCount": 4,
+            "customResolve": false
         },
         "colorGrading": {
             "enabled": true,
