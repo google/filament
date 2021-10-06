@@ -385,6 +385,16 @@ value_object<filament::View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("maxForegroundCOC", &filament::View::DepthOfFieldOptions::maxForegroundCOC)
     .field("maxBackgroundCOC", &filament::View::DepthOfFieldOptions::maxBackgroundCOC);
 
+value_object<filament::View::MultiSampleAntiAliasingOptions>("View$MultiSampleAntiAliasingOptions")
+    .field("enabled", &filament::View::MultiSampleAntiAliasingOptions::enabled)
+    .field("sampleCount", &filament::View::MultiSampleAntiAliasingOptions::sampleCount)
+    .field("customResolve", &filament::View::MultiSampleAntiAliasingOptions::customResolve);
+
+value_object<filament::View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOptions")
+    .field("enabled", &filament::View::TemporalAntiAliasingOptions::enabled)
+    .field("filterWidth", &filament::View::TemporalAntiAliasingOptions::filterWidth)
+    .field("feedback", &filament::View::TemporalAntiAliasingOptions::feedback);
+
 value_object<filament::View::BloomOptions>("View$BloomOptions")
     .field("dirtStrength", &filament::View::BloomOptions::dirtStrength)
     .field("strength", &filament::View::BloomOptions::strength)
@@ -675,12 +685,14 @@ class_<View>("View")
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
     .function("setBlendMode", &View::setBlendMode)
     .function("getBlendMode", &View::getBlendMode)
-    .function("getViewport", &View::getViewport)
     .function("setViewport", &View::setViewport)
+    .function("getViewport", &View::getViewport)
     .function("setVisibleLayers", &View::setVisibleLayers)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
     .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
     .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
+    .function("_setMultiSampleAntiAliasingOptions", &View::setMultiSampleAntiAliasingOptions)
+    .function("_setTemporalAntiAliasingOptions", &View::setTemporalAntiAliasingOptions)
     .function("_setBloomOptions", &View::setBloomOptions)
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
@@ -689,6 +701,7 @@ class_<View>("View")
     .function("setAntiAliasing", &View::setAntiAliasing)
     .function("getAntiAliasing", &View::getAntiAliasing)
     .function("setSampleCount", &View::setSampleCount)
+    .function("getSampleCount", &View::getSampleCount)
     .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
         self->setRenderTarget(renderTarget);
     }), allow_raw_pointers());
