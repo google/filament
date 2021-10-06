@@ -1165,7 +1165,7 @@ static std::ostream& operator<<(std::ostream& out, math::float4 v) {
 static std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
-        << "\"sampleCount\": " << (in.sampleCount) << ",\n"
+        << "\"sampleCount\": " << int(in.sampleCount) << ",\n"
         << "\"customResolve\": " << to_string(in.customResolve) << "\n"
         << "}";
 }
