@@ -268,6 +268,32 @@ Filament.loadClassExtensions = function() {
         this._setDepthOfFieldOptions(options);
     };
 
+    /// setMultiSampleAntiAliasingOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// enabled, sampleCount, customResolve.
+    Filament.View.prototype.setMultiSampleAntiAliasingOptions = function(overrides) {
+        const options = {
+            enabled: false,
+            sampleCount: 4,
+            customResolve: false
+        };
+        Object.assign(options, overrides);
+        this._setMultiSampleAntiAliasingOptions(options);
+    };
+
+    /// setTemporalAntiAliasingOptions ::method::
+    /// overrides ::argument:: Dictionary with one or more of the following properties: \
+    /// filterWidth, feedback, enabled.
+    Filament.View.prototype.setTemporalAntiAliasingOptions = function(overrides) {
+        const options = {
+            filterWidth: 1.0,
+            feedback: 0.04,
+            enabled: false
+        };
+        Object.assign(options, overrides);
+        this._setTemporalAntiAliasingOptions(options);
+    };
+
     /// setBloomOptions ::method::
     /// overrides ::argument:: Dictionary with one or more of the following properties: \
     /// enabled, strength, resolution, anomorphism, levels, blendMode, threshold, highlight.
