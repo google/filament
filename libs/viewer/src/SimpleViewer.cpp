@@ -733,6 +733,21 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
+    if (ImGui::CollapsingHeader("Dynamic Resolution")) {
+        auto& dsr = mSettings.view.dsr;
+        int quality = (int)dsr.quality;
+        ImGui::Checkbox("enabled", &dsr.enabled);
+        ImGui::Checkbox("homogeneous", &dsr.homogeneousScaling);
+        ImGui::SliderFloat("min. scale", &dsr.minScale.x, 0.25f, 1.0f);
+        ImGui::SliderFloat("max. scale", &dsr.maxScale.x, 0.25f, 1.0f);
+        ImGui::SliderInt("quality", &quality, 0, 3);
+        ImGui::SliderFloat("sharpness", &dsr.sharpness, 0.0f, 1.0f);
+        dsr.minScale.x = std::min(dsr.minScale.x, dsr.maxScale.x);
+        dsr.minScale.y = dsr.minScale.x;
+        dsr.maxScale.y = dsr.maxScale.x;
+        dsr.quality = (QualityLevel)quality;
+    }
+
     auto& light = mSettings.lighting;
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();

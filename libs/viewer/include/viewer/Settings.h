@@ -66,6 +66,8 @@ using Dithering = filament::View::Dithering;
 using FogOptions = filament::View::FogOptions;
 using RenderQuality = filament::View::RenderQuality;
 using ShadowType = filament::View::ShadowType;
+using DynamicResolutionOptions = filament::View::DynamicResolutionOptions;
+using MultiSampleAntiAliasingOptions = filament::View::MultiSampleAntiAliasingOptions;
 using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
@@ -156,6 +158,7 @@ struct ViewSettings {
     TemporalAntiAliasingOptions taa;
     ColorGradingSettings colorGrading;
     AmbientOcclusionOptions ssao;
+    DynamicResolutionOptions dsr;
     BloomOptions bloom;
     FogOptions fog;
     DepthOfFieldOptions dof;
