@@ -58,7 +58,9 @@ export interface Vector<T> {
 export function vectorToArray<T>(vector: Vector<T>): T[];
 
 export class SwapChain {}
-export class ColorGrading {}
+export class ColorGrading {
+    public static Builder(): ColorGrading$Builder;
+}
 
 export interface Box {
     center: float3;
@@ -525,6 +527,8 @@ export class View {
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
     public getBlendMode(): View$BlendMode;
+    public setPostProcessingEnabled(enabled: boolean): void;
+    public setAntiAliasing(antialiasing: View$AntiAliasing): void;
 }
 
 export class TransformManager {
