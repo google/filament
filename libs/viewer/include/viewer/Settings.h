@@ -151,8 +151,8 @@ struct DynamicLightingSettings {
 
 // This defines fields in the same order as the setter methods in filament::View.
 struct ViewSettings {
-    uint8_t sampleCount = 1;
     AntiAliasing antiAliasing = AntiAliasing::FXAA;
+    MultiSampleAntiAliasingOptions msaa;
     TemporalAntiAliasingOptions taa;
     ColorGradingSettings colorGrading;
     AmbientOcclusionOptions ssao;

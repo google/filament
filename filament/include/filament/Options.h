@@ -285,6 +285,28 @@ struct AmbientOcclusionOptions {
 };
 
 /**
+ * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+ * @see setMultiSampleAntiAliasingOptions()
+ */
+struct MultiSampleAntiAliasingOptions {
+    bool enabled = false;           //!< enables or disables msaa
+
+    /**
+     * sampleCount number of samples to use for multi-sampled anti-aliasing.\n
+     *              0: treated as 1
+     *              1: no anti-aliasing
+     *              n: sample count. Effective sample could be different depending on the
+     *                 GPU capabilities.
+     */
+    uint8_t sampleCount = 4;
+
+    /**
+     * custom resolve improves quality for HDR scenes, but may impact performance.
+     */
+    bool customResolve = false;
+};
+
+/**
  * Options for Temporal Anti-aliasing (TAA)
  * @see setTemporalAntiAliasingOptions()
  */

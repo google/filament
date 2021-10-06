@@ -371,7 +371,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     mSettings.view.vsmShadowOptions.anisotropy = 0;
     mSettings.view.dithering = Dithering::TEMPORAL;
     mSettings.view.antiAliasing = AntiAliasing::FXAA;
-    mSettings.view.sampleCount = 4;
+    mSettings.view.msaa = { .enabled = true, .sampleCount = 4 };
     mSettings.view.ssao.enabled = true;
     mSettings.view.bloom.enabled = true;
 
@@ -688,9 +688,7 @@ void SimpleViewer::updateUserInterface() {
             enableFxaa(fxaa);
         ImGui::Unindent();
 
-        bool msaa = mSettings.view.sampleCount != 1;
-        ImGui::Checkbox("MSAA 4x", &msaa);
-        enableMsaa(msaa);
+        ImGui::Checkbox("MSAA 4x", &mSettings.view.msaa.enabled);
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
         if (ImGui::CollapsingHeader("SSAO Options")) {

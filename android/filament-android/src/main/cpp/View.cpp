@@ -86,13 +86,19 @@ Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass, jlong nativeView, jint count) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     view->setSampleCount((uint8_t) count);
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return view->getSampleCount();
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -353,6 +359,17 @@ Java_com_google_android_filament_View_nSetVignetteOptions(JNIEnv*, jclass, jlong
     View* view = (View*) nativeView;
     view->setVignetteOptions({.midPoint = midPoint, .roundness = roundness, .feather = feather,
             .color = LinearColorA{r, g, b, a}, .enabled = (bool)enabled});
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetMultiSampleAntiAliasingOptions(JNIEnv* env, jclass clazz,
+        jlong nativeView, jboolean enabled, jint sampleCount, jboolean customResolve) {
+    View* view = (View*) nativeView;
+    view->setMultiSampleAntiAliasingOptions({
+            .enabled = (bool)enabled,
+            .sampleCount = (uint8_t)sampleCount,
+            .customResolve = (bool)customResolve});
 }
 
 extern "C"

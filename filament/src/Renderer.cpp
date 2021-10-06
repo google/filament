@@ -229,8 +229,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
-    uint8_t msaaSampleCount = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
+    auto msaaOptions = view.getMultiSampleAntiAliasingOptions();
     auto dsrOptions = view.getDynamicResolutionOptions();
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
@@ -249,6 +249,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         hasFXAA = false;
         scale = 1.0f;
     }
+
+    const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
     filament::Viewport svp = vp.scale(scale);
