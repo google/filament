@@ -613,13 +613,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
         if (scaled) {
             mightNeedFinalBlit = false;
+            auto viewport = DEBUG_DYNAMIC_SCALING ? svp : vp;
             if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, {
-                        .width = vp.width, .height = vp.height,
+                        .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             } else {
                 input = ppm.blendBlit(fg, blending, dsrOptions, input, {
-                        .width = vp.width, .height = vp.height,
+                        .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat });
             }
         }
