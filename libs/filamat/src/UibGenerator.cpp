@@ -120,7 +120,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrBias",                 1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved5",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("ssrDistance",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("reserved6",               1, UniformInterfaceBlock::Type::FLOAT)
 
             // bring PerViewUib to 2 KiB

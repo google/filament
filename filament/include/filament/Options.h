@@ -320,6 +320,7 @@ struct ScreenSpaceReflectionsOptions {
     bool enabled = true;
     float thickness = 0.5f;     //!< ray thickness, in world units
     float bias = 0.01f;         //!< bias, in world units, to prevent self-intersections
+    float maxDistance = 3.0f;   //!< maximum distance, in world units, to raycast
 };
 
 /**

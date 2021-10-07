@@ -609,7 +609,7 @@ void evaluateScreenSpaceReflections(const PixelParams pixel, inout vec3 Fr) {
     highp float stride = 1.0;
     highp float jitterFraction = 1.0f; //random(gl_FragCoord.xy);
     highp float maxSteps = 1000.0;
-    highp float maxRayTraceDistance = 3.0f;
+    highp float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     // <-- outputs -->
     vec2 hitPixel;

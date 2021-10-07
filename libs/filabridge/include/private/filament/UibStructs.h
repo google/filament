@@ -140,7 +140,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f ssrReprojection;
     float ssrThickness;
     float ssrBias;
-    float reserved5;
+    float ssrDistance;
     float reserved6;
 
     // bring PerViewUib to 2 KiB
