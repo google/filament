@@ -2304,11 +2304,15 @@ void OpenGLDriver::endRenderPass(int) {
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
+        auto effectiveDiscardFlags = discardFlags;
+        if (gl.bugs.invalidate_end_only_if_invalidate_start) {
+            effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
+        }
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
