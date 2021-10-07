@@ -1610,7 +1610,7 @@ public class View {
         @Entity public int renderable;
         /** The value of the depth buffer at the picking query location */
         public float depth;
-        /** The fragment coordinate in GL convention at the the picking query location */
+        /** The fragment coordinate in GL convention at the picking query location */
         @NonNull public float[] fragCoords = new float[3];
     };
 
