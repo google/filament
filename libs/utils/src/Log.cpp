@@ -34,7 +34,7 @@ class LogStream : public ostream {
 public:
 
     enum Priority {
-        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO
+        LOG_DEBUG, LOG_ERROR, LOG_WARNING, LOG_INFO, LOG_VERBOSE
     };
 
     explicit LogStream(Priority p) noexcept : mPriority(p) {}
@@ -61,8 +61,11 @@ ostream& LogStream::flush() noexcept {
         case LOG_INFO:
             __android_log_write(ANDROID_LOG_INFO, UTILS_LOG_TAG, buf.get());
             break;
+        case LOG_VERBOSE:
+            __android_log_write(ANDROID_LOG_VERBOSE, UTILS_LOG_TAG, buf.get());
+            break;
     }
-#else
+#else // ANDROID
     switch (mPriority) {
         case LOG_DEBUG:
         case LOG_WARNING:
@@ -72,8 +75,13 @@ ostream& LogStream::flush() noexcept {
         case LOG_ERROR:
             fprintf(stderr, "%s", buf.get());
             break;
-    }
+        case LOG_VERBOSE:
+#ifndef NDEBUG
+            fprintf(stdout, "%s", buf.get());
 #endif
+            break;
+    }
+#endif // ANDROID
     buf.reset();
     return *this;
 }
@@ -82,15 +90,17 @@ static LogStream cout(LogStream::Priority::LOG_DEBUG);
 static LogStream cerr(LogStream::Priority::LOG_ERROR);
 static LogStream cwarn(LogStream::Priority::LOG_WARNING);
 static LogStream cinfo(LogStream::Priority::LOG_INFO);
+static LogStream cverbose(LogStream::Priority::LOG_VERBOSE);
 
 } // namespace io
 
 
 Loggers const slog = {
-        io::cout,   // debug
-        io::cerr,   // error
-        io::cwarn,  // warning
-        io::cinfo   // info
+        io::cout,       // debug
+        io::cerr,       // error
+        io::cwarn,      // warning
+        io::cinfo,      // info
+        io::cverbose    // verbose
 };
 
 } // namespace utils
