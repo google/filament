@@ -35,9 +35,7 @@ OpenGLContext::OpenGLContext() noexcept {
     UTILS_UNUSED char const* const version  = (char const*) glGetString(GL_VERSION);
     UTILS_UNUSED char const* const shader   = (char const*) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-#ifndef NDEBUG
-    slog.i << vendor << ", " << renderer << ", " << version << ", " << shader << io::endl;
-#endif
+    slog.v << "[" << vendor << "], [" << renderer << "], [" << version << "], [" << shader << "]" << io::endl;
 
     // OpenGL (ES) version
     GLint major = 0;
@@ -83,6 +81,7 @@ OpenGLContext::OpenGLContext() noexcept {
         bugs.disable_sidecar_blit_into_texture_array = true;
         // early exit condition is flattened in EASU code
         bugs.split_easu = true;
+        bugs.invalidate_end_only_if_invalidate_start = true;
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
@@ -105,6 +104,14 @@ OpenGLContext::OpenGLContext() noexcept {
         bugs.disable_invalidate_framebuffer = true;
     }
 
+    slog.v << "Active workarounds: " << '\n';
+    for (auto [enabled, name, _] : mBugDatabase) {
+        if (enabled) {
+            slog.v << name << '\n';
+        }
+    }
+    flush(slog.v);
+
     // now we can query getter and features
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
@@ -119,16 +126,16 @@ OpenGLContext::OpenGLContext() noexcept {
 
     assert_invariant(gets.max_draw_buffers >= 4); // minspec
 
-#if 0
-    // this is useful for development, but too verbose even for debug builds
-    slog.i
-            << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
+#ifndef NDEBUG
+    // this is useful for development
+    slog.v  << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
             << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << '\n'
             << "GL_MAX_SAMPLES = " << gets.max_samples << '\n'
             << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy << '\n'
             << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << '\n'
             << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << '\n'
-            << io::endl;
+            ;
+    flush(slog.v);
 #endif
 
     /*
