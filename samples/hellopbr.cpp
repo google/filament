@@ -46,7 +46,7 @@ struct App {
     mat4f transform;
 };
 
-static const char* IBL_FOLDER = "default_env";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 int main(int argc, char** argv) {
     Config config;
