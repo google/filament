@@ -34,8 +34,7 @@
 
 using namespace utils;
 
-namespace filament {
-namespace viewer {
+namespace filament::viewer {
 
 static const char* to_string(bool b) { return b ? "true" : "false"; }
 
@@ -1007,9 +1006,9 @@ static void apply(MaterialProperty<T> prop, MaterialInstance* dest) {
 }
 
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
-    for (auto prop : settings.scalar) { apply(prop, dest); }
-    for (auto prop : settings.float3) { apply(prop, dest); }
-    for (auto prop : settings.float4) { apply(prop, dest); }
+    for (const auto& prop : settings.scalar) { apply(prop, dest); }
+    for (const auto& prop : settings.float3) { apply(prop, dest); }
+    for (const auto& prop : settings.float4) { apply(prop, dest); }
 }
 
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
@@ -1041,7 +1040,7 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
 }
 
 static LinearColor inverseTonemapSRGB(sRGBColor x) {
-    return (x * -0.155) / (x - 1.019);
+    return (x * -0.155f) / (x - 1.019f);
 }
 
 void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
@@ -1372,18 +1371,18 @@ static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     std::ostringstream oss;
     oss << "{\n";
     oss << "\"scalar\": {\n";
-    for (auto prop : in.scalar) { writeJson(prop, oss); }
+    for (const auto& prop : in.scalar) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "\"float3\": {\n";
-    for (auto prop : in.float3) { writeJson(prop, oss); }
+    for (const auto& prop : in.float3) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "\"float4\": {\n";
-    for (auto prop : in.float4) { writeJson(prop, oss); }
+    for (const auto& prop : in.float4) { writeJson(prop, oss); }
     oss << "},\n";
     oss << "}";
     std::string result = oss.str();
 
-    const auto replace = [&result](std::string s, std::string t) {
+    const auto replace = [&result](const std::string& s, const std::string& t) {
         std::string::size_type n = 0;
         while ((n = result.find(s, n )) != std::string::npos) {
             result.replace(n, s.size(), t);
@@ -1599,5 +1598,4 @@ bool JsonSerializer::readJson(const char* jsonChunk, size_t size, Settings* out)
     return i >= 0;
 }
 
-} // namespace viewer
-} // namespace filament
+} // namespace filament::viewer

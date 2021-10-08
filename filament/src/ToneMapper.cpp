@@ -347,7 +347,7 @@ GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs)  noexcept : mOptio
     rhs.mOptions = nullptr;
 }
 
-GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper& rhs) noexcept {
+GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper&& rhs) noexcept {
     mOptions = rhs.mOptions;
     rhs.mOptions = nullptr;
     return *this;
