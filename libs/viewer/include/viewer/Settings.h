@@ -153,22 +153,27 @@ struct DynamicLightingSettings {
 
 // This defines fields in the same order as the setter methods in filament::View.
 struct ViewSettings {
+    // standalone View settings
     AntiAliasing antiAliasing = AntiAliasing::FXAA;
-    MultiSampleAntiAliasingOptions msaa;
-    TemporalAntiAliasingOptions taa;
-    ColorGradingSettings colorGrading;
-    AmbientOcclusionOptions ssao;
-    DynamicResolutionOptions dsr;
-    BloomOptions bloom;
-    FogOptions fog;
-    DepthOfFieldOptions dof;
-    VignetteOptions vignette;
     Dithering dithering = Dithering::TEMPORAL;
-    RenderQuality renderQuality;
-    DynamicLightingSettings dynamicLighting;
     ShadowType shadowType = ShadowType::PCF;
-    VsmShadowOptions vsmShadowOptions;
     bool postProcessingEnabled = true;
+
+    // View Options (sorted)
+    AmbientOcclusionOptions ssao;
+    BloomOptions bloom;
+    DepthOfFieldOptions dof;
+    DynamicResolutionOptions dsr;
+    FogOptions fog;
+    MultiSampleAntiAliasingOptions msaa;
+    RenderQuality renderQuality;
+    TemporalAntiAliasingOptions taa;
+    VignetteOptions vignette;
+    VsmShadowOptions vsmShadowOptions;
+
+    // Custom View Options
+    ColorGradingSettings colorGrading;
+    DynamicLightingSettings dynamicLighting;
 };
 
 template <typename T>
