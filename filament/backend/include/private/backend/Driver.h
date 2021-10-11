@@ -63,7 +63,7 @@ public:
     virtual ~Driver() noexcept;
 
     // called from the main thread (NOT the render-thread) at various intervals, this
-    // is where the driver can free resources consumed by previous commands.
+    // is where the driver can execute user callbacks.
     virtual void purge() noexcept = 0;
 
     virtual ShaderModel getShaderModel() const noexcept = 0;

@@ -288,7 +288,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
         auto& cachedPrograms = mCachedPrograms;
         for (uint8_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
-            if (Variant(i).isDepthPass()) {
+            if (Variant::isValidDepthVariant(i)) {
                 cachedPrograms[i] = engine.getDefaultMaterial()->getProgram(i);
             }
         }
@@ -430,7 +430,7 @@ Program FMaterial::getProgramBuilderWithVariants(
 
     ASSERT_POSTCONDITION(isNoop || (fsOK && fsBuilder.size() > 0),
             "The material '%s' has not been compiled to include the required "
-            "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filterer=0x%x).",
+            "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variantKey, fragmentVariantKey);
 
     Program pb;
@@ -543,7 +543,7 @@ void FMaterial::destroyPrograms(FEngine& engine) {
         if (!mIsDefaultMaterial) {
             // The depth variants may be shared with the default material, in which case
             // we should not free it now.
-            bool isSharedVariant = Variant(i).isDepthPass() && !mHasCustomDepthShader;
+            bool isSharedVariant = Variant::isValidDepthVariant(i) && !mHasCustomDepthShader;
             if (isSharedVariant) {
                 // we don't own this variant, skip.
                 continue;

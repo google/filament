@@ -1548,6 +1548,71 @@ public class View {
         return mDepthOfFieldOptions;
     }
 
+    /**
+     * A class containing the result of a picking query
+     */
+    public static class PickingQueryResult {
+        /** The entity of the renderable at the picking query location */
+        @Entity public int renderable;
+        /** The value of the depth buffer at the picking query location */
+        public float depth;
+        /** The fragment coordinate in GL convention at the the picking query location */
+        @NonNull public float[] fragCoords = new float[3];
+    };
+
+    /**
+     * An interface to implement a custom class to receive results of picking queries.
+     */
+    public interface OnPickCallback {
+        /**
+         * onPick() is called by the specified Handler in {@link View#pick} when the picking query
+         * result is available.
+         * @param result An instance of {@link PickingQueryResult}.
+         */
+        void onPick(@NonNull PickingQueryResult result);
+    }
+
+    /**
+     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
+     * Picking queries are all executed when {@link Renderer#render} is called on this View.
+     * The provided callback is guaranteed to be called at some point in the future.
+     *
+     * Typically it takes a couple frames to receive the result of a picking query.
+     *
+     * @param x        Horizontal coordinate to query in the viewport with origin on the left.
+     * @param y        Vertical coordinate to query on the viewport with origin at the bottom.
+     * @param handler  An {@link java.util.concurrent.Executor Executor}.
+     *                 On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback User callback executed by <code>handler</code> when the picking query
+     *                 result is available.
+     */
+    public void pick(int x, int y,
+            @Nullable Object handler, @Nullable OnPickCallback callback) {
+        InternalOnPickCallback internalCallback = new InternalOnPickCallback(callback);
+        nPick(getNativeObject(), x, y, handler, internalCallback);
+    }
+
+    private static class InternalOnPickCallback implements Runnable {
+        public InternalOnPickCallback(OnPickCallback mUserCallback) {
+            this.mUserCallback = mUserCallback;
+        }
+        @Override
+        public void run() {
+            mPickingQueryResult.renderable = mRenderable;
+            mPickingQueryResult.depth = mDepth;
+            mPickingQueryResult.fragCoords[0] = mFragCoordsX;
+            mPickingQueryResult.fragCoords[1] = mFragCoordsY;
+            mPickingQueryResult.fragCoords[2] = mFragCoordsZ;
+            mUserCallback.onPick(mPickingQueryResult);
+        }
+        private final OnPickCallback mUserCallback;
+        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
+        @Entity int mRenderable;
+        float mDepth;
+        float mFragCoordsX;
+        float mFragCoordsY;
+        float mFragCoordsZ;
+    }
 
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1598,4 +1663,5 @@ public class View {
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
+    private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
 }

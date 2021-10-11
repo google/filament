@@ -49,11 +49,16 @@ struct CameraInfo;
 class PostProcessManager {
 public:
     struct ColorGradingConfig {
-        bool asSubpass = false;
+        bool asSubpass{};
         bool translucent{};
         bool fxaa{};
         bool dithering{};
         backend::TextureFormat ldrFormat{};
+    };
+
+    struct StructurePassConfig {
+        float scale = 0.5f;
+        bool picking{};
     };
 
     explicit PostProcessManager(FEngine& engine) noexcept;
@@ -65,7 +70,7 @@ public:
 
     // structure (depth) pass
     FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
-            uint32_t width, uint32_t height, float scale) noexcept;
+            uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,

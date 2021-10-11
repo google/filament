@@ -2750,7 +2750,7 @@ void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string,  uint32_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
@@ -2834,6 +2834,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     glBufferData(GL_PIXEL_PACK_BUFFER, p.size, nullptr, GL_STATIC_DRAW);
     glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    CHECK_GL_ERROR(utils::slog.e)
 
     // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
     // constructor.
@@ -2865,8 +2866,6 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         delete pUserBuffer;
         CHECK_GL_ERROR(utils::slog.e)
     });
-
-    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {

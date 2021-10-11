@@ -128,7 +128,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .add("flags", 1, UniformInterfaceBlock::Type::UINT)
             .add("channels", 1, UniformInterfaceBlock::Type::UINT)
-            .add("reserved1", 1, UniformInterfaceBlock::Type::UINT)
+            .add("objectId", 1, UniformInterfaceBlock::Type::UINT)
             .add("userData", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;

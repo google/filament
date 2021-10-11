@@ -20,6 +20,8 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include "common/CallbackUtils.h"
+
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
@@ -381,4 +383,42 @@ Java_com_google_android_filament_View_nIsScreenSpaceRefractionEnabled(JNIEnv *, 
         jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isScreenSpaceRefractionEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass clazz,
+        jlong nativeView,
+        jint x, jint y, jobject handler, jobject internalCallback) {
+
+    // jniState will be initialized the first time this method is called
+    static const struct JniState {
+        jclass internalOnPickCallbackClass;
+        jfieldID renderableFieldId;
+        jfieldID depthFieldId;
+        jfieldID fragCoordXFieldId;
+        jfieldID fragCoordYFieldId;
+        jfieldID fragCoordZFieldId;
+        explicit JniState(JNIEnv* env) noexcept {
+            internalOnPickCallbackClass = env->FindClass("com/google/android/filament/View$InternalOnPickCallback");
+            renderableFieldId = env->GetFieldID(internalOnPickCallbackClass, "mRenderable", "I");
+            depthFieldId = env->GetFieldID(internalOnPickCallbackClass, "mDepth", "F");
+            fragCoordXFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsX", "F");
+            fragCoordYFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsY", "F");
+            fragCoordZFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsZ", "F");
+        }
+    } jniState(env);
+
+    View* view = (View*) nativeView;
+    JniCallback *callback = JniCallback::make(env, handler, internalCallback);
+    view->pick(x, y, [callback](View::PickingQueryResult const& result) {
+        jobject obj = callback->getCallbackObject();
+        JNIEnv* const env = callback->getJniEnv();
+        env->SetIntField(obj, jniState.renderableFieldId, (jint)result.renderable.getId());
+        env->SetFloatField(obj, jniState.depthFieldId, result.depth);
+        env->SetFloatField(obj, jniState.fragCoordXFieldId, result.fragCoords.x);
+        env->SetFloatField(obj, jniState.fragCoordYFieldId, result.fragCoords.y);
+        env->SetFloatField(obj, jniState.fragCoordZFieldId, result.fragCoords.z);
+        JniCallback::invoke(callback);  // this destroys JniCallback
+    });
 }

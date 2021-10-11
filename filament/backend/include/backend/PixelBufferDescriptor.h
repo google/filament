@@ -105,6 +105,71 @@ public:
               alignment(1) {
     }
 
+    // --------------------------------------------------------------------------------------------
+
+    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type, uint8_t alignment,
+            uint32_t left, uint32_t top, uint32_t stride, T* data) noexcept {
+        return { buffer, size, format, type, alignment, left, top, stride,
+                [](void* b, size_t s, void* u) {
+                    (*static_cast<T**>(u)->*method)(b, s); }, data };
+    }
+
+    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type, T* data) noexcept {
+        return { buffer, size, format, type, [](void* b, size_t s, void* u) {
+                    (*static_cast<T**>(u)->*method)(b, s); }, data };
+    }
+
+    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            backend::CompressedPixelDataType format, uint32_t imageSize, T* data) noexcept {
+        return { buffer, size, format, imageSize, [](void* b, size_t s, void* u) {
+                    (*static_cast<T**>(u)->*method)(b, s); }, data
+        };
+    }
+
+    template<typename T>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type, uint8_t alignment,
+            uint32_t left, uint32_t top, uint32_t stride, T&& functor) noexcept {
+        return { buffer, size, format, type, alignment, left, top, stride,
+                [](void* b, size_t s, void* u) {
+                    T& that = *static_cast<T*>(u);
+                    that(b, s);
+                    delete &that;
+                }, new T(std::forward<T>(functor))
+        };
+    }
+
+    template<typename T>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type, T&& functor) noexcept {
+        return { buffer, size, format, type,
+                [](void* b, size_t s, void* u) {
+                    T& that = *static_cast<T*>(u);
+                    that(b, s);
+                    delete &that;
+                }, new T(std::forward<T>(functor))
+        };
+    }
+
+    template<typename T>
+    static PixelBufferDescriptor make(void const* buffer, size_t size,
+            backend::CompressedPixelDataType format, uint32_t imageSize, T&& functor) noexcept {
+        return { buffer, size, format, imageSize,
+                [](void* b, size_t s, void* u) {
+                    T& that = *static_cast<T*>(u);
+                    that(b, s);
+                    delete &that;
+                }, new T(std::forward<T>(functor))
+        };
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     /**
      * Computes the size in bytes needed to fit an image of given dimensions and format
      *

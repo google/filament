@@ -265,8 +265,8 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     // (in principle, we could have split this method into two, at the cost of going through
     // the list twice)
 
-    const bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
+    constexpr bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
+    constexpr bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
 
     static_assert(isColorPass != isDepthPass, "only color or depth pass supported");
 
@@ -292,13 +292,16 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
     Command cmdColor;
 
     Command cmdDepth;
-    cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
-    cmdDepth.primitive.materialVariant.setVsm(renderFlags & HAS_VSM);
-    cmdDepth.primitive.rasterState = {};
-    cmdDepth.primitive.rasterState.colorWrite = renderFlags & HAS_VSM;
-    cmdDepth.primitive.rasterState.depthWrite = true;
-    cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
-    cmdDepth.primitive.rasterState.alphaToCoverage = false;
+    if constexpr (isDepthPass) {
+        cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
+        cmdDepth.primitive.materialVariant.setPicking(renderFlags & HAS_PICKING);
+        cmdDepth.primitive.materialVariant.setVsm(renderFlags & HAS_VSM);
+        cmdDepth.primitive.rasterState = {};
+        cmdDepth.primitive.rasterState.colorWrite = renderFlags & (HAS_VSM | HAS_PICKING);
+        cmdDepth.primitive.rasterState.depthWrite = true;
+        cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
+        cmdDepth.primitive.rasterState.alphaToCoverage = false;
+    }
 
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask. If it doesn't, encode SENTINEL
@@ -353,15 +356,16 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
         materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
 
-        // we're assuming we're always doing the depth (either way, it's correct)
-        // this will generate front to back rendering
-        cmdDepth.key = uint64_t(Pass::DEPTH);
-        cmdDepth.key |= uint64_t(CustomCommand::PASS);
-        cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-        cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
-        cmdDepth.primitive.index = (uint16_t)i;
-        cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning || soaVisibility[i].morphing);
-        cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+        if constexpr (isDepthPass) {
+            cmdDepth.key = uint64_t(Pass::DEPTH);
+            cmdDepth.key |= uint64_t(CustomCommand::PASS);
+            cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+            cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
+            cmdDepth.primitive.index = (uint16_t)i;
+            cmdDepth.primitive.materialVariant.setSkinning(
+                    soaVisibility[i].skinning || soaVisibility[i].morphing);
+            cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+        }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
@@ -374,7 +378,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (auto const& primitive : primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
-            if (isColorPass) {
+            if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
@@ -454,13 +458,13 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 ++curr;
             }
 
-            if (isDepthPass) {
+            if constexpr (isDepthPass) {
                 FMaterial const* const ma = mi->getMaterial();
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
-                                          && blendingMode != BlendingMode::MASKED);
+                        && blendingMode != BlendingMode::MASKED);
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();

@@ -272,7 +272,7 @@ inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
     return x;
 }
 
-inline float3 OECF_sRGB(float3 x) noexcept {
+inline float3 OETF_sRGB(float3 x) noexcept {
     constexpr float a  = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float b  = 12.92f;
@@ -283,7 +283,7 @@ inline float3 OECF_sRGB(float3 x) noexcept {
     return x;
 }
 
-inline float3 EOCF_sRGB(float3 x) noexcept {
+inline float3 EOTF_sRGB(float3 x) noexcept {
     constexpr float a  = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float b  = 1.0f / 12.92f;
@@ -294,7 +294,7 @@ inline float3 EOCF_sRGB(float3 x) noexcept {
     return x;
 }
 
-inline float3 OECF_PQ(float3 x, float maxPqValue) {
+inline float3 OETF_PQ(float3 x, float maxPqValue) {
     constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
     constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
     constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;
@@ -309,7 +309,7 @@ inline float3 OECF_PQ(float3 x, float maxPqValue) {
     return pow(numerator / denominator, PQ_constant_M);
 }
 
-inline float3 EOCF_PQ(float3 x, float maxPqValue) {
+inline float3 EOTF_PQ(float3 x, float maxPqValue) {
     constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
     constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
     constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;

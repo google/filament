@@ -3,7 +3,18 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.8 (currently main branch)
+## v1.12.9 (currently main branch)
+
+## v1.12.8
+
+- engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: A new `Engine::pumpMessageQueues()` method can be used to trigger all pending user
+  callbacks right away [**NEW API**].
+- engine: new inline helpers to more easily use lambdas, functors and method callbacks with
+  `{Pixel}BufferDescriptor`.
+- Vulkan: fix vertical offset for `readPixels`.
+- Vulkan: various internal improvements.
+- Metal: support integer formats with `readPixels`.
 
 ## v1.12.7
 

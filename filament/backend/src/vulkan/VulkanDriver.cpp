@@ -1452,6 +1452,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
+    // TODO: don't flush/wait here, this should be asynchronous
+
     mContext.commands->flush();
     mContext.commands->wait();
 
@@ -1459,6 +1461,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
+    // TODO: staging should just use the GENERAL layout
     transitionImageLayout(cmdbuffer, {
         .image = stagingImage,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1487,7 +1490,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         },
         .srcOffset = {
             .x = (int32_t) x,
-            .y = (int32_t) y,
+            .y = (int32_t) (srcTarget->getExtent(mContext.currentSurface).height - (height + y)),
         },
         .dstSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1510,6 +1513,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         .layerCount = 1,
     };
 
+    // FIXME: the content of the source may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
     VkImage srcImage = srcTarget->getColor(mContext.currentSurface, 0).image;
     transitionImageLayout(cmdbuffer, {
         .image = srcImage,
@@ -1532,6 +1536,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     if (srcTexture || mContext.currentSurface->presentQueue) {
         const VkImageLayout present = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1543,6 +1548,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         });
     } else {
+        // FIXME: the content of image we just blitted into may be destroyed because of VK_IMAGE_LAYOUT_UNDEFINED
         transitionImageLayout(cmdbuffer, {
             .image = srcImage,
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1557,6 +1563,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     // Transition the staging image layout to GENERAL.
 
+    // TODO: why is this not using transitionImageLayout() ?
     VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1577,6 +1584,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
 
     vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    // TODO: don't flush/wait here -- we should do this asynchronously
 
     // Flush and wait.
     mContext.commands->flush();
