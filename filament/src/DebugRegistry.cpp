@@ -31,9 +31,7 @@ using namespace utils;
 
 namespace filament {
 
-FDebugRegistry::FDebugRegistry() noexcept {
-    mProperties.reserve(8);
-}
+FDebugRegistry::FDebugRegistry() noexcept = default;
 
 UTILS_NOINLINE
 void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
@@ -48,13 +46,8 @@ void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
 void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type type) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
-        mProperties.push_back({ name.c_str(), type });
         propertyMap[name] = p;
     }
-}
-
-DebugRegistry::PropertyArray FDebugRegistry::getProperties() const noexcept {
-    return {mProperties.data(), mProperties.size()};
 }
 
 inline bool FDebugRegistry::hasProperty(const char *name) const noexcept {
@@ -86,10 +79,6 @@ inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) c
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-DebugRegistry::PropertyArray DebugRegistry::getProperties() const noexcept {
-    return upcast(this)->getProperties();
-}
 
 bool DebugRegistry::hasProperty(const char* name) const noexcept {
     return upcast(this)->hasProperty(name);

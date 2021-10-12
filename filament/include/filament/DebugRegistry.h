@@ -54,18 +54,6 @@ public:
         Type type;          //!< property type
     };
 
-    struct PropertyArray {
-        Property const* array;
-        size_t size;
-    };
-
-    /**
-     * Queries the list of all available properties.
-     *
-     * @return A pair containing a pointer to a Property array and the size of this array.
-     */
-    PropertyArray getProperties() const noexcept;
-
     /**
      * Queries whether a property exists
      * @param name The name of the property to query
