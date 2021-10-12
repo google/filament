@@ -1058,10 +1058,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
+
+        using std::chrono::duration;
+        const duration<float> period{ float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate };
         mFrameInfoManager.beginFrame({
-                .targetFrameTime = FrameInfo::duration{
-                        float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate
-                },
+                .targetFrameTime = period,
                 .headRoomRatio = mFrameRateOptions.headRoomRatio,
                 .oneOverTau = mFrameRateOptions.scaleRate,
                 .historySize = mFrameRateOptions.history

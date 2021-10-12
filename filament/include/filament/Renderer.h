@@ -99,7 +99,7 @@ public:
      * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
      *                Useful for taking into account constant costs like post-processing or
      *                GPU drivers on different platforms.
-     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * history:   History size. higher values, tend to filter more (clamped to 31)
      * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
      *            This value can be computed as 1 / N, where N is the number of frames
      *            needed to reach 64% of the target scale factor.
@@ -112,7 +112,7 @@ public:
     struct FrameRateOptions {
         float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
         float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
-        uint8_t history = 3;           //!< history size
+        uint8_t history = 31;          //!< history size
         uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
     };
 
