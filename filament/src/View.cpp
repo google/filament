@@ -142,8 +142,8 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
 
         // scaling factor we need to apply on the whole surface
         const float scale = info.scale;
-        const float w = mViewport.width;
-        const float h = mViewport.height;
+        const float w = float(mViewport.width);
+        const float h = float(mViewport.height);
         if (scale < 1.0f && !options.homogeneousScaling) {
             // figure out the major and minor axis
             const float major = std::max(w, h);
@@ -159,7 +159,7 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             // if we have some scaling capacity left, scale homogeneously
             const float homogeneousScale = scale / (majorScale * minorScale);
 
-            // finally write the scale factors
+            // finally, write the scale factors
             float& majorRef = w > h ? mScale.x : mScale.y;
             float& minorRef = w > h ? mScale.y : mScale.x;
             majorRef = std::sqrt(homogeneousScale) * majorScale;
@@ -171,7 +171,8 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
 
         // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
         // i.e. 8x8=64 fragments, to try to help with warp sizes.
-        mScale = (floor(mScale * float2{ w, h } / 8) * 8) / float2{ w, h };
+        mScale.x = mScale.x == 1.0f ? 1.0f : (std::floor(mScale.x * float{ w } / 8) * 8) / float{ w };
+        mScale.y = mScale.y == 1.0f ? 1.0f : (std::floor(mScale.y * float{ h } / 8) * 8) / float{ h };
 
         // always clamp to the min/max scale range
         mScale = clamp(mScale, options.minScale, options.maxScale);

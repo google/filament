@@ -61,7 +61,7 @@ class ShadowMap;
  * A concrete implementation of the Renderer Interface.
  */
 class FRenderer : public Renderer {
-    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+    static constexpr unsigned MAX_FRAMETIME_HISTORY = 32u;
 
 public:
     explicit FRenderer(FEngine& engine);
@@ -107,9 +107,9 @@ public:
         FrameRateOptions& frameRateOptions = mFrameRateOptions;
         frameRateOptions = options;
 
-        // History can't be more than 32 frames (~0.5s)
-        frameRateOptions.history = std::min(frameRateOptions.history,
-                uint8_t(MAX_FRAMETIME_HISTORY));
+        // History can't be more than 31 frames (~0.5s), make it odd.
+        frameRateOptions.history = std::min(frameRateOptions.history / 2u * 2u + 1u,
+                MAX_FRAMETIME_HISTORY);
 
         // History must at least be 3 frames
         frameRateOptions.history = std::max(frameRateOptions.history, uint8_t(3));

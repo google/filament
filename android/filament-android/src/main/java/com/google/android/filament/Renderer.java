@@ -110,9 +110,9 @@ public class Renderer {
         public float scaleRate = 0.125f;
 
         /**
-         * History size. higher values, tend to filter more (clamped to 30).
+         * History size. higher values, tend to filter more (clamped to 31).
          */
-        public int history = 9;
+        public int history = 31;
     }
 
     /**
