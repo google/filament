@@ -76,6 +76,23 @@ inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) c
     return false;
 }
 
+void FDebugRegistry::registerDataSource(StaticString name, void const* data, size_t count) noexcept {
+    auto& dataSourceMap = mDataSourceMap;
+    if (dataSourceMap.find(name) == dataSourceMap.end()) {
+        dataSourceMap[name] = { data, count };
+    }
+}
+
+DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
+    StaticString key = StaticString::make(name, strlen(name));
+    auto &dataSourceMap = mDataSourceMap;
+    auto const& it = dataSourceMap.find(key);
+    if (it == dataSourceMap.end()) {
+        return { nullptr, 0u };
+    }
+    return it->second;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -136,6 +153,11 @@ bool DebugRegistry::getProperty(const char* name, float4* v) const noexcept {
 void *DebugRegistry::getPropertyAddress(const char *name) noexcept {
     return  upcast(this)->getPropertyAddress(name);
 }
+
+DebugRegistry::DataSource DebugRegistry::getDataSource(const char* name) const noexcept {
+    return  upcast(this)->getDataSource(name);
+}
+
 
 } // namespace filament
 

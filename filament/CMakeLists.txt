@@ -116,6 +116,7 @@ set(PRIVATE_HDRS
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
+        src/PIDController.h
         src/PostProcessManager.h
         src/RenderPass.h
         src/RenderPrimitive.h

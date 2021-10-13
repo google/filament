@@ -56,9 +56,14 @@ public:
         registerProperty(name, p, type);
     }
 
+    void registerDataSource(utils::StaticString name, void const* data, size_t count) noexcept;
+
+    DataSource getDataSource(const char* name) const noexcept;
+
 private:
     void registerProperty(utils::StaticString name, void* p, Type type) noexcept;
     std::unordered_map<utils::StaticString, void*> mPropertyMap;
+    std::unordered_map<utils::StaticString, DataSource> mDataSourceMap;
 };
 
 FILAMENT_UPCAST(DebugRegistry)

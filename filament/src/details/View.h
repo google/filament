@@ -19,6 +19,8 @@
 
 #include <filament/View.h>
 
+#include <filament/Renderer.h>
+
 #include "upcast.h"
 
 #include "Allocators.h"
@@ -26,6 +28,7 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "PerViewUniforms.h"
+#include "PIDController.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
@@ -270,7 +273,10 @@ public:
         return mHasPostProcessPass;
     }
 
-    math::float2 updateScale(FrameInfo const& info) noexcept;
+    math::float2 updateScale(FEngine& engine,
+            FrameInfo const& info,
+            Renderer::FrameRateOptions const& frameRateOptions,
+            Renderer::DisplayInfo const& displayInfo) noexcept;
 
     void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
 
@@ -555,6 +561,7 @@ private:
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
 
+    PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;
     math::float2 mScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
@@ -581,6 +588,10 @@ private:
     mutable bool mNeedsShadowMap = false;
 
     ShadowMapManager mShadowMapManager;
+
+#ifndef NDEBUG
+    std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;
+#endif
 };
 
 FILAMENT_UPCAST(View)
