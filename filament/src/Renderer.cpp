@@ -229,7 +229,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
-    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
+    float2 scale = view.updateScale(engine, mFrameInfoManager.getLastFrameInfo(), mFrameRateOptions, mDisplayInfo);
     auto msaaOptions = view.getMultiSampleAntiAliasingOptions();
     auto dsrOptions = view.getDynamicResolutionOptions();
     auto bloomOptions = view.getBloomOptions();
@@ -1059,12 +1059,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
 
-        using std::chrono::duration;
-        const duration<float> period{ float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate };
         mFrameInfoManager.beginFrame({
-                .targetFrameTime = period,
-                .headRoomRatio = mFrameRateOptions.headRoomRatio,
-                .oneOverTau = mFrameRateOptions.scaleRate,
                 .historySize = mFrameRateOptions.history
         }, mFrameId);
 

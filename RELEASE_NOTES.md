@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.9 (currently main branch)
 
+- engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+
 ## v1.12.8
 
 - engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].

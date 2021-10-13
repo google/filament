@@ -443,6 +443,11 @@ public:
         } ssao;
         struct {
             bool camera_at_origin = true;
+            struct {
+                float kp = 0.0f;
+                float ki = 0.0f;
+                float kd = 0.0f;
+            } pid;
         } view;
         struct {
             // When set to true, the backend will attempt to capture the next frame and write the

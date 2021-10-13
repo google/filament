@@ -110,10 +110,10 @@ public:
      *
      */
     struct FrameRateOptions {
-        float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
-        float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
-        uint8_t history = 31;          //!< history size
-        uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
+        float headRoomRatio = 0.0f;        //!< additional headroom for the GPU
+        float scaleRate = 1.0f / 8.0f;     //!< rate at which the system reacts to load changes
+        uint8_t history = 15;              //!< history size
+        uint8_t interval = 1;              //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
     };
 
     /**

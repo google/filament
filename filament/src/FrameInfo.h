@@ -30,28 +30,20 @@ namespace filament {
 class FEngine;
 
 struct FrameInfo {
-    using duration = std::chrono::duration<float>;
+    using duration = std::chrono::duration<float, std::milli>;
     duration frameTime{};            // frame period
     duration denoisedFrameTime{};    // frame period (median filter)
     bool valid = false;
-    float scale = 1.0f;
-    struct {
-        float integral{};
-        float error{};
-    } pid;
 };
 
 class FrameInfoManager {
-    static constexpr size_t POOL_COUNT = 8;
-    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+    static constexpr size_t POOL_COUNT = 4;
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 31u;
 
 public:
     using duration = FrameInfo::duration;
 
     struct Config {
-        duration targetFrameTime;
-        float headRoomRatio;
-        float oneOverTau;
         uint32_t historySize;
     };
 
