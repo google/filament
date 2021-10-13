@@ -33,7 +33,9 @@ import android.graphics.ImageFormat
 import android.hardware.HardwareBuffer
 import android.media.ImageReader
 import android.opengl.Matrix
-import android.view.Display
+import android.os.Build
+import android.os.Looper
+import androidx.annotation.RequiresApi
 
 import com.google.android.filament.*
 
@@ -44,7 +46,7 @@ import java.util.concurrent.TimeUnit
  * Toy class that handles all interaction with the Android camera2 API.
  * Sets the "textureTransform" and "videoTexture" parameters on the given Filament material.
  */
-class CameraHelper(val activity: Activity, private val filamentEngine: Engine, private val filamentMaterial: MaterialInstance, private val display: Display) {
+class CameraHelper(val activity: Activity, private val filamentEngine: Engine, private val filamentMaterial: MaterialInstance) {
     private lateinit var cameraId: String
     private lateinit var captureRequest: CaptureRequest
 
@@ -62,6 +64,20 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
             ImageFormat.PRIVATE,
             kImageReaderMaxImages,
             HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE)
+
+    @Suppress("deprecation")
+    private val display = if (Build.VERSION.SDK_INT >= 30) {
+        Api30Impl.getDisplay(activity)
+    } else {
+        activity.windowManager.defaultDisplay!!
+    }
+
+    @RequiresApi(30)
+    class Api30Impl {
+        companion object {
+            fun getDisplay(context: Context) = context.display!!
+        }
+    }
 
     private val cameraCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(cameraDevice: CameraDevice) {
@@ -87,7 +103,9 @@ class CameraHelper(val activity: Activity, private val filamentEngine: Engine, p
         val stream = filamentStream
         if (stream != null) {
             imageReader.acquireLatestImage()?.also {
-                stream.setAcquiredImage(it.hardwareBuffer, Handler()) { it.close() }
+                stream.setAcquiredImage(it.hardwareBuffer, Handler(Looper.getMainLooper())) {
+                    it.close()
+                }
             }
         }
     }
