@@ -14,5 +14,6 @@ android {
 
 dependencies {
     implementation deps.kotlin
+    implementation deps.androidx.annotations
     implementation project(':filament-android')
 }
