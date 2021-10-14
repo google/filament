@@ -74,6 +74,9 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     if (mContext->highestSupportedGpuFamily.mac > 0) {
         utils::slog.d << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
     }
+    utils::slog.d << "Features:" << utils::io::endl;
+    utils::slog.d << "  readWriteTextureSupport: " <<
+            (bool) mContext->device.readWriteTextureSupport << utils::io::endl;
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // iOS 13+.
@@ -650,11 +653,10 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
-    return true;
-#else
-    return false;
-#endif
+    // FrameBuffer fetch is achievable via "programmable blending" in Metal, and only supported on
+    // Apple GPUs with readWriteTextureSupport.
+    return mContext->highestSupportedGpuFamily.apple >= 1 &&
+            mContext->device.readWriteTextureSupport;
 }
 
 bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
