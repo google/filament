@@ -75,6 +75,16 @@ OpenGLContext::OpenGLContext() noexcept {
 
     // Figure out which driver bugs we need to workaround
     if (strstr(renderer, "Adreno")) {
+        int maj, min, driverMajor, driverMinor;
+        int c = sscanf(version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
+                &maj, &min, &driverMajor, &driverMinor);
+        if (c == 4) {
+            // workarounds based on version here.
+            // notes:
+            //  bugs.invalidate_end_only_if_invalidate_start
+            //      - appeared at least in "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
+            //      - wasn't present in    "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
+        }
         // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
         bugs.dont_use_timer_query = true;
         // Blits to texture arrays are failing
