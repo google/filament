@@ -31,6 +31,15 @@
 
 namespace filament {
 
+/*
+ * ExternalTextureManagerAndroid::ExternalTexture is basically a wrapper for AHardwareBuffer.
+ *
+ * This class doesn't rely on GL or EGL, and could be used for other Android platform if needed
+ * (e.g. Vulkan).
+ *
+ * ExternalTextureManagerAndroid handle allocation/destruction using either Java or the NDK,
+ * whichever is available.
+ */
 class ExternalTextureManagerAndroid {
 public:
 
@@ -47,7 +56,7 @@ public:
     // not quite sure on which thread this is going to be called
     ~ExternalTextureManagerAndroid() noexcept;
 
-    // called on gl thread
+    // called on backend thread
     backend::Platform::ExternalTexture* create() noexcept;
 
     // called on app thread

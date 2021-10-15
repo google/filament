@@ -31,6 +31,11 @@ typedef struct ASurfaceTexture ASurfaceTexture;
 
 namespace filament {
 
+/*
+ * ExternalStreamManagerAndroid::Stream is basically a wrapper for SurfaceTexture.
+ *
+ * This class DOES DEPEND on having a GLES context, because that's how SurfaceTexture works.
+ */
 class ExternalStreamManagerAndroid {
 public:
     using Stream = backend::Platform::Stream;
@@ -40,8 +45,14 @@ public:
 
     Stream* acquire(jobject surfaceTexture) noexcept;
     void release(Stream* stream) noexcept;
+
+    // attach Stream to current GLES context
     void attach(Stream* stream, intptr_t tname) noexcept;
+
+    // detach Stream to current GLES context
     void detach(Stream* stream) noexcept;
+
+    // must be called on GLES context thread, updates the stream content
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
 
 private:

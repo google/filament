@@ -87,7 +87,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         list(APPEND SRCS src/VirtualMachineEnv.cpp)
     endif ()
     if (ANDROID)
-        list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
+        list(APPEND SRCS src/opengl/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
     elseif (IOS)
