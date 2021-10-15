@@ -22,44 +22,44 @@
 #if defined(ANDROID)
     #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformEGLAndroid.h"
+        #include "opengl/platforms/PlatformEGLAndroid.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkAndroid.h"
     #endif
 #elif defined(IOS)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformCocoaTouchGL.h"
+        #include "opengl/platforms/PlatformCocoaTouchGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoaTouch.h"
     #endif
 #elif defined(__APPLE__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformCocoaGL.h"
+        #include "opengl/platforms/PlatformCocoaGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformGLX.h"
+        #include "opengl/platforms/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkLinux.h"
     #endif
 #elif defined(WIN32)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformWGL.h"
+        #include "opengl/platforms/PlatformWGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkWindows.h"
     #endif
 #elif defined(__EMSCRIPTEN__)
-    #include "opengl/PlatformWebGL.h"
+    #include "opengl/platforms/PlatformWebGL.h"
 #else
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformDummyGL.h"
+        #include "opengl/platforms/PlatformDummyGL.h"
     #endif
 #endif
 
