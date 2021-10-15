@@ -30,9 +30,9 @@
 
 #include <utils/Panic.h>
 
-#include "OpenGLDriverFactory.h"
+#include "../OpenGLDriverFactory.h"
 
-#include "OpenGLDriver.h"
+#include "../OpenGLDriver.h"
 #include "CocoaTouchExternalImage.h"
 
 namespace filament {

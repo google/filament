@@ -16,8 +16,8 @@
 
 #include "PlatformEGLAndroid.h"
 
-#include "OpenGLDriver.h"
-#include "OpenGLContext.h"
+#include "opengl/OpenGLDriver.h"
+#include "opengl/OpenGLContext.h"
 
 #include "android/ExternalTextureManagerAndroid.h"
 #include "ExternalStreamManagerAndroid.h"
