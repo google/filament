@@ -20,7 +20,7 @@
 #include "OpenGLContext.h"
 
 #include "android/ExternalTextureManagerAndroid.h"
-#include "android/ExternalStreamManagerAndroid.h"
+#include "ExternalStreamManagerAndroid.h"
 #include "private/backend/VirtualMachineEnv.h"
 
 #include <android/api-level.h>
