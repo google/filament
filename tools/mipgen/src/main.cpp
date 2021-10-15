@@ -440,6 +440,9 @@ int main(int argc, char* argv[]) {
         if (!outputStream) {
             cerr << "The output file cannot be opened: " << path << endl;
         } else {
+            if (g_filter == Filter::GAUSSIAN_NORMALS) {
+                image = vectorsToColors(image);
+            }
             if (!ImageEncoder::encode(outputStream, g_format, image, g_compression, path)) {
                 cerr << "An error occurred while encoding the image." << endl;
                 return 1;
