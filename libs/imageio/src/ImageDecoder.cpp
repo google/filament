@@ -237,6 +237,7 @@ LinearImage PNGDecoder::decode() {
             png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_DEFAULT_sRGB);
         } else {
             png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_GAMMA_LINEAR);
+            png_set_gamma_fixed(mPNG, PNG_FP_1, PNG_FP_1);
         }
         if (bitDepth < 16) {
             png_set_expand_16(mPNG);

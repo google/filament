@@ -502,6 +502,26 @@ Filament.loadClassExtensions = function() {
         return new Int16Array(arrayBuffer);
     };
 
+    Filament.SurfaceOrientation.prototype.getQuatsHalf4 = function (nverts) {
+        const attribType = Filament.VertexBuffer$AttributeType.HALF4;
+        const quatsBufferSize = 8 * nverts;
+        const quatsBuffer = Filament._malloc(quatsBufferSize);
+        this._getQuats(quatsBuffer, nverts, attribType);
+        const arrayBuffer = Filament.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+        Filament._free(quatsBuffer);
+        return new Uint16Array(arrayBuffer);
+    };
+
+    Filament.SurfaceOrientation.prototype.getQuatsFloat4 = function (nverts) {
+        const attribType = Filament.VertexBuffer$AttributeType.FLOAT4;
+        const quatsBufferSize = 16 * nverts;
+        const quatsBuffer = Filament._malloc(quatsBufferSize);
+        this._getQuats(quatsBuffer, nverts, attribType);
+        const arrayBuffer = Filament.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+        Filament._free(quatsBuffer);
+        return new Float32Array(arrayBuffer);
+    };
+
     Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {
         if ('string' == typeof buffer && buffer.endsWith('.glb')) {
             console.error('Please use createAssetFromBinary for glb files.');
