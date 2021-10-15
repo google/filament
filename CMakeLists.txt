@@ -11,8 +11,6 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
-option(FILAMENT_ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
-
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
@@ -43,6 +41,10 @@ set(FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB "49" CACHE STRING
 
 set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "10" CACHE STRING
     "Size of the OpenGL handle arena, default 4."
+)
+
+set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
+    "Size of the Metal handle arena, default 8."
 )
 
 # ==================================================================================================
@@ -129,27 +131,35 @@ if (WIN32)
     # __declspec(dllexport) in front of each functions).
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+    # The CMAKE_CXX_FLAGS vars can be overriden by some Visual Studio generators, so we use an alternative
+    # global method here:
     if (${USE_STATIC_CRT})
-        set(CRT_FLAGS_RELEASE "/MT")
-        set(CRT_FLAGS_DEBUG "/MTd")
+        add_compile_options(
+            $<$<CONFIG:>:/MT>
+            $<$<CONFIG:Debug>:/MTd>
+            $<$<CONFIG:Release>:/MT>
+        )
     else()
-        set(CRT_FLAGS_RELEASE "/MD")
-        set(CRT_FLAGS_DEBUG "/MDd")
+        add_compile_options(
+            $<$<CONFIG:>:/MD>
+            $<$<CONFIG:Debug>:/MDd>
+            $<$<CONFIG:Release>:/MD>
+        )
     endif()
 
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
     # In RELEASE, also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7")
 
     # Special settings when building on CI.
     if (${FILAMENT_WINDOWS_CI_BUILD})
@@ -287,6 +297,12 @@ endif()
 if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+endif()
+
+# Use hidden by default and expose what we need.
+if (NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 endif()
 
 # ==================================================================================================
@@ -440,8 +456,9 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
+# Disable optimizations and enable debug info (preserves names in SPIR-V)
 if (FILAMENT_DISABLE_MATOPT)
-    set(MATC_OPT_FLAGS -g)
+    set(MATC_OPT_FLAGS -gd)
 endif()
 
 set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
@@ -655,10 +672,6 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${LIBRARIES}/filamentapp)
     add_subdirectory(${LIBRARIES}/imageio)
 
-    add_subdirectory(${FILAMENT}/java/filamat)
-    add_subdirectory(${FILAMENT}/java/filament)
-    add_subdirectory(${FILAMENT}/java/gltfio)
-
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
@@ -678,6 +691,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/mipgen)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/resgen)
+    add_subdirectory(${TOOLS}/rgb-to-lmsr)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
 endif()

@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationMutatePointer : public Transformation {
  public:
   explicit TransformationMutatePointer(
-      const protobufs::TransformationMutatePointer& message);
+      protobufs::TransformationMutatePointer message);
 
   explicit TransformationMutatePointer(
       uint32_t pointer_id, uint32_t fresh_id,

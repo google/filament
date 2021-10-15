@@ -147,8 +147,8 @@ bool ConvertToHalfPass::MatConvertCleanup(Instruction* inst) {
   return true;
 }
 
-void ConvertToHalfPass::RemoveRelaxedDecoration(uint32_t id) {
-  context()->get_decoration_mgr()->RemoveDecorationsFrom(
+bool ConvertToHalfPass::RemoveRelaxedDecoration(uint32_t id) {
+  return context()->get_decoration_mgr()->RemoveDecorationsFrom(
       id, [](const Instruction& dec) {
         if (dec.opcode() == SpvOpDecorate &&
             dec.GetSingleWordInOperand(1u) == SpvDecorationRelaxedPrecision)
@@ -344,10 +344,14 @@ Pass::Status ConvertToHalfPass::ProcessImpl() {
   // If modified, make sure module has Float16 capability
   if (modified) context()->AddCapability(SpvCapabilityFloat16);
   // Remove all RelaxedPrecision decorations from instructions and globals
-  for (auto c_id : relaxed_ids_set_) RemoveRelaxedDecoration(c_id);
+  for (auto c_id : relaxed_ids_set_) {
+    modified |= RemoveRelaxedDecoration(c_id);
+  }
   for (auto& val : get_module()->types_values()) {
     uint32_t v_id = val.result_id();
-    if (v_id != 0) RemoveRelaxedDecoration(v_id);
+    if (v_id != 0) {
+      modified |= RemoveRelaxedDecoration(v_id);
+    }
   }
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }

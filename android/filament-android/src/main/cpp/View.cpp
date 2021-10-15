@@ -20,6 +20,8 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include "common/CallbackUtils.h"
+
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
@@ -119,13 +121,14 @@ Java_com_google_android_filament_View_nGetDithering(JNIEnv*, jclass,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*, jclass, jlong nativeView,
         jboolean enabled, jboolean homogeneousScaling,
-        jfloat minScale, jfloat maxScale, jint quality) {
+        jfloat minScale, jfloat maxScale, jfloat sharpness, jint quality) {
     View* view = (View*)nativeView;
     View::DynamicResolutionOptions options;
     options.enabled = enabled;
     options.homogeneousScaling = homogeneousScaling;
     options.minScale = filament::math::float2{ minScale };
     options.maxScale = filament::math::float2{ maxScale };
+    options.sharpness = sharpness;
     options.quality = (View::QualityLevel)quality;
     view->setDynamicResolutionOptions(options);
 }
@@ -216,7 +219,9 @@ Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlon
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
     jlong nativeView, jfloat radius, jfloat bias, jfloat power, jfloat resolution, jfloat intensity,
-    jint quality, jint lowPassFilter, jint upsampling, jboolean enabled, jfloat minHorizonAngleRad) {
+    jfloat bilateralThreshold,
+    jint quality, jint lowPassFilter, jint upsampling, jboolean enabled, jboolean bentNormals,
+    jfloat minHorizonAngleRad) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
     options.radius = radius;
@@ -224,10 +229,12 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
     options.bias = bias;
     options.resolution = resolution;
     options.intensity = intensity;
+    options.bilateralThreshold = bilateralThreshold;
     options.quality = (View::QualityLevel)quality;
     options.lowPassFilter = (View::QualityLevel)lowPassFilter;
     options.upsampling = (View::QualityLevel)upsampling;
     options.enabled = (bool)enabled;
+    options.bentNormals = (bool)bentNormals;
     options.minHorizonAngleRad = minHorizonAngleRad;
     view->setAmbientOcclusionOptions(options);
 }
@@ -376,4 +383,42 @@ Java_com_google_android_filament_View_nIsScreenSpaceRefractionEnabled(JNIEnv *, 
         jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isScreenSpaceRefractionEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass clazz,
+        jlong nativeView,
+        jint x, jint y, jobject handler, jobject internalCallback) {
+
+    // jniState will be initialized the first time this method is called
+    static const struct JniState {
+        jclass internalOnPickCallbackClass;
+        jfieldID renderableFieldId;
+        jfieldID depthFieldId;
+        jfieldID fragCoordXFieldId;
+        jfieldID fragCoordYFieldId;
+        jfieldID fragCoordZFieldId;
+        explicit JniState(JNIEnv* env) noexcept {
+            internalOnPickCallbackClass = env->FindClass("com/google/android/filament/View$InternalOnPickCallback");
+            renderableFieldId = env->GetFieldID(internalOnPickCallbackClass, "mRenderable", "I");
+            depthFieldId = env->GetFieldID(internalOnPickCallbackClass, "mDepth", "F");
+            fragCoordXFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsX", "F");
+            fragCoordYFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsY", "F");
+            fragCoordZFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsZ", "F");
+        }
+    } jniState(env);
+
+    View* view = (View*) nativeView;
+    JniCallback *callback = JniCallback::make(env, handler, internalCallback);
+    view->pick(x, y, [callback](View::PickingQueryResult const& result) {
+        jobject obj = callback->getCallbackObject();
+        JNIEnv* const env = callback->getJniEnv();
+        env->SetIntField(obj, jniState.renderableFieldId, (jint)result.renderable.getId());
+        env->SetFloatField(obj, jniState.depthFieldId, result.depth);
+        env->SetFloatField(obj, jniState.fragCoordXFieldId, result.fragCoords.x);
+        env->SetFloatField(obj, jniState.fragCoordYFieldId, result.fragCoords.y);
+        env->SetFloatField(obj, jniState.fragCoordZFieldId, result.fragCoords.z);
+        JniCallback::invoke(callback);  // this destroys JniCallback
+    });
 }

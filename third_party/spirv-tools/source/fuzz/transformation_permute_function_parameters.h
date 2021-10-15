@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationPermuteFunctionParameters : public Transformation {
  public:
   explicit TransformationPermuteFunctionParameters(
-      const protobufs::TransformationPermuteFunctionParameters& message);
+      protobufs::TransformationPermuteFunctionParameters message);
 
   TransformationPermuteFunctionParameters(
       uint32_t function_id, uint32_t function_type_fresh_id,

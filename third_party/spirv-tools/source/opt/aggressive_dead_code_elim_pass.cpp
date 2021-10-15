@@ -991,9 +991,14 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_NV_mesh_shader",
       "SPV_NV_ray_tracing",
       "SPV_KHR_ray_tracing",
+      "SPV_KHR_ray_query",
       "SPV_EXT_fragment_invocation_density",
       "SPV_EXT_physical_storage_buffer",
       "SPV_KHR_terminate_invocation",
+      "SPV_KHR_shader_clock",
+      "SPV_KHR_vulkan_memory_model",
+      "SPV_KHR_subgroup_uniform_control_flow",
+      "SPV_KHR_integer_dot_product",
   });
 }
 

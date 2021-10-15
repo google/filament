@@ -17,6 +17,7 @@
 #ifndef GLTFIO_FILAMENTINSTANCE_H
 #define GLTFIO_FILAMENTINSTANCE_H
 
+#include <utils/compiler.h>
 #include <utils/Entity.h>
 
 namespace gltfio {
@@ -33,7 +34,7 @@ class FilamentAsset;
  *
  * \see AssetLoader::createInstancedAsset()
  */
-class FilamentInstance {
+class UTILS_PUBLIC FilamentInstance {
 public:
     /**
      * Gets the owner of this instance.

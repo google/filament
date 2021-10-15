@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_ACQUIRED_IMAGE_H
-#define TNT_FILAMENT_BACKEND_ACQUIRED_IMAGE_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_ACQUIREDIMAGE_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_ACQUIREDIMAGE_H
 
 #include <backend/DriverEnums.h>
 
@@ -35,4 +35,4 @@ struct AcquiredImage {
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_BACKEND_ACQUIRED_IMAGE_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_ACQUIREDIMAGE_H

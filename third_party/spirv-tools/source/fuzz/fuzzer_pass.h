@@ -106,37 +106,13 @@ class FuzzerPass {
 
   // A generic helper for applying a transformation that should be applicable
   // by construction, and adding it to the sequence of applied transformations.
-  void ApplyTransformation(const Transformation& transformation) {
-    assert(transformation.IsApplicable(GetIRContext(),
-                                       *GetTransformationContext()) &&
-           "Transformation should be applicable by construction.");
-    transformation.Apply(GetIRContext(), GetTransformationContext());
-    protobufs::Transformation transformation_message =
-        transformation.ToMessage();
-    assert(transformation_message.transformation_case() !=
-               protobufs::Transformation::TRANSFORMATION_NOT_SET &&
-           "Bad transformation.");
-    *GetTransformations()->add_transformation() = transformation_message;
-  }
+  void ApplyTransformation(const Transformation& transformation);
 
   // A generic helper for applying a transformation only if it is applicable.
   // If it is applicable, the transformation is applied and then added to the
   // sequence of applied transformations and the function returns true.
   // Otherwise, the function returns false.
-  bool MaybeApplyTransformation(const Transformation& transformation) {
-    if (transformation.IsApplicable(GetIRContext(),
-                                    *GetTransformationContext())) {
-      transformation.Apply(GetIRContext(), GetTransformationContext());
-      protobufs::Transformation transformation_message =
-          transformation.ToMessage();
-      assert(transformation_message.transformation_case() !=
-                 protobufs::Transformation::TRANSFORMATION_NOT_SET &&
-             "Bad transformation.");
-      *GetTransformations()->add_transformation() = transformation_message;
-      return true;
-    }
-    return false;
-  }
+  bool MaybeApplyTransformation(const Transformation& transformation);
 
   // Returns the id of an OpTypeBool instruction.  If such an instruction does
   // not exist, a transformation is applied to add it.

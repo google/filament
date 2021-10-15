@@ -16,13 +16,14 @@
 
 #include "FilamentAPI-impl.h"
 
+#include "RenderPrimitive.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/Material.h"
-#include "details/RenderPrimitive.h"
 
 #include <backend/DriverEnums.h>
 
@@ -30,10 +31,13 @@
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
+
 using namespace filament::math;
 using namespace utils;
 
 namespace filament {
+
+using namespace backend;
 
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
@@ -41,18 +45,23 @@ struct RenderableManager::BuilderDetails {
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
+    uint8_t mChannels = 1;
     bool mCulling : 1;
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
     bool mScreenSpaceContactShadows : 1;
     bool mMorphingEnabled : 1;
+    bool mSkinningBufferMode : 1;
     size_t mSkinningBoneCount = 0;
     Bone const* mUserBones = nullptr;
     mat4f const* mUserBoneMatrices = nullptr;
+    FSkinningBuffer* mSkinningBuffer = nullptr;
+    uint32_t mSkinningBufferOffset = 0;
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
-              mScreenSpaceContactShadows(false), mMorphingEnabled(false) {
+              mScreenSpaceContactShadows(false), mMorphingEnabled(false),
+              mSkinningBufferMode(false) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -125,6 +134,15 @@ RenderableManager::Builder& RenderableManager::Builder::culling(bool enable) noe
     return *this;
 }
 
+RenderableManager::Builder& RenderableManager::Builder::lightChannel(unsigned int channel, bool enable) noexcept {
+    if (channel < 8) {
+        const uint8_t mask = 1u << channel;
+        mImpl->mChannels &= ~mask;
+        mImpl->mChannels |= enable ? mask : 0u;
+    }
+    return *this;
+}
+
 RenderableManager::Builder& RenderableManager::Builder::castShadows(bool enable) noexcept {
     mImpl->mCastShadows = enable;
     return *this;
@@ -156,6 +174,19 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
         size_t boneCount, mat4f const* transforms) noexcept {
     mImpl->mSkinningBoneCount = boneCount;
     mImpl->mUserBoneMatrices = transforms;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::skinning(
+        SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
+    mImpl->mSkinningBuffer = upcast(skinningBuffer);
+    mImpl->mSkinningBoneCount = count;
+    mImpl->mSkinningBufferOffset = offset;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bool enabled) noexcept {
+    mImpl->mSkinningBufferMode = enabled;
     return *this;
 }
 
@@ -286,39 +317,59 @@ void FRenderableManager::create(
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphingEnabled);
         setMorphWeights(ci, {0, 0, 0, 0});
+        mManager[ci].channels = builder->mChannels;
 
-        const size_t count = builder->mSkinningBoneCount;
-        if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
-            std::unique_ptr<Bones>& bones = manager[ci].bones;
-            // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
-            // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
-            // Buffer Object Bindings:
-            //
-            //     the uniform block must be populated with a buffer object with a size no smaller
-            //     than the minimum required size of the uniform block (the value of
-            //     UNIFORM_BLOCK_DATA_SIZE).
-            //
-            // This unfortunately means that we are using a large memory footprint for skinned
-            // renderables. In the future we could try addressing this by implementing a paging
-            // system such that multiple skinned renderables will share regions within a single
-            // large block of bones.
-            bones = std::unique_ptr<Bones>(new Bones{
-                    driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
-                            backend::BufferUsage::DYNAMIC),
-                    UniformBuffer{ count * sizeof(PerRenderableUibBone) },
-                    count
-            });
-            assert_invariant(bones);
-            if (bones) {
+        const uint32_t count = builder->mSkinningBoneCount;
+        if (builder->mSkinningBufferMode) {
+            if (builder->mSkinningBuffer) {
                 setSkinning(ci, count > 0);
-                if (builder->mUserBones) {
-                    setBones(ci, builder->mUserBones, count);
-                } else if (builder->mUserBoneMatrices) {
-                    setBones(ci, builder->mUserBoneMatrices, count);
-                } else {
-                    // initialize the bones to identity
-                    PerRenderableUibBone* out = (PerRenderableUibBone*)bones->bones.invalidate();
-                    std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
+                Bones& bones = manager[ci].bones;
+                bones = Bones{
+                        .handle = builder->mSkinningBuffer->getHwHandle(),
+                        .count = (uint16_t)count,
+                        .offset = (uint16_t)builder->mSkinningBufferOffset,
+                        .skinningBufferMode = true };
+            }
+        } else {
+            if (UTILS_UNLIKELY(count > 0 || builder->mMorphingEnabled)) {
+                setSkinning(ci, count > 0);
+                Bones& bones = manager[ci].bones;
+                // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
+                // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
+                // Buffer Object Bindings:
+                //
+                //     the uniform block must be populated with a buffer object with a size no smaller
+                //     than the minimum required size of the uniform block (the value of
+                //     UNIFORM_BLOCK_DATA_SIZE).
+                //
+                // This unfortunately means that we are using a large memory footprint for skinned
+                // renderables. In the future we could try addressing this by implementing a paging
+                // system such that multiple skinned renderables will share regions within a single
+                // large block of bones.
+                bones = Bones{
+                        .handle = driver.createBufferObject(
+                                CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
+                                BufferObjectBinding::UNIFORM,
+                                backend::BufferUsage::DYNAMIC,
+                                false),
+                        .count = (uint16_t)count,
+                        .offset = 0,
+                        .skinningBufferMode = false };
+
+                if (count) {
+                    if (builder->mUserBones) {
+                        FSkinningBuffer::setBones(mEngine, bones.handle,
+                                builder->mUserBones, count, 0);
+                    } else if (builder->mUserBoneMatrices) {
+                        FSkinningBuffer::setBones(mEngine, bones.handle,
+                                builder->mUserBoneMatrices, count, 0);
+                    } else {
+                        // initialize the bones to identity
+                        size_t size = count * sizeof(PerRenderableUibBone);
+                        auto* out = (PerRenderableUibBone*)driver.allocate(size);
+                        std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
+                        driver.updateBufferObject(bones.handle, { out, size }, 0);
+                    }
                 }
             }
         }
@@ -362,9 +413,9 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     destroyComponentPrimitives(engine, manager[ci].primitives);
 
     // destroy the bones structures if any
-    std::unique_ptr<Bones> const& bones = manager[ci].bones;
-    if (bones) {
-        driver.destroyUniformBuffer(bones->handle);
+    Bones const& bones = manager[ci].bones;
+    if (bones.handle && !bones.skinningBufferMode) {
+        driver.destroyBufferObject(bones.handle);
     }
 }
 
@@ -374,25 +425,6 @@ void FRenderableManager::destroyComponentPrimitives(
         primitive.terminate(engine);
     }
     delete[] primitives.data();
-}
-
-
-void FRenderableManager::prepare(
-        backend::DriverApi& UTILS_RESTRICT driver,
-        Instance const* UTILS_RESTRICT instances,
-        utils::Range<uint32_t> list) const noexcept {
-    const auto& manager = mManager;
-
-    std::unique_ptr<Bones>  const * const UTILS_RESTRICT bones = manager.raw_array<BONES>();
-    for (uint32_t index : list) {
-        size_t i = instances[index].asValue();
-        assert_invariant(i);  // we should never get the null instance here
-        if (UTILS_UNLIKELY(bones[i])) {
-            if (bones[i]->bones.isDirty()) {
-                driver.loadUniformBuffer(bones[i]->handle, bones[i]->bones.toBufferDescriptor(driver));
-            }
-        }
-    }
 }
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
@@ -471,18 +503,15 @@ void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t 
 void FRenderableManager::setBones(Instance ci,
         Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
-        std::unique_ptr<Bones> const& bones = mManager[ci].bones;
-        assert_invariant(bones && offset + boneCount <= bones->count);
-        if (bones) {
-            boneCount = std::min(boneCount, bones->count - offset);
-            PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(
-                    offset * sizeof(PerRenderableUibBone),
-                    boneCount * sizeof(PerRenderableUibBone));
-            for (size_t i = 0, c = boneCount; i < c; ++i) {
-                out[i].q = transforms[i].unitQuaternion;
-                out[i].t.xyz = transforms[i].translation;
-                out[i].s = out[i].ns = { 1, 1, 1, 0 };
-            }
+        Bones& bones = mManager[ci].bones;
+
+        ASSERT_PRECONDITION(!bones.skinningBufferMode,
+                "Disable skinning buffer mode to use this API");
+
+        assert_invariant(bones.handle && offset + boneCount <= bones.count);
+        if (bones.handle) {
+            boneCount = std::min(boneCount, bones.count - offset);
+            FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
         }
     }
 }
@@ -490,18 +519,48 @@ void FRenderableManager::setBones(Instance ci,
 void FRenderableManager::setBones(Instance ci,
         mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
-        std::unique_ptr<Bones> const& bones = mManager[ci].bones;
-        assert_invariant(bones && offset + boneCount <= bones->count);
-        if (bones) {
-            boneCount = std::min(boneCount, bones->count - offset);
-            PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(
-                    offset * sizeof(PerRenderableUibBone),
-                    boneCount * sizeof(PerRenderableUibBone));
-            for (size_t i = 0, c = boneCount; i < c; ++i) {
-                makeBone(&out[i], transforms[i]);
-            }
+        Bones& bones = mManager[ci].bones;
+
+        ASSERT_PRECONDITION(!bones.skinningBufferMode,
+                "Disable skinning buffer mode to use this API");
+
+        assert_invariant(bones.handle && offset + boneCount <= bones.count);
+        if (bones.handle) {
+            boneCount = std::min(boneCount, bones.count - offset);
+            FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
         }
     }
+}
+
+void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
+        FSkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
+
+    Bones& bones = mManager[ci].bones;
+
+    ASSERT_PRECONDITION(bones.skinningBufferMode,
+            "Enable skinning buffer mode to use this API");
+
+    ASSERT_PRECONDITION(
+            count + offset < skinningBuffer->getBoneCount(),
+            "SkinningBuffer overflow (size=%u, count=%u, offset=%u)",
+            skinningBuffer->getBoneCount(), count, offset);
+
+    // According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
+    // Buffer Object Bindings:
+    //
+    //     the uniform block must be populated with a buffer object with a size no smaller
+    //     than the minimum required size of the uniform block (the value of
+    //     UNIFORM_BLOCK_DATA_SIZE).
+    //
+    // So we round-up the "window" of bones set to match UNIFORM_BLOCK_DATA_SIZE, the SkinningBuffer
+    // should always contain enough date for this to work.
+
+    count = FSkinningBuffer::getPhysicalBoneCount(count);
+    assert_invariant(count + offset < skinningBuffer->getBoneCount());
+
+    bones.handle = skinningBuffer->getHwHandle();
+    bones.count = uint16_t(count);
+    bones.offset = uint16_t(offset);
 }
 
 void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noexcept {
@@ -510,27 +569,24 @@ void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noe
     }
 }
 
-void FRenderableManager::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4f const& t) noexcept {
-    mat4f m(t);
-
-    // figure out the scales
-    float4 s = { length(m[0]), length(m[1]), length(m[2]), 0.0f };
-    if (dot(cross(m[0].xyz, m[1].xyz), m[2].xyz) < 0) {
-        s[2] = -s[2];
+void FRenderableManager::setLightChannel(Instance ci, unsigned int channel, bool enable) noexcept {
+    if (ci) {
+        if (channel < 8) {
+            const uint8_t mask = 1u << channel;
+            mManager[ci].channels &= ~mask;
+            mManager[ci].channels |= enable ? mask : 0u;
+        }
     }
+}
 
-    // compute the inverse scales
-    float4 is = { 1.0f/s.x, 1.0f/s.y, 1.0f/s.z, 0.0f };
-
-    // normalize the matrix
-    m[0] *= is[0];
-    m[1] *= is[1];
-    m[2] *= is[2];
-
-    out->s = s;
-    out->q = m.toQuaternion();
-    out->t = m[3];
-    out->ns = is / max(abs(is));
+bool FRenderableManager::getLightChannel(Instance ci, unsigned int channel) const noexcept {
+    if (ci) {
+        if (channel < 8) {
+            const uint8_t mask = 1u << channel;
+            return bool(mManager[ci].channels & mask);
+        }
+    }
+    return false;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -640,6 +696,19 @@ void RenderableManager::setBones(Instance instance,
 
 void RenderableManager::setMorphWeights(Instance instance, float4 const& weights) noexcept {
     upcast(this)->setMorphWeights(instance, weights);
+}
+
+void RenderableManager::setSkinningBuffer(Instance instance,
+        SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
+    upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
+}
+
+void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {
+    upcast(this)->setLightChannel(instance, channel, enable);
+}
+
+bool RenderableManager::getLightChannel(Instance instance, unsigned int channel) const noexcept {
+    return upcast(this)->getLightChannel(instance, channel);
 }
 
 } // namespace filament

@@ -28,9 +28,6 @@ FuzzerPassInvertComparisonOperators::FuzzerPassInvertComparisonOperators(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassInvertComparisonOperators::~FuzzerPassInvertComparisonOperators() =
-    default;
-
 void FuzzerPassInvertComparisonOperators::Apply() {
   GetIRContext()->module()->ForEachInst([this](const opt::Instruction* inst) {
     if (!TransformationInvertComparisonOperator::IsInversionSupported(

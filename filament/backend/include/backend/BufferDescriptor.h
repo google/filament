@@ -16,16 +16,16 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
-#define TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
+#ifndef TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
+#define TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /**
  * A CPU memory-buffer descriptor, typically used to transfer data from the CPU to the GPU.
@@ -91,6 +91,56 @@ public:
                 : buffer(const_cast<void*>(buffer)), size(size), callback(callback), user(user) {
     }
 
+    // --------------------------------------------------------------------------------------------
+
+    /**
+     * Helper to create a BufferDescriptor that uses a KNOWN method pointer w/ object passed
+     * by pointer as the callback. e.g.:
+     *     auto bd = BufferDescriptor::make(buffer, size, &Foo::method, foo);
+     *
+     * @param buffer    Memory address of the CPU buffer to reference
+     * @param size      Size of the CPU buffer in bytes
+     * @return          a new BufferDescriptor
+     */
+    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    static BufferDescriptor make(
+            void const* buffer, size_t size, T* data) noexcept {
+        return {
+                buffer, size,
+                [](void* b, size_t s, void* u) {
+                    (*static_cast<T**>(u)->*method)(b, s);
+                }, data
+        };
+    }
+
+    /**
+     * Helper to create a BufferDescriptor that uses a functor as the callback.
+     *
+     * Caveats:
+     *      - DO NOT CALL setCallback() when using this helper.
+     *      - This make a heap allocation
+     *
+     * @param buffer    Memory address of the CPU buffer to reference
+     * @param size      Size of the CPU buffer in bytes
+     * @param functor   functor of type f(void const* buffer, size_t size)
+     * @return          a new BufferDescriptor
+     */
+    template<typename T>
+    static BufferDescriptor make(
+            void const* buffer, size_t size, T&& functor) noexcept {
+        return {
+                buffer, size,
+                [](void* b, size_t s, void* u) {
+                    T& that = *static_cast<T*>(u);
+                    that(b, s);
+                    delete &that;
+                },
+                new T(std::forward<T>(functor))
+        };
+    }
+
+    // --------------------------------------------------------------------------------------------
+
     /**
      * Set or replace the release callback function
      * @param callback  The new callback function
@@ -126,7 +176,10 @@ private:
     void* user = nullptr;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::BufferDescriptor& b);
+#endif
+
+#endif // TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H

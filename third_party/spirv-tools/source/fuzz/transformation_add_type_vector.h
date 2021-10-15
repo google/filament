@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddTypeVector : public Transformation {
  public:
   explicit TransformationAddTypeVector(
-      const protobufs::TransformationAddTypeVector& message);
+      protobufs::TransformationAddTypeVector message);
 
   TransformationAddTypeVector(uint32_t fresh_id, uint32_t component_type_id,
                               uint32_t component_count);

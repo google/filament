@@ -28,15 +28,18 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
+        include/filament/Options.h
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
         include/filament/Renderer.h
         include/filament/Scene.h
+        include/filament/SkinningBuffer.h
         include/filament/Skybox.h
         include/filament/Stream.h
         include/filament/SwapChain.h
         include/filament/Texture.h
         include/filament/TextureSampler.h
+        include/filament/ToneMapper.h
         include/filament/TransformManager.h
         include/filament/VertexBuffer.h
         include/filament/View.h
@@ -49,6 +52,7 @@ set(SRCS
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
+        src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
         src/DebugRegistry.cpp
@@ -59,12 +63,13 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
-        src/GPUBuffer.cpp
+        src/fsr.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -74,11 +79,12 @@ set(SRCS
         src/Scene.cpp
         src/ShadowMap.cpp
         src/ShadowMapManager.cpp
+        src/SkinningBuffer.cpp
         src/Skybox.cpp
         src/Stream.cpp
         src/SwapChain.cpp
         src/Texture.cpp
-        src/ToneMapping.cpp
+        src/ToneMapper.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/View.cpp
@@ -90,52 +96,53 @@ set(SRCS
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
-        src/fg2/FrameGraphResources.cpp
         src/fg2/FrameGraphPass.cpp
+        src/fg2/FrameGraphResources.cpp
+        src/fg2/FrameGraphTexture.cpp
         src/fg2/PassNode.cpp
         src/fg2/ResourceNode.cpp
-        src/fg2/FrameGraphTexture.cpp
 )
 
 set(PRIVATE_HDRS
+        src/Allocators.h
+        src/ColorSpace.h
+        src/Culler.h
+        src/DFG.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
-        src/GPUBuffer.h
+        src/FrameSkipper.h
+        src/Froxelizer.h
         src/Intersections.h
         src/MaterialParser.h
+        src/PerViewUniforms.h
         src/PostProcessManager.h
         src/RenderPass.h
+        src/RenderPrimitive.h
         src/ResourceAllocator.h
-        src/ToneMapping.h
+        src/ResourceList.h
+        src/ShadowMap.h
+        src/ShadowMapManager.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
-        src/details/Allocators.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
-        src/details/Culler.h
-        src/details/DFG.h
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
-        src/details/FrameSkipper.h
-        src/details/Froxelizer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/Material.h
         src/details/MaterialInstance.h
-        src/details/RenderPrimitive.h
         src/details/RenderTarget.h
         src/details/Renderer.h
-        src/details/ResourceList.h
         src/details/Scene.h
-        src/details/ShadowMap.h
-        src/details/ShadowMapManager.h
+        src/details/SkinningBuffer.h
         src/details/Skybox.h
         src/details/Stream.h
         src/details/SwapChain.h
@@ -145,20 +152,28 @@ set(PRIVATE_HDRS
         src/fg2/Blackboard.h
         src/fg2/FrameGraph.h
         src/fg2/FrameGraphId.h
-        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphPass.h
         src/fg2/FrameGraphRenderPass.h
-        src/fg2/Resource.cpp
+        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphTexture.h
+        src/fg2/Resource.cpp
         src/fg2/details/DependencyGraph.h
         src/fg2/details/PassNode.h
         src/fg2/details/Resource.h
         src/fg2/details/ResourceNode.h
         src/fg2/details/Utilities.h
+        src/fsr.h
+        src/materials/fsr/ffx_a.h
+        src/materials/fsr/ffx_fsr1.h
+        src/materials/fsr/ffx_fsr1_mobile.fs
         src/upcast.h
 )
 
 set(MATERIAL_SRCS
+        src/materials/fsr/fsr_easu.mat
+        src/materials/fsr/fsr_easu_mobile.mat
+        src/materials/fsr/fsr_easu_mobileF.mat
+        src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/defaultMaterial.mat
@@ -173,14 +188,14 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMedian.mat
         src/materials/flare/flare.mat
         src/materials/blitLow.mat
-        src/materials/blitMedium.mat
-        src/materials/blitHigh.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomUpsample.mat
         src/materials/ssao/bilateralBlur.mat
+        src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat
         src/materials/skybox.mat
         src/materials/ssao/sao.mat
+        src/materials/ssao/saoBentNormals.mat
         src/materials/separableGaussianBlur.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
@@ -223,6 +238,7 @@ add_definitions(
     -DFILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB=${FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB}
     -DFILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB=${FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB}
     -DFILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB}
+    -DFILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB=${FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB}
 )
 
 # ==================================================================================================
@@ -312,12 +328,64 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/sao.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
+        DEPENDS src/materials/ssao/ssct.fs
+        DEPENDS src/materials/ssao/depthUtils.fs
+        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/ssao/saoImpl.fs
+        DEPENDS src/materials/ssao/ssctImpl.fs
         APPEND
 )
 
 add_custom_command(
-        OUTPUT "${MATERIAL_DIR}/sao.filamat"
+        OUTPUT "${MATERIAL_DIR}/saoBentNormals.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
         DEPENDS src/materials/ssao/ssct.fs
+        DEPENDS src/materials/ssao/depthUtils.fs
+        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/ssao/saoImpl.fs
+        DEPENDS src/materials/ssao/ssctImpl.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/bilateralBlur.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/bilateralBlurBentNormals.filamat"
+        DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobile.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobileF.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
         APPEND
 )
 
@@ -388,14 +456,13 @@ if (MSVC)
     )
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
-    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
+    set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
-        -fvisibility=hidden
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
     )

@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationSwapCommutableOperands : public Transformation {
  public:
   explicit TransformationSwapCommutableOperands(
-      const protobufs::TransformationSwapCommutableOperands& message);
+      protobufs::TransformationSwapCommutableOperands message);
 
   TransformationSwapCommutableOperands(
       const protobufs::InstructionDescriptor& instruction_descriptor);

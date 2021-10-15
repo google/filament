@@ -79,6 +79,7 @@ public:
 
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
+        mActivePrograms.set(variantKey);
         if (UTILS_UNLIKELY(mPendingEdits.load())) {
             const_cast<FMaterial*>(this)->applyPendingEdits();
         }
@@ -150,8 +151,14 @@ public:
     static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
             size_t packageSize);
 
-    /** Queries the program cache to check which variants are resident. */
-    static void onQueryCallback(void* userdata, uint64_t* pVariants);
+    /**
+     * Returns a list of "active" variants.
+     *
+     * This works by checking which variants have been accessed since the previous call, then
+     * clearing out the internal list.  Note that the active vs inactive status is merely a visual
+     * indicator in the matdbg UI, and that it gets updated about every second.
+     */
+    static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
     /** @}*/
 
@@ -162,6 +169,10 @@ private:
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+
+#if FILAMENT_ENABLE_MATDBG
+    mutable VariantList mActivePrograms;
+#endif
 
     backend::RasterState mRasterState;
     BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;

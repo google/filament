@@ -98,10 +98,14 @@ TEST(TransformationAddLocalVariableTest, BasicTest) {
   // %105 = OpVariable %50 Function %51
   {
     TransformationAddLocalVariable transformation(105, 50, 4, 51, true);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(105));
+    ASSERT_EQ(nullptr, context->get_instr_block(105));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
+    ASSERT_EQ(SpvOpVariable, context->get_def_use_mgr()->GetDef(105)->opcode());
+    ASSERT_EQ(5, context->get_instr_block(105)->id());
   }
 
   // %104 = OpVariable %41 Function %46

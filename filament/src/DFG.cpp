@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/DFG.h"
+#include "DFG.h"
 
 #include "details/Engine.h"
 #include "details/Texture.h"

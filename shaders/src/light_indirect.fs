@@ -386,7 +386,8 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 #endif
 }
 
-void evaluateSheenIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
+        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     // Albedo scaling of the base layer before we layer sheen on top
@@ -394,13 +395,17 @@ void evaluateSheenIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, 
     Fr *= pixel.sheenScaling;
 
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
+    reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
+
     Fr += reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
 #endif
 #endif
 }
 
-void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
+        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    float specularAO = specularAO(shading_NoV, diffuseAO, pixel.clearCoatRoughness, cache);
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
     return;
 #endif
@@ -419,6 +424,9 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
     Fr *= attenuation;
+
+    // TODO: Should we apply specularAO to the attenuation as well?
+    float specularAO = specularAO(clearCoatNoV, diffuseAO, pixel.clearCoatRoughness, cache);
     Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatPerceptualRoughness) * (specularAO * Fc);
 #endif
 }
@@ -486,7 +494,8 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-void applyRefraction(const PixelParams pixel,
+void applyRefraction(
+    const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
@@ -500,7 +509,7 @@ void applyRefraction(const PixelParams pixel,
 #error invalid REFRACTION_TYPE
 #endif
 
-    /* compute transmission T */
+    // compute transmission T
 #if defined(MATERIAL_HAS_ABSORPTION)
 #if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
@@ -509,11 +518,11 @@ void applyRefraction(const PixelParams pixel,
 #endif
 #endif
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
+    // of 1.5 has full microfacet refraction
+    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
+            saturate(pixel.etaIR * 3.0 - 2.0));
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
-
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
@@ -537,16 +546,22 @@ void applyRefraction(const PixelParams pixel,
     // perceptualRoughness to LOD
     // Empirical factor to compensate for the gaussian approximation of Dggx, chosen so
     // cubemap and screen-space modes match at perceptualRoughness 0.125
-    float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    // TODO: Remove this factor temporarily until we find a better solution
+    //       This overblurs many scenes and needs a more principled approach
+    // float tweakedPerceptualRoughness = perceptualRoughness * 1.74;
+    float tweakedPerceptualRoughness = perceptualRoughness;
     float lod = max(0.0, 2.0 * log2(tweakedPerceptualRoughness) + frameUniforms.refractionLodOffset);
 
     vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
-    /* fresnel from the first interface */
+    // base color changes the amount of light passing through the boundary
+    Ft *= pixel.diffuseColor;
+
+    // fresnel from the first interface
     Ft *= 1.0 - E;
 
-    /* apply absorption */
+    // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
 #endif
@@ -557,7 +572,8 @@ void applyRefraction(const PixelParams pixel,
 }
 #endif
 
-void combineDiffuseAndSpecular(const PixelParams pixel,
+void combineDiffuseAndSpecular(
+        const PixelParams pixel,
         const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
         inout vec3 color) {
 #if defined(HAS_REFRACTION)
@@ -568,10 +584,6 @@ void combineDiffuseAndSpecular(const PixelParams pixel,
 }
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
-    float ssao = evaluateSSAO();
-    float diffuseAO = min(material.ambientOcclusion, ssao);
-    float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.roughness);
-
     // specular layer
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
@@ -582,6 +594,16 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
 #endif
+
+    SSAOInterpolationCache interpolationCache;
+#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
+    interpolationCache.uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+#endif
+
+    float ssao = evaluateSSAO(interpolationCache);
+    float diffuseAO = min(material.ambientOcclusion, ssao);
+    float specularAO = specularAO(shading_NoV, diffuseAO, pixel.roughness, interpolationCache);
+
     Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
 
     // diffuse layer
@@ -601,18 +623,18 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #endif
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
 
-    // sheen layer
-    evaluateSheenIBL(pixel, specularAO, Fd, Fr);
-
-    // clear coat layer
-    evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
-
     // subsurface layer
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
 
-    // extra ambient occlusion term
+    // extra ambient occlusion term for the base and subsurface layers
     multiBounceAO(diffuseAO, pixel.diffuseColor, Fd);
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
+
+    // sheen layer
+    evaluateSheenIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
+
+    // clear coat layer
+    evaluateClearCoatIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
     combineDiffuseAndSpecular(pixel, shading_normal, E, Fd, Fr, color);

@@ -70,17 +70,21 @@ include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC
-        utils
-        filaflat
-        filabridge
         backend_headers
         civetweb
-        utils
-        SPIRV
-        SPIRV-Tools
-        spirv-cross-glsl
+        filabridge
+        filaflat
+        filamat
+        glslang
         matdbg_resources
+        SPIRV
+        spirv-cross-glsl
+        SPIRV-Tools
+        utils
+        utils
 )
+
+target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
@@ -116,4 +120,5 @@ combine_static_libs(matdbg "${MATDBG_COMBINED_OUTPUT}" "${MATDBG_DEPS}")
 
 set(MATDBG_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}matdbg${CMAKE_STATIC_LIBRARY_SUFFIX})
 install(FILES "${MATDBG_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${MATDBG_LIB_NAME})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/matdbg DESTINATION include)
+# We do not need matdbg headers in the install directory
+# install(DIRECTORY ${PUBLIC_HDR_DIR}/matdbg DESTINATION include)

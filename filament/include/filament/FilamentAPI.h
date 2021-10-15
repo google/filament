@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FILAMENT_API_H
-#define TNT_FILAMENT_FILAMENT_API_H
+#ifndef TNT_FILAMENT_FILAMENTAPI_H
+#define TNT_FILAMENT_FILAMENTAPI_H
 
 #include <utils/compiler.h>
 
@@ -81,11 +81,11 @@ public:
     }
 
 protected:
-    T* mImpl;
+    T* mImpl = nullptr;
     inline T* operator->() noexcept { return mImpl; }
     inline T const* operator->() const noexcept { return mImpl; }
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_FILAMENT_API_H
+#endif // TNT_FILAMENT_FILAMENTAPI_H

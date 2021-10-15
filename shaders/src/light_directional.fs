@@ -27,6 +27,7 @@ Light getDirectionalLight() {
     light.l = sampleSunAreaLight(frameUniforms.lightDirection);
     light.attenuation = 1.0;
     light.NoL = saturate(dot(shading_normal, light.l));
+    light.channels = frameUniforms.lightChannels & 0xFFu;
     return light;
 }
 
@@ -35,20 +36,31 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
     Light light = getDirectionalLight();
 
+    uint channels = objectUniforms.channels & 0xFFu;
+    if ((light.channels & channels) == 0u) {
+        return;
+    }
+
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+    if (light.NoL <= 0.0) {
+        return;
+    }
+#endif
+
     float visibility = 1.0;
 #if defined(HAS_SHADOWING)
     if (light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
         uint cascade = getShadowCascade();
-        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & (1u << cascade << 8u));
+        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-            if (objectUniforms.screenSpaceContactShadows != 0u) {
+            if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
             }
         }
@@ -58,13 +70,12 @@ void evaluateDirectionalLight(const MaterialInputs material,
         #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
         visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
         #endif
-    } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        return;
+        if (visibility <= 0.0) {
+            return;
+        }
 #endif
     }
-#elif defined(MATERIAL_CAN_SKIP_LIGHTING)
-    if (light.NoL <= 0.0) return;
 #endif
 
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)

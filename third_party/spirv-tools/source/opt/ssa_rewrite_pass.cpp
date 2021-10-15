@@ -658,8 +658,8 @@ Pass::Status SSARewriter::AddDebugValuesForInvisibleDebugDecls(Function* fp) {
   //   a = 3;
   //   foo(3);
   // After inlining:
-  //   a = 3; // we want to specify "DebugValue: %x = %int_3"
-  //   foo and x disappeared!
+  //   a = 3;
+  //   foo and x disappeared but we want to specify "DebugValue: %x = %int_3".
   //
   // We want to specify the value for the variable using |defs_at_block_[bb]|,
   // where |bb| is the basic block contains the decl.
@@ -680,17 +680,18 @@ Pass::Status SSARewriter::AddDebugValuesForInvisibleDebugDecls(Function* fp) {
     // If |value| dominates |decl|, we can set it as DebugValue.
     if (value && (pass_->context()->get_instr_block(value) == nullptr ||
                   dom_tree->Dominates(value, decl))) {
-      if (!pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
-              decl, value->result_id())) {
+      if (pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
+              decl, value->result_id(), decl, value) == nullptr) {
         return Pass::Status::Failure;
       }
     } else {
       // If |value| in the same basic block does not dominate |decl|, we can
       // assign the value in the immediate dominator.
       value_id = GetValueAtBlock(var_id, dom_tree->ImmediateDominator(bb));
+      if (value_id) value = pass_->get_def_use_mgr()->GetDef(value_id);
       if (value_id &&
-          !pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
-              decl, value_id)) {
+          pass_->context()->get_debug_info_mgr()->AddDebugValueForDecl(
+              decl, value_id, decl, value) == nullptr) {
         return Pass::Status::Failure;
       }
     }

@@ -28,8 +28,6 @@ FuzzerPassAddLocalVariables::FuzzerPassAddLocalVariables(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddLocalVariables::~FuzzerPassAddLocalVariables() = default;
-
 void FuzzerPassAddLocalVariables::Apply() {
   auto basic_type_ids_and_pointers =
       GetAvailableBasicTypesAndPointers(SpvStorageClassFunction);

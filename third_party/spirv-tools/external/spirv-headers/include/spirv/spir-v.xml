@@ -78,7 +78,10 @@
         <id value="25"  vendor="Netease Games" tool="Messiah Shader Compiler" comment="Contact Yuwen Wu, atyuwen@gmail.com"/>
         <id value="26"  vendor="Xenia" tool="Xenia Emulator Microcode Translator" comment="Contact Vitaliy Kuzmin, triang3l@yandex.ru, https://github.com/xenia-project/xenia"/>
         <id value="27"  vendor="Embark Studios" tool="Rust GPU Compiler Backend" comment="https://github.com/embarkstudios/rust-gpu"/>
-        <unused start="28" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="28"  vendor="gfx-rs community" tool="Naga" comment="https://github.com/gfx-rs/naga"/>
+        <id value="29"  vendor="Mikkosoft Productions" tool="MSP Shader Compiler" comment="Contact Mikko Rasa, tdb@tdb.fi"/>
+        <id value="30"  vendor="SpvGenTwo community" tool="SpvGenTwo SPIR-V IR Tools" comment="https://github.com/rAzoR8/SpvGenTwo"/>
+        <unused start="31" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->
@@ -128,13 +131,15 @@
     <ids type="opcode" start="5952" end="6015" vendor="Codeplay" comment="Contact victor@codeplay.com"/>
     <ids type="opcode" start="6016" end="6079" vendor="Khronos" comment="Contact @tobski"/>
     <ids type="opcode" start="6080" end="6143" vendor="Intel" comment="Contact mariusz.merecki@intel.com"/>
+    <ids type="opcode" start="6144" end="6271" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="opcode" start="6272" end="6399" vendor="Huawei" comment="Contact wanghuilong2@xunweitech.com"/>
     <!-- Opcode enumerants to reserve for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
          sure to fill in the vendor attribute, and preferably add a contact
          person/address in a comment attribute. -->
     <!-- Example new block: <ids type="opcode" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
-    <ids type="opcode" start="6144" end="65535" comment="Opcode range reservable for future use by vendors"/>
+    <ids type="opcode" start="6400" end="65535" comment="Opcode range reservable for future use by vendors"/>
     <!-- End reservations of opcodes -->
 
 
@@ -154,13 +159,15 @@
     <ids type="enumerant" start="5952" end="6015" vendor="Codeplay" comment="Contact victor@codeplay.com"/>
     <ids type="enumerant" start="6016" end="6079" vendor="Khronos" comment="Contact @tobski"/>
     <ids type="enumerant" start="6080" end="6143" vendor="Intel" comment="Contact mariusz.merecki@intel.com"/>
+    <ids type="enumerant" start="6144" end="6271" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="enumerant" start="6272" end="6399" vendor="Huawei" comment="Contact wanghuilong2@xunweitech.com"/>
     <!-- Enumerants to reserve for future use. To get a block, allocate
          multiples of 64 starting at the lowest available point in this
          block and add a corresponding <ids> tag immediately above. Make
          sure to fill in the vendor attribute, and preferably add a contact
          person/address in a comment attribute. -->
     <!-- Example new block: <ids type="enumerant" start="XXXX" end="XXXX+64n-1" vendor="Add vendor" comment="Contact TBD"/> -->
-    <ids type="enumerant" start="6144" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
+    <ids type="enumerant" start="6400" end="4294967295" comment="Enumerant range reservable for future use by vendors"/>
     <!-- End reservations of enumerants -->
 
 
@@ -180,9 +187,30 @@
 
     <!-- Reserved loop control bits -->
     <ids type="LoopControl" start="0" end="15" vendor="Khronos" comment="Reserved LoopControl bits, not available to vendors - see the SPIR-V Specification"/>
-    <ids type="LoopControl" start="16" end="23" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
-    <ids type="LoopControl" start="24" end="30" comment="Unreserved bits reservable for use by vendors"/>
+    <ids type="LoopControl" start="16" end="24" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="LoopControl" start="25" end="30" comment="Unreserved bits reservable for use by vendors"/>
     <ids type="LoopControl" start="31" end="31" vendor="Khronos" comment="Reserved LoopControl bit, not available to vendors"/>
+
+
+    <!-- SECTION: SPIR-V Function Control Bit Reservations -->
+    <!-- Reserve ranges of bits in the function control bitfield.
+
+         Each vendor determines the use of values in their own ranges.
+         Vendors are not required to disclose those uses.  If the use of a
+         value is included in an extension that is adopted by a Khronos
+         extension or specification, then that value's use may be permanently
+         fixed as if originally reserved in a Khronos range.
+
+         The SPIR Working Group strongly recommends:
+         - Each value is used for only one purpose.
+         - All values in a range should be used before allocating a new range.
+         -->
+
+    <!-- Reserved function control bits -->
+    <ids type="FunctionControl" start="0" end="15" vendor="Khronos" comment="Reserved FunctionControl bits, not available to vendors - see the SPIR-V Specification"/>
+    <ids type="FunctionControl" start="16" end="16" vendor="Intel" comment="Contact ben.ashbaugh@intel.com"/>
+    <ids type="FunctionControl" start="17" end="30" comment="Unreserved bits reservable for use by vendors"/>
+    <ids type="FunctionControl" start="31" end="31" vendor="Khronos" comment="Reserved FunctionControl bit, not available to vendors"/>
 
 
     <!-- SECTION: SPIR-V FP Fast Math Mode Bit Reservations -->
@@ -201,5 +229,26 @@
     <ids type="FPFastMathMode" start="0" end="15" vendor="Khronos" comment="Reserved FPFastMathMode bits, not available to vendors - see the SPIR-V Specification"/>
     <ids type="FPFastMathMode" start="16" end="17" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
     <ids type="FPFastMathMode" start="18" end="31" comment="Unreserved bits reservable for use by vendors"/>
+
+
+    <!-- SECTION: SPIR-V Memory Operand Bit Reservations -->
+    <!-- Reserve ranges of bits in the memory operands bitfield.
+
+         Each vendor determines the use of values in their own ranges.
+         Vendors are not required to disclose those uses.  If the use of a
+         value is included in an extension that is adopted by a Khronos
+         extension or specification, then that value's use may be permanently
+         fixed as if originally reserved in a Khronos range.
+
+         The SPIR Working Group strongly recommends:
+         - Each value is used for only one purpose.
+         - All values in a range should be used before allocating a new range.
+         -->
+
+    <!-- Reserved memory operand bits -->
+    <ids type="MemoryOperand" start="0" end="15" vendor="Khronos" comment="Reserved MemoryOperand bits, not available to vendors - see the SPIR-V Specification"/>
+    <ids type="MemoryOperand" start="16" end="17" vendor="Intel" comment="Contact michael.kinsner@intel.com"/>
+    <ids type="MemoryOperand" start="18" end="30" comment="Unreserved bits reservable for use by vendors"/>
+    <ids type="MemoryOperand" start="31" end="31" vendor="Khronos" comment="Reserved MemoryOperand bit, not available to vendors"/>
 
 </registry>

@@ -160,13 +160,19 @@ void ApplyAndCheckFreshIds(
     const Transformation& transformation, opt::IRContext* ir_context,
     TransformationContext* transformation_context,
     const std::unordered_set<uint32_t>& issued_overflow_ids) {
+  // To ensure that we cover all ToMessage and message-based constructor methods
+  // in our tests, we turn this into a message and back into a transformation,
+  // and use the reconstructed transformation in the rest of the function.
+  auto message = transformation.ToMessage();
+  auto reconstructed_transformation = Transformation::FromMessage(message);
+
   opt::analysis::DefUseManager::IdToDefMap before_transformation =
       ir_context->get_def_use_mgr()->id_to_defs();
-  transformation.Apply(ir_context, transformation_context);
+  reconstructed_transformation->Apply(ir_context, transformation_context);
   opt::analysis::DefUseManager::IdToDefMap after_transformation =
       ir_context->get_def_use_mgr()->id_to_defs();
   std::unordered_set<uint32_t> fresh_ids_for_transformation =
-      transformation.GetFreshIds();
+      reconstructed_transformation->GetFreshIds();
   for (auto& entry : after_transformation) {
     uint32_t id = entry.first;
     bool introduced_by_transformation_message =

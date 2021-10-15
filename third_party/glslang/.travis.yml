@@ -61,7 +61,17 @@ install:
     fi
 
 before_script:
-  - git clone --depth=1 https://github.com/google/googletest.git External/googletest
+  # check out pre-breakage version of googletest; can be deleted when
+  # issue 3128 is fixed
+  # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+  - mkdir -p External/googletest
+  - cd External/googletest
+  - git init
+  - git remote add origin https://github.com/google/googletest.git
+  - git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+  - git reset --hard FETCH_HEAD
+  - cd ../..
+  # get spirv-tools and spirv-headers
   - ./update_glslang_sources.py
 
 script:
@@ -99,8 +109,11 @@ after_success:
       zip ${TARBALL}
         bin/glslangValidator
         include/glslang/*
+        lib/libGenericCodeGen${SUFFIX}.a
         lib/libglslang${SUFFIX}.a
+        lib/libglslang-default-resource-limits${SUFFIX}.a
         lib/libHLSL${SUFFIX}.a
+        lib/libMachineIndependent${SUFFIX}.a
         lib/libOGLCompiler${SUFFIX}.a
         lib/libOSDependent${SUFFIX}.a
         lib/libSPIRV${SUFFIX}.a

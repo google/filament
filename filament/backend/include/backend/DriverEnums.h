@@ -16,13 +16,15 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_DRIVERENUMS_H
-#define TNT_FILAMENT_DRIVER_DRIVERENUMS_H
+#ifndef TNT_FILAMENT_BACKEND_DRIVERENUMS_H
+#define TNT_FILAMENT_BACKEND_DRIVERENUMS_H
 
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
 #include <backend/PresentCallable.h>
+
+#include <utils/ostream.h>
 
 #include <math/vec4.h>
 
@@ -67,15 +69,15 @@ enum class Backend : uint8_t {
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
-static constexpr const char* backendToString(backend::Backend backend) {
+static constexpr const char* backendToString(Backend backend) {
     switch (backend) {
-        case backend::Backend::NOOP:
+        case Backend::NOOP:
             return "Noop";
-        case backend::Backend::OPENGL:
+        case Backend::OPENGL:
             return "OpenGL";
-        case backend::Backend::VULKAN:
+        case Backend::VULKAN:
             return "Vulkan";
-        case backend::Backend::METAL:
+        case Backend::METAL:
             return "Metal";
         default:
             return "Unknown";
@@ -104,7 +106,7 @@ enum class TargetBufferFlags : uint32_t {
     ALL = COLOR_ALL | DEPTH | STENCIL       //!< Color, depth and stencil buffer selected.
 };
 
-inline TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
+inline constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
     if (index == 0u) return TargetBufferFlags::COLOR0;
     if (index == 1u) return TargetBufferFlags::COLOR1;
     if (index == 2u) return TargetBufferFlags::COLOR2;
@@ -285,6 +287,7 @@ enum class ElementType : uint8_t {
 //! Buffer object binding type
 enum class BufferObjectBinding : uint8_t {
     VERTEX,
+    UNIFORM
 };
 
 //! Face culling Mode
@@ -317,7 +320,7 @@ enum class PixelDataType : uint8_t {
     BYTE,                 //!< signed byte
     USHORT,               //!< unsigned short (16-bit)
     SHORT,                //!< signed short (16-bit)
-    UINT,                 //!< unsigned int (16-bit)
+    UINT,                 //!< unsigned int (32-bit)
     INT,                  //!< signed int (32-bit)
     HALF,                 //!< half-float (16-bit float)
     FLOAT,                //!< float (32-bits float)
@@ -560,6 +563,48 @@ static constexpr bool isDepthFormat(TextureFormat format) noexcept {
     }
 }
 
+static constexpr bool isUnsignedIntFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8UI:
+        case TextureFormat::R16UI:
+        case TextureFormat::R32UI:
+        case TextureFormat::RG8UI:
+        case TextureFormat::RG16UI:
+        case TextureFormat::RG32UI:
+        case TextureFormat::RGB8UI:
+        case TextureFormat::RGB16UI:
+        case TextureFormat::RGB32UI:
+        case TextureFormat::RGBA8UI:
+        case TextureFormat::RGBA16UI:
+        case TextureFormat::RGBA32UI:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static constexpr bool isSignedIntFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8I:
+        case TextureFormat::R16I:
+        case TextureFormat::R32I:
+        case TextureFormat::RG8I:
+        case TextureFormat::RG16I:
+        case TextureFormat::RG32I:
+        case TextureFormat::RGB8I:
+        case TextureFormat::RGB16I:
+        case TextureFormat::RGB32I:
+        case TextureFormat::RGBA8I:
+        case TextureFormat::RGBA16I:
+        case TextureFormat::RGBA32I:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 //! returns whether this format a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;
@@ -761,10 +806,10 @@ using AttributeArray = std::array<Attribute, MAX_VERTEX_ATTRIBUTE_COUNT>;
 //! Raster state descriptor
 struct RasterState {
 
-    using CullingMode = filament::backend::CullingMode;
-    using DepthFunc = filament::backend::SamplerCompareFunc;
-    using BlendEquation = filament::backend::BlendEquation;
-    using BlendFunction = filament::backend::BlendFunction;
+    using CullingMode = CullingMode;
+    using DepthFunc = SamplerCompareFunc;
+    using BlendEquation = BlendEquation;
+    using BlendFunction = BlendFunction;
 
     RasterState() noexcept { // NOLINT
         static_assert(sizeof(RasterState) == sizeof(uint32_t),
@@ -887,7 +932,7 @@ struct RenderPassParams {
     DepthRange depthRange{};    //!< depth range for this pass
 
     //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
-    filament::math::float4 clearColor = {};
+    math::float4 clearColor = {};
 
     //! Depth value to clear the depth buffer with
     double clearDepth = 0.0;
@@ -912,10 +957,13 @@ struct PolygonOffset {
 };
 
 
-using FrameScheduledCallback = void(*)(backend::PresentCallable callable, void* user);
+using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
 using FrameCompletedCallback = void(*)(void* user);
 
+enum class Workaround : uint16_t {
+    SPLIT_EASU
+};
 
 } // namespace backend
 } // namespace filament
@@ -925,4 +973,36 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferF
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
 
-#endif // TNT_FILAMENT_DRIVER_DRIVERENUMS_H
+
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CullingMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ElementType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TargetBufferFlags f);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMagFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMinFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerParams params);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerWrapMode wrap);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderModel model);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureCubemapFace face);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
+#endif
+
+#endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H

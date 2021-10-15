@@ -90,19 +90,34 @@ TEST(TransformationAddTypeArrayTest, BasicTest) {
   ASSERT_FALSE(TransformationAddTypeArray(100, 11, 17)
                    .IsApplicable(context.get(), transformation_context));
 
-  TransformationAddTypeArray transformations[] = {
-      // %100 = OpTypeArray %10 %16
-      TransformationAddTypeArray(100, 10, 16),
-
-      // %101 = OpTypeArray %7 %12
-      TransformationAddTypeArray(101, 7, 12)};
-
-  for (auto& transformation : transformations) {
+  {
+    // %100 = OpTypeArray %10 %16
+    TransformationAddTypeArray transformation(100, 10, 16);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(100));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
+    ASSERT_EQ(SpvOpTypeArray,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsArray());
   }
+
+  {
+    // %101 = OpTypeArray %7 %12
+    TransformationAddTypeArray transformation(101, 7, 12);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(101));
+    ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(101));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpTypeArray,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsArray());
+  }
+
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 

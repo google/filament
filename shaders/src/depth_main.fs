@@ -1,21 +1,39 @@
 #if defined(HAS_VSM)
 layout(location = 0) out vec4 fragColor;
+#elif defined(HAS_PICKING)
+layout(location = 0) out highp uint2 outPicking;
+#else
+// not color output
 #endif
 
 //------------------------------------------------------------------------------
 // Depth
+//
+// note: HAS_VSM and HAS_PICKING are mutually exclusive
 //------------------------------------------------------------------------------
 
 void main() {
-#if defined(BLEND_MODE_MASKED)
+    filament_lodBias = frameUniforms.lodBias;
+
+#if defined(BLEND_MODE_MASKED) || (defined(BLEND_MODE_TRANSPARENT) && defined(HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);
 
     float alpha = inputs.baseColor.a;
+#if defined(BLEND_MODE_MASKED)
     if (alpha < getMaskThreshold()) {
         discard;
     }
+#endif
+
+#if defined(HAS_TRANSPARENT_SHADOW)
+    // Interleaved gradient noise, see dithering.fs
+    float noise = fract(52.982919 * fract(dot(vec2(0.06711, 0.00584), gl_FragCoord.xy)));
+    if (noise >= alpha) {
+        discard;
+    }
+#endif
 #endif
 
 #if defined(HAS_VSM)
@@ -46,5 +64,10 @@ void main() {
     moments.y = depth * depth + 0.25 * (dx * dx + dy * dy);
 
     fragColor = vec4(moments, 0.0, 0.0);
+#elif defined(HAS_PICKING)
+    outPicking.x = objectUniforms.objectId;
+    outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
+#else
+    // that's it
 #endif
 }

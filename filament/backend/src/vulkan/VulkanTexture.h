@@ -34,7 +34,7 @@ struct VulkanTexture : public HwTexture {
     void update3DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
             uint32_t depth, int miplevel);
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
-            int miplevel);
+            uint32_t miplevel);
 
     // Returns the primary image view, which is used for shader sampling.
     VkImageView getPrimaryImageView() const { return mCachedImageViews.at(mPrimaryViewRange); }
@@ -49,6 +49,8 @@ struct VulkanTexture : public HwTexture {
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
+    void setSidecar(VulkanTexture* sidecar) { mSidecarMSAA = sidecar; }
+    VulkanTexture* getSidecar() const { return mSidecarMSAA; }
 
 private:
     // Gets or creates a cached VkImageView for a range of miplevels and array layers.
@@ -62,11 +64,12 @@ private:
             FaceOffsets const* faceOffsets, uint32_t miplevel);
 
     void updateWithCopyBuffer(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, int miplevel);
+        uint32_t height, uint32_t depth, uint32_t miplevel);
 
     void updateWithBlitImage(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, int miplevel);
+        uint32_t height, uint32_t depth, uint32_t miplevel);
 
+    VulkanTexture* mSidecarMSAA = nullptr;
     const VkFormat mVkFormat;
     const VkComponentMapping mSwizzle;
     VkImageViewType mViewType;

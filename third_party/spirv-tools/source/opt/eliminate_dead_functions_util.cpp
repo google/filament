@@ -23,9 +23,11 @@ Module::iterator EliminateFunction(IRContext* context,
                                    Module::iterator* func_iter) {
   bool first_func = *func_iter == context->module()->begin();
   bool seen_func_end = false;
+  std::unordered_set<Instruction*> to_kill;
   (*func_iter)
       ->ForEachInst(
-          [context, first_func, func_iter, &seen_func_end](Instruction* inst) {
+          [context, first_func, func_iter, &seen_func_end,
+           &to_kill](Instruction* inst) {
             if (inst->opcode() == SpvOpFunctionEnd) {
               seen_func_end = true;
             }
@@ -33,6 +35,7 @@ Module::iterator EliminateFunction(IRContext* context,
             // global values if this is the first function.
             if (seen_func_end && inst->opcode() == SpvOpExtInst) {
               assert(inst->IsNonSemanticInstruction());
+              if (to_kill.find(inst) != to_kill.end()) return;
               std::unique_ptr<Instruction> clone(inst->Clone(context));
               context->ForgetUses(inst);
               context->AnalyzeDefUse(clone.get());
@@ -44,12 +47,17 @@ Module::iterator EliminateFunction(IRContext* context,
                 prev_func_iter->AddNonSemanticInstruction(std::move(clone));
               }
               inst->ToNop();
-            } else {
-              context->KillNonSemanticInfo(inst);
+            } else if (to_kill.find(inst) == to_kill.end()) {
+              context->CollectNonSemanticTree(inst, &to_kill);
               context->KillInst(inst);
             }
           },
           true, true);
+
+  for (auto* dead : to_kill) {
+    context->KillInst(dead);
+  }
+
   return func_iter->Erase();
 }
 

@@ -48,6 +48,15 @@ VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
+
+// Helper function for populating barrier fields based on the desired image layout.
+// This logic is specific to blitting.
+VulkanLayoutTransition blitterTransitionHelper(VulkanLayoutTransition transition);
+
+// Helper function for populating barrier fields based on the desired image layout.
+// This logic is specific to texturing.
+VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition);
+
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);

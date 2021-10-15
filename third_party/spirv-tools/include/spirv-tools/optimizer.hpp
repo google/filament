@@ -68,11 +68,6 @@ class Optimizer {
   // The instance will have an empty message consumer, which ignores all
   // messages from the library. Use SetMessageConsumer() to supply a consumer
   // if messages are of concern.
-  //
-  // For collections of passes that are meant to transform the input into
-  // another execution environment, then the source environment should be
-  // supplied. e.g. for VulkanToWebGPUPasses the environment should be
-  // SPV_ENV_VULKAN_1_1 not SPV_ENV_WEBGPU_0.
   explicit Optimizer(spv_target_env env);
 
   // Disables copy/move constructor/assignment operations.
@@ -105,16 +100,6 @@ class Optimizer {
   // This sequence of passes is subject to constant review and will change
   // from time to time.
   Optimizer& RegisterSizePasses();
-
-  // Registers passes that have been prescribed for converting from Vulkan to
-  // WebGPU. This sequence of passes is subject to constant review and will
-  // change from time to time.
-  Optimizer& RegisterVulkanToWebGPUPasses();
-
-  // Registers passes that have been prescribed for converting from WebGPU to
-  // Vulkan. This sequence of passes is subject to constant review and will
-  // change from time to time.
-  Optimizer& RegisterWebGPUToVulkanPasses();
 
   // Registers passes that attempt to legalize the generated code.
   //
@@ -237,13 +222,6 @@ class Optimizer {
 // Creates a null pass.
 // A null pass does nothing to the SPIR-V module to be optimized.
 Optimizer::PassToken CreateNullPass();
-
-// Creates a strip-atomic-counter-memory pass.
-// A strip-atomic-counter-memory pass removes all usages of the
-// AtomicCounterMemory bit in Memory Semantics bitmasks. This bit is a no-op in
-// Vulkan, so isn't needed in that env. And the related capability is not
-// allowed in WebGPU, so it is not allowed in that env.
-Optimizer::PassToken CreateStripAtomicCounterMemoryPass();
 
 // Creates a strip-debug-info pass.
 // A strip-debug-info pass removes all debug instructions (as documented in
@@ -536,6 +514,13 @@ Optimizer::PassToken CreateDeadInsertElimPass();
 // eliminated with standard dead code elimination.
 Optimizer::PassToken CreateAggressiveDCEPass();
 
+// Creates a remove-unused-interface-variables pass.
+// Removes variables referenced on the |OpEntryPoint| instruction that are not
+// referenced in the entry point function or any function in its call tree. Note
+// that this could cause the shader interface to no longer match other shader
+// stages.
+Optimizer::PassToken CreateRemoveUnusedInterfaceVariablesPass();
+
 // Creates an empty pass.
 // This is deprecated and will be removed.
 // TODO(jaebaek): remove this pass after handling glslang's broken unit tests.
@@ -747,12 +732,16 @@ Optimizer::PassToken CreateCombineAccessChainsPass();
 // The instrumentation will read and write buffers in debug
 // descriptor set |desc_set|. It will write |shader_id| in each output record
 // to identify the shader module which generated the record.
-// |input_length_enable| controls instrumentation of runtime descriptor array
-// references, and |input_init_enable| controls instrumentation of descriptor
-// initialization checking, both of which require input buffer support.
+// |desc_length_enable| controls instrumentation of runtime descriptor array
+// references, |desc_init_enable| controls instrumentation of descriptor
+// initialization checking, and |buff_oob_enable| controls instrumentation
+// of storage and uniform buffer bounds checking, all of which require input
+// buffer support. |texbuff_oob_enable| controls instrumentation of texel
+// buffers, which does not require input buffer support.
 Optimizer::PassToken CreateInstBindlessCheckPass(
-    uint32_t desc_set, uint32_t shader_id, bool input_length_enable = false,
-    bool input_init_enable = false, bool input_buff_oob_enable = false);
+    uint32_t desc_set, uint32_t shader_id, bool desc_length_enable = false,
+    bool desc_init_enable = false, bool buff_oob_enable = false,
+    bool texbuff_oob_enable = false);
 
 // Create a pass to instrument physical buffer address checking
 // This pass instruments all physical buffer address references to check that
@@ -798,29 +787,10 @@ Optimizer::PassToken CreateUpgradeMemoryModelPass();
 // where an instruction is moved into a more deeply nested construct.
 Optimizer::PassToken CreateCodeSinkingPass();
 
-// Create a pass to adds initializers for OpVariable calls that require them
-// in WebGPU. Currently this pass naively initializes variables that are
-// missing an initializer with a null value. In the future it may initialize
-// variables to the first value stored in them, if that is a constant.
-Optimizer::PassToken CreateGenerateWebGPUInitializersPass();
-
 // Create a pass to fix incorrect storage classes.  In order to make code
 // generation simpler, DXC may generate code where the storage classes do not
 // match up correctly.  This pass will fix the errors that it can.
 Optimizer::PassToken CreateFixStorageClassPass();
-
-// Create a pass to legalize OpVectorShuffle operands going into WebGPU. WebGPU
-// forbids using 0xFFFFFFFF, which indicates an undefined result, so this pass
-// converts those literals to 0.
-Optimizer::PassToken CreateLegalizeVectorShufflePass();
-
-// Create a pass to decompose initialized variables into a seperate variable
-// declaration and an initial store.
-Optimizer::PassToken CreateDecomposeInitializedVariablesPass();
-
-// Create a pass to attempt to split up invalid unreachable merge-blocks and
-// continue-targets to legalize for WebGPU.
-Optimizer::PassToken CreateSplitInvalidUnreachablePass();
 
 // Creates a graphics robust access pass.
 //
@@ -874,6 +844,15 @@ Optimizer::PassToken CreateWrapOpKillPass();
 // VK_AMD_shader_trinary_minmax with equivalent code using core instructions and
 // capabilities.
 Optimizer::PassToken CreateAmdExtToKhrPass();
+
+// Replaces the internal version of GLSLstd450 InterpolateAt* extended
+// instructions with the externally valid version. The internal version allows
+// an OpLoad of the interpolant for the first argument. This pass removes the
+// OpLoad and replaces it with its pointer. glslang and possibly other
+// frontends will create the internal version for HLSL. This pass will be part
+// of HLSL legalization and should be called after interpolants have been
+// propagated into their final positions.
+Optimizer::PassToken CreateInterpolateFixupPass();
 
 }  // namespace spvtools
 

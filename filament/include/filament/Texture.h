@@ -94,7 +94,7 @@ public:
      *
      * @see generatePrefilterMipmap()
      */
-    struct UTILS_PUBLIC PrefilterOptions {
+    struct PrefilterOptions {
         uint16_t sampleCount = 8;   //!< sample count used for filtering
         bool mirror = true;         //!< whether the environment must be mirrored
     private:
@@ -181,7 +181,7 @@ public:
         /**
          * Specifies how a texture's channels map to color components
          *
-         * Texture Swizzle is only supported is isTextureSwizzleSupported() returns true.
+         * Texture Swizzle is only supported if isTextureSwizzleSupported() returns true.
          *
          * @param r  texture channel for red component
          * @param g  texture channel for green component
@@ -394,6 +394,7 @@ public:
      *   - only the level of detail (lod) 0 can be specified
      *   - only nearest or linear filtering is supported
      *   - the size and format of the texture is defined by the external image
+     *   - only the CLAMP_TO_EDGE wrap mode is supported
      *
      * @param engine        Engine this texture is associated to.
      * @param image         An opaque handle to a platform specific image. Supported types are
@@ -429,6 +430,7 @@ public:
      *   - only the level of detail (lod) 0 can be specified
      *   - only nearest or linear filtering is supported
      *   - the size and format of the texture is defined by the external image
+     *   - only the CLAMP_TO_EDGE wrap mode is supported
      *
      * @param engine        Engine this texture is associated to.
      * @param image         An opaque handle to a platform specific image. Supported types are

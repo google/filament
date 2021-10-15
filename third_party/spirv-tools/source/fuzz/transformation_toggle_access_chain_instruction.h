@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationToggleAccessChainInstruction : public Transformation {
  public:
   explicit TransformationToggleAccessChainInstruction(
-      const protobufs::TransformationToggleAccessChainInstruction& message);
+      protobufs::TransformationToggleAccessChainInstruction message);
 
   TransformationToggleAccessChainInstruction(
       const protobufs::InstructionDescriptor& instruction_descriptor);

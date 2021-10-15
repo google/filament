@@ -93,7 +93,7 @@ constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {
 
 constexpr inline GLbitfield getAttachmentBitfield(backend::TargetBufferFlags flags) noexcept {
     GLbitfield mask = 0;
-    if (any(flags & backend::TargetBufferFlags::COLOR)) {
+    if (any(flags & backend::TargetBufferFlags::COLOR_ALL)) {
         mask |= (GLbitfield)GL_COLOR_BUFFER_BIT;
     }
     if (any(flags & backend::TargetBufferFlags::DEPTH)) {
@@ -112,6 +112,15 @@ constexpr inline GLenum getBufferUsage(backend::BufferUsage usage) noexcept {
         case backend::BufferUsage::DYNAMIC:
         case backend::BufferUsage::STREAM:
             return GL_DYNAMIC_DRAW;
+    }
+}
+
+constexpr inline GLenum getBufferBindingType(backend::BufferObjectBinding bindingType) noexcept {
+    switch (bindingType) {
+        case backend::BufferObjectBinding::VERTEX:
+            return GL_ARRAY_BUFFER;
+        case backend::BufferObjectBinding::UNIFORM:
+            return GL_UNIFORM_BUFFER;
     }
 }
 

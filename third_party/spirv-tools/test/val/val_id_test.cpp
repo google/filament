@@ -411,10 +411,10 @@ TEST_F(ValidateIdWithMessage, OpEntryPointFunctionBad) {
 }
 TEST_F(ValidateIdWithMessage, OpEntryPointParameterCountBad) {
   std::string spirv = kGLSL450MemoryModel + R"(
-     OpEntryPoint GLCompute %3 ""
-%1 = OpTypeVoid
-%2 = OpTypeFunction %1 %1
-%3 = OpFunction %1 None %2
+     OpEntryPoint GLCompute %1 ""
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2 %2
+%1 = OpFunction %2 None %3
 %4 = OpLabel
      OpReturn
      OpFunctionEnd)";
@@ -426,16 +426,55 @@ TEST_F(ValidateIdWithMessage, OpEntryPointParameterCountBad) {
 }
 TEST_F(ValidateIdWithMessage, OpEntryPointReturnTypeBad) {
   std::string spirv = kGLSL450MemoryModel + R"(
-     OpEntryPoint GLCompute %3 ""
-%1 = OpTypeInt 32 0
-%ret = OpConstant %1 0
-%2 = OpTypeFunction %1
-%3 = OpFunction %1 None %2
+     OpEntryPoint GLCompute %1 ""
+%2 = OpTypeInt 32 0
+%ret = OpConstant %2 0
+%3 = OpTypeFunction %2
+%1 = OpFunction %2 None %3
 %4 = OpLabel
      OpReturnValue %ret
      OpFunctionEnd)";
   CompileSuccessfully(spirv.c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint Entry Point <id> '1[%1]'s function "
+                        "return type is not void."));
+}
+TEST_F(ValidateIdWithMessage, OpEntryPointParameterCountBadInVulkan) {
+  std::string spirv = R"(
+     OpCapability Shader
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %1 ""
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2 %2
+%1 = OpFunction %2 None %3
+%4 = OpLabel
+     OpReturn
+     OpFunctionEnd)";
+  CompileSuccessfully(spirv.c_str(), SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-None-04633"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpEntryPoint Entry Point <id> '1[%1]'s function "
+                        "parameter count is not zero"));
+}
+TEST_F(ValidateIdWithMessage, OpEntryPointReturnTypeBadInVulkan) {
+  std::string spirv = R"(
+     OpCapability Shader
+     OpMemoryModel Logical GLSL450
+     OpEntryPoint GLCompute %1 ""
+%2 = OpTypeInt 32 0
+%ret = OpConstant %2 0
+%3 = OpTypeFunction %2
+%1 = OpFunction %2 None %3
+%4 = OpLabel
+     OpReturnValue %ret
+     OpFunctionEnd)";
+  CompileSuccessfully(spirv.c_str(), SPV_ENV_VULKAN_1_0);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-None-04633"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("OpEntryPoint Entry Point <id> '1[%1]'s function "
                         "return type is not void."));
@@ -796,7 +835,7 @@ class OpTypeArrayLengthTest
         position_(spv_position_t{0, 0, 0}),
         diagnostic_(spvDiagnosticCreate(&position_, "")) {}
 
-  ~OpTypeArrayLengthTest() { spvDiagnosticDestroy(diagnostic_); }
+  ~OpTypeArrayLengthTest() override { spvDiagnosticDestroy(diagnostic_); }
 
   // Runs spvValidate() on v, printing any errors via spvDiagnosticPrint().
   spv_result_t Val(const SpirvVector& v, const std::string& expected_err = "") {
@@ -915,31 +954,6 @@ TEST_P(OpTypeArrayLengthTest, LengthPositiveHugeEnding1InVulkan) {
   }
 }
 
-TEST_P(OpTypeArrayLengthTest, LengthPositiveHugeEnding0InWebGPU) {
-  env_ = SPV_ENV_WEBGPU_0;
-  const int width = GetParam();
-  // WebGPU only has 32 bit integers.
-  if (width != 32) return;
-  const int max_int_width = 32;
-  const auto module = CompileSuccessfully(MakeArrayLength(
-      big_num_ending_0(width), kUnsigned, width, max_int_width, true));
-  EXPECT_EQ(SPV_SUCCESS, Val(module));
-}
-
-TEST_P(OpTypeArrayLengthTest, LengthPositiveHugeEnding1InWebGPU) {
-  env_ = SPV_ENV_WEBGPU_0;
-  const int width = GetParam();
-  // WebGPU only has 32 bit integers.
-  if (width != 32) return;
-  const int max_int_width = 32;
-  const auto module = CompileSuccessfully(MakeArrayLength(
-      big_num_ending_1(width), kUnsigned, width, max_int_width, true));
-  EXPECT_EQ(SPV_ERROR_INVALID_ID,
-            Val(module,
-                "OpTypeArray Length <id> '3\\[%.*\\]' size exceeds max value "
-                "2147483648 permitted by WebGPU: got 2147483649"));
-}
-
 // The only valid widths for integers are 8, 16, 32, and 64.
 // Since the Int8 capability requires the Kernel capability, and the Kernel
 // capability prohibits usage of signed integers, we can skip 8-bit integers
@@ -1041,6 +1055,8 @@ TEST_F(ValidateIdWithMessage, OpTypeStructOpaqueTypeBad) {
 )";
   CompileSuccessfully(spirv.c_str(), SPV_ENV_VULKAN_1_0);
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-None-04667"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("OpTypeStruct must not contain an opaque type"));
 }
@@ -2749,9 +2765,13 @@ TEST_F(ValidateIdWithMessage, OpStoreObjectGood) {
 %6 = OpVariable %3 Uniform
 %7 = OpFunction %1 None %4
 %8 = OpLabel
-%9 = OpUndef %1
+%9 = OpFunctionCall %1 %10
      OpStore %6 %9
      OpReturn
+     OpFunctionEnd
+%10 = OpFunction %1 None %4
+%11 = OpLabel
+      OpReturn
      OpFunctionEnd)";
   CompileSuccessfully(spirv.c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
@@ -4686,39 +4706,6 @@ TEST_F(ValidateIdWithMessage, OpVectorShuffleLiterals) {
       HasSubstr(
           "Component index 8 is out of bounds for combined (Vector1 + Vector2) "
           "size of 5."));
-}
-
-TEST_F(ValidateIdWithMessage, WebGPUOpVectorShuffle0xFFFFFFFFLiteralBad) {
-  std::string spirv = R"(
-    OpCapability Shader
-    OpCapability VulkanMemoryModelKHR
-    OpExtension "SPV_KHR_vulkan_memory_model"
-    OpMemoryModel Logical VulkanKHR
-%float = OpTypeFloat 32
-%vec2 = OpTypeVector %float 2
-%vec3 = OpTypeVector %float 3
-%vec4 = OpTypeVector %float 4
-%ptr_vec2 = OpTypePointer Function %vec2
-%ptr_vec3 = OpTypePointer Function %vec3
-%float_1 = OpConstant %float 1
-%float_2 = OpConstant %float 2
-%1 = OpConstantComposite %vec2 %float_2 %float_1
-%2 = OpConstantComposite %vec3 %float_1 %float_2 %float_2
-%3 = OpTypeFunction %vec4
-%4 = OpFunction %vec4 None %3
-%5 = OpLabel
-%var = OpVariable %ptr_vec2 Function %1
-%var2 = OpVariable %ptr_vec3 Function %2
-%6 = OpLoad %vec2 %var
-%7 = OpLoad %vec3 %var2
-%8 = OpVectorShuffle %vec4 %6 %7 4 3 1 0xffffffff
-     OpReturnValue %8
-     OpFunctionEnd)";
-  CompileSuccessfully(spirv.c_str(), SPV_ENV_WEBGPU_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Component literal at operand 3 cannot be 0xFFFFFFFF in"
-                        " WebGPU execution environment."));
 }
 
 // TODO: OpCompositeConstruct

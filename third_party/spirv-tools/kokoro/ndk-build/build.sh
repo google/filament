@@ -20,38 +20,5 @@ set -e
 # Display commands being run.
 set -x
 
-BUILD_ROOT=$PWD
-SRC=$PWD/github/SPIRV-Tools
-
-# Get NINJA.
-wget -q https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
-unzip -q ninja-linux.zip
-export PATH="$PWD:$PATH"
-
-# NDK Path
-export ANDROID_NDK=/opt/android-ndk-r15c
-
-# Get the dependencies.
-cd $SRC
-git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers external/spirv-headers
-git clone https://github.com/google/googletest          external/googletest
-cd external && cd googletest && git reset --hard 1fb1bb23bb8418dc73a5a9a82bbed31dc610fec7 && cd .. && cd ..
-git clone --depth=1 https://github.com/google/effcee              external/effcee
-git clone --depth=1 https://github.com/google/re2                 external/re2
-
-mkdir build && cd $SRC/build
-mkdir libs
-mkdir app
-
-# Invoke the build.
-BUILD_SHA=${KOKORO_GITHUB_COMMIT:-$KOKORO_GITHUB_PULL_REQUEST_COMMIT}
-echo $(date): Starting ndk-build ...
-$ANDROID_NDK/ndk-build \
-  -C $SRC/android_test \
-  NDK_PROJECT_PATH=.   \
-  NDK_LIBS_OUT=./libs  \
-  NDK_APP_OUT=./app    \
-  -j8
-
-echo $(date): ndk-build completed.
-
+SCRIPT_DIR=`dirname "$BASH_SOURCE"`
+source $SCRIPT_DIR/../scripts/linux/build.sh ASAN clang android-ndk-build

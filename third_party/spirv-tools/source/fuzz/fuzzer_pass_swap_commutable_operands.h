@@ -30,8 +30,6 @@ class FuzzerPassSwapCommutableOperands : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassSwapCommutableOperands();
-
   void Apply() override;
 };
 

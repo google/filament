@@ -42,8 +42,11 @@ public:
             id<MTLTexture> depth = nil;
             MTLRegion region = {};
             uint8_t level = 0;
+            uint32_t slice = 0;      // must be 0 on source attachment
         };
 
+        // Valid source formats:       2D, 2DMultisample, 3D
+        // Valid destination formats:  2D, 2DArray, 3D, Cube
         Attachment source, destination;
         SamplerMagFilter filter;
 
@@ -76,20 +79,32 @@ public:
 
 private:
 
-    static void setupColorAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor);
-    static void setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor);
+    static void setupColorAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor,
+            uint32_t depthPlane);
+    static void setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor,
+            uint32_t depthPlane);
 
     struct BlitFunctionKey {
         bool blitColor;
         bool blitDepth;
         bool msaaColorSource;
         bool msaaDepthSource;
+        bool sources3D;
+
+        char padding[3];
+
+        bool isValid() const noexcept {
+            // MSAA 3D textures do not exist.
+            bool hasMsaa = msaaColorSource || msaaDepthSource;
+            return !(hasMsaa && sources3D);
+        }
 
         bool operator==(const BlitFunctionKey& rhs) const noexcept {
             return blitColor == rhs.blitColor &&
                    blitDepth == rhs.blitDepth &&
                    msaaColorSource == rhs.msaaColorSource &&
-                   msaaDepthSource == rhs.msaaDepthSource;
+                   msaaDepthSource == rhs.msaaDepthSource &&
+                   sources3D == rhs.sources3D;
         }
 
         BlitFunctionKey() {
@@ -99,6 +114,11 @@ private:
 
     void blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
             const BlitArgs& args);
+    void blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+            const BlitArgs& args);
+    void blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor, bool blitDepth,
+            const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest);
+    id<MTLTexture> createIntermediateTexture(id<MTLTexture> t, MTLSize size);
     id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
     id<MTLFunction> getBlitVertexFunction();
     id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);

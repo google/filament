@@ -667,57 +667,6 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidInBasicBlock) {
       HasSubstr("ModuleProcessed cannot appear in a function declaration"));
 }
 
-TEST_F(ValidateLayout, WebGPUCallerBeforeCalleeBad) {
-  char str[] = R"(
-           OpCapability Shader
-           OpCapability VulkanMemoryModelKHR
-           OpExtension "SPV_KHR_vulkan_memory_model"
-           OpMemoryModel Logical VulkanKHR
-           OpEntryPoint GLCompute %main "main"
-%void    = OpTypeVoid
-%voidfn  = OpTypeFunction %void
-%main    = OpFunction %void None %voidfn
-%1       = OpLabel
-%2       = OpFunctionCall %void %callee
-           OpReturn
-           OpFunctionEnd
-%callee  = OpFunction %void None %voidfn
-%3       = OpLabel
-           OpReturn
-           OpFunctionEnd
-)";
-
-  CompileSuccessfully(str, SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_ERROR_INVALID_LAYOUT, ValidateInstructions(SPV_ENV_WEBGPU_0));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("For WebGPU, functions need to be defined before being "
-                        "called.\n  %5 = OpFunctionCall %void %6\n"));
-}
-
-TEST_F(ValidateLayout, WebGPUCalleeBeforeCallerGood) {
-  char str[] = R"(
-           OpCapability Shader
-           OpCapability VulkanMemoryModelKHR
-           OpExtension "SPV_KHR_vulkan_memory_model"
-           OpMemoryModel Logical VulkanKHR
-           OpEntryPoint GLCompute %main "main"
-%void    = OpTypeVoid
-%voidfn  = OpTypeFunction %void
-%callee  = OpFunction %void None %voidfn
-%3       = OpLabel
-           OpReturn
-           OpFunctionEnd
-%main    = OpFunction %void None %voidfn
-%1       = OpLabel
-%2       = OpFunctionCall %void %callee
-           OpReturn
-           OpFunctionEnd
-)";
-
-  CompileSuccessfully(str, SPV_ENV_WEBGPU_0);
-  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_WEBGPU_0));
-}
-
 // TODO(umar): Test optional instructions
 
 }  // namespace

@@ -31,7 +31,6 @@ struct EntryPoint {
 class CodeGenerator {
  public:
   static CodeGenerator GetDefaultShaderCodeGenerator();
-  static CodeGenerator GetWebGPUShaderCodeGenerator();
 
   std::string Build() const;
 

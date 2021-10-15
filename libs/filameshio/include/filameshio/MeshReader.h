@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_FILAMESHIO_MESHREADER_H
 #define TNT_FILAMENT_FILAMESHIO_MESHREADER_H
 
+#include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/CString.h>
 
@@ -39,7 +40,7 @@ namespace filamesh {
  * by the command line tool of the same name. This file format is documented in
  * "docs/filamesh.md" in the Filament distribution.
  */
-class MeshReader {
+class UTILS_PUBLIC MeshReader {
 public:
     using Callback = void(*)(void* buffer, size_t size, void* user);
 

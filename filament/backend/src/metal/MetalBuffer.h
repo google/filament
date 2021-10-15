@@ -20,6 +20,8 @@
 #include "MetalContext.h"
 #include "MetalBufferPool.h"
 
+#include <backend/DriverEnums.h>
+
 #include <Metal/Metal.h>
 
 namespace filament {
@@ -29,7 +31,7 @@ namespace metal {
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
@@ -51,7 +53,7 @@ public:
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
      */
-    void copyIntoBuffer(void* src, size_t size);
+    void copyIntoBuffer(void* src, size_t size, size_t byteOffset = 0);
 
     /**
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
@@ -59,8 +61,18 @@ public:
      *
      * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
      * is no device allocation.
+     *
+     * For STREAM buffers, getGpuBufferStreamOffset() should be called to retrieve the correct
+     * buffer offset.
+     *
      */
     id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
+
+    /**
+     * Returns the offset into the buffer returned by getGpuBufferForDraw. This is always 0 for
+     * non-STREAM buffers.
+     */
+    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamStart; }
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
@@ -81,12 +93,16 @@ public:
 
 private:
 
+    BufferUsage mUsage;
     size_t mBufferSize = 0;
     id<MTLBuffer> mExternalBuffer = nil;
+    size_t mCurrentStreamStart = 0;
+    size_t mCurrentStreamEnd = 0;
     const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
 
+    void copyIntoStreamBuffer(void* src, size_t size);
 };
 
 } // namespace metal

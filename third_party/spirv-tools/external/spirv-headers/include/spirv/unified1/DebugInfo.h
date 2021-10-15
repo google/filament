@@ -78,6 +78,7 @@ enum DebugInfoInstructions {
 
 
 enum DebugInfoDebugInfoFlags {
+    DebugInfoNone = 0x0000,
     DebugInfoFlagIsProtected = 0x01,
     DebugInfoFlagIsPrivate = 0x02,
     DebugInfoFlagIsPublic = 0x03,

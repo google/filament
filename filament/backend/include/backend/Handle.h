@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_HANDLE_H
-#define TNT_FILAMENT_DRIVER_HANDLE_H
+#ifndef TNT_FILAMENT_BACKEND_HANDLE_H
+#define TNT_FILAMENT_BACKEND_HANDLE_H
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -36,7 +36,6 @@ struct HwSwapChain;
 struct HwSync;
 struct HwTexture;
 struct HwTimerQuery;
-struct HwUniformBuffer;
 struct HwVertexBuffer;
 
 /*
@@ -109,10 +108,9 @@ using SwapChainHandle       = Handle<HwSwapChain>;
 using SyncHandle            = Handle<HwSync>;
 using TextureHandle         = Handle<HwTexture>;
 using TimerQueryHandle      = Handle<HwTimerQuery>;
-using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_HANDLE_H
+#endif // TNT_FILAMENT_BACKEND_HANDLE_H

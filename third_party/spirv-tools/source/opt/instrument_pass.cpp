@@ -758,7 +758,6 @@ uint32_t InstrumentPass::GetStreamWriteFunctionId(uint32_t stage_idx,
                                        write_blk_id, merge_blk_id, merge_blk_id,
                                        SpvSelectionControlMaskNone);
     // Close safety test block and gen write block
-    new_blk_ptr->SetParent(&*output_func);
     output_func->AddBasicBlock(std::move(new_blk_ptr));
     new_blk_ptr = MakeUnique<BasicBlock>(std::move(write_label));
     builder.SetInsertPoint(&*new_blk_ptr);
@@ -773,13 +772,11 @@ uint32_t InstrumentPass::GetStreamWriteFunctionId(uint32_t stage_idx,
     }
     // Close write block and gen merge block
     (void)builder.AddBranch(merge_blk_id);
-    new_blk_ptr->SetParent(&*output_func);
     output_func->AddBasicBlock(std::move(new_blk_ptr));
     new_blk_ptr = MakeUnique<BasicBlock>(std::move(merge_label));
     builder.SetInsertPoint(&*new_blk_ptr);
     // Close merge block and function and add function to module
     (void)builder.AddNullaryOp(0, SpvOpReturn);
-    new_blk_ptr->SetParent(&*output_func);
     output_func->AddBasicBlock(std::move(new_blk_ptr));
     std::unique_ptr<Instruction> func_end_inst(
         new Instruction(get_module()->context(), SpvOpFunctionEnd, 0, 0, {}));
@@ -860,7 +857,6 @@ uint32_t InstrumentPass::GetDirectReadFunctionId(uint32_t param_cnt) {
       context(), SpvOpReturnValue, 0, 0,
       std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {last_value_id}}}));
   // Close block and function and add function to module
-  new_blk_ptr->SetParent(&*input_func);
   input_func->AddBasicBlock(std::move(new_blk_ptr));
   std::unique_ptr<Instruction> func_end_inst(
       new Instruction(get_module()->context(), SpvOpFunctionEnd, 0, 0, {}));

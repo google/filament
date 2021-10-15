@@ -29,8 +29,6 @@ class FuzzerPassAddCompositeExtract : public FuzzerPass {
       FuzzerContext* fuzzer_context,
       protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassAddCompositeExtract() override;
-
   void Apply() override;
 };
 

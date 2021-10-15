@@ -22,10 +22,11 @@ namespace fuzz {
 class TransformationMergeFunctionReturns : public Transformation {
  public:
   explicit TransformationMergeFunctionReturns(
-      const protobufs::TransformationMergeFunctionReturns& message);
+      protobufs::TransformationMergeFunctionReturns message);
 
   TransformationMergeFunctionReturns(
-      uint32_t function_id, uint32_t outer_header_id, uint32_t outer_return_id,
+      uint32_t function_id, uint32_t outer_header_id,
+      uint32_t unreachable_continue_id, uint32_t outer_return_id,
       uint32_t return_val_id, uint32_t any_returnable_val_id,
       const std::vector<protobufs::ReturnMergingInfo>& returns_merging_info);
 
@@ -40,7 +41,7 @@ class TransformationMergeFunctionReturns : public Transformation {
   //   statements, this id will be ignored.
   // - Merge blocks of reachable loops that contain return statements only
   //   consist of OpLabel, OpPhi or OpBranch instructions.
-  // - The model contains OpConstantTrue and OpConstantFalse instructions.
+  // - The module contains OpConstantTrue and OpConstantFalse instructions.
   // - For all merge blocks of reachable loops that contain return statements,
   //   either:
   //   - a mapping is provided in |message_.return_merging_info|, all of the

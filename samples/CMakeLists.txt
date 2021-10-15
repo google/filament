@@ -24,6 +24,7 @@ set(MATERIAL_SRCS
         materials/aoPreview.mat
         materials/groundShadow.mat
         materials/heightfield.mat
+        materials/image.mat
         materials/mirror.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
@@ -36,7 +37,8 @@ set(MATERIAL_SRCS
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
-        materials/texturedLit.mat)
+        materials/texturedLit.mat
+)
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
@@ -228,6 +230,7 @@ if (NOT ANDROID)
     add_demo(heightfield)
     add_demo(hellopbr)
     add_demo(hellotriangle)
+    add_demo(image_viewer)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(multiple_windows)
@@ -248,12 +251,18 @@ if (NOT ANDROID)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-resources gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
+    target_link_libraries(image_viewer PRIVATE viewer imageio)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
+    # ==============================================================================================
+    # Installation
+    # ==============================================================================================
+    install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
+    install(TARGETS material_sandbox RUNTIME DESTINATION bin)
 endif()
 
 # ==================================================================================================

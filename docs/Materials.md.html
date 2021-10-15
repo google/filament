@@ -412,7 +412,7 @@ with a direction map](images/screenshot_anisotropy.png)
 The result shown in figure [anisotropyDirectionProperty] was obtained using the direction map shown
 in figure [anisotropyDirectionProperty].
 
-![Figure [anisotropyDirectionProperty]: Example of a direction map](images/screenshot_anisotropy_map.jpg)
+![Figure [anisotropyDirectionProperty]: Example of Lighting: specularAmbientOcclusiona direction map](images/screenshot_anisotropy_map.jpg)
 
 ### Ambient occlusion
 
@@ -959,7 +959,9 @@ Type
 
 Value
 :     Each entry is an object with the properties `name` and `type`, both of `string` type. The
-      name must be a valid GLSL identifier. The type must be one of the types described in
+      name must be a valid GLSL identifier. Entries also have an optional `precision`, which can be
+      one of `default` (best precision for the platform, typically `high` on desktop, `medium` on
+      mobile), `low`, `medium`, `high`. The type must be one of the types described in
       table [materialParamsTypes].
 
          Type          |            Description
@@ -988,10 +990,8 @@ samplerCubemap         | Cubemap texture
 [Table [materialParamsTypes]: Material parameter types]
 
 Samplers
-:     Sampler types can also specify a `format` (defaults to `float`) and a `precision` (defaults
-      to `default`). The format can be one of `int`, `float`. The precision can be one of `default`
-      (best precision for the platform, typically `high` on desktop, `medium` on mobile),
-      `low`, `medium`, `high`.
+:     Sampler types can also specify a `format` which can be either `int` or `float` (defaults to
+      `float`).
 
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where
@@ -1541,6 +1541,42 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Lighting: transparentShadow
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:     Enables transparent shadows on this material. When this feature is enabled, Filament emulates
+      transparent shadows using a dithering pattern: they work best with variance shadow maps (VSM)
+      and blurring enabled. The opacity of the shadow derives directly from the alpha channel of
+      the material's `baseColor` property. Transparent shadows can be enabled on opaque objects,
+      making them compatible with refractive/transmissive objects that are otherwise considered
+      opaque.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Clear plastic with stickers",
+    transparentShadow : true,
+    blending : transparent,
+    // ...
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, getUV0());
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [transparentShadow]: Objects rendered with transparent shadows and blurry VSM with a
+radius of 4. Model [Bottle of Water](https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff)
+by [T-Art](https://sketchfab.com/person-x).](images/screenshot_transparent_shadows.jpg)
+
 ### Lighting: clearCoatIorChange
 
 Type
@@ -1611,9 +1647,7 @@ Description
      This effect helps remove unwanted specular reflections as shown in figure [specularAO].
      When this value is set to `simple`, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to `bentNormals`, Filament will use
-     a much more accurate but much more expensive method. `bentNormals` only works if the material
-     sets the `bentNormal` property inside the fragment shader. If that property isn't set,
-     `bentNormals` will behave like `simple`.
+     a much more accurate but much more expensive method.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -2143,8 +2177,8 @@ The following APIs are only available from the fragment block:
 **getUV0()**                            | float2   |  First interpolated set of UV coordinates, only available if the uv0 attribute is required
 **getUV1()**                            | float2   |  First interpolated set of UV coordinates, only available if the uv1 attribute is required
 **getMaskThreshold()**                  | float    |  Returns the mask threshold, only available when `blending` is set to `masked`
-**inverseTonemap(float3)**              | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
-**inverseTonemapSRGB(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
+**inverseTonemap(float3)**              | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the "Filmic" tone mapping operator
+**inverseTonemapSRGB(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the "Filmic" tone mapping operator
 **luminance(float3)**                   | float    |  Computes the luminance of the specified linear sRGB color
 **ycbcrToRgb(float, float2)**           | float3   |  Converts a luminance and CbCr pair to a sRGB color
 **uvToRenderTargetUV(float2)**          | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment

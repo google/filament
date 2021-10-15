@@ -381,7 +381,6 @@ TEST_F(InlineTest, InOutParameter) {
 
   const std::vector<const char*> after = {
       // clang-format off
-         "%26 = OpUndef %void",
        "%main = OpFunction %void None %11",
          "%23 = OpLabel",
           "%b = OpVariable %_ptr_Function_v4float Function",
@@ -1543,11 +1542,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  const std::string undef = "%11 = OpUndef %void\n";
-
-  SinglePassRunAndCheck<InlineExhaustivePass>(
-      predefs + nonEntryFuncs + before, predefs + undef + nonEntryFuncs + after,
-      false, true);
+  SinglePassRunAndCheck<InlineExhaustivePass>(predefs + nonEntryFuncs + before,
+                                              predefs + nonEntryFuncs + after,
+                                              false, true);
 }
 
 TEST_F(InlineTest, MultiBlockLoopHeaderCallsMultiBlockCallee) {
@@ -1622,10 +1619,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  const std::string undef = "%20 = OpUndef %void\n";
-  SinglePassRunAndCheck<InlineExhaustivePass>(
-      predefs + nonEntryFuncs + before, predefs + undef + nonEntryFuncs + after,
-      false, true);
+  SinglePassRunAndCheck<InlineExhaustivePass>(predefs + nonEntryFuncs + before,
+                                              predefs + nonEntryFuncs + after,
+                                              false, true);
 }
 
 TEST_F(InlineTest, SingleBlockLoopCallsMultiBlockCalleeHavingSelectionMerge) {
@@ -1711,10 +1707,9 @@ OpBranchConditional %true %13 %16
 OpReturn
 OpFunctionEnd
 )";
-  const std::string undef = "%15 = OpUndef %void\n";
-  SinglePassRunAndCheck<InlineExhaustivePass>(
-      predefs + nonEntryFuncs + before, predefs + undef + nonEntryFuncs + after,
-      false, true);
+  SinglePassRunAndCheck<InlineExhaustivePass>(predefs + nonEntryFuncs + before,
+                                              predefs + nonEntryFuncs + after,
+                                              false, true);
 }
 
 TEST_F(InlineTest,
@@ -1793,10 +1788,9 @@ OpReturn
 OpFunctionEnd
 )";
 
-  const std::string undef = "%20 = OpUndef %void\n";
-  SinglePassRunAndCheck<InlineExhaustivePass>(
-      predefs + nonEntryFuncs + before, predefs + undef + nonEntryFuncs + after,
-      false, true);
+  SinglePassRunAndCheck<InlineExhaustivePass>(predefs + nonEntryFuncs + before,
+                                              predefs + nonEntryFuncs + after,
+                                              false, true);
 }
 
 TEST_F(InlineTest, NonInlinableCalleeWithSingleReturn) {
@@ -2169,7 +2163,6 @@ OpName %foo "foo"
 OpName %foo_entry "foo_entry"
 %void = OpTypeVoid
 %void_fn = OpTypeFunction %void
-%3 = OpUndef %void
 %foo = OpFunction %void None %void_fn
 %foo_entry = OpLabel
 OpReturn
@@ -2475,7 +2468,6 @@ OpName %kill_ "kill("
 %3 = OpTypeFunction %void
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
-%16 = OpUndef %void
 %main = OpFunction %void None %3
 %5 = OpLabel
 OpKill
@@ -2573,7 +2565,6 @@ OpName %kill_ "kill("
 %3 = OpTypeFunction %void
 %bool = OpTypeBool
 %true = OpConstantTrue %bool
-%16 = OpUndef %void
 %main = OpFunction %void None %3
 %5 = OpLabel
 OpTerminateInvocation
@@ -2588,6 +2579,63 @@ OpFunctionEnd
 
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndCheck<InlineExhaustivePass>(before, after, false, true);
+}
+
+TEST_F(InlineTest, InlineFuncWithOpTerminateRayNotInContinue) {
+  const std::string text =
+      R"(
+               OpCapability RayTracingKHR
+               OpExtension "SPV_KHR_ray_tracing"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint AnyHitKHR %MyAHitMain2 "MyAHitMain2" %a
+               OpSource HLSL 630
+               OpName %a "a"
+               OpName %MyAHitMain2 "MyAHitMain2"
+               OpName %param_var_a "param.var.a"
+               OpName %src_MyAHitMain2 "src.MyAHitMain2"
+               OpName %a_0 "a"
+               OpName %bb_entry "bb.entry"
+        %int = OpTypeInt 32 1
+%_ptr_IncomingRayPayloadKHR_int = OpTypePointer IncomingRayPayloadKHR %int
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+%_ptr_Function_int = OpTypePointer Function %int
+         %14 = OpTypeFunction %void %_ptr_Function_int
+          %a = OpVariable %_ptr_IncomingRayPayloadKHR_int IncomingRayPayloadKHR
+%MyAHitMain2 = OpFunction %void None %6
+          %7 = OpLabel
+%param_var_a = OpVariable %_ptr_Function_int Function
+         %10 = OpLoad %int %a
+               OpStore %param_var_a %10
+         %11 = OpFunctionCall %void %src_MyAHitMain2 %param_var_a
+         %13 = OpLoad %int %param_var_a
+               OpStore %a %13
+               OpReturn
+               OpFunctionEnd
+%src_MyAHitMain2 = OpFunction %void None %14
+        %a_0 = OpFunctionParameter %_ptr_Function_int
+   %bb_entry = OpLabel
+         %17 = OpLoad %int %a_0
+               OpStore %a %17
+               OpTerminateRayKHR
+               OpFunctionEnd
+
+; CHECK:      %MyAHitMain2 = OpFunction %void None
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT:   %param_var_a = OpVariable %_ptr_Function_int Function
+; CHECK-NEXT:   OpLoad %int %a
+; CHECK-NEXT:   OpStore %param_var_a {{%\d+}}
+; CHECK-NEXT:   OpLoad %int %param_var_a
+; CHECK-NEXT:   OpStore %a {{%\d+}}
+; CHECK-NEXT:   OpTerminateRayKHR
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT:   OpLoad %int %param_var_a
+; CHECK-NEXT:   OpStore %a %16
+; CHECK-NEXT:   OpReturn
+; CHECK-NEXT: OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<InlineExhaustivePass>(text, false);
 }
 
 TEST_F(InlineTest, EarlyReturnFunctionInlined) {
@@ -2801,7 +2849,6 @@ OpFunctionEnd
 %uint_0 = OpConstant %uint 0
 %false = OpConstantFalse %bool
 %_ptr_Function_bool = OpTypePointer Function %bool
-%11 = OpUndef %void
 %foo_ = OpFunction %void None %4
 %7 = OpLabel
 %18 = OpVariable %_ptr_Function_bool Function %false
@@ -3885,35 +3932,6 @@ OpFunctionEnd
 %bar_ret = OpFAdd %v4float %foo_val0 %v4f2
 OpReturnValue %bar_ret
 OpFunctionEnd
-)";
-
-  SinglePassRunAndMatch<InlineExhaustivePass>(text, true);
-}
-
-TEST_F(InlineTest, UsingVoidFunctionResult) {
-  const std::string text = R"(
-; CHECK: [[undef:%\w+]] = OpUndef %void
-; CHECK: OpFunction
-; CHECK: OpCopyObject %void [[undef]]
-; CHECK: OpFunctionEnd
-               OpCapability Shader
-          %1 = OpExtInstImport "GLSL.std.450"
-               OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %4 "main"
-               OpExecutionMode %4 OriginUpperLeft
-               OpSource ESSL 320
-          %2 = OpTypeVoid
-          %3 = OpTypeFunction %2
-          %4 = OpFunction %2 None %3
-          %5 = OpLabel
-          %8 = OpFunctionCall %2 %6
-          %9 = OpCopyObject %2 %8
-               OpReturn
-               OpFunctionEnd
-          %6 = OpFunction %2 None %3
-          %7 = OpLabel
-               OpReturn
-               OpFunctionEnd
 )";
 
   SinglePassRunAndMatch<InlineExhaustivePass>(text, true);

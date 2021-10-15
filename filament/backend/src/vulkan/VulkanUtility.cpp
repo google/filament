@@ -265,7 +265,7 @@ VkFormat getVkFormat(PixelDataFormat format, PixelDataType type) {
     CONVERT(RG_INTEGER, USHORT, R16G16_UINT);
     CONVERT(RG_INTEGER, SHORT, R16G16_SINT);
     CONVERT(RG, HALF, R16G16_SFLOAT);
-    CONVERT(RGBA_INTEGER, USHORT, R16G16B16A16_SINT);
+    CONVERT(RGBA_INTEGER, USHORT, R16G16B16A16_UINT);
     CONVERT(RGBA_INTEGER, SHORT, R16G16B16A16_SINT);
     CONVERT(RGBA, HALF, R16G16B16A16_SFLOAT);
     CONVERT(R_INTEGER, UINT, R32_UINT);
@@ -518,6 +518,67 @@ void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition tra
     vkCmdPipelineBarrier(cmdbuffer, transition.srcStage, transition.dstStage, 0, 0, nullptr, 0,
             nullptr, 1, &barrier);
 }
+
+VulkanLayoutTransition blitterTransitionHelper(VulkanLayoutTransition transition) {
+    switch (transition.newLayout) {
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_GENERAL:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        default:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.dstAccessMask = 0;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+    }
+    return transition;
+}
+
+VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition) {
+    switch (transition.newLayout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            transition.srcAccessMask = 0;
+            transition.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            transition.srcAccessMask = 0;
+            transition.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_GENERAL:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+            // We support PRESENT as a target layout to allow blitting from the swap chain.
+            // See also makeSwapChainPresentable().
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.dstAccessMask = 0;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+
+        default:
+            PANIC_POSTCONDITION("Unsupported layout transition.");
+    }
+    return transition;
+}
+
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b) {
     // These are all integers so there's no need for an epsilon.

@@ -186,8 +186,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "ACES_LEGACY")) { *out = ToneMapping::ACES_LEGACY; }
     else if (0 == compare(tokens[i], jsonChunk, "ACES")) { *out = ToneMapping::ACES; }
     else if (0 == compare(tokens[i], jsonChunk, "FILMIC")) { *out = ToneMapping::FILMIC; }
-    else if (0 == compare(tokens[i], jsonChunk, "EVILS")) { *out = ToneMapping::EVILS; }
-    else if (0 == compare(tokens[i], jsonChunk, "REINHARD")) { *out = ToneMapping::REINHARD; }
+    else if (0 == compare(tokens[i], jsonChunk, "GENERIC")) { *out = ToneMapping::GENERIC; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
         slog.w << "Invalid ToneMapping: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -267,6 +266,34 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericToneMapperSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "contrast") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->contrast);
+        } else if (compare(tok, jsonChunk, "shoulder") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shoulder);
+        } else if (compare(tok, jsonChunk, "midGrayIn") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->midGrayIn);
+        } else if (compare(tok, jsonChunk, "midGrayOut") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->midGrayOut);
+        } else if (compare(tok, jsonChunk, "hdrMax") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->hdrMax);
+        } else {
+            slog.w << "Invalid generic tone mapper key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid generic tone mapper value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGradingSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -279,6 +306,16 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "toneMapping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
+        } else if (compare(tok, jsonChunk, "genericToneMapper") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->genericToneMapper);
+        } else if (compare(tok, jsonChunk, "luminanceScaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->luminanceScaling);
+        } else if (compare(tok, jsonChunk, "gamutMapping") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->gamutMapping);
+        } else if (compare(tok, jsonChunk, "exposure") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->exposure);
+        } else if (compare(tok, jsonChunk, "nightAdaptation") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->nightAdaptation);
         } else if (compare(tok, jsonChunk, "temperature") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->temperature);
         } else if (compare(tok, jsonChunk, "tint") == 0) {
@@ -385,6 +422,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->resolution);
         } else if (compare(tok, jsonChunk, "intensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->intensity);
+        } else if (compare(tok, jsonChunk, "bilateralThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bilateralThreshold);
         } else if (compare(tok, jsonChunk, "quality") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "lowPassFilter") == 0) {
@@ -393,6 +432,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->upsampling);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "bentNormals") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->bentNormals);
         } else if (compare(tok, jsonChunk, "minHorizonAngleRad") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->minHorizonAngleRad);
         } else if (compare(tok, jsonChunk, "ssct") == 0) {
@@ -925,7 +966,7 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
-        auto light = lm->getInstance(sceneLights[i]);
+        light = lm->getInstance(sceneLights[i]);
         if (lm->isSpotLight(light)) {
             lm->setShadowCaster(light, settings.enableShadows);
         }
@@ -960,24 +1001,48 @@ void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox
     }
 }
 
+constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noexcept {
+    switch (settings.toneMapping) {
+        case ToneMapping::LINEAR: return new LinearToneMapper;
+        case ToneMapping::ACES_LEGACY: return new ACESLegacyToneMapper;
+        case ToneMapping::ACES: return new ACESToneMapper;
+        case ToneMapping::FILMIC: return new FilmicToneMapper;
+        case ToneMapping::GENERIC: return new GenericToneMapper(
+                    settings.genericToneMapper.contrast,
+                    settings.genericToneMapper.shoulder,
+                    settings.genericToneMapper.midGrayIn,
+                    settings.genericToneMapper.midGrayOut,
+                    settings.genericToneMapper.hdrMax
+        );
+        case ToneMapping::DISPLAY_RANGE: return new DisplayRangeToneMapper;
+    }
+}
+
 ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* engine) {
-    return ColorGrading::Builder()
-        .quality(settings.quality)
-        .whiteBalance(settings.temperature, settings.tint)
-        .channelMixer(settings.outRed, settings.outGreen, settings.outBlue)
-        .shadowsMidtonesHighlights(
-                Color::toLinear(settings.shadows),
-                Color::toLinear(settings.midtones),
-                Color::toLinear(settings.highlights),
-                settings.ranges
-        )
-        .slopeOffsetPower(settings.slope, settings.offset, settings.power)
-        .contrast(settings.contrast)
-        .vibrance(settings.vibrance)
-        .saturation(settings.saturation)
-        .curves(settings.gamma, settings.midPoint, settings.scale)
-        .toneMapping(settings.toneMapping)
-        .build(*engine);
+    ToneMapper* toneMapper = createToneMapper(settings);
+    ColorGrading *colorGrading = ColorGrading::Builder()
+            .quality(settings.quality)
+            .exposure(settings.exposure)
+            .nightAdaptation(settings.nightAdaptation)
+            .whiteBalance(settings.temperature, settings.tint)
+            .channelMixer(settings.outRed, settings.outGreen, settings.outBlue)
+            .shadowsMidtonesHighlights(
+                    Color::toLinear(settings.shadows),
+                    Color::toLinear(settings.midtones),
+                    Color::toLinear(settings.highlights),
+                    settings.ranges
+            )
+            .slopeOffsetPower(settings.slope, settings.offset, settings.power)
+            .contrast(settings.contrast)
+            .vibrance(settings.vibrance)
+            .saturation(settings.saturation)
+            .curves(settings.gamma, settings.midPoint, settings.scale)
+            .toneMapper(toneMapper)
+            .luminanceScaling(settings.luminanceScaling)
+            .gamutMapping(settings.gamutMapping)
+            .build(*engine);
+    delete toneMapper;
+    return colorGrading;
 }
 
 static std::ostream& operator<<(std::ostream& out, AntiAliasing in) {
@@ -1046,8 +1111,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::ACES_LEGACY: return out << "\"ACES_LEGACY\"";
         case ToneMapping::ACES: return out << "\"ACES\"";
         case ToneMapping::FILMIC: return out << "\"FILMIC\"";
-        case ToneMapping::EVILS: return out << "\"EVILS\"";
-        case ToneMapping::REINHARD: return out << "\"REINHARD\"";
+        case ToneMapping::GENERIC: return out << "\"GENERIC\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }
     return out << "\"INVALID\"";
@@ -1081,11 +1145,26 @@ static std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOpt
         << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettings& in) {
+    return out << "{\n"
+       << "\"contrast\": " << (in.contrast) << ",\n"
+       << "\"shoulder\": " << (in.shoulder) << ",\n"
+       << "\"midGrayIn\": " << (in.midGrayIn) << ",\n"
+       << "\"midGrayOut\": " << (in.midGrayOut) << ",\n"
+       << "\"hdrMax\": " << (in.hdrMax) << "\n"
+       << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
+        << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
+        << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
+        << "\"gamutMapping\": " << to_string(in.gamutMapping) << ",\n"
+        << "\"exposure\": " << (in.exposure) << ",\n"
+        << "\"nightAdaptation\": " << (in.nightAdaptation) << ",\n"
         << "\"temperature\": " << (in.temperature) << ",\n"
         << "\"tint\": " << (in.tint) << ",\n"
         << "\"outRed\": " << (in.outRed) << ",\n"
@@ -1130,10 +1209,12 @@ static std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions
         << "\"bias\": " << (in.bias) << ",\n"
         << "\"resolution\": " << (in.resolution) << ",\n"
         << "\"intensity\": " << (in.intensity) << ",\n"
+        << "\"bilateralThreshold\": " << (in.bilateralThreshold) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"lowPassFilter\": " << (in.lowPassFilter) << ",\n"
         << "\"upsampling\": " << (in.upsampling) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"bentNormals\": " << to_string(in.bentNormals) << ",\n"
         << "\"minHorizonAngleRad\": " << (in.minHorizonAngleRad) << ",\n"
         << "\"ssct\": " << (in.ssct) << "\n"
         << "}";
@@ -1336,13 +1417,27 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
         << "}";
 }
 
+bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
+    static_assert(sizeof(GenericToneMapperSettings) == 20, "Please update Settings.cpp");
+    return contrast == rhs.contrast &&
+           shoulder == rhs.shoulder &&
+           midGrayIn == rhs.midGrayIn &&
+           midGrayOut == rhs.midGrayOut &&
+           hdrMax == rhs.hdrMax;
+}
+
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 200, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 232, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
+            genericToneMapper == rhs.genericToneMapper &&
+            luminanceScaling == rhs.luminanceScaling &&
+            gamutMapping == rhs.gamutMapping &&
+            exposure == rhs.exposure &&
+            nightAdaptation == rhs.nightAdaptation &&
             temperature == rhs.temperature &&
             tint == rhs.tint &&
             outRed == rhs.outRed &&

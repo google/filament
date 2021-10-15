@@ -107,8 +107,8 @@ public class AssetLoader {
      * Frees all memory consumed by the native <code>AssetLoader</code> and its material cache.
      */
     public void destroy() {
-        nDestroyAssetLoader(mNativeObject);
         mMaterialCache.destroyMaterials();
+        nDestroyAssetLoader(mNativeObject);
         mNativeObject = 0;
     }
 

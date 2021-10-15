@@ -21,15 +21,17 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationMergeFunctionReturns::TransformationMergeFunctionReturns(
-    const protobufs::TransformationMergeFunctionReturns& message)
-    : message_(message) {}
+    protobufs::TransformationMergeFunctionReturns message)
+    : message_(std::move(message)) {}
 
 TransformationMergeFunctionReturns::TransformationMergeFunctionReturns(
-    uint32_t function_id, uint32_t outer_header_id, uint32_t outer_return_id,
+    uint32_t function_id, uint32_t outer_header_id,
+    uint32_t unreachable_continue_id, uint32_t outer_return_id,
     uint32_t return_val_id, uint32_t any_returnable_val_id,
     const std::vector<protobufs::ReturnMergingInfo>& returns_merging_info) {
   message_.set_function_id(function_id);
   message_.set_outer_header_id(outer_header_id);
+  message_.set_unreachable_continue_id(unreachable_continue_id);
   message_.set_outer_return_id(outer_return_id);
   message_.set_return_val_id(return_val_id);
   message_.set_any_returnable_val_id(any_returnable_val_id);
@@ -66,7 +68,9 @@ bool TransformationMergeFunctionReturns::IsApplicable(
 
   // Check that the fresh ids provided are fresh and distinct.
   std::set<uint32_t> used_fresh_ids;
-  for (uint32_t id : {message_.outer_header_id(), message_.outer_return_id()}) {
+  for (uint32_t id :
+       {message_.outer_header_id(), message_.unreachable_continue_id(),
+        message_.outer_return_id()}) {
     if (!id || !CheckIdIsFreshAndNotUsedByThisTransformation(id, ir_context,
                                                              &used_fresh_ids)) {
       return false;
@@ -499,25 +503,20 @@ void TransformationMergeFunctionReturns::Apply(
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.outer_header_id());
 
-  // Add the instruction: OpLoopMerge %outer_return_id %outer_header_id None
-  // The header is the continue block of the outer loop.
+  // Add the instruction:
+  //   OpLoopMerge %outer_return_id %unreachable_continue_id None
   outer_loop_header->AddInstruction(MakeUnique<opt::Instruction>(
       ir_context, SpvOpLoopMerge, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.outer_return_id()}},
-          {SPV_OPERAND_TYPE_ID, {message_.outer_header_id()}},
+          {SPV_OPERAND_TYPE_ID, {message_.unreachable_continue_id()}},
           {SPV_OPERAND_TYPE_LOOP_CONTROL, {SpvLoopControlMaskNone}}}));
 
-  // Add conditional branch:
-  //   OpBranchConditional %true %block_after_entry %outer_header_id
-  // This will always branch to %block_after_entry, but it also creates a back
-  // edge for the loop (which is never traversed).
+  // Add unconditional branch to %block_after_entry.
   outer_loop_header->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranchConditional, 0, 0,
+      ir_context, SpvOpBranch, 0, 0,
       opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_ID, {constant_true}},
-          {SPV_OPERAND_TYPE_ID, {block_after_entry}},
-          {SPV_OPERAND_TYPE_ID, {message_.outer_header_id()}}}));
+          {SPV_OPERAND_TYPE_ID, {block_after_entry}}}));
 
   // Insert the header right after the entry block.
   function->InsertBasicBlockAfter(std::move(outer_loop_header),
@@ -579,8 +578,25 @@ void TransformationMergeFunctionReturns::Apply(
   }
 
   // Insert the new return block at the end of the function.
-  outer_return_block->SetParent(function);
   function->AddBasicBlock(std::move(outer_return_block));
+
+  // Create the unreachable continue block associated with the enclosing loop.
+  auto unreachable_continue_block =
+      MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
+          ir_context, SpvOpLabel, 0, message_.unreachable_continue_id(),
+          opt::Instruction::OperandList()));
+
+  fuzzerutil::UpdateModuleIdBound(ir_context,
+                                  message_.unreachable_continue_id());
+
+  // Insert an branch back to the loop header, to create a back edge.
+  unreachable_continue_block->AddInstruction(MakeUnique<opt::Instruction>(
+      ir_context, SpvOpBranch, 0, 0,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_ID, {message_.outer_header_id()}}}));
+
+  // Insert the unreachable continue block at the end of the function.
+  function->AddBasicBlock(std::move(unreachable_continue_block));
 
   // All analyses must be invalidated because the structure of the module was
   // changed.
@@ -591,13 +607,14 @@ std::unordered_set<uint32_t> TransformationMergeFunctionReturns::GetFreshIds()
     const {
   std::unordered_set<uint32_t> result;
   result.emplace(message_.outer_header_id());
+  result.emplace(message_.unreachable_continue_id());
   result.emplace(message_.outer_return_id());
   // |message_.return_val_info| can be 0 if the function is void.
   if (message_.return_val_id()) {
     result.emplace(message_.return_val_id());
   }
 
-  for (auto merging_info : message_.return_merging_info()) {
+  for (const auto& merging_info : message_.return_merging_info()) {
     result.emplace(merging_info.is_returning_id());
     // |maybe_return_val_id| can be 0 if the function is void.
     if (merging_info.maybe_return_val_id()) {

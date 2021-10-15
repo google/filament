@@ -193,7 +193,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(other->getUniformBuffer());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
+        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC, false);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -203,6 +204,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
@@ -219,7 +222,8 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::STATIC);
+        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC, false);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -251,20 +255,22 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
         setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
         setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
     }
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance::~FMaterialInstance() noexcept = default;
 
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mUbHandle);
+    driver.destroyBufferObject(mUbHandle);
     driver.destroySamplerGroup(mSbHandle);
 }
 
 void FMaterialInstance::commitSlow(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty()) {
-        driver.loadUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
+        driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (mSamplers.isDirty()) {
         driver.updateSamplerGroup(mSbHandle, std::move(mSamplers.toCommandStream()));
@@ -323,6 +329,10 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     if (doubleSided) {
         setCullingMode(CullingMode::NONE);
     }
+}
+
+void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+    mTransparencyMode = mode;
 }
 
 void FMaterialInstance::setDepthCulling(bool enable) noexcept {
@@ -389,6 +399,10 @@ void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcep
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     upcast(this)->setDoubleSided(doubleSided);
+}
+
+void MaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+    upcast(this)->setTransparencyMode(mode);
 }
 
 void MaterialInstance::setCullingMode(CullingMode culling) noexcept {

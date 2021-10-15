@@ -26,12 +26,13 @@ set(SRCS
         src/CommandStream.cpp
         src/Driver.cpp
         src/Handle.cpp
+        src/HandleAllocator.cpp
+        src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/Platform.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
-        src/TextureReshaper.cpp
 )
 
 set(PRIVATE_HDRS
@@ -43,12 +44,12 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/DriverApiForward.h
+        include/private/backend/HandleAllocator.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
         src/DriverBase.h
-        src/TextureReshaper.h
 )
 
 # ==================================================================================================
@@ -110,12 +111,14 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalBufferPool.mm
             src/metal/MetalContext.mm
             src/metal/MetalDriver.mm
+            src/metal/MetalEnums.mm
             src/metal/MetalExternalImage.mm
             src/metal/MetalHandles.mm
+            src/metal/MetalPlatform.mm
             src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
-            src/metal/MetalPlatform.mm
+            src/metal/MetalUtils.mm
     )
 
     list(APPEND SRCS ${METAL_SRCS})
@@ -129,6 +132,8 @@ if (FILAMENT_SUPPORTS_METAL)
             src/opengl/PlatformCocoaGL.mm
             PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
     endif()
+
+    option(FILAMENT_METAL_PROFILING "Enable profiling for the Metal backend" OFF)
 endif()
 
 # ==================================================================================================
@@ -301,14 +306,13 @@ if (MSVC)
     )
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
-    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
+    set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
-        -fvisibility=hidden
         -fvisibility-inlines-hidden
         -fstrict-vtable-pointers
     )
@@ -341,6 +345,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
 
+if (FILAMENT_SUPPORTS_METAL)
+    target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_METAL_PROFILING}>:FILAMENT_METAL_PROFILING>)
+endif()
+
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
@@ -370,6 +378,8 @@ if (APPLE)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_MRT.cpp
+        test/test_LoadImage.cpp
+        test/test_RenderExternalImage.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

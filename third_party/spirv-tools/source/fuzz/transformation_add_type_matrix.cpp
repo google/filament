@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddTypeMatrix::TransformationAddTypeMatrix(
-    const spvtools::fuzz::protobufs::TransformationAddTypeMatrix& message)
-    : message_(message) {}
+    protobufs::TransformationAddTypeMatrix message)
+    : message_(std::move(message)) {}
 
 TransformationAddTypeMatrix::TransformationAddTypeMatrix(
     uint32_t fresh_id, uint32_t column_type_id, uint32_t column_count) {
@@ -52,13 +52,17 @@ void TransformationAddTypeMatrix::Apply(
   in_operands.push_back({SPV_OPERAND_TYPE_ID, {message_.column_type_id()}});
   in_operands.push_back(
       {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.column_count()}});
-  ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeMatrix, 0, message_.fresh_id(), in_operands));
+  auto type_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpTypeMatrix, 0, message_.fresh_id(), in_operands);
+  auto type_instruction_ptr = type_instruction.get();
+  ir_context->module()->AddType(std::move(type_instruction));
+
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+
+  // Inform the def use manager that there is a new definition. Invalidate the
+  // type manager since we have added a new type.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(type_instruction_ptr);
+  ir_context->InvalidateAnalyses(opt::IRContext::kAnalysisTypes);
 }
 
 protobufs::Transformation TransformationAddTypeMatrix::ToMessage() const {

@@ -3,8 +3,8 @@ material {
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
-    depthWrite : true,
     doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
@@ -18,45 +18,45 @@ material {
         { type : int, name : baseColorIndex },
         { type : float4, name : baseColorFactor },
         { type : sampler2d, name : baseColorMap },
-        { type : mat3, name : baseColorUvMatrix },
+        { type : mat3, name : baseColorUvMatrix, precision: high },
 
         // Metallic-Roughness Map
         { type : int, name : metallicRoughnessIndex },
         { type : float, name : metallicFactor },
         { type : float, name : roughnessFactor },
         { type : sampler2d, name : metallicRoughnessMap },
-        { type : mat3, name : metallicRoughnessUvMatrix },
+        { type : mat3, name : metallicRoughnessUvMatrix, precision: high },
 
         // Normal Map
         { type : int, name : normalIndex },
         { type : float, name : normalScale },
         { type : sampler2d, name : normalMap },
-        { type : mat3, name : normalUvMatrix },
+        { type : mat3, name : normalUvMatrix, precision: high },
 
         // Ambient Occlusion
         { type : int, name : aoIndex },
         { type : float, name : aoStrength },
         { type : sampler2d, name : occlusionMap },
-        { type : mat3, name : occlusionUvMatrix },
+        { type : mat3, name : occlusionUvMatrix, precision: high },
 
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
         { type : sampler2d, name : emissiveMap },
-        { type : mat3, name : emissiveUvMatrix },
+        { type : mat3, name : emissiveUvMatrix, precision: high },
 
         // Cleat coat
         { type : float, name : clearCoatFactor },
         { type : float, name : clearCoatRoughnessFactor },
         { type : int, name : clearCoatIndex },
         { type : sampler2d, name : clearCoatMap },
-        { type : mat3, name : clearCoatUvMatrix },
+        { type : mat3, name : clearCoatUvMatrix, precision: high },
         { type : int, name : clearCoatRoughnessIndex },
         { type : sampler2d, name : clearCoatRoughnessMap },
-        { type : mat3, name : clearCoatRoughnessUvMatrix },
+        { type : mat3, name : clearCoatRoughnessUvMatrix, precision: high },
         { type : int, name : clearCoatNormalIndex },
         { type : sampler2d, name : clearCoatNormalMap },
-        { type : mat3, name : clearCoatNormalUvMatrix },
+        { type : mat3, name : clearCoatNormalUvMatrix, precision: high },
         { type : float, name : clearCoatNormalScale },
 
         // Reflectance

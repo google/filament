@@ -19,6 +19,8 @@
 
 #include <utils/compiler.h>
 
+#include <utils/Mutex.h>
+
 #include <atomic>
 #include <type_traits>
 
@@ -26,6 +28,7 @@
 #include <stddef.h>
 
 namespace utils {
+namespace details {
 
 class SpinLock {
     std::atomic_flag mLock = ATOMIC_FLAG_INIT;
@@ -70,7 +73,18 @@ private:
         UTILS_WAIT_FOR_EVENT();
     }
 };
+} // namespace details
+
+#if defined(__SANITIZE_THREAD__)
+// Unfortunately TSAN doesn't support homegrown synchronization primitives
+using SpinLock = Mutex;
+#elif defined(__ARM_ARCH_7A__)
+// We've had problems with  "wfe" on some ARM-V7 devices, causing spurious SIGILL
+using SpinLock = Mutex;
+#else
+using SpinLock = details::SpinLock;
+#endif
 
 } // namespace utils
 
-#endif //TNT_UTILS_SPINLOCK_H
+#endif // TNT_UTILS_SPINLOCK_H

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
-#define TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
+#ifndef TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
+#define TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -104,4 +104,9 @@ public:
 } // namespace backend
 } // namespace filament
 
-#endif //TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::MRT& mrt);
+#endif
+
+#endif //TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H

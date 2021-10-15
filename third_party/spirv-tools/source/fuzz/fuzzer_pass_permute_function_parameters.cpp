@@ -32,9 +32,6 @@ FuzzerPassPermuteFunctionParameters::FuzzerPassPermuteFunctionParameters(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassPermuteFunctionParameters::~FuzzerPassPermuteFunctionParameters() =
-    default;
-
 void FuzzerPassPermuteFunctionParameters::Apply() {
   for (const auto& function : *GetIRContext()->module()) {
     uint32_t function_id = function.result_id();

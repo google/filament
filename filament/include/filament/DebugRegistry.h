@@ -16,17 +16,14 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DEBUG_H
-#define TNT_FILAMENT_DEBUG_H
+#ifndef TNT_FILAMENT_DEBUGREGISTRY_H
+#define TNT_FILAMENT_DEBUGREGISTRY_H
 
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
 
 #include <math/mathfwd.h>
-
-// FIXME: could we get rid of <utility>
-#include <utility> // for std::pair
 
 #include <stdint.h>
 
@@ -57,12 +54,17 @@ public:
         Type type;          //!< property type
     };
 
+    struct PropertyArray {
+        Property const* array;
+        size_t size;
+    };
+
     /**
      * Queries the list of all available properties.
      *
      * @return A pair containing a pointer to a Property array and the size of this array.
      */
-    std::pair<Property const*, size_t> getProperties() const noexcept;
+    PropertyArray getProperties() const noexcept;
 
     /**
      * Queries whether a property exists
@@ -126,4 +128,4 @@ public:
 
 } // namespace filament
 
-#endif /* TNT_FILAMENT_DEBUG_H */
+#endif /* TNT_FILAMENT_DEBUGREGISTRY_H */

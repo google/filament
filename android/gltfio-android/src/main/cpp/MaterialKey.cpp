@@ -63,13 +63,10 @@ void MaterialKeyHelper::init(JNIEnv* env) {
     sheenColorUV = field("sheenColorUV", "I");
     hasSheenRoughnessTexture = field("hasSheenRoughnessTexture", "Z");
     sheenRoughnessUV = field("sheenRoughnessUV", "I");
+    hasVolumeThicknessTexture = field("hasVolumeThicknessTexture", "Z");
+    volumeThicknessUV = field("volumeThicknessUV", "I");
     hasSheen = field("hasSheen", "Z");
     hasIOR = field("hasIOR", "Z");
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_gltfio_MaterialProvider_00024MaterialKey_nGlobalInit(JNIEnv* env, jclass) {
-    MaterialKeyHelper::get().init(env);
 }
 
 void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
@@ -104,6 +101,8 @@ void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
     dst.sheenColorUV = env->GetIntField(src, sheenColorUV);
     dst.hasSheenRoughnessTexture = env->GetBooleanField(src, hasSheenRoughnessTexture);
     dst.sheenRoughnessUV = env->GetIntField(src, sheenRoughnessUV);
+    dst.hasVolumeThicknessTexture = env->GetBooleanField(src, hasVolumeThicknessTexture);
+    dst.volumeThicknessUV = env->GetIntField(src, volumeThicknessUV);
     dst.hasSheen = env->GetBooleanField(src, hasSheen);
     dst.hasIOR = env->GetBooleanField(src, hasIOR);
 }
@@ -140,6 +139,39 @@ void MaterialKeyHelper::copy(JNIEnv* env, jobject dst, const MaterialKey& src) {
     env->SetIntField(dst, sheenColorUV, src.sheenColorUV);
     env->SetBooleanField(dst, hasSheenRoughnessTexture, src.hasSheenRoughnessTexture);
     env->SetIntField(dst, sheenRoughnessUV, src.sheenRoughnessUV);
+    env->SetBooleanField(dst, hasVolumeThicknessTexture, src.hasVolumeThicknessTexture);
+    env->SetIntField(dst, volumeThicknessUV, src.volumeThicknessUV);
     env->SetBooleanField(dst, hasSheen, src.hasSheen);
     env->SetBooleanField(dst, hasIOR, src.hasIOR);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_MaterialProvider_00024MaterialKey_nGlobalInit(JNIEnv* env, jclass) {
+    MaterialKeyHelper::get().init(env);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_MaterialProvider_00024MaterialKey_nConstrainMaterial(JNIEnv* env, jclass,
+        jobject materialKey, jintArray uvMap) {
+    MaterialKey nativeMaterialKey = {};
+
+    auto& helper = MaterialKeyHelper::get();
+    helper.copy(env, nativeMaterialKey, materialKey);
+
+    UvMap nativeUvMap = {};
+    constrainMaterial(&nativeMaterialKey, &nativeUvMap);
+
+    // Copy the UvMap results from the native array into the JVM array.
+    jint* elements = env->GetIntArrayElements(uvMap, nullptr);
+    if (elements) {
+        const size_t javaSize = env->GetArrayLength(uvMap);
+        for (int i = 0, n = std::min(javaSize, nativeUvMap.size()); i < n; ++i) {
+            elements[i] = nativeUvMap[i];
+        }
+        env->ReleaseIntArrayElements(uvMap, elements, 0);
+    }
+
+    // The config parameter is an in-out parameter so we need to copy the results back to Java.
+    helper.copy(env, materialKey, nativeMaterialKey);
 }

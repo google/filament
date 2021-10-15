@@ -23,8 +23,6 @@
 
 #include "ColorSpace.h"
 
-#include "ToneMapping.h"
-
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -32,8 +30,6 @@
 #include <utils/JobSystem.h>
 #include <utils/SpinLock.h>
 #include <utils/Systrace.h>
-
-#include <functional>
 
 #include <math.h>
 #include <stdlib.h>
@@ -49,9 +45,24 @@ using namespace backend;
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
-    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
+    const ToneMapper* toneMapper = nullptr;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+#pragma clang diagnostic pop
+
+    bool hasAdjustments = false;
+
+    // Everything below must be part of the == comparison operator
+    ColorGrading::QualityLevel quality = QualityLevel::MEDIUM;
+    // Out-of-gamut color handling
+    bool   luminanceScaling = false;
+    bool   gamutMapping     = false;
+    // Exposure
+    float  exposure         = 0.0f;
+    // Night adaptation
+    float  nightAdaptation  = 0.0f;
     // White balance
     float2 whiteBalance     = {0.0f, 0.0f};
     // Channel mixer
@@ -75,17 +86,18 @@ struct ColorGrading::BuilderDetails {
     float3 shadowGamma      = {1.0f};
     float3 midPoint         = {1.0f};
     float3 highlightScale   = {1.0f};
-    // Keep last
-    bool hasAdjustments     = false;
 
     bool operator!=(const BuilderDetails &rhs) const {
         return !(rhs == *this);
     }
 
     bool operator==(const BuilderDetails &rhs) const {
-        // Note: Do NOT compare hasAdjustments
+        // Note: Do NOT compare hasAdjustments and toneMapper
         return quality == rhs.quality &&
-               toneMapping == rhs.toneMapping &&
+               luminanceScaling == rhs.luminanceScaling &&
+               gamutMapping == rhs.gamutMapping &&
+               exposure == rhs.exposure &&
+               nightAdaptation == rhs.nightAdaptation &&
                whiteBalance == rhs.whiteBalance &&
                outRed == rhs.outRed &&
                outGreen == rhs.outGreen &&
@@ -119,8 +131,33 @@ ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel
     return *this;
 }
 
+ColorGrading::Builder& ColorGrading::Builder::toneMapper(const ToneMapper* toneMapper) noexcept {
+    mImpl->toneMapper = toneMapper;
+    return *this;
+}
+
 ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
     mImpl->toneMapping = toneMapping;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::luminanceScaling(bool luminanceScaling) noexcept {
+    mImpl->luminanceScaling = luminanceScaling;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::gamutMapping(bool gamutMapping) noexcept {
+    mImpl->gamutMapping = gamutMapping;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::exposure(float exposure) noexcept {
+    mImpl->exposure = exposure;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::nightAdaptation(float adaptation) noexcept {
+    mImpl->nightAdaptation = saturate(adaptation);
     return *this;
 }
 
@@ -186,15 +223,163 @@ ColorGrading::Builder& ColorGrading::Builder::curves(
     return *this;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     // We want to see if any of the default adjustment values have been modified
     // We skip the tonemapping operator on purpose since we always want to apply it
     BuilderDetails defaults;
-    defaults.toneMapping = mImpl->toneMapping;
     bool hasAdjustments = defaults != *mImpl;
     mImpl->hasAdjustments = hasAdjustments;
 
-    return upcast(engine).createColorGrading(*this);
+    // Fallback for clients that still use the deprecated ToneMapping API
+    bool needToneMapper = mImpl->toneMapper == nullptr;
+    if (needToneMapper) {
+        switch (mImpl->toneMapping) {
+            case ToneMapping::LINEAR:
+                mImpl->toneMapper = new LinearToneMapper();
+                break;
+            case ToneMapping::ACES_LEGACY:
+                mImpl->toneMapper = new ACESLegacyToneMapper();
+                break;
+            case ToneMapping::ACES:
+                mImpl->toneMapper = new ACESToneMapper();
+                break;
+            case ToneMapping::FILMIC:
+                mImpl->toneMapper = new FilmicToneMapper();
+                break;
+            case ToneMapping::DISPLAY_RANGE:
+                mImpl->toneMapper = new DisplayRangeToneMapper();
+                break;
+        }
+    }
+
+    FColorGrading* colorGrading = upcast(engine).createColorGrading(*this);
+
+    if (needToneMapper) {
+        delete mImpl->toneMapper;
+        mImpl->toneMapper = nullptr;
+    }
+
+    return colorGrading;
+}
+#pragma clang diagnostic pop
+
+//------------------------------------------------------------------------------
+// Exposure
+//------------------------------------------------------------------------------
+
+UTILS_ALWAYS_INLINE
+inline float3 adjustExposure(float3 v, float exposure) {
+    return v * std::exp2(exposure);
+}
+
+//------------------------------------------------------------------------------
+// Purkinje shift/scotopic vision
+//------------------------------------------------------------------------------
+
+// In low-light conditions, peak luminance sensitivity of the eye shifts toward
+// the blue end of the visible spectrum. This effect called the Purkinje effect
+// occurs during the transition from photopic (cone-based) vision to scotopic
+// (rod-based) vision. Because the rods and cones use the same neural pathways,
+// a color shift is introduced as the rods take over to improve low-light
+// perception.
+//
+// This function aims to (somewhat) replicate this color shift and peak luminance
+// sensitivity increase to more faithfully reproduce scenes in low-light conditions
+// as they would be perceived by a human observer (as opposed to an artificial
+// observer such as a camera sensor).
+//
+// The implementation below is based on two papers:
+// "Rod Contributions to Color Perception: Linear with Rod Contrast", Cao et al., 2008
+//     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2630540/pdf/nihms80286.pdf
+// "Perceptually Based Tone Mapping for Low-Light Conditions", Kirk & O'Brien, 2011
+//     http://graphics.berkeley.edu/papers/Kirk-PBT-2011-08/Kirk-PBT-2011-08.pdf
+//
+// Many thanks to Jasmin Patry for his explanations in "Real-Time Samurai Cinema",
+// SIGGRAPH 2021, and the idea of using log-luminance based on "Maximum Entropy
+// Spectral Modeling Approach to Mesopic Tone Mapping", Rezagholizadeh & Clark, 2013
+float3 scotopicAdaptation(float3 v, float nightAdaptation) noexcept {
+    // The 4 vectors below are generated by the command line tool rgb-to-lmsr.
+    // Together they form a 4x3 matrix that can be used to convert a Rec.709
+    // input color to the LMSR (long/medium/short cone + rod receptors) space.
+    // That matrix is computed using this formula:
+    //     Mij = \Integral Ei(lambda) I(lambda) Rj(lambda) d(lambda)
+    // Where:
+    //     i in {L, M, S, R}
+    //     j in {R, G, B}
+    //     lambda: wavelength
+    //     Ei(lambda): response curve of the corresponding receptor
+    //     I(lambda): relative spectral power of the CIE illuminant D65
+    //     Rj(lambda): spectral power of the corresponding Rec.709 color
+    constexpr float3 L{7.696847f, 18.424824f,  2.068096f};
+    constexpr float3 M{2.431137f, 18.697937f,  3.012463f};
+    constexpr float3 S{0.289117f,  1.401833f, 13.792292f};
+    constexpr float3 R{0.466386f, 15.564362f, 10.059963f};
+
+    constexpr mat3f LMS_to_RGB = inverse(transpose(mat3f{L, M, S}));
+
+    // Maximal LMS cone sensitivity, Cao et al. Table 1
+    constexpr float3 m{0.63721f, 0.39242f, 1.6064f};
+    // Strength of rod input, free parameters in Cao et al., manually tuned for our needs
+    // We follow Kirk & O'Brien who recommend constant values as opposed to Cao et al.
+    // who propose to adapt those values based on retinal illuminance. We instead offer
+    // artistic control at the end of the process
+    // The vector below is {k1, k1, k2} in Kirk & O'Brien, but {k5, k5, k6} in Cao et al.
+    constexpr float3 k{0.2f, 0.2f, 0.3f};
+
+    // Transform from opponent space back to LMS
+    constexpr mat3f opponent_to_LMS{
+        -0.5f, 0.5f, 0.0f,
+         0.0f, 0.0f, 1.0f,
+         0.5f, 0.5f, 1.0f
+    };
+
+    // The constants below follow Cao et al, using the KC pathway
+    // Scaling constant
+    constexpr float K_ = 45.0f;
+    // Static saturation
+    constexpr float S_ = 10.0f;
+    // Surround strength of opponent signal
+    constexpr float k3 = 0.6f;
+    // Radio of responses for white light
+    constexpr float rw = 0.139f;
+    // Relative weight of L cones
+    constexpr float p  = 0.6189f;
+
+    // Weighted cone response as described in Cao et al., section 3.3
+    // The approximately linear relation defined in the paper is represented here
+    // in matrix form to simplify the code
+    constexpr mat3f weightedRodResponse = (K_ / S_) * mat3f{
+       -(k3 + rw),       p * k3,          p * S_,
+        1.0f + k3 * rw, (1.0f - p) * k3, (1.0f - p) * S_,
+        0.0f,            1.0f,            0.0f
+    } * mat3f{k} * inverse(mat3f{m});
+
+    // Move to log-luminance, or the EV values as measured by a Minolta Spotmeter F.
+    // The relationship is EV = log2(L * 100 / 14), or 2^EV = L / 0.14. We can therefore
+    // multiply our input by 0.14 to obtain our log-luminance values.
+    // We then follow Patry's recommendation to shift the log-luminance by ~ +11.4EV to
+    // match luminance values to mesopic measurements as described in Rezagholizadeh &
+    // Clark 2013,
+    // The result is 0.14 * exp2(11.40) ~= 380.0 (we use +11.406 EV to get a round number)
+    constexpr float logExposure = 380.0f;
+
+    // Move to scaled log-luminance
+    v *= logExposure;
+
+    // Convert the scene color from Rec.709 to LMSR response
+    float4 q{dot(v, L), dot(v, M), dot(v, S), dot(v, R)};
+    // Regulated signal through the selected pathway (KC in Cao et al.)
+    float3 g = inversesqrt(1.0f + max(float3{0.0f}, (0.33f / m) * (q.rgb + k * q.w)));
+
+    // Compute the incremental effect that rods have in opponent space
+    float3 deltaOpponent = weightedRodResponse * g * q.w * nightAdaptation;
+    // Photopic response in LMS space
+    float3 qHat = q.rgb + opponent_to_LMS * deltaOpponent;
+
+    // And finally, back to RGB
+    return (LMS_to_RGB * qHat) / logExposure;
 }
 
 //------------------------------------------------------------------------------
@@ -203,28 +388,24 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
 
 // Return the chromatic adaptation coefficients in LMS space for the given
 // temperature/tint offsets. The chromatic adaption is perfomed following
-// the von Kries method, using the CIECAT02 transform.
+// the von Kries method, using the CIECAT16 transform.
 // See https://en.wikipedia.org/wiki/Chromatic_adaptation
 // See https://en.wikipedia.org/wiki/CIECAM02#Chromatic_adaptation
-UTILS_ALWAYS_INLINE
-inline float3 adaptationTransform(float2 whiteBalance) {
+constexpr mat3f adaptationTransform(float2 whiteBalance) noexcept {
     // See Mathematica notebook in docs/math/White Balance.nb
     float k = whiteBalance.x; // temperature
     float t = whiteBalance.y; // tint
 
-    float x = ILLUMINANT_D65_xyY.x - k * (k < 0.0f ? 0.0214f : 0.066f);
+    float x = ILLUMINANT_D65_xyY[0] - k * (k < 0.0f ? 0.0214f : 0.066f);
     float y = chromaticityCoordinateIlluminantD(x) + t * 0.066f;
 
-    float3 lms = XYZ_to_CIECAT02 * xyY_to_XYZ({x, y, 1.0f});
-    return ILLUMINANT_D65_LMS / lms;
+    float3 lms = XYZ_to_CIECAT16 * xyY_to_XYZ({x, y, 1.0f});
+    return LMS_CAT16_to_REC2020 * mat3f{ILLUMINANT_D65_LMS_CAT16 / lms} * REC2020_to_LMS_CAT16;
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
-    v = sRGB_to_LMS * v;
-    v = adaptationTransform(whiteBalance) * v;
-    v = LMS_to_sRGB * v;
-    return v;
+inline float3 chromaticAdaptation(float3 v, mat3f adaptationTransform) {
+    return adaptationTransform * v;
 }
 
 //------------------------------------------------------------------------------
@@ -233,62 +414,6 @@ inline float3 chromaticAdaptation(float3 v, float2 whiteBalance) {
 
 using ColorTransform = float3(*)(float3);
 
-ColorTransform selectLinearToLogTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return linearAP1_to_ACEScct;
-        default:
-            return linear_to_LogC;
-    }
-}
-
-ColorTransform selectLogToLinearTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return ACEScct_to_linearAP1;
-        default:
-            return LogC_to_linear;
-    }
-}
-
-mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return sRGB_to_AP1;
-        case ColorGrading::ToneMapping::FILMIC:
-        case ColorGrading::ToneMapping::EVILS:
-            return mat3f{}; // stay in sRGB
-        default:
-            return sRGB_to_REC2020;
-    }
-}
-
-mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return AP1_to_sRGB;
-        case ColorGrading::ToneMapping::FILMIC:
-        case ColorGrading::ToneMapping::EVILS:
-            return mat3f{}; // stay in sRGB
-        default:
-            return REC2020_to_sRGB;
-    }
-}
-
-float3 selectLumaTransform(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-        case ColorGrading::ToneMapping::ACES:
-            return LUMA_AP1;
-        default:
-            return LUMA_REC709;
-    }
-}
-
 UTILS_ALWAYS_INLINE
 inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
     return {dot(v, r), dot(v, g), dot(v, b)};
@@ -296,11 +421,14 @@ inline constexpr float3 channelMixer(float3 v, float3 r, float3 g, float3 b) {
 
 UTILS_ALWAYS_INLINE
 inline constexpr float3 tonalRanges(
-        float3 v, float3 luma, float3 shadows, float3 midtones, float3 highlights, float4 ranges) {
+        float3 v, float3 luminance,
+        float3 shadows, float3 midtones, float3 highlights,
+        float4 ranges
+) {
     // See the Mathematica notebook at docs/math/Shadows Midtones Highlight.nb for
     // details on how the curves were designed. The default curve values are based
     // on the defaults from the "Log" color wheels in DaVinci Resolve.
-    float y = dot(v, luma);
+    float y = dot(v, luminance);
 
     // Shadows curve
     float s = 1.0f - smoothstep(ranges.x, ranges.y, y);
@@ -331,16 +459,16 @@ inline constexpr float3 contrast(float3 v, float contrast) {
 }
 
 UTILS_ALWAYS_INLINE
-inline constexpr float3 saturation(float3 v, float saturation) {
-    const float3 y = dot(v, LUMA_REC709);
+inline constexpr float3 saturation(float3 v, float3 luminance, float saturation) {
+    const float3 y = dot(v, luminance);
     return y + saturation * (v - y);
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 vibrance(float3 v, float vibrance) {
+inline float3 vibrance(float3 v, float3 luminance, float vibrance) {
     float r = v.r - max(v.g, v.b);
     float s = (vibrance - 1.0f) / (1.0f + std::exp(-r * 3.0f)) + 1.0f;
-    float3 l{(1.0f - s) * LUMA_REC709};
+    float3 l{(1.0f - s) * luminance};
     return float3{
         dot(v, l + float3{s, 0.0f, 0.0f}),
         dot(v, l + float3{0.0f, s, 0.0f}),
@@ -363,10 +491,43 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 }
 
 //------------------------------------------------------------------------------
+// Luminance scaling
+//------------------------------------------------------------------------------
+
+static float3 luminanceScaling(float3 x,
+        const ToneMapper& toneMapper, float3 luminanceWeights) noexcept {
+
+    // Troy Sobotka, 2021, "EVILS - Exposure Value Invariant Luminance Scaling"
+    // https://colab.research.google.com/drive/1iPJzNNKR7PynFmsqSnQm3bCZmQ3CvAJ-#scrollTo=psU43hb-BLzB
+
+    float luminanceIn = dot(x, luminanceWeights);
+
+    // TODO: We could optimize for the case of single-channel luminance
+    float luminanceOut = toneMapper(luminanceIn).y;
+
+    float peak = max(x);
+    float3 chromaRatio = max(x / peak, 0.0f);
+
+    float chromaRatioLuminance = dot(chromaRatio, luminanceWeights);
+
+    float3 maxReserves = 1.0f - chromaRatio;
+    float maxReservesLuminance = dot(maxReserves, luminanceWeights);
+
+    float luminanceDifference = std::max(luminanceOut - chromaRatioLuminance, 0.0f);
+    float scaledLuminanceDifference =
+            luminanceDifference / std::max(maxReservesLuminance, std::numeric_limits<float>::min());
+
+    float chromaScale = (luminanceOut - luminanceDifference) /
+            std::max(chromaRatioLuminance, std::numeric_limits<float>::min());
+
+    return chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves;
+}
+
+//------------------------------------------------------------------------------
 // Quality
 //------------------------------------------------------------------------------
 
-size_t selectLutDimension(ColorGrading::QualityLevel quality) {
+static size_t selectLutDimension(ColorGrading::QualityLevel quality) noexcept {
     switch (quality) {
         case ColorGrading::QualityLevel::LOW:    return 16u;
         case ColorGrading::QualityLevel::MEDIUM: return 32u;
@@ -375,8 +536,8 @@ size_t selectLutDimension(ColorGrading::QualityLevel quality) {
     }
 }
 
-void selectLutTextureParams(ColorGrading::QualityLevel quality,
-        TextureFormat& internalFormat, PixelDataFormat& format, PixelDataType& type) {
+static void selectLutTextureParams(ColorGrading::QualityLevel quality,
+        TextureFormat& internalFormat, PixelDataFormat& format, PixelDataType& type) noexcept {
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
     switch (quality) {
@@ -403,42 +564,45 @@ void selectLutTextureParams(ColorGrading::QualityLevel quality,
     }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// The following functions exist to preserve backward compatibility with the
+// `FILMIC` set via the deprecated `ToneMapping` API. Selecting `ToneMapping::FILMIC`
+// forces post-processing to be performed in sRGB to guarantee that the inverse tone
+// mapping function in the shaders will match the forward tone mapping step exactly.
 
-//------------------------------------------------------------------------------
-// Tone mapping
-//------------------------------------------------------------------------------
-
-ColorTransform selectToneMapping(ColorGrading::ToneMapping toneMapping) {
-    switch (toneMapping) {
-        case ColorGrading::ToneMapping::LINEAR:
-            return tonemap::Linear;
-        case ColorGrading::ToneMapping::ACES_LEGACY:
-            return tonemap::ACES_Legacy;
-        case ColorGrading::ToneMapping::ACES:
-            return tonemap::ACES;
-        case ColorGrading::ToneMapping::FILMIC:
-            return tonemap::Filmic;
-        case ColorGrading::ToneMapping::EVILS:
-            return tonemap::EVILS;
-        case ColorGrading::ToneMapping::REINHARD:
-            return tonemap::Reinhard;
-        case ColorGrading::ToneMapping::DISPLAY_RANGE:
-            return tonemap::DisplayRange;
+static mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) noexcept {
+    if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
+        return mat3f{};
     }
+    return sRGB_to_REC2020;
 }
+
+static mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) noexcept {
+    if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
+        return mat3f{};
+    }
+    return REC2020_to_sRGB;
+}
+
+static float3 selectColorGradingLuminance(ColorGrading::ToneMapping toneMapping) noexcept {
+    if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
+        return LUMINANCE_REC709;
+    }
+    return LUMINANCE_REC2020;
+}
+#pragma clang diagnostic pop
 
 //------------------------------------------------------------------------------
 // Color grading implementation
 //------------------------------------------------------------------------------
 
 struct Config {
-    mat3f colorGradingTransformIn;
-    mat3f colorGradingTransformOut;
-    float3 lumaTransform;
-    ColorTransform linearToLogTransform;
-    ColorTransform logToLinearTransform;
-    ColorTransform toneMapper;
     size_t lutDimension;
+    mat3f  adaptationTransform;
+    mat3f  colorGradingIn;
+    mat3f  colorGradingOut;
+    float3 colorGradingLuminance;
 };
 
 // Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
@@ -456,14 +620,14 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     utils::SpinLock configLock;
     {
         std::lock_guard<utils::SpinLock> lock(configLock);
-        c.colorGradingTransformIn  = selectColorGradingTransformIn(builder->toneMapping);
-        c.colorGradingTransformOut = selectColorGradingTransformOut(builder->toneMapping);
-        c.lumaTransform            = selectLumaTransform(builder->toneMapping);
-        c.linearToLogTransform     = selectLinearToLogTransform(builder->toneMapping);
-        c.logToLinearTransform     = selectLogToLinearTransform(builder->toneMapping);
-        c.toneMapper               = selectToneMapping(builder->toneMapping);
-        c.lutDimension             = selectLutDimension(builder->quality);
+        c.lutDimension          = selectLutDimension(builder->quality);
+        c.adaptationTransform   = adaptationTransform(builder->whiteBalance);
+        c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
+        c.colorGradingOut       = selectColorGradingTransformOut(builder->toneMapping);
+        c.colorGradingLuminance = selectColorGradingLuminance(builder->toneMapping);
     }
+
+    mDimension = c.lutDimension;
 
     size_t lutElementCount = c.lutDimension * c.lutDimension * c.lutDimension;
     size_t elementSize = sizeof(half4);
@@ -499,21 +663,29 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;
             for (size_t g = 0; g < config.lutDimension; g++) {
                 for (size_t r = 0; r < config.lutDimension; r++) {
-                    float3 v = float3{ r, g, b } * (1.0f / float(config.lutDimension - 1u));
+                    float3 v = float3{r, g, b} * (1.0f / float(config.lutDimension - 1u));
 
                     // LogC encoding
                     v = LogC_to_linear(v);
 
-                    // TODO: Performed in sRGB, should be in Rec.2020 or AP1
+                    // Kill negative values near 0.0f due to imprecision in the log conversion
+                    v = max(v, 0.0f);
+
                     if (builder->hasAdjustments) {
-                        // White balance
-                        v = chromaticAdaptation(v, builder->whiteBalance);
+                        // Exposure
+                        v = adjustExposure(v, builder->exposure);
+
+                        // Purkinje shift ("low-light" vision)
+                        v = scotopicAdaptation(v, builder->nightAdaptation);
                     }
 
-                    // Convert to color grading color space
-                    v = config.colorGradingTransformIn * v;
+                    // Move to color grading color space
+                    v = c.colorGradingIn * v;
 
                     if (builder->hasAdjustments) {
+                        // White balance
+                        v = chromaticAdaptation(v, config.adaptationTransform);
+
                         // Kill negative values before the next transforms
                         v = max(v, 0.0f);
 
@@ -521,13 +693,12 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = channelMixer(v, builder->outRed, builder->outGreen, builder->outBlue);
 
                         // Shadows/mid-tones/highlights
-                        v = tonalRanges(v, config.lumaTransform,
+                        v = tonalRanges(v, c.colorGradingLuminance,
                                 builder->shadows, builder->midtones, builder->highlights,
                                 builder->tonalRanges);
 
-                        // The adjustments below behave better in log space using the ACEScct
-                        // color space.
-                        v = config.linearToLogTransform(v);
+                        // The adjustments below behave better in log space
+                        v = linear_to_LogC(v);
 
                         // ASC CDL
                         v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
@@ -536,15 +707,15 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         v = contrast(v, builder->contrast);
 
                         // Back to linear space
-                        v = config.logToLinearTransform(v);
+                        v = LogC_to_linear(v);
 
                         // Vibrance in linear space
-                        v = vibrance(v, builder->vibrance);
+                        v = vibrance(v, c.colorGradingLuminance, builder->vibrance);
 
                         // Saturation in linear space
-                        v = saturation(v, builder->saturation);
+                        v = saturation(v, c.colorGradingLuminance, builder->saturation);
 
-                        // Kill negative values before tone mapping
+                        // Kill negative values before curves
                         v = max(v, 0.0f);
 
                         // RGB curves
@@ -553,16 +724,30 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     }
 
                     // Tone mapping
-                    v = config.toneMapper(v);
+                    if (builder->luminanceScaling) {
+                        v = luminanceScaling(v, *builder->toneMapper, c.colorGradingLuminance);
+                    } else {
+                        v = (*builder->toneMapper)(v);
+                    }
 
-                    // Convert to output color space
-                    // TODO: allow to customize the output color space,
-                    v = config.colorGradingTransformOut * v;
+                    // Go back to display color space
+                    v = c.colorGradingOut * v;
 
+                    // Apply gamut mapping
+                    if (builder->gamutMapping) {
+                        // TODO: This should depend on the output color space
+                        v = gamutMapping_sRGB(v);
+                    }
+
+                    // TODO: We should convert to the output color space if we use a working
+                    //       color space that's not sRGB
+                    // TODO: Allow the user to customize the output color space
+
+                    // We need to clamp for the output transfer function
                     v = saturate(v);
 
-                    // Apply OECF
-                    v = OECF_sRGB(v);
+                    // Apply OETF
+                    v = OETF_sRGB(v);
 
                     *p++ = half4{v, 0.0f};
                 }
@@ -579,10 +764,10 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 #pragma clang loop vectorize_width(8)
                 for (size_t i = 0; i < count; ++i) {
                     float4 v{src[i]};
-                    uint32_t r = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
-                    uint32_t g = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
-                    uint32_t b = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
-                    dst[i] = (b << 20u) | (g << 10u) | r;
+                    uint32_t pr = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
+                    uint32_t pg = uint32_t(std::floor(v.y * 1023.0f + 0.5f));
+                    uint32_t pb = uint32_t(std::floor(v.z * 1023.0f + 0.5f));
+                    dst[i] = (pb << 20u) | (pg << 10u) | pr;
                 }
             }
 
@@ -597,8 +782,16 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
     //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
 
-    mLutHandle = driver.createTexture(SamplerType::SAMPLER_3D, 1, textureFormat, 1,
-            c.lutDimension, c.lutDimension, c.lutDimension, TextureUsage::DEFAULT);
+    mLutHandle = driver.createTexture(
+            SamplerType::SAMPLER_3D,
+            1,
+            textureFormat,
+            1,
+            c.lutDimension,
+            c.lutDimension,
+            c.lutDimension,
+            TextureUsage::DEFAULT
+    );
 
     if (converted) {
         free(data);

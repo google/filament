@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationMoveBlockDown::TransformationMoveBlockDown(
-    const spvtools::fuzz::protobufs::TransformationMoveBlockDown& message)
-    : message_(message) {}
+    protobufs::TransformationMoveBlockDown message)
+    : message_(std::move(message)) {}
 
 TransformationMoveBlockDown::TransformationMoveBlockDown(uint32_t id) {
   message_.set_block_id(id);

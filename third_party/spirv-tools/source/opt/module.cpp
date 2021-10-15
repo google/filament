@@ -188,7 +188,7 @@ void Module::ToBinary(std::vector<uint32_t>* binary, bool skip_nop) const {
       i->ToBinaryWithoutAttachedDebugInsts(binary);
     }
     // Update the last line instruction.
-    if (IsTerminatorInst(opcode) || opcode == SpvOpNoLine) {
+    if (spvOpcodeIsBlockTerminator(opcode) || opcode == SpvOpNoLine) {
       last_line_inst = nullptr;
     } else if (opcode == SpvOpLoopMerge || opcode == SpvOpSelectionMerge) {
       between_merge_and_branch = true;

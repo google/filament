@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H
+
 #include <backend/DriverEnums.h>
+
+#include <backend/PixelBufferDescriptor.h>
 
 #include <stddef.h>
 
@@ -59,5 +64,12 @@ size_t getBlockWidth(TextureFormat format) noexcept;
  */
 size_t getBlockHeight(TextureFormat format) noexcept;
 
+/**
+ * Reshapes 3-component data into 4-component data.
+ */
+bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped);
+
 } // namespace backend
 } // namespace filament
+
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H

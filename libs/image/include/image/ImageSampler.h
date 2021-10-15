@@ -19,12 +19,14 @@
 
 #include <image/LinearImage.h>
 
+#include <utils/compiler.h>
+
 namespace image {
 
 /**
  * Value of a single point sample, allocated according to the number of image channels.
  */
-struct SingleSample {
+struct UTILS_PUBLIC SingleSample {
     float& operator[](int index) { return *(data + index); }
     float* data = nullptr;
     ~SingleSample();
@@ -101,12 +103,14 @@ struct ImageSampler {
 /**
  * Resizes or blurs the given linear image, producing a new linear image with the given dimensions.
  */
+UTILS_PUBLIC
 LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height,
         const ImageSampler& sampler);
 
 /**
  * Resizes the given linear image using a simplified API that takes target dimensions and filter.
  */
+UTILS_PUBLIC
 LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height,
         Filter filter = Filter::DEFAULT);
 
@@ -126,6 +130,7 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
  * The x y coordinates live in "texture space" such that (0.0f, 0.0f) is the upper-left boundary of
  * the top-left pixel and (+1.0f, +1.0f) is the lower-right boundary of the bottom-right pixel.
  */
+UTILS_PUBLIC
 void computeSingleSample(const LinearImage& source, float x, float y, SingleSample* result,
         Filter filter = Filter::BOX);
 
@@ -137,18 +142,21 @@ void computeSingleSample(const LinearImage& source, float x, float y, SingleSamp
  * index 0, the quarter-size image is at index 1, etc. Please note that the original-sized image is
  * not included.
  */
+UTILS_PUBLIC
 void generateMipmaps(const LinearImage& source, Filter, LinearImage* result, uint32_t mipCount);
 
 /**
  * Returns the number of miplevels it would take to downsample the given image down to 1x1. This
  * number does not include the original image (i.e. mip 0).
  */
+UTILS_PUBLIC
 uint32_t getMipmapCount(const LinearImage& source);
 
 /**
  * Given the string name of a filter, converts it to uppercase and returns the corresponding
  * enum value. If no corresponding enumerant exists, returns DEFAULT.
  */
+UTILS_PUBLIC
 Filter filterFromString(const char* name);
 
 } // namespace image

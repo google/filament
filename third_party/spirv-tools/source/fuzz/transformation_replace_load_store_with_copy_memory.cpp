@@ -29,9 +29,8 @@ const uint32_t kOpLoadOperandIndexSourceVariable = 2;
 
 TransformationReplaceLoadStoreWithCopyMemory::
     TransformationReplaceLoadStoreWithCopyMemory(
-        const spvtools::fuzz::protobufs::
-            TransformationReplaceLoadStoreWithCopyMemory& message)
-    : message_(message) {}
+        protobufs::TransformationReplaceLoadStoreWithCopyMemory message)
+    : message_(std::move(message)) {}
 
 TransformationReplaceLoadStoreWithCopyMemory::
     TransformationReplaceLoadStoreWithCopyMemory(

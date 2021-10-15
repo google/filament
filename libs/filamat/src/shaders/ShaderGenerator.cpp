@@ -244,8 +244,9 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateGetters(vs, ShaderType::VERTEX);
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
-    if (variant.isDepthPass() &&
-            (material.blendingMode != BlendingMode::MASKED) &&
+    if (filament::Variant::isValidDepthVariant(variantKey) &&
+            material.blendingMode != BlendingMode::MASKED &&
+            !material.hasTransparentShadow &&
             !hasCustomDepthShader()) {
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
@@ -346,9 +347,11 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
-    cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
-    cg.generateDefine(fs, "HAS_FOG", variant.hasFog());
+    cg.generateDefine(fs, "HAS_FOG", variant.hasFog() && !variant.hasDepth());
+    cg.generateDefine(fs, "HAS_PICKING", variant.hasPicking() && variant.hasDepth());
     cg.generateDefine(fs, "HAS_VSM", variant.hasVsm());
+    cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
+    cg.generateDefine(fs, "HAS_TRANSPARENT_SHADOW", material.hasTransparentShadow);
 
     // material defines
     cg.generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);
@@ -432,6 +435,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
+    fs << "float filament_lodBias;\n";
+
     // shading code
     cg.generateCommon(fs, ShaderType::FRAGMENT);
     cg.generateGetters(fs, ShaderType::FRAGMENT);
@@ -440,8 +445,8 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
     cg.generateFog(fs, ShaderType::FRAGMENT);
 
     // shading model
-    if (variant.isDepthPass()) {
-        if (material.blendingMode == BlendingMode::MASKED) {
+    if (filament::Variant::isValidDepthVariant(variantKey)) {
+        if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
             appendShader(fs, mMaterialCode, mMaterialLineOffset);
         }
         // these variants are special and are treated as DEPTH variants. Filament will never

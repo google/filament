@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-
-#ifndef MATH_TQUATHELPERS_H_
-#define MATH_TQUATHELPERS_H_
-
-#include <math.h>
-#include <stdint.h>
-#include <sys/types.h>
+#ifndef TNT_MATH_TQUATHELPERS_H
+#define TNT_MATH_TQUATHELPERS_H
 
 #include <math/compiler.h>
 #include <math/scalar.h>
 #include <math/vec3.h>
+
+#include <math.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 namespace filament {
 namespace math {
@@ -289,4 +288,4 @@ public:
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_TQUATHELPERS_H_
+#endif  // TNT_MATH_TQUATHELPERS_H

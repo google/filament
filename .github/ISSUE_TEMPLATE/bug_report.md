@@ -17,6 +17,10 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
+**Logs**
+If applicable, copy logs from your console here. Please *do not*
+use screenshots of logs, copy them as text.
+
 **Desktop (please complete the following information):**
  - OS: [e.g. iOS]
  - GPU: [e.g. NVIDIA GTX 1080]

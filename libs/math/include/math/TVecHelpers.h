@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MATH_TVECHELPERS_H_
-#define MATH_TVECHELPERS_H_
+#ifndef TNT_MATH_TVECHELPERS_H
+#define TNT_MATH_TVECHELPERS_H
 
 #include <math/compiler.h>
 
@@ -463,6 +463,13 @@ private:
         return v;
     }
 
+    friend inline VECTOR<T> MATH_PURE cbrt(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::cbrt(v[i]);
+        }
+        return v;
+    }
+
     friend inline VECTOR<T> MATH_PURE exp(VECTOR<T> v) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::exp(v[i]);
@@ -615,4 +622,4 @@ private:
 }  // namespace math
 }  // namespace filament
 
-#endif  // MATH_TVECHELPERS_H_
+#endif  // TNT_MATH_TVECHELPERS_H

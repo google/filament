@@ -797,6 +797,9 @@ void LoopUnrollerUtilsImpl::CloseUnrolledLoop(Loop* loop) {
   for (BasicBlock* block : loop_blocks_inorder_) {
     RemapOperands(block);
   }
+  for (auto& block_itr : blocks_to_add_) {
+    RemapOperands(block_itr.get());
+  }
 
   // Rewrite the last phis, since they may still reference the original phi.
   for (Instruction* last_phi : state_.previous_phis_) {

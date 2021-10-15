@@ -147,12 +147,12 @@ TEST(TransformationMergeFunctionReturnsTest, SimpleInapplicable) {
       MakeUnique<FactManager>(context.get()), validator_options);
 
   // Function %1 does not exist.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(1, 100, 101, 0, 0, {{}})
+  ASSERT_FALSE(TransformationMergeFunctionReturns(1, 100, 200, 101, 0, 0, {{}})
                    .IsApplicable(context.get(), transformation_context));
 
   // The entry block (%22) of function %15 does not branch unconditionally to
   // the following block.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(16, 100, 101, 0, 0, {{}})
+  ASSERT_FALSE(TransformationMergeFunctionReturns(16, 100, 200, 101, 0, 0, {{}})
                    .IsApplicable(context.get(), transformation_context));
 
   // Block %28 is the merge block of a loop containing a return instruction, but
@@ -160,7 +160,7 @@ TEST(TransformationMergeFunctionReturnsTest, SimpleInapplicable) {
   // not OpLabel, OpPhi or OpBranch).
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          18, 100, 101, 0, 0, {{MakeReturnMergingInfo(29, 102, 0, {{}})}})
+          18, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(29, 102, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // Block %34 is the merge block of a loop containing a return instruction, but
@@ -168,21 +168,24 @@ TEST(TransformationMergeFunctionReturnsTest, SimpleInapplicable) {
   // that are not OpLabel, OpPhi or OpBranch).
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          20, 100, 101, 0, 0, {{MakeReturnMergingInfo(35, 102, 0, {{}})}})
+          20, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(35, 102, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // Id %1000 cannot be found in the module and there is no id of the correct
   // type (float) available at the end of the entry block of function %21.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(22, 100, 101, 102, 1000, {{}})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMergeFunctionReturns(22, 100, 200, 101, 102, 1000, {{}})
+          .IsApplicable(context.get(), transformation_context));
 
   // Id %47 is of type float, while function %45 has return type int.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(45, 100, 101, 102, 47, {{}})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMergeFunctionReturns(45, 100, 200, 101, 102, 47, {{}})
+          .IsApplicable(context.get(), transformation_context));
 
   // Id %50 is not available at the end of the entry block of function %45.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(45, 100, 101, 102, 50, {{}})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMergeFunctionReturns(45, 100, 200, 101, 102, 50, {{}})
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationMergeFunctionReturnsTest, MissingBooleans) {
@@ -235,8 +238,9 @@ TEST(TransformationMergeFunctionReturnsTest, MissingBooleans) {
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
 
-    ASSERT_FALSE(TransformationMergeFunctionReturns(3, 100, 101, 0, 0, {{}})
-                     .IsApplicable(context.get(), transformation_context));
+    ASSERT_FALSE(
+        TransformationMergeFunctionReturns(3, 100, 200, 101, 0, 0, {{}})
+            .IsApplicable(context.get(), transformation_context));
   }
   {
     // OpConstantFalse is missing.
@@ -287,8 +291,9 @@ TEST(TransformationMergeFunctionReturnsTest, MissingBooleans) {
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
 
-    ASSERT_FALSE(TransformationMergeFunctionReturns(3, 100, 101, 0, 0, {{}})
-                     .IsApplicable(context.get(), transformation_context));
+    ASSERT_FALSE(
+        TransformationMergeFunctionReturns(3, 100, 200, 101, 0, 0, {{}})
+            .IsApplicable(context.get(), transformation_context));
   }
 }
 
@@ -386,59 +391,65 @@ TEST(TransformationMergeFunctionReturnsTest, InvalidIds) {
   // Fresh id %100 is used twice.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          17, 100, 100, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
+          17, 100, 200, 100, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // Fresh id %100 is used twice.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          17, 100, 101, 0, 0, {{MakeReturnMergingInfo(20, 100, 0, {{}})}})
+          17, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(20, 100, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // %0 cannot be a fresh id for the new merge block.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          17, 100, 0, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
+          17, 100, 200, 0, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
+          .IsApplicable(context.get(), transformation_context));
+
+  // %0 cannot be a fresh id for the new continue block.
+  ASSERT_FALSE(
+      TransformationMergeFunctionReturns(
+          17, 100, 0, 200, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // %0 cannot be a fresh id for the new header block.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          17, 0, 100, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
+          17, 0, 200, 100, 0, 0, {{MakeReturnMergingInfo(20, 101, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // %0 cannot be a fresh id for the new |is_returning| instruction in an
   // existing merge block.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          17, 100, 101, 0, 0, {{MakeReturnMergingInfo(20, 0, 0, {{}})}})
+          17, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(20, 0, 0, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // %0 cannot be a fresh id for the new |return_val| instruction in the new
   // return block.
-  ASSERT_FALSE(
-      TransformationMergeFunctionReturns(
-          14, 100, 101, 0, 10, {{MakeReturnMergingInfo(27, 102, 103, {{}})}})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationMergeFunctionReturns(
+                   14, 100, 200, 101, 0, 10,
+                   {{MakeReturnMergingInfo(27, 102, 103, {{}})}})
+                   .IsApplicable(context.get(), transformation_context));
 
   // %0 cannot be a fresh id for the new |maybe_return_val| instruction in an
   // existing merge block, inside a non-void function.
-  ASSERT_FALSE(
-      TransformationMergeFunctionReturns(
-          14, 100, 101, 102, 10, {{MakeReturnMergingInfo(27, 103, 0, {{}})}})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationMergeFunctionReturns(
+                   14, 100, 200, 101, 102, 10,
+                   {{MakeReturnMergingInfo(27, 103, 0, {{}})}})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Fresh id %102 is repeated.
-  ASSERT_FALSE(
-      TransformationMergeFunctionReturns(
-          14, 100, 101, 102, 10, {{MakeReturnMergingInfo(27, 102, 104, {{}})}})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationMergeFunctionReturns(
+                   14, 100, 200, 101, 102, 10,
+                   {{MakeReturnMergingInfo(27, 102, 104, {{}})}})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Id %11 (type int) does not have the correct type (float) for OpPhi
   // instruction %31.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          16, 100, 101, 0, 0,
+          16, 100, 200, 101, 0, 0,
           {{MakeReturnMergingInfo(36, 103, 104, {{{31, 11}, {32, 11}}})}})
           .IsApplicable(context.get(), transformation_context));
 
@@ -446,21 +457,21 @@ TEST(TransformationMergeFunctionReturnsTest, InvalidIds) {
   // instruction %31.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          16, 100, 101, 0, 0,
+          16, 100, 200, 101, 0, 0,
           {{MakeReturnMergingInfo(36, 102, 0, {{{31, 11}, {32, 11}}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // Id %43 is not available at the end of the entry block.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          16, 100, 101, 0, 0,
+          16, 100, 200, 101, 0, 0,
           {{MakeReturnMergingInfo(36, 102, 0, {{{31, 44}, {32, 11}}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // There is not a mapping for id %31 (float OpPhi instruction in a loop merge
   // block) and no suitable id is available at the end of the entry block.
   ASSERT_FALSE(TransformationMergeFunctionReturns(
-                   16, 100, 101, 0, 0,
+                   16, 100, 200, 101, 0, 0,
                    {{MakeReturnMergingInfo(36, 102, 0, {{{32, 11}}})}})
                    .IsApplicable(context.get(), transformation_context));
 
@@ -468,7 +479,7 @@ TEST(TransformationMergeFunctionReturnsTest, InvalidIds) {
   // available at the end of the entry block.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          16, 100, 101, 0, 0,
+          16, 100, 200, 101, 0, 0,
           {{MakeReturnMergingInfo(36, 102, 0, {{{31, 1000}, {32, 11}}})}})
           .IsApplicable(context.get(), transformation_context));
 }
@@ -560,7 +571,7 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
 
   // The 0s are allowed because the function's return type is void.
   auto transformation1 =
-      TransformationMergeFunctionReturns(14, 100, 101, 0, 0, {{}});
+      TransformationMergeFunctionReturns(14, 100, 200, 101, 0, 0, {{}});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -570,13 +581,14 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
 
   // %12 is available at the end of the entry block of %19 (it is a global
   // variable).
-  ASSERT_TRUE(TransformationMergeFunctionReturns(19, 110, 111, 112, 12, {{}})
-                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(
+      TransformationMergeFunctionReturns(19, 110, 210, 111, 112, 12, {{}})
+          .IsApplicable(context.get(), transformation_context));
 
   // %1000 cannot be found in the module, but there is a suitable id available
   // at the end of the entry block (%12).
   auto transformation2 =
-      TransformationMergeFunctionReturns(19, 110, 111, 112, 1000, {{}});
+      TransformationMergeFunctionReturns(19, 110, 210, 111, 112, 1000, {{}});
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -586,13 +598,14 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
 
   // %27 is available at the end of the entry block of %26 (it is a function
   // parameter).
-  ASSERT_TRUE(TransformationMergeFunctionReturns(26, 120, 121, 122, 27, {{}})
-                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(
+      TransformationMergeFunctionReturns(26, 120, 220, 121, 122, 27, {{}})
+          .IsApplicable(context.get(), transformation_context));
 
   // %1000 cannot be found in the module, but there is a suitable id available
   // at the end of the entry block (%27).
   auto transformation3 =
-      TransformationMergeFunctionReturns(26, 120, 121, 122, 1000, {{}});
+      TransformationMergeFunctionReturns(26, 120, 220, 121, 122, 1000, {{}});
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -602,13 +615,14 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
 
   // %35 is available at the end of the entry block of %33 (it is in the entry
   // block).
-  ASSERT_TRUE(TransformationMergeFunctionReturns(26, 130, 131, 132, 27, {{}})
-                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(
+      TransformationMergeFunctionReturns(26, 130, 230, 131, 132, 27, {{}})
+          .IsApplicable(context.get(), transformation_context));
 
   // %1000 cannot be found in the module, but there is a suitable id available
   // at the end of the entry block (%35).
   auto transformation4 =
-      TransformationMergeFunctionReturns(33, 130, 131, 132, 1000, {{}});
+      TransformationMergeFunctionReturns(33, 130, 230, 131, 132, 1000, {{}});
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),
@@ -642,8 +656,8 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
          %15 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %11 %16 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %16
          %16 = OpLabel
                OpSelectionMerge %17 None
                OpBranchConditional %11 %18 %17
@@ -653,13 +667,15 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
                OpBranch %101
         %101 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
          %19 = OpFunction %5 None %6
          %20 = OpLabel
                OpBranch %110
         %110 = OpLabel
-               OpLoopMerge %111 %110 None
-               OpBranchConditional %11 %21 %110
+               OpLoopMerge %111 %210 None
+               OpBranch %21
          %21 = OpLabel
                OpSelectionMerge %22 None
                OpBranchConditional %11 %23 %24
@@ -673,14 +689,16 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
         %111 = OpLabel
         %112 = OpPhi %5 %12 %23 %25 %24
                OpReturnValue %112
+        %210 = OpLabel
+               OpBranch %110
                OpFunctionEnd
          %26 = OpFunction %7 None %8
          %27 = OpFunctionParameter %7
          %28 = OpLabel
                OpBranch %120
         %120 = OpLabel
-               OpLoopMerge %121 %120 None
-               OpBranchConditional %11 %29 %120
+               OpLoopMerge %121 %220 None
+               OpBranch %29
          %29 = OpLabel
                OpSelectionMerge %30 None
                OpBranchConditional %11 %31 %30
@@ -692,14 +710,16 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
         %121 = OpLabel
         %122 = OpPhi %7 %27 %30 %32 %31
                OpReturnValue %122
+        %220 = OpLabel
+               OpBranch %120
                OpFunctionEnd
          %33 = OpFunction %7 None %9
          %34 = OpLabel
          %35 = OpConvertSToF %7 %12
                OpBranch %130
         %130 = OpLabel
-               OpLoopMerge %131 %130 None
-               OpBranchConditional %11 %36 %130
+               OpLoopMerge %131 %230 None
+               OpBranch %36
          %36 = OpLabel
                OpSelectionMerge %37 None
                OpBranchConditional %11 %38 %37
@@ -711,6 +731,8 @@ TEST(TransformationMergeFunctionReturnsTest, Simple) {
         %131 = OpLabel
         %132 = OpPhi %7 %35 %37 %39 %38
                OpReturnValue %132
+        %230 = OpLabel
+               OpBranch %130
                OpFunctionEnd
 )";
 
@@ -743,8 +765,8 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
          %15 = OpLabel
                OpBranch %16
          %16 = OpLabel
-               OpLoopMerge %17 %16 None
-               OpBranchConditional %8 %18 %16
+               OpLoopMerge %17 %916 None
+               OpBranch %18
          %18 = OpLabel
                OpLoopMerge %19 %20 None
                OpBranchConditional %8 %19 %21
@@ -767,8 +789,8 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
          %28 = OpLabel
                OpBranch %29
          %29 = OpLabel
-               OpLoopMerge %30 %29 None
-               OpBranchConditional %8 %30 %29
+               OpLoopMerge %30 %929 None
+               OpBranch %30
          %30 = OpLabel
                OpLoopMerge %31 %32 None
                OpBranch %33
@@ -792,6 +814,10 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
                OpBranch %38
          %38 = OpLabel
                OpReturnValue %12
+        %916 = OpLabel
+               OpBranch %16
+        %929 = OpLabel
+               OpBranch %29
                OpFunctionEnd
 )";
 
@@ -805,7 +831,7 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
       MakeUnique<FactManager>(context.get()), validator_options);
 
   auto transformation = TransformationMergeFunctionReturns(
-      14, 100, 101, 102, 11,
+      14, 100, 200, 101, 102, 11,
       {{MakeReturnMergingInfo(19, 103, 104, {{}}),
         MakeReturnMergingInfo(17, 105, 106, {{}}),
         MakeReturnMergingInfo(31, 107, 108, {{{35, 10}, {36, 12}}}),
@@ -841,11 +867,11 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
          %15 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %8 %16 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %16
          %16 = OpLabel
-               OpLoopMerge %17 %16 None
-               OpBranchConditional %8 %18 %16
+               OpLoopMerge %17 %916 None
+               OpBranch %18
          %18 = OpLabel
                OpLoopMerge %19 %20 None
                OpBranchConditional %8 %19 %21
@@ -872,8 +898,8 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
          %28 = OpLabel
                OpBranch %29
          %29 = OpLabel
-               OpLoopMerge %30 %29 None
-               OpBranchConditional %8 %30 %29
+               OpLoopMerge %30 %929 None
+               OpBranch %30
          %30 = OpLabel
                OpLoopMerge %31 %32 None
                OpBranch %33
@@ -901,9 +927,15 @@ TEST(TransformationMergeFunctionReturnsTest, NestedLoops) {
                OpBranchConditional %109 %101 %38
          %38 = OpLabel
                OpBranch %101
+        %916 = OpLabel
+               OpBranch %16
+        %929 = OpLabel
+               OpBranch %29
         %101 = OpLabel
         %102 = OpPhi %5 %106 %17 %110 %23 %12 %38
                OpReturnValue %102
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
 )";
 
@@ -997,7 +1029,7 @@ TEST(TransformationMergeFunctionReturnsTest, OverflowIds) {
   // No mapping from merge block %16 to fresh ids is given, so overflow ids are
   // needed.
   auto transformation1 =
-      TransformationMergeFunctionReturns(12, 100, 101, 102, 10, {{}});
+      TransformationMergeFunctionReturns(12, 100, 200, 101, 102, 10, {{}});
 
 #ifndef NDEBUG
   ASSERT_DEATH(
@@ -1016,7 +1048,7 @@ TEST(TransformationMergeFunctionReturnsTest, OverflowIds) {
   // No mapping from merge block %27 to fresh ids is given, so overflow ids are
   // needed.
   auto transformation2 =
-      TransformationMergeFunctionReturns(24, 110, 111, 0, 0, {{}});
+      TransformationMergeFunctionReturns(24, 110, 210, 111, 0, 0, {{}});
 
 #ifndef NDEBUG
   ASSERT_DEATH(
@@ -1054,8 +1086,8 @@ TEST(TransformationMergeFunctionReturnsTest, OverflowIds) {
          %13 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %8 %14 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %14
          %14 = OpLabel
          %15 = OpIAdd %5 %10 %10
                OpLoopMerge %16 %17 None
@@ -1081,13 +1113,15 @@ TEST(TransformationMergeFunctionReturnsTest, OverflowIds) {
         %101 = OpLabel
         %102 = OpPhi %5 %1001 %16 %22 %23
                OpReturnValue %102
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
          %24 = OpFunction %3 None %4
          %25 = OpLabel
                OpBranch %110
         %110 = OpLabel
-               OpLoopMerge %111 %110 None
-               OpBranchConditional %8 %26 %110
+               OpLoopMerge %111 %210 None
+               OpBranch %26
          %26 = OpLabel
                OpLoopMerge %27 %28 None
                OpBranch %29
@@ -1110,6 +1144,8 @@ TEST(TransformationMergeFunctionReturnsTest, OverflowIds) {
                OpBranch %111
         %111 = OpLabel
                OpReturn
+        %210 = OpLabel
+               OpBranch %110
                OpFunctionEnd
 )";
 
@@ -1179,7 +1215,7 @@ TEST(TransformationMergeFunctionReturnsTest, MissingIdsForOpPhi) {
   // corresponding mapping.
 
   auto transformation = TransformationMergeFunctionReturns(
-      12, 101, 102, 0, 0,
+      12, 101, 200, 102, 0, 0,
       {{MakeReturnMergingInfo(17, 103, 0, {{{25, 7}, {35, 8}}})}});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
@@ -1212,8 +1248,8 @@ TEST(TransformationMergeFunctionReturnsTest, MissingIdsForOpPhi) {
          %15 = OpConvertSToF %10 %13
                OpBranch %101
         %101 = OpLabel
-               OpLoopMerge %102 %101 None
-               OpBranchConditional %6 %16 %101
+               OpLoopMerge %102 %200 None
+               OpBranch %16
          %16 = OpLabel
                OpLoopMerge %17 %18 None
                OpBranch %19
@@ -1238,6 +1274,8 @@ TEST(TransformationMergeFunctionReturnsTest, MissingIdsForOpPhi) {
                OpBranch %102
         %102 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %101
                OpFunctionEnd
 )";
 
@@ -1324,14 +1362,14 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules1) {
   // block %14 is added.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          2, 100, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}})
+          2, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // In function %18, The definition of id %26 will still dominate its use in
   // instruction %27 (inside merge block %21), because %27 is an OpPhi
   // instruction.
   auto transformation = TransformationMergeFunctionReturns(
-      18, 100, 101, 0, 0, {{MakeReturnMergingInfo(21, 102, 103, {{}})}});
+      18, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(21, 102, 103, {{}})}});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1376,8 +1414,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules1) {
          %19 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %6 %20 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %20
          %20 = OpLabel
                OpLoopMerge %21 %22 None
                OpBranch %23
@@ -1399,6 +1437,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules1) {
                OpBranch %101
         %101 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
 )";
 
@@ -1482,17 +1522,17 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules2) {
   // block %14 to merge block %10 is added.
   ASSERT_FALSE(
       TransformationMergeFunctionReturns(
-          2, 100, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}})
+          2, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}})
           .IsApplicable(context.get(), transformation_context));
 
   // In function %18, the definition of id %26 will not dominate its use in
   // instruction %28 (inside block %27) after a new branch from return
   // block %25 to merge block %21 is added.
-  ASSERT_FALSE(TransformationMergeFunctionReturns(
-                   2, 100, 101, 0, 0,
-                   {{MakeReturnMergingInfo(10, 102, 0, {{}}),
-                     MakeReturnMergingInfo(21, 103, 0, {{}})}})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMergeFunctionReturns(
+          2, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 0, {{}}),
+                                    MakeReturnMergingInfo(21, 103, 0, {{}})}})
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules3) {
@@ -1556,7 +1596,7 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules3) {
   // fact that the id definition dominates the uses does not depend on it
   // dominating the merge block.
   auto transformation = TransformationMergeFunctionReturns(
-      2, 100, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}});
+      2, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1579,8 +1619,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules3) {
           %8 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %6 %9 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %9
           %9 = OpLabel
                OpLoopMerge %10 %11 None
                OpBranch %12
@@ -1608,6 +1648,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules3) {
                OpBranch %101
         %101 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
 )";
 
@@ -1700,7 +1742,7 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules4) {
   // instruction %19 after the transformation is applied, because %13 dominates
   // all of the return blocks.
   auto transformation = TransformationMergeFunctionReturns(
-      2, 100, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}});
+      2, 100, 200, 101, 0, 0, {{MakeReturnMergingInfo(10, 102, 103, {{}})}});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1710,10 +1752,10 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules4) {
   // In function %20, the definition of id %28 will not dominate its use in
   // instruction %32 after the transformation is applied, because %28 dominates
   // only one of the return blocks.
-  ASSERT_FALSE(
-      TransformationMergeFunctionReturns(
-          20, 100, 101, 0, 0, {{MakeReturnMergingInfo(23, 102, 103, {{}})}})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationMergeFunctionReturns(
+                   20, 100, 200, 101, 0, 0,
+                   {{MakeReturnMergingInfo(23, 102, 103, {{}})}})
+                   .IsApplicable(context.get(), transformation_context));
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -1731,8 +1773,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules4) {
           %8 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %6 %9 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %9
           %9 = OpLabel
                OpLoopMerge %10 %11 None
                OpBranch %12
@@ -1759,6 +1801,8 @@ TEST(TransformationMergeFunctionReturnsTest, RespectDominanceRules4) {
                OpBranch %101
         %101 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
          %20 = OpFunction %3 None %4
          %21 = OpLabel
@@ -1830,7 +1874,7 @@ TEST(TransformationMergeFunctionReturnsTest, OpPhiAfterFirstBlock) {
       MakeUnique<FactManager>(context.get()), validator_options);
 
   auto transformation =
-      TransformationMergeFunctionReturns(2, 100, 101, 0, 0, {});
+      TransformationMergeFunctionReturns(2, 100, 200, 101, 0, 0, {});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1863,8 +1907,8 @@ TEST(TransformationMergeFunctionReturnsTest, OpPhiAfterFirstBlock) {
           %8 = OpLabel
                OpBranch %100
         %100 = OpLabel
-               OpLoopMerge %101 %100 None
-               OpBranchConditional %6 %9 %100
+               OpLoopMerge %101 %200 None
+               OpBranch %9
           %9 = OpLabel
          %10 = OpPhi %5 %6 %100
                OpSelectionMerge %11 None
@@ -1875,6 +1919,8 @@ TEST(TransformationMergeFunctionReturnsTest, OpPhiAfterFirstBlock) {
                OpBranch %101
         %101 = OpLabel
                OpReturn
+        %200 = OpLabel
+               OpBranch %100
                OpFunctionEnd
 )";
 

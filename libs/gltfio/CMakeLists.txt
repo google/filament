@@ -54,6 +54,7 @@ endif()
 
 function(generate_mat TEMPLATE SHADINGMODEL BLENDING)
     set(DOUBLESIDED false)
+    set(TRANSPARENCY default)
     set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
     configure_file(materials/${TEMPLATE}.mat.in ${GENERATED_MAT})
     set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
@@ -69,6 +70,7 @@ generate_mat(ubershader specularGlossiness masked)
 generate_mat(ubershader unlit fade)
 generate_mat(ubershader unlit opaque)
 generate_mat(ubershader unlit masked)
+generate_mat(volume lit volume)
 generate_mat(transmission lit transmission)
 generate_mat(sheen lit sheen)
 
@@ -115,6 +117,7 @@ set(LITE_DIR ${CMAKE_CURRENT_BINARY_DIR}/lite)
 
 function(generate_lite_mat BLENDING)
     set(DOUBLESIDED false)
+    set(TRANSPARENCY default)
     set(SHADINGMODEL lit)
     set(GENERATED_MAT "${LITE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
     configure_file(materials/gltflite.mat.in ${GENERATED_MAT})
@@ -195,12 +198,17 @@ if (NOT WEBGL AND NOT ANDROID)
     # Installation
     # ==================================================================================================
     install(TARGETS ${TARGET} gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
-
+    # The Image.h header is only needed within Filament and does not need to be distributed.
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
+        DESTINATION include
+        PATTERN "Image.h" EXCLUDE)
 else()
 
     install(TARGETS gltfio_core gltfio_resources gltfio_resources_lite ARCHIVE DESTINATION lib/${DIST_DIR})
-    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+    # The Image.h header is only needed within Filament and does not need to be distributed.
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio
+        DESTINATION include
+        PATTERN "Image.h" EXCLUDE)
     install(FILES ${RESOURCE_DIR}/gltfresources.h DESTINATION include/gltfio/resources)
     install(FILES ${LITE_DIR}/gltfresources_lite.h DESTINATION include/gltfio/resources)
 

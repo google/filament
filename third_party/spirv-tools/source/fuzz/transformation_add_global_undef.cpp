@@ -20,8 +20,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationAddGlobalUndef::TransformationAddGlobalUndef(
-    const spvtools::fuzz::protobufs::TransformationAddGlobalUndef& message)
-    : message_(message) {}
+    spvtools::fuzz::protobufs::TransformationAddGlobalUndef message)
+    : message_(std::move(message)) {}
 
 TransformationAddGlobalUndef::TransformationAddGlobalUndef(uint32_t fresh_id,
                                                            uint32_t type_id) {
@@ -42,14 +42,14 @@ bool TransformationAddGlobalUndef::IsApplicable(
 
 void TransformationAddGlobalUndef::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
-  ir_context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
+  auto new_instruction = MakeUnique<opt::Instruction>(
       ir_context, SpvOpUndef, message_.type_id(), message_.fresh_id(),
-      opt::Instruction::OperandList()));
+      opt::Instruction::OperandList());
+  auto new_instruction_ptr = new_instruction.get();
+  ir_context->module()->AddGlobalValue(std::move(new_instruction));
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  // We have added an instruction to the module, so need to be careful about the
-  // validity of existing analyses.
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  // Inform the def-use manager about the new instruction.
+  ir_context->get_def_use_mgr()->AnalyzeInstDef(new_instruction_ptr);
 }
 
 protobufs::Transformation TransformationAddGlobalUndef::ToMessage() const {

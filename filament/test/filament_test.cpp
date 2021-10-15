@@ -36,10 +36,10 @@
 #include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
-#include "details/Allocators.h"
+#include "Allocators.h"
 #include "details/Material.h"
 #include "details/Camera.h"
-#include "details/Froxelizer.h"
+#include "Froxelizer.h"
 #include "details/Engine.h"
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
@@ -792,7 +792,7 @@ TEST(FilamentTest, Bones) {
 
         static void check(mat4f const& m) noexcept {
             PerRenderableUibBone b;
-            FRenderableManager::makeBone(&b, m);
+            FSkinningBuffer::makeBone(&b, m);
 
             expect_eq(Shader::vertice(b), m);
 
@@ -803,7 +803,7 @@ TEST(FilamentTest, Bones) {
 
         static void check(mat4f const& m, float3 const& v) noexcept {
             PerRenderableUibBone b;
-            FRenderableManager::makeBone(&b, m);
+            FSkinningBuffer::makeBone(&b, m);
 
             expect_eq((m * v).xyz, Shader::vertice(v, b));
 

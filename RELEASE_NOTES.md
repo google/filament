@@ -3,7 +3,113 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.10.8 (currently main branch)
+## v1.12.9 (currently main branch)
+
+## v1.12.8
+
+- engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: A new `Engine::pumpMessageQueues()` method can be used to trigger all pending user
+  callbacks right away [**NEW API**].
+- engine: new inline helpers to more easily use lambdas, functors and method callbacks with
+  `{Pixel}BufferDescriptor`.
+- Vulkan: fix vertical offset for `readPixels`.
+- Vulkan: various internal improvements.
+- Metal: support integer formats with `readPixels`.
+
+## v1.12.7
+
+- engine: Fix, apply emissive after shadowing.
+
+## v1.12.6
+
+- engine: Added concept of lod bias to materials.
+  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: Use more sensible defaults for spot light inner outer cone angles.
+- engine: Fix potential race condition that caused stalls in `endFrame`.
+- gltfio: Improved handling of transparent materials.
+- Metal: Fix potential crash on earlier versions of iOS (<= 13.0).
+- Android: Fix `filament-utils-android` 'lite' flavor.
+- Java: Fix potential crash with `IBLPrefilter`.
+
+## v1.12.5
+
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
+
+## v1.12.4
+
+- engine: New night adaptation API on `ColorGrading`. This API can be used to create an effect that
+  that simulates color and brightness shifts in human vision in low-light conditions.
+- engine: improved performance of AMD FidelityFX FSR1 by 4.6x, it now runs in about 2ms in 4K.
+- engine: Dynamic resolution quality `MEDIUM`, `HIGH` and `ULTRA` now all use AMD FidelityFX FSR1.
+- engine: Fix crash when duplicating material instances.
+- gltfio: generate tangents if requested by the material.
+
+## v1.12.3
+
+- engine: Support AMD FidelityFX Super Resolution for dynamic resolution scaling
+
+## v1.12.2
+
+- engine: New API on `ColorGrading` to enable or disable gamut mapping at will [**New API**].
+- engine: Fix typo causing ShadowOptions::shadowFar to not work properly.
+- engine: Fix, CSM glitch when using shadowMultiplier materials.
+- engine: Improve precision when computing camera projection.
+- engine: Increase the number of supported spot shadows to 14 (from 6).
+- Metal: Add texture swizzling support for external textures.
+
+## v1.12.1
+
+- engine: `double` precision translation support in TransformManager. Disabled by default.
+  Augment model (and view) matrix on `Camera` to accept double precision matrices. When enabled,
+  double precision translations allow filament to handle a very large world space [**New API**].
+- engine: Fix, Views with custom render targets are now blendable.
+
+## v1.12.0
+
+- engine: Option to automatically compute bent normals from SSAO & apply to specular AO
+  [⚠️ **Material breakage**].
+- engine: New APIs: Light channels. Geometry and lights now have a channel associated to them, at
+  least one channel must match for lighting to occur [⚠️ **Material breakage**].
+- engine: Fix potential GPU crash with punctual lights near the far clipping plane.
+- materials: The `inverseTonemap` API is now an exact inverse of the Filmic tonemapper.
+- Metal: Better support for texture formats on M1 Macs.
+
+## v1.11.2
+
+- engine: New API: `ColorGrading::Builder::toneMapper(const ToneMapper*)`.
+- engine: New tone mapper: `GenericToneMapper`, a configurable tone mapper.
+- engine: `ColorGrading::Builder::toneMapping(ColorGrading::ToneMapping)` is now deprecated.
+- engine: Removed `REINHARD` tonemap operator[⚠️ **API Change**].
+- engine: Improve s3tc_srgb detection on desktop.
+- engine: Add bilateral threshold in SSAO options.
+- gltfio: Fix AssetLoader leak, remove unwanted destructor.
+- Metal/Vulkan: Fix uploading texture data with padding or offset.
+- Metal: fix GPU crash seen with large amounts of geometry.
+
+## v1.11.1
+
+- engine: Luminance scaling can now be used with any tone mapping operator. It was previously tied
+  to the "EVILS" tone mapping operator.
+- engine: Removed the "EVILS" tone mapping operator [⚠️ **API Change**].
+- engine: Improvements to Skinning. A new `SkinningBuffer` API allows bone sharing between
+  renderables.
+- engine: Improvements to internal memory allocation for Metal and Vulkan backends.
+- engine: Default to OpenGL backend when Windows does not support Vulkan.
+- samples: Add new sample app: image_viewer.
+
+## v1.11.0
+
+- engine: Added support for transparent shadows. Add `transparentShadow : true` in the material file.
+- engine: honor user-defined precision in material files for non-samplers, rename `SamplerPrecision`
+  to `ParameterPrecicion`. [⚠️ **API Change**]
+- engine: Work around Qualcomm issue with point lights.
+- engine: Allow MSAA when post-processing is disabled.
+- engine: enable up to 6 spot-light shadows.
+- gltfio: Added support for `KHR_materials_volume`.
+- gltfio: fix precision in KHR_texture_transform.
+- java: Removed support for Java desktop targets (macOS, Linux, and Windows) [⚠️ **API Change**].
 
 ## v1.10.7
 

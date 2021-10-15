@@ -78,9 +78,23 @@ TEST(TransformationAddConstantNullTest, BasicTest) {
   ASSERT_FALSE(TransformationAddConstantNull(100, 22).IsApplicable(
       context.get(), transformation_context));
 
+  {
+    // %100 = OpConstantNull %6
+    TransformationAddConstantNull transformation(100, 6);
+    ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
+    ASSERT_EQ(nullptr, context->get_constant_mgr()->FindDeclaredConstant(100));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_EQ(SpvOpConstantNull,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_EQ(
+        0.0F,
+        context->get_constant_mgr()->FindDeclaredConstant(100)->GetFloat());
+  }
+
   TransformationAddConstantNull transformations[] = {
-      // %100 = OpConstantNull %6
-      TransformationAddConstantNull(100, 6),
 
       // %101 = OpConstantNull %7
       TransformationAddConstantNull(101, 7),

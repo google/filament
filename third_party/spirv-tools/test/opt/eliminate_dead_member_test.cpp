@@ -1184,4 +1184,86 @@ TEST_F(EliminateDeadMemberTest, UpdateSpecConstOpInsert) {
   SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
 }
 
+TEST_F(EliminateDeadMemberTest, 8BitIndexNoChange) {
+  // Test that the pass does not crash when an 8 bit index is used in an
+  // OpAccessChain. No change is expected.
+  const std::string text = R"(
+               OpCapability ImageQuery
+               OpCapability Int8
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "OpnSeman/" %2
+               OpExecutionMode %1 OriginUpperLeft
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+  %_struct_7 = OpTypeStruct %v4float
+%_ptr_Function__struct_7 = OpTypePointer Function %_struct_7
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %10 = OpTypeFunction %v4float %_ptr_Function__struct_7
+       %char = OpTypeInt 8 1
+     %char_0 = OpConstant %char 0
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+          %2 = OpVariable %_ptr_Output_v4float Output
+          %1 = OpFunction %void None %4
+         %14 = OpLabel
+         %15 = OpVariable %_ptr_Function__struct_7 Function
+         %16 = OpFunctionCall %v4float %17 %15
+               OpReturn
+               OpFunctionEnd
+         %17 = OpFunction %v4float DontInline %10
+         %18 = OpFunctionParameter %_ptr_Function__struct_7
+         %19 = OpLabel
+         %20 = OpAccessChain %_ptr_Function_v4float %18 %char_0
+         %21 = OpLoad %v4float %20
+               OpReturnValue %21
+               OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndDisassemble<opt::EliminateDeadMembersPass>(
+      text, /* skip_nop = */ true, /* do_validation = */ true);
+  EXPECT_EQ(opt::Pass::Status::SuccessWithoutChange, std::get<1>(result));
+}
+
+TEST_F(EliminateDeadMemberTest, 8BitIndexWithChange) {
+  // Test that the pass does not crash when an 8 bit index is used in an
+  // OpAccessChain. The index in the access change should be changed to 0.
+  const std::string text = R"(
+               OpCapability ImageQuery
+               OpCapability Int8
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "OpnSeman/" %2
+               OpExecutionMode %1 OriginUpperLeft
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+  %_struct_7 = OpTypeStruct %v4float %v4float
+%_ptr_Function__struct_7 = OpTypePointer Function %_struct_7
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %10 = OpTypeFunction %v4float %_ptr_Function__struct_7
+       %char = OpTypeInt 8 1
+     %char_1 = OpConstant %char 1
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+          %2 = OpVariable %_ptr_Output_v4float Output
+          %1 = OpFunction %void None %4
+         %14 = OpLabel
+         %15 = OpVariable %_ptr_Function__struct_7 Function
+         %16 = OpFunctionCall %v4float %17 %15
+               OpReturn
+               OpFunctionEnd
+         %17 = OpFunction %v4float DontInline %10
+; CHECK: [[param:%\w+]] = OpFunctionParameter
+         %18 = OpFunctionParameter %_ptr_Function__struct_7
+         %19 = OpLabel
+; CHECK: OpAccessChain %_ptr_Function_v4float [[param]] %uint_0
+         %20 = OpAccessChain %_ptr_Function_v4float %18 %char_1
+         %21 = OpLoad %v4float %20
+               OpReturnValue %21
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<opt::EliminateDeadMembersPass>(text, true);
+}
+
 }  // namespace

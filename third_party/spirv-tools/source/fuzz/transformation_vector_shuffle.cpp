@@ -21,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationVectorShuffle::TransformationVectorShuffle(
-    const spvtools::fuzz::protobufs::TransformationVectorShuffle& message)
-    : message_(message) {}
+    protobufs::TransformationVectorShuffle message)
+    : message_(std::move(message)) {}
 
 TransformationVectorShuffle::TransformationVectorShuffle(
     const protobufs::InstructionDescriptor& instruction_to_insert_before,
@@ -130,13 +130,18 @@ void TransformationVectorShuffle::Apply(
 
   // Add a shuffle instruction right before the instruction identified by
   // |message_.instruction_to_insert_before|.
-  FindInstruction(message_.instruction_to_insert_before(), ir_context)
-      ->InsertBefore(MakeUnique<opt::Instruction>(
+  auto insert_before =
+      FindInstruction(message_.instruction_to_insert_before(), ir_context);
+  opt::Instruction* new_instruction =
+      insert_before->InsertBefore(MakeUnique<opt::Instruction>(
           ir_context, SpvOpVectorShuffle, result_type_id, message_.fresh_id(),
           shuffle_operands));
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  // Inform the def-use manager about the new instruction and record its basic
+  // block.
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_instruction);
+  ir_context->set_instr_block(new_instruction,
+                              ir_context->get_instr_block(insert_before));
 
   AddDataSynonymFacts(ir_context, transformation_context);
 }

@@ -142,7 +142,7 @@ IBLPrefilterContext::IBLPrefilterContext(IBLPrefilterContext&& rhs) noexcept
     this->operator=(std::move(rhs));
 }
 
-IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) {
+IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) noexcept {
     using std::swap;
     if (this != & rhs) {
         swap(mRenderer, rhs.mRenderer);
@@ -182,7 +182,7 @@ IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
 
 IBLPrefilterContext::EquirectangularToCubemap&
 IBLPrefilterContext::EquirectangularToCubemap::operator=(
-        IBLPrefilterContext::EquirectangularToCubemap&& rhs) {
+        IBLPrefilterContext::EquirectangularToCubemap&& rhs) noexcept {
     using std::swap;
     if (this != &rhs) {
         swap(mEquirectMaterial, rhs.mEquirectMaterial);
@@ -332,7 +332,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(SpecularFilter&& rhs) noexce
     this->operator=(std::move(rhs));
 }
 
-IBLPrefilterContext::SpecularFilter& IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) {
+IBLPrefilterContext::SpecularFilter&
+IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) noexcept {
     using std::swap;
     if (this != & rhs) {
         swap(mKernelMaterial, rhs.mKernelMaterial);

@@ -22,6 +22,10 @@
 #define FILAMENT_VULKAN_VERBOSE 0
 #define FILAMENT_VULKAN_DUMP_API 0
 
+#ifndef FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB
+#define FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
+
 // In debug builds, we enable validation layers and set up a debug callback.
 //
 // To enable validation layers in Android, also be sure to set the jniLibs property in the gradle

@@ -14,7 +14,6 @@
 
 #include "transformation_composite_insert.h"
 
-#include "source/fuzz/fuzzer_pass_add_composite_inserts.h"
 #include "source/fuzz/fuzzer_util.h"
 #include "source/fuzz/instruction_descriptor.h"
 
@@ -22,8 +21,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationCompositeInsert::TransformationCompositeInsert(
-    const spvtools::fuzz::protobufs::TransformationCompositeInsert& message)
-    : message_(message) {}
+    protobufs::TransformationCompositeInsert message)
+    : message_(std::move(message)) {}
 
 TransformationCompositeInsert::TransformationCompositeInsert(
     const protobufs::InstructionDescriptor& instruction_to_insert_before,
@@ -124,15 +123,21 @@ void TransformationCompositeInsert::Apply(
   auto composite_type_id =
       fuzzerutil::GetTypeId(ir_context, message_.composite_id());
 
-  FindInstruction(message_.instruction_to_insert_before(), ir_context)
-      ->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpCompositeInsert, composite_type_id,
-          message_.fresh_id(), std::move(in_operands)));
+  auto insert_before =
+      FindInstruction(message_.instruction_to_insert_before(), ir_context);
+  auto new_instruction = MakeUnique<opt::Instruction>(
+      ir_context, SpvOpCompositeInsert, composite_type_id, message_.fresh_id(),
+      std::move(in_operands));
+  auto new_instruction_ptr = new_instruction.get();
+  insert_before->InsertBefore(std::move(new_instruction));
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
 
-  // We have modified the module so most analyzes are now invalid.
-  ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
+  // Inform the def-use manager about the new instruction and record its basic
+  // block.
+  ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_instruction_ptr);
+  ir_context->set_instr_block(new_instruction_ptr,
+                              ir_context->get_instr_block(insert_before));
 
   // Add data synonym facts that arise from the insertion.
   AddDataSynonymFacts(ir_context, transformation_context);

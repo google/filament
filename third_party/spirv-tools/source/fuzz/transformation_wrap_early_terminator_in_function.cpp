@@ -23,9 +23,8 @@ namespace fuzz {
 
 TransformationWrapEarlyTerminatorInFunction::
     TransformationWrapEarlyTerminatorInFunction(
-        const spvtools::fuzz::protobufs::
-            TransformationWrapEarlyTerminatorInFunction& message)
-    : message_(message) {}
+        protobufs::TransformationWrapEarlyTerminatorInFunction message)
+    : message_(std::move(message)) {}
 
 TransformationWrapEarlyTerminatorInFunction::
     TransformationWrapEarlyTerminatorInFunction(

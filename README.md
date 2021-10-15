@@ -31,39 +31,28 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.10.7'
+    implementation 'com.google.android.filament:filament-android:1.12.8'
 }
 ```
 
 Here are all the libraries available in the group `com.google.android.filament`:
 
-[![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  
-The Filament rendering engine itself.
-
-[![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android)  
-A glTF 2.0 loader for Filament, depends on `filament-android`  .
-
-[![gltfio-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite/badge.svg?subject=gltfio-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite)  
-Trimmed version of `gltfio` that does not support some glTF features.
-
-[![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android)  
-KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`.
-
-[![filament-utils-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite/badge.svg?subject=filament-utils-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite)  
-Trimmed version of `filament-utils` that does not support some glTF features.
-
-[![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android)  
-A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer.
-
-[![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite)  
-A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations.
+| Artifact      | Description   |
+| ------------- | ------------- |
+| [![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
+| [![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
+| [![gltfio-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite/badge.svg?subject=gltfio-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite) | Trimmed version of `gltfio` that does not support some glTF extensions. |
+| [![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
+| [![filament-utils-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite/badge.svg?subject=filament-utils-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android-lite) | Trimmed version of `filament-utils` that does not support some glTF features. |
+| [![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
+| [![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite) | A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations. |
 
 ### iOS
 
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.10.7'
+pod 'Filament', '~> 1.12.8'
 ```
 
 ### Snapshots
@@ -97,25 +86,12 @@ steps:
 ![Helmet](docs/images/samples/example_helmet.jpg)
 ![Screen-space refraction](docs/images/samples/example_ssr.jpg)
 
-
-### Applications
-
-Here are a few screenshots of applications that use Filament in production:
-
-#### Google Maps AR Navigation
-
-![Google Maps AR Navigation](docs/images/samples/app_gmm_ar_nav.jpg)
-
-#### Google Search 3D/AR Viewer on Android
-
-![Google Search 3D/AR Viewer on Android](docs/images/samples/app_google_3d_viewer.jpg)
-
 ## Features
 
 ### APIs
 
 - Native C++ API for Android, iOS, Linux, macOS and Windows
-- Java/JNI API for Android, Linux, macOS and Windows
+- Java/JNI API for Android
 - JavaScript API
 
 ### Backends
@@ -147,19 +123,21 @@ Here are a few screenshots of applications that use Filament in production:
 - Spot and directional light shadows
 - Cascaded shadows
 - EVSM or PCF shadows
+- Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
 - Screen-space refraction
 - Global fog
-- Dynamic resolution
+- Dynamic resolution (with support for AMD FidelityFX FSR)
 
 ### Post processing
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: ACES, filmic, etc.
-- Color grading: white balance, channel mixer, shadows/mid-tones/highlights, ASC CDL,
-  contrast, saturation, etc.
+- Multiple tone mappers: generic (customizable), ACES, filmic, etc.
+- Color and tone management: luminance scaling, gamut mapping
+- Color grading: exposure, night adaptation, white balance, channel mixer,
+  shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
 - TAA, FXAA, MSAA
 - Screen-space lens flares
 
@@ -195,6 +173,7 @@ Here are a few screenshots of applications that use Filament in production:
   - [x] KHR_materials_sheen
   - [x] KHR_materials_transmission
   - [x] KHR_materials_unlit
+  - [x] KHR_materials_volume
   - [x] KHR_mesh_quantization
   - [x] KHR_texture_transform
 
@@ -262,22 +241,11 @@ if (renderer->beginFrame(swapChain)) {
 ```
 
 For complete examples of Linux, macOS and Windows Filament applications, look at the source files
-in the `samples/` directory. These samples are all based on `samples/app/` which contains the code
-that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
+in the `samples/` directory. These samples are all based on `libs/filamentapp/` which contains the
+code that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
 
-### Java on Linux, macOS and Windows
-
-After building Filament, you can use `filament-java.jar` and its companion `filament-jni` native
-library to use Filament in desktop Java applications.
-
-You must always first initialize Filament by calling `Filament.init()`.
-
-You can use Filament either with AWT or Swing, using respectively a `FilamentCanvas` or a
-`FilamentPanel`.
-
-Following the steps above (how to use Filament from native code), create an `Engine` and a
-`Renderer`, but instead of calling `beginFrame` and `endFrame` on the renderer itself, call
-these methods on `FilamentCanvas` or `FilamentPanel`.
+For more information on how to prepare environment maps for image-based lighting please refer to
+[BUILDING.md](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples).
 
 ### Android
 
@@ -308,6 +276,10 @@ To get started you can use the textures and environment maps found respectively 
 `third_party/textures` and `third_party/environments`. These assets are under CC0 license. Please
 refer to their respective `URL.txt` files to know more about the original authors.
 
+Environments must be pre-processed using
+[`cmgen`](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples) or
+using the `libiblprefilter` library.
+
 ## How to make contributions
 
 Please read and follow the steps in [CONTRIBUTING.md](/CONTRIBUTING.md). Make sure you are
@@ -330,9 +302,9 @@ and tools.
 - `docs`:                     Documentation
   - `math`:                   Mathematica notebooks used to explore BRDFs, equations, etc.
 - `filament`:                 Filament rendering engine (minimal dependencies)
+  - `backend`:                Rendering backends/drivers (Vulkan, Metal, OpenGL/ES)
 - `ide`:                      Configuration files for IDEs (CLion, etc.)
 - `ios`:                      Sample projects for iOS
-- `java`:                     Java bindings for Filament libraries
 - `libs`:                     Libraries
   - `bluegl`:                 OpenGL bindings for macOS, Linux and Windows
   - `bluevk`:                 Vulkan bindings for macOS, Linux, Windows and Android
@@ -352,6 +324,7 @@ and tools.
   - `math`:                   Math library
   - `mathio`:                 Math types support for output streams
   - `utils`:                  Utility library (threads, memory, data structures, etc.)
+  - `viewer`:                 glTF viewer library (requires gltfio)
 - `samples`:                  Sample desktop applications
 - `shaders`:                  Shaders used by `filamat` and `matc`
 - `third_party`:              External libraries and assets

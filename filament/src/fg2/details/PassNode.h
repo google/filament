@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FG2_PASSNODE_H
-#define TNT_FILAMENT_FG2_PASSNODE_H
+#ifndef TNT_FILAMENT_FG2_DETAILS_PASSNODE_H
+#define TNT_FILAMENT_FG2_DETAILS_PASSNODE_H
 
 #include "fg2/details/DependencyGraph.h"
 #include "fg2/details/Utilities.h"
@@ -124,4 +124,4 @@ private:
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FG2_PASSNODE_H
+#endif // TNT_FILAMENT_FG2_DETAILS_PASSNODE_H

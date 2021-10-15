@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
-#define TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
+#ifndef TNT_FILAMENT_RENDERABLEMANAGER_H
+#define TNT_FILAMENT_RENDERABLEMANAGER_H
 
 #include <filament/Box.h>
 #include <filament/FilamentAPI.h>
@@ -36,11 +36,13 @@ namespace utils {
 
 namespace filament {
 
+class BufferObject;
 class Engine;
 class IndexBuffer;
 class Material;
 class MaterialInstance;
 class Renderer;
+class SkinningBuffer;
 class VertexBuffer;
 
 class FEngine;
@@ -217,6 +219,14 @@ public:
         Builder& culling(bool enable) noexcept;
 
         /**
+         * Enables or disables a light channel. Light channel 0 is enabled by default.
+         *
+         * @param channel Light channel to enable or disable, between 0 and 7.
+         * @param enable Whether to enable or disable the light channel.
+         */
+        Builder& lightChannel(unsigned int channel, bool enable = true) noexcept;
+
+        /**
          * Controls if this renderable casts shadows, false by default.
          *
          * If the View's shadow type is set to ShadowType::VSM, castShadows should only be disabled
@@ -240,7 +250,38 @@ public:
         Builder& screenSpaceContactShadows(bool enable) noexcept;
 
         /**
+         * Allows bones to be swapped out and shared using SkinningBuffer.
+         *
+         * If skinning buffer mode is enabled, clients must call setSkinningBuffer() rather than
+         * setBones(). This allows sharing of data between renderables.
+         *
+         * @param enabled If true, enables buffer object mode.  False by default.
+         */
+        Builder& enableSkinningBuffers(bool enabled = true) noexcept;
+
+        /**
          * Enables GPU vertex skinning for up to 255 bones, 0 by default.
+         *
+         * Skinning Buffer mode must be enabled.
+         *
+         * Each vertex can be affected by up to 4 bones simultaneously. The attached
+         * VertexBuffer must provide data in the \c BONE_INDICES slot (uvec4) and the
+         * \c BONE_WEIGHTS slot (float4).
+         *
+         * See also RenderableManager::setSkinningBuffer() or SkinningBuffer::setBones(),
+         * which can be called on a per-frame basis to advance the animation.
+         *
+         * @param skinningBuffer nullptr to disable, otherwise the SkinningBuffer to use
+         * @param count 0 to disable, otherwise the number of bone transforms (up to 255)
+         * @param offset offset in the SkinningBuffer
+         */
+        Builder& skinning(SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept;
+
+
+        /**
+         * Enables GPU vertex skinning for up to 255 bones, 0 by default.
+         *
+         * Skinning Buffer mode must be disabled.
          *
          * Each vertex can be affected by up to 4 bones simultaneously. The attached
          * VertexBuffer must provide data in the \c BONE_INDICES slot (uvec4) and the
@@ -349,6 +390,22 @@ public:
     void setCulling(Instance instance, bool enable) noexcept;
 
     /**
+     * Enables or disables a light channel.
+     * Light channel 0 is enabled by default.
+     *
+     * \see Builder::lightChannel()
+     */
+    void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
+
+    /**
+     * Returns whether a light channel is enabled on a specified renderable.
+     * @param instance Instance of the component obtained from getInstance().
+     * @param channel  Light channel to query
+     * @return         true if the light channel is enabled, false otherwise
+     */
+    bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
+
+    /**
      * Changes whether or not the renderable casts shadows.
      *
      * \see Builder::castShadows()
@@ -389,6 +446,12 @@ public:
      */
     void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept; //!< \overload
+
+    /**
+     * Associates a SkinningBuffer to a renderable instance
+     */
+    void setSkinningBuffer(Instance instance, SkinningBuffer* skinningBuffer,
+            size_t count, size_t offset) noexcept;
 
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
@@ -519,4 +582,4 @@ Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices,
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_RENDERABLECOMPONENTMANAGER_H
+#endif // TNT_FILAMENT_RENDERABLEMANAGER_H

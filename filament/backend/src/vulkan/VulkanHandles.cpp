@@ -114,12 +114,12 @@ static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachmen
 // Creates a special "default" render target (i.e. associated with the swap chain)
 // Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
-        mContext(context), mOffscreen(false), mSamples(1) {}
+        mOffscreen(false), mSamples(1) {}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
-            HwRenderTarget(width, height), mContext(context), mOffscreen(true), mSamples(samples) {
+            HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
 
     // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
     // miplevel and array layer.
@@ -163,8 +163,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         const VulkanAttachment& spec = color[index];
         VulkanTexture* texture = spec.texture;
         if (texture && texture->samples == 1) {
-            VulkanTexture* msTexture = new VulkanTexture(context, texture->target, level,
-                    texture->format, samples, width, height, depth, texture->usage, stagePool);
+            VulkanTexture* msTexture = texture->getSidecar();
+            if (UTILS_UNLIKELY(msTexture == nullptr)) {
+                msTexture = new VulkanTexture(context, texture->target, level,
+                        texture->format, samples, width, height, depth, texture->usage, stagePool);
+                texture->setSidecar(msTexture);
+            }
             mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
             mMsaaAttachments[index].view = msTexture->getAttachmentView(0, 0,
                     VK_IMAGE_ASPECT_COLOR_BIT);
@@ -185,8 +189,12 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     }
 
     // Create sidecar MSAA texture for the depth attachment.
-    VulkanTexture* msTexture = new VulkanTexture(context, depthTexture->target, level,
-            depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+    VulkanTexture* msTexture = depthTexture->getSidecar();
+    if (UTILS_UNLIKELY(msTexture == nullptr)) {
+        msTexture = new VulkanTexture(context, depthTexture->target, level,
+                depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+        depthTexture->setSidecar(msTexture);
+    }
     mMsaaDepthAttachment = createAttachment(context, {
         .format = {},
         .image = {},
@@ -201,44 +209,33 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
             VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
-VulkanRenderTarget::~VulkanRenderTarget() {
-    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        if (mMsaaAttachments[index].texture != mColor[index].texture) {
-            delete mMsaaAttachments[index].texture;
-        }
-    }
-    if (mMsaaDepthAttachment.texture != mDepth.texture) {
-        delete mMsaaDepthAttachment.texture;
-    }
-}
-
-void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
-    const auto& extent = getExtent();
+void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const {
+    const auto& extent = getExtent(currentSurface);
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
-    flipVertically(bounds, getExtent().height);
+void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const {
+    flipVertically(bounds, getExtent(currentSurface).height);
 }
 
-VkExtent2D VulkanRenderTarget::getExtent() const {
+VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const {
     if (mOffscreen) {
         return {width, height};
     }
-    return mContext.currentSurface->clientSize;
+    return currentSurface->clientSize;
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : mContext.currentSurface->getColor();
+VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
+    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColor();
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth() const {
-    return mOffscreen ? mDepth : mContext.currentSurface->depth;
+VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
+    return mOffscreen ? mDepth : currentSurface->depth;
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
@@ -268,60 +265,12 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
         buffers(bufferCount, nullptr) {}
 
-VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes, backend::BufferUsage usage)
-        : mContext(context), mStagePool(stagePool) {
-    // Create the VkBuffer.
-    VkBufferCreateInfo bufferInfo {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = numBytes,
-        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    };
-    VmaAllocationCreateInfo allocInfo {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY
-    };
-    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
-}
 
-void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
-    void* mapped;
-    vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
-
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
-
-    VkBufferCopy region { .size = numBytes };
-    vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
-
-    // First, ensure that the copy finishes before the next draw call.
-    // Second, in case the user decides to upload another chunk (without ever using the first one)
-    // we need to ensure that this upload completes first.
-
-    // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but this
-    // seems to be insufficient on Mali devices. To work around this we are using a more
-    // aggressive ALL_GRAPHICS_BIT barrier.
-
-    VkBufferMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = mGpuBuffer,
-        .size = VK_WHOLE_SIZE
-    };
-
-    vkCmdPipelineBarrier(cmdbuffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-            0, 0, nullptr, 1, &barrier, 0, nullptr);
-}
-
-VulkanUniformBuffer::~VulkanUniformBuffer() {
-    vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
+VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
+        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
+        : HwBufferObject(byteCount),
+          buffer(context, stagePool, getBufferObjectUsage(bindingType), byteCount),
+          bindingType(bindingType) {
 }
 
 void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {

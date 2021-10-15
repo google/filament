@@ -131,8 +131,20 @@ public class View {
         public float maxScale = 1.0f;
 
         /**
-         * Upscaling quality. LOW: 1 bilinear tap, MEDIUM: 4 bilinear taps, HIGH: 9 bilinear taps.
-         * If minScale needs to be very low, it might help to use MEDIUM or HIGH here.
+         * Sharpness when QualityLevel.MEDIUM or higher is used [0, 1].
+         * 0 is disabled, 1 is the sharpest setting.
+         * The default is set to 0.9
+         */
+        public float sharpness = 0.9f;
+
+        /**
+         * Upscaling quality
+         * LOW: bilinear filtered blit. Fastest, poor quality
+         * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations no RCAS sharpening pass
+         * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations + RCAS
+         * ULTRA:  AMD FidelityFX FSR1
+         *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+         *
          * The default upscaling quality is set to LOW.
          */
         @NonNull
@@ -170,6 +182,16 @@ public class View {
         public float intensity = 1.0f;
 
         /**
+         * Depth distance that constitute an edge for filtering. Must be positive.
+         * Default is 5cm.
+         * This must be adjusted with the scene's scale and/or units.
+         * A value too low will result in high frequency noise, while a value too high will
+         * result in the loss of geometry edges. For AO, it is generally better to be too
+         * blurry than not enough.
+         */
+        public float bilateralThreshold = 0.05f;
+
+        /**
          * The quality setting controls the number of samples used for evaluating Ambient
          * occlusion. The default is QualityLevel.LOW which is sufficient for most mobile
          * applications.
@@ -197,6 +219,11 @@ public class View {
          * enable or disable screen space ambient occlusion
          */
         public boolean enabled = false;
+
+        /**
+         * enables bent normals computation from AO, and specular AO
+         */
+        public boolean bentNormals = false;
 
         /**
          * Minimal angle to consider in radian. This is used to reduce the creases that can
@@ -1173,6 +1200,7 @@ public class View {
                 options.homogeneousScaling,
                 options.minScale,
                 options.maxScale,
+                options.sharpness,
                 options.quality.ordinal());
     }
 
@@ -1378,9 +1406,11 @@ public class View {
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
         nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power,
-                options.resolution, options.intensity, options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
-                options.enabled, options.minHorizonAngleRad);
-        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance, options.ssctContactDistanceMax,  options.ssctIntensity,
+                options.resolution, options.intensity, options.bilateralThreshold,
+                options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
+                options.enabled, options.bentNormals, options.minHorizonAngleRad);
+        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance,
+                options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
                 options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
                 options.ssctRayCount, options.ssctEnabled);
@@ -1518,6 +1548,71 @@ public class View {
         return mDepthOfFieldOptions;
     }
 
+    /**
+     * A class containing the result of a picking query
+     */
+    public static class PickingQueryResult {
+        /** The entity of the renderable at the picking query location */
+        @Entity public int renderable;
+        /** The value of the depth buffer at the picking query location */
+        public float depth;
+        /** The fragment coordinate in GL convention at the the picking query location */
+        @NonNull public float[] fragCoords = new float[3];
+    };
+
+    /**
+     * An interface to implement a custom class to receive results of picking queries.
+     */
+    public interface OnPickCallback {
+        /**
+         * onPick() is called by the specified Handler in {@link View#pick} when the picking query
+         * result is available.
+         * @param result An instance of {@link PickingQueryResult}.
+         */
+        void onPick(@NonNull PickingQueryResult result);
+    }
+
+    /**
+     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
+     * Picking queries are all executed when {@link Renderer#render} is called on this View.
+     * The provided callback is guaranteed to be called at some point in the future.
+     *
+     * Typically it takes a couple frames to receive the result of a picking query.
+     *
+     * @param x        Horizontal coordinate to query in the viewport with origin on the left.
+     * @param y        Vertical coordinate to query on the viewport with origin at the bottom.
+     * @param handler  An {@link java.util.concurrent.Executor Executor}.
+     *                 On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback User callback executed by <code>handler</code> when the picking query
+     *                 result is available.
+     */
+    public void pick(int x, int y,
+            @Nullable Object handler, @Nullable OnPickCallback callback) {
+        InternalOnPickCallback internalCallback = new InternalOnPickCallback(callback);
+        nPick(getNativeObject(), x, y, handler, internalCallback);
+    }
+
+    private static class InternalOnPickCallback implements Runnable {
+        public InternalOnPickCallback(OnPickCallback mUserCallback) {
+            this.mUserCallback = mUserCallback;
+        }
+        @Override
+        public void run() {
+            mPickingQueryResult.renderable = mRenderable;
+            mPickingQueryResult.depth = mDepth;
+            mPickingQueryResult.fragCoords[0] = mFragCoordsX;
+            mPickingQueryResult.fragCoords[1] = mFragCoordsY;
+            mPickingQueryResult.fragCoords[2] = mFragCoordsZ;
+            mUserCallback.onPick(mPickingQueryResult);
+        }
+        private final OnPickCallback mUserCallback;
+        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
+        @Entity int mRenderable;
+        float mDepth;
+        float mFragCoordsX;
+        float mFragCoordsY;
+        float mFragCoordsZ;
+    }
 
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1543,7 +1638,7 @@ public class View {
     private static native int nGetAntiAliasing(long nativeView);
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
-    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, int quality);
+    private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, float sharpness, int quality);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
@@ -1555,7 +1650,7 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, int quality, int lowPassFilter, int upsampling, boolean enabled, float minHorizonAngleRad);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad);
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
@@ -1568,4 +1663,5 @@ public class View {
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
+    private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
 }

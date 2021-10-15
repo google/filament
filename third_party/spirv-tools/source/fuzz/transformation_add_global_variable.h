@@ -26,7 +26,7 @@ namespace fuzz {
 class TransformationAddGlobalVariable : public Transformation {
  public:
   explicit TransformationAddGlobalVariable(
-      const protobufs::TransformationAddGlobalVariable& message);
+      protobufs::TransformationAddGlobalVariable message);
 
   TransformationAddGlobalVariable(uint32_t fresh_id, uint32_t type_id,
                                   SpvStorageClass storage_class,

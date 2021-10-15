@@ -22,8 +22,8 @@ namespace spvtools {
 namespace fuzz {
 
 TransformationPermutePhiOperands::TransformationPermutePhiOperands(
-    const spvtools::fuzz::protobufs::TransformationPermutePhiOperands& message)
-    : message_(message) {}
+    protobufs::TransformationPermutePhiOperands message)
+    : message_(std::move(message)) {}
 
 TransformationPermutePhiOperands::TransformationPermutePhiOperands(
     uint32_t result_id, const std::vector<uint32_t>& permutation) {
@@ -80,9 +80,8 @@ void TransformationPermutePhiOperands::Apply(
 
   inst->SetInOperands(std::move(permuted_operands));
 
-  // Make sure our changes are analyzed
-  ir_context->InvalidateAnalysesExceptFor(
-      opt::IRContext::Analysis::kAnalysisNone);
+  // Update the def-use manager.
+  ir_context->UpdateDefUse(inst);
 }
 
 protobufs::Transformation TransformationPermutePhiOperands::ToMessage() const {

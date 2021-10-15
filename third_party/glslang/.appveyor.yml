@@ -77,8 +77,11 @@ after_test:
     bin\glslangValidator.exe
     bin\spirv-remap.exe
     include\glslang\*
+    lib\GenericCodeGen%SUFFIX%.lib
     lib\glslang%SUFFIX%.lib
+    lib\glslang-default-resource-limits%SUFFIX%.lib
     lib\HLSL%SUFFIX%.lib
+    lib\MachineIndependent%SUFFIX%.lib
     lib\OGLCompiler%SUFFIX%.lib
     lib\OSDependent%SUFFIX%.lib
     lib\SPIRV%SUFFIX%.lib

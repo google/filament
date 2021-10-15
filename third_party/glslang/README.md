@@ -125,6 +125,15 @@ cd <the directory glslang was cloned to, "External" will be a subdirectory>
 git clone https://github.com/google/googletest.git External/googletest
 ```
 
+TEMPORARY NOTICE: additionally perform the following to avoid a current
+breakage in googletest:
+
+```bash
+cd External/googletest
+git checkout 0c400f67fcf305869c5fb113dd296eca266c9725
+cd ../..
+```
+
 If you wish to assure that SPIR-V generated from HLSL is legal for Vulkan,
 wish to invoke -Os to reduce SPIR-V size from HLSL or GLSL, or wish to run the
 integrated test suite, install spirv-tools with this:

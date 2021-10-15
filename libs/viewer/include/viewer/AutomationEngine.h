@@ -50,7 +50,7 @@ namespace viewer {
  * waiting for a large model file to become fully loaded. Batch mode also offers a query
  * (shouldClose) that is triggered after the last test has been invoked.
  */
-class AutomationEngine {
+class UTILS_PUBLIC AutomationEngine {
 public:
     /**
      * Allows users to toggle screenshots, change the sleep duration between tests, etc.

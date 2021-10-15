@@ -27,6 +27,10 @@ add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
+add_library(filamat STATIC IMPORTED)
+set_target_properties(filamat PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamat.a)
+
 add_library(geometry STATIC IMPORTED)
 set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
@@ -75,11 +79,13 @@ add_library(filament-jni SHARED
     src/main/cpp/RenderTarget.cpp
     src/main/cpp/Scene.cpp
     src/main/cpp/SkyBox.cpp
+    src/main/cpp/SkinningBuffer.cpp
     src/main/cpp/Stream.cpp
     src/main/cpp/SurfaceOrientation.cpp
     src/main/cpp/SwapChain.cpp
     src/main/cpp/Texture.cpp
     src/main/cpp/TextureSampler.cpp
+    src/main/cpp/ToneMapper.cpp
     src/main/cpp/TransformManager.cpp
     src/main/cpp/VertexBuffer.cpp
     src/main/cpp/View.cpp
@@ -110,6 +116,7 @@ target_link_libraries(filament-jni
     PUBLIC geometry
 
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
+    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>

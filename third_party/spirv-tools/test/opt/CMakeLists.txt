@@ -34,7 +34,6 @@ add_spvtools_unittest(TARGET opt
        dead_insert_elim_test.cpp
        dead_variable_elim_test.cpp
        debug_info_manager_test.cpp
-       decompose_initialized_variables_test.cpp
        decoration_manager_test.cpp
        def_use_test.cpp
        desc_sroa_test.cpp
@@ -48,7 +47,6 @@ add_spvtools_unittest(TARGET opt
        fold_test.cpp
        freeze_spec_const_test.cpp
        function_test.cpp
-       generate_webgpu_initializers_test.cpp
        graphics_robust_access_test.cpp
        if_conversion_test.cpp
        inline_opaque_test.cpp
@@ -59,11 +57,11 @@ add_spvtools_unittest(TARGET opt
        inst_debug_printf_test.cpp
        instruction_list_test.cpp
        instruction_test.cpp
+       interp_fixup_test.cpp
        ir_builder.cpp
        ir_context_test.cpp
        ir_loader_test.cpp
        iterator_test.cpp
-       legalize_vector_shuffle_test.cpp
        line_debug_info_test.cpp
        local_access_chain_convert_test.cpp
        local_redundancy_elimination_test.cpp
@@ -81,6 +79,7 @@ add_spvtools_unittest(TARGET opt
        propagator_test.cpp
        reduce_load_size_test.cpp
        redundancy_elimination_test.cpp
+	   remove_unused_interface_variables_test.cpp
        register_liveness.cpp
        relax_float_ops_test.cpp
        replace_invalid_opc_test.cpp
@@ -88,9 +87,7 @@ add_spvtools_unittest(TARGET opt
        scalar_replacement_test.cpp
        set_spec_const_default_value_test.cpp
        simplification_test.cpp
-       split_invalid_unreachable_test.cpp
        strength_reduction_test.cpp
-       strip_atomic_counter_memory_test.cpp
        strip_debug_info_test.cpp
        strip_reflect_info_test.cpp
        struct_cfg_analysis_test.cpp

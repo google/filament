@@ -150,13 +150,14 @@ bool CocoaTouchExternalImage::set(CVPixelBufferRef image) noexcept {
 
     if (planeCount == 0) {
         mImage = image;
-        mTexture = createTextureFromImage(image, GL_RGBA, 0);
+        mTexture = createTextureFromImage(image, GL_RGBA, GL_BGRA, 0);
         mEncodedToRgb = false;
     }
 
     if (planeCount == 2) {
-        CVOpenGLESTextureRef yPlane = createTextureFromImage(image, GL_LUMINANCE, 0);
-        CVOpenGLESTextureRef colorPlane = createTextureFromImage(image, GL_LUMINANCE_ALPHA, 1);
+        CVOpenGLESTextureRef yPlane = createTextureFromImage(image, GL_LUMINANCE, GL_LUMINANCE, 0);
+        CVOpenGLESTextureRef colorPlane = createTextureFromImage(image, GL_LUMINANCE_ALPHA,
+                GL_LUMINANCE_ALPHA, 1);
 
         size_t width, height;
         width = CVPixelBufferGetWidthOfPlane(image, 0);
@@ -214,7 +215,7 @@ void CocoaTouchExternalImage::release() noexcept {
 }
 
 CVOpenGLESTextureRef CocoaTouchExternalImage::createTextureFromImage(CVPixelBufferRef image, GLuint
-        glFormat, size_t plane) noexcept {
+        glFormat, GLenum format, size_t plane) noexcept {
     const size_t width = CVPixelBufferGetWidthOfPlane(image, plane);
     const size_t height = CVPixelBufferGetHeightOfPlane(image, plane);
 
@@ -222,7 +223,7 @@ CVOpenGLESTextureRef CocoaTouchExternalImage::createTextureFromImage(CVPixelBuff
     UTILS_UNUSED_IN_RELEASE CVReturn success =
             CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
             mTextureCache, image, nullptr, GL_TEXTURE_2D, glFormat, width, height,
-            glFormat, GL_UNSIGNED_BYTE, plane, &texture);
+            format, GL_UNSIGNED_BYTE, plane, &texture);
     assert_invariant(success == kCVReturnSuccess);
 
     return texture;

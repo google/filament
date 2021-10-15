@@ -125,6 +125,7 @@ LOCAL_SRC_FILES:= \
 		glslang/MachineIndependent/RemoveTree.cpp \
 		glslang/MachineIndependent/Scan.cpp \
 		glslang/MachineIndependent/ShaderLang.cpp \
+		glslang/MachineIndependent/SpirvIntrinsics.cpp \
 		glslang/MachineIndependent/SymbolTable.cpp \
 		glslang/MachineIndependent/Versions.cpp \
 		glslang/MachineIndependent/preprocessor/PpAtom.cpp \

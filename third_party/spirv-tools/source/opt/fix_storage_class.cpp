@@ -222,6 +222,16 @@ bool FixStorageClass::PropagateType(Instruction* inst, uint32_t type_id,
       uint32_t pointee_type_id = GetPointeeTypeId(ptr_inst);
 
       if (obj_type_id != pointee_type_id) {
+        if (context()->get_type_mgr()->GetType(obj_type_id)->AsImage() &&
+            context()->get_type_mgr()->GetType(pointee_type_id)->AsImage()) {
+          // When storing an image, allow the type mismatch
+          // and let the later legalization passes eliminate the OpStore.
+          // This is to support assigning an image to a variable,
+          // where the assigned image does not have a pre-defined
+          // image format.
+          return false;
+        }
+
         uint32_t copy_id = GenerateCopy(obj_inst, pointee_type_id, inst);
         inst->SetInOperand(1, {copy_id});
         context()->UpdateDefUse(inst);

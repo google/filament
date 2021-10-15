@@ -28,6 +28,7 @@
 #include "source/reduce/remove_unused_instruction_reduction_opportunity_finder.h"
 #include "source/reduce/remove_unused_struct_member_reduction_opportunity_finder.h"
 #include "source/reduce/simple_conditional_branch_to_branch_opportunity_finder.h"
+#include "source/reduce/structured_construct_to_block_reduction_opportunity_finder.h"
 #include "source/reduce/structured_loop_to_selection_reduction_opportunity_finder.h"
 #include "source/spirv_reducer_options.h"
 
@@ -54,10 +55,10 @@ void Reducer::SetInterestingnessFunction(
 }
 
 Reducer::ReductionResultStatus Reducer::Run(
-    std::vector<uint32_t>&& binary_in, std::vector<uint32_t>* binary_out,
+    const std::vector<uint32_t>& binary_in, std::vector<uint32_t>* binary_out,
     spv_const_reducer_options options,
     spv_validator_options validator_options) {
-  std::vector<uint32_t> current_binary(std::move(binary_in));
+  std::vector<uint32_t> current_binary(binary_in);
 
   spvtools::SpirvTools tools(target_env_);
   assert(tools.IsValid() && "Failed to create SPIRV-Tools interface");
@@ -113,6 +114,8 @@ void Reducer::AddDefaultReductionPasses() {
   AddReductionPass(
       spvtools::MakeUnique<OperandToDominatingIdReductionOpportunityFinder>());
   AddReductionPass(spvtools::MakeUnique<
+                   StructuredConstructToBlockReductionOpportunityFinder>());
+  AddReductionPass(spvtools::MakeUnique<
                    StructuredLoopToSelectionReductionOpportunityFinder>());
   AddReductionPass(
       spvtools::MakeUnique<MergeBlocksReductionOpportunityFinder>());
@@ -138,13 +141,13 @@ void Reducer::AddDefaultReductionPasses() {
 }
 
 void Reducer::AddReductionPass(
-    std::unique_ptr<ReductionOpportunityFinder>&& finder) {
+    std::unique_ptr<ReductionOpportunityFinder> finder) {
   passes_.push_back(
       spvtools::MakeUnique<ReductionPass>(target_env_, std::move(finder)));
 }
 
 void Reducer::AddCleanupReductionPass(
-    std::unique_ptr<ReductionOpportunityFinder>&& finder) {
+    std::unique_ptr<ReductionOpportunityFinder> finder) {
   cleanup_passes_.push_back(
       spvtools::MakeUnique<ReductionPass>(target_env_, std::move(finder)));
 }

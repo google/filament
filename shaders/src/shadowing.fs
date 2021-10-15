@@ -250,19 +250,19 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
     // ray end in world space
     highp vec3 wsRayEnd = wsRayStart + wsRayDirection * wsRayLength;
 
-    // ray start/end in clip space
+    // ray start/end in clip space (z is inverted: [1,0])
     highp vec4 csRayStart = worldToClip * vec4(wsRayStart, 1.0);
     highp vec4 csRayEnd = worldToClip * vec4(wsRayEnd, 1.0);
     highp vec4 csViewRayEnd = csRayStart + viewToClip * vec4(0.0, 0.0, wsRayLength, 0.0);
 
-    // ray start/end in screen space
+    // ray start/end in screen space (z is inverted: [1,0])
     ray.ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
     ray.ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
     ray.ssViewRayEnd = csViewRayEnd.xyz * (1.0 / csViewRayEnd.w);
 
-    // convert all to uv (texture) space
-    highp vec3 uvRayEnd = ray.ssRayEnd.xyz * 0.5 + 0.5;
-    ray.uvRayStart = ray.ssRayStart.xyz * 0.5 + 0.5;
+    // convert all to uv (texture) space (z is inverted: [1,0])
+    highp vec3 uvRayEnd = vec3(ray.ssRayEnd.xy * 0.5 + 0.5, ray.ssRayEnd.z);
+    ray.uvRayStart = vec3(ray.ssRayStart.xy * 0.5 + 0.5, ray.ssRayStart.z);
     ray.uvRay = uvRayEnd - ray.uvRayStart;
 }
 
@@ -279,20 +279,20 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     highp float dt = 1.0 / float(kStepCount);
 
     // tolerance
-    float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt * 0.5;
+    highp float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
 
     // dither the ray with interleaved gradient noise
     const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
     float dither = fract(m.z * fract(dot(gl_FragCoord.xy, m.xy))) - 0.5;
 
     // normalized position on the ray (0 to 1)
-    float t = dt * dither + dt;
+    highp float t = dt * dither + dt;
 
     highp vec3 ray;
     for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
-        float z = 1.0 - textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
-        float dz = ray.z - z;
+        highp float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+        highp float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion = 1.0;
             break;

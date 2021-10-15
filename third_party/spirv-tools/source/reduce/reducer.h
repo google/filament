@@ -84,17 +84,17 @@ class Reducer {
 
   // Adds a reduction pass based on the given finder to the sequence of passes
   // that will be iterated over.
-  void AddReductionPass(std::unique_ptr<ReductionOpportunityFinder>&& finder);
+  void AddReductionPass(std::unique_ptr<ReductionOpportunityFinder> finder);
 
   // Adds a cleanup reduction pass based on the given finder to the sequence of
   // passes that will run after other passes.
   void AddCleanupReductionPass(
-      std::unique_ptr<ReductionOpportunityFinder>&& finder);
+      std::unique_ptr<ReductionOpportunityFinder> finder);
 
   // Reduces the given SPIR-V module |binary_out|.
   // The reduced binary ends up in |binary_out|.
   // A status is returned.
-  ReductionResultStatus Run(std::vector<uint32_t>&& binary_in,
+  ReductionResultStatus Run(const std::vector<uint32_t>& binary_in,
                             std::vector<uint32_t>* binary_out,
                             spv_const_reducer_options options,
                             spv_validator_options validator_options);

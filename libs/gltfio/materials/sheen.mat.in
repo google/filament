@@ -5,6 +5,7 @@ material {
     blending : fade,
     depthWrite : true,
     doubleSided : ${DOUBLESIDED},
+    transparency : ${TRANSPARENCY},
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
@@ -14,42 +15,42 @@ material {
         { type : int, name : baseColorIndex },
         { type : float4, name : baseColorFactor },
         { type : sampler2d, name : baseColorMap },
-        { type : mat3, name : baseColorUvMatrix },
+        { type : mat3, name : baseColorUvMatrix, precision: high },
 
         // Metallic-Roughness Map
         { type : int, name : metallicRoughnessIndex },
         { type : float, name : metallicFactor },
         { type : float, name : roughnessFactor },
         { type : sampler2d, name : metallicRoughnessMap },
-        { type : mat3, name : metallicRoughnessUvMatrix },
+        { type : mat3, name : metallicRoughnessUvMatrix, precision: high },
 
         // Normal Map
         { type : int, name : normalIndex },
         { type : float, name : normalScale },
         { type : sampler2d, name : normalMap },
-        { type : mat3, name : normalUvMatrix },
+        { type : mat3, name : normalUvMatrix, precision: high },
 
         // Ambient Occlusion
         { type : int, name : aoIndex },
         { type : float, name : aoStrength },
         { type : sampler2d, name : occlusionMap },
-        { type : mat3, name : occlusionUvMatrix },
+        { type : mat3, name : occlusionUvMatrix, precision: high },
 
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
         { type : sampler2d, name : emissiveMap },
-        { type : mat3, name : emissiveUvMatrix },
+        { type : mat3, name : emissiveUvMatrix, precision: high },
 
         // Sheen Map
         { type : int, name : sheenColorIndex },
         { type : float3, name : sheenColorFactor },
         { type : sampler2d, name : sheenColorMap },
-        { type : mat3, name : sheenColorUvMatrix },
+        { type : mat3, name : sheenColorUvMatrix, precision: high },
         { type : int, name : sheenRoughnessIndex },
         { type : float, name : sheenRoughnessFactor },
         { type : sampler2d, name : sheenRoughnessMap },
-        { type : mat3, name : sheenRoughnessUvMatrix },
+        { type : mat3, name : sheenRoughnessUvMatrix, precision: high },
 
         // Reflectance
         { type : float, name : reflectance }

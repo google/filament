@@ -64,6 +64,7 @@ io::sstream& CodeGenerator::generateProlog(io::sstream& out, ShaderType type,
                 out << "#version 450 core\n\n";
             } else {
                 out << "#version 410 core\n\n";
+                out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
             break;
     }
@@ -253,11 +254,30 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
     (void) qualifier;
     assert(qualifier == MaterialBuilder::VariableQualifier::OUT);
 
+    // The material output type is the type the shader writes to from the material.
+    const MaterialBuilder::OutputType materialOutputType = outputType;
+
+    const char* swizzleString = "";
+
+    // Metal doesn't support some 3-component texture formats, so the backend uses 4-component
+    // formats behind the scenes. It's an error to output fewer components than the attachment
+    // needs, so we always output a float4 instead of a float3. It's never an error to output extra
+    // components.
+    if (mTargetApi == TargetApi::METAL) {
+        if (outputType == MaterialBuilder::OutputType::FLOAT3) {
+            outputType = MaterialBuilder::OutputType::FLOAT4;
+            swizzleString = ".rgb";
+        }
+    }
+
+    const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
     out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
     out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
+    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString << "\n";
     out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
+    out << "\n#define FRAG_OUTPUT_SWIZZLE" << index << " " << swizzleString << "\n";
     out << "layout(location=" << index << ") out " << typeString <<
         " output_" << name.c_str() << ";\n";
 
@@ -678,7 +698,6 @@ char const* CodeGenerator::getUniformTypeName(UniformInterfaceBlock::Type type) 
 }
 
 char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) noexcept {
-    using Type = UniformInterfaceBlock::Type;
     switch (type) {
         case MaterialBuilder::OutputType::FLOAT:  return "float";
         case MaterialBuilder::OutputType::FLOAT2: return "float2";

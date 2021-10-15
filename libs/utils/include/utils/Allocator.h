@@ -19,6 +19,7 @@
 
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 #include <utils/SpinLock.h>
@@ -469,16 +470,7 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
-#if defined(__SANITIZE_THREAD__)
-// Unfortunately TSAN doesn't support homegrown synchronization primitives
-using SpinLock = utils::Mutex;
-#elif defined(__ARM_ARCH_7A__)
-// We've had problems with  "wfe" on some ARM-V7 devices, causing spurious SIGILL
-using SpinLock = utils::Mutex;
-#else
 using SpinLock = utils::SpinLock;
-#endif
-
 using Mutex = utils::Mutex;
 
 } // namespace LockingPolicy
@@ -802,7 +794,9 @@ public:
     explicit STLAllocator(STLAllocator<U, ARENA> const& rhs) : mArena(rhs.mArena) { }
 
     TYPE* allocate(std::size_t n) {
-        return static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
+        auto p = static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
+        assert_invariant(p);
+        return p;
     }
 
     void deallocate(TYPE* p, std::size_t n) {

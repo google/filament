@@ -28,9 +28,6 @@ FuzzerPassAddVectorShuffleInstructions::FuzzerPassAddVectorShuffleInstructions(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddVectorShuffleInstructions::
-    ~FuzzerPassAddVectorShuffleInstructions() = default;
-
 void FuzzerPassAddVectorShuffleInstructions::Apply() {
   ForEachInstructionWithInstructionDescriptor(
       [this](opt::Function* function, opt::BasicBlock* block,

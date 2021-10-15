@@ -104,15 +104,15 @@ std::unordered_map<std::string, SubpassType>& Enums::getMap<SubpassType>() noexc
     return mStringToSubpassType;
 };
 
-std::unordered_map<std::string, SamplerPrecision> Enums::mStringToSamplerPrecision = {
-        { "default", SamplerPrecision::DEFAULT },
-        { "low",     SamplerPrecision::LOW },
-        { "medium",  SamplerPrecision::MEDIUM },
-        { "high",    SamplerPrecision::HIGH },
+std::unordered_map<std::string, ParameterPrecision> Enums::mStringToSamplerPrecision = {
+        { "default", ParameterPrecision::DEFAULT },
+        { "low",     ParameterPrecision::LOW },
+        { "medium",  ParameterPrecision::MEDIUM },
+        { "high",    ParameterPrecision::HIGH },
 };
 
 template <>
-std::unordered_map<std::string, SamplerPrecision>& Enums::getMap<SamplerPrecision>() noexcept {
+std::unordered_map<std::string, ParameterPrecision>& Enums::getMap<ParameterPrecision>() noexcept {
     return mStringToSamplerPrecision;
 };
 

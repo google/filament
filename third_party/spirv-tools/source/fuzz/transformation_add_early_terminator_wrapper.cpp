@@ -22,9 +22,8 @@ namespace fuzz {
 
 TransformationAddEarlyTerminatorWrapper::
     TransformationAddEarlyTerminatorWrapper(
-        const spvtools::fuzz::protobufs::
-            TransformationAddEarlyTerminatorWrapper& message)
-    : message_(message) {}
+        protobufs::TransformationAddEarlyTerminatorWrapper message)
+    : message_(std::move(message)) {}
 
 TransformationAddEarlyTerminatorWrapper::
     TransformationAddEarlyTerminatorWrapper(uint32_t function_fresh_id,
@@ -84,7 +83,6 @@ void TransformationAddEarlyTerminatorWrapper::Apply(
 
   // Add the basic block to the function as the sole block, and add the function
   // to the module.
-  basic_block->SetParent(function.get());
   function->AddBasicBlock(std::move(basic_block));
   function->SetFunctionEnd(MakeUnique<opt::Instruction>(
       ir_context, SpvOpFunctionEnd, 0, 0, opt::Instruction::OperandList()));

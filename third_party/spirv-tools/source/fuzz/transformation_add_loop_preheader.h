@@ -23,7 +23,7 @@ namespace fuzz {
 class TransformationAddLoopPreheader : public Transformation {
  public:
   explicit TransformationAddLoopPreheader(
-      const protobufs::TransformationAddLoopPreheader& message);
+      protobufs::TransformationAddLoopPreheader message);
 
   TransformationAddLoopPreheader(uint32_t loop_header_block, uint32_t fresh_id,
                                  std::vector<uint32_t> phi_id);

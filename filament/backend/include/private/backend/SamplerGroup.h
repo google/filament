@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_SAMPLERGROUP_H
-#define TNT_FILAMENT_SAMPLERGROUP_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
 #include <array>
 #include <stddef.h>
@@ -74,7 +74,7 @@ public:
     void clean() const noexcept { mDirty.reset(); }
 
     // set sampler at given index
-    void setSampler(size_t index, Sampler const& sampler) noexcept;
+    void setSampler(size_t index, Sampler sampler) noexcept;
 
     inline void setSampler(size_t index, Handle<HwTexture> t, SamplerParams s)  {
         setSampler(index, { t, s });
@@ -154,4 +154,4 @@ private:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_SAMPLERGROUP_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H

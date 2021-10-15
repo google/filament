@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Checks names of global exports from a library."""
+"""Ensures that all externally visible functions in the library have an appropriate name
+
+Appropriate function names are:
+  - names starting with spv,
+  - anything in a namespace,
+  - functions added by the protobuf compiler,
+  - and weak definitions of new and delete."""
 
 import os.path
 import re
@@ -46,14 +52,16 @@ def check_library(library):
     exports are namespaced or begin with spv (in either C or C++ styles)
     then return 0.  Otherwise emit a message and return 1."""
 
-    # The pattern for a global symbol record
-    symbol_pattern = re.compile(r'^[0-aA-Fa-f]+ g *F \.text.*[0-9A-Fa-f]+ +(.*)')
+    # The pattern for an externally visible symbol record
+    symbol_pattern = re.compile(r'^[0-aA-Fa-f]+ +([wg]) *F \.text.*[0-9A-Fa-f]+ +(.*)')
 
     # Ok patterns are as follows, assuming Itanium name mangling:
     #   spv[A-Z]          :  extern "C" symbol starting with spv
     #   _ZN               :  something in a namespace
+    #   _ZSt              :  something in the standard namespace
+    #   _ZZN              :  something in a local scope and namespace
     #   _Z[0-9]+spv[A-Z_] :  C++ symbol starting with spv[A-Z_]
-    symbol_ok_pattern = re.compile(r'^(spv[A-Z]|_ZN|_Z[0-9]+spv[A-Z_])')
+    symbol_ok_pattern = re.compile(r'^(spv[A-Z]|_ZN|_ZSt|_ZZN|_Z[0-9]+spv[A-Z_])')
 
     # In addition, the following pattern allowlists global functions that are added
     # by the protobuf compiler:
@@ -61,18 +69,31 @@ def check_library(library):
     #   - InitDefaults_spvtoolsfuzz_2eproto()
     symbol_allowlist_pattern = re.compile(r'_Z[0-9]+(InitDefaults|AddDescriptors)_spvtoolsfuzz_2eprotov')
 
+    symbol_is_new_or_delete = re.compile(r'^(_Zna|_Znw|_Zdl|_Zda)')
+    # Compilaion for Arm has various thunks for constructors, destructors, vtables.
+    # They are weak.
+    symbol_is_thunk = re.compile(r'^_ZT')
+
+    # This occurs in NDK builds.
+    symbol_is_hidden = re.compile(r'^\.hidden ')
+
     seen = set()
     result = 0
     for line in command_output(['objdump', '-t', library], '.').split('\n'):
         match = symbol_pattern.search(line)
         if match:
-            symbol = match.group(1)
+            linkage = match.group(1)
+            symbol = match.group(2)
             if symbol not in seen:
                 seen.add(symbol)
                 #print("look at '{}'".format(symbol))
-                if not (symbol_allowlist_pattern.match(symbol) or symbol_ok_pattern.match(symbol)):
-                    print('{}: error: Unescaped exported symbol: {}'.format(PROG, symbol))
-                    result = 1
+                if not (symbol_is_new_or_delete.match(symbol) and linkage == 'w'):
+                    if not (symbol_is_thunk.match(symbol) and linkage == 'w'):
+                        if not (symbol_allowlist_pattern.match(symbol) or
+                                symbol_ok_pattern.match(symbol) or
+                                symbol_is_hidden.match(symbol)):
+                            print('{}: error: Unescaped exported symbol: {}'.format(PROG, symbol))
+                            result = 1
     return result
 
 

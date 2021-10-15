@@ -129,26 +129,28 @@ public:
 
     // supported extensions detected at runtime
     struct {
-        bool EXT_texture_compression_etc2 = false;
-        bool EXT_texture_filter_anisotropic = false;
-        bool QCOM_tiled_rendering = false;
-        bool OES_EGL_image_external_essl3 = false;
-        bool EXT_debug_marker = false;
-        bool EXT_color_buffer_half_float = false;
-        bool EXT_color_buffer_float = false;
         bool APPLE_color_buffer_packed_float = false;
+        bool ARB_shading_language_packing = false;
+        bool EXT_clip_control = false;
+        bool EXT_color_buffer_float = false;
+        bool EXT_color_buffer_half_float = false;
+        bool EXT_debug_marker = false;
+        bool EXT_disjoint_timer_query = false;
         bool EXT_multisampled_render_to_texture = false;
         bool EXT_multisampled_render_to_texture2 = false;
-        bool KHR_debug = false;
-        bool EXT_texture_sRGB = false;
-        bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
-        bool EXT_clip_control = false;
-        bool GOOGLE_cpp_style_line_directive = false;
+        bool EXT_texture_compression_etc2 = false;
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
-        bool WEBGL_texture_compression_s3tc = false;
-        bool WEBGL_texture_compression_s3tc_srgb = false;
+        bool EXT_texture_filter_anisotropic = false;
+        bool EXT_texture_sRGB = false;
+        bool GOOGLE_cpp_style_line_directive = false;
+        bool KHR_debug = false;
+        bool OES_EGL_image_external_essl3 = false;
+        bool QCOM_tiled_rendering = false;
+        bool WEBGL_compressed_texture_etc = false;
+        bool WEBGL_compressed_texture_s3tc = false;
+        bool WEBGL_compressed_texture_s3tc_srgb = false;
     } ext;
 
     struct {
@@ -186,6 +188,10 @@ public:
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
         bool disable_sidecar_blit_into_texture_array = false;
+
+        // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
+        // case we need an alternative algorithm
+        bool split_easu = false;
     } bugs;
 
     // state getters -- as needed.

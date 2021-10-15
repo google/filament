@@ -76,6 +76,7 @@ set(GLTFIO_INCLUDE_DIRS
         ..
         ${FILAMENT_DIR}/include
         ${FILAMENT_DIR}/include/gltfio/resources
+        ../../libs/gltfio/include
         ../../third_party/cgltf
         ../../third_party/robin-map
         ../../third_party/hat-trie

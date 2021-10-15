@@ -102,11 +102,9 @@ struct FAssetLoader : public AssetLoader {
         FilamentInstance** instances, size_t numInstances);
     FilamentInstance* createInstance(FFilamentAsset* primary);
 
-    bool createAssets(const uint8_t* bytes, uint32_t numBytes, FilamentAsset** assets,
-            size_t numAssets);
-
-    ~FAssetLoader() {
-        delete mMaterials;
+    static void destroy(FAssetLoader** loader) noexcept {
+        delete *loader;
+        *loader = nullptr;
     }
 
     void destroyAsset(const FFilamentAsset* asset) {
@@ -131,7 +129,7 @@ struct FAssetLoader : public AssetLoader {
             FFilamentInstance* instance);
     void createRenderable(const cgltf_node* node, Entity entity, const char* name);
     bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
-            const char* name);
+            const char* name, MaterialInstance* mi);
     void createLight(const cgltf_light* light, Entity entity);
     void createCamera(const cgltf_camera* camera, Entity entity);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
@@ -471,7 +469,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name)) {
+        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name, mi)) {
             mError = true;
             continue;
         }
@@ -534,7 +532,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 }
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
-        const UvMap& uvmap, const char* name) {
+        const UvMap& uvmap, const char* name, MaterialInstance* mi) {
     outPrim->uvmap = uvmap;
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
@@ -680,7 +678,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     // If the model is lit but does not have normals, we'll need to generate flat normals.
-    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+    auto const* const material = mi->getMaterial();
+    if (material->getRequiredAttributes().test(VertexAttribute::TANGENTS) && !hasNormals) {
         vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
         vbb.normalized(VertexAttribute::TANGENTS);
         cgltf_attribute_type atype = cgltf_attribute_type_normal;
@@ -913,6 +912,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .has_pbr_specular_glossiness = false,
         .has_clearcoat = false,
         .has_transmission = false,
+        .has_volume = false,
         .has_ior = false,
         .has_specular = false,
         .has_sheen = false,
@@ -929,6 +929,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto ccConfig = inputMat->clearcoat;
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
+    auto vlConfig = inputMat->volume;
 
     bool hasTextureTransforms =
         sgConfig.diffuse_texture.has_transform ||
@@ -976,8 +977,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .sheenColorUV = (uint8_t) shConfig.sheen_color_texture.texcoord,
         .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
         .sheenRoughnessUV = (uint8_t) shConfig.sheen_roughness_texture.texcoord,
+        .hasVolumeThicknessTexture = vlConfig.thickness_texture.texture != nullptr,
+        .volumeThicknessUV = (uint8_t) vlConfig.thickness_texture.texcoord,
         .hasSheen = !!inputMat->has_sheen,
-        .hasIOR = !!inputMat->has_ior
+        .hasIOR = !!inputMat->has_ior,
+        .hasVolume = !!inputMat->has_volume,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1151,6 +1155,26 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasVolume) {
+        mi->setParameter("volumeThicknessFactor", vlConfig.thickness_factor);
+
+        float attenuationDistance = vlConfig.attenuation_distance;
+        // TODO: We assume a color in linear sRGB, is this correct? The spec doesn't say anything
+        const float* attenuationColor = vlConfig.attenuation_color;
+        LinearColor absorption = Color::absorptionAtDistance(
+                *reinterpret_cast<const LinearColor*>(attenuationColor), attenuationDistance);
+        mi->setParameter("volumeAbsorption", RgbType::LINEAR, absorption);
+
+        if (matkey.hasVolumeThicknessTexture) {
+            addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture, false);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("volumeThicknessUvMatrix", uvmat);
+            }
+        }
+    }
+
     if (matkey.hasTransmission) {
         mi->setParameter("transmissionFactor", trConfig.transmission_factor);
         if (matkey.hasTransmissionTexture) {
@@ -1243,8 +1267,9 @@ AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {
-    delete *loader;
-    *loader = nullptr;
+    FAssetLoader* temp(upcast(*loader));
+    FAssetLoader::destroy(&temp);
+    *loader = temp;
 }
 
 FilamentAsset* AssetLoader::createAssetFromJson(uint8_t const* bytes, uint32_t nbytes) {

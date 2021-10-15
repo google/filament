@@ -20,8 +20,12 @@ a:hover, a.current {
     color: #07f;
 }
 
-a.rebuild {
+a.status_button {
     color: #e4e682;
+}
+
+a.status_button.active {
+    color: #fff;
 }
 
 span.warning {

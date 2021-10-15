@@ -29,8 +29,6 @@ FuzzerPassAddParameters::FuzzerPassAddParameters(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAddParameters::~FuzzerPassAddParameters() = default;
-
 void FuzzerPassAddParameters::Apply() {
   // Compute type candidates for the new parameter.
   std::vector<uint32_t> type_candidates;

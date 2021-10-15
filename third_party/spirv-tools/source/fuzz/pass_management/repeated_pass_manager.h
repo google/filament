@@ -18,10 +18,20 @@
 #include "source/fuzz/fuzzer_context.h"
 #include "source/fuzz/fuzzer_pass.h"
 #include "source/fuzz/pass_management/repeated_pass_instances.h"
+#include "source/fuzz/pass_management/repeated_pass_recommender.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
 
 namespace spvtools {
 namespace fuzz {
+
+// Each field of this enum corresponds to an available repeated pass
+// strategy, and is used to decide which kind of RepeatedPassManager object
+// to create.
+enum class RepeatedPassStrategy {
+  kSimple,
+  kRandomWithRecommendations,
+  kLoopedWithRecommendations
+};
 
 // An interface to encapsulate the manner in which the sequence of repeated
 // passes that are applied during fuzzing is chosen.  An implementation of this
@@ -39,6 +49,12 @@ class RepeatedPassManager {
   // |applied_transformations| and can be used to influence the decision.
   virtual FuzzerPass* ChoosePass(
       const protobufs::TransformationSequence& applied_transformations) = 0;
+
+  // Creates a corresponding RepeatedPassManager based on the |strategy|.
+  static std::unique_ptr<RepeatedPassManager> Create(
+      RepeatedPassStrategy strategy, FuzzerContext* fuzzer_context,
+      RepeatedPassInstances* pass_instances,
+      RepeatedPassRecommender* pass_recommender);
 
  protected:
   FuzzerContext* GetFuzzerContext() { return fuzzer_context_; }

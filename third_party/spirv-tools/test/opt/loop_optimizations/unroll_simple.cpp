@@ -3401,6 +3401,215 @@ OpFunctionEnd
   SinglePassRunAndCheck<LoopUnroller>(shader, output, false);
 }
 
+TEST_F(PassClassTest, UnrollWithPhiReferencesPhi) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 600
+               OpName %main "main"
+               OpName %color "color"
+               OpDecorate %color Location 0
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+       %bool = OpTypeBool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %11
+         %15 = OpLabel
+               OpBranch %16
+         %16 = OpLabel
+         %17 = OpPhi %float %float_0 %15 %18 %19
+         %18 = OpPhi %float %float_1 %15 %20 %19
+         %21 = OpPhi %uint %uint_1 %15 %22 %19
+         %23 = OpULessThanEqual %bool %21 %uint_3
+               OpLoopMerge %24 %19 Unroll
+               OpBranchConditional %23 %25 %24
+         %25 = OpLabel
+
+; First loop iteration
+; CHECK: [[next_phi1_0:%\w+]] = OpFSub %float %float_1 %float_0
+
+; Second loop iteration
+; CHECK: [[next_phi1_1:%\w+]] = OpFSub %float [[next_phi1_0]] %float_1
+
+; Third loop iteration
+; CHECK:                        OpFSub %float [[next_phi1_1]] [[next_phi1_0]]
+
+         %20 = OpFSub %float %18 %17
+               OpBranch %19
+         %19 = OpLabel
+         %22 = OpIAdd %uint %21 %uint_1
+               OpBranch %16
+         %24 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for ushader:\n"
+                             << text << std::endl;
+
+  LoopUnroller loop_unroller;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
+TEST_F(PassClassTest, UnrollWithDoublePhiReferencesPhi) {
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 600
+               OpName %main "main"
+               OpName %color "color"
+               OpDecorate %color Location 0
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+       %bool = OpTypeBool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %11
+         %15 = OpLabel
+               OpBranch %16
+         %16 = OpLabel
+         %17 = OpPhi %float %float_1 %15 %18 %19
+         %18 = OpPhi %float %float_0 %15 %20 %19
+         %20 = OpPhi %float %float_1 %15 %21 %19
+         %22 = OpPhi %uint %uint_1 %15 %23 %19
+         %24 = OpULessThanEqual %bool %22 %uint_3
+               OpLoopMerge %25 %19 Unroll
+               OpBranchConditional %24 %26 %25
+         %26 = OpLabel
+
+; First loop iteration
+; CHECK: [[next_phi1_0:%\w+]] = OpFSub %float %float_1 %float_0
+; CHECK:                        OpFMul %float %float_1
+
+; Second loop iteration
+; CHECK: [[next_phi1_1:%\w+]] = OpFSub %float [[next_phi1_0]] %float_1
+; CHECK:                        OpFMul %float %float_0
+
+; Third loop iteration
+; CHECK:                        OpFSub %float [[next_phi1_1]] [[next_phi1_0]]
+; CHECK:                        OpFMul %float %float_1
+
+         %21 = OpFSub %float %20 %18
+         %27 = OpFMul %float %17 %21
+               OpBranch %19
+         %19 = OpLabel
+         %23 = OpIAdd %uint %22 %uint_1
+               OpBranch %16
+         %25 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for ushader:\n"
+                             << text << std::endl;
+
+  LoopUnroller loop_unroller;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
+TEST_F(PassClassTest, PartialUnrollWithPhiReferencesPhi) {
+  // With LocalMultiStoreElimPass
+  const std::string text = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 600
+               OpName %main "main"
+               OpName %color "color"
+               OpDecorate %color Location 0
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+       %bool = OpTypeBool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+      %color = OpVariable %_ptr_Output_v4float Output
+       %main = OpFunction %void None %11
+         %15 = OpLabel
+               OpBranch %16
+         %16 = OpLabel
+         %17 = OpPhi %float %float_0 %15 %18 %19
+         %18 = OpPhi %float %float_1 %15 %20 %19
+         %21 = OpPhi %uint %uint_1 %15 %22 %19
+         %23 = OpULessThanEqual %bool %21 %uint_3
+               OpLoopMerge %24 %19 Unroll
+               OpBranchConditional %23 %25 %24
+         %25 = OpLabel
+
+; CHECK: [[phi0_0:%\w+]] = OpPhi {{%\w+}} {{%\w+}} {{%\w+}} [[phi1_0:%\w+]]
+; CHECK:      [[phi1_0]] = OpPhi {{%\w+}} {{%\w+}} {{%\w+}} [[sub:%\w+]]
+
+; CHECK: [[sub]] = OpFSub {{%\w+}} [[phi1_0]] [[phi0_0]]
+
+; CHECK: [[phi0_1:%\w+]] = OpPhi {{%\w+}} [[phi0_0]]
+; CHECK: [[phi1_1:%\w+]] = OpPhi {{%\w+}} [[phi1_0]]
+
+; CHECK: [[sub:%\w+]] = OpFSub {{%\w+}} [[phi1_1]] [[phi0_1]]
+
+; CHECK: OpFSub {{%\w+}} [[sub]] [[phi1_1]]
+
+         %20 = OpFSub %float %18 %17
+               OpBranch %19
+         %19 = OpLabel
+         %22 = OpIAdd %uint %21 %uint_1
+               OpBranch %16
+         %24 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for ushader:\n"
+                             << text << std::endl;
+
+  LoopUnroller loop_unroller;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndMatch<PartialUnrollerTestPass<2>>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

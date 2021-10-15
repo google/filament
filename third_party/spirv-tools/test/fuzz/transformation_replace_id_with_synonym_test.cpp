@@ -303,10 +303,18 @@ TEST(TransformationReplaceIdWithSynonymTest, LegalTransformations) {
   auto global_constant_synonym = TransformationReplaceIdWithSynonym(
       MakeIdUseDescriptor(19, MakeInstructionDescriptor(47, SpvOpStore, 0), 1),
       210);
+  uint32_t num_uses_of_original_id_before_replacement =
+      context->get_def_use_mgr()->NumUses(19);
+  uint32_t num_uses_of_synonym_before_replacement =
+      context->get_def_use_mgr()->NumUses(210);
   ASSERT_TRUE(global_constant_synonym.IsApplicable(context.get(),
                                                    transformation_context));
   ApplyAndCheckFreshIds(global_constant_synonym, context.get(),
                         &transformation_context);
+  ASSERT_EQ(num_uses_of_original_id_before_replacement - 1,
+            context->get_def_use_mgr()->NumUses(19));
+  ASSERT_EQ(num_uses_of_synonym_before_replacement + 1,
+            context->get_def_use_mgr()->NumUses(210));
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 
@@ -1786,6 +1794,300 @@ TEST(TransformationReplaceIdWithSynonymTest, IncompatibleTypes) {
   ASSERT_FALSE(TransformationReplaceIdWithSynonym(
                    MakeIdUseDescriptorFromUse(context.get(), op_f_add, 0), 13)
                    .IsApplicable(context.get(), transformation_context));
+}
+
+// TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/4346): This test
+//  should be updated to cover more atomic operations, and once the issue is
+//  fixed the test should be enabled.
+TEST(TransformationReplaceIdWithSynonymTest,
+     DISABLED_AtomicScopeAndMemorySemanticsMustBeConstant) {
+  // The following SPIR-V came from this GLSL, edited to add some synonyms:
+  //
+  // #version 320 es
+  //
+  // #extension GL_KHR_memory_scope_semantics : enable
+  //
+  // layout(set = 0, binding = 0) buffer Buf {
+  //   int x;
+  // };
+  //
+  // void main() {
+  //   int tmp = atomicLoad(x,
+  //                        gl_ScopeWorkgroup,
+  //                        gl_StorageSemanticsBuffer,
+  //                        gl_SemanticsRelaxed);
+  // }
+  const std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %4 "main"
+               OpExecutionMode %4 LocalSize 1 1 1
+               OpSource ESSL 320
+               OpSourceExtension "GL_KHR_memory_scope_semantics"
+               OpMemberDecorate %9 0 Offset 0
+               OpDecorate %9 Block
+               OpDecorate %11 DescriptorSet 0
+               OpDecorate %11 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypePointer Function %6
+          %9 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %9
+         %11 = OpVariable %10 StorageBuffer
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 2
+         %16 = OpConstant %6 64
+         %17 = OpTypeInt 32 0
+         %18 = OpConstant %17 1
+         %19 = OpConstant %17 0
+         %20 = OpConstant %17 64
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %8 = OpVariable %7 Function
+        %100 = OpCopyObject %6 %15 ; A non-constant version of %15
+        %101 = OpCopyObject %17 %20 ; A non-constant version of %20
+         %14 = OpAccessChain %13 %11 %12
+         %21 = OpAtomicLoad %6 %14 %15 %20
+               OpStore %8 %21
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  // Tell the fact manager that %100 and %15 are synonymous
+  transformation_context.GetFactManager()->AddFactDataSynonym(
+      MakeDataDescriptor(100, {}), MakeDataDescriptor(15, {}));
+
+  // Tell the fact manager that %101 and %20 are synonymous
+  transformation_context.GetFactManager()->AddFactDataSynonym(
+      MakeDataDescriptor(101, {}), MakeDataDescriptor(20, {}));
+
+  const auto& scope_operand = MakeIdUseDescriptorFromUse(
+      context.get(), context->get_def_use_mgr()->GetDef(21), 1);
+  ASSERT_FALSE(TransformationReplaceIdWithSynonym(scope_operand, 100)
+                   .IsApplicable(context.get(), transformation_context));
+
+  const auto& semantics_operand = MakeIdUseDescriptorFromUse(
+      context.get(), context->get_def_use_mgr()->GetDef(21), 2);
+  ASSERT_FALSE(TransformationReplaceIdWithSynonym(semantics_operand, 101)
+                   .IsApplicable(context.get(), transformation_context));
+}
+
+// TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/4345): Improve this
+//  test so that it covers more atomic operations, and enable the test once the
+//  issue is fixed.
+TEST(TransformationReplaceIdWithSynonymTest,
+     DISABLED_SignOfAtomicScopeAndMemorySemanticsDoesNotMatter) {
+  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/4345): both the
+  //  GLSL comment and the corresponding SPIR-V should be updated to cover a
+  //  larger number of atomic operations.
+  // The following SPIR-V came from this GLSL, edited to add some synonyms:
+  //
+  // #version 320 es
+  //
+  // #extension GL_KHR_memory_scope_semantics : enable
+  //
+  // layout(set = 0, binding = 0) buffer Buf {
+  //   int x;
+  // };
+  //
+  // void main() {
+  //   int tmp = atomicLoad(x,
+  //                        gl_ScopeWorkgroup,
+  //                        gl_StorageSemanticsBuffer,
+  //                        gl_SemanticsRelaxed);
+  // }
+  const std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %4 "main"
+               OpExecutionMode %4 LocalSize 1 1 1
+               OpSource ESSL 320
+               OpSourceExtension "GL_KHR_memory_scope_semantics"
+               OpMemberDecorate %9 0 Offset 0
+               OpDecorate %9 Block
+               OpDecorate %11 DescriptorSet 0
+               OpDecorate %11 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypePointer Function %6
+          %9 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %9
+         %11 = OpVariable %10 StorageBuffer
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 2
+         %16 = OpConstant %6 64
+         %17 = OpTypeInt 32 0
+        %100 = OpConstant %17 2 ; The same as %15, but with unsigned int type
+         %18 = OpConstant %17 1
+         %19 = OpConstant %17 0
+         %20 = OpConstant %17 64
+        %101 = OpConstant %6 64 ; The same as %20, but with signed int type
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %8 = OpVariable %7 Function
+         %14 = OpAccessChain %13 %11 %12
+         %21 = OpAtomicLoad %6 %14 %15 %20
+               OpStore %8 %21
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  // Tell the fact manager that %100 and %15 are synonymous
+  transformation_context.GetFactManager()->AddFactDataSynonym(
+      MakeDataDescriptor(100, {}), MakeDataDescriptor(15, {}));
+
+  // Tell the fact manager that %101 and %20 are synonymous
+  transformation_context.GetFactManager()->AddFactDataSynonym(
+      MakeDataDescriptor(101, {}), MakeDataDescriptor(20, {}));
+
+  {
+    const auto& scope_operand = MakeIdUseDescriptorFromUse(
+        context.get(), context->get_def_use_mgr()->GetDef(21), 1);
+    TransformationReplaceIdWithSynonym replace_scope(scope_operand, 100);
+    ASSERT_TRUE(
+        replace_scope.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(replace_scope, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+  }
+
+  {
+    const auto& semantics_operand = MakeIdUseDescriptorFromUse(
+        context.get(), context->get_def_use_mgr()->GetDef(21), 2);
+    TransformationReplaceIdWithSynonym replace_semantics(semantics_operand,
+                                                         101);
+    ASSERT_TRUE(
+        replace_semantics.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(replace_semantics, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+  }
+
+  const std::string after_transformation = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %4 "main"
+               OpExecutionMode %4 LocalSize 1 1 1
+               OpSource ESSL 320
+               OpSourceExtension "GL_KHR_memory_scope_semantics"
+               OpMemberDecorate %9 0 Offset 0
+               OpDecorate %9 Block
+               OpDecorate %11 DescriptorSet 0
+               OpDecorate %11 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypePointer Function %6
+          %9 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %9
+         %11 = OpVariable %10 StorageBuffer
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 2
+         %16 = OpConstant %6 64
+         %17 = OpTypeInt 32 0
+        %100 = OpConstant %17 2
+         %18 = OpConstant %17 1
+         %19 = OpConstant %17 0
+         %20 = OpConstant %17 64
+        %101 = OpConstant %6 64
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+          %8 = OpVariable %7 Function
+         %14 = OpAccessChain %13 %11 %12
+         %21 = OpAtomicLoad %6 %14 %100 %101
+               OpStore %8 %21
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+}
+
+// TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/4345): Improve this
+//  test so that it covers more atomic operations, and enable the test once the
+//  issue is fixed.
+TEST(TransformationReplaceIdWithSynonymTest, DISABLED_TypesAreCompatible) {
+  const std::string shader = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %9 = OpTypeInt 32 0
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+
+  const uint32_t int_type = 6;   // The id of OpTypeInt 32 1
+  const uint32_t uint_type = 9;  // The id of OpTypeInt 32 0
+
+  // OpAtomicLoad
+#ifndef NDEBUG
+  ASSERT_DEATH(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+                   context.get(), SpvOpAtomicLoad, 0, int_type, uint_type),
+               "Invalid operand index");
+#endif
+  ASSERT_TRUE(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+      context.get(), SpvOpAtomicLoad, 1, int_type, uint_type));
+  ASSERT_TRUE(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+      context.get(), SpvOpAtomicLoad, 2, int_type, uint_type));
+
+  // OpAtomicExchange
+#ifndef NDEBUG
+  ASSERT_DEATH(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+                   context.get(), SpvOpAtomicExchange, 0, int_type, uint_type),
+               "Invalid operand index");
+#endif
+  ASSERT_TRUE(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+      context.get(), SpvOpAtomicExchange, 1, int_type, uint_type));
+  ASSERT_TRUE(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+      context.get(), SpvOpAtomicExchange, 2, int_type, uint_type));
+  ASSERT_FALSE(TransformationReplaceIdWithSynonym::TypesAreCompatible(
+      context.get(), SpvOpAtomicExchange, 2, int_type, uint_type));
+
+  // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/4345): Similar for
+  // other atomic instructions
 }
 
 }  // namespace

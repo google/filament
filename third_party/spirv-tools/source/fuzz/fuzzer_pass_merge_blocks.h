@@ -28,8 +28,6 @@ class FuzzerPassMergeBlocks : public FuzzerPass {
                         FuzzerContext* fuzzer_context,
                         protobufs::TransformationSequence* transformations);
 
-  ~FuzzerPassMergeBlocks();
-
   void Apply() override;
 };
 

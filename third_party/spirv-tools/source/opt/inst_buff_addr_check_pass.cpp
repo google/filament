@@ -202,7 +202,6 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     (void)builder.AddInstruction(MakeUnique<Instruction>(
         context(), SpvOpBranch, 0, 0,
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {hdr_blk_id}}}));
-    first_blk_ptr->SetParent(&*input_func);
     input_func->AddBasicBlock(std::move(first_blk_ptr));
     // Linear search loop header block
     // TODO(greg-lunarg): Implement binary search
@@ -246,7 +245,6 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     (void)builder.AddInstruction(MakeUnique<Instruction>(
         context(), SpvOpBranch, 0, 0,
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {cont_blk_id}}}));
-    hdr_blk_ptr->SetParent(&*input_func);
     input_func->AddBasicBlock(std::move(hdr_blk_ptr));
     // Continue/Work Block. Read next buffer pointer and break if greater
     // than ref_ptr arg.
@@ -272,7 +270,6 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     (void)builder.AddConditionalBranch(uptr_test_inst->result_id(),
                                        bound_test_blk_id, hdr_blk_id,
                                        kInvalidId, SpvSelectionControlMaskNone);
-    cont_blk_ptr->SetParent(&*input_func);
     input_func->AddBasicBlock(std::move(cont_blk_ptr));
     // Bounds test block. Read length of selected buffer and test that
     // all len arg bytes are in buffer.
@@ -333,7 +330,6 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
         std::initializer_list<Operand>{
             {SPV_OPERAND_TYPE_ID, {len_test_inst->result_id()}}}));
     // Close block
-    bound_test_blk_ptr->SetParent(&*input_func);
     input_func->AddBasicBlock(std::move(bound_test_blk_ptr));
     // Close function and add function to module
     std::unique_ptr<Instruction> func_end_inst(

@@ -30,6 +30,7 @@
 #include "sca/GLSLTools.h"
 
 #include <utils/Log.h>
+#include <filament/MaterialEnums.h>
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -203,6 +204,12 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         return false;
     }
 
+    // add texture lod bias
+    if (config.shaderType == filament::backend::FRAGMENT &&
+        config.domain == filament::MaterialDomain::SURFACE) {
+        GLSLTools::textureLodBias(tShader);
+    }
+
     program.addShader(&tShader);
     // Even though we only have a single shader stage, linking is still necessary to finalize
     // SPIR-V types
@@ -343,6 +350,11 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
         CompilerGLSL glslCompiler(move(spirv));
         glslCompiler.set_common_options(glslOptions);
+
+        if (tShader.getStage() == EShLangFragment && !glslOptions.es) {
+            // enable GL_ARB_shading_language_packing if available
+            glslCompiler.add_header_line("#extension GL_ARB_shading_language_packing : enable");
+        }
 
         if (tShader.getStage() == EShLangFragment && glslOptions.es) {
             for (auto i : config.glsl.subpassInputToColorLocation) {

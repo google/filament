@@ -27,6 +27,7 @@ import android.widget.Toast
 import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
+import com.google.android.filament.View
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,7 +79,6 @@ class MainActivity : Activity() {
 
         modelViewer = ModelViewer(surfaceView)
         viewerContent.view = modelViewer.view
-        viewerContent.indirectLight = modelViewer.scene.indirectLight
         viewerContent.sunlight = modelViewer.light
         viewerContent.lightManager = modelViewer.engine.lightManager
         viewerContent.scene = modelViewer.scene
@@ -98,6 +98,7 @@ class MainActivity : Activity() {
         val view = modelViewer.view
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = true
+            quality = View.QualityLevel.MEDIUM
         }
 
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
@@ -129,6 +130,7 @@ class MainActivity : Activity() {
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
             scene.indirectLight = KTXLoader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f
+            viewerContent.indirectLight = modelViewer.scene.indirectLight
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
             scene.skybox = KTXLoader.createSkybox(engine, it)
@@ -193,6 +195,10 @@ class MainActivity : Activity() {
                          .build(engine)
 
                 val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
+
+                specularFilter.destroy();
+                equirectToCubemap.destroy();
+                context.destroy();
 
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl

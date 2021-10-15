@@ -20,37 +20,32 @@ namespace fuzz {
 opt::Instruction* FindInstruction(
     const protobufs::InstructionDescriptor& instruction_descriptor,
     spvtools::opt::IRContext* context) {
-  for (auto& function : *context->module()) {
-    for (auto& block : function) {
-      bool found_base =
-          block.id() == instruction_descriptor.base_instruction_result_id();
-      uint32_t num_ignored = 0;
-      for (auto& instruction : block) {
-        if (instruction.HasResultId() &&
-            instruction.result_id() ==
-                instruction_descriptor.base_instruction_result_id()) {
-          assert(!found_base &&
-                 "It should not be possible to find the base instruction "
-                 "multiple times.");
-          found_base = true;
-          assert(num_ignored == 0 &&
-                 "The skipped instruction count should only be incremented "
-                 "after the instruction base has been found.");
-        }
-        if (found_base &&
-            instruction.opcode() ==
-                instruction_descriptor.target_instruction_opcode()) {
-          if (num_ignored == instruction_descriptor.num_opcodes_to_ignore()) {
-            return &instruction;
-          }
-          num_ignored++;
-        }
+  auto block = context->get_instr_block(
+      instruction_descriptor.base_instruction_result_id());
+  if (block == nullptr) {
+    return nullptr;
+  }
+  bool found_base =
+      block->id() == instruction_descriptor.base_instruction_result_id();
+  uint32_t num_ignored = 0;
+  for (auto& instruction : *block) {
+    if (instruction.HasResultId() &&
+        instruction.result_id() ==
+            instruction_descriptor.base_instruction_result_id()) {
+      assert(!found_base &&
+             "It should not be possible to find the base instruction "
+             "multiple times.");
+      found_base = true;
+      assert(num_ignored == 0 &&
+             "The skipped instruction count should only be incremented "
+             "after the instruction base has been found.");
+    }
+    if (found_base && instruction.opcode() ==
+                          instruction_descriptor.target_instruction_opcode()) {
+      if (num_ignored == instruction_descriptor.num_opcodes_to_ignore()) {
+        return &instruction;
       }
-      if (found_base) {
-        // We found the base instruction, but did not find the target
-        // instruction in the same block.
-        return nullptr;
-      }
+      num_ignored++;
     }
   }
   return nullptr;

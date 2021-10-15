@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef MATH_MAT3_H_
-#define MATH_MAT3_H_
+#ifndef TNT_MATH_MAT3_H
+#define TNT_MATH_MAT3_H
 
-#include <math/quat.h>
 #include <math/TMatHelpers.h>
-#include <math/vec3.h>
 #include <math/compiler.h>
+#include <math/quat.h>
+#include <math/vec3.h>
 
 #include <limits.h>
 #include <stdint.h>
@@ -487,4 +487,4 @@ constexpr void swap(filament::math::details::TMat33<T>& lhs,
 }
 }
 
-#endif  // MATH_MAT3_H_
+#endif  // TNT_MATH_MAT3_H

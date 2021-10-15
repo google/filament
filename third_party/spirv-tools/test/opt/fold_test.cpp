@@ -141,6 +141,7 @@ OpName %main "main"
 %v4int = OpTypeVector %int 4
 %v4float = OpTypeVector %float 4
 %v4double = OpTypeVector %double 4
+%v2uint = OpTypeVector %uint 2
 %v2float = OpTypeVector %float 2
 %v2double = OpTypeVector %double 2
 %v2half = OpTypeVector %half 2
@@ -191,6 +192,7 @@ OpName %main "main"
 %v2int_2_3 = OpConstantComposite %v2int %int_2 %int_3
 %v2int_3_2 = OpConstantComposite %v2int %int_3 %int_2
 %v2int_4_4 = OpConstantComposite %v2int %int_4 %int_4
+%v2int_min_max = OpConstantComposite %v2int %int_min %int_max
 %v2bool_null = OpConstantNull %v2bool
 %v2bool_true_false = OpConstantComposite %v2bool %true %false
 %v2bool_false_true = OpConstantComposite %v2bool %false %true
@@ -258,6 +260,15 @@ OpName %main "main"
 %v4double_1_1_1_0p5 = OpConstantComposite %v4double %double_1 %double_1 %double_1 %double_0p5
 %v4double_null = OpConstantNull %v4double
 %v4float_n1_2_1_3 = OpConstantComposite %v4float %float_n1 %float_2 %float_1 %float_3
+%uint_0x3f800000 = OpConstant %uint 0x3f800000
+%uint_0xbf800000 = OpConstant %uint 0xbf800000
+%v2uint_0x3f800000_0xbf800000 = OpConstantComposite %v2uint %uint_0x3f800000 %uint_0xbf800000
+%long_0xbf8000003f800000 = OpConstant %long 0xbf8000003f800000
+%int_0x3FF00000 = OpConstant %int 0x3FF00000
+%int_0x00000000 = OpConstant %int 0x00000000
+%int_0xC05FD666 = OpConstant %int 0xC05FD666
+%int_0x66666666 = OpConstant %int 0x66666666
+%v4int_0x3FF00000_0x00000000_0xC05FD666_0x66666666 = OpConstantComposite %v4int %int_0x00000000 %int_0x3FF00000 %int_0x66666666 %int_0xC05FD666
 )";
 
   return header;
@@ -708,7 +719,31 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
           "%2 = OpExtInst %uint %1 UClamp %uint_2 %undef %uint_1\n" +
           "OpReturn\n" +
           "OpFunctionEnd",
-      2, 1)
+      2, 1),
+    // Test case 46: Bit-cast int 0 to unsigned int
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpBitcast %uint %int_0\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0),
+    // Test case 47: Bit-cast int -24 to unsigned int
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpBitcast %uint %int_n24\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, static_cast<uint32_t>(-24)),
+    // Test case 48: Bit-cast float 1.0f to unsigned int
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpBitcast %uint %float_1\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, static_cast<uint32_t>(0x3f800000))
 ));
 // clang-format on
 
@@ -790,9 +825,71 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntVectorInstructionFoldingTest,
           "%2 = OpVectorShuffle %v2int %v2int_null %v2int_2_3 0 4294967295 \n" +
           "OpReturn\n" +
           "OpFunctionEnd",
-      2, {0,0})
+      2, {0,0}),
+    // Test case 4: fold bit-cast int -24 to unsigned int
+    InstructionFoldingCase<std::vector<uint32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%n = OpVariable %_ptr_int Function\n" +
+          "%load = OpLoad %int %n\n" +
+          "%2 = OpBitcast %v2uint %v2int_min_max\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {2147483648, 2147483647})
 ));
 // clang-format on
+
+using DoubleVectorInstructionFoldingTest =
+    ::testing::TestWithParam<InstructionFoldingCase<std::vector<double>>>;
+
+TEST_P(DoubleVectorInstructionFoldingTest, Case) {
+  const auto& tc = GetParam();
+
+  // Build module.
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(nullptr, context);
+
+  // Fold the instruction to test.
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
+  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
+
+  // Make sure the instruction folded as expected.
+  EXPECT_TRUE(succeeded);
+  if (succeeded && inst != nullptr) {
+    EXPECT_EQ(inst->opcode(), SpvOpCopyObject);
+    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+    std::vector<SpvOp> opcodes = {SpvOpConstantComposite};
+    EXPECT_THAT(opcodes, Contains(inst->opcode()));
+    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
+    const analysis::Constant* result = const_mrg->GetConstantFromInst(inst);
+    EXPECT_NE(result, nullptr);
+    if (result != nullptr) {
+      const std::vector<const analysis::Constant*>& componenets =
+          result->AsVectorConstant()->GetComponents();
+      EXPECT_EQ(componenets.size(), tc.expected_result.size());
+      for (size_t i = 0; i < componenets.size(); i++) {
+        EXPECT_EQ(tc.expected_result[i], componenets[i]->GetDouble());
+      }
+    }
+  }
+}
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(TestCase, DoubleVectorInstructionFoldingTest,
+::testing::Values(
+   // Test case 0: bit-cast int {0x3FF00000,0x00000000,0xC05FD666,0x66666666}
+   //              to double vector
+   InstructionFoldingCase<std::vector<double>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpBitcast %v2double %v4int_0x3FF00000_0x00000000_0xC05FD666_0x66666666\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {1.0,-127.35})
+));
 
 using FloatVectorInstructionFoldingTest =
     ::testing::TestWithParam<InstructionFoldingCase<std::vector<float>>>;
@@ -843,7 +940,24 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
            "%2 = OpExtInst %v2float %1 FMix %v2float_2_3 %v2float_0_0 %v2float_0p2_0p5\n" +
            "OpReturn\n" +
            "OpFunctionEnd",
-       2, {1.6f,1.5f})
+       2, {1.6f,1.5f}),
+   // Test case 1: bit-cast unsigned int vector {0x3f800000, 0xbf800000} to
+   //              float vector
+   InstructionFoldingCase<std::vector<float>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpBitcast %v2float %v2uint_0x3f800000_0xbf800000\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {1.0f,-1.0f}),
+   // Test case 2: bit-cast long int 0xbf8000003f800000 to float vector
+   InstructionFoldingCase<std::vector<float>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpBitcast %v2float %long_0xbf8000003f800000\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {1.0f,-1.0f})
 ));
 // clang-format on
 using BooleanInstructionFoldingTest =

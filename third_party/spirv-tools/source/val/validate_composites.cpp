@@ -437,6 +437,10 @@ spv_result_t ValidateCopyObject(ValidationState_t& _, const Instruction* inst) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Result Type and Operand type to be the same";
   }
+  if (_.IsVoidType(result_type)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << "OpCopyObject cannot have void result type";
+  }
   return SPV_SUCCESS;
 }
 
@@ -531,24 +535,16 @@ spv_result_t ValidateVectorShuffle(ValidationState_t& _,
   }
 
   // All Component literals must either be FFFFFFFF or in [0, N - 1].
-  // For WebGPU specifically, Component literals cannot be FFFFFFFF.
   auto vector1ComponentCount = vector1Type->GetOperandAs<uint32_t>(2);
   auto vector2ComponentCount = vector2Type->GetOperandAs<uint32_t>(2);
   auto N = vector1ComponentCount + vector2ComponentCount;
   auto firstLiteralIndex = 4;
-  const auto is_webgpu_env = spvIsWebGPUEnv(_.context()->target_env);
   for (size_t i = firstLiteralIndex; i < inst->operands().size(); ++i) {
     auto literal = inst->GetOperandAs<uint32_t>(i);
     if (literal != 0xFFFFFFFF && literal >= N) {
       return _.diag(SPV_ERROR_INVALID_ID, inst)
              << "Component index " << literal << " is out of bounds for "
              << "combined (Vector1 + Vector2) size of " << N << ".";
-    }
-
-    if (is_webgpu_env && literal == 0xFFFFFFFF) {
-      return _.diag(SPV_ERROR_INVALID_ID, inst)
-             << "Component literal at operand " << i - firstLiteralIndex
-             << " cannot be 0xFFFFFFFF in WebGPU execution environment.";
     }
   }
 

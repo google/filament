@@ -30,6 +30,7 @@
 #include <viewer/Settings.h>
 
 #include <utils/Entity.h>
+#include <utils/compiler.h>
 
 #include <math/mat4.h>
 #include <math/vec3.h>
@@ -50,7 +51,7 @@ namespace viewer {
  * \note If you don't need ImGui controls, there is no need to use this class, just use AssetLoader
  * instead.
  */
-class SimpleViewer {
+class UTILS_PUBLIC SimpleViewer {
 public:
     using Animator = gltfio::Animator;
     using FilamentAsset = gltfio::FilamentAsset;
@@ -242,10 +243,12 @@ private:
     int mCurrentCamera = 0;
 
     // Color grading UI state.
+    float mToneMapPlot[1024];
     float mRangePlot[1024 * 3];
     float mCurvePlot[1024 * 3];
 };
 
+UTILS_PUBLIC
 filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds, float zoffset);
 
 } // namespace viewer

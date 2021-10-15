@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/Froxelizer.h"
+#include "Froxelizer.h"
 
 #include "Intersections.h"
 
@@ -87,10 +87,13 @@ Froxelizer::Froxelizer(FEngine& engine)
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
             "Record Buffer must use bytes");
 
-    mRecordsBuffer = driverApi.createUniformBuffer(RECORD_BUFFER_ENTRY_COUNT,BufferUsage::DYNAMIC);
+    mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC, false);
 
-    mFroxelBuffer  = GPUBuffer(driverApi, { GPUBuffer::ElementType::UINT16, 2 },
-            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
+    mFroxelTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
+            backend::TextureFormat::RG16UI, 1,
+            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
 }
 
 Froxelizer::~Froxelizer() {
@@ -106,9 +109,8 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     mPlanesX = nullptr;
     mDistancesZ = nullptr;
 
-    driverApi.destroyUniformBuffer(mRecordsBuffer);
-
-    mFroxelBuffer.terminate(driverApi);
+    driverApi.destroyBufferObject(mRecordsBuffer);
+    driverApi.destroyTexture(mFroxelTexture);
 }
 
 void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
@@ -293,13 +295,12 @@ bool Froxelizer::update() noexcept {
         }
 
         // for the inverse-transformation (view-space z to z-slice)
-        mLinearizer = 1 / linearizer;
+        mLinearizer = 1.0f / linearizer;
         mZLightFar = zLightFar;
-        mLog2ZLightFar = std::log2(zLightFar);
 
         mParamsZ[0] = 0; // updated when camera changes
         mParamsZ[1] = 0; // updated when camera changes
-        mParamsZ[2] = -mLinearizer;
+        mParamsZ[2] = 0; // updated when camera changes
         mParamsZ[3] = mFroxelCountZ;
         mParamsF[0] = 1;
         mParamsF[1] = uint32_t(mFroxelCountX);
@@ -374,7 +375,7 @@ bool Froxelizer::update() noexcept {
             // the camera.
             minp.z = -planesZ[iz+1];
             maxp.z = -planesZ[iz];
-            assert_invariant(minp.z < maxp.z);
+            assert_invariant(minp.z <= maxp.z);
 
             for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
                 // left, right planes for all froxels at ix
@@ -390,7 +391,7 @@ bool Froxelizer::update() noexcept {
                     minp.x = std::min(minp.x, px);
                     maxp.x = std::max(maxp.x, px);
                 }
-                assert_invariant(minp.x < maxp.x);
+                assert_invariant(minp.x <= maxp.x);
                 minMaxX[ix] = float2{ minp.x, maxp.x };
             }
 
@@ -420,32 +421,23 @@ bool Froxelizer::update() noexcept {
             }
         }
 
-        //    linearizer = log2(zLightFar / zLightNear) / (zcount - 1)
-        //    vz = -exp2((i - zcount) * linearizer) * zLightFar
-        // => i = log2(zLightFar / -vz) / -linearizer + zcount
-
         float Pz = mProjection[2][2];
         float Pw = mProjection[3][2];
         if (mProjection[2][3] != 0) {
-            // perspective projection
-            // (clip) cz = Pz*vz+Pw, cw=-vz
-            // (ndc)  nz = -Pz-Pw/vz
-            // (win)  fz = -Pz*0.5+0.5 - Pw*0.5/vz
-            // ->  = vz = -Pw / (2*fz + Pz-1)
-            // i = log2(zLightFar*(2*fz + Pz-1) / Pw) / -linearizer + zcount
-            mParamsZ[0] = 2.0f * mZLightFar / Pw;
-            mParamsZ[1] =  mZLightFar * (Pz - 1.0f) / Pw;
+            // With our inverted DX convention, we have the simple relation:
+            // z_view = -near / z_screen
+            // ==> i = log2(-z / far) / linearizer + zcount
+            // ==> i = -log2(z_screen * (far/near)) * (1/linearizer) + zcount
+            // ==> i = log2(z_screen * (far/near)) * (-1/linearizer) + zcount
+            mParamsZ[0] = mZLightFar / Pw;
+            mParamsZ[1] = 0.0f;
+            mParamsZ[2] = -mLinearizer;
         } else {
             // orthographic projection
-            // (clip) cz = Pz*vz+Pw, cw=1
-            // (ndc)  nz = Pz*vz+Pw
-            // (win)  fz = Pz*vz*0.5 + Pw*0.5+0.5
-            // ->  = vz = (2*fz - Pw-1)/Pz
-            // i = log2(-vz / zLightFar) / linearizer + zcount
-            // i = log2((-2*fz + Pw + 1)/(Pz*zLightFar)) / linearizer + zcount
-
-            mParamsZ[0] = -2.0f / (Pz * mZLightFar);
-            mParamsZ[1] = (1.0f + Pw) / (Pz * mZLightFar);
+            // z_view = (1 - z_screen) * (near - far) - near
+            // z_view = z_screen * (far - near) - far
+            mParamsZ[0] =       -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
+            mParamsZ[1] = (0.5f - Pw) / (Pz * mZLightFar);  //         far / mZLightFar
             mParamsZ[2] = mLinearizer;
         }
         uniformsNeedUpdating = true;
@@ -477,7 +469,7 @@ size_t Froxelizer::findSliceZ(float z) const noexcept {
 
     // This whole function is now branch-less.
 
-    int s = int((fast::log2(-z) - mLog2ZLightFar) * mLinearizer + mFroxelCountZ);
+    int s = int( fast::log2(-z / mZLightFar) * mLinearizer + mFroxelCountZ );
 
     // there are cases where z can be negative here, e.g.:
     // - the light is visible, but its center is behind the camera
@@ -501,10 +493,14 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 
 void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
-    mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
+    driverApi.update2DImage(mFroxelTexture, 0, 0, 0,
+            FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT,{
+                    mFroxelBufferUser.begin(), mFroxelBufferUser.sizeInBytes(),
+                    PixelBufferDescriptor::PixelDataFormat::RG_INTEGER,
+                    PixelBufferDescriptor::PixelDataType::USHORT });
 
-    driverApi.loadUniformBuffer(mRecordsBuffer,
-            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT });
+    driverApi.updateBufferObject(mRecordsBuffer,
+            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT }, 0);
 
 #ifndef NDEBUG
     mFroxelBufferUser.clear();

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_POSTPROCESS_MANAGER_H
-#define TNT_FILAMENT_POSTPROCESS_MANAGER_H
+#ifndef TNT_FILAMENT_POSTPROCESSMANAGER_H
+#define TNT_FILAMENT_POSTPROCESSMANAGER_H
 
 #include "private/backend/DriverApiForward.h"
 
@@ -24,7 +24,7 @@
 #include <fg2/FrameGraphId.h>
 #include <fg2/FrameGraphResources.h>
 
-#include <filament/View.h>
+#include <filament/Options.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
@@ -49,11 +49,16 @@ struct CameraInfo;
 class PostProcessManager {
 public:
     struct ColorGradingConfig {
-        bool asSubpass = false;
+        bool asSubpass{};
         bool translucent{};
         bool fxaa{};
         bool dithering{};
         backend::TextureFormat ldrFormat{};
+    };
+
+    struct StructurePassConfig {
+        float scale = 0.5f;
+        bool picking{};
     };
 
     explicit PostProcessManager(FEngine& engine) noexcept;
@@ -65,12 +70,12 @@ public:
 
     // structure (depth) pass
     FrameGraphId<FrameGraphTexture> structure(FrameGraph& fg, RenderPass const& pass,
-            uint32_t width, uint32_t height, float scale) noexcept;
+            uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             filament::Viewport const& svp, const CameraInfo& cameraInfo,
-            View::AmbientOcclusionOptions options) noexcept;
+            AmbientOcclusionOptions const& options) noexcept;
 
     // Used in refraction pass
     FrameGraphId<FrameGraphTexture> generateGaussianMipmap(FrameGraph& fg,
@@ -79,23 +84,24 @@ public:
 
     // Depth-of-field
     FrameGraphId<FrameGraphTexture> dof(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-            const View::DepthOfFieldOptions& dofOptions, bool translucent,
+            const DepthOfFieldOptions& dofOptions, bool translucent,
             const CameraInfo& cameraInfo, math::float2 scale) noexcept;
 
     // Bloom
-    FrameGraphId<FrameGraphTexture> bloom(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+    FrameGraphId<FrameGraphTexture> bloom(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
+            BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
+            math::float2 scale) noexcept;
 
     // Color grading, tone mapping, dithering and bloom
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, math::float2 scale,
+            FrameGraphId<FrameGraphTexture> input,
             const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-            View::BloomOptions bloomOptions, View::VignetteOptions vignetteOptions) noexcept;
+            BloomOptions const& bloomOptions, VignetteOptions const& vignetteOptions,
+            math::float2 scale) noexcept;
 
     void colorGradingPrepareSubpass(backend::DriverApi& driver, const FColorGrading* colorGrading,
             ColorGradingConfig const& colorGradingConfig,
-            View::VignetteOptions vignetteOptions,
+            VignetteOptions const& vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
 
     void colorGradingSubpass(backend::DriverApi& driver,
@@ -107,23 +113,23 @@ public:
             bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameHistory& frameHistory,
-            CameraInfo const& cameraInfo,
-            View::TemporalAntiAliasingOptions const& taaOptions) const noexcept;
+    void prepareTaa(FrameHistory& frameHistory, CameraInfo const& cameraInfo,
+            TemporalAntiAliasingOptions const& taaOptions) const noexcept;
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
-            View::TemporalAntiAliasingOptions taaOptions,
+            TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 
     // Blit/rescaling/resolves
     FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
 
     FrameGraphId<FrameGraphTexture> blendBlit(
-            FrameGraph& fg, bool translucent, View::QualityLevel quality,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc) noexcept;
+            FrameGraph& fg, bool translucent, DynamicResolutionOptions dsrOptions,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
@@ -152,6 +158,7 @@ private:
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
+        bool bentNormals = false;
         float standardDeviation = 1.0f;
         float bilateralThreshold = 0.0625f;
         float scale = 1.0f;
@@ -163,7 +170,7 @@ private:
 
     FrameGraphId<FrameGraphTexture> bloomPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            View::BloomOptions& bloomOptions, math::float2 scale) noexcept;
+            BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
 
     void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material, uint8_t variant,
@@ -223,9 +230,10 @@ private:
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
     const math::float2 mHaltonSamples[16];
-};
 
+    bool mWorkaroundSplitEasu : 1;
+};
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_POSTPROCESS_MANAGER_H
+#endif // TNT_FILAMENT_POSTPROCESSMANAGER_H

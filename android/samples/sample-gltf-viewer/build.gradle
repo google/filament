@@ -10,6 +10,7 @@ filamentTools {
     iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
 }
 
+// don't forget to update MainACtivity.kt when/if changing this.
 task copyMesh(type: Copy) {
     from "../../../third_party/models/BusterDrone"
     into "src/main/assets/models"
@@ -36,5 +37,5 @@ dependencies {
     implementation project(':filament-android')
     implementation project(':gltfio-android')
     implementation project(':filament-utils-android')
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.8'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0'
 }

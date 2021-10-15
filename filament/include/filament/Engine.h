@@ -327,6 +327,15 @@ public:
     TransformManager& getTransformManager() noexcept;
 
     /**
+     * Helper to enable accurate translations.
+     * If you need this Engine to handle a very large world space, one way to achieve this
+     * automatically is to enable accurate translations in the TransformManager. This helper
+     * provides a convenient way of doing that.
+     * This is typically called once just after creating the Engine.
+     */
+    void enableAccurateTranslations() noexcept;
+
+    /**
      * Creates a SwapChain from the given Operating System's native window handle.
      *
      * @param nativeWindow An opaque native window handle. e.g.: on Android this is an
@@ -437,7 +446,7 @@ public:
 
     /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
-     * all commands to this point are executed. Note that this doesn't guarantee that the
+     * all commands to this point are executed. Note that does guarantee that the
      * hardware is actually finished.
      *
      * <p>This is typically used right after destroying the <code>SwapChain</code>,
@@ -446,6 +455,25 @@ public:
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
      */
     void flushAndWait();
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait
+     * for commands to be either executed or the hardware finished.
+     *
+     * <p>This is typically used after creating a lot of objects to start draining the command
+     * queue which has a limited size.</p>
+      */
+    void flush();
+
+    /**
+     * Drains the user callback message queue and immediately execute all pending callbacks.
+     *
+     * <p> Typically this should be called once per frame right after the application's vsync tick,
+     * and typically just before computing parameters (e.g. object positions) for the next frame.
+     * This is useful because otherwise callbacks will be executed by filament at a later time,
+     * which may increase latency in certain applications.</p>
+     */
+    void pumpMessageQueues();
 
     /**
      * Returns the default Material.

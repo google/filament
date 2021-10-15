@@ -19,7 +19,6 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/LightManager.h>
-#include <filament/Material.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
@@ -119,6 +118,47 @@ static void computeCurvePlot(Settings& settings, float* curvePlot) {
     }
 }
 
+static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
+    float hdrMax = 10.0f;
+    ToneMapper* mapper;
+    switch (settings.toneMapping) {
+        case ToneMapping::LINEAR:
+            mapper = new LinearToneMapper;
+            break;
+        case ToneMapping::ACES_LEGACY:
+            mapper = new ACESLegacyToneMapper;
+            break;
+        case ToneMapping::ACES:
+            mapper = new ACESToneMapper;
+            break;
+        case ToneMapping::FILMIC:
+            mapper = new FilmicToneMapper;
+            break;
+        case ToneMapping::GENERIC:
+            mapper = new GenericToneMapper(
+                    settings.genericToneMapper.contrast,
+                    settings.genericToneMapper.shoulder,
+                    settings.genericToneMapper.midGrayIn,
+                    settings.genericToneMapper.midGrayOut,
+                    settings.genericToneMapper.hdrMax
+            );
+            hdrMax = settings.genericToneMapper.hdrMax;
+            break;
+        case ToneMapping::DISPLAY_RANGE:
+            mapper = new DisplayRangeToneMapper;
+            break;
+    }
+
+    float a = std::log10(hdrMax * 1.5f / 1e-6f);
+    for (size_t i = 0; i < 1024; i++) {
+        float v = i;
+        float x = 1e-6f * std::pow(10.0f, a * v / 1023.0f);
+        plot[i] = (*mapper)(x).r;
+    }
+
+    delete mapper;
+}
+
 static void tooltipFloat(float value) {
     if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%.2f", value);
@@ -134,10 +174,10 @@ static void pushSliderColors(float hue) {
 
 static void popSliderColors() { ImGui::PopStyleColor(4); }
 
-static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlot) {
+static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlot, float* toneMapPlot) {
     const static ImVec2 verticalSliderSize(18.0f, 160.0f);
-    const static ImVec2 plotLinesSize(260.0f, 160.0f);
-    const static ImVec2 plotLinesWideSize(350.0f, 120.0f);
+    const static ImVec2 plotLinesSize(0.0f, 160.0f);
+    const static ImVec2 plotLinesWideSize(0.0f, 120.0f);
 
     if (ImGui::CollapsingHeader("Color grading")) {
         ColorGradingSettings& colorGrading = settings.view.colorGrading;
@@ -151,8 +191,30 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0EVILS\0Reinhard\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0Generic\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
+        if (colorGrading.toneMapping == ToneMapping::GENERIC) {
+            if (ImGui::CollapsingHeader("Tonemap parameters")) {
+                GenericToneMapperSettings& generic = colorGrading.genericToneMapper;
+                ImGui::SliderFloat("Contrast##genericToneMapper", &generic.contrast, 1e-5f, 3.0f);
+                ImGui::SliderFloat("Shoulder##genericToneMapper", &generic.shoulder, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray in##genericToneMapper", &generic.midGrayIn, 0.0f, 1.0f);
+                ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
+                ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
+            }
+        }
+
+        computeToneMapPlot(colorGrading, toneMapPlot);
+
+        ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
+        ImGui::PlotLines("", toneMapPlot, 1024, 0, "Tone map", 0.0f, 1.05f, ImVec2(0, 160));
+        ImGui::PopStyleColor();
+
+        ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
+        ImGui::Checkbox("Gamut mapping", &colorGrading.gamutMapping);
+
+        ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
+        ImGui::SliderFloat("Night adaptation", &colorGrading.nightAdaptation, 0.0f, 1.0f);
 
         if (ImGui::CollapsingHeader("White balance")) {
             int temperature = colorGrading.temperature * 100.0f;
@@ -319,9 +381,9 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         .intensity(mSettings.lighting.sunlightIntensity)
         .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
-        .sunAngularRadius(1.9)
-        .sunHaloSize(10.0)
-        .sunHaloFalloff(80.0)
+        .sunAngularRadius(1.0f)
+        .sunHaloSize(2.0f)
+        .sunHaloFalloff(80.0f)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
@@ -613,26 +675,24 @@ void SimpleViewer::updateUserInterface() {
             enableDithering(dither);
             ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
             ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
+
+            ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
+            // this clutters the UI and isn't that useful (except when working on TAA)
+            //ImGui::Indent();
+            //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
+            //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
+            //ImGui::Unindent();
+
+            bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
+            ImGui::Checkbox("FXAA", &fxaa);
+            enableFxaa(fxaa);
         ImGui::Unindent();
 
         bool msaa = mSettings.view.sampleCount != 1;
         ImGui::Checkbox("MSAA 4x", &msaa);
         enableMsaa(msaa);
 
-        ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
-
-        // this clutters the UI and isn't that useful (except when working on TAA)
-        //ImGui::Indent();
-        //ImGui::SliderFloat("feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
-        //ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth, 0.0f, 2.0f);
-        //ImGui::Unindent();
-
-        bool fxaa = mSettings.view.antiAliasing == AntiAliasing::FXAA;
-        ImGui::Checkbox("FXAA", &fxaa);
-        enableFxaa(fxaa);
-
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
-
         if (ImGui::CollapsingHeader("SSAO Options")) {
             auto& ssao = mSettings.view.ssao;
 
@@ -640,10 +700,16 @@ void SimpleViewer::updateUserInterface() {
             int lowpass = (int) ssao.lowPassFilter;
             bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
 
+            bool halfRes = ssao.resolution == 1.0f ? false : true;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
+            ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
             ImGui::Checkbox("High quality upsampling", &upsampling);
             ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+            ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
+            ImGui::Checkbox("Half resolution", &halfRes);
+            ssao.resolution = halfRes ? 0.5f : 1.0f;
+
 
             ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             ssao.lowPassFilter = (View::QualityLevel) lowpass;
@@ -827,7 +893,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Unindent();
     }
 
-    colorGradingUI(mSettings, mRangePlot, mCurvePlot);
+    colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);
 
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.

@@ -142,6 +142,10 @@ class ScalarReplacementPass : public Pass {
   // of |inst| and the store is not to volatile memory.
   bool CheckStore(const Instruction* inst, uint32_t index) const;
 
+  // Returns true if |index| is the pointer operand of an OpImageTexelPointer
+  // instruction.
+  bool CheckImageTexelPointer(uint32_t index) const;
+
   // Creates a variable of type |typeId| from the |index|'th element of
   // |varInst|. The new variable is added to |replacements|.  If the variable
   // could not be created, then |nullptr| is appended to |replacements|.

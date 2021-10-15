@@ -27,8 +27,6 @@ function print_help {
     echo "        Always invoke CMake before incremental builds."
     echo "    -i"
     echo "        Install build output"
-    echo "    -j"
-    echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
@@ -154,8 +152,6 @@ BUILD_ANDROID_SAMPLES=false
 
 RUN_TESTS=false
 
-FILAMENT_ENABLE_JAVA=ON
-
 INSTALL_COMMAND=
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
@@ -207,10 +203,10 @@ function build_desktop_target {
 
     cd "out/cmake-${lc_target}"
 
-    # On macOS, set the deployment target to 10.14.
+    # On macOS, set the deployment target to 10.15.
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
     if [[ "${lc_name}" == "darwin" ]]; then
-        local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14"
+        local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
 
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             local architectures="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
@@ -223,7 +219,6 @@ function build_desktop_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
-            -DFILAMENT_ENABLE_JAVA="${FILAMENT_ENABLE_JAVA}" \
             ${SWIFTSHADER_OPTION} \
             ${MATDBG_OPTION} \
             ${deployment_target} \
@@ -762,12 +757,6 @@ function validate_build_command {
             exit 1
         fi
     fi
-    # Make sure we have Java
-    local javac_binary=$(command -v javac)
-    if [[ "${ISSUE_DESKTOP_BUILD}" == "true" ]] && ([[ "${JAVA_HOME}" == "" ]] || [[ ! "${javac_binary}" ]]); then
-        echo "Warning: JAVA_HOME is not set, skipping Java projects"
-        FILAMENT_ENABLE_JAVA=OFF
-    fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
     if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
@@ -834,16 +823,13 @@ while getopts ":hacCfijmp:q:uvgslwtdk:" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON"
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
             ;;
         i)
             INSTALL_COMMAND=install
-            ;;
-        j)
-            FILAMENT_ENABLE_JAVA=OFF
             ;;
         m)
             BUILD_GENERATOR="Unix Makefiles"

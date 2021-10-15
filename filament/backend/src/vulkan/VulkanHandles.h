@@ -53,14 +53,12 @@ struct VulkanRenderTarget : private HwRenderTarget {
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context);
 
-    ~VulkanRenderTarget();
-
-    void transformClientRectToPlatform(VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VkViewport* bounds) const;
-    VkExtent2D getExtent() const;
-    VulkanAttachment getColor(int target) const;
+    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const;
+    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const;
+    VkExtent2D getExtent(VulkanSwapChain* currentSurface) const;
+    VulkanAttachment getColor(VulkanSwapChain* currentSurface, int target) const;
     VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth() const;
+    VulkanAttachment getDepth(VulkanSwapChain* currentSurface) const;
     VulkanAttachment getMsaaDepth() const;
     int getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
@@ -70,50 +68,36 @@ struct VulkanRenderTarget : private HwRenderTarget {
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mDepth = {};
-    VulkanContext& mContext;
-    const bool mOffscreen;
-    uint8_t mSamples;
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
+    const bool mOffscreen : 1;
+    uint8_t mSamples : 7;
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             AttributeArray const& attributes);
-    utils::FixedCapacityVector<VulkanBuffer*> buffers;
+    utils::FixedCapacityVector<VulkanBuffer const*> buffers;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
     VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
             uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-            indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-            buffer(new VulkanBuffer(context, stagePool,
-                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount)) {}
+            buffer(context, stagePool,
+                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
+            indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
+    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanBuffer buffer;
     const VkIndexType indexType;
-    const std::unique_ptr<VulkanBuffer> buffer;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
     VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
-            uint32_t byteCount) : HwBufferObject(byteCount),
-            buffer(new VulkanBuffer(context, stagePool,
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, byteCount)) {}
-    const std::unique_ptr<VulkanBuffer> buffer;
-};
-
-struct VulkanUniformBuffer : public HwUniformBuffer {
-    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-            uint32_t numBytes, backend::BufferUsage usage);
-    ~VulkanUniformBuffer();
-    void loadFromCpu(const void* cpuData, uint32_t numBytes);
-    VkBuffer getGpuBuffer() const { return mGpuBuffer; }
-
-private:
-    VulkanContext& mContext;
-    VulkanStagePool& mStagePool;
-    VkBuffer mGpuBuffer;
-    VmaAllocation mGpuMemory;
+            uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
+    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanBuffer buffer;
+    const BufferObjectBinding bindingType;
 };
 
 struct VulkanSamplerGroup : public HwSamplerGroup {
@@ -134,6 +118,7 @@ struct VulkanFence : public HwFence {
 };
 
 struct VulkanSync : public HwSync {
+    VulkanSync() {}
     VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
@@ -144,8 +129,20 @@ struct VulkanTimerQuery : public HwTimerQuery {
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
     VulkanContext& mContext;
-    std::atomic<VulkanCommandBuffer const*> cmdbuffer;
+    std::atomic<VulkanCommandBuffer const*> cmdbuffer = nullptr;
 };
+
+inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
+        BufferObjectBinding bindingType) noexcept {
+    switch(bindingType) {
+        case BufferObjectBinding::VERTEX:
+            return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        case BufferObjectBinding::UNIFORM:
+            return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        // when adding more buffer types here, make sure to update VulkanBuffer::loadFromCpu()
+        // if necessary.
+    }
+}
 
 } // namespace filament
 } // namespace backend

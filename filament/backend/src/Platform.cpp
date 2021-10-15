@@ -99,8 +99,10 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend, void* nativeDevice) n
         *backend = Backend::OPENGL;
 #elif defined(IOS) || defined(__APPLE__)
         *backend = Backend::METAL;
-#else
+#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         *backend = Backend::VULKAN;
+#else
+        * backend = Backend::OPENGL;
 #endif
     }
     if (*backend == Backend::NOOP) {

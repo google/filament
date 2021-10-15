@@ -27,9 +27,6 @@ FuzzerPassAdjustMemoryOperandsMasks::FuzzerPassAdjustMemoryOperandsMasks(
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
                  transformations) {}
 
-FuzzerPassAdjustMemoryOperandsMasks::~FuzzerPassAdjustMemoryOperandsMasks() =
-    default;
-
 void FuzzerPassAdjustMemoryOperandsMasks::Apply() {
   // Consider every block in every function.
   for (auto& function : *GetIRContext()->module()) {

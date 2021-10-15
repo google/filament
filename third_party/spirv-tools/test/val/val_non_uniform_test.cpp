@@ -100,6 +100,7 @@ OpFunctionEnd)";
 SpvScope scopes[] = {SpvScopeCrossDevice, SpvScopeDevice, SpvScopeWorkgroup,
                      SpvScopeSubgroup, SpvScopeInvocation};
 
+using ValidateGroupNonUniform = spvtest::ValidateBase<bool>;
 using GroupNonUniform = spvtest::ValidateBase<
     std::tuple<std::string, std::string, SpvScope, std::string, std::string>>;
 
@@ -140,6 +141,8 @@ TEST_P(GroupNonUniform, Vulkan1p1) {
       EXPECT_EQ(SPV_SUCCESS, result);
     } else {
       EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
+      EXPECT_THAT(getDiagnosticString(),
+                  AnyVUID("VUID-StandaloneSpirv-None-04642"));
       EXPECT_THAT(
           getDiagnosticString(),
           HasSubstr(
@@ -287,6 +290,41 @@ INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitCountBadValue, GroupNonUniform,
                                         "Reduce %float_0"),
                                  Values("Expected Value to be a vector of four "
                                         "components of integer type scalar")));
+
+TEST_F(ValidateGroupNonUniform, VulkanGroupNonUniformBallotBitCountOperation) {
+  std::string test = R"(
+OpCapability Shader
+OpCapability GroupNonUniform
+OpCapability GroupNonUniformBallot
+OpCapability GroupNonUniformClustered
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%u32 = OpTypeInt 32 0
+%u32vec4 = OpTypeVector %u32 4
+%u32_0 = OpConstant %u32 0
+%u32vec4_null = OpConstantComposite %u32vec4 %u32_0 %u32_0 %u32_0 %u32_0
+%subgroup = OpConstant %u32 3
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+%result = OpGroupNonUniformBallotBitCount %u32 %subgroup ClusteredReduce %u32vec4_null
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(test, SPV_ENV_VULKAN_1_1);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_1));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      AnyVUID("VUID-StandaloneSpirv-OpGroupNonUniformBallotBitCount-04685"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "In Vulkan: The OpGroupNonUniformBallotBitCount group operation must "
+          "be only: Reduce, InclusiveScan, or ExclusiveScan."));
+}
 
 }  // namespace
 }  // namespace val

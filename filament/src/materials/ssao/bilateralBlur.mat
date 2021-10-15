@@ -2,7 +2,7 @@ material {
     name : bilateralBlur,
     parameters : [
         {
-            type : sampler2d,
+            type : sampler2dArray,
             name : ssao,
             precision: medium
         },
@@ -39,29 +39,22 @@ vertex {
 }
 
 fragment {
-    highp float unpack(highp vec2 depth) {
-        // depth here only has 8-bits of precision, but the unpacked depth is highp
-        // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
-        return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
-    }
+    #include "ssaoUtils.fs"
 
-    float random(const highp vec2 w) {
-        const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-        return fract(m.z * fract(dot(w, m.xy)));
-    }
+    void dummy(){}
 
     float bilateralWeight(in highp float depth, in highp float sampleDepth) {
         float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
         return max(0.0, 1.0 - diff * diff);
     }
 
-    void tap(inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
+    void tap(const highp sampler2DArray saoTexture,
+            inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
         // ambient occlusion sample
-        vec3 data = textureLod(materialParams_ssao, position, 0.0).rgb;
+        vec3 data = textureLod(saoTexture, vec3(position, 0.0), 0.0).rgb;
 
         // bilateral sample
-        float bilateral = bilateralWeight(depth, unpack(data.gb));
-        bilateral *= weight;
+        float bilateral = weight * bilateralWeight(depth, unpack(data.gb));
         sum += data.r * bilateral;
         totalWeight += bilateral;
     }
@@ -69,7 +62,7 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
 
-        vec3 data = textureLod(materialParams_ssao, uv, 0.0).rgb;
+        vec3 data = textureLod(materialParams_ssao, vec3(uv, 0.0), 0.0).rgb;
         if (data.g * data.b == 1.0) {
             // This is the skybox, skip
             postProcess.color.rgb = data;
@@ -85,8 +78,8 @@ fragment {
         vec2 offset = materialParams.axis;
         for (int i = 1; i < materialParams.sampleCount; i++) {
             float weight = materialParams.kernel[i];
-            tap(sum, totalWeight, weight, depth, uv + offset);
-            tap(sum, totalWeight, weight, depth, uv - offset);
+            tap(materialParams_ssao, sum, totalWeight, weight, depth, uv + offset);
+            tap(materialParams_ssao, sum, totalWeight, weight, depth, uv - offset);
             offset += materialParams.axis;
         }
 

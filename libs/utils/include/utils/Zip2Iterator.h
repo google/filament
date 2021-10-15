@@ -60,11 +60,9 @@ public:
     Zip2Iterator(Zip2Iterator const& rhs) noexcept = default;
     Zip2Iterator& operator=(Zip2Iterator const& rhs) = default;
 
-    value_type operator*() const { return { *mIt.first, *mIt.second }; }
-    reference  operator*()       { return { *mIt.first, *mIt.second }; }
+    reference operator*() const { return { *mIt.first, *mIt.second }; }
 
-    const value_type operator[](size_t n) const { return *(*this + n); }
-          reference  operator[](size_t n)       { return *(*this + n); }
+    reference operator[](size_t n) const { return *(*this + n); }
 
     Zip2Iterator& operator++() {
         ++mIt.first;
@@ -121,4 +119,4 @@ public:
 
 } // namespace utils
 
-#endif /* TNT_UTILS_ZIP2ITERATOR_H */
+#endif // TNT_UTILS_ZIP2ITERATOR_H

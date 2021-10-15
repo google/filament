@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_RENDERPASS_H
-#define TNT_UTILS_RENDERPASS_H
+#ifndef TNT_FILAMENT_RENDERPASS_H
+#define TNT_FILAMENT_RENDERPASS_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
@@ -28,11 +29,11 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/Allocator.h>
+#include <utils/Range.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Allocator.h>
-#include <utils/Range.h>
 
 #include <functional>
 #include <limits>
@@ -210,13 +211,12 @@ public:
     struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
-        backend::Handle<backend::HwUniformBuffer> perRenderableBones;   // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved = {};                                          // 1 byte
+        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 byte (9)
     };
-    static_assert(sizeof(PrimitiveInfo) == sizeof(void*) + 16);
+    static_assert(sizeof(PrimitiveInfo) == 24);
 
     struct alignas(8) Command {     // 32 bytes
         CommandKey key = 0;         //  8 bytes
@@ -239,6 +239,7 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
     static constexpr RenderFlags HAS_FOG                 = 0x10;
     static constexpr RenderFlags HAS_VSM                 = 0x20;
+    static constexpr RenderFlags HAS_PICKING             = 0x40;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -265,12 +266,12 @@ public:
 
     // specifies the geometry to generate commands for
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
-            backend::Handle<backend::HwUniformBuffer> uboHandle) noexcept;
+            backend::Handle<backend::HwBufferObject> uboHandle) noexcept;
 
     // specifies camera information (e.g. used for sorting commands)
     void setCamera(const CameraInfo& camera) noexcept { mCamera = camera; }
 
-    //  flags controling how commands are generated
+    //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
 
     // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine
@@ -312,13 +313,14 @@ public:
         FEngine& mEngine;
         Command const* mBegin;
         Command const* mEnd;
+        FScene::RenderableSoa const& mRenderableSoa;
         const CustomCommandVector mCustomCommands;
-        const backend::Handle<backend::HwUniformBuffer> mUboHandle;
+        const backend::Handle<backend::HwBufferObject> mUboHandle;
         const backend::PolygonOffset mPolygonOffset;
         const bool mPolygonOffsetOverride;
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-                : mEngine(pass->mEngine), mBegin(b), mEnd(e),
+                : mEngine(pass->mEngine), mBegin(b), mEnd(e), mRenderableSoa(*pass->mRenderableSoa),
                   mCustomCommands(pass->mCustomCommands), mUboHandle(pass->mUboHandle),
                   mPolygonOffset(pass->mPolygonOffset),
                   mPolygonOffsetOverride(pass->mPolygonOffsetOverride) {
@@ -326,8 +328,9 @@ public:
             assert_invariant(e <= pass->end());
         }
 
-        void recordDriverCommands(backend::DriverApi& driver, const Command* first,
-                const Command* last) const noexcept;
+        void recordDriverCommands(backend::DriverApi& driver,
+                const Command* first, const Command* last,
+                FScene::RenderableSoa const& soa) const noexcept;
 
     public:
         void execute(const char* name,
@@ -399,7 +402,7 @@ private:
     utils::Range<uint32_t> mVisibleRenderables{};
 
     // the UBO containing the data for the renderables
-    backend::Handle<backend::HwUniformBuffer> mUboHandle;
+    backend::Handle<backend::HwBufferObject> mUboHandle;
 
     // info about the camera
     CameraInfo mCamera;
@@ -422,4 +425,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_UTILS_RENDERPASS_H
+#endif // TNT_FILAMENT_RENDERPASS_H

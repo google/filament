@@ -91,6 +91,8 @@ public:
 
     bool getDepthWrite() const noexcept { return mDepthWrite; }
 
+    TransparencyMode getTransparencyMode() const noexcept { return mTransparencyMode; }
+
     backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
 
     void setPolygonOffset(float scale, float constant) noexcept {
@@ -107,6 +109,8 @@ public:
     void setSpecularAntiAliasingThreshold(float threshold) noexcept;
 
     void setDoubleSided(bool doubleSided) noexcept;
+
+    void setTransparencyMode(TransparencyMode mode) noexcept;
 
     void setCullingMode(CullingMode culling) noexcept { mCulling = culling; }
 
@@ -149,7 +153,7 @@ private:
 
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
-    backend::Handle<backend::HwUniformBuffer> mUbHandle;
+    backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
 
     UniformBuffer mUniforms;
@@ -159,6 +163,7 @@ private:
     bool mColorWrite;
     bool mDepthWrite;
     backend::RasterState::DepthFunc mDepthFunc;
+    TransparencyMode mTransparencyMode;
 
     uint64_t mMaterialSortingKey = 0;
 

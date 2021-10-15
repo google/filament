@@ -217,7 +217,7 @@ size_t JsonWriter::getJsonSize() const {
 }
 
 bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
-        Backend backend, uint64_t activeVariants) {
+        Backend backend, VariantList activeVariants) {
     vector<ShaderInfo> shaders;
     ostringstream json;
     json << "[\"";
@@ -241,17 +241,13 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
             return false;
     }
     json << "\"";
-    for (uint8_t variant = 0; variant < VARIANT_COUNT; variant++) {
-        if (activeVariants & (1 << variant)) {
-            int shaderIndex = 0;
-            for (const auto& info : shaders) {
-                if (info.variant == variant) {
-                    json << ", " << shaderIndex;
-                }
-                shaderIndex++;
-            }
+    json << std::hex;
+    for (size_t variant = 0; variant < activeVariants.size(); variant++) {
+        if (activeVariants[variant]) {
+            json << ", " << variant;
         }
     }
+    json << std::dec;
     json << "]";
     mJsonString = CString(json.str().c_str());
     return true;

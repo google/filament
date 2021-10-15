@@ -41,7 +41,7 @@ namespace filagui {
 // Translates ImGui's draw commands into Filament primitives, textures, vertex buffers, etc.
 // Creates a UI-specific Scene object and populates it with a Renderable. Does not handle
 // event processing; clients can simply call ImGui::GetIO() directly and set the mouse state.
-class ImGuiHelper {
+class UTILS_PUBLIC ImGuiHelper {
 public:
     // Using std::function instead of a vanilla C callback to make it easy for clients to pass in
     // lambdas that have captures.
