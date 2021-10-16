@@ -234,10 +234,14 @@ LinearImage PNGDecoder::decode() {
             png_set_tRNS_to_alpha(mPNG);
         }
         if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-            png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_DEFAULT_sRGB);
+            double gamma = 1.0;
+            png_get_gAMA(mPNG, mInfo, &gamma);
+            if (gamma != 1.0) {
+                png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_DEFAULT_sRGB);
+            }
         } else {
-            png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_GAMMA_LINEAR);
             png_set_gamma_fixed(mPNG, PNG_FP_1, PNG_FP_1);
+            png_set_alpha_mode(mPNG, PNG_ALPHA_PNG, PNG_GAMMA_LINEAR);
         }
         if (bitDepth < 16) {
             png_set_expand_16(mPNG);
