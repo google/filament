@@ -99,7 +99,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
 
     if (mExternalBuffer) {
         memcpy(static_cast<uint8_t*>(mExternalBuffer.contents), src, size);
-#if !TARGET_OS_IOS
+#if !TARGET_OS_IOS || TARGET_OS_MACCATALYST
         if (mExternalBuffer.storageMode == MTLStorageModeManaged) {
             [mExternalBuffer didModifyRange:NSMakeRange(0, size)];
         }
