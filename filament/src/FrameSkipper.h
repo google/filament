@@ -18,28 +18,28 @@
 #define TNT_FILAMENT_DETAILS_FRAMESKIPPER_H
 
 #include <backend/Handle.h>
+#include <private/backend/DriverApi.h>
 
 #include <array>
 
 namespace filament {
 
-class FEngine;
-
 class FrameSkipper {
     static constexpr size_t MAX_FRAME_LATENCY = 4;
 public:
-    explicit FrameSkipper(FEngine& engine, size_t latency = 2) noexcept;
+    explicit FrameSkipper(size_t latency = 2) noexcept;
     ~FrameSkipper() noexcept;
+
+    void terminate(backend::DriverApi& driver) noexcept;
 
     // returns false if we need to skip this frame, because the gpu is running behind the cpu.
     // in that case, don't call endFrame().
     // returns true if rendering can proceed. Always call endFrame() when done.
-    bool beginFrame() noexcept;
+    bool beginFrame(backend::DriverApi& driver) noexcept;
 
-    void endFrame() noexcept;
+    void endFrame(backend::DriverApi& driver) noexcept;
 
 private:
-    FEngine& mEngine;
     using Container = std::array<backend::Handle<backend::HwSync>, MAX_FRAME_LATENCY>;
     mutable Container mDelayedSyncs{};
     size_t mLast;

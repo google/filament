@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEINFO_H
 #define TNT_FILAMENT_FRAMEINFO_H
 
-#include "details/Engine.h"
-
 #include "backend/Handle.h"
+#include <private/backend/DriverApi.h>
 
 #include <array>
 #include <chrono>
@@ -47,13 +46,18 @@ public:
         uint32_t historySize;
     };
 
-    explicit FrameInfoManager(FEngine& engine);
-    ~FrameInfoManager() noexcept;
-    void terminate();
-    void beginFrame(Config const& config, uint32_t frameId);  // call this immediately after "make current"
-    void endFrame(); // call this immediately before "swap buffers"
+    explicit FrameInfoManager(backend::DriverApi& driver) noexcept;
 
-    FrameInfo const& getLastFrameInfo() const {
+    ~FrameInfoManager() noexcept;
+    void terminate(backend::DriverApi& driver) noexcept;
+
+    // call this immediately after "make current"
+    void beginFrame(backend::DriverApi& driver, Config const& config, uint32_t frameId) noexcept;
+
+    // call this immediately before "swap buffers"
+    void endFrame(backend::DriverApi& driver) noexcept;
+
+    FrameInfo const& getLastFrameInfo() const noexcept {
         return mFrameTimeHistory[0];
     }
 
@@ -61,10 +65,8 @@ public:
         return getLastFrameInfo().frameTime;
     }
 
-
 private:
-    void update(Config const& config, duration lastFrameTime);
-    FEngine& mEngine;
+    void update(Config const& config, duration lastFrameTime) noexcept;
     backend::Handle<backend::HwTimerQuery> mQueries[POOL_COUNT];
     duration mFrameTime{};
     uint32_t mIndex = 0;

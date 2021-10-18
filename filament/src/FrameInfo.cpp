@@ -24,7 +24,9 @@
 #include <cmath>
 
 namespace filament {
+
 using namespace utils;
+using namespace backend;
 
 // this is to avoid a call to memmove
 template<class InputIterator, class OutputIterator>
@@ -35,8 +37,7 @@ void move_backward(InputIterator first, InputIterator last, OutputIterator resul
     }
 }
 
-FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept {
     for (auto& query : mQueries) {
         query = driver.createTimerQuery();
     }
@@ -44,15 +45,13 @@ FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
 
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
-void FrameInfoManager::terminate() {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::terminate(DriverApi& driver) noexcept {
     for (auto& query : mQueries) {
         driver.destroyTimerQuery(query);
     }
 }
 
-void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::beginFrame(DriverApi& driver,Config const& config, uint32_t frameId) noexcept {
     driver.beginTimerQuery(mQueries[mIndex]);
     uint64_t elapsed = 0;
     if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
@@ -63,13 +62,12 @@ void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
     update(config, mFrameTime);
 }
 
-void FrameInfoManager::endFrame() {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     driver.endTimerQuery(mQueries[mIndex]);
     mIndex = (mIndex + 1) % POOL_COUNT;
 }
 
-void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) {
+void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) noexcept {
     // keep an history of frame times
     auto& history = mFrameTimeHistory;
 
