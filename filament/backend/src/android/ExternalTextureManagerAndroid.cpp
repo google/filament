@@ -84,9 +84,12 @@ struct EGLExternalTexture : public ExternalTextureManagerAndroid::ExternalTextur
     GraphicBufferWrapper* graphicBufferWrapper = nullptr;
 };
 
-ExternalTextureManagerAndroid& ExternalTextureManagerAndroid::get() noexcept {
-    static ExternalTextureManagerAndroid instance;
-    return instance;
+ExternalTextureManagerAndroid& ExternalTextureManagerAndroid::create() noexcept {
+    return *(new ExternalTextureManagerAndroid{});
+}
+
+void ExternalTextureManagerAndroid::destroy(ExternalTextureManagerAndroid* pExternalTextureManager) noexcept {
+    delete pExternalTextureManager;
 }
 
 // called on gl thread
@@ -116,7 +119,7 @@ ExternalTextureManagerAndroid::~ExternalTextureManagerAndroid() noexcept {
 }
 
 // called on gl thread
-backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::create() noexcept {
+backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::createExternalTexture() noexcept {
 #ifndef PLATFORM_HAS_HARDWAREBUFFER
     if (!AHardwareBuffer_allocate) {
         // initialize java stuff on-demand

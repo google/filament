@@ -28,6 +28,9 @@ class PlatformEGLAndroid final : public PlatformEGL {
 public:
 
     PlatformEGLAndroid() noexcept;
+    ~PlatformEGLAndroid() noexcept override;
+
+    void terminate() noexcept override;
 
     backend::Driver* createDriver(void* sharedContext) noexcept final;
 

@@ -37,10 +37,12 @@ static void loadSymbol(T*& pfn, const char *symbol) noexcept {
     pfn = (T*)dlsym(RTLD_DEFAULT, symbol);
 }
 
-ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::get() noexcept {
-    // declaring this thread local, will ensure it's destroyed with the calling thread
-    static thread_local ExternalStreamManagerAndroid instance;
-    return instance;
+ExternalStreamManagerAndroid& ExternalStreamManagerAndroid::create() noexcept {
+    return *(new ExternalStreamManagerAndroid{});
+}
+
+void ExternalStreamManagerAndroid::destroy(ExternalStreamManagerAndroid* pExternalStreamManagerAndroid) noexcept {
+    delete pExternalStreamManagerAndroid;
 }
 
 ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
@@ -60,6 +62,8 @@ ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
         slog.d << "Using ASurfaceTexture" << io::endl;
     }
 }
+
+ExternalStreamManagerAndroid::~ExternalStreamManagerAndroid() noexcept = default;
 
 UTILS_NOINLINE
 JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
