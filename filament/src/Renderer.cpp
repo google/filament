@@ -632,7 +632,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // * This is because the default render target is not multi-sampled, so we need an
     //   intermediate buffer when MSAA is enabled.
     // * We also need an extra buffer for blending the result to the framebuffer if the view
-    //   is translucent.
+    //   is translucent AND we've not already done it as part of upscaling.
     // * And we can't use the default rendertarget if MRT is required (e.g. with color grading
     //   as a subpass)
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
@@ -645,7 +645,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (UTILS_LIKELY(!blending)) {
             input = ppm.opaqueBlit(fg, input, {
                     .width = vp.width, .height = vp.height,
-                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
+                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
         } else {
             input = ppm.blendBlit(fg, blending, {
                     .quality = QualityLevel::LOW
