@@ -22,6 +22,7 @@
 #include "Allocators.h"
 #include "FrameInfo.h"
 #include "FrameSkipper.h"
+#include "PostProcessManager.h"
 #include "RenderPass.h"
 
 #include "details/SwapChain.h"
@@ -29,9 +30,11 @@
 #include "private/backend/DriverApiForward.h"
 
 #include <fg2/FrameGraphId.h>
+#include <fg2/FrameGraphTexture.h>
 
 #include <filament/Renderer.h>
 #include <filament/View.h>
+#include <filament/Viewport.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

@@ -16,6 +16,7 @@
 
 #include "details/Renderer.h"
 
+#include "PostProcessManager.h"
 #include "RenderPass.h"
 #include "ResourceAllocator.h"
 
@@ -53,8 +54,8 @@ using namespace backend;
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        mFrameSkipper(engine, 1u),
-        mFrameInfoManager(engine),
+        mFrameSkipper(1u),
+        mFrameInfoManager(engine.getDriverApi()),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
@@ -129,7 +130,8 @@ void FRenderer::terminate(FEngine& engine) {
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
         engine.execute();
     }
-    mFrameInfoManager.terminate();
+    mFrameInfoManager.terminate(driver);
+    mFrameSkipper.terminate(driver);
 }
 
 void FRenderer::resetUserTime() {
@@ -1059,7 +1061,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
 
-        mFrameInfoManager.beginFrame({
+        mFrameInfoManager.beginFrame(driver, {
                 .historySize = mFrameRateOptions.history
         }, mFrameId);
 
@@ -1099,7 +1101,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare();
     };
 
-    if (mFrameSkipper.beginFrame()) {
+    if (mFrameSkipper.beginFrame(driver)) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
         // so do the beginFrame work right now, instead of requiring a call to render()
         beginFrameInternal();
@@ -1133,8 +1135,8 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
-    mFrameInfoManager.endFrame();
-    mFrameSkipper.endFrame();
+    mFrameInfoManager.endFrame(driver);
+    mFrameSkipper.endFrame(driver);
 
     if (mSwapChain) {
         mSwapChain->commit(driver);
