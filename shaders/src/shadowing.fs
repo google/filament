@@ -2,30 +2,18 @@
 // Shadowing configuration
 //------------------------------------------------------------------------------
 
-#define SHADOW_SAMPLING_PCF_HARD          0
-#define SHADOW_SAMPLING_PCF_LOW           1
-#define SHADOW_SAMPLING_PCF_MEDIUM        2
-#define SHADOW_SAMPLING_PCF_HIGH          3
+#define SHADOW_SAMPLING_PCF_HARD                    0
+#define SHADOW_SAMPLING_PCF_LOW                     1
 
-#define SHADOW_SAMPLING_ERROR_DISABLED   0
-#define SHADOW_SAMPLING_ERROR_ENABLED    1
+#define SHADOW_SAMPLING_ERROR_DISABLED              0
+#define SHADOW_SAMPLING_ERROR_ENABLED               1
 
 #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED   0
 #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED    1
 
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD    SHADOW_SAMPLING_PCF_MEDIUM
-
-#define SHADOW_SAMPLING_METHOD            SHADOW_SAMPLING_PCF_LOW
+#define SHADOW_SAMPLING_METHOD            SHADOW_SAMPLING_PCF_HARD
 #define SHADOW_SAMPLING_ERROR             SHADOW_SAMPLING_ERROR_DISABLED
 #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
-
-#if SHADOW_SAMPLING_ERROR == SHADOW_SAMPLING_ERROR_ENABLED
-  #undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
-  #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
-#elif SHADOW_SAMPLING_METHOD < SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
-  #undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
-  #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
-#endif
 
 //------------------------------------------------------------------------------
 // Shadow sampling methods
@@ -61,9 +49,7 @@ float samplingBias(float depth, const vec2 rpdb, const highp vec2 texelSize) {
 float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
         const highp vec2 base, const highp vec2 dudv, float depth, vec2 rpdb) {
 #if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
- #if SHADOW_SAMPLING_METHOD >= SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
     depth += dot(dudv, rpdb);
- #endif
 #endif
     // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
     // value from the depth texture (which is never greater than 1.0) with a greater-than-one
@@ -77,7 +63,7 @@ float ShadowSample_Hard(const mediump sampler2DArrayShadow map, const uint layer
     highp vec2 texelSize = vec2(1.0) / size;
     vec2 rpdb = computeReceiverPlaneDepthBias(position);
     float depth = samplingBias(position.z, rpdb, texelSize);
-    return texture(map, vec4(position.xy, layer, saturate(depth)));
+    return sampleDepth(map,layer, position.xy, vec2(0.0f), depth, rpdb);
 }
 #endif
 
@@ -86,6 +72,8 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint la
         const highp vec2 size, highp vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     highp vec2 texelSize = vec2(1.0) / size;
+    vec2 rpdb = computeReceiverPlaneDepthBias(position);
+    float depth = samplingBias(position.z, rpdb, texelSize);
 
     // clamp position to avoid overflows below, which cause some GPUs to abort
     position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
@@ -104,9 +92,6 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint la
     u *= texelSize.x;
     v *= texelSize.y;
 
-    vec2 rpdb = computeReceiverPlaneDepthBias(position);
-
-    float depth = samplingBias(position.z, rpdb, texelSize);
     float sum = 0.0;
 
     sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
@@ -116,118 +101,6 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint la
     sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
 
     return sum * (1.0 / 16.0);
-}
-#endif
-
-#if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
-float ShadowSample_PCF_Medium(const mediump sampler2DArrayShadow map, const uint layer,
-        const highp vec2 size, highp vec3 position) {
-    //  Castaño, 2013, "Shadow Mapping Summary Part 1"
-    highp vec2 texelSize = vec2(1.0) / size;
-
-    // clamp position to avoid overflows below, which cause some GPUs to abort
-    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
-
-    vec2 offset = vec2(0.5);
-    highp vec2 uv = (position.xy * size) + offset;
-    highp vec2 base = (floor(uv) - offset) * texelSize;
-    highp vec2 st = fract(uv);
-
-    vec3 uw = vec3(4.0 - 3.0 * st.x, 7.0, 1.0 + 3.0 * st.x);
-    vec3 vw = vec3(4.0 - 3.0 * st.y, 7.0, 1.0 + 3.0 * st.y);
-
-    highp vec3 u = vec3((3.0 - 2.0 * st.x) / uw.x - 2.0, (3.0 + st.x) / uw.y, st.x / uw.z + 2.0);
-    highp vec3 v = vec3((3.0 - 2.0 * st.y) / vw.x - 2.0, (3.0 + st.y) / vw.y, st.y / vw.z + 2.0);
-
-    u *= texelSize.x;
-    v *= texelSize.y;
-
-    vec2 rpdb = computeReceiverPlaneDepthBias(position);
-
-    float depth = samplingBias(position.z, rpdb, texelSize);
-    float sum = 0.0;
-
-    sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
-    sum += uw.y * vw.x * sampleDepth(map, layer, base, vec2(u.y, v.x), depth, rpdb);
-    sum += uw.z * vw.x * sampleDepth(map, layer, base, vec2(u.z, v.x), depth, rpdb);
-
-    sum += uw.x * vw.y * sampleDepth(map, layer, base, vec2(u.x, v.y), depth, rpdb);
-    sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
-    sum += uw.z * vw.y * sampleDepth(map, layer, base, vec2(u.z, v.y), depth, rpdb);
-
-    sum += uw.x * vw.z * sampleDepth(map, layer, base, vec2(u.x, v.z), depth, rpdb);
-    sum += uw.y * vw.z * sampleDepth(map, layer, base, vec2(u.y, v.z), depth, rpdb);
-    sum += uw.z * vw.z * sampleDepth(map, layer, base, vec2(u.z, v.z), depth, rpdb);
-
-    return sum * (1.0 / 144.0);
-}
-#endif
-
-#if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
-float ShadowSample_PCF_High(const mediump sampler2DArrayShadow map, const uint layer,
-        const highp vec2 size, highp vec3 position) {
-    //  Castaño, 2013, "Shadow Mapping Summary Part 1"
-    highp vec2 texelSize = vec2(1.0) / size;
-
-    // clamp position to avoid overflows below, which cause some GPUs to abort
-    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
-
-    vec2 offset = vec2(0.5);
-    highp vec2 uv = (position.xy * size) + offset;
-    highp vec2 base = (floor(uv) - offset) * texelSize;
-    highp vec2 st = fract(uv);
-
-    vec4 uw = vec4(
-         5.0 * st.x - 6.0,
-         11.0 * st.x - 28.0,
-        -(11.0 * st.x + 17.0),
-        -(5.0 * st.x + 1.0));
-    vec4 vw = vec4(
-         5.0 * st.y - 6.0,
-         11.0 * st.y - 28.0,
-        -(11.0 * st.y + 17.0),
-        -(5.0 * st.y + 1.0));
-
-    vec4 u = vec4(
-         (4.0 * st.x - 5.0) / uw.x - 3.0,
-         (4.0 * st.x - 16.0) / uw.y - 1.0,
-        -(7.0 * st.x + 5.0) / uw.z + 1.0,
-        -st.x / uw.w + 3.0);
-    vec4 v = vec4(
-         (4.0 * st.y - 5.0) / vw.x - 3.0,
-         (4.0 * st.y - 16.0) / vw.y - 1.0,
-        -(7.0 * st.y + 5.0) / vw.z + 1.0,
-        -st.y / vw.w + 3.0);
-
-    u *= texelSize.x;
-    v *= texelSize.y;
-
-    vec2 rpdb = computeReceiverPlaneDepthBias(position);
-
-    float depth = samplingBias(position.z, rpdb, texelSize);
-    highp float sum = 0.0;
-
-    sum += uw.x * vw.x * sampleDepth(map, layer, base, vec2(u.x, v.x), depth, rpdb);
-    sum += uw.y * vw.x * sampleDepth(map, layer, base, vec2(u.y, v.x), depth, rpdb);
-    sum += uw.z * vw.x * sampleDepth(map, layer, base, vec2(u.z, v.x), depth, rpdb);
-    sum += uw.w * vw.x * sampleDepth(map, layer, base, vec2(u.w, v.x), depth, rpdb);
-
-    sum += uw.x * vw.y * sampleDepth(map, layer, base, vec2(u.x, v.y), depth, rpdb);
-    sum += uw.y * vw.y * sampleDepth(map, layer, base, vec2(u.y, v.y), depth, rpdb);
-    sum += uw.z * vw.y * sampleDepth(map, layer, base, vec2(u.z, v.y), depth, rpdb);
-    sum += uw.w * vw.y * sampleDepth(map, layer, base, vec2(u.w, v.y), depth, rpdb);
-
-    sum += uw.x * vw.z * sampleDepth(map, layer, base, vec2(u.x, v.z), depth, rpdb);
-    sum += uw.y * vw.z * sampleDepth(map, layer, base, vec2(u.y, v.z), depth, rpdb);
-    sum += uw.z * vw.z * sampleDepth(map, layer, base, vec2(u.z, v.z), depth, rpdb);
-    sum += uw.w * vw.z * sampleDepth(map, layer, base, vec2(u.w, v.z), depth, rpdb);
-
-    sum += uw.x * vw.w * sampleDepth(map, layer, base, vec2(u.x, v.w), depth, rpdb);
-    sum += uw.y * vw.w * sampleDepth(map, layer, base, vec2(u.y, v.w), depth, rpdb);
-    sum += uw.z * vw.w * sampleDepth(map, layer, base, vec2(u.z, v.w), depth, rpdb);
-    sum += uw.w * vw.w * sampleDepth(map, layer, base, vec2(u.w, v.w), depth, rpdb);
-
-    return sum * (1.0 / 2704.0);
 }
 #endif
 
@@ -347,37 +220,38 @@ float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
 
 // PCF sampling
 float shadow(const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const highp vec3 shadowPosition) {
+        const uint layer, const highp vec4 shadowPosition) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     highp vec2 size = vec2(textureSize(shadowMap, 0));
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
-    return ShadowSample_Hard(shadowMap, layer, size, shadowPosition);
+    return ShadowSample_Hard(shadowMap, layer, size, position);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
-    return ShadowSample_PCF_Low(shadowMap, layer, size, shadowPosition);
-#elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
-    return ShadowSample_PCF_Medium(shadowMap, layer, size, shadowPosition);
-#elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
-    return ShadowSample_PCF_High(shadowMap, layer, size, shadowPosition);
+    return ShadowSample_PCF_Low(shadowMap, layer, size, position);
 #endif
 }
 
-// VSM sampling
+// VSM or DPCF sampling
 float shadow(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec3 shadowPosition) {
-    // note: shadowPosition.z is in linear light space normalized to [0, 1]
-    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
-    //  see: computeLightSpacePosition() in common_shadowing.fs
+        const uint layer, const highp vec4 shadowPosition) {
 
-    // Read the shadow map with all available filtering
-    highp vec2 moments = texture(shadowMap, vec3(shadowPosition.xy, layer)).xy;
-    highp float depth = shadowPosition.z;
+        // note: shadowPosition.z is in linear light space normalized to [0, 1]
+        //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
+        //  see: computeLightSpacePosition() in common_shadowing.fs
 
-    // EVSM depth warping
-    depth = depth * 2.0 - 1.0;
-    depth = exp(frameUniforms.vsmExponent * depth);
+        highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
 
-    highp float depthScale = frameUniforms.vsmDepthScale * depth;
-    highp float minVariance = depthScale * depthScale;
-    float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
-    return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
+        // Read the shadow map with all available filtering
+        highp vec2 moments = texture(shadowMap, vec3(position.xy, layer)).xy;
+        highp float depth = position.z;
+
+        // EVSM depth warping
+        depth = depth * 2.0 - 1.0;
+        depth = exp(frameUniforms.vsmExponent * depth);
+
+        highp float depthScale = frameUniforms.vsmDepthScale * depth;
+        highp float minVariance = depthScale * depthScale;
+        float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
+        return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
+
 }
