@@ -250,6 +250,7 @@ void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMa
     s.vsmExponent = options.exponent;  // fp16: max 5.54f, fp32: max 42.0
     s.vsmDepthScale = options.minVarianceScale * 0.01f * options.exponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
+    s.shadowSamplingType = 0;
 
     s.lightFromWorldMatrix = shadowMappingUniforms.lightFromWorldMatrix;
     s.cascadeSplits = shadowMappingUniforms.cascadeSplits;

@@ -104,6 +104,65 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint la
 }
 #endif
 
+/*
+ * DPCF, PCF with contact hardenning.
+ * see "Shadow of Cold War", A scalable approach to shadowing -- by Kevin Myers
+ */
+float ShadowSample_DPCF(const mediump sampler2DArray map, const uint layer,
+        const highp vec2 size, highp vec3 position) {
+    highp vec2 texelSize = vec2(1.0) / size;
+    vec2 rpdb = computeReceiverPlaneDepthBias(position);
+    float depth = samplingBias(position.z, rpdb, texelSize);
+
+    float occluders = 0.0f;
+    float occluderDistSum = 0.0f;
+
+    // TODO: this needs a lot of improvements
+    const float penumbra = 4.0f;
+    const uint SHADOW_TAP_COUNT = 9u;
+    vec2 offsets[SHADOW_TAP_COUNT] = vec2[9](
+        vec2(-1, -1), vec2(0, -1), vec2(1, -1),
+        vec2(-1,  0), vec2(0,  0), vec2(1,  0),
+        vec2(-1,  1), vec2(0,  1), vec2(1,  1)
+    );
+
+    for (uint tap=0; tap<SHADOW_TAP_COUNT; ++tap) {
+        highp vec2 uv = position.xy + offsets[tap] * (texelSize * penumbra);
+
+        vec4 depths;
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+        depths = textureGather(map, vec3(uv, layer), 0); // 01, 11, 10, 00
+#else
+        depths[0] = textureLodOffset(map, vec3(uv, layer), 0.0, ivec2(0, 1)).r;
+        depths[1] = textureLodOffset(map, vec3(uv, layer), 0.0, ivec2(1, 1)).r;
+        depths[2] = textureLodOffset(map, vec3(uv, layer), 0.0, ivec2(1, 0)).r;
+        depths[3] = textureLodOffset(map, vec3(uv, layer), 0.0, ivec2(0, 0)).r;
+#endif
+        for (uint d = 0; d<4; ++d) {
+            float dist = depths[d] - depth;
+            float occluder = step(0.0, dist);
+            occluders += occluder;
+            occluderDistSum += dist * occluder;
+        }
+    }
+
+    float occluderAvgDist = occluderDistSum / occluders;
+    float w = 1.0f / (4.0f * SHADOW_TAP_COUNT);
+
+    float pcfWeight = saturate(occluderAvgDist / depth);
+    float percentageOccluded = saturate(occluders * w);
+
+    percentageOccluded = 2.0f * percentageOccluded - 1.0f;
+    float occludedSign = sign(percentageOccluded);
+    percentageOccluded = 1.0f - (occludedSign * percentageOccluded);
+
+    percentageOccluded = mix(pow(percentageOccluded, 5.0f), percentageOccluded, pcfWeight);
+    percentageOccluded = 1.0 - percentageOccluded;
+    percentageOccluded *= occludedSign;
+    percentageOccluded = 0.5 * percentageOccluded + 0.5f;
+    return 1.0f - percentageOccluded;
+}
+
 //------------------------------------------------------------------------------
 // Screen-space Contact Shadows
 //------------------------------------------------------------------------------
@@ -231,9 +290,14 @@ float shadow(const mediump sampler2DArrayShadow shadowMap,
 #endif
 }
 
+#define SHADOW_SAMPLING_RUNTIME_VSM     0
+#define SHADOW_SAMPLING_RUNTIME_DPCF    1
+
 // VSM or DPCF sampling
 float shadow(const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec4 shadowPosition) {
+
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_VSM) {
 
         // note: shadowPosition.z is in linear light space normalized to [0, 1]
         //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
@@ -254,4 +318,14 @@ float shadow(const mediump sampler2DArray shadowMap,
         float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
         return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
 
+    } else if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {
+
+        highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+        highp vec2 size = vec2(textureSize(shadowMap, 0));
+        return ShadowSample_DPCF(shadowMap, layer, size, position);
+
+    } else {
+        // should not happen
+        return 0.0f;
+    }
 }

@@ -126,7 +126,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmExponent;
     float vsmDepthScale;
     float vsmLightBleedReduction;
-    float vsmReserved0;
+    uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
 
     float lodBias;
     float reserved1;

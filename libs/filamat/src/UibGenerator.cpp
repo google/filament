@@ -107,7 +107,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
 
             .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("reserved1",               1, UniformInterfaceBlock::Type::FLOAT)
