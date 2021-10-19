@@ -51,6 +51,10 @@ class PerViewUniforms {
     using LightManagerInstance = utils::EntityInstance<LightManager>;
     using TextureHandle = backend::Handle<backend::HwTexture>;
 
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF  = 0u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_VSM  = 1u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
+
 public:
     explicit PerViewUniforms(FEngine& engine) noexcept;
 
@@ -79,6 +83,7 @@ public:
     // maybe these should have their own UBO, they're needed only when GENERATING the shadowmaps
     void prepareShadowVSM(TextureHandle texture, VsmShadowOptions const& options) noexcept;
     void prepareShadowPCF(TextureHandle texture) noexcept;
+    void prepareShadowDPCF(TextureHandle texture) noexcept;
 
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;

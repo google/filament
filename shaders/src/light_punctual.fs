@@ -143,7 +143,7 @@ Light getLight(const uint index) {
     highp uint channels = floatBitsToUint(data[3][3]);
 
     // poition-to-light vector
-    highp vec3 worldPosition = vertex_worldPosition.xyz;
+    highp vec3 worldPosition = getWorldPosition();
     highp vec3 posToLight = positionFalloff.xyz - worldPosition;
 
     // and populate the Light structure

@@ -186,7 +186,8 @@ public:
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
-    bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,

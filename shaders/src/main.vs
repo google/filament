@@ -114,7 +114,7 @@ void main() {
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
     vertex_lightSpacePosition = computeLightSpacePosition(
             vertex_worldPosition.xyz, vertex_worldNormal,
-            frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
+            frameUniforms.lightDirection, frameUniforms.shadowBias, getLightFromWorldMatrix());
 #endif
 
 #endif // !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
@@ -145,7 +145,7 @@ void main() {
     // (see ShadowMap.cpp).
     // Use vertex_worldPosition.w which is otherwise not used to store the interpolated
     // light-space depth.
-    highp float z = (frameUniforms.viewFromWorldMatrix * vec4(material.worldPosition.xyz, 1.0)).z;
+    highp float z = (getViewFromWorldMatrix() * getWorldPosition(material)).z;
 
     // rescale [near, far] to [0, 1]
     highp float depth = -z * frameUniforms.oneOverFarMinusNear - frameUniforms.nearOverFarMinusNear;
