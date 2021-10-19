@@ -1,4 +1,13 @@
 //------------------------------------------------------------------------------
+// Shadow Sampling Types
+//------------------------------------------------------------------------------
+
+// Keep this in sync with PerViewUniforms.h
+#define SHADOW_SAMPLING_RUNTIME_PCF     0u
+#define SHADOW_SAMPLING_RUNTIME_VSM     1u
+#define SHADOW_SAMPLING_RUNTIME_DPCF    2u
+
+//------------------------------------------------------------------------------
 // PCF Shadow Sampling
 //------------------------------------------------------------------------------
 
@@ -12,13 +21,17 @@ float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
 
 // use hardware assisted PCF
 float ShadowSample_PCF(const mediump sampler2DArrayShadow map,
-        const uint layer, const highp vec3 position) {
+        const uint layer, const highp vec4 shadowPosition) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return sampleDepth(map, layer, position.xy, position.z);
 }
 
 // use manual PCF
 float ShadowSample_PCF(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec3 position) {
+        const uint layer, const highp vec4 shadowPosition) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     highp vec2 size = vec2(textureSize(shadowMap, 0));
     highp vec2 st = position.xy * size - 0.5;
     vec4 d;
@@ -31,9 +44,152 @@ float ShadowSample_PCF(const mediump sampler2DArray shadowMap,
     d[2] = texelFetchOffset(shadowMap, tc, 0, ivec2(1, 0)).r;
     d[3] = texelFetchOffset(shadowMap, tc, 0, ivec2(0, 0)).r;
 #endif
-    vec4 pcf = step(0.0, d - position.zzzz);
+    vec4 pcf = step(0.0, position.zzzz - d);
     highp vec2 grad = fract(st);
     return mix(mix(pcf.w, pcf.z, grad.x), mix(pcf.x, pcf.y, grad.x), grad.y);
+}
+
+//------------------------------------------------------------------------------
+// DPCF sampling
+//------------------------------------------------------------------------------
+
+const uint DPCF_SHADOW_TAP_COUNT = 12u;   // 12 max
+const vec2 poissonDisk[12] = vec2[12](
+    vec2(-0.326,-0.406), vec2(-0.840,-0.074), vec2(-0.696, 0.457), vec2(-0.203, 0.621),
+    vec2( 0.962,-0.195), vec2( 0.473,-0.480), vec2( 0.519, 0.767), vec2( 0.185,-0.893),
+    vec2( 0.507, 0.064), vec2( 0.896, 0.412), vec2(-0.322,-0.933), vec2(-0.792,-0.598)
+);
+
+float random(const highp vec2 w) {
+    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(m.z * fract(dot(w, m.xy)));
+}
+
+float hardenedKernel(float x) {
+    // this is basically a stronger smoothstep()
+    x = 2.0 * x - 1.0;
+    float s = sign(x);
+    x = 1.0 - s * x;
+    x = x * x * x;
+    x = s - x * s;
+    return 0.5 * x + 0.5;
+}
+
+highp vec2 computeReceiverPlaneDepthBias(const highp vec3 position) {
+    // see: GDC '06: Shadow Mapping: GPU-based Tips and Techniques
+    // Chain rule to compute dz/du and dz/dv
+    // |dz/du|   |du/dx du/dy|^-T   |dz/dx|
+    // |dz/dv| = |dv/dx dv/dy|    * |dz/dy|
+    highp vec3 duvz_dx = dFdx(position);
+    highp vec3 duvz_dy = dFdy(position);
+    highp vec2 dz_duv = inverse(transpose(mat2(duvz_dx.xy, duvz_dy.xy))) * vec2(duvz_dx.z, duvz_dy.z);
+    return dz_duv;
+}
+
+mat2 getRandomRotationMatrix(highp vec2 fragCoord) {
+    // rotate the poisson disk randomly
+    fragCoord += vec2(frameUniforms.temporalNoise); // 0 when TAA is not used
+    float randomAngle = random(fragCoord) * (2.0 * PI);
+    vec2 randomBase = vec2(cos(randomAngle), sin(randomAngle));
+    mat2 R = mat2(randomBase.x, randomBase.y, -randomBase.y, randomBase.x);
+    return R;
+}
+
+float getPenumbra(const bool DIRECTIONAL, const uint index, const highp float zLight) {
+    float penumbra;
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+        penumbra = frameUniforms.shadowBulbRadiusLs;
+    } else {
+        // the penumbra radius depends on the light-space z for spotlights
+        penumbra = shadowUniforms.shadows[index].bulbRadiusLs / zLight;
+    }
+    return penumbra;
+}
+
+float getPenumbraRatio(const bool DIRECTIONAL, const uint index,
+        float z_receiver, float z_blocker) {
+    // z_receiver/z_blocker are not linear depths (i.e. they're not distances)
+    // Penumbra ratio for PCSS is given by:  pr = (d_receiver - d_blocker) / d_blocker
+    float penumbraRatio;
+    if (DIRECTIONAL) {
+        // TODO: take lispsm into account
+        // For directional lights, the depths are linear but depend on the position (because of LiSPSM).
+        // With:        z_linear = f + z * (n - f)
+        // We get:      (r-b)/b ==> (f/(n-f) + r_linear) / (f/(n-f) + b_linear) - 1
+        // Assuming f>>n and ignoring LISPSM, we get:
+        penumbraRatio = (z_blocker - z_receiver) / (1.0 - z_blocker);
+    } else {
+        // For spotlights, the depths are congruent to 1/z, specifically:
+        //      z_linear = (n * f) / (n + z * (f - n))
+        // replacing in (r - b) / b gives:
+        float nearOverFarMinusNear = shadowUniforms.shadows[index].nearOverFarMinusNear;
+        penumbraRatio = (nearOverFarMinusNear + z_blocker) / (nearOverFarMinusNear + z_receiver) - 1.0;
+    }
+    return penumbraRatio;
+}
+
+/*
+ * DPCF, PCF with contact hardenning simulation.
+ * see "Shadow of Cold War", A scalable approach to shadowing -- by Kevin Myers
+ */
+float ShadowSample_DPCF(const bool DIRECTIONAL,
+        const mediump sampler2DArray map, const uint layer, const uint index,
+        const highp vec4 shadowPosition, const highp float zLight) {
+    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
+    highp vec2 texelSize = vec2(1.0) / vec2(textureSize(map, 0));
+
+    // We need to use the shadow receiver plane depth bias to combat shadow acne due to the
+    // large kernel.
+    highp vec2 dz_duv = computeReceiverPlaneDepthBias(position);
+
+    float penumbra = getPenumbra(DIRECTIONAL, index, zLight);
+
+    // rotate the poisson disk randomly
+    mat2 R = getRandomRotationMatrix(gl_FragCoord.xy);
+
+    float occludedCount = 0.0;
+    float z_occSum = 0.0;
+    for (uint i = 0u; i < DPCF_SHADOW_TAP_COUNT; i++) {
+        highp vec2 duv = R * poissonDisk[i] * (texelSize * penumbra);
+        float z_occ = textureLod(map, vec3(position.xy + duv, layer), 0.0).r;
+
+        // note: z_occ and z_rec are not necessarily linear here, comparing them is always okay for
+        // the regular PCF, but the "distance" is meaningless unless they are actually linear
+        // (e.g.: for the directional light).
+        // Either way, if we assume that all the samples are close to each other we can take their
+        // average regardless, and the average depth value of the occluders
+        // becomes: z_occSum / occludedCount.
+
+        // receiver plane depth bias
+        float z_bias = dot(dz_duv, duv);
+        float dz = z_occ - position.z; // dz>0 when blocker is between receiver and light
+        float occluded = step(z_bias, dz);
+        occludedCount += occluded;
+        z_occSum += z_occ * occluded;
+    }
+
+    // early exit if there is no occluders at all, also avoids a divide-by-zero below.
+    if (z_occSum == 0.0) {
+        return 1.0;
+    }
+
+    float penumbraRatio = getPenumbraRatio(DIRECTIONAL, index, position.z, z_occSum / occludedCount);
+
+    // The main way we're diverging from PCSS is that we're not going to sample again, instead
+    // we're going to reuse the blocker search samples and we're going to use the penumbra ratio
+    // as a parameter to lerp between a hardened PCF kernel and the search PCF kernel.
+    // We need a parameter to blend between the the "hardened" kernel and the "soft" kernel,
+    // to this end clamp the penumbra ratio between 0 (blocker is close to the receiver) and
+    // 1 (blocker is close to the light).
+    penumbraRatio = saturate(penumbraRatio);
+
+    // regular PCF weight (i.e. average of samples in shadow)
+    float percentageOccluded = occludedCount * (1.0 / float(DPCF_SHADOW_TAP_COUNT));
+
+    // now we just need to lerp between hardened PCF and regular PCF based on alpha
+    percentageOccluded = mix(hardenedKernel(percentageOccluded), percentageOccluded, penumbraRatio);
+    return 1.0 - percentageOccluded;
 }
 
 //------------------------------------------------------------------------------
@@ -147,7 +303,13 @@ float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
 }
 
 float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec3 position) {
+        const uint layer, const highp vec4 shadowPosition) {
+
+    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
+    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
+    //  see: computeLightSpacePosition() in common_shadowing.fs
+    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
+
     // Read the shadow map with all available filtering
     highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
     highp float depth = position.z;
@@ -186,21 +348,21 @@ float shadow(const bool DIRECTIONAL,
 #endif
     } else {
 #if defined(HAS_DYNAMIC_LIGHTING)
-        shadowPosition = getSpotLightSpacePosition(index);
+        highp float zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
+        shadowPosition = getSpotLightSpacePosition(index, zLight);
 #endif
     }
 
-    highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
-    // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    return ShadowSample_PCF(shadowMap, layer, position);
+    return ShadowSample_PCF(shadowMap, layer, shadowPosition);
 }
 
-// VSM sampling
+// VSM or DPCF sampling
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
         const uint layer, const uint index, const uint cascade) {
 
     highp vec4 shadowPosition;
+    highp float zLight = 0.0;
 
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
@@ -209,13 +371,26 @@ float shadow(const bool DIRECTIONAL,
 #endif
     } else {
 #if defined(HAS_DYNAMIC_LIGHTING)
-        shadowPosition = getSpotLightSpacePosition(index);
+        zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
+        shadowPosition = getSpotLightSpacePosition(index, zLight);
 #endif
     }
 
-    // note: shadowPosition.z is in linear light-space normalized to [0, 1]
-    //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
-    //  see: computeLightSpacePosition() in common_shadowing.fs
-    highp vec3 position = vec3(shadowPosition.xy * (1.0 / shadowPosition.w), shadowPosition.z);
-    return ShadowSample_VSM(shadowMap, layer, position);
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_VSM) {
+        return ShadowSample_VSM(shadowMap, layer, shadowPosition);
+    }
+
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {
+        return ShadowSample_DPCF(DIRECTIONAL, shadowMap, layer, index, shadowPosition, zLight);
+    }
+
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_PCF) {
+        // This is here mostly for debugging at this point.
+        // Note: In this codepath, the normal bias is not applied because we're in the VSM variant.
+        // (see: get{Cascade|Spot}LightSpacePosition)
+        return ShadowSample_PCF(shadowMap, layer, shadowPosition);
+    }
+
+    // should not happen
+    return 0.0;
 }

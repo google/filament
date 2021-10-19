@@ -56,7 +56,9 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
             // shadow
-            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
             // froxels
             .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
@@ -107,7 +109,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
 
             .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)

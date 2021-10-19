@@ -163,7 +163,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                         .depth = textureRequirements.layers,
                         .levels = textureRequirements.levels,
                         .type = SamplerType::SAMPLER_2D_ARRAY,
-                        .format = view.hasVsm() ? vsmTextureFormat : mTextureFormat
+                        .format = view.hasVSM() ? vsmTextureFormat : mTextureFormat
                 });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) { });
@@ -191,14 +191,14 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
+                    const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     FrameGraphRenderPass::Descriptor renderTargetDesc{};
 
                     auto attachment = builder.createSubresource(prepareShadowPass->shadows,
                             "Shadowmap Layer", { .layer = layer });
 
-                    if (view.hasVsm()) {
+                    if (view.hasVSM()) {
                         // Each shadow pass has its own sample count, but textures are created with
                         // a default count of 1 because we're using "magic resolve" (sample count is
                         // set on the render target).
@@ -270,7 +270,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                     shadowMap.render(*scene, entry.range, entry.visibilityMask, cameraInfo, &entryPass);
 
                     const auto& executor = entryPass.getExecutor();
-                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
+                    const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     view.prepareCamera(cameraInfo);
 
@@ -305,7 +305,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
 
         // now emit the blurring passes
-        if (view.hasVsm()) {
+        if (view.hasVSM()) {
             const float blurWidth = options->vsm.blurWidth;
             if (blurWidth > 0.0f) {
                 const float sigma = (blurWidth + 1.0f) / 6.0f;
@@ -349,10 +349,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             .atlasDimension   = mTextureAtlasRequirements.size,
             .textureDimension = uint16_t(options.mapSize),
             .shadowDimension  = uint16_t(options.mapSize - 2u),
-            .vsm = view.hasVsm(),
+            .vsm = view.hasVSM(),
             .polygonOffset = { // handle reversed Z
-                    .slope    = view.hasVsm() ? 0.0f : -params.options.polygonOffsetSlope,
-                    .constant = view.hasVsm() ? 0.0f : -params.options.polygonOffsetConstant
+                    .slope    = view.hasVSM() ? 0.0f : -params.options.polygonOffsetSlope,
+                    .constant = view.hasVSM() ? 0.0f : -params.options.polygonOffsetConstant
             }
     };
 
@@ -375,7 +375,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // Texel size is constant for directional light (although that's not true when LISPSM
         // is used, but in that case we're pretending it is).
         const float wsTexelSize = shadowMap.getTexelSizAtOneMeterWs();
-        mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * wsTexelSize, 0 };
+        mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
+        mShadowMappingUniforms.shadowBulbRadiusLs = options.shadowBulbRadius / wsTexelSize;
     }
 
     // Adjust the near and far planes to tightly bound the scene.
@@ -498,10 +499,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
                 .textureDimension = uint16_t(options->mapSize),
                 .shadowDimension = uint16_t(options->mapSize - 2u),
                 .spotIndex = uint16_t(i),
-                .vsm = view.hasVsm(),
+                .vsm = view.hasVSM(),
                 .polygonOffset = { // handle reversed Z
-                        .slope    = view.hasVsm() ? 0.0f : -params.options.polygonOffsetSlope,
-                        .constant = view.hasVsm() ? 0.0f : -params.options.polygonOffsetConstant
+                        .slope    = view.hasVSM() ? 0.0f : -params.options.polygonOffsetSlope,
+                        .constant = view.hasVSM() ? 0.0f : -params.options.polygonOffsetConstant
                 }
         };
 
@@ -537,11 +538,15 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
 
             auto& s = shadowUb.edit();
+            const float n = shadowMap.getCamera().getNear();
+            const float f = shadowMap.getCamera().getCullingFar();
             s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             s.shadows[i].direction = direction;
             s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
             s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
             s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
+            s.shadows[i].bulbRadiusLs = options->shadowBulbRadius / wsTexelSizeAtOneMeter;
+            s.shadows[i].nearOverFarMinusNear = n / (f - n);
 
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         }
@@ -586,8 +591,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
 
     // Generate mipmaps for VSM when anisotropy is enabled or when requested
     auto const& vsmShadowOptions = view.getVsmShadowOptions();
-    const bool useMipmapping = view.hasVsm() && 
-            ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
+    const bool useMipmapping = view.hasVSM() &&
+                               ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
     uint8_t mipLevels = 1u;
     if (useMipmapping) {

@@ -339,7 +339,7 @@ bool Froxelizer::update() noexcept {
 
 
         /*
-         * Now compute the bounding sphere of each froxel, which is needed for spot-lights
+         * Now compute the bounding sphere of each froxel, which is needed for spotlights
          * We intersect 3 planes of the frustum to find each 8 corners.
          * Currently the bounding sphere is computed from the bounding-box, which is probably,
          * not the best.

@@ -305,11 +305,11 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         mShadowMapManager.setShadowCascades(0, &shadowOptions);
     }
 
-    // Find all shadow-casting spot lights.
+    // Find all shadow-casting spotlights.
     size_t shadowCastingSpotCount = 0;
 
     // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
-    // shadow-casting spot lights are ignored.
+    // shadow-casting spotlights are ignored.
     for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
 
         // when we get here all the lights should be visible
@@ -456,7 +456,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(worldOriginScene, hasVsm());
+    scene->prepare(worldOriginScene, hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -666,10 +666,16 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
-    if (hasVsm()) {
-        mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
-    } else {
-        mPerViewUniforms.prepareShadowPCF(texture);
+    switch (mShadowType) {
+        case filament::ShadowType::PCF:
+            mPerViewUniforms.prepareShadowPCF(texture);
+            break;
+        case filament::ShadowType::VSM:
+            mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+            break;
+        case filament::ShadowType::DPCF:
+            mPerViewUniforms.prepareShadowDPCF(texture);
+            break;
     }
 }
 
