@@ -50,6 +50,7 @@ class PostProcessManager {
 public:
     struct ColorGradingConfig {
         bool asSubpass{};
+        bool customResolve{};
         bool translucent{};
         bool fxaa{};
         bool dithering{};
@@ -107,7 +108,14 @@ public:
     void colorGradingSubpass(backend::DriverApi& driver,
             ColorGradingConfig const& colorGradingConfig) noexcept;
 
-    // Anti-aliasing
+    // custom MSAA resolve as subpass
+    enum class CustomResolveOp { COMPRESS, UNCOMPRESS };
+    void customResolvePrepareSubpass(backend::DriverApi& driver, CustomResolveOp op) noexcept;
+    void customResolveSubpass(backend::DriverApi& driver) noexcept;
+    FrameGraphId<FrameGraphTexture> customResolveUncompressPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> inout) noexcept;
+
+        // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             bool translucent) noexcept;

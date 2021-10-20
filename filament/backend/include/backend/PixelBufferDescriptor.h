@@ -28,8 +28,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /**
  * A descriptor to an image in main memory, typically used to transfer image data from the CPU
@@ -58,9 +57,19 @@ public:
      * @param left      Left coordinate in pixels
      * @param top       Top coordinate in pixels
      * @param stride    Stride of a row in pixels
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler
      * @param callback  A callback used to release the CPU buffer
      * @param user      An opaque user pointer passed to the callback function when it's called
      */
+    PixelBufferDescriptor(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type, uint8_t alignment,
+            uint32_t left, uint32_t top, uint32_t stride,
+            CallbackHandler* handler, Callback callback, void* user = nullptr) noexcept
+            : BufferDescriptor(buffer, size, handler, callback, user),
+              left(left), top(top), stride(stride),
+              format(format), type(type), alignment(alignment) {
+    }
+
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment = 1,
             uint32_t left = 0, uint32_t top = 0, uint32_t stride = 0,
@@ -77,15 +86,24 @@ public:
      * @param size      Size in bytes of the buffer containing the image
      * @param format    Format of the image pixels
      * @param type      Type of the image pixels
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler
      * @param callback  A callback used to release the CPU buffer
      * @param user      An opaque user pointer passed to the callback function when it's called
      */
+    PixelBufferDescriptor(void const* buffer, size_t size,
+            PixelDataFormat format, PixelDataType type,
+            CallbackHandler* handler, Callback callback, void* user = nullptr) noexcept
+            : BufferDescriptor(buffer, size, handler, callback, user),
+              stride(0), format(format), type(type), alignment(1) {
+    }
+
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type,
             Callback callback, void* user = nullptr) noexcept
             : BufferDescriptor(buffer, size, callback, user),
               stride(0), format(format), type(type), alignment(1) {
     }
+
 
     /**
      * Creates a new PixelBufferDescriptor referencing a compressed image in main memory
@@ -94,9 +112,18 @@ public:
      * @param size      Size in bytes of the buffer containing the image
      * @param format    Compressed format of the image
      * @param imageSize Compressed size of the image
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler
      * @param callback  A callback used to release the CPU buffer
      * @param user      An opaque user pointer passed to the callback function when it's called
      */
+    PixelBufferDescriptor(void const* buffer, size_t size,
+            backend::CompressedPixelDataType format, uint32_t imageSize,
+            CallbackHandler* handler, Callback callback, void* user = nullptr) noexcept
+            : BufferDescriptor(buffer, size, handler, callback, user),
+              imageSize(imageSize), compressedFormat(format), type(PixelDataType::COMPRESSED),
+              alignment(1) {
+    }
+
     PixelBufferDescriptor(void const* buffer, size_t size,
             backend::CompressedPixelDataType format, uint32_t imageSize,
             Callback callback, void* user = nullptr) noexcept
@@ -107,26 +134,29 @@ public:
 
     // --------------------------------------------------------------------------------------------
 
-    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    template<typename T, void(T::*method)(void const*, size_t)>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment,
-            uint32_t left, uint32_t top, uint32_t stride, T* data) noexcept {
+            uint32_t left, uint32_t top, uint32_t stride, T* data,
+            CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type, alignment, left, top, stride,
-                [](void* b, size_t s, void* u) {
+                handler, [](void* b, size_t s, void* u) {
                     (*static_cast<T**>(u)->*method)(b, s); }, data };
     }
 
-    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    template<typename T, void(T::*method)(void const*, size_t)>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
-            PixelDataFormat format, PixelDataType type, T* data) noexcept {
-        return { buffer, size, format, type, [](void* b, size_t s, void* u) {
+            PixelDataFormat format, PixelDataType type, T* data,
+            CallbackHandler* handler = nullptr) noexcept {
+        return { buffer, size, format, type, handler, [](void* b, size_t s, void* u) {
                     (*static_cast<T**>(u)->*method)(b, s); }, data };
     }
 
-    template<typename T, void(T::*method)(void const* buffer, size_t size)>
+    template<typename T, void(T::*method)(void const*, size_t)>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
-            backend::CompressedPixelDataType format, uint32_t imageSize, T* data) noexcept {
-        return { buffer, size, format, imageSize, [](void* b, size_t s, void* u) {
+            backend::CompressedPixelDataType format, uint32_t imageSize, T* data,
+            CallbackHandler* handler = nullptr) noexcept {
+        return { buffer, size, format, imageSize, handler, [](void* b, size_t s, void* u) {
                     (*static_cast<T**>(u)->*method)(b, s); }, data
         };
     }
@@ -134,9 +164,10 @@ public:
     template<typename T>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment,
-            uint32_t left, uint32_t top, uint32_t stride, T&& functor) noexcept {
+            uint32_t left, uint32_t top, uint32_t stride, T&& functor,
+            CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type, alignment, left, top, stride,
-                [](void* b, size_t s, void* u) {
+                handler, [](void* b, size_t s, void* u) {
                     T& that = *static_cast<T*>(u);
                     that(b, s);
                     delete &that;
@@ -146,9 +177,10 @@ public:
 
     template<typename T>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
-            PixelDataFormat format, PixelDataType type, T&& functor) noexcept {
+            PixelDataFormat format, PixelDataType type, T&& functor,
+            CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type,
-                [](void* b, size_t s, void* u) {
+                 handler, [](void* b, size_t s, void* u) {
                     T& that = *static_cast<T*>(u);
                     that(b, s);
                     delete &that;
@@ -158,9 +190,10 @@ public:
 
     template<typename T>
     static PixelBufferDescriptor make(void const* buffer, size_t size,
-            backend::CompressedPixelDataType format, uint32_t imageSize, T&& functor) noexcept {
+            backend::CompressedPixelDataType format, uint32_t imageSize, T&& functor,
+            CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, imageSize,
-                [](void* b, size_t s, void* u) {
+                 handler, [](void* b, size_t s, void* u) {
                     T& that = *static_cast<T*>(u);
                     that(b, s);
                     delete &that;
@@ -275,8 +308,7 @@ public:
     uint8_t alignment  : 4;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace backend::filament
 
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PixelBufferDescriptor& b);

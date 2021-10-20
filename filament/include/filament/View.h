@@ -32,6 +32,10 @@
 
 namespace filament {
 
+namespace backend {
+class CallbackHandler;
+} // namespace backend
+
 class Camera;
 class ColorGrading;
 class MaterialInstance;
@@ -76,6 +80,7 @@ public:
     using RenderQuality = RenderQuality;
     using AmbientOcclusionOptions = AmbientOcclusionOptions;
     using TemporalAntiAliasingOptions = TemporalAntiAliasingOptions;
+    using MultiSampleAntiAliasingOptions = MultiSampleAntiAliasingOptions;
     using VsmShadowOptions = VsmShadowOptions;
 
     /**
@@ -275,7 +280,9 @@ public:
      *       cost. See setAntialiasing.
      *
      * @see setAntialiasing
+     * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
+    UTILS_DEPRECATED
     void setSampleCount(uint8_t count = 1) noexcept;
 
     /**
@@ -283,7 +290,9 @@ public:
      * A value of 0 or 1 means MSAA is disabled.
      *
      * @return value set by setSampleCount().
+     * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    UTILS_DEPRECATED
     uint8_t getSampleCount() const noexcept;
 
     /**
@@ -319,6 +328,20 @@ public:
      * @return temporal anti-aliasing options
      */
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
+
+    /**
+     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     *
+     * @param options multi-sample anti-aliasing options
+     */
+    void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
+
+    /**
+     * Returns multi-sample anti-aliasing options.
+     *
+     * @return multi-sample anti-aliasing options
+     */
+    MultiSampleAntiAliasingOptions const& getMultiSampleAntiAliasingOptions() const noexcept;
 
     /**
      * Sets this View's color grading transforms.
@@ -611,9 +634,10 @@ public:
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
      * @param data      A pointer to an instance of T
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
-    void pick(uint32_t x, uint32_t y, T* instance) noexcept {
+    void pick(uint32_t x, uint32_t y, T* instance, backend::CallbackHandler* handler = nullptr) noexcept {
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
             void* user = pq->storage;
             (*static_cast<T**>(user)->*method)(result);
@@ -630,9 +654,10 @@ public:
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
      * @param data      An instance of T
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
-    void pick(uint32_t x, uint32_t y, T instance) noexcept {
+    void pick(uint32_t x, uint32_t y, T instance, backend::CallbackHandler* handler = nullptr) noexcept {
         static_assert(sizeof(instance) <= sizeof(PickingQuery::storage), "user data too large");
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
             void* user = pq->storage;
@@ -650,11 +675,12 @@ public:
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
      * @param functor   A functor, typically a lambda function.
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T>
-    void pick(uint32_t x, uint32_t y, T functor) noexcept {
+    void pick(uint32_t x, uint32_t y, T functor, backend::CallbackHandler* handler = nullptr) noexcept {
         static_assert(sizeof(functor) <= sizeof(PickingQuery::storage), "functor too large");
-        PickingQuery& query = pick(x, y,
+        PickingQuery& query = pick(x, y, handler,
                 (PickingQueryResultCallback)[](PickingQueryResult const& result, PickingQuery* pq) {
             void* user = pq->storage;
             T& that = *static_cast<T*>(user);
@@ -674,11 +700,12 @@ public:
      * @param x         Horizontal coordinate to query in the viewport with origin on the left.
      * @param y         Vertical coordinate to query on the viewport with origin at the bottom.
      * @param callback  User callback, called when the picking query result is available.
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      * @return          A reference to a PickingQuery structure, which can be used to store up to
      *                  8*sizeof(void*) bytes of user data. This user data is later accessible
      *                  in the PickingQueryResultCallback callback 3rd parameter.
      */
-    PickingQuery& pick(uint32_t x, uint32_t y,
+    PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
             PickingQueryResultCallback callback) noexcept;
 
 

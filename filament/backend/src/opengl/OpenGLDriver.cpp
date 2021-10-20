@@ -1360,13 +1360,14 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 // called only once per frame. If the user pushes images to the same stream multiple times in a
 // single frame, we emit a warning and honor only the final image, but still invoke all callbacks.
 void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
-        backend::StreamCallback cb, void* userData) {
+        backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
     if (glstream->user_thread.pending.image) {
-        scheduleRelease(std::move(glstream->user_thread.pending));
+        scheduleRelease(glstream->user_thread.pending);
         slog.w << "Acquired image is set more than once per frame." << io::endl;
     }
-    glstream->user_thread.pending = mPlatform.transformAcquiredImage({hwbuffer, cb, userData});
+    glstream->user_thread.pending = mPlatform.transformAcquiredImage({
+            hwbuffer, cb, userData, handler });
 }
 
 void OpenGLDriver::updateStreams(DriverApi* driver) {
@@ -1550,6 +1551,10 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 bool OpenGLDriver::isFrameBufferFetchSupported() {
     auto& gl = mContext;
     return gl.ext.EXT_shader_framebuffer_fetch;
+}
+
+bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
+    return isFrameBufferFetchSupported();
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
@@ -2299,11 +2304,15 @@ void OpenGLDriver::endRenderPass(int) {
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES30_HEADERS) {
+        auto effectiveDiscardFlags = discardFlags;
+        if (gl.bugs.invalidate_end_only_if_invalidate_start) {
+            effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
+        }
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }

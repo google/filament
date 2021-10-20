@@ -16,6 +16,8 @@
 
 #include <jni.h>
 
+#include "private/backend/VirtualMachineEnv.h"
+
 namespace filament {
     extern jint JNI_OnLoad(JavaVM* vm, void* reserved);
 };
@@ -28,6 +30,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 #if ANDROID
     ::filament::JNI_OnLoad(vm, reserved);
+#else
+    ::filament::VirtualMachineEnv::JNI_OnLoad(vm);
 #endif
 
     return JNI_VERSION_1_6;

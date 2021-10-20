@@ -229,8 +229,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
-    uint8_t msaaSampleCount = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
+    auto msaaOptions = view.getMultiSampleAntiAliasingOptions();
     auto dsrOptions = view.getDynamicResolutionOptions();
     auto bloomOptions = view.getBloomOptions();
     auto dofOptions = view.getDepthOfFieldOptions();
@@ -249,6 +249,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         hasFXAA = false;
         scale = 1.0f;
     }
+
+    const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
     filament::Viewport svp = vp.scale(scale);
@@ -383,8 +385,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
                     hasColorGrading &&
-                    msaaSampleCount <= 1 && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
+                    msaaSampleCount <= 1 &&
+                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported(),
+            .customResolve =
+                    msaaOptions.customResolve &&
+                    msaaSampleCount > 1 &&
+                    hasColorGrading &&
+                    driver.isFrameBufferFetchMultiSampleSupported(),
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
             .dithering = hasDithering,
@@ -498,7 +506,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
                             config.svp.width, config.svp.height);
+                } else if (colorGradingConfig.customResolve) {
+                    ppm.customResolvePrepareSubpass(driver,
+                            PostProcessManager::CustomResolveOp::COMPRESS);
                 }
+
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
                 if (jobFroxelize) {
@@ -518,8 +530,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         pass.appendCustomCommand(
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
-                0, [&ppm, &driver, colorGradingConfigForColor](){
+                0, [&ppm, &driver, colorGradingConfigForColor]() {
                     ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
+                });
+    } if (colorGradingConfig.customResolve) {
+        // append custom resolve subpass after all other passes
+        pass.appendCustomCommand(
+                RenderPass::Pass::BLENDED,
+                RenderPass::CustomCommand::EPILOG,
+                0, [&ppm, &driver]() {
+                    ppm.customResolveSubpass(driver);
                 });
     }
 
@@ -531,6 +551,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // this cancels the colorPass() call above if refraction is active.
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         colorPassOutput = refractionPass(fg, config, colorGradingConfigForColor, pass, view);
+    }
+
+    if (colorGradingConfig.customResolve) {
+        // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's  used
+        //       by many other passes (Bloom, TAA, DoF, etc...). We could make this more
+        //       efficient by using ARM_shader_framebuffer_fetch. We use a load/store (i.e.
+        //       subpass) here because it's more convenient.
+        colorPassOutput = ppm.customResolveUncompressPass(fg, colorPassOutput);
     }
 
     FrameGraphId<FrameGraphTexture> input = colorPassOutput;
@@ -585,13 +613,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
         if (scaled) {
             mightNeedFinalBlit = false;
+            auto viewport = DEBUG_DYNAMIC_SCALING ? svp : vp;
             if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
                 input = ppm.opaqueBlit(fg, input, {
-                        .width = vp.width, .height = vp.height,
+                        .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             } else {
                 input = ppm.blendBlit(fg, blending, dsrOptions, input, {
-                        .width = vp.width, .height = vp.height,
+                        .width = viewport.width, .height = viewport.height,
                         .format = colorGradingConfig.ldrFormat });
             }
         }
@@ -612,12 +641,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (mightNeedFinalBlit &&
             ((outputIsSwapChain && (msaaSampleCount > 1 || colorGradingConfig.asSubpass)) ||
              blending)) {
-        if (UTILS_LIKELY(!blending && dsrOptions.quality == QualityLevel::LOW)) {
+        assert_invariant(!scaled);
+        if (UTILS_LIKELY(!blending)) {
             input = ppm.opaqueBlit(fg, input, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
         } else {
-            input = ppm.blendBlit(fg, blending, dsrOptions, input, {
+            input = ppm.blendBlit(fg, blending, {
+                    .quality = QualityLevel::LOW
+            }, input, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat });
         }
@@ -843,6 +875,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     });
                     data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                } else if (colorGradingConfig.customResolve) {
+                    data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
                 }
 
                 // We set a "read" constraint on these attachments here because we need to preserve them
@@ -898,7 +932,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     }
                 }
 
-                if (colorGradingConfig.asSubpass) {
+                if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
                     out.params.subpassMask = 1;
                 }
                 passExecutor.execute(resources.getPassName(), out.target, out.params);

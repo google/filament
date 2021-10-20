@@ -91,7 +91,8 @@ Java_com_google_android_filament_IndexBuffer_nSetBuffer(JNIEnv *env, jclass type
 
     auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    BufferDescriptor desc(data, sizeInBytes, &JniBufferCallback::invoke, callback);
+    BufferDescriptor desc(data, sizeInBytes,
+            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
     indexBuffer->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
 

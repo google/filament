@@ -819,7 +819,7 @@ void FView::executePickingQueries(backend::DriverApi& driver,
                 &pQuery->result.renderable, 4*4, // 4*uint
                 // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
                 backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
-                [](void* buffer, size_t size, void* user) {
+                pQuery->handler, [](void* buffer, size_t size, void* user) {
                     FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
                     pQuery->result.fragCoords = {
                             pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };
@@ -921,6 +921,14 @@ void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) n
 
 const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
     return upcast(this)->getTemporalAntiAliasingOptions();
+}
+
+void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
+    upcast(this)->setMultiSampleAntiAliasingOptions(options);
+}
+
+const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
+    return upcast(this)->getMultiSampleAntiAliasingOptions();
 }
 
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
@@ -1059,9 +1067,9 @@ bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return upcast(this)->isScreenSpaceRefractionEnabled();
 }
 
-View::PickingQuery& View::pick(uint32_t x, uint32_t y,
+View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
         View::PickingQueryResultCallback callback) noexcept {
-    return upcast(this)->pick(x, y, callback);
+    return upcast(this)->pick(x, y, handler, callback);
 }
 
 } // namespace filament

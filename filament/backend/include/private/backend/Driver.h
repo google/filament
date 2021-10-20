@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
 
 #include <backend/BufferDescriptor.h>
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>

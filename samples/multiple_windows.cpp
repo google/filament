@@ -51,7 +51,7 @@ namespace {
     static constexpr double kFieldOfViewDeg = 60.0;
     static constexpr double kNearPlane = 0.1;
     static constexpr double kFarPlane = 50.0;
-    static constexpr const char* kIBLFolder = "default_env";
+    static constexpr const char* kIBLFolder = "assets/ibl/lightroom_14b";
     static constexpr double kRotationDegPerSec = 36.0;
     static constexpr math::float3 kCameraCenter = {0.0f, 0.0f, 0.0f};
     static constexpr math::float3 kCameraUp = {0.0f, 1.0f, 0.0f};

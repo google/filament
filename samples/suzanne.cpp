@@ -62,7 +62,7 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "default_env";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());

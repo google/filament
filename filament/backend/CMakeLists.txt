@@ -10,6 +10,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
+        include/backend/CallbackHandler.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
         include/backend/PipelineState.h
@@ -21,6 +22,7 @@ set(PUBLIC_HDRS
 set(SRCS
         src/BackendUtils.cpp
         src/Callable.cpp
+        src/CallbackHandler.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
@@ -80,9 +82,13 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         list(APPEND SRCS src/opengl/PlatformEGL.cpp)
     endif()
     if (ANDROID)
+        # FIXME: this should be included when we build for JAVA (which is implied by ANDROID)
+        #        but is not specific to ANDROID
+        list(APPEND SRCS src/VirtualMachineEnv.cpp)
+    endif ()
+    if (ANDROID)
         list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
-        list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
         list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
     elseif (IOS)
         list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
