@@ -3,9 +3,22 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.9 (currently main branch)
+## v1.12.11 (currently main branch)
+
+## v1.12.10
 
 - engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+
+## v1.12.9
+
+- engine: New API: `MultiSampleAntiAliasingOptions` and HDR-aware MSAA resolve. When `customResolve`
+  is enabled, improves anti-aliasing quality [**NEW API**].
+- engine: Fixes and improvements for FSR.
+- engine: All APIs that take a callback as argument now also take a `CallbackHandler*`, a new
+  interface that provides more flexibility around callback dispatch [**NEW API**].
+- Android: Fix JNI bindings for `DepthOfFieldOptions`.
+- Android: workarounds for Adreno-specific fraembuffer issue.
+- JavaScript: updates to JS bindings.
 
 ## v1.12.8
 
