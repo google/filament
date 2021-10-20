@@ -150,7 +150,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                         .depth = textureRequirements.layers,
                         .levels = textureRequirements.levels,
                         .type = SamplerType::SAMPLER_2D_ARRAY,
-                        .format = view.hasVsm() ? vsmTextureFormat : mTextureFormat
+                        .format = view.hasVSM() ? vsmTextureFormat : mTextureFormat
                 });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) { });
@@ -178,14 +178,14 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
+                    const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     FrameGraphRenderPass::Descriptor renderTargetDesc{};
 
                     auto attachment = builder.createSubresource(prepareShadowPass->shadows,
                             "Shadowmap Layer", { .layer = layer });
 
-                    if (view.hasVsm()) {
+                    if (view.hasVSM()) {
                         // Each shadow pass has its own sample count, but textures are created with
                         // a default count of 1 because we're using "magic resolve" (sample count is
                         // set on the render target).
@@ -257,7 +257,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                     shadowMap.render(*scene, entry.range, entry.visibilityMask, cameraInfo, &entryPass);
 
                     const auto& executor = entryPass.getExecutor();
-                    const bool blur = view.hasVsm() && options->vsm.blurWidth > 0.0f;
+                    const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     view.prepareCamera(cameraInfo);
 
@@ -292,7 +292,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
 
         // now emit the blurring passes
-        if (view.hasVsm()) {
+        if (view.hasVSM()) {
             const float blurWidth = options->vsm.blurWidth;
             if (blurWidth > 0.0f) {
                 const float sigma = (blurWidth + 1.0f) / 6.0f;
@@ -351,7 +351,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
                 .atlasDimension   = textureSize,
                 .textureDimension = (uint16_t)textureDimension,
                 .shadowDimension  = (uint16_t)(textureDimension - 2),
-                .vsm = view.hasVsm()
+                .vsm = view.hasVSM()
         };
 
         map.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
@@ -428,7 +428,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
                 .atlasDimension = textureSize,
                 .textureDimension = (uint16_t)textureDimension,
                 .shadowDimension = (uint16_t)(textureDimension - 2),
-                .vsm = view.hasVsm()
+                .vsm = view.hasVSM()
         };
         sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
         shadowMap.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
@@ -491,7 +491,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
                 .atlasDimension = textureSize,
                 .textureDimension = (uint16_t)textureDimension,
                 .shadowDimension = (uint16_t)(textureDimension - 2),
-                .vsm = view.hasVsm()
+                .vsm = view.hasVSM()
         };
         shadowMap.update(lightData, l, viewingCameraInfo, layout, {});
 
@@ -558,8 +558,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
 
     // Generate mipmaps for VSM when anisotropy is enabled or when requested
     auto const& vsmShadowOptions = view.getVsmShadowOptions();
-    const bool useMipmapping = view.hasVsm() && 
-            ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
+    const bool useMipmapping = view.hasVSM() &&
+                               ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
     uint8_t mipLevels = 1u;
     if (useMipmapping) {

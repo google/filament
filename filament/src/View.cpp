@@ -457,7 +457,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(worldOriginScene, hasVsm());
+    scene->prepare(worldOriginScene, hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -666,10 +666,16 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
-    if (hasVsm()) {
-        mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
-    } else {
-        mPerViewUniforms.prepareShadowPCF(texture);
+    switch (mShadowType) {
+        case filament::ShadowType::PCF:
+            mPerViewUniforms.prepareShadowPCF(texture);
+            break;
+        case filament::ShadowType::VSM:
+            mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+            break;
+        case filament::ShadowType::DPCF:
+            mPerViewUniforms.prepareShadowDPCF(texture);
+            break;
     }
 }
 

@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.12.9 (currently main branch)
 
 - engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+- engine: add support for DPCF (PCF shadows with contact hardening)
 
 ## v1.12.8
 

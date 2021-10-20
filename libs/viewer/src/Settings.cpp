@@ -212,6 +212,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Ditherin
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowType* out) {
     if (0 == compare(tokens[i], jsonChunk, "PCF")) { *out = ShadowType::PCF; }
     else if (0 == compare(tokens[i], jsonChunk, "VSM")) { *out = ShadowType::VSM; }
+    else if (0 == compare(tokens[i], jsonChunk, "DPCF")) { *out = ShadowType::DPCF; }
     else {
         slog.w << "Invalid ShadowType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -1130,6 +1131,7 @@ static std::ostream& operator<<(std::ostream& out, ShadowType in) {
     switch (in) {
         case ShadowType::PCF: return out << "\"PCF\"";
         case ShadowType::VSM: return out << "\"VSM\"";
+        case ShadowType::DPCF: return out << "\"DPCF\"";
     }
     return out << "\"INVALID\"";
 }

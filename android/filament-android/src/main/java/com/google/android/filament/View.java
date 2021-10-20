@@ -732,7 +732,12 @@ public class View {
         /**
          * Variance shadows.
          */
-        VSM
+        VSM,
+
+        /**
+         * Percentage-closer filtered shadows, with contact hardening simulation.
+         */
+        DPCF
     }
 
     /**

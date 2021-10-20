@@ -250,7 +250,6 @@ void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMa
     s.vsmExponent = options.exponent;  // fp16: max 5.54f, fp32: max 42.0
     s.vsmDepthScale = options.minVarianceScale * 0.01f * options.exponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
-    s.shadowSamplingType = 0;
 
     s.lightFromWorldMatrix = shadowMappingUniforms.lightFromWorldMatrix;
     s.cascadeSplits = shadowMappingUniforms.cascadeSplits;
@@ -271,6 +270,8 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture, VsmShadowOptio
                     .filterMin = filterMin,
                     .anisotropyLog2 = options.anisotropy,
             }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = 0;
 }
 
 void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
@@ -278,9 +279,15 @@ void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE, // ignored for VSM
-                    .compareFunc = SamplerCompareFunc::GE                  // ignored for VSM
+                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
+                    .compareFunc = SamplerCompareFunc::GE
             }});
+}
+
+void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture) noexcept {
+    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, { texture, { }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = 1;
 }
 
 void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {

@@ -292,7 +292,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isFrontFaceWindingInverted()) baseRenderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
 
     RenderPass::RenderFlags colorRenderFlags = baseRenderFlags;
-    if (view.hasVsm())                     colorRenderFlags |= RenderPass::HAS_VSM;
+    switch (view.getShadowType()) {
+        case ShadowType::PCF:   break;
+        case ShadowType::VSM:   colorRenderFlags |= RenderPass::HAS_VSM;    break;
+        case ShadowType::DPCF:  colorRenderFlags |= RenderPass::HAS_DPCF;   break;
+    }
 
     RenderPass::RenderFlags structureRenderFlags = baseRenderFlags;
     if (view.hasPicking())                 structureRenderFlags |= RenderPass::HAS_PICKING;

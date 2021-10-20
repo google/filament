@@ -339,7 +339,8 @@ enum class Dithering : uint8_t {
  */
 enum class ShadowType : uint8_t {
     PCF,        //!< percentage-closer filtered shadows (default)
-    VSM         //!< variance shadows
+    VSM,        //!< variance shadows
+    DPCF        //!< PCF with contact hardening simulation
 };
 
 /**
