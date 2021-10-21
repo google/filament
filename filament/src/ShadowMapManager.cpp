@@ -360,8 +360,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                 VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
 
-        // note: normalBias is ignored for VSM
-        const float normalBias = lcm.getShadowNormalBias(0);
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : lcm.getShadowNormalBias(0);
         // Set shadowBias, using the first directional cascade.
         const float texelSizeWorldSpace = map.getTexelSizeWorldSpace();
         mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * texelSizeWorldSpace, 0 };
@@ -486,14 +486,14 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
         size_t l = entry.getLightIndex();
 
         const size_t textureDimension = entry.getShadowOptions()->mapSize;
-        const ShadowMap::ShadowMapInfo layout{
+        const ShadowMap::ShadowMapInfo shadowMapInfo{
                 .zResolution = mTextureZResolution,
                 .atlasDimension = textureSize,
                 .textureDimension = (uint16_t)textureDimension,
                 .shadowDimension = (uint16_t)(textureDimension - 2),
                 .vsm = view.hasVsm()
         };
-        shadowMap.update(lightData, l, viewingCameraInfo, layout, {});
+        shadowMap.update(lightData, l, viewingCameraInfo, shadowMapInfo, {});
 
         FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
         if (shadowMap.hasVisibleShadows()) {
@@ -509,10 +509,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
             shadowInfo[l].index = i;
             shadowInfo[l].layer = mSpotShadowMaps[i].getLayer();
 
-            // note: normalBias is ignored for VSM
+            // note: normalBias is set to zero for VSM
             const float3 dir = lightData.elementAt<FScene::DIRECTION>(l);
             const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
-            const float normalBias = lcm.getShadowNormalBias(light);
+            const float normalBias = shadowMapInfo.vsm ? 0.0f : lcm.getShadowNormalBias(light);
             s.directionShadowBias[i] = float4{ dir, normalBias * texelSizeWorldSpace };
 
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
