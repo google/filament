@@ -208,6 +208,7 @@ private:
     backend::TargetBufferFlags mClearFlags{};
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
+    bool mWithinFrame = false;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;
