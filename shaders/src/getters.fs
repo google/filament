@@ -102,7 +102,7 @@ highp vec3 getNormalizedViewportCoord2() {
 highp vec4 getSpotLightSpacePosition(uint index) {
     vec3 dir = shadowUniforms.directionShadowBias[index].xyz;
     float bias = shadowUniforms.directionShadowBias[index].w;
-    return computeLightSpacePosition(vertex_worldPosition,
+    return computeLightSpacePosition(vertex_worldPosition.xyz,
             vertex_worldNormal, dir, bias, shadowUniforms.spotLightFromWorldMatrix[index]);
 }
 #endif

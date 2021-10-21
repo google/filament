@@ -37,18 +37,8 @@ void main() {
 #endif
 
 #if defined(HAS_VSM)
-    // For VSM, we use the linear light space Z coordinate as the depth metric, which works for both
-    // directional and spot lights.
-    // The value is guaranteed to be between [0, -zfar] by construction of viewFromWorldMatrix,
-    // (see ShadowMap.cpp).
-    highp float z = (frameUniforms.viewFromWorldMatrix * vec4(vertex_worldPosition, 1.0)).z;
-
-    // rescale the depth between [0, 1]
-    highp float depth = -z / abs(frameUniforms.cameraFar);
-
-    // We use positive only EVSM which helps a lot with light bleeding.
-    depth = depth * 2.0 - 1.0;
-    depth = exp(frameUniforms.vsmExponent * depth);
+    // interpolated depth is stored in vertex_worldPosition.w (see depth_main.vs / main.vs)
+    highp float depth = exp(vertex_worldPosition.w);
 
     // computes the moments
     // See GPU Gems 3
