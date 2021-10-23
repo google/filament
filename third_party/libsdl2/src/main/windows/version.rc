@@ -9,8 +9,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,8,0
- PRODUCTVERSION 2,0,8,0
+ FILEVERSION 2,0,16,0
+ PRODUCTVERSION 2,0,16,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -23,12 +23,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "\0"
             VALUE "FileDescription", "SDL\0"
-            VALUE "FileVersion", "2, 0, 8, 0\0"
+            VALUE "FileVersion", "2, 0, 16, 0\0"
             VALUE "InternalName", "SDL\0"
-            VALUE "LegalCopyright", "Copyright © 2018 Sam Lantinga\0"
+            VALUE "LegalCopyright", "Copyright (C) 2021 Sam Lantinga\0"
             VALUE "OriginalFilename", "SDL2.dll\0"
             VALUE "ProductName", "Simple DirectMedia Layer\0"
-            VALUE "ProductVersion", "2, 0, 8, 0\0"
+            VALUE "ProductVersion", "2, 0, 16, 0\0"
         END
     END
     BLOCK "VarFileInfo"

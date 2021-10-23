@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -25,12 +25,14 @@
 
 static SDLTest_CommonState *state;
 
-SDL_Rect viewport;
-int done, j;
-SDL_bool use_target = SDL_FALSE;
+static SDL_Rect viewport;
+static int done, j;
+static SDL_bool use_target = SDL_FALSE;
 #ifdef __EMSCRIPTEN__
-Uint32 wait_start;
+static Uint32 wait_start;
 #endif
+static SDL_Texture *sprite;
+static int sprite_w, sprite_h;
 
 /* Call this instead of exit(), so we can clean up SDL: atexit() is evil. */
 static void
@@ -40,8 +42,57 @@ quit(int rc)
     exit(rc);
 }
 
+int
+LoadSprite(char *file, SDL_Renderer *renderer)
+{
+    SDL_Surface *temp;
+
+    /* Load the sprite image */
+    temp = SDL_LoadBMP(file);
+    if (temp == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s\n", file, SDL_GetError());
+        return (-1);
+    }
+    sprite_w = temp->w;
+    sprite_h = temp->h;
+
+    /* Set transparent pixel as the pixel at (0,0) */
+    if (temp->format->palette) {
+        SDL_SetColorKey(temp, SDL_TRUE, *(Uint8 *) temp->pixels);
+    } else {
+        switch (temp->format->BitsPerPixel) {
+        case 15:
+            SDL_SetColorKey(temp, SDL_TRUE,
+                            (*(Uint16 *) temp->pixels) & 0x00007FFF);
+            break;
+        case 16:
+            SDL_SetColorKey(temp, SDL_TRUE, *(Uint16 *) temp->pixels);
+            break;
+        case 24:
+            SDL_SetColorKey(temp, SDL_TRUE,
+                            (*(Uint32 *) temp->pixels) & 0x00FFFFFF);
+            break;
+        case 32:
+            SDL_SetColorKey(temp, SDL_TRUE, *(Uint32 *) temp->pixels);
+            break;
+        }
+    }
+
+    /* Create textures from the image */
+    sprite = SDL_CreateTextureFromSurface(renderer, temp);
+    if (!sprite) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s\n", SDL_GetError());
+        SDL_FreeSurface(temp);
+        return (-1);
+    }
+    SDL_FreeSurface(temp);
+
+    /* We're ready to roll. :) */
+    return (0);
+}
+
 void
-DrawOnViewport(SDL_Renderer * renderer, SDL_Rect viewport)
+DrawOnViewport(SDL_Renderer * renderer)
 {    
     SDL_Rect rect;
 
@@ -53,11 +104,11 @@ DrawOnViewport(SDL_Renderer * renderer, SDL_Rect viewport)
     SDL_RenderClear(renderer);
 
     /* Test inside points */
-    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xF, 0xFF);
-    SDL_RenderDrawPoint(renderer, viewport.h/2 + 10, viewport.w/2);
-    SDL_RenderDrawPoint(renderer, viewport.h/2 - 10, viewport.w/2);
-    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 - 10);
-    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 + 10);
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF);
+    SDL_RenderDrawPoint(renderer, viewport.h/2 + 20, viewport.w/2);
+    SDL_RenderDrawPoint(renderer, viewport.h/2 - 20, viewport.w/2);
+    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 - 20);
+    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 + 20);
 
     /* Test horizontal and vertical lines */
     SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0x00, 0xFF);
@@ -68,17 +119,15 @@ DrawOnViewport(SDL_Renderer * renderer, SDL_Rect viewport)
 
     /* Test diagonal lines */
     SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0xFF, 0xFF);
-    SDL_RenderDrawLine(renderer, 0, 0,
-                       viewport.w-1, viewport.h-1);
-    SDL_RenderDrawLine(renderer, viewport.w-1, 0,
-                       0, viewport.h-1);                      
+    SDL_RenderDrawLine(renderer, 0, 0, viewport.w-1, viewport.h-1);
+    SDL_RenderDrawLine(renderer, viewport.w-1, 0, 0, viewport.h-1);                      
 
     /* Test outside points */
-    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xF, 0xFF);
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0x00, 0xFF);
     SDL_RenderDrawPoint(renderer, viewport.h/2 + viewport.h, viewport.w/2);
     SDL_RenderDrawPoint(renderer, viewport.h/2 - viewport.h, viewport.w/2);
-    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 - viewport.w);
-    SDL_RenderDrawPoint(renderer, viewport.h/2     , viewport.w/2 + viewport.w);
+    SDL_RenderDrawPoint(renderer, viewport.h/2, viewport.w/2 - viewport.w);
+    SDL_RenderDrawPoint(renderer, viewport.h/2, viewport.w/2 + viewport.w);
 
     /* Add a box at the top */
     rect.w = 8;
@@ -86,6 +135,14 @@ DrawOnViewport(SDL_Renderer * renderer, SDL_Rect viewport)
     rect.x = (viewport.w - rect.w) / 2;
     rect.y = 0;
     SDL_RenderFillRect(renderer, &rect);
+
+    /* Add a clip rect and fill it with the sprite */
+    SDL_QueryTexture(sprite, NULL, NULL, &rect.w, &rect.h);
+    rect.x = (viewport.w - rect.w) / 2;
+    rect.y = (viewport.h - rect.h) / 2;
+    SDL_RenderSetClipRect(renderer, &rect);
+    SDL_RenderCopy(renderer, sprite, NULL, &rect);
+    SDL_RenderSetClipRect(renderer, NULL);
 }
 
 void
@@ -117,7 +174,7 @@ loop()
             continue;
 
         /* Draw using viewport */
-        DrawOnViewport(state->renderers[i], viewport);
+        DrawOnViewport(state->renderers[i]);
 
         /* Update the screen! */
         if (use_target) {
@@ -149,6 +206,7 @@ main(int argc, char *argv[])
         return 1;
     }
 
+
     for (i = 1; i < argc;) {
         int consumed;
 
@@ -161,13 +219,17 @@ main(int argc, char *argv[])
             }
         }
         if (consumed < 0) {
-            SDL_Log("Usage: %s %s [--target]\n",
-                    argv[0], SDLTest_CommonUsage(state));
+            static const char *options[] = { "[--target]", NULL };
+            SDLTest_CommonLogUsage(state, argv[0], options);
             quit(1);
         }
         i += consumed;
     }
     if (!SDLTest_CommonInit(state)) {
+        quit(2);
+    }
+
+    if (LoadSprite("icon.bmp", state->renderers[0]) < 0) {
         quit(2);
     }
 

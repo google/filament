@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,7 +26,6 @@
 #include "../SDL_internal.h"
 
 #include "SDL_stdinc.h"
-#include "SDL_assert.h"
 
 #if defined(HAVE_QSORT)
 void
@@ -64,7 +63,7 @@ SDL_qsort(void *base, size_t nmemb, size_t size, int (*compare) (const void *, c
 
 /*
 This code came from Gareth McCaughan, under the zlib license.
-Specifically this: https://www.mccaughan.org.uk/software/qsort.c-1.14
+Specifically this: https://www.mccaughan.org.uk/software/qsort.c-1.15
 
 Everything below this comment until the HAVE_QSORT #endif was from Gareth
 (any minor changes will be noted inline).
@@ -143,6 +142,10 @@ benefit!
  *   2016-02-21 v1.14 Replace licence with 2-clause BSD,
  *                    and clarify a couple of things in
  *                    comments. No code changes.
+ *   2016-03-10 v1.15 Fix bug kindly reported by Ryan Gordon
+ *                    (pre-insertion-sort messed up).
+ *                    Disable DEBUG_QSORT by default.
+ *                    Tweak comments very slightly.
  */
 
 /* BEGIN SDL CHANGE ... commented this out with an #if 0 block. --ryan. */
@@ -151,9 +154,9 @@ benefit!
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG_QSORT
+#undef DEBUG_QSORT
 
-static char _ID[]="<qsort.c gjm 1.14 2016-02-21>";
+static char _ID[]="<qsort.c gjm 1.15 2016-03-10>";
 #endif
 /* END SDL CHANGE ... commented this out with an #if 0 block. --ryan. */
 
@@ -316,7 +319,9 @@ typedef struct { char * first; char * last; } stack_entry;
  * We find the smallest element from the first |nmemb|,
  * or the first |limit|, whichever is smaller;
  * therefore we must have ensured that the globally smallest
- * element is in the first |limit|.
+ * element is in the first |limit| (because our
+ * quicksort recursion bottoms out only once we
+ * reach subarrays smaller than |limit|).
  */
 #define PreInsertion(swapper,limit,sz)		\
   first=base;					\
@@ -499,7 +504,7 @@ fprintf(stderr, "after partitioning first=#%lu last=#%lu\n", (first-(char*)base)
       Recurse(TRUNC_words)
     }
   }
-  PreInsertion(SWAP_words,(TRUNC_words/WORD_BYTES),WORD_BYTES);
+  PreInsertion(SWAP_words,TRUNC_words/WORD_BYTES,WORD_BYTES);
   /* Now do insertion sort. */
   last=((char*)base)+nmemb*WORD_BYTES;
   for (first=((char*)base)+WORD_BYTES;first!=last;first+=WORD_BYTES) {
@@ -526,7 +531,6 @@ extern void qsortG(void *base, size_t nmemb, size_t size,
   else
     qsort_words(base,nmemb,compare);
 }
-
 
 #endif /* HAVE_QSORT */
 

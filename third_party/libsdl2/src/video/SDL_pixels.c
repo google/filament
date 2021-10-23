@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -94,6 +94,7 @@ SDL_GetPixelFormatName(Uint32 format)
     CASE(SDL_PIXELFORMAT_INDEX8)
     CASE(SDL_PIXELFORMAT_RGB332)
     CASE(SDL_PIXELFORMAT_RGB444)
+    CASE(SDL_PIXELFORMAT_BGR444)
     CASE(SDL_PIXELFORMAT_RGB555)
     CASE(SDL_PIXELFORMAT_BGR555)
     CASE(SDL_PIXELFORMAT_ARGB4444)
@@ -321,12 +322,18 @@ SDL_MasksToPixelFormatEnum(int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask,
             Amask == 0x0000) {
             return SDL_PIXELFORMAT_RGB444;
         }
+        if (Rmask == 0x000F &&
+            Gmask == 0x00F0 &&
+            Bmask == 0x0F00 &&
+            Amask == 0x0000) {
+            return SDL_PIXELFORMAT_BGR444;
+        }
         break;
     case 15:
         if (Rmask == 0) {
             return SDL_PIXELFORMAT_RGB555;
         }
-	/* fallthrough */
+    /* fallthrough */
     case 16:
         if (Rmask == 0) {
             return SDL_PIXELFORMAT_RGB565;
@@ -794,6 +801,54 @@ SDL_FindColor(SDL_Palette * pal, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
     return (pixel);
 }
 
+/* Tell whether palette is opaque, and if it has an alpha_channel */
+void
+SDL_DetectPalette(SDL_Palette *pal, SDL_bool *is_opaque, SDL_bool *has_alpha_channel)
+{
+    int i;
+
+    {
+        SDL_bool all_opaque = SDL_TRUE;
+        for (i = 0; i < pal->ncolors; i++) {
+            Uint8 alpha_value = pal->colors[i].a;
+            if (alpha_value != SDL_ALPHA_OPAQUE) {
+                all_opaque = SDL_FALSE;
+                break;
+            }
+        }
+
+        if (all_opaque) {
+            /* Palette is opaque, with an alpha channel */
+            *is_opaque = SDL_TRUE;
+            *has_alpha_channel = SDL_TRUE;
+            return;
+        }
+    }
+
+    {
+        SDL_bool all_transparent = SDL_TRUE;
+        for (i = 0; i < pal->ncolors; i++) {
+            Uint8 alpha_value = pal->colors[i].a;
+            if (alpha_value != SDL_ALPHA_TRANSPARENT) {
+                all_transparent = SDL_FALSE;
+                break;
+            }
+        }
+
+        if (all_transparent) {
+            /* Palette is opaque, without an alpha channel */
+            *is_opaque = SDL_TRUE;
+            *has_alpha_channel = SDL_FALSE;
+            return;
+        }
+    }
+
+    /* Palette has alpha values */
+    *is_opaque = SDL_FALSE;
+    *has_alpha_channel = SDL_TRUE;
+}
+
+
 /* Find the opaque pixel value corresponding to an RGB triple */
 Uint32
 SDL_MapRGB(const SDL_PixelFormat * format, Uint8 r, Uint8 g, Uint8 b)
@@ -968,6 +1023,62 @@ SDL_AllocBlitMap(void)
     return (map);
 }
 
+
+typedef struct SDL_ListNode
+{
+    void *entry;
+    struct SDL_ListNode *next;
+} SDL_ListNode;
+
+void
+SDL_InvalidateAllBlitMap(SDL_Surface *surface)
+{
+    SDL_ListNode *l = surface->list_blitmap;
+
+    surface->list_blitmap = NULL;
+
+    while (l) {
+        SDL_ListNode *tmp = l;
+        SDL_InvalidateMap((SDL_BlitMap *)l->entry);
+        l = l->next;
+        SDL_free(tmp);
+    }
+}
+
+static void SDL_ListAdd(SDL_ListNode **head, void *ent);
+static void SDL_ListRemove(SDL_ListNode **head, void *ent);
+
+void
+SDL_ListAdd(SDL_ListNode **head, void *ent)
+{
+    SDL_ListNode *node = SDL_malloc(sizeof (*node));
+
+    if (node == NULL) {
+        SDL_OutOfMemory();
+        return;
+    }
+
+    node->entry = ent;
+    node->next = *head;
+    *head = node;
+}
+
+void
+SDL_ListRemove(SDL_ListNode **head, void *ent)
+{
+    SDL_ListNode **ptr = head;
+
+    while (*ptr) {
+        if ((*ptr)->entry == ent) {
+            SDL_ListNode *tmp = *ptr;
+            *ptr = (*ptr)->next;
+            SDL_free(tmp);
+            return;
+        }
+        ptr = &(*ptr)->next;
+    }
+}
+
 void
 SDL_InvalidateMap(SDL_BlitMap * map)
 {
@@ -975,10 +1086,8 @@ SDL_InvalidateMap(SDL_BlitMap * map)
         return;
     }
     if (map->dst) {
-        /* Release our reference to the surface - see the note below */
-        if (--map->dst->refcount <= 0) {
-            SDL_FreeSurface(map->dst);
-        }
+        /* Un-register from the destination surface */
+        SDL_ListRemove((SDL_ListNode **)&(map->dst->list_blitmap), map);
     }
     map->dst = NULL;
     map->src_palette_version = 0;
@@ -996,9 +1105,11 @@ SDL_MapSurface(SDL_Surface * src, SDL_Surface * dst)
 
     /* Clear out any previous mapping */
     map = src->map;
+#if SDL_HAVE_RLE
     if ((src->flags & SDL_RLEACCEL) == SDL_RLEACCEL) {
         SDL_UnRLESurface(src, 1);
     }
+#endif
     SDL_InvalidateMap(map);
 
     /* Figure out what kind of mapping we're doing */
@@ -1047,14 +1158,8 @@ SDL_MapSurface(SDL_Surface * src, SDL_Surface * dst)
     map->dst = dst;
 
     if (map->dst) {
-        /* Keep a reference to this surface so it doesn't get deleted
-           while we're still pointing at it.
-
-           A better method would be for the destination surface to keep
-           track of surfaces that are mapped to it and automatically
-           invalidate them when it is freed, but this will do for now.
-        */
-        ++map->dst->refcount;
+        /* Register BlitMap to the destination surface, to be invalidated when needed */
+        SDL_ListAdd((SDL_ListNode **)&(map->dst->list_blitmap), map);
     }
 
     if (dstfmt->palette) {

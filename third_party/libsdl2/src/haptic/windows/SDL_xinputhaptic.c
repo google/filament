@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,7 +26,6 @@
 
 #if SDL_HAPTIC_XINPUT
 
-#include "SDL_assert.h"
 #include "SDL_hints.h"
 #include "SDL_timer.h"
 #include "SDL_windowshaptic_c.h"
@@ -51,14 +50,14 @@ SDL_XINPUT_HapticInit(void)
     if (loaded_xinput) {
         DWORD i;
         for (i = 0; i < XUSER_MAX_COUNT; i++) {
-            SDL_XINPUT_MaybeAddDevice(i);
+            SDL_XINPUT_HapticMaybeAddDevice(i);
         }
     }
     return 0;
 }
 
 int
-SDL_XINPUT_MaybeAddDevice(const DWORD dwUserid)
+SDL_XINPUT_HapticMaybeAddDevice(const DWORD dwUserid)
 {
     const Uint8 userid = (Uint8)dwUserid;
     SDL_hapticlist_item *item;
@@ -107,7 +106,7 @@ SDL_XINPUT_MaybeAddDevice(const DWORD dwUserid)
 }
 
 int
-SDL_XINPUT_MaybeRemoveDevice(const DWORD dwUserid)
+SDL_XINPUT_HapticMaybeRemoveDevice(const DWORD dwUserid)
 {
     const Uint8 userid = (Uint8)dwUserid;
     SDL_hapticlist_item *item;
@@ -378,13 +377,13 @@ SDL_XINPUT_HapticInit(void)
 }
 
 int
-SDL_XINPUT_MaybeAddDevice(const DWORD dwUserid)
+SDL_XINPUT_HapticMaybeAddDevice(const DWORD dwUserid)
 {
     return SDL_Unsupported();
 }
 
 int
-SDL_XINPUT_MaybeRemoveDevice(const DWORD dwUserid)
+SDL_XINPUT_HapticMaybeRemoveDevice(const DWORD dwUserid)
 {
     return SDL_Unsupported();
 }

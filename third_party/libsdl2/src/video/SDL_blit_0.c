@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,6 +19,8 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 #include "../SDL_internal.h"
+
+#if SDL_HAVE_BLIT_0
 
 #include "SDL_video.h"
 #include "SDL_blit.h"
@@ -479,5 +481,7 @@ SDL_CalculateBlit0(SDL_Surface * surface)
     }
     return (SDL_BlitFunc) NULL;
 }
+
+#endif /* SDL_HAVE_BLIT_0 */
 
 /* vi: set ts=4 sw=4 expandtab: */

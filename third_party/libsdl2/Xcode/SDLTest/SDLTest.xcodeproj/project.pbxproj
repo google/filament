@@ -1134,36 +1134,36 @@
 
 /* Begin PBXFileReference section */
 		0017958C10741F7900F5D044 /* testatomic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testatomic; sourceTree = BUILT_PRODUCTS_DIR; };
-		0017958F1074216E00F5D044 /* testatomic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testatomic.c; path = ../../test/testatomic.c; sourceTree = SOURCE_ROOT; };
+		0017958F1074216E00F5D044 /* testatomic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testatomic.c; sourceTree = "<group>"; };
 		001795AD107421BF00F5D044 /* testaudioinfo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testaudioinfo; sourceTree = BUILT_PRODUCTS_DIR; };
-		001795B01074222D00F5D044 /* testaudioinfo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testaudioinfo.c; path = ../../test/testaudioinfo.c; sourceTree = SOURCE_ROOT; };
+		001795B01074222D00F5D044 /* testaudioinfo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testaudioinfo.c; sourceTree = "<group>"; };
 		0017972110742F3200F5D044 /* testgl2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testgl2; sourceTree = BUILT_PRODUCTS_DIR; };
-		0017972710742FB900F5D044 /* testgl2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testgl2.c; path = ../../test/testgl2.c; sourceTree = SOURCE_ROOT; };
+		0017972710742FB900F5D044 /* testgl2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testgl2.c; sourceTree = "<group>"; };
 		00179748107430D600F5D044 /* testhaptic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testhaptic; sourceTree = BUILT_PRODUCTS_DIR; };
-		0017974E1074315700F5D044 /* testhaptic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testhaptic.c; path = ../../test/testhaptic.c; sourceTree = SOURCE_ROOT; };
+		0017974E1074315700F5D044 /* testhaptic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testhaptic.c; sourceTree = "<group>"; };
 		0017976E107431B300F5D044 /* testdraw2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testdraw2; sourceTree = BUILT_PRODUCTS_DIR; };
-		001797711074320D00F5D044 /* testdraw2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testdraw2.c; path = ../../test/testdraw2.c; sourceTree = SOURCE_ROOT; };
+		001797711074320D00F5D044 /* testdraw2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testdraw2.c; sourceTree = "<group>"; };
 		0017978E107432AE00F5D044 /* testime */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testime; sourceTree = BUILT_PRODUCTS_DIR; };
-		00179791107432FA00F5D044 /* testime.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testime.c; path = ../../test/testime.c; sourceTree = SOURCE_ROOT; };
+		00179791107432FA00F5D044 /* testime.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testime.c; sourceTree = "<group>"; };
 		001797AE1074334C00F5D044 /* testintersections */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testintersections; sourceTree = BUILT_PRODUCTS_DIR; };
-		001797B31074339C00F5D044 /* testintersections.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testintersections.c; path = ../../test/testintersections.c; sourceTree = SOURCE_ROOT; };
+		001797B31074339C00F5D044 /* testintersections.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testintersections.c; sourceTree = "<group>"; };
 		001797D0107433C600F5D044 /* testloadso */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testloadso; sourceTree = BUILT_PRODUCTS_DIR; };
-		001797D31074343E00F5D044 /* testloadso.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testloadso.c; path = ../../test/testloadso.c; sourceTree = SOURCE_ROOT; };
+		001797D31074343E00F5D044 /* testloadso.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testloadso.c; sourceTree = "<group>"; };
 		001798121074355200F5D044 /* testmultiaudio */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmultiaudio; sourceTree = BUILT_PRODUCTS_DIR; };
-		001798151074359B00F5D044 /* testmultiaudio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testmultiaudio.c; path = ../../test/testmultiaudio.c; sourceTree = SOURCE_ROOT; };
-		0017985A107436ED00F5D044 /* testnative.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testnative.c; path = ../../test/testnative.c; sourceTree = SOURCE_ROOT; };
-		0017985B107436ED00F5D044 /* testnative.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = testnative.h; path = ../../test/testnative.h; sourceTree = SOURCE_ROOT; };
-		0017985C107436ED00F5D044 /* testnativecocoa.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = testnativecocoa.m; path = ../../test/testnativecocoa.m; sourceTree = SOURCE_ROOT; };
-		00179872107438D000F5D044 /* testnativex11.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testnativex11.c; path = ../../test/testnativex11.c; sourceTree = SOURCE_ROOT; };
+		001798151074359B00F5D044 /* testmultiaudio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testmultiaudio.c; sourceTree = "<group>"; };
+		0017985A107436ED00F5D044 /* testnative.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testnative.c; sourceTree = "<group>"; };
+		0017985B107436ED00F5D044 /* testnative.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = testnative.h; sourceTree = "<group>"; };
+		0017985C107436ED00F5D044 /* testnativecocoa.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = testnativecocoa.m; sourceTree = "<group>"; };
+		00179872107438D000F5D044 /* testnativex11.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testnativex11.c; sourceTree = "<group>"; };
 		001798941074392D00F5D044 /* testnative */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testnative; sourceTree = BUILT_PRODUCTS_DIR; };
 		001798B5107439DF00F5D044 /* testpower */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testpower; sourceTree = BUILT_PRODUCTS_DIR; };
-		001798B910743A4900F5D044 /* testpower.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testpower.c; path = ../../test/testpower.c; sourceTree = SOURCE_ROOT; };
+		001798B910743A4900F5D044 /* testpower.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testpower.c; sourceTree = "<group>"; };
 		001798F210743BEC00F5D044 /* testresample */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testresample; sourceTree = BUILT_PRODUCTS_DIR; };
-		001798F910743E9200F5D044 /* testresample.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testresample.c; path = ../../test/testresample.c; sourceTree = SOURCE_ROOT; };
+		001798F910743E9200F5D044 /* testresample.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testresample.c; sourceTree = "<group>"; };
 		0017991610743F1000F5D044 /* testsprite2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testsprite2; sourceTree = BUILT_PRODUCTS_DIR; };
-		0017991910743F5300F5D044 /* testsprite2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testsprite2.c; path = ../../test/testsprite2.c; sourceTree = SOURCE_ROOT; };
+		0017991910743F5300F5D044 /* testsprite2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testsprite2.c; sourceTree = "<group>"; };
 		0017993810743FB700F5D044 /* testwm2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testwm2; sourceTree = BUILT_PRODUCTS_DIR; };
-		0017993B10743FEF00F5D044 /* testwm2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testwm2.c; path = ../../test/testwm2.c; sourceTree = SOURCE_ROOT; };
+		0017993B10743FEF00F5D044 /* testwm2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testwm2.c; sourceTree = "<group>"; };
 		002A863B10730545007319AE /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = /System/Library/Frameworks/CoreAudio.framework; sourceTree = "<absolute>"; };
 		002A863C10730545007319AE /* ForceFeedback.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ForceFeedback.framework; path = /System/Library/Frameworks/ForceFeedback.framework; sourceTree = "<absolute>"; };
 		002A863D10730545007319AE /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
@@ -1173,37 +1173,37 @@
 		002A873910730675007319AE /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		002F33A709CA188600EBEB88 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		002F341209CA1BFF00EBEB88 /* testfile */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testfile; sourceTree = BUILT_PRODUCTS_DIR; };
-		002F341709CA1C5B00EBEB88 /* testfile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testfile.c; path = ../../test/testfile.c; sourceTree = SOURCE_ROOT; };
+		002F341709CA1C5B00EBEB88 /* testfile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testfile.c; sourceTree = "<group>"; };
 		002F343109CA1F0300EBEB88 /* testiconv */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testiconv; sourceTree = BUILT_PRODUCTS_DIR; };
-		002F343609CA1F6F00EBEB88 /* testiconv.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testiconv.c; path = ../../test/testiconv.c; sourceTree = SOURCE_ROOT; };
+		002F343609CA1F6F00EBEB88 /* testiconv.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testiconv.c; sourceTree = "<group>"; };
 		002F344D09CA1FB300EBEB88 /* testoverlay2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testoverlay2; sourceTree = BUILT_PRODUCTS_DIR; };
-		002F345209CA201C00EBEB88 /* testoverlay2.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testoverlay2.c; path = ../../test/testoverlay2.c; sourceTree = SOURCE_ROOT; };
+		002F345209CA201C00EBEB88 /* testoverlay2.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testoverlay2.c; sourceTree = "<group>"; };
 		002F346A09CA204F00EBEB88 /* testplatform */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testplatform; sourceTree = BUILT_PRODUCTS_DIR; };
-		002F346F09CA20A600EBEB88 /* testplatform.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testplatform.c; path = ../../test/testplatform.c; sourceTree = SOURCE_ROOT; };
+		002F346F09CA20A600EBEB88 /* testplatform.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testplatform.c; sourceTree = "<group>"; };
 		003FA63A093FFD41000C53B3 /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = ../SDL/SDL.xcodeproj; sourceTree = SOURCE_ROOT; };
-		00794E5D09D20839003FC8A1 /* icon.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; name = icon.bmp; path = ../../test/icon.bmp; sourceTree = SOURCE_ROOT; };
-		00794E5E09D20839003FC8A1 /* moose.dat */ = {isa = PBXFileReference; lastKnownFileType = file; name = moose.dat; path = ../../test/moose.dat; sourceTree = SOURCE_ROOT; };
-		00794E5F09D20839003FC8A1 /* picture.xbm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = picture.xbm; path = ../../test/picture.xbm; sourceTree = SOURCE_ROOT; };
-		00794E6109D20839003FC8A1 /* sample.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; name = sample.bmp; path = ../../test/sample.bmp; sourceTree = SOURCE_ROOT; };
-		00794E6209D20839003FC8A1 /* sample.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = sample.wav; path = ../../test/sample.wav; sourceTree = SOURCE_ROOT; };
-		00794E6309D20839003FC8A1 /* utf8.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; name = utf8.txt; path = ../../test/utf8.txt; sourceTree = SOURCE_ROOT; };
-		083E4872006D84C97F000001 /* loopwave.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = loopwave.c; path = ../../test/loopwave.c; sourceTree = SOURCE_ROOT; };
-		083E4878006D85357F000001 /* testerror.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testerror.c; path = ../../test/testerror.c; sourceTree = SOURCE_ROOT; };
-		083E487E006D86A17F000001 /* testsem.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testsem.c; path = ../../test/testsem.c; sourceTree = SOURCE_ROOT; };
-		083E4880006D86A17F000001 /* testtimer.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testtimer.c; path = ../../test/testtimer.c; sourceTree = SOURCE_ROOT; };
-		083E4882006D86A17F000001 /* testver.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testver.c; path = ../../test/testver.c; sourceTree = SOURCE_ROOT; };
-		083E4887006D86A17F000001 /* torturethread.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = torturethread.c; path = ../../test/torturethread.c; sourceTree = SOURCE_ROOT; };
-		092D6D10FFB30A2C7F000001 /* checkkeys.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = checkkeys.c; path = ../../test/checkkeys.c; sourceTree = SOURCE_ROOT; };
-		092D6D58FFB311A97F000001 /* testthread.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testthread.c; path = ../../test/testthread.c; sourceTree = SOURCE_ROOT; };
-		092D6D62FFB312AA7F000001 /* testjoystick.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testjoystick.c; path = ../../test/testjoystick.c; sourceTree = SOURCE_ROOT; };
-		092D6D6CFFB313437F000001 /* testkeys.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testkeys.c; path = ../../test/testkeys.c; sourceTree = SOURCE_ROOT; };
-		092D6D75FFB313BB7F000001 /* testlock.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = testlock.c; path = ../../test/testlock.c; sourceTree = SOURCE_ROOT; };
+		00794E5D09D20839003FC8A1 /* icon.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = icon.bmp; sourceTree = "<group>"; };
+		00794E5E09D20839003FC8A1 /* moose.dat */ = {isa = PBXFileReference; lastKnownFileType = file; path = moose.dat; sourceTree = "<group>"; };
+		00794E5F09D20839003FC8A1 /* picture.xbm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = picture.xbm; sourceTree = "<group>"; };
+		00794E6109D20839003FC8A1 /* sample.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = sample.bmp; sourceTree = "<group>"; };
+		00794E6209D20839003FC8A1 /* sample.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = sample.wav; sourceTree = "<group>"; };
+		00794E6309D20839003FC8A1 /* utf8.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = utf8.txt; sourceTree = "<group>"; };
+		083E4872006D84C97F000001 /* loopwave.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = loopwave.c; sourceTree = "<group>"; };
+		083E4878006D85357F000001 /* testerror.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testerror.c; sourceTree = "<group>"; };
+		083E487E006D86A17F000001 /* testsem.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testsem.c; sourceTree = "<group>"; };
+		083E4880006D86A17F000001 /* testtimer.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testtimer.c; sourceTree = "<group>"; };
+		083E4882006D86A17F000001 /* testver.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testver.c; sourceTree = "<group>"; };
+		083E4887006D86A17F000001 /* torturethread.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = torturethread.c; sourceTree = "<group>"; };
+		092D6D10FFB30A2C7F000001 /* checkkeys.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = checkkeys.c; sourceTree = "<group>"; };
+		092D6D58FFB311A97F000001 /* testthread.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testthread.c; sourceTree = "<group>"; };
+		092D6D62FFB312AA7F000001 /* testjoystick.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testjoystick.c; sourceTree = "<group>"; };
+		092D6D6CFFB313437F000001 /* testkeys.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testkeys.c; sourceTree = "<group>"; };
+		092D6D75FFB313BB7F000001 /* testlock.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = testlock.c; sourceTree = "<group>"; };
 		4537749212091504002F0F45 /* testshape */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testshape; sourceTree = BUILT_PRODUCTS_DIR; };
-		453774A4120915E3002F0F45 /* testshape.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testshape.c; path = ../../test/testshape.c; sourceTree = SOURCE_ROOT; };
+		453774A4120915E3002F0F45 /* testshape.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testshape.c; sourceTree = "<group>"; };
 		66E88E5B203B733C0004D44E /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		66E88E8A203B778F0004D44E /* testyuv_cvt.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testyuv_cvt.c; path = ../../test/testyuv_cvt.c; sourceTree = "<group>"; };
-		AAF02FF41F90089800B9A9FB /* SDL_test_memory.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_memory.c; path = ../../src/test/SDL_test_memory.c; sourceTree = "<group>"; };
-		BBFC088E164C6820003E6A99 /* testgamecontroller.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testgamecontroller.c; path = ../../test/testgamecontroller.c; sourceTree = "<group>"; };
+		66E88E8A203B778F0004D44E /* testyuv_cvt.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testyuv_cvt.c; sourceTree = "<group>"; };
+		AAF02FF41F90089800B9A9FB /* SDL_test_memory.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_memory.c; sourceTree = "<group>"; };
+		BBFC088E164C6820003E6A99 /* testgamecontroller.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testgamecontroller.c; sourceTree = "<group>"; };
 		BBFC08CD164C6862003E6A99 /* testgamecontroller */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testgamecontroller; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEC566B60761D90300A33029 /* checkkeys */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = checkkeys; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEC566D10761D90300A33029 /* loopwave */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = loopwave; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1216,37 +1216,37 @@
 		BEC567980761D90500A33029 /* testtimer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testtimer; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEC567B20761D90500A33029 /* testversion */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testversion; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEC567F50761D90600A33029 /* torturethread */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = torturethread; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB0F48D717CA51D2008798C5 /* testdrawchessboard.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testdrawchessboard.c; path = ../../test/testdrawchessboard.c; sourceTree = "<group>"; };
-		DB0F48D817CA51D2008798C5 /* testfilesystem.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testfilesystem.c; path = ../../test/testfilesystem.c; sourceTree = "<group>"; };
+		DB0F48D717CA51D2008798C5 /* testdrawchessboard.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testdrawchessboard.c; sourceTree = "<group>"; };
+		DB0F48D817CA51D2008798C5 /* testfilesystem.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testfilesystem.c; sourceTree = "<group>"; };
 		DB0F48EC17CA51E5008798C5 /* testdrawchessboard */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testdrawchessboard; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB0F490117CA5212008798C5 /* testfilesystem */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testfilesystem; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB166CBB16A1C74100A1396C /* testgesture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testgesture.c; path = ../../test/testgesture.c; sourceTree = "<group>"; };
-		DB166CBC16A1C74100A1396C /* testgles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testgles.c; path = ../../test/testgles.c; sourceTree = "<group>"; };
-		DB166CBD16A1C74100A1396C /* testmessage.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testmessage.c; path = ../../test/testmessage.c; sourceTree = "<group>"; };
-		DB166CBF16A1C74100A1396C /* testrelative.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testrelative.c; path = ../../test/testrelative.c; sourceTree = "<group>"; };
-		DB166CC016A1C74100A1396C /* testrendercopyex.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testrendercopyex.c; path = ../../test/testrendercopyex.c; sourceTree = "<group>"; };
-		DB166CC116A1C74100A1396C /* testrendertarget.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testrendertarget.c; path = ../../test/testrendertarget.c; sourceTree = "<group>"; };
-		DB166CC216A1C74100A1396C /* testrumble.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testrumble.c; path = ../../test/testrumble.c; sourceTree = "<group>"; };
-		DB166CC316A1C74100A1396C /* testscale.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testscale.c; path = ../../test/testscale.c; sourceTree = "<group>"; };
-		DB166CC416A1C74100A1396C /* testshader.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testshader.c; path = ../../test/testshader.c; sourceTree = "<group>"; };
-		DB166CC516A1C74100A1396C /* testspriteminimal.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = testspriteminimal.c; path = ../../test/testspriteminimal.c; sourceTree = "<group>"; };
-		DB166CC616A1C74100A1396C /* teststreaming.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = teststreaming.c; path = ../../test/teststreaming.c; sourceTree = "<group>"; };
+		DB166CBB16A1C74100A1396C /* testgesture.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testgesture.c; sourceTree = "<group>"; };
+		DB166CBC16A1C74100A1396C /* testgles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testgles.c; sourceTree = "<group>"; };
+		DB166CBD16A1C74100A1396C /* testmessage.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testmessage.c; sourceTree = "<group>"; };
+		DB166CBF16A1C74100A1396C /* testrelative.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testrelative.c; sourceTree = "<group>"; };
+		DB166CC016A1C74100A1396C /* testrendercopyex.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testrendercopyex.c; sourceTree = "<group>"; };
+		DB166CC116A1C74100A1396C /* testrendertarget.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testrendertarget.c; sourceTree = "<group>"; };
+		DB166CC216A1C74100A1396C /* testrumble.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testrumble.c; sourceTree = "<group>"; };
+		DB166CC316A1C74100A1396C /* testscale.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testscale.c; sourceTree = "<group>"; };
+		DB166CC416A1C74100A1396C /* testshader.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testshader.c; sourceTree = "<group>"; };
+		DB166CC516A1C74100A1396C /* testspriteminimal.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = testspriteminimal.c; sourceTree = "<group>"; };
+		DB166CC616A1C74100A1396C /* teststreaming.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = teststreaming.c; sourceTree = "<group>"; };
 		DB166D7F16A1D12400A1396C /* libSDL_test.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSDL_test.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB166D8416A1D1A500A1396C /* SDL_test_assert.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_assert.c; path = ../../src/test/SDL_test_assert.c; sourceTree = "<group>"; };
-		DB166D8516A1D1A500A1396C /* SDL_test_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_common.c; path = ../../src/test/SDL_test_common.c; sourceTree = "<group>"; };
-		DB166D8616A1D1A500A1396C /* SDL_test_compare.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_compare.c; path = ../../src/test/SDL_test_compare.c; sourceTree = "<group>"; };
-		DB166D8716A1D1A500A1396C /* SDL_test_crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_crc32.c; path = ../../src/test/SDL_test_crc32.c; sourceTree = "<group>"; };
-		DB166D8816A1D1A500A1396C /* SDL_test_font.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_font.c; path = ../../src/test/SDL_test_font.c; sourceTree = "<group>"; };
-		DB166D8916A1D1A500A1396C /* SDL_test_fuzzer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_fuzzer.c; path = ../../src/test/SDL_test_fuzzer.c; sourceTree = "<group>"; };
-		DB166D8A16A1D1A500A1396C /* SDL_test_harness.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_harness.c; path = ../../src/test/SDL_test_harness.c; sourceTree = "<group>"; };
-		DB166D8B16A1D1A500A1396C /* SDL_test_imageBlit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageBlit.c; path = ../../src/test/SDL_test_imageBlit.c; sourceTree = "<group>"; };
-		DB166D8C16A1D1A500A1396C /* SDL_test_imageBlitBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageBlitBlend.c; path = ../../src/test/SDL_test_imageBlitBlend.c; sourceTree = "<group>"; };
-		DB166D8D16A1D1A500A1396C /* SDL_test_imageFace.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageFace.c; path = ../../src/test/SDL_test_imageFace.c; sourceTree = "<group>"; };
-		DB166D8E16A1D1A500A1396C /* SDL_test_imagePrimitives.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imagePrimitives.c; path = ../../src/test/SDL_test_imagePrimitives.c; sourceTree = "<group>"; };
-		DB166D8F16A1D1A500A1396C /* SDL_test_imagePrimitivesBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imagePrimitivesBlend.c; path = ../../src/test/SDL_test_imagePrimitivesBlend.c; sourceTree = "<group>"; };
-		DB166D9016A1D1A500A1396C /* SDL_test_log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_log.c; path = ../../src/test/SDL_test_log.c; sourceTree = "<group>"; };
-		DB166D9116A1D1A500A1396C /* SDL_test_md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_md5.c; path = ../../src/test/SDL_test_md5.c; sourceTree = "<group>"; };
-		DB166D9216A1D1A500A1396C /* SDL_test_random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_random.c; path = ../../src/test/SDL_test_random.c; sourceTree = "<group>"; };
+		DB166D8416A1D1A500A1396C /* SDL_test_assert.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_assert.c; sourceTree = "<group>"; };
+		DB166D8516A1D1A500A1396C /* SDL_test_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_common.c; sourceTree = "<group>"; };
+		DB166D8616A1D1A500A1396C /* SDL_test_compare.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_compare.c; sourceTree = "<group>"; };
+		DB166D8716A1D1A500A1396C /* SDL_test_crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_crc32.c; sourceTree = "<group>"; };
+		DB166D8816A1D1A500A1396C /* SDL_test_font.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_font.c; sourceTree = "<group>"; };
+		DB166D8916A1D1A500A1396C /* SDL_test_fuzzer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_fuzzer.c; sourceTree = "<group>"; };
+		DB166D8A16A1D1A500A1396C /* SDL_test_harness.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_harness.c; sourceTree = "<group>"; };
+		DB166D8B16A1D1A500A1396C /* SDL_test_imageBlit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_imageBlit.c; sourceTree = "<group>"; };
+		DB166D8C16A1D1A500A1396C /* SDL_test_imageBlitBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_imageBlitBlend.c; sourceTree = "<group>"; };
+		DB166D8D16A1D1A500A1396C /* SDL_test_imageFace.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_imageFace.c; sourceTree = "<group>"; };
+		DB166D8E16A1D1A500A1396C /* SDL_test_imagePrimitives.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_imagePrimitives.c; sourceTree = "<group>"; };
+		DB166D8F16A1D1A500A1396C /* SDL_test_imagePrimitivesBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_imagePrimitivesBlend.c; sourceTree = "<group>"; };
+		DB166D9016A1D1A500A1396C /* SDL_test_log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_log.c; sourceTree = "<group>"; };
+		DB166D9116A1D1A500A1396C /* SDL_test_md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_md5.c; sourceTree = "<group>"; };
+		DB166D9216A1D1A500A1396C /* SDL_test_random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_test_random.c; sourceTree = "<group>"; };
 		DB166DBF16A1D2F600A1396C /* testgesture */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testgesture; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB166DD516A1D36A00A1396C /* testmessage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testmessage; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB166DEE16A1D50C00A1396C /* testrelative */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testrelative; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1257,16 +1257,16 @@
 		DB166E6816A1D6F300A1396C /* testshader */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testshader; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB166E7E16A1D78400A1396C /* testspriteminimal */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testspriteminimal; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB166E9116A1D78C00A1396C /* teststreaming */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = teststreaming; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB166ECF16A1D87000A1396C /* shapes */ = {isa = PBXFileReference; lastKnownFileType = folder; name = shapes; path = ../../test/shapes; sourceTree = "<group>"; };
+		DB166ECF16A1D87000A1396C /* shapes */ = {isa = PBXFileReference; lastKnownFileType = folder; path = shapes; sourceTree = "<group>"; };
 		DB445EF818184B7000B306B0 /* testdropfile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = testdropfile.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB445EFA18184BB600B306B0 /* testdropfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testdropfile.c; path = ../../test/testdropfile.c; sourceTree = "<group>"; };
+		DB445EFA18184BB600B306B0 /* testdropfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testdropfile.c; sourceTree = "<group>"; };
 		DB89957E18A19ABA0092407C /* testhotplug */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = testhotplug; sourceTree = BUILT_PRODUCTS_DIR; };
-		DB89958318A19B130092407C /* testhotplug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = testhotplug.c; path = ../../test/testhotplug.c; sourceTree = "<group>"; };
-		DBBC552C182831D700F3CA8D /* TestDropFile-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TestDropFile-Info.plist"; sourceTree = "<group>"; };
-		DBEC54D11A1A811D005B1EAB /* controllermap.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = controllermap.c; path = ../../test/controllermap.c; sourceTree = "<group>"; };
-		DBEC54D61A1A8145005B1EAB /* axis.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; name = axis.bmp; path = ../../test/axis.bmp; sourceTree = "<group>"; };
-		DBEC54D71A1A8145005B1EAB /* button.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; name = button.bmp; path = ../../test/button.bmp; sourceTree = "<group>"; };
-		DBEC54D81A1A8145005B1EAB /* controllermap.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; name = controllermap.bmp; path = ../../test/controllermap.bmp; sourceTree = "<group>"; };
+		DB89958318A19B130092407C /* testhotplug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = testhotplug.c; sourceTree = "<group>"; };
+		DBBC552C182831D700F3CA8D /* TestDropFile-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "TestDropFile-Info.plist"; sourceTree = SOURCE_ROOT; };
+		DBEC54D11A1A811D005B1EAB /* controllermap.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = controllermap.c; sourceTree = "<group>"; };
+		DBEC54D61A1A8145005B1EAB /* axis.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = axis.bmp; sourceTree = "<group>"; };
+		DBEC54D71A1A8145005B1EAB /* button.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = button.bmp; sourceTree = "<group>"; };
+		DBEC54D81A1A8145005B1EAB /* controllermap.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = controllermap.bmp; sourceTree = "<group>"; };
 		DBEC54EA1A1A81C3005B1EAB /* controllermap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = controllermap; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA73672219A54A90004122E4 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = /System/Library/Frameworks/CoreVideo.framework; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
@@ -2165,6 +2165,7 @@
 				00794E6309D20839003FC8A1 /* utf8.txt */,
 			);
 			name = Resources;
+			path = ../../test;
 			sourceTree = "<group>";
 		};
 		08FB7794FE84155DC02AAC07 /* SDLTest */ = {
@@ -2238,6 +2239,7 @@
 				083E4887006D86A17F000001 /* torturethread.c */,
 			);
 			name = Source;
+			path = ../../test;
 			sourceTree = "<group>";
 		};
 		1AB674ADFE9D54B511CA2CBB /* Products */ = {
@@ -2323,6 +2325,7 @@
 				DB166D9216A1D1A500A1396C /* SDL_test_random.c */,
 			);
 			name = SDL_Test;
+			path = ../../src/test;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -4037,6 +4040,7 @@
 		002A85B21073008E007319AE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SRCROOT)/../SDL/build/$(CONFIGURATION)",
 					"$(HOME)/Library/Frameworks",
@@ -4163,6 +4167,7 @@
 		002A85D41073009D007319AE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SRCROOT)/../SDL/build/$(CONFIGURATION)",
 					"$(HOME)/Library/Frameworks",

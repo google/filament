@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,7 +18,6 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-
 #include "../../SDL_internal.h"
 
 #if SDL_VIDEO_DRIVER_COCOA
@@ -27,7 +26,6 @@
 #include "SDL_shape.h"
 #include "SDL_cocoashape.h"
 #include "../SDL_sysvideo.h"
-#include "SDL_assert.h"
 
 SDL_WindowShaper*
 Cocoa_CreateShaper(SDL_Window* window)
@@ -37,14 +35,14 @@ Cocoa_CreateShaper(SDL_Window* window)
 
     [windata->nswindow setStyleMask:NSWindowStyleMaskBorderless];
 
-    SDL_WindowShaper* result = result = malloc(sizeof(SDL_WindowShaper));
+    SDL_WindowShaper* result = (SDL_WindowShaper *)SDL_malloc(sizeof(SDL_WindowShaper));
     result->window = window;
     result->mode.mode = ShapeModeDefault;
     result->mode.parameters.binarizationCutoff = 1;
     result->userx = result->usery = 0;
     window->shaper = result;
 
-    SDL_ShapeData* data = malloc(sizeof(SDL_ShapeData));
+    SDL_ShapeData* data = (SDL_ShapeData *)SDL_malloc(sizeof(SDL_ShapeData));
     result->driverdata = data;
     data->context = [windata->nswindow graphicsContext];
     data->saved = SDL_FALSE;
@@ -88,10 +86,10 @@ Cocoa_SetWindowShape(SDL_WindowShaper *shaper, SDL_Surface *shape, SDL_WindowSha
     [NSGraphicsContext setCurrentContext:data->context];
 
     [[NSColor clearColor] set];
-    NSRectFill([[windata->nswindow contentView] frame]);
+    NSRectFill([windata->sdlContentView frame]);
     data->shape = SDL_CalculateShapeTree(*shape_mode,shape);
 
-    closure.view = [windata->nswindow contentView];
+    closure.view = windata->sdlContentView;
     closure.path = [NSBezierPath bezierPath];
     closure.window = shaper->window;
     SDL_TraverseShapeTree(data->shape,&ConvertRects,&closure);

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -107,7 +107,7 @@ main(int argc, char *argv[])
     now = SDL_GetPerformanceCounter();
     SDL_Log("1 million iterations of ticktock took %f ms\n", (double)((now - start)*1000) / SDL_GetPerformanceFrequency());
 
-    SDL_Log("Performance counter frequency: %"SDL_PRIu64"\n", (unsigned long long) SDL_GetPerformanceFrequency());
+    SDL_Log("Performance counter frequency: %"SDL_PRIu64"\n", SDL_GetPerformanceFrequency());
     start32 = SDL_GetTicks();
     start = SDL_GetPerformanceCounter();
     SDL_Delay(1000);

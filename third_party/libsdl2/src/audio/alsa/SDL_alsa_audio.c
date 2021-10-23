@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,13 +22,16 @@
 
 #if SDL_AUDIO_DRIVER_ALSA
 
+#ifndef SDL_ALSA_NON_BLOCKING
+#define SDL_ALSA_NON_BLOCKING 0
+#endif
+
 /* Allow access to a raw mixing buffer */
 
 #include <sys/types.h>
 #include <signal.h>             /* For kill() */
 #include <string.h>
 
-#include "SDL_assert.h"
 #include "SDL_timer.h"
 #include "SDL_audio.h"
 #include "../SDL_audio_c.h"
@@ -68,7 +71,9 @@ static int (*ALSA_snd_pcm_hw_params_set_period_size_near)
   (snd_pcm_t *, snd_pcm_hw_params_t *, snd_pcm_uframes_t *, int *);
 static int (*ALSA_snd_pcm_hw_params_get_period_size)
   (const snd_pcm_hw_params_t *, snd_pcm_uframes_t *, int *);
-static int (*ALSA_snd_pcm_hw_params_set_periods_near)
+static int (*ALSA_snd_pcm_hw_params_set_periods_min)
+  (snd_pcm_t *, snd_pcm_hw_params_t *, unsigned int *, int *);
+static int (*ALSA_snd_pcm_hw_params_set_periods_first)
   (snd_pcm_t *, snd_pcm_hw_params_t *, unsigned int *, int *);
 static int (*ALSA_snd_pcm_hw_params_get_periods)
   (const snd_pcm_hw_params_t *, unsigned int *, int *);
@@ -90,6 +95,7 @@ static int (*ALSA_snd_pcm_reset)(snd_pcm_t *);
 static int (*ALSA_snd_device_name_hint) (int, const char *, void ***);
 static char* (*ALSA_snd_device_name_get_hint) (const void *, const char *);
 static int (*ALSA_snd_device_name_free_hint) (void **);
+static snd_pcm_sframes_t (*ALSA_snd_pcm_avail)(snd_pcm_t *);
 #ifdef SND_CHMAP_API_VERSION
 static snd_pcm_chmap_t* (*ALSA_snd_pcm_get_chmap) (snd_pcm_t *);
 static int (*ALSA_snd_pcm_chmap_print) (const snd_pcm_chmap_t *map, size_t maxlen, char *buf);
@@ -143,7 +149,8 @@ load_alsa_syms(void)
     SDL_ALSA_SYM(snd_pcm_hw_params_set_rate_near);
     SDL_ALSA_SYM(snd_pcm_hw_params_set_period_size_near);
     SDL_ALSA_SYM(snd_pcm_hw_params_get_period_size);
-    SDL_ALSA_SYM(snd_pcm_hw_params_set_periods_near);
+    SDL_ALSA_SYM(snd_pcm_hw_params_set_periods_min);
+    SDL_ALSA_SYM(snd_pcm_hw_params_set_periods_first);
     SDL_ALSA_SYM(snd_pcm_hw_params_get_periods);
     SDL_ALSA_SYM(snd_pcm_hw_params_set_buffer_size_near);
     SDL_ALSA_SYM(snd_pcm_hw_params_get_buffer_size);
@@ -158,6 +165,7 @@ load_alsa_syms(void)
     SDL_ALSA_SYM(snd_device_name_hint);
     SDL_ALSA_SYM(snd_device_name_get_hint);
     SDL_ALSA_SYM(snd_device_name_free_hint);
+    SDL_ALSA_SYM(snd_pcm_avail);
 #ifdef SND_CHMAP_API_VERSION
     SDL_ALSA_SYM(snd_pcm_get_chmap);
     SDL_ALSA_SYM(snd_pcm_chmap_print);
@@ -243,7 +251,24 @@ get_audio_device(void *handle, const int channels)
 static void
 ALSA_WaitDevice(_THIS)
 {
-    /* We're in blocking mode, so there's nothing to do here */
+#if SDL_ALSA_NON_BLOCKING
+    const snd_pcm_sframes_t needed = (snd_pcm_sframes_t) this->spec.samples;
+    while (SDL_AtomicGet(&this->enabled)) {
+        const snd_pcm_sframes_t rc = ALSA_snd_pcm_avail(this->hidden->pcm_handle);
+        if ((rc < 0) && (rc != -EAGAIN)) {
+            /* Hmm, not much we can do - abort */
+            fprintf(stderr, "ALSA snd_pcm_avail failed (unrecoverable): %s\n",
+                        ALSA_snd_strerror(rc));
+            SDL_OpenedAudioDeviceDisconnected(this);
+            return;
+        } else if (rc < needed) {
+            const Uint32 delay = ((needed - (SDL_max(rc, 0))) * 1000) / this->spec.freq;
+            SDL_Delay(SDL_max(delay, 10));
+        } else {
+            break;  /* ready to go! */
+        }
+    }
+#endif
 }
 
 
@@ -314,7 +339,6 @@ swizzle_alsa_channels(_THIS, void *buffer, Uint32 bufferlen)
 static void
 no_swizzle(_THIS, void *buffer, Uint32 bufferlen)
 {
-    return;
 }
 #endif /* SND_CHMAP_API_VERSION */
 
@@ -323,7 +347,7 @@ static void
 ALSA_PlayDevice(_THIS)
 {
     const Uint8 *sample_buf = (const Uint8 *) this->hidden->mixbuf;
-    const int frame_size = (((int) SDL_AUDIO_BITSIZE(this->spec.format)) / 8) *
+    const int frame_size = ((SDL_AUDIO_BITSIZE(this->spec.format)) / 8) *
                                 this->spec.channels;
     snd_pcm_uframes_t frames_left = ((snd_pcm_uframes_t) this->spec.samples);
 
@@ -372,7 +396,7 @@ static int
 ALSA_CaptureFromDevice(_THIS, void *buffer, int buflen)
 {
     Uint8 *sample_buf = (Uint8 *) buffer;
-    const int frame_size = (((int) SDL_AUDIO_BITSIZE(this->spec.format)) / 8) *
+    const int frame_size = ((SDL_AUDIO_BITSIZE(this->spec.format)) / 8) *
                                 this->spec.channels;
     const int total_frames = buflen / frame_size;
     snd_pcm_uframes_t frames_left = total_frames;
@@ -422,7 +446,7 @@ static void
 ALSA_CloseDevice(_THIS)
 {
     if (this->hidden->pcm_handle) {
-	/* Wait for the submitted audio to drain
+        /* Wait for the submitted audio to drain
            ALSA_snd_pcm_drop() can hang, so don't use that.
          */
         Uint32 delay = ((this->spec.samples * 1000) / this->spec.freq) * 2;
@@ -435,10 +459,38 @@ ALSA_CloseDevice(_THIS)
 }
 
 static int
-ALSA_finalize_hardware(_THIS, snd_pcm_hw_params_t *hwparams, int override)
+ALSA_set_buffer_size(_THIS, snd_pcm_hw_params_t *params)
 {
     int status;
-    snd_pcm_uframes_t bufsize;
+    snd_pcm_hw_params_t *hwparams;
+    snd_pcm_uframes_t persize;
+    unsigned int periods;
+
+    /* Copy the hardware parameters for this setup */
+    snd_pcm_hw_params_alloca(&hwparams);
+    ALSA_snd_pcm_hw_params_copy(hwparams, params);
+
+    /* Attempt to match the period size to the requested buffer size */
+    persize = this->spec.samples;
+    status = ALSA_snd_pcm_hw_params_set_period_size_near(
+                this->hidden->pcm_handle, hwparams, &persize, NULL);
+    if ( status < 0 ) {
+        return(-1);
+    }
+
+    /* Need to at least double buffer */
+    periods = 2;
+    status = ALSA_snd_pcm_hw_params_set_periods_min(
+                this->hidden->pcm_handle, hwparams, &periods, NULL);
+    if ( status < 0 ) {
+        return(-1);
+    }
+
+    status = ALSA_snd_pcm_hw_params_set_periods_first(
+                this->hidden->pcm_handle, hwparams, &periods, NULL);
+    if ( status < 0 ) {
+        return(-1);
+    }
 
     /* "set" the hardware with the desired parameters */
     status = ALSA_snd_pcm_hw_params(this->hidden->pcm_handle, hwparams);
@@ -446,25 +498,13 @@ ALSA_finalize_hardware(_THIS, snd_pcm_hw_params_t *hwparams, int override)
         return(-1);
     }
 
-    /* Get samples for the actual buffer size */
-    status = ALSA_snd_pcm_hw_params_get_buffer_size(hwparams, &bufsize);
-    if ( status < 0 ) {
-        return(-1);
-    }
-    if ( !override && bufsize != this->spec.samples * 2 ) {
-        return(-1);
-    }
-
-    /* !!! FIXME: Is this safe to do? */
-    this->spec.samples = bufsize / 2;
+    this->spec.samples = persize;
 
     /* This is useful for debugging */
     if ( SDL_getenv("SDL_AUDIO_ALSA_DEBUG") ) {
-        snd_pcm_uframes_t persize = 0;
-        unsigned int periods = 0;
+        snd_pcm_uframes_t bufsize;
 
-        ALSA_snd_pcm_hw_params_get_period_size(hwparams, &persize, NULL);
-        ALSA_snd_pcm_hw_params_get_periods(hwparams, &periods, NULL);
+        ALSA_snd_pcm_hw_params_get_buffer_size(hwparams, &bufsize);
 
         fprintf(stderr,
             "ALSA: period size = %ld, periods = %u, buffer size = %lu\n",
@@ -472,78 +512,6 @@ ALSA_finalize_hardware(_THIS, snd_pcm_hw_params_t *hwparams, int override)
     }
 
     return(0);
-}
-
-static int
-ALSA_set_period_size(_THIS, snd_pcm_hw_params_t *params, int override)
-{
-    const char *env;
-    int status;
-    snd_pcm_hw_params_t *hwparams;
-    snd_pcm_uframes_t frames;
-    unsigned int periods;
-
-    /* Copy the hardware parameters for this setup */
-    snd_pcm_hw_params_alloca(&hwparams);
-    ALSA_snd_pcm_hw_params_copy(hwparams, params);
-
-    if ( !override ) {
-        env = SDL_getenv("SDL_AUDIO_ALSA_SET_PERIOD_SIZE");
-        if ( env ) {
-            override = SDL_atoi(env);
-            if ( override == 0 ) {
-                return(-1);
-            }
-        }
-    }
-
-    frames = this->spec.samples;
-    status = ALSA_snd_pcm_hw_params_set_period_size_near(
-                this->hidden->pcm_handle, hwparams, &frames, NULL);
-    if ( status < 0 ) {
-        return(-1);
-    }
-
-    periods = 2;
-    status = ALSA_snd_pcm_hw_params_set_periods_near(
-                this->hidden->pcm_handle, hwparams, &periods, NULL);
-    if ( status < 0 ) {
-        return(-1);
-    }
-
-    return ALSA_finalize_hardware(this, hwparams, override);
-}
-
-static int
-ALSA_set_buffer_size(_THIS, snd_pcm_hw_params_t *params, int override)
-{
-    const char *env;
-    int status;
-    snd_pcm_hw_params_t *hwparams;
-    snd_pcm_uframes_t frames;
-
-    /* Copy the hardware parameters for this setup */
-    snd_pcm_hw_params_alloca(&hwparams);
-    ALSA_snd_pcm_hw_params_copy(hwparams, params);
-
-    if ( !override ) {
-        env = SDL_getenv("SDL_AUDIO_ALSA_SET_BUFFER_SIZE");
-        if ( env ) {
-            override = SDL_atoi(env);
-            if ( override == 0 ) {
-                return(-1);
-            }
-        }
-    }
-
-    frames = this->spec.samples * 2;
-    status = ALSA_snd_pcm_hw_params_set_buffer_size_near(
-                    this->hidden->pcm_handle, hwparams, &frames);
-    if ( status < 0 ) {
-        return(-1);
-    }
-
-    return ALSA_finalize_hardware(this, hwparams, override);
 }
 
 static int
@@ -692,14 +660,11 @@ ALSA_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
     this->spec.freq = rate;
 
     /* Set the buffer size, in samples */
-    if ( ALSA_set_period_size(this, hwparams, 0) < 0 &&
-         ALSA_set_buffer_size(this, hwparams, 0) < 0 ) {
-        /* Failed to set desired buffer size, do the best you can... */
-        status = ALSA_set_period_size(this, hwparams, 1);
-        if (status < 0) {
-            return SDL_SetError("Couldn't set hardware audio parameters: %s", ALSA_snd_strerror(status));
-        }
+    status = ALSA_set_buffer_size(this, hwparams);
+    if (status < 0) {
+        return SDL_SetError("Couldn't set hardware audio parameters: %s", ALSA_snd_strerror(status));
     }
+
     /* Set the software parameters */
     snd_pcm_sw_params_alloca(&swparams);
     status = ALSA_snd_pcm_sw_params_current(pcm_handle, swparams);
@@ -737,9 +702,11 @@ ALSA_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
         SDL_memset(this->hidden->mixbuf, this->spec.silence, this->hidden->mixlen);
     }
 
+    #if !SDL_ALSA_NON_BLOCKING
     if (!iscapture) {
         ALSA_snd_pcm_nonblock(pcm_handle, 0);
     }
+    #endif
 
     /* We're ready to rock and roll. :-) */
     return 0;
@@ -798,7 +765,11 @@ add_device(const int iscapture, const char *name, void *hint, ALSA_Device **pSee
         return;
     }
 
-    SDL_AddAudioDevice(iscapture, desc, handle);
+    /* Note that spec is NULL, because we are required to open the device before
+     * acquiring the mix format, making this information inaccessible at
+     * enumeration time
+     */
+    SDL_AddAudioDevice(iscapture, desc, NULL, handle);
     if (hint)
         free(desc);
     dev->name = handle;
@@ -828,7 +799,7 @@ ALSA_HotplugThread(void *arg)
         ALSA_Device *seen;
         ALSA_Device *prev;
 
-        if (ALSA_snd_device_name_hint(-1, "pcm", &hints) != -1) {
+        if (ALSA_snd_device_name_hint(-1, "pcm", &hints) == 0) {
             int i, j;
             const char *match = NULL;
             int bestmatch = 0xFFFF;

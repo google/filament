@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #  Simple DirectMedia Layer
-#  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+#  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 #
 #  This software is provided 'as-is', without any express or implied
 #  warranty.  In no event will the authors be held liable for any damages
@@ -21,7 +21,7 @@
 
 # WHAT IS THIS?
 #  When you add a public API to SDL, please run this script, make sure the
-#  output looks sane (hg diff, it adds to existing files), and commit it.
+#  output looks sane (git diff, it adds to existing files), and commit it.
 #  It keeps the dynamic API jump table operating correctly.
 
 # If you wanted this to be readable, you shouldn't have used perl.
@@ -49,9 +49,9 @@ open(SDL_DYNAPI_PROCS_H, '>>', $sdl_dynapi_procs_h) or die("Can't open $sdl_dyna
 open(SDL_DYNAPI_OVERRIDES_H, '>>', $sdl_dynapi_overrides_h) or die("Can't open $sdl_dynapi_overrides_h: $!\n");
 
 opendir(HEADERS, 'include') or die("Can't open include dir: $!\n");
-while (readdir(HEADERS)) {
-    next if not /\.h\Z/;
-    my $header = "include/$_";
+while (my $d = readdir(HEADERS)) {
+    next if not $d =~ /\.h\Z/;
+    my $header = "include/$d";
     open(HEADER, '<', $header) or die("Can't open $header: $!\n");
     while (<HEADER>) {
         chomp;
@@ -107,13 +107,19 @@ while (readdir(HEADERS)) {
                     $type =~ s/\s*\*\Z/*/g;
                     $type =~ s/\s*(\*+)\Z/ $1/;
                     #print("SPLIT: ($type, $var)\n");
+                    my $var_array_suffix = "";
+                    # parse array suffix
+                    if ($var =~ /\A.*(\[.*\])\Z/) {
+                        #print("PARSED ARRAY SUFFIX: [$1] of '$var'\n");
+                        $var_array_suffix = $1;
+                    }
                     my $name = chr(ord('a') + $i);
                     if ($i > 0) {
                         $paramstr .= ', ';
                         $argstr .= ',';
                     }
                     my $spc = ($type =~ /\*\Z/) ? '' : ' ';
-                    $paramstr .= "$type$spc$name";
+                    $paramstr .= "$type$spc$name$var_array_suffix";
                     $argstr .= "$name";
                 }
                 $i++;

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -35,13 +35,13 @@ main(int argc, char *argv[])
     SDL_Log("Compiled with SDL older than 2.0\n");
 #endif
     SDL_VERSION(&compiled);
-    SDL_Log("Compiled version: %d.%d.%d.%d (%s)\n",
+    SDL_Log("Compiled version: %d.%d.%d (%s)\n",
            compiled.major, compiled.minor, compiled.patch,
-           SDL_REVISION_NUMBER, SDL_REVISION);
+           SDL_REVISION);
     SDL_GetVersion(&linked);
-    SDL_Log("Linked version: %d.%d.%d.%d (%s)\n",
+    SDL_Log("Linked version: %d.%d.%d (%s)\n",
            linked.major, linked.minor, linked.patch,
-           SDL_GetRevisionNumber(), SDL_GetRevision());
+           SDL_GetRevision());
     SDL_Quit();
     return (0);
 }

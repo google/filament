@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -38,13 +38,21 @@
 #include <basetyps.h>   /* for REFIID with broken mingw.org headers */
 
 /* Routines to convert from UTF8 to native Windows text */
-#if UNICODE
-#define WIN_StringToUTF8(S) SDL_iconv_string("UTF-8", "UTF-16LE", (char *)(S), (SDL_wcslen(S)+1)*sizeof(WCHAR))
-#define WIN_UTF8ToString(S) (WCHAR *)SDL_iconv_string("UTF-16LE", "UTF-8", (char *)(S), SDL_strlen(S)+1)
-#else
+#define WIN_StringToUTF8W(S) SDL_iconv_string("UTF-8", "UTF-16LE", (char *)(S), (SDL_wcslen(S)+1)*sizeof(WCHAR))
+#define WIN_UTF8ToStringW(S) (WCHAR *)SDL_iconv_string("UTF-16LE", "UTF-8", (char *)(S), SDL_strlen(S)+1)
 /* !!! FIXME: UTF8ToString() can just be a SDL_strdup() here. */
-#define WIN_StringToUTF8(S) SDL_iconv_string("UTF-8", "ASCII", (char *)(S), (SDL_strlen(S)+1))
-#define WIN_UTF8ToString(S) SDL_iconv_string("ASCII", "UTF-8", (char *)(S), SDL_strlen(S)+1)
+#define WIN_StringToUTF8A(S) SDL_iconv_string("UTF-8", "ASCII", (char *)(S), (SDL_strlen(S)+1))
+#define WIN_UTF8ToStringA(S) SDL_iconv_string("ASCII", "UTF-8", (char *)(S), SDL_strlen(S)+1)
+#if UNICODE
+#define WIN_StringToUTF8 WIN_StringToUTF8W
+#define WIN_UTF8ToString WIN_UTF8ToStringW
+#define SDL_tcslen SDL_wcslen
+#define SDL_tcsstr SDL_wcsstr
+#else
+#define WIN_StringToUTF8 WIN_StringToUTF8A
+#define WIN_UTF8ToString WIN_UTF8ToStringA
+#define SDL_tcslen SDL_strlen
+#define SDL_tcsstr SDL_strstr
 #endif
 
 /* Sets an error message based on a given HRESULT */
@@ -62,6 +70,9 @@ extern BOOL WIN_IsWindowsVistaOrGreater(void);
 
 /* Returns SDL_TRUE if we're running on Windows 7 and newer */
 extern BOOL WIN_IsWindows7OrGreater(void);
+
+/* Returns SDL_TRUE if we're running on Windows 8 and newer */
+extern BOOL WIN_IsWindows8OrGreater(void);
 
 /* You need to SDL_free() the result of this call. */
 extern char *WIN_LookupAudioDeviceName(const WCHAR *name, const GUID *guid);

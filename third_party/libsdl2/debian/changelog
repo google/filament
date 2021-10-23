@@ -1,3 +1,51 @@
+libsdl2 (2.0.16) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.16
+
+ -- Sam Lantinga <slouken@libsdl.org>  Sat, 31 Jul 2021 13:27:38 -0800
+
+libsdl2 (2.0.15) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.15 for development builds
+
+ -- Sam Lantinga <slouken@libsdl.org>  Tue, 22 Dec 2020 10:29:01 -0800
+
+libsdl2 (2.0.14) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.14
+
+ -- Sam Lantinga <slouken@libsdl.org>  Tue, 8 Dec 2020 17:54:33 -0800
+
+libsdl2 (2.0.13) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.13 for development builds
+
+ -- Sam Lantinga <slouken@libsdl.org>  Tue, 10 Mar 2020 18:24:22 -0800
+
+libsdl2 (2.0.12) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.12
+
+ -- Sam Lantinga <slouken@libsdl.org>  Sun, 1 Mar 2020 14:57:07 -0800
+
+libsdl2 (2.0.11) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.11 for development builds
+
+ -- Sam Lantinga <slouken@libsdl.org>  Sun, 22 Sep 2019 10:33:03 -0800
+
+libsdl2 (2.0.10) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.10
+
+ -- Sam Lantinga <slouken@libsdl.org>  Mon, 17 Jun 2019 08:48:47 -0800
+
+libsdl2 (2.0.9) UNRELEASED; urgency=low
+
+  * Updated SDL to version 2.0.9
+
+ -- Sam Lantinga <slouken@libsdl.org>  Wed, 26 Sep 2018 10:02:21 -0800
+
 libsdl2 (2.0.8) UNRELEASED; urgency=low
 
   * Updated SDL to version 2.0.8

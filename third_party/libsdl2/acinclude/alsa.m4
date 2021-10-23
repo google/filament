@@ -1,4 +1,3 @@
-##############################################################################
 dnl Configure Paths for Alsa
 dnl Some modifications by Richard Boulton <richard-alsa@tartarus.org>
 dnl Christopher Lansdown <lansdoct@cs.alfred.edu>
@@ -7,12 +6,13 @@ dnl Last modification: alsa.m4,v 1.23 2004/01/16 18:14:22 tiwai Exp
 dnl AM_PATH_ALSA([MINIMUM-VERSION [, ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
 dnl Test for libasound, and define ALSA_CFLAGS and ALSA_LIBS as appropriate.
 dnl enables arguments --with-alsa-prefix=
-dnl                   --with-alsa-enc-prefix=
+dnl                   --with-alsa-inc-prefix=
 dnl                   --disable-alsatest
 dnl
 dnl For backwards compatibility, if ACTION_IF_NOT_FOUND is not specified,
 dnl and the alsa libraries are not found, a fatal AC_MSG_ERROR() will result.
 dnl
+
 AC_DEFUN([AM_PATH_ALSA],
 [dnl Save the original CFLAGS, LDFLAGS, and LIBS
 alsa_save_CFLAGS="$CFLAGS"
@@ -62,7 +62,7 @@ LIBS="$ALSA_LIBS $LIBS"
 AC_MSG_RESULT($ALSA_LIBS)
 
 dnl Check for a working version of libasound that is of the right version.
-min_alsa_version=ifelse([$1], ,0.1.1,$1)
+min_alsa_version=ifelse([$1], ,0.1.1, $1)
 AC_MSG_CHECKING(for libasound headers version >= $min_alsa_version)
 no_alsa=""
     alsa_min_major_version=`echo $min_alsa_version | \
@@ -72,11 +72,10 @@ no_alsa=""
     alsa_min_micro_version=`echo $min_alsa_version | \
            sed 's/\([[0-9]]*\).\([[0-9]]*\).\([[0-9]]*\)/\3/'`
 
-AC_LANG_SAVE
-AC_LANG_C
-AC_TRY_COMPILE([
+AC_LANG_PUSH([C])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <alsa/asoundlib.h>
-], [
+]], [[
 /* ensure backward compatibility */
 #if !defined(SND_LIB_MAJOR) && defined(SOUNDLIB_VERSION_MAJOR)
 #define SND_LIB_MAJOR SOUNDLIB_VERSION_MAJOR
@@ -108,13 +107,13 @@ AC_TRY_COMPILE([
 #    endif
 #  endif
 exit(0);
-],
+]])],
   [AC_MSG_RESULT(found.)],
   [AC_MSG_RESULT(not present.)
    ifelse([$3], , [AC_MSG_ERROR(Sufficiently new version of libasound not found.)])
    alsa_found=no]
 )
-AC_LANG_RESTORE
+AC_LANG_POP([C])
 
 dnl Now that we know that we have the right version, let's see if we have the library and not just the headers.
 if test "x$enable_alsatest" = "xyes"; then

@@ -1,0 +1,5 @@
+# parameter name, type, value range, required, categories
+--geometry, enum, [500x500 600x600], false, []
+--logical, enum, [300x500 550x450], false, []
+--scale, integer, [1 5], false, []
+--iterations, integer, [1000 1000], true, []

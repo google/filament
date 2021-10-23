@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -30,7 +30,6 @@
 
 #include "SDL_uikitvideo.h"
 #include "SDL_uikitwindow.h"
-#include "SDL_assert.h"
 
 #include "SDL_loadso.h"
 #include "SDL_uikitvulkan.h"
@@ -39,7 +38,10 @@
 
 #include <dlfcn.h>
 
-#define DEFAULT_MOLTENVK  "libMoltenVK.dylib"
+const char* defaultPaths[] = {
+    "libvulkan.dylib",
+};
+
 /* Since libSDL is static, could use RTLD_SELF. Using RTLD_DEFAULT is future
  * proofing. */
 #define DEFAULT_HANDLE RTLD_DEFAULT
@@ -53,7 +55,7 @@ int UIKit_Vulkan_LoadLibrary(_THIS, const char *path)
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = NULL;
 
     if (_this->vulkan_config.loader_handle) {
-        return SDL_SetError("MoltenVK/Vulkan already loaded");
+        return SDL_SetError("Vulkan Portability library is already loaded.");
     }
 
     /* Load the Vulkan loader library */
@@ -62,9 +64,7 @@ int UIKit_Vulkan_LoadLibrary(_THIS, const char *path)
     }
 
     if (!path) {
-        /* MoltenVK framework, currently, v0.17.0, has a static library and is
-         * the recommended way to use the package. There is likely no object to
-         * load. */
+        /* Handle the case where Vulkan Portability is linked statically. */
         vkGetInstanceProcAddr =
         (PFN_vkGetInstanceProcAddr)dlsym(DEFAULT_HANDLE,
                                          "vkGetInstanceProcAddr");
@@ -73,15 +73,29 @@ int UIKit_Vulkan_LoadLibrary(_THIS, const char *path)
     if (vkGetInstanceProcAddr) {
         _this->vulkan_config.loader_handle = DEFAULT_HANDLE;
     } else {
-        if (!path) {
+        const char** paths;
+        const char *foundPath = NULL;
+        int numPaths;
+        int i;
+
+        if (path) {
+            paths = &path;
+            numPaths = 1;
+        } else {
             /* Look for the .dylib packaged with the application instead. */
-            path = DEFAULT_MOLTENVK;
+            paths = defaultPaths;
+            numPaths = SDL_arraysize(defaultPaths);
         }
 
-        _this->vulkan_config.loader_handle = SDL_LoadObject(path);
-        if (!_this->vulkan_config.loader_handle) {
-            return -1;
+        for (i = 0; i < numPaths && _this->vulkan_config.loader_handle == NULL; i++) {
+            foundPath = paths[i];
+            _this->vulkan_config.loader_handle = SDL_LoadObject(foundPath);
         }
+
+        if (_this->vulkan_config.loader_handle == NULL) {
+            return SDL_SetError("Failed to load Vulkan Portability library");
+        }
+
         SDL_strlcpy(_this->vulkan_config.loader_path, path,
                     SDL_arraysize(_this->vulkan_config.loader_path));
         vkGetInstanceProcAddr =
@@ -93,7 +107,7 @@ int UIKit_Vulkan_LoadLibrary(_THIS, const char *path)
     if (!vkGetInstanceProcAddr) {
         SDL_SetError("Failed to find %s in either executable or %s: %s",
                      "vkGetInstanceProcAddr",
-                     DEFAULT_MOLTENVK,
+                     "linked Vulkan Portability library",
                      (const char *) dlerror());
         goto fail;
     }
@@ -128,11 +142,11 @@ int UIKit_Vulkan_LoadLibrary(_THIS, const char *path)
     SDL_free(extensions);
 
     if (!hasSurfaceExtension) {
-        SDL_SetError("Installed MoltenVK/Vulkan doesn't implement the "
+        SDL_SetError("Installed Vulkan Portability doesn't implement the "
                      VK_KHR_SURFACE_EXTENSION_NAME " extension");
         goto fail;
     } else if (!hasIOSSurfaceExtension) {
-        SDL_SetError("Installed MoltenVK/Vulkan doesn't implement the "
+        SDL_SetError("Installed Vulkan Portability doesn't implement the "
                      VK_MVK_IOS_SURFACE_EXTENSION_NAME "extension");
         goto fail;
     }
@@ -185,6 +199,7 @@ SDL_bool UIKit_Vulkan_CreateSurface(_THIS,
                                             "vkCreateIOSSurfaceMVK");
     VkIOSSurfaceCreateInfoMVK createInfo = {};
     VkResult result;
+    SDL_MetalView metalview;
 
     if (!_this->vulkan_config.loader_handle) {
         SDL_SetError("Vulkan is not loaded");
@@ -197,24 +212,37 @@ SDL_bool UIKit_Vulkan_CreateSurface(_THIS,
         return SDL_FALSE;
     }
 
+    metalview = UIKit_Metal_CreateView(_this, window);
+    if (metalview == NULL) {
+        return SDL_FALSE;
+    }
+
     createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.pView = (__bridge void *)UIKit_Mtl_AddMetalView(window);
+    createInfo.pView = (const void *)metalview;
     result = vkCreateIOSSurfaceMVK(instance, &createInfo,
                                        NULL, surface);
     if (result != VK_SUCCESS) {
+        UIKit_Metal_DestroyView(_this, metalview);
         SDL_SetError("vkCreateIOSSurfaceMVK failed: %s",
                      SDL_Vulkan_GetResultString(result));
         return SDL_FALSE;
     }
+
+    /* Unfortunately there's no SDL_Vulkan_DestroySurface function we can call
+     * Metal_DestroyView from. Right now the metal view's ref count is +2 (one
+     * from returning a new view object in CreateView, and one because it's
+     * a subview of the window.) If we release the view here to make it +1, it
+     * will be destroyed when the window is destroyed. */
+    CFBridgingRelease(metalview);
 
     return SDL_TRUE;
 }
 
 void UIKit_Vulkan_GetDrawableSize(_THIS, SDL_Window *window, int *w, int *h)
 {
-    UIKit_Mtl_GetDrawableSize(window, w, h);
+    UIKit_Metal_GetDrawableSize(_this, window, w, h);
 }
 
 #endif

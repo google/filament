@@ -9,6 +9,7 @@ LIBS	= @LIBS@
 
 TARGETS = \
 	checkkeys$(EXE) \
+	checkkeysthreads$(EXE) \
 	controllermap$(EXE) \
 	loopwave$(EXE) \
 	loopwavequeue$(EXE) \
@@ -24,13 +25,11 @@ TARGETS = \
 	testdrawchessboard$(EXE) \
 	testdropfile$(EXE) \
 	testerror$(EXE) \
+	testevdev$(EXE) \
 	testfile$(EXE) \
 	testfilesystem$(EXE) \
 	testgamecontroller$(EXE) \
 	testgesture$(EXE) \
-	testgl2$(EXE) \
-	testgles$(EXE) \
-	testgles2$(EXE) \
 	testhaptic$(EXE) \
 	testhittesting$(EXE) \
 	testhotplug$(EXE) \
@@ -40,6 +39,7 @@ TARGETS = \
 	testjoystick$(EXE) \
 	testkeys$(EXE) \
 	testloadso$(EXE) \
+	testlocale$(EXE) \
 	testlock$(EXE) \
 	testmessage$(EXE) \
 	testmultiaudio$(EXE) \
@@ -55,26 +55,36 @@ TARGETS = \
 	testrumble$(EXE) \
 	testscale$(EXE) \
 	testsem$(EXE) \
-	testshader$(EXE) \
+	testsensor$(EXE) \
 	testshape$(EXE) \
 	testsprite2$(EXE) \
 	testspriteminimal$(EXE) \
 	teststreaming$(EXE) \
 	testthread$(EXE) \
 	testtimer$(EXE) \
+	testurl$(EXE) \
 	testver$(EXE) \
 	testviewport$(EXE) \
 	testvulkan$(EXE) \
 	testwm2$(EXE) \
 	testyuv$(EXE) \
 	torturethread$(EXE) \
+
 	
+@OPENGL_TARGETS@ += testgl2$(EXE) testshader$(EXE)
+@OPENGLES1_TARGETS@ += testgles$(EXE)
+@OPENGLES2_TARGETS@ += testgles2$(EXE)
+
+
 all: Makefile $(TARGETS) copydatafiles
 
 Makefile: $(srcdir)/Makefile.in
 	$(SHELL) config.status $@
 
 checkkeys$(EXE): $(srcdir)/checkkeys.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+checkkeysthreads$(EXE): $(srcdir)/checkkeysthreads.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 loopwave$(EXE): $(srcdir)/loopwave.c
@@ -143,6 +153,9 @@ testdropfile$(EXE): $(srcdir)/testdropfile.c
 testerror$(EXE): $(srcdir)/testerror.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+testevdev$(EXE): $(srcdir)/testevdev.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 testfile$(EXE): $(srcdir)/testfile.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
@@ -159,6 +172,9 @@ testgles$(EXE): $(srcdir)/testgles.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) @GLESLIB@ @MATHLIB@
 
 testgles2$(EXE): $(srcdir)/testgles2.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) @MATHLIB@
+
+testgles2_sdf$(EXE): $(srcdir)/testgles2_sdf.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) @MATHLIB@
 
 testhaptic$(EXE): $(srcdir)/testhaptic.c
@@ -240,6 +256,9 @@ testscale$(EXE): $(srcdir)/testscale.c
 testsem$(EXE): $(srcdir)/testsem.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+testsensor$(EXE): $(srcdir)/testsensor.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 testshader$(EXE): $(srcdir)/testshader.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) @GLLIB@ @MATHLIB@
 
@@ -256,6 +275,9 @@ teststreaming$(EXE): $(srcdir)/teststreaming.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS) @MATHLIB@
 
 testtimer$(EXE): $(srcdir)/testtimer.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+testurl$(EXE): $(srcdir)/testurl.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 testver$(EXE): $(srcdir)/testver.c
@@ -297,6 +319,10 @@ controllermap$(EXE): $(srcdir)/controllermap.c
 testvulkan$(EXE): $(srcdir)/testvulkan.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+testlocale$(EXE): $(srcdir)/testlocale.c
+	$(CC) -o $@ $? $(CFLAGS) $(LIBS)
+
+
 
 clean:
 	rm -f $(TARGETS)
@@ -306,14 +332,18 @@ distclean: clean
 	rm -f config.status config.cache config.log
 	rm -rf $(srcdir)/autom4te*
 
-
+ifneq ($(srcdir), .)
 %.bmp: $(srcdir)/%.bmp
 	cp $< $@
 
 %.wav: $(srcdir)/%.wav
 	cp $< $@
 
-copydatafiles: copybmpfiles copywavfiles
+%.dat: $(srcdir)/%.dat
+	cp $< $@
+endif
+
+copydatafiles: copybmpfiles copywavfiles copydatfiles
 .PHONY : copydatafiles
 
 copybmpfiles: $(foreach bmp,$(wildcard $(srcdir)/*.bmp),$(notdir $(bmp)))
@@ -321,4 +351,7 @@ copybmpfiles: $(foreach bmp,$(wildcard $(srcdir)/*.bmp),$(notdir $(bmp)))
 
 copywavfiles: $(foreach wav,$(wildcard $(srcdir)/*.wav),$(notdir $(wav)))
 .PHONY : copywavfiles
+
+copydatfiles: $(foreach dat,$(wildcard $(srcdir)/*.dat),$(notdir $(dat)))
+.PHONY : copydatfiles
 

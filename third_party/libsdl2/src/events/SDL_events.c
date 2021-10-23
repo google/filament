@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,7 +33,12 @@
 #include "../video/SDL_sysvideo.h"
 #include "SDL_syswm.h"
 
-/*#define SDL_DEBUG_EVENTS 1*/
+#undef SDL_PRIs64
+#ifdef __WIN32__
+#define SDL_PRIs64  "I64d"
+#else
+#define SDL_PRIs64  "lld"
+#endif
 
 /* An arbitrary limit so we don't have unbounded growth */
 #define SDL_MAX_QUEUED_EVENTS   65535
@@ -87,32 +92,101 @@ static struct
 } SDL_EventQ = { NULL, { 1 }, { 0 }, 0, NULL, NULL, NULL, NULL, NULL };
 
 
-#ifdef SDL_DEBUG_EVENTS
+#if !SDL_JOYSTICK_DISABLED
 
-/* this is to make printf() calls cleaner. */
-#define uint unsigned int
+static SDL_bool SDL_update_joysticks = SDL_TRUE;
 
 static void
-SDL_DebugPrintEvent(const SDL_Event *event)
+SDL_CalculateShouldUpdateJoysticks()
 {
-    /* !!! FIXME: This code is kinda ugly, sorry. */
-    printf("SDL EVENT: ");
+    if (SDL_GetHintBoolean(SDL_HINT_AUTO_UPDATE_JOYSTICKS, SDL_TRUE) &&
+        (!SDL_disabled_events[SDL_JOYAXISMOTION >> 8] || SDL_JoystickEventState(SDL_QUERY))) {
+        SDL_update_joysticks = SDL_TRUE;
+    } else {
+        SDL_update_joysticks = SDL_FALSE;
+    }
+}
 
-    if ((event->type >= SDL_USEREVENT) && (event->type <= SDL_LASTEVENT)) {
-        printf("SDL_USEREVENT");
-        if (event->type > SDL_USEREVENT) {
-            printf("+%u", ((uint) event->type) - SDL_USEREVENT);
-        }
-        printf(" (timestamp=%u windowid=%u code=%d data1=%p data2=%p)",
-                (uint) event->user.timestamp, (uint) event->user.windowID,
-                (int) event->user.code, event->user.data1, event->user.data2);
+static void SDLCALL
+SDL_AutoUpdateJoysticksChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
+{
+    SDL_CalculateShouldUpdateJoysticks();
+}
+
+#endif /* !SDL_JOYSTICK_DISABLED */
+
+
+#if !SDL_SENSOR_DISABLED
+
+static SDL_bool SDL_update_sensors = SDL_TRUE;
+
+static void
+SDL_CalculateShouldUpdateSensors()
+{
+    if (SDL_GetHintBoolean(SDL_HINT_AUTO_UPDATE_SENSORS, SDL_TRUE) &&
+        !SDL_disabled_events[SDL_SENSORUPDATE >> 8]) {
+        SDL_update_sensors = SDL_TRUE;
+    } else {
+        SDL_update_sensors = SDL_FALSE;
+    }
+}
+
+static void SDLCALL
+SDL_AutoUpdateSensorsChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
+{
+    SDL_CalculateShouldUpdateSensors();
+}
+
+#endif /* !SDL_SENSOR_DISABLED */
+
+
+/* 0 (default) means no logging, 1 means logging, 2 means logging with mouse and finger motion */
+static int SDL_DoEventLogging = 0;
+
+static void SDLCALL
+SDL_EventLoggingChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
+{
+    SDL_DoEventLogging = (hint && *hint) ? SDL_max(SDL_min(SDL_atoi(hint), 2), 0) : 0;
+}
+
+static void
+SDL_LogEvent(const SDL_Event *event)
+{
+    char name[32];
+    char details[128];
+
+    /* mouse/finger motion are spammy, ignore these if they aren't demanded. */
+    if ( (SDL_DoEventLogging < 2) &&
+            ( (event->type == SDL_MOUSEMOTION) ||
+              (event->type == SDL_FINGERMOTION) ) ) {
         return;
     }
 
+    /* this is to make SDL_snprintf() calls cleaner. */
+    #define uint unsigned int
+
+    name[0] = '\0';
+    details[0] = '\0';
+
+    /* !!! FIXME: This code is kinda ugly, sorry. */
+
+    if ((event->type >= SDL_USEREVENT) && (event->type <= SDL_LASTEVENT)) {
+        char plusstr[16];
+        SDL_strlcpy(name, "SDL_USEREVENT", sizeof (name));
+        if (event->type > SDL_USEREVENT) {
+            SDL_snprintf(plusstr, sizeof (plusstr), "+%u", ((uint) event->type) - SDL_USEREVENT);
+        } else {
+            plusstr[0] = '\0';
+        }
+        SDL_snprintf(details, sizeof (details), "%s (timestamp=%u windowid=%u code=%d data1=%p data2=%p)",
+                plusstr, (uint) event->user.timestamp, (uint) event->user.windowID,
+                (int) event->user.code, event->user.data1, event->user.data2);
+    }
+
     switch (event->type) {
-        #define SDL_EVENT_CASE(x) case x: printf("%s", #x);
-        SDL_EVENT_CASE(SDL_FIRSTEVENT) printf("(THIS IS PROBABLY A BUG!)"); break;
-        SDL_EVENT_CASE(SDL_QUIT) printf("(timestamp=%u)", (uint) event->quit.timestamp); break;
+        #define SDL_EVENT_CASE(x) case x: SDL_strlcpy(name, #x, sizeof (name));
+        SDL_EVENT_CASE(SDL_FIRSTEVENT) SDL_strlcpy(details, " (THIS IS PROBABLY A BUG!)", sizeof (details)); break;
+        SDL_EVENT_CASE(SDL_QUIT) SDL_snprintf(details, sizeof (details), " (timestamp=%u)", (uint) event->quit.timestamp); break;
         SDL_EVENT_CASE(SDL_APP_TERMINATING) break;
         SDL_EVENT_CASE(SDL_APP_LOWMEMORY) break;
         SDL_EVENT_CASE(SDL_APP_WILLENTERBACKGROUND) break;
@@ -123,15 +197,12 @@ SDL_DebugPrintEvent(const SDL_Event *event)
         SDL_EVENT_CASE(SDL_CLIPBOARDUPDATE) break;
         SDL_EVENT_CASE(SDL_RENDER_TARGETS_RESET) break;
         SDL_EVENT_CASE(SDL_RENDER_DEVICE_RESET) break;
-        #undef SDL_EVENT_CASE
 
-        #define SDL_EVENT_CASE(x) case x: printf("%s ", #x);
-
-        SDL_EVENT_CASE(SDL_WINDOWEVENT)
-            printf("(timestamp=%u windowid=%u event=", (uint) event->window.timestamp, (uint) event->window.windowID);
+        SDL_EVENT_CASE(SDL_WINDOWEVENT) {
+            char name2[64];
             switch(event->window.event) {
-                case SDL_WINDOWEVENT_NONE: printf("none(THIS IS PROBABLY A BUG!)"); break;
-                #define SDL_WINDOWEVENT_CASE(x) case x: printf("%s", #x); break
+                case SDL_WINDOWEVENT_NONE: SDL_strlcpy(name2, "SDL_WINDOWEVENT_NONE (THIS IS PROBABLY A BUG!)", sizeof (name2)); break;
+                #define SDL_WINDOWEVENT_CASE(x) case x: SDL_strlcpy(name2, #x, sizeof (name2)); break
                 SDL_WINDOWEVENT_CASE(SDL_WINDOWEVENT_SHOWN);
                 SDL_WINDOWEVENT_CASE(SDL_WINDOWEVENT_HIDDEN);
                 SDL_WINDOWEVENT_CASE(SDL_WINDOWEVENT_EXPOSED);
@@ -149,18 +220,20 @@ SDL_DebugPrintEvent(const SDL_Event *event)
                 SDL_WINDOWEVENT_CASE(SDL_WINDOWEVENT_TAKE_FOCUS);
                 SDL_WINDOWEVENT_CASE(SDL_WINDOWEVENT_HIT_TEST);
                 #undef SDL_WINDOWEVENT_CASE
-                default: printf("UNKNOWN(bug? fixme?)"); break;
+                default: SDL_strlcpy(name2, "UNKNOWN (bug? fixme?)", sizeof (name2)); break;
             }
-            printf(" data1=%d data2=%d)", (int) event->window.data1, (int) event->window.data2);
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u event=%s data1=%d data2=%d)",
+                        (uint) event->window.timestamp, (uint) event->window.windowID, name2, (int) event->window.data1, (int) event->window.data2);
             break;
+        }
 
         SDL_EVENT_CASE(SDL_SYSWMEVENT)
-            printf("(timestamp=%u)", (uint) event->syswm.timestamp);
             /* !!! FIXME: we don't delve further at the moment. */
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u)", (uint) event->syswm.timestamp);
             break;
 
         #define PRINT_KEY_EVENT(event) \
-            printf("(timestamp=%u windowid=%u state=%s repeat=%s scancode=%u keycode=%u mod=%u)", \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u state=%s repeat=%s scancode=%u keycode=%u mod=%u)", \
                 (uint) event->key.timestamp, (uint) event->key.windowID, \
                 event->key.state == SDL_PRESSED ? "pressed" : "released", \
                 event->key.repeat ? "true" : "false", \
@@ -172,18 +245,18 @@ SDL_DebugPrintEvent(const SDL_Event *event)
         #undef PRINT_KEY_EVENT
 
         SDL_EVENT_CASE(SDL_TEXTEDITING)
-            printf("(timestamp=%u windowid=%u text='%s' start=%d length=%d)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u text='%s' start=%d length=%d)",
                 (uint) event->edit.timestamp, (uint) event->edit.windowID,
                 event->edit.text, (int) event->edit.start, (int) event->edit.length);
             break;
 
         SDL_EVENT_CASE(SDL_TEXTINPUT)
-            printf("(timestamp=%u windowid=%u text='%s')", (uint) event->text.timestamp, (uint) event->text.windowID, event->text.text);
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u text='%s')", (uint) event->text.timestamp, (uint) event->text.windowID, event->text.text);
             break;
 
 
         SDL_EVENT_CASE(SDL_MOUSEMOTION)
-            printf("(timestamp=%u windowid=%u which=%u state=%u x=%d y=%d xrel=%d yrel=%d)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u which=%u state=%u x=%d y=%d xrel=%d yrel=%d)",
                     (uint) event->motion.timestamp, (uint) event->motion.windowID,
                     (uint) event->motion.which, (uint) event->motion.state,
                     (int) event->motion.x, (int) event->motion.y,
@@ -191,7 +264,7 @@ SDL_DebugPrintEvent(const SDL_Event *event)
             break;
 
         #define PRINT_MBUTTON_EVENT(event) \
-            printf("(timestamp=%u windowid=%u which=%u button=%u state=%s clicks=%u x=%d y=%d)", \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u which=%u button=%u state=%s clicks=%u x=%d y=%d)", \
                     (uint) event->button.timestamp, (uint) event->button.windowID, \
                     (uint) event->button.which, (uint) event->button.button, \
                     event->button.state == SDL_PRESSED ? "pressed" : "released", \
@@ -202,67 +275,67 @@ SDL_DebugPrintEvent(const SDL_Event *event)
 
 
         SDL_EVENT_CASE(SDL_MOUSEWHEEL)
-            printf("(timestamp=%u windowid=%u which=%u x=%d y=%d direction=%s)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u windowid=%u which=%u x=%d y=%d direction=%s)",
                     (uint) event->wheel.timestamp, (uint) event->wheel.windowID,
                     (uint) event->wheel.which, (int) event->wheel.x, (int) event->wheel.y,
                     event->wheel.direction == SDL_MOUSEWHEEL_NORMAL ? "normal" : "flipped");
             break;
 
         SDL_EVENT_CASE(SDL_JOYAXISMOTION)
-            printf("(timestamp=%u which=%d axis=%u value=%d)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d axis=%u value=%d)",
                 (uint) event->jaxis.timestamp, (int) event->jaxis.which,
                 (uint) event->jaxis.axis, (int) event->jaxis.value);
             break;
 
         SDL_EVENT_CASE(SDL_JOYBALLMOTION)
-            printf("(timestamp=%u which=%d ball=%u xrel=%d yrel=%d)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d ball=%u xrel=%d yrel=%d)",
                 (uint) event->jball.timestamp, (int) event->jball.which,
                 (uint) event->jball.ball, (int) event->jball.xrel, (int) event->jball.yrel);
             break;
 
         SDL_EVENT_CASE(SDL_JOYHATMOTION)
-            printf("(timestamp=%u which=%d hat=%u value=%u)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d hat=%u value=%u)",
                 (uint) event->jhat.timestamp, (int) event->jhat.which,
                 (uint) event->jhat.hat, (uint) event->jhat.value);
             break;
 
         #define PRINT_JBUTTON_EVENT(event) \
-            printf("(timestamp=%u which=%d button=%u state=%s)", \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d button=%u state=%s)", \
                 (uint) event->jbutton.timestamp, (int) event->jbutton.which, \
                 (uint) event->jbutton.button, event->jbutton.state == SDL_PRESSED ? "pressed" : "released")
         SDL_EVENT_CASE(SDL_JOYBUTTONDOWN) PRINT_JBUTTON_EVENT(event); break;
         SDL_EVENT_CASE(SDL_JOYBUTTONUP) PRINT_JBUTTON_EVENT(event); break;
         #undef PRINT_JBUTTON_EVENT
 
-        #define PRINT_JOYDEV_EVENT(event) printf("(timestamp=%u which=%d)", (uint) event->jdevice.timestamp, (int) event->jdevice.which)
+        #define PRINT_JOYDEV_EVENT(event) SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d)", (uint) event->jdevice.timestamp, (int) event->jdevice.which)
         SDL_EVENT_CASE(SDL_JOYDEVICEADDED) PRINT_JOYDEV_EVENT(event); break;
         SDL_EVENT_CASE(SDL_JOYDEVICEREMOVED) PRINT_JOYDEV_EVENT(event); break;
         #undef PRINT_JOYDEV_EVENT
 
         SDL_EVENT_CASE(SDL_CONTROLLERAXISMOTION)
-            printf("(timestamp=%u which=%d axis=%u value=%d)",
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d axis=%u value=%d)",
                 (uint) event->caxis.timestamp, (int) event->caxis.which,
                 (uint) event->caxis.axis, (int) event->caxis.value);
             break;
 
         #define PRINT_CBUTTON_EVENT(event) \
-            printf("(timestamp=%u which=%d button=%u state=%s)", \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d button=%u state=%s)", \
                 (uint) event->cbutton.timestamp, (int) event->cbutton.which, \
                 (uint) event->cbutton.button, event->cbutton.state == SDL_PRESSED ? "pressed" : "released")
         SDL_EVENT_CASE(SDL_CONTROLLERBUTTONDOWN) PRINT_CBUTTON_EVENT(event); break;
         SDL_EVENT_CASE(SDL_CONTROLLERBUTTONUP) PRINT_CBUTTON_EVENT(event); break;
         #undef PRINT_CBUTTON_EVENT
 
-        #define PRINT_CONTROLLERDEV_EVENT(event) printf("(timestamp=%u which=%d)", (uint) event->cdevice.timestamp, (int) event->cdevice.which)
+        #define PRINT_CONTROLLERDEV_EVENT(event) SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%d)", (uint) event->cdevice.timestamp, (int) event->cdevice.which)
         SDL_EVENT_CASE(SDL_CONTROLLERDEVICEADDED) PRINT_CONTROLLERDEV_EVENT(event); break;
         SDL_EVENT_CASE(SDL_CONTROLLERDEVICEREMOVED) PRINT_CONTROLLERDEV_EVENT(event); break;
         SDL_EVENT_CASE(SDL_CONTROLLERDEVICEREMAPPED) PRINT_CONTROLLERDEV_EVENT(event); break;
         #undef PRINT_CONTROLLERDEV_EVENT
 
         #define PRINT_FINGER_EVENT(event) \
-            printf("(timestamp=%u touchid=%lld fingerid=%lld x=%f y=%f dx=%f dy=%f pressure=%f)", \
-                (uint) event->tfinger.timestamp, (long long) event->tfinger.touchId, \
-                (long long) event->tfinger.fingerId, event->tfinger.x, event->tfinger.y, \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u touchid=%"SDL_PRIs64" fingerid=%"SDL_PRIs64" x=%f y=%f dx=%f dy=%f pressure=%f)", \
+                (uint) event->tfinger.timestamp, (long long)event->tfinger.touchId, \
+                (long long)event->tfinger.fingerId, event->tfinger.x, event->tfinger.y, \
                 event->tfinger.dx, event->tfinger.dy, event->tfinger.pressure)
         SDL_EVENT_CASE(SDL_FINGERDOWN) PRINT_FINGER_EVENT(event); break;
         SDL_EVENT_CASE(SDL_FINGERUP) PRINT_FINGER_EVENT(event); break;
@@ -270,29 +343,29 @@ SDL_DebugPrintEvent(const SDL_Event *event)
         #undef PRINT_FINGER_EVENT
 
         #define PRINT_DOLLAR_EVENT(event) \
-            printf("(timestamp=%u touchid=%lld gestureid=%lld numfingers=%u error=%f x=%f y=%f)", \
-                (uint) event->dgesture.timestamp, (long long) event->dgesture.touchId, \
-                (long long) event->dgesture.gestureId, (uint) event->dgesture.numFingers, \
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u touchid=%"SDL_PRIs64" gestureid=%"SDL_PRIs64" numfingers=%u error=%f x=%f y=%f)", \
+                (uint) event->dgesture.timestamp, (long long)event->dgesture.touchId, \
+                (long long)event->dgesture.gestureId, (uint) event->dgesture.numFingers, \
                 event->dgesture.error, event->dgesture.x, event->dgesture.y);
         SDL_EVENT_CASE(SDL_DOLLARGESTURE) PRINT_DOLLAR_EVENT(event); break;
         SDL_EVENT_CASE(SDL_DOLLARRECORD) PRINT_DOLLAR_EVENT(event); break;
         #undef PRINT_DOLLAR_EVENT
 
         SDL_EVENT_CASE(SDL_MULTIGESTURE)
-            printf("(timestamp=%u touchid=%lld dtheta=%f ddist=%f x=%f y=%f numfingers=%u)",
-                (uint) event->mgesture.timestamp, (long long) event->mgesture.touchId,
+            SDL_snprintf(details, sizeof (details), " (timestamp=%u touchid=%"SDL_PRIs64" dtheta=%f ddist=%f x=%f y=%f numfingers=%u)",
+                (uint) event->mgesture.timestamp, (long long)event->mgesture.touchId,
                 event->mgesture.dTheta, event->mgesture.dDist,
                 event->mgesture.x, event->mgesture.y, (uint) event->mgesture.numFingers);
             break;
 
-        #define PRINT_DROP_EVENT(event) printf("(file='%s' timestamp=%u windowid=%u)", event->drop.file, (uint) event->drop.timestamp, (uint) event->drop.windowID)
+        #define PRINT_DROP_EVENT(event) SDL_snprintf(details, sizeof (details), " (file='%s' timestamp=%u windowid=%u)", event->drop.file, (uint) event->drop.timestamp, (uint) event->drop.windowID)
         SDL_EVENT_CASE(SDL_DROPFILE) PRINT_DROP_EVENT(event); break;
         SDL_EVENT_CASE(SDL_DROPTEXT) PRINT_DROP_EVENT(event); break;
         SDL_EVENT_CASE(SDL_DROPBEGIN) PRINT_DROP_EVENT(event); break;
         SDL_EVENT_CASE(SDL_DROPCOMPLETE) PRINT_DROP_EVENT(event); break;
         #undef PRINT_DROP_EVENT
 
-        #define PRINT_AUDIODEV_EVENT(event) printf("(timestamp=%u which=%u iscapture=%s)", (uint) event->adevice.timestamp, (uint) event->adevice.which, event->adevice.iscapture ? "true" : "false");
+        #define PRINT_AUDIODEV_EVENT(event) SDL_snprintf(details, sizeof (details), " (timestamp=%u which=%u iscapture=%s)", (uint) event->adevice.timestamp, (uint) event->adevice.which, event->adevice.iscapture ? "true" : "false");
         SDL_EVENT_CASE(SDL_AUDIODEVICEADDED) PRINT_AUDIODEV_EVENT(event); break;
         SDL_EVENT_CASE(SDL_AUDIODEVICEREMOVED) PRINT_AUDIODEV_EVENT(event); break;
         #undef PRINT_AUDIODEV_EVENT
@@ -300,14 +373,19 @@ SDL_DebugPrintEvent(const SDL_Event *event)
         #undef SDL_EVENT_CASE
 
         default:
-            printf("UNKNOWN SDL EVENT #%u! (Bug? FIXME?)", (uint) event->type);
+            if (!name[0]) {
+                SDL_strlcpy(name, "UNKNOWN", sizeof (name));
+                SDL_snprintf(details, sizeof (details), " #%u! (Bug? FIXME?)", (uint) event->type);
+            }
             break;
     }
 
-    printf("\n");
+    if (name[0]) {
+        SDL_Log("SDL EVENT: %s%s", name, details);
+    }
+
+    #undef uint
 }
-#undef uint
-#endif
 
 
 
@@ -417,6 +495,10 @@ SDL_StartEventLoop(void)
     SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
     SDL_EventState(SDL_TEXTEDITING, SDL_DISABLE);
     SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
+#if 0 /* Leave these events enabled so apps can respond to items being dragged onto them at startup */
+    SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
+    SDL_EventState(SDL_DROPTEXT, SDL_DISABLE);
+#endif
 
     SDL_AtomicSet(&SDL_EventQ.active, 1);
 
@@ -447,9 +529,9 @@ SDL_AddEvent(SDL_Event * event)
         SDL_EventQ.free = entry->next;
     }
 
-    #ifdef SDL_DEBUG_EVENTS
-    SDL_DebugPrintEvent(event);
-    #endif
+    if (SDL_DoEventLogging) {
+        SDL_LogEvent(event);
+    }
 
     entry->event = *event;
     if (event->type == SDL_SYSWMEVENT) {
@@ -502,6 +584,27 @@ SDL_CutEvent(SDL_EventEntry *entry)
     SDL_EventQ.free = entry;
     SDL_assert(SDL_AtomicGet(&SDL_EventQ.count) > 0);
     SDL_AtomicAdd(&SDL_EventQ.count, -1);
+}
+
+static int
+SDL_SendWakeupEvent()
+{
+    SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    if (!_this || !_this->SendWakeupEvent) {
+        return 0;
+    }
+    if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
+        if (_this->wakeup_window) {
+            _this->SendWakeupEvent(_this, _this->wakeup_window);
+
+            /* No more wakeup events needed until we enter a new wait */
+            _this->wakeup_window = NULL;
+        }
+        if (_this->wakeup_lock) {
+            SDL_UnlockMutex(_this->wakeup_lock);
+        }
+    }
+    return 0;
 }
 
 /* Lock the event queue, take a peep at it, and unlock it */
@@ -580,6 +683,11 @@ SDL_PeepEvents(SDL_Event * events, int numevents, SDL_eventaction action,
     } else {
         return SDL_SetError("Couldn't lock event queue");
     }
+
+    if (used > 0 && action == SDL_ADDEVENT) {
+        SDL_SendWakeupEvent();
+    }
+
     return (used);
 }
 
@@ -604,6 +712,10 @@ SDL_FlushEvent(Uint32 type)
 void
 SDL_FlushEvents(Uint32 minType, Uint32 maxType)
 {
+    /* !!! FIXME: we need to manually SDL_free() the strings in TEXTINPUT and
+       drag'n'drop events if we're flushing them without passing them to the
+       app, but I don't know if this is the right place to do that. */
+
     /* Don't look after we've quit */
     if (!SDL_AtomicGet(&SDL_EventQ.active)) {
         return;
@@ -640,18 +752,29 @@ SDL_PumpEvents(void)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
 
+    /* Release any keys held down from last frame */
+    SDL_ReleaseAutoReleaseKeys();
+
     /* Get events from the video subsystem */
     if (_this) {
         _this->PumpEvents(_this);
     }
+
 #if !SDL_JOYSTICK_DISABLED
     /* Check for joystick state change */
-    if ((!SDL_disabled_events[SDL_JOYAXISMOTION >> 8] || SDL_JoystickEventState(SDL_QUERY))) {
+    if (SDL_update_joysticks) {
         SDL_JoystickUpdate();
     }
 #endif
 
-    SDL_SendPendingQuit();  /* in case we had a signal handler fire, etc. */
+#if !SDL_SENSOR_DISABLED
+    /* Check for sensor state change */
+    if (SDL_update_sensors) {
+        SDL_SensorUpdate();
+    }
+#endif
+
+    SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
 }
 
 /* Public functions */
@@ -660,6 +783,82 @@ int
 SDL_PollEvent(SDL_Event * event)
 {
     return SDL_WaitEventTimeout(event, 0);
+}
+
+static int
+SDL_WaitEventTimeout_Device(_THIS, SDL_Window *wakeup_window, SDL_Event * event, int timeout)
+{
+    for (;;) {
+        /* Pump events on entry and each time we wake to ensure:
+           a) All pending events are batch processed after waking up from a wait
+           b) Waiting can be completely skipped if events are already available to be pumped
+           c) Periodic processing that takes place in some platform PumpEvents() functions happens
+        */
+        SDL_PumpEvents();
+
+        if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
+            int status = SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
+            /* If status == 0 we are going to block so wakeup will be needed. */
+            if (status == 0) {
+                _this->wakeup_window = wakeup_window;
+            } else {
+                _this->wakeup_window = NULL;
+            }
+            if (_this->wakeup_lock) {
+                SDL_UnlockMutex(_this->wakeup_lock);
+            }
+            if (status < 0) {
+                /* Got an error: return */
+                break;
+            }
+            if (status > 0) {
+                /* There is an event, we can return. */
+                SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
+                return 1;
+            }
+            /* No events found in the queue, call WaitEventTimeout to wait for an event. */
+            status = _this->WaitEventTimeout(_this, timeout);
+            /* Set wakeup_window to NULL without holding the lock. */
+            _this->wakeup_window = NULL;
+            if (status <= 0) {
+                /* There is either an error or the timeout is elapsed: return */
+                return status;
+            }
+            /* An event was found and pumped into the SDL events queue. Continue the loop
+              to let SDL_PeepEvents pick it up .*/
+        }
+    }
+    return 0;
+}
+
+static int
+SDL_events_need_polling() {
+    SDL_bool need_polling = SDL_FALSE;
+
+#if !SDL_JOYSTICK_DISABLED
+    need_polling = \
+        (!SDL_disabled_events[SDL_JOYAXISMOTION >> 8] || SDL_JoystickEventState(SDL_QUERY)) \
+        && (SDL_NumJoysticks() > 0);
+#endif
+
+#if !SDL_SENSOR_DISABLED
+    need_polling = need_polling || (!SDL_disabled_events[SDL_SENSORUPDATE >> 8] && \
+        (SDL_NumSensors() > 0));
+#endif
+
+    return need_polling;
+}
+
+static SDL_Window *
+SDL_find_active_window(SDL_VideoDevice * _this)
+{
+    SDL_Window *window;
+    for (window = _this->windows; window; window = window->next) {
+        if (!window->is_destroying) {
+            return window;
+        }
+    }
+    return NULL;
 }
 
 int
@@ -671,10 +870,26 @@ SDL_WaitEvent(SDL_Event * event)
 int
 SDL_WaitEventTimeout(SDL_Event * event, int timeout)
 {
+    SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    SDL_Window *wakeup_window;
     Uint32 expiration = 0;
 
     if (timeout > 0)
         expiration = SDL_GetTicks() + timeout;
+
+    if (timeout != 0 && _this && _this->WaitEventTimeout && _this->SendWakeupEvent && !SDL_events_need_polling()) {
+        /* Look if a shown window is available to send the wakeup event. */
+        wakeup_window = SDL_find_active_window(_this);
+        if (wakeup_window) {
+            int status = SDL_WaitEventTimeout_Device(_this, wakeup_window, event, timeout);
+
+            /* There may be implementation-defined conditions where the backend cannot
+               reliably wait for the next event. If that happens, fall back to polling. */
+            if (status >= 0) {
+                return status;
+            }
+        }
+    }
 
     for (;;) {
         SDL_PumpEvents();
@@ -690,7 +905,7 @@ SDL_WaitEventTimeout(SDL_Event * event, int timeout)
                 /* Timeout expired and no events */
                 return 0;
             }
-            SDL_Delay(10);
+            SDL_Delay(1);
             break;
         default:
             /* Has events */
@@ -863,6 +1078,8 @@ SDL_FilterEvents(SDL_EventFilter filter, void *userdata)
 Uint8
 SDL_EventState(Uint32 type, int state)
 {
+    const SDL_bool isdnd = ((state == SDL_DISABLE) || (state == SDL_ENABLE)) &&
+                           ((type == SDL_DROPFILE) || (type == SDL_DROPTEXT));
     Uint8 current_state;
     Uint8 hi = ((type >> 8) & 0xff);
     Uint8 lo = (type & 0xff);
@@ -896,6 +1113,23 @@ SDL_EventState(Uint32 type, int state)
             /* Querying state... */
             break;
         }
+
+#if !SDL_JOYSTICK_DISABLED
+        if (state == SDL_DISABLE || state == SDL_ENABLE) {
+            SDL_CalculateShouldUpdateJoysticks();
+        }
+#endif
+#if !SDL_SENSOR_DISABLED
+        if (state == SDL_DISABLE || state == SDL_ENABLE) {
+            SDL_CalculateShouldUpdateSensors();
+        }
+#endif
+    }
+
+    /* turn off drag'n'drop support if we've disabled the events.
+       This might change some UI details at the OS level. */
+    if (isdnd) {
+        SDL_ToggleDragAndDropSupport();
     }
 
     return current_state;
@@ -950,6 +1184,46 @@ int
 SDL_SendKeymapChangedEvent(void)
 {
     return SDL_SendAppEvent(SDL_KEYMAPCHANGED);
+}
+
+int
+SDL_SendLocaleChangedEvent(void)
+{
+    return SDL_SendAppEvent(SDL_LOCALECHANGED);
+}
+
+int
+SDL_EventsInit(void)
+{
+#if !SDL_JOYSTICK_DISABLED
+    SDL_AddHintCallback(SDL_HINT_AUTO_UPDATE_JOYSTICKS, SDL_AutoUpdateJoysticksChanged, NULL);
+#endif
+#if !SDL_SENSOR_DISABLED
+    SDL_AddHintCallback(SDL_HINT_AUTO_UPDATE_SENSORS, SDL_AutoUpdateSensorsChanged, NULL);
+#endif
+    SDL_AddHintCallback(SDL_HINT_EVENT_LOGGING, SDL_EventLoggingChanged, NULL);
+    if (SDL_StartEventLoop() < 0) {
+        SDL_DelHintCallback(SDL_HINT_EVENT_LOGGING, SDL_EventLoggingChanged, NULL);
+        return -1;
+    }
+
+    SDL_QuitInit();
+
+    return 0;
+}
+
+void
+SDL_EventsQuit(void)
+{
+    SDL_QuitQuit();
+    SDL_StopEventLoop();
+    SDL_DelHintCallback(SDL_HINT_EVENT_LOGGING, SDL_EventLoggingChanged, NULL);
+#if !SDL_JOYSTICK_DISABLED
+    SDL_DelHintCallback(SDL_HINT_AUTO_UPDATE_JOYSTICKS, SDL_AutoUpdateJoysticksChanged, NULL);
+#endif
+#if !SDL_SENSOR_DISABLED
+    SDL_DelHintCallback(SDL_HINT_AUTO_UPDATE_SENSORS, SDL_AutoUpdateSensorsChanged, NULL);
+#endif
 }
 
 /* vi: set ts=4 sw=4 expandtab: */

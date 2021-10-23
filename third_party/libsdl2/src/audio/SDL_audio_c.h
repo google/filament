@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -52,6 +52,7 @@ extern SDL_AudioFormat SDL_FirstAudioFormat(SDL_AudioFormat format);
 extern SDL_AudioFormat SDL_NextAudioFormat(void);
 
 /* Function to calculate the size and silence for a SDL_AudioSpec */
+extern Uint8 SDL_SilenceValueForFormat(const SDL_AudioFormat format);
 extern void SDL_CalculateAudioSpec(SDL_AudioSpec * spec);
 
 /* Choose the audio filter functions below */

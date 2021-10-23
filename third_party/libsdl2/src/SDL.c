@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,23 @@
 
 #if defined(__WIN32__)
 #include "core/windows/SDL_windows.h"
+#elif defined(__OS2__)
+#include <stdlib.h> /* For _exit() */
+#elif !defined(__WINRT__)
+#include <unistd.h> /* For _exit(), etc. */
+#endif
+#if defined(__OS2__)
+#include "core/os2/SDL_os2.h"
+#endif
+#if SDL_THREAD_OS2
+#include "thread/os2/SDL_systls_c.h"
+#endif
+
+/* this checks for HAVE_DBUS_DBUS_H internally. */
+#include "core/linux/SDL_dbus.h"
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
 #endif
 
 /* Initialization code for SDL */
@@ -33,6 +50,7 @@
 #include "events/SDL_events_c.h"
 #include "haptic/SDL_haptic_c.h"
 #include "joystick/SDL_joystick_c.h"
+#include "sensor/SDL_sensor_c.h"
 
 /* Initialization/Cleanup routines */
 #if !SDL_TIMERS_DISABLED
@@ -42,6 +60,34 @@
 extern int SDL_HelperWindowCreate(void);
 extern int SDL_HelperWindowDestroy(void);
 #endif
+
+
+/* This is not declared in any header, although it is shared between some
+    parts of SDL, because we don't want anything calling it without an
+    extremely good reason. */
+extern SDL_NORETURN void SDL_ExitProcess(int exitcode);
+SDL_NORETURN void SDL_ExitProcess(int exitcode)
+{
+#ifdef __WIN32__
+    /* "if you do not know the state of all threads in your process, it is
+       better to call TerminateProcess than ExitProcess"
+       https://msdn.microsoft.com/en-us/library/windows/desktop/ms682658(v=vs.85).aspx */
+    TerminateProcess(GetCurrentProcess(), exitcode);
+    /* MingW doesn't have TerminateProcess marked as noreturn, so add an
+       ExitProcess here that will never be reached but make MingW happy. */
+    ExitProcess(exitcode);
+#elif defined(__EMSCRIPTEN__)
+    emscripten_cancel_main_loop();  /* this should "kill" the app. */
+    emscripten_force_exit(exitcode);  /* this should "kill" the app. */
+    exit(exitcode);
+#elif defined(__HAIKU__)  /* Haiku has _Exit, but it's not marked noreturn. */
+    _exit(exitcode);
+#elif defined(HAVE__EXIT) /* Upper case _Exit() */
+    _Exit(exitcode);
+#else
+    _exit(exitcode);
+#endif
+}
 
 
 /* The initialized subsystems */
@@ -112,6 +158,10 @@ SDL_InitSubSystem(Uint32 flags)
     /* Clear the error message */
     SDL_ClearError();
 
+#if SDL_USE_LIBDBUS
+    SDL_DBus_Init();
+#endif
+
     if ((flags & SDL_INIT_GAMECONTROLLER)) {
         /* game controller implies joystick */
         flags |= SDL_INIT_JOYSTICK;
@@ -122,12 +172,16 @@ SDL_InitSubSystem(Uint32 flags)
         flags |= SDL_INIT_EVENTS;
     }
 
+#if SDL_THREAD_OS2
+    SDL_OS2TLSAlloc(); /* thread/os2/SDL_systls.c */
+#endif
+
 #if SDL_VIDEO_DRIVER_WINDOWS
-	if ((flags & (SDL_INIT_HAPTIC|SDL_INIT_JOYSTICK))) {
-		if (SDL_HelperWindowCreate() < 0) {
-			return -1;
-		}
-	}
+    if ((flags & (SDL_INIT_HAPTIC|SDL_INIT_JOYSTICK))) {
+        if (SDL_HelperWindowCreate() < 0) {
+            return -1;
+        }
+    }
 #endif
 
 #if !SDL_TIMERS_DISABLED
@@ -138,10 +192,9 @@ SDL_InitSubSystem(Uint32 flags)
     if ((flags & SDL_INIT_EVENTS)) {
 #if !SDL_EVENTS_DISABLED
         if (SDL_PrivateShouldInitSubsystem(SDL_INIT_EVENTS)) {
-            if (SDL_StartEventLoop() < 0) {
+            if (SDL_EventsInit() < 0) {
                 return (-1);
             }
-            SDL_QuitInit();
         }
         SDL_PrivateSubsystemRefCountIncr(SDL_INIT_EVENTS);
 #else
@@ -232,6 +285,20 @@ SDL_InitSubSystem(Uint32 flags)
 #endif
     }
 
+    /* Initialize the sensor subsystem */
+    if ((flags & SDL_INIT_SENSOR)){
+#if !SDL_SENSOR_DISABLED
+        if (SDL_PrivateShouldInitSubsystem(SDL_INIT_SENSOR)) {
+            if (SDL_SensorInit() < 0) {
+                return (-1);
+            }
+        }
+        SDL_PrivateSubsystemRefCountIncr(SDL_INIT_SENSOR);
+#else
+        return SDL_SetError("SDL not built with sensor support");
+#endif
+    }
+
     return (0);
 }
 
@@ -244,7 +311,23 @@ SDL_Init(Uint32 flags)
 void
 SDL_QuitSubSystem(Uint32 flags)
 {
+#if SDL_THREAD_OS2
+    SDL_OS2TLSFree(); /* thread/os2/SDL_systls.c */
+#endif
+#if defined(__OS2__)
+    SDL_OS2Quit();
+#endif
+
     /* Shut down requested initialized subsystems */
+#if !SDL_SENSOR_DISABLED
+    if ((flags & SDL_INIT_SENSOR)) {
+        if (SDL_PrivateShouldQuitSubsystem(SDL_INIT_SENSOR)) {
+            SDL_SensorQuit();
+        }
+        SDL_PrivateSubsystemRefCountDecr(SDL_INIT_SENSOR);
+    }
+#endif
+
 #if !SDL_JOYSTICK_DISABLED
     if ((flags & SDL_INIT_GAMECONTROLLER)) {
         /* game controller implies joystick */
@@ -309,8 +392,7 @@ SDL_QuitSubSystem(Uint32 flags)
 #if !SDL_EVENTS_DISABLED
     if ((flags & SDL_INIT_EVENTS)) {
         if (SDL_PrivateShouldQuitSubsystem(SDL_INIT_EVENTS)) {
-            SDL_QuitQuit();
-            SDL_StopEventLoop();
+            SDL_EventsQuit();
         }
         SDL_PrivateSubsystemRefCountDecr(SDL_INIT_EVENTS);
     }
@@ -323,6 +405,12 @@ SDL_WasInit(Uint32 flags)
     int i;
     int num_subsystems = SDL_arraysize(SDL_SubsystemRefCount);
     Uint32 initialized = 0;
+
+    /* Fast path for checking one flag */
+    if (SDL_HasExactlyOneBitSet32(flags)) {
+        int subsystem_index = SDL_MostSignificantBitIndex32(flags);
+        return SDL_SubsystemRefCount[subsystem_index] ? flags : 0;
+    }
 
     if (!flags) {
         flags = SDL_INIT_EVERYTHING;
@@ -361,6 +449,10 @@ SDL_Quit(void)
     SDL_AssertionsQuit();
     SDL_LogResetPriorities();
 
+#if SDL_USE_LIBDBUS
+    SDL_DBus_Quit();
+#endif
+
     /* Now that every subsystem has been quit, we reset the subsystem refcount
      * and the list of initialized subsystems.
      */
@@ -387,7 +479,7 @@ SDL_GetRevision(void)
 int
 SDL_GetRevisionNumber(void)
 {
-    return SDL_REVISION_NUMBER;
+    return 0;  /* doesn't make sense without Mercurial. */
 }
 
 /* Get the name of the platform */
@@ -446,8 +538,24 @@ SDL_GetPlatform()
     return "iOS";
 #elif __PSP__
     return "PlayStation Portable";
+#elif __VITA__
+    return "PlayStation Vita";
 #else
     return "Unknown (see SDL_platform.h)";
+#endif
+}
+
+SDL_bool
+SDL_IsTablet()
+{
+#if __ANDROID__
+    extern SDL_bool SDL_IsAndroidTablet(void);
+    return SDL_IsAndroidTablet();
+#elif __IPHONEOS__
+    extern SDL_bool SDL_IsIPad(void);
+    return SDL_IsIPad();
+#else
+    return SDL_FALSE;
 #endif
 }
 

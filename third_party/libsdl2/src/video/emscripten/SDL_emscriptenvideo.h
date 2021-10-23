@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -40,15 +40,14 @@ typedef struct SDL_WindowData
     SDL_Window *window;
     SDL_Surface *surface;
 
+    char *canvas_id;
+
     float pixel_ratio;
 
     SDL_bool external_size;
 
     int requested_fullscreen_mode;
     SDL_bool fullscreen_resize;
-
-    SDL_bool finger_touching;  /* for mapping touch events to mice */
-    SDL_FingerID first_finger;
 
     SDL_bool has_pointer_lock;
 } SDL_WindowData;

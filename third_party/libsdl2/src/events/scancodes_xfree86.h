@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,6 +18,10 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef scancodes_xfree86_h_
+#define scancodes_xfree86_h_
+
 #include "../../include/SDL_scancode.h"
 
 /* XFree86 key code to SDL scancode mapping table
@@ -295,12 +299,12 @@ static const SDL_Scancode xfree86_scancode_table2[] = {
     /* 115 */   SDL_SCANCODE_VOLUMEUP,
     /* 116 */   SDL_SCANCODE_POWER,
     /* 117 */   SDL_SCANCODE_KP_EQUALS,
-    /* 118 */   SDL_SCANCODE_UNKNOWN,   /* plusminus */
+    /* 118 */   SDL_SCANCODE_KP_PLUSMINUS, /* plusminus */
     /* 119 */   SDL_SCANCODE_PAUSE,
     /* 120 */   SDL_SCANCODE_UNKNOWN,   /* XF86LaunchA */
-    /* 121 */   SDL_SCANCODE_UNKNOWN,   /* KP_Decimal */
-    /* 122 */   SDL_SCANCODE_UNKNOWN,   /* Hangul */
-    /* 123 */   SDL_SCANCODE_UNKNOWN,   /* Hangul_Hanja */
+    /* 121 */   SDL_SCANCODE_KP_COMMA,  /* KP_Decimal */
+    /* 122 */   SDL_SCANCODE_LANG1,     /* Hangul */
+    /* 123 */   SDL_SCANCODE_LANG2,     /* Hangul_Hanja */
     /* 124 */   SDL_SCANCODE_INTERNATIONAL3, /* Yen */
     /* 125 */   SDL_SCANCODE_LGUI,
     /* 126 */   SDL_SCANCODE_RGUI,
@@ -316,7 +320,7 @@ static const SDL_Scancode xfree86_scancode_table2[] = {
     /* 136 */   SDL_SCANCODE_FIND,
     /* 137 */   SDL_SCANCODE_CUT,
     /* 138 */   SDL_SCANCODE_HELP,
-    /* 139 */   SDL_SCANCODE_UNKNOWN,   /* XF86MenuKB */
+    /* 139 */   SDL_SCANCODE_MENU,   /* XF86MenuKB */
     /* 140 */   SDL_SCANCODE_CALCULATOR,
     /* 141 */   SDL_SCANCODE_UNKNOWN,
     /* 142 */   SDL_SCANCODE_SLEEP,
@@ -356,8 +360,8 @@ static const SDL_Scancode xfree86_scancode_table2[] = {
     /* 176 */   SDL_SCANCODE_UNKNOWN,
     /* 177 */   SDL_SCANCODE_UNKNOWN,   /* XF86ScrollUp */
     /* 178 */   SDL_SCANCODE_UNKNOWN,   /* XF86ScrollDown */
-    /* 179 */   SDL_SCANCODE_UNKNOWN,   /* parenleft */
-    /* 180 */   SDL_SCANCODE_UNKNOWN,   /* parenright */
+    /* 179 */   SDL_SCANCODE_KP_LEFTPAREN,  /* parenleft */
+    /* 180 */   SDL_SCANCODE_KP_RIGHTPAREN, /* parenright */
     /* 181 */   SDL_SCANCODE_UNKNOWN,   /* XF86New */
     /* 182 */   SDL_SCANCODE_AGAIN,
     /* 183 */   SDL_SCANCODE_F13,       /* XF86Tools */
@@ -367,7 +371,7 @@ static const SDL_Scancode xfree86_scancode_table2[] = {
     /* 187 */   SDL_SCANCODE_F17,       /* XF86Launch8 */
     /* 188 */   SDL_SCANCODE_F18,       /* XF86Launch9 */
     /* 189 */   SDL_SCANCODE_F19,       /* null keysym */
-    /* 190 */   SDL_SCANCODE_UNKNOWN,
+    /* 190 */   SDL_SCANCODE_F20,
     /* 191 */   SDL_SCANCODE_UNKNOWN,
     /* 192 */   SDL_SCANCODE_UNKNOWN,   /* XF86TouchpadToggle */
     /* 193 */   SDL_SCANCODE_UNKNOWN,
@@ -385,7 +389,7 @@ static const SDL_Scancode xfree86_scancode_table2[] = {
     /* 205 */   SDL_SCANCODE_UNKNOWN,   /* XF86Suspend */
     /* 206 */   SDL_SCANCODE_UNKNOWN,   /* XF86Close */
     /* 207 */   SDL_SCANCODE_AUDIOPLAY,
-    /* 208 */   SDL_SCANCODE_AUDIONEXT,
+    /* 208 */   SDL_SCANCODE_AUDIOFASTFORWARD,
     /* 209 */   SDL_SCANCODE_UNKNOWN,
     /* 210 */   SDL_SCANCODE_PRINTSCREEN,
     /* 211 */   SDL_SCANCODE_UNKNOWN,
@@ -502,5 +506,7 @@ static const SDL_Scancode xvnc_scancode_table[] = {
     /*  79 */   SDL_SCANCODE_F11,
     /*  80 */   SDL_SCANCODE_F12,
 };
+
+#endif /* scancodes_xfree86_h_ */
 
 /* *INDENT-ON* */

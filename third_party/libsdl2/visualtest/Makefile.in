@@ -1,0 +1,37 @@
+# Makefile to build the SDL tests
+srcdir  = @srcdir@
+CC      = @CC@
+EXE	= @EXE@
+CFLAGS  = @CFLAGS@ -I../include -I./include
+LIBS	= @LIBS@
+TARGETS = \
+	testharness$(EXE) \
+	testquit$(EXE)
+all: Makefile $(TARGETS)
+Makefile: $(srcdir)/Makefile.in
+	$(SHELL) config.status $@
+testharness$(EXE): $(srcdir)/src/action_configparser.c \
+		   $(srcdir)/src/harness_argparser.c \
+		   $(srcdir)/src/rwhelper.c \
+		   $(srcdir)/src/testharness.c \
+		   $(srcdir)/src/variator_exhaustive.c \
+		   $(srcdir)/src/variators.c \
+		   $(srcdir)/src/screenshot.c \
+		   $(srcdir)/src/harness_argparser.c \
+		   $(srcdir)/src/sut_configparser.c \
+		   $(srcdir)/src/variator_common.c \
+		   $(srcdir)/src/variator_random.c \
+		   $(srcdir)/src/parsehelper.c \
+		   $(srcdir)/src/mischelper.c \
+		   $(srcdir)/src/linux/linux_process.c \
+		   $(srcdir)/src/windows/windows_process.c \
+		   $(srcdir)/src/windows/windows_screenshot.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+testquit$(EXE): $(srcdir)/unittest/testquit.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+clean:
+	rm -f $(TARGETS)
+distclean: clean
+	rm -f Makefile
+	rm -f config.status config.cache config.log
+	rm -rf $(srcdir)/autom4te*

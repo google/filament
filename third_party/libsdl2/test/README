@@ -12,6 +12,7 @@ These are test programs for the SDL library:
 	testjoystick	List joysticks and watch joystick events
 	testkeys	List the available keyboard keys
 	testloadso	Tests the loadable library layer
+	testlocale  Test Locale API
 	testlock	Hacked up test of multi-threading and locking
 	testmultiaudio	Tests using several audio devices
 	testoverlay2	Tests the overlay flickering/scaling during playback.

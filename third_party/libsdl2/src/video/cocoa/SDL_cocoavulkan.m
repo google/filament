@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,18 +19,16 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/* 
+/*
  * @author Mark Callow, www.edgewise-consulting.com. Based on Jacob Lifshay's
  * SDL_x11vulkan.c.
  */
-
 #include "../../SDL_internal.h"
 
 #if SDL_VIDEO_VULKAN && SDL_VIDEO_DRIVER_COCOA
 
 #include "SDL_cocoavideo.h"
 #include "SDL_cocoawindow.h"
-#include "SDL_assert.h"
 
 #include "SDL_loadso.h"
 #include "SDL_cocoametalview.h"
@@ -42,6 +40,7 @@
 const char* defaultPaths[] = {
     "vulkan.framework/vulkan",
     "libvulkan.1.dylib",
+    "libvulkan.dylib",
     "MoltenVK.framework/MoltenVK",
     "libMoltenVK.dylib"
 };
@@ -58,8 +57,7 @@ int Cocoa_Vulkan_LoadLibrary(_THIS, const char *path)
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = NULL;
 
     if (_this->vulkan_config.loader_handle) {
-        SDL_SetError("Vulkan/MoltenVK already loaded");
-        return -1;
+        return SDL_SetError("Vulkan Portability library is already loaded.");
     }
 
     /* Load the Vulkan loader library */
@@ -68,9 +66,7 @@ int Cocoa_Vulkan_LoadLibrary(_THIS, const char *path)
     }
 
     if (!path) {
-        /* MoltenVK framework, currently, v0.17.0, has a static library and is
-         * the recommended way to use the package. There is likely no object to
-         * load. */
+        /* Handle the case where Vulkan Portability is linked statically. */
         vkGetInstanceProcAddr =
          (PFN_vkGetInstanceProcAddr)dlsym(DEFAULT_HANDLE,
                                           "vkGetInstanceProcAddr");
@@ -80,6 +76,7 @@ int Cocoa_Vulkan_LoadLibrary(_THIS, const char *path)
         _this->vulkan_config.loader_handle = DEFAULT_HANDLE;
     } else {
         const char** paths;
+        const char *foundPath = NULL;
         int numPaths;
         int i;
 
@@ -92,18 +89,17 @@ int Cocoa_Vulkan_LoadLibrary(_THIS, const char *path)
             paths = defaultPaths;
             numPaths = SDL_arraysize(defaultPaths);
         }
-        
-        for (i=0; i < numPaths; i++) {
-            _this->vulkan_config.loader_handle = SDL_LoadObject(paths[i]);
-            if (_this->vulkan_config.loader_handle)
-                break;
-            else
-                continue;
-        }
-        if (i == numPaths)
-            return -1;
 
-        SDL_strlcpy(_this->vulkan_config.loader_path, paths[i],
+        for (i = 0; i < numPaths && _this->vulkan_config.loader_handle == NULL; i++) {
+            foundPath = paths[i];
+            _this->vulkan_config.loader_handle = SDL_LoadObject(foundPath);
+        }
+
+        if (_this->vulkan_config.loader_handle == NULL) {
+            return SDL_SetError("Failed to load Vulkan Portability library");
+        }
+
+        SDL_strlcpy(_this->vulkan_config.loader_path, foundPath,
                     SDL_arraysize(_this->vulkan_config.loader_path));
         vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)SDL_LoadFunction(
             _this->vulkan_config.loader_handle, "vkGetInstanceProcAddr");
@@ -140,11 +136,11 @@ int Cocoa_Vulkan_LoadLibrary(_THIS, const char *path)
     }
     SDL_free(extensions);
     if (!hasSurfaceExtension) {
-        SDL_SetError("Installed MoltenVK/Vulkan doesn't implement the "
+        SDL_SetError("Installed Vulkan Portability library doesn't implement the "
                      VK_KHR_SURFACE_EXTENSION_NAME " extension");
         goto fail;
     } else if (!hasMacOSSurfaceExtension) {
-        SDL_SetError("Installed MoltenVK/Vulkan doesn't implement the "
+        SDL_SetError("Installed Vulkan Portability library doesn't implement the "
                      VK_MVK_MACOS_SURFACE_EXTENSION_NAME "extension");
         goto fail;
     }
@@ -196,6 +192,7 @@ SDL_bool Cocoa_Vulkan_CreateSurface(_THIS,
                                             "vkCreateMacOSSurfaceMVK");
     VkMacOSSurfaceCreateInfoMVK createInfo = {};
     VkResult result;
+    SDL_MetalView metalview;
 
     if (!_this->vulkan_config.loader_handle) {
         SDL_SetError("Vulkan is not loaded");
@@ -207,23 +204,38 @@ SDL_bool Cocoa_Vulkan_CreateSurface(_THIS,
                      " extension is not enabled in the Vulkan instance.");
         return SDL_FALSE;
     }
+
+    metalview = Cocoa_Metal_CreateView(_this, window);
+    if (metalview == NULL) {
+        return SDL_FALSE;
+    }
+
     createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.pView = Cocoa_Mtl_AddMetalView(window);
+    createInfo.pView = (const void *)metalview;
     result = vkCreateMacOSSurfaceMVK(instance, &createInfo,
                                        NULL, surface);
     if (result != VK_SUCCESS) {
+        Cocoa_Metal_DestroyView(_this, metalview);
         SDL_SetError("vkCreateMacOSSurfaceMVK failed: %s",
                      SDL_Vulkan_GetResultString(result));
         return SDL_FALSE;
     }
+
+    /* Unfortunately there's no SDL_Vulkan_DestroySurface function we can call
+     * Metal_DestroyView from. Right now the metal view's ref count is +2 (one
+     * from returning a new view object in CreateView, and one because it's
+     * a subview of the window.) If we release the view here to make it +1, it
+     * will be destroyed when the window is destroyed. */
+    CFBridgingRelease(metalview);
+
     return SDL_TRUE;
 }
 
 void Cocoa_Vulkan_GetDrawableSize(_THIS, SDL_Window *window, int *w, int *h)
 {
-    Cocoa_Mtl_GetDrawableSize(window, w, h);
+    Cocoa_Metal_GetDrawableSize(_this, window, w, h);
 }
 
 #endif

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -169,7 +169,7 @@ SDLTest_GenerateExecKey(const char *runSeed, char *suiteName, char *testName, in
 * \return Timer id or -1 on failure.
 */
 static SDL_TimerID
-SDLTest_SetTestTimeout(int timeout, void (*callback)())
+SDLTest_SetTestTimeout(int timeout, void (*callback)(void))
 {
     Uint32 timeoutInMilliseconds;
     SDL_TimerID timerID;
@@ -206,8 +206,11 @@ SDLTest_SetTestTimeout(int timeout, void (*callback)())
 /**
 * \brief Timeout handler. Aborts test run and exits harness process.
 */
+#if defined(__WATCOMC__)
+#pragma aux SDLTest_BailOut aborts;
+#endif
 static SDL_NORETURN void
-SDLTest_BailOut()
+SDLTest_BailOut(void)
 {
     SDLTest_LogError("TestCaseTimeout timer expired. Aborting test run.");
     exit(TEST_ABORTED); /* bail out from the test */
@@ -391,13 +394,13 @@ int SDLTest_RunSuites(SDLTest_TestSuiteReference *testSuites[], const char *user
 	SDL_bool forceTestRun = SDL_FALSE;
     int testResult = 0;
     int runResult = 0;
-    Uint32 totalTestFailedCount = 0;
-    Uint32 totalTestPassedCount = 0;
-    Uint32 totalTestSkippedCount = 0;
-    Uint32 testFailedCount = 0;
-    Uint32 testPassedCount = 0;
-    Uint32 testSkippedCount = 0;
-    Uint32 countSum = 0;
+    int totalTestFailedCount = 0;
+    int totalTestPassedCount = 0;
+    int totalTestSkippedCount = 0;
+    int testFailedCount = 0;
+    int testPassedCount = 0;
+    int testSkippedCount = 0;
+    int countSum = 0;
     const SDLTest_TestCaseReference **failedTests;
 
     /* Sanitize test iterations */
@@ -431,7 +434,7 @@ int SDLTest_RunSuites(SDLTest_TestSuiteReference *testSuites[], const char *user
 	/* Count the total number of tests */
     suiteCounter = 0;
     while (testSuites[suiteCounter]) {
-        testSuite=(SDLTest_TestSuiteReference *)testSuites[suiteCounter];
+        testSuite = testSuites[suiteCounter];
         suiteCounter++;
         testCounter = 0;
         while (testSuite->testCases[testCounter])
@@ -454,7 +457,7 @@ int SDLTest_RunSuites(SDLTest_TestSuiteReference *testSuites[], const char *user
         /* Loop over all suites to check if we have a filter match */
         suiteCounter = 0;
         while (testSuites[suiteCounter] && suiteFilter == 0) {
-            testSuite=(SDLTest_TestSuiteReference *)testSuites[suiteCounter];
+            testSuite = testSuites[suiteCounter];
             suiteCounter++;
             if (testSuite->name != NULL && SDL_strcmp(filter, testSuite->name) == 0) {
                 /* Matched a suite name */
@@ -493,8 +496,8 @@ int SDLTest_RunSuites(SDLTest_TestSuiteReference *testSuites[], const char *user
     /* Loop over all suites */
     suiteCounter = 0;
     while(testSuites[suiteCounter]) {
-        testSuite=(SDLTest_TestSuiteReference *)testSuites[suiteCounter];
-        currentSuiteName = (char *)((testSuite->name) ? testSuite->name : SDLTEST_INVALID_NAME_FORMAT);
+        testSuite = testSuites[suiteCounter];
+        currentSuiteName = (testSuite->name ? testSuite->name : SDLTEST_INVALID_NAME_FORMAT);
         suiteCounter++;
 
         /* Filter suite if flag set and we have a name */
@@ -524,7 +527,7 @@ int SDLTest_RunSuites(SDLTest_TestSuiteReference *testSuites[], const char *user
             while(testSuite->testCases[testCounter])
             {
                 testCase = testSuite->testCases[testCounter];
-                currentTestName = (char *)((testCase->name) ? testCase->name : SDLTEST_INVALID_NAME_FORMAT);
+                currentTestName = (testCase->name ? testCase->name : SDLTEST_INVALID_NAME_FORMAT);
                 testCounter++;
 
                 /* Filter tests if flag set and we have a name */

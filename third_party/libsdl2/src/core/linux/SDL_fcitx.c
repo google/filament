@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,9 +20,6 @@
 */
 #include "../../SDL_internal.h"
 
-#ifdef HAVE_FCITX_FRONTEND_H
-
-#include <fcitx/frontend.h>
 #include <unistd.h>
 
 #include "SDL_fcitx.h"
@@ -36,23 +33,20 @@
 #endif
 #include "SDL_hints.h"
 
-#define FCITX_DBUS_SERVICE "org.fcitx.Fcitx"
+#define FCITX_DBUS_SERVICE "org.freedesktop.portal.Fcitx"
 
-#define FCITX_IM_DBUS_PATH "/inputmethod"
-#define FCITX_IC_DBUS_PATH "/inputcontext_%d"
+#define FCITX_IM_DBUS_PATH "/org/freedesktop/portal/inputmethod"
 
-#define FCITX_IM_DBUS_INTERFACE "org.fcitx.Fcitx.InputMethod"
-#define FCITX_IC_DBUS_INTERFACE "org.fcitx.Fcitx.InputContext"
+#define FCITX_IM_DBUS_INTERFACE "org.fcitx.Fcitx.InputMethod1"
+#define FCITX_IC_DBUS_INTERFACE "org.fcitx.Fcitx.InputContext1"
 
-#define IC_NAME_MAX 64
 #define DBUS_TIMEOUT 500
 
 typedef struct _FcitxClient
 {
     SDL_DBusContext *dbus;
 
-    char servicename[IC_NAME_MAX];
-    char icname[IC_NAME_MAX];
+    char *ic_path;
 
     int id;
 
@@ -60,34 +54,6 @@ typedef struct _FcitxClient
 } FcitxClient;
 
 static FcitxClient fcitx_client;
-
-static int
-GetDisplayNumber()
-{
-    const char *display = SDL_getenv("DISPLAY");
-    const char *p = NULL;
-    int number = 0;
-
-    if (display == NULL)
-        return 0;
-
-    display = SDL_strchr(display, ':');
-    if (display == NULL)
-        return 0;
-
-    display++;
-    p = SDL_strchr(display, '.');
-    if (p == NULL && display != NULL) {
-        number = SDL_strtod(display, NULL);
-    } else {
-        char *buffer = SDL_strdup(display);
-        buffer[p - display] = '\0';
-        number = SDL_strtod(buffer, NULL);
-        SDL_free(buffer);
-    }
-
-    return number;
-}
 
 static char*
 GetAppName()
@@ -118,6 +84,54 @@ GetAppName()
     return SDL_strdup("SDL_App");
 }
 
+size_t Fcitx_GetPreeditString(SDL_DBusContext *dbus, DBusMessage *msg, char **ret) {
+    char *text = NULL, *subtext;
+    size_t text_bytes = 0;
+    DBusMessageIter iter, array, sub;
+
+    dbus->message_iter_init(msg, &iter);
+    /* Message type is a(si)i, we only need string part */
+    if (dbus->message_iter_get_arg_type(&iter) == DBUS_TYPE_ARRAY) {
+        /* First pass: calculate string length */
+        dbus->message_iter_recurse(&iter, &array);
+        while (dbus->message_iter_get_arg_type(&array) == DBUS_TYPE_STRUCT) {
+            dbus->message_iter_recurse(&array, &sub);
+            if (dbus->message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
+                dbus->message_iter_get_basic(&sub, &subtext);
+                if (subtext && *subtext) {
+                    text_bytes += SDL_strlen(subtext);
+                }
+            }
+            dbus->message_iter_next(&array);
+        }
+        if (text_bytes) {
+            text = SDL_malloc(text_bytes + 1);
+        }
+
+        if (text) {
+            char* pivot = text;
+            /* Second pass: join all the sub string */
+            dbus->message_iter_recurse(&iter, &array);
+            while (dbus->message_iter_get_arg_type(&array) == DBUS_TYPE_STRUCT) {
+                dbus->message_iter_recurse(&array, &sub);
+                if (dbus->message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
+                    dbus->message_iter_get_basic(&sub, &subtext);
+                    if (subtext && *subtext) {
+                        size_t length = SDL_strlen(subtext);
+                        SDL_strlcpy(pivot, subtext, length + 1);
+                        pivot += length;
+                    }
+                }
+                dbus->message_iter_next(&array);
+            }
+        } else {
+            text_bytes = 0;
+        }
+    }
+    *ret= text;
+    return text_bytes;
+}
+
 static DBusHandlerResult
 DBus_MessageFilter(DBusConnection *conn, DBusMessage *msg, void *data)
 {
@@ -130,22 +144,27 @@ DBus_MessageFilter(DBusConnection *conn, DBusMessage *msg, void *data)
         dbus->message_iter_init(msg, &iter);
         dbus->message_iter_get_basic(&iter, &text);
 
-        if (text)
-            SDL_SendKeyboardText(text);
+        if (text && *text) {
+            char buf[SDL_TEXTINPUTEVENT_TEXT_SIZE];
+            size_t text_bytes = SDL_strlen(text), i = 0;
+
+            while (i < text_bytes) {
+                size_t sz = SDL_utf8strlcpy(buf, text+i, sizeof(buf));
+                SDL_SendKeyboardText(buf);
+
+                i += sz;
+            }
+        }
 
         return DBUS_HANDLER_RESULT_HANDLED;
     }
 
-    if (dbus->message_is_signal(msg, FCITX_IC_DBUS_INTERFACE, "UpdatePreedit")) {
-        DBusMessageIter iter;
-        const char *text;
-
-        dbus->message_iter_init(msg, &iter);
-        dbus->message_iter_get_basic(&iter, &text);
-
-        if (text && *text) {
+    if (dbus->message_is_signal(msg, FCITX_IC_DBUS_INTERFACE, "UpdateFormattedPreedit")) {
+        char *text = NULL;
+        size_t text_bytes = Fcitx_GetPreeditString(dbus, msg, &text);
+        if (text_bytes) {
             char buf[SDL_TEXTEDITINGEVENT_TEXT_SIZE];
-            size_t text_bytes = SDL_strlen(text), i = 0;
+            size_t i = 0;
             size_t cursor = 0;
 
             while (i < text_bytes) {
@@ -157,6 +176,9 @@ DBus_MessageFilter(DBusConnection *conn, DBusMessage *msg, void *data)
                 i += sz;
                 cursor += chars;
             }
+            SDL_free(text);
+        } else {
+            SDL_SendEditingText("", 0, 0);
         }
 
         SDL_Fcitx_UpdateTextRect(NULL);
@@ -169,7 +191,10 @@ DBus_MessageFilter(DBusConnection *conn, DBusMessage *msg, void *data)
 static void
 FcitxClientICCallMethod(FcitxClient *client, const char *method)
 {
-    SDL_DBus_CallVoidMethod(client->servicename, client->icname, FCITX_IC_DBUS_INTERFACE, method, DBUS_TYPE_INVALID);
+    if (!client->ic_path) {
+        return;
+    }
+    SDL_DBus_CallVoidMethod(FCITX_DBUS_SERVICE, client->ic_path, FCITX_IC_DBUS_INTERFACE, method, DBUS_TYPE_INVALID);
 }
 
 static void SDLCALL
@@ -179,40 +204,68 @@ Fcitx_SetCapabilities(void *data,
         const char *internal_editing)
 {
     FcitxClient *client = (FcitxClient *)data;
-    Uint32 caps = CAPACITY_NONE;
-
-    if (!(internal_editing && *internal_editing == '1')) {
-        caps |= CAPACITY_PREEDIT;
+    Uint32 caps = 0;
+    if (!client->ic_path) {
+        return;
     }
 
-    SDL_DBus_CallVoidMethod(client->servicename, client->icname, FCITX_IC_DBUS_INTERFACE, "SetCapacity", DBUS_TYPE_UINT32, &caps, DBUS_TYPE_INVALID);
+    if (!(internal_editing && *internal_editing == '1')) {
+        caps |= (1 << 1); /* Preedit Flag */
+        caps |= (1 << 4); /* Formatted Preedit Flag */
+    }
+
+    SDL_DBus_CallVoidMethod(FCITX_DBUS_SERVICE, client->ic_path, FCITX_IC_DBUS_INTERFACE, "SetCapability", DBUS_TYPE_UINT64, &caps, DBUS_TYPE_INVALID);
+}
+
+static SDL_bool
+FcitxCreateInputContext(SDL_DBusContext* dbus, const char *appname, char **ic_path) {
+    const char *program = "program";
+    SDL_bool retval = SDL_FALSE;
+    if (dbus->session_conn) {
+        DBusMessage *msg = dbus->message_new_method_call(FCITX_DBUS_SERVICE, FCITX_IM_DBUS_PATH, FCITX_IM_DBUS_INTERFACE, "CreateInputContext");
+        if (msg) {
+            DBusMessage *reply = NULL;
+            DBusMessageIter args, array, sub;
+            dbus->message_iter_init_append(msg, &args);
+            dbus->message_iter_open_container(&args, DBUS_TYPE_ARRAY, "(ss)", &array);
+            dbus->message_iter_open_container(&array, DBUS_TYPE_STRUCT, 0, &sub);
+            dbus->message_iter_append_basic(&sub, DBUS_TYPE_STRING, &program);
+            dbus->message_iter_append_basic(&sub, DBUS_TYPE_STRING, &appname);
+            dbus->message_iter_close_container(&array, &sub);
+            dbus->message_iter_close_container(&args, &array);
+            reply = dbus->connection_send_with_reply_and_block(dbus->session_conn, msg, 300, NULL);
+            if (reply) {
+                if (dbus->message_get_args(reply, NULL, DBUS_TYPE_OBJECT_PATH, ic_path, DBUS_TYPE_INVALID)) {
+                    retval = SDL_TRUE;
+                }
+                dbus->message_unref(reply);
+            }
+            dbus->message_unref(msg);
+        }
+    }
+    return retval;
 }
 
 static SDL_bool
 FcitxClientCreateIC(FcitxClient *client)
 {
     char *appname = GetAppName();
-    pid_t pid = getpid();
-    int id = -1;
-    Uint32 enable, arg1, arg2, arg3, arg4;
+    char *ic_path = NULL;
+    SDL_DBusContext *dbus = client->dbus;
 
-    if (!SDL_DBus_CallMethod(client->servicename, FCITX_IM_DBUS_PATH, FCITX_IM_DBUS_INTERFACE, "CreateICv3",
-            DBUS_TYPE_STRING, &appname, DBUS_TYPE_INT32, &pid, DBUS_TYPE_INVALID,
-            DBUS_TYPE_INT32, &id, DBUS_TYPE_BOOLEAN, &enable, DBUS_TYPE_UINT32, &arg1, DBUS_TYPE_UINT32, &arg2, DBUS_TYPE_UINT32, &arg3, DBUS_TYPE_UINT32, &arg4, DBUS_TYPE_INVALID)) {
-        id = -1;  /* just in case. */
+    /* SDL_DBus_CallMethod cannot handle a(ss) type, call dbus function directly */
+    if (!FcitxCreateInputContext(dbus, appname, &ic_path)) {
+        ic_path = NULL;  /* just in case. */
     }
 
     SDL_free(appname);
 
-    if (id >= 0) {
-        SDL_DBusContext *dbus = client->dbus;
-
-        client->id = id;
-
-        SDL_snprintf(client->icname, IC_NAME_MAX, FCITX_IC_DBUS_PATH, client->id);
+    if (ic_path) {
+        SDL_free(client->ic_path);
+        client->ic_path = SDL_strdup(ic_path);
 
         dbus->bus_add_match(dbus->session_conn,
-                "type='signal', interface='org.fcitx.Fcitx.InputContext'",
+                "type='signal', interface='org.fcitx.Fcitx.InputContext1'",
                 NULL);
         dbus->connection_add_filter(dbus->session_conn,
                 &DBus_MessageFilter, dbus,
@@ -232,13 +285,14 @@ Fcitx_ModState(void)
     Uint32 fcitx_mods = 0;
     SDL_Keymod sdl_mods = SDL_GetModState();
 
-    if (sdl_mods & KMOD_SHIFT) fcitx_mods |= FcitxKeyState_Shift;
-    if (sdl_mods & KMOD_CAPS)   fcitx_mods |= FcitxKeyState_CapsLock;
-    if (sdl_mods & KMOD_CTRL)  fcitx_mods |= FcitxKeyState_Ctrl;
-    if (sdl_mods & KMOD_ALT)   fcitx_mods |= FcitxKeyState_Alt;
-    if (sdl_mods & KMOD_NUM)    fcitx_mods |= FcitxKeyState_NumLock;
-    if (sdl_mods & KMOD_LGUI)   fcitx_mods |= FcitxKeyState_Super;
-    if (sdl_mods & KMOD_RGUI)   fcitx_mods |= FcitxKeyState_Meta;
+    if (sdl_mods & KMOD_SHIFT) fcitx_mods |= (1 << 0);
+    if (sdl_mods & KMOD_CAPS)   fcitx_mods |= (1 << 1);
+    if (sdl_mods & KMOD_CTRL)  fcitx_mods |= (1 << 2);
+    if (sdl_mods & KMOD_ALT)   fcitx_mods |= (1 << 3);
+    if (sdl_mods & KMOD_NUM)    fcitx_mods |= (1 << 4);
+    if (sdl_mods & KMOD_MODE)   fcitx_mods |= (1 << 7);
+    if (sdl_mods & KMOD_LGUI)   fcitx_mods |= (1 << 6);
+    if (sdl_mods & KMOD_RGUI)   fcitx_mods |= (1 << 28);
 
     return fcitx_mods;
 }
@@ -253,10 +307,6 @@ SDL_Fcitx_Init()
     fcitx_client.cursor_rect.w = 0;
     fcitx_client.cursor_rect.h = 0;
 
-    SDL_snprintf(fcitx_client.servicename, IC_NAME_MAX,
-            "%s-%d",
-            FCITX_DBUS_SERVICE, GetDisplayNumber());
-
     return FcitxClientCreateIC(&fcitx_client);
 }
 
@@ -264,6 +314,10 @@ void
 SDL_Fcitx_Quit()
 {
     FcitxClientICCallMethod(&fcitx_client, "DestroyIC");
+    if (fcitx_client.ic_path) {
+        SDL_free(fcitx_client.ic_path);
+        fcitx_client.ic_path = NULL;
+    }
 }
 
 void
@@ -288,12 +342,16 @@ SDL_Fcitx_ProcessKeyEvent(Uint32 keysym, Uint32 keycode)
 {
     Uint32 state = Fcitx_ModState();
     Uint32 handled = SDL_FALSE;
-    int type = FCITX_PRESS_KEY;
+    Uint32 is_release = SDL_FALSE;
     Uint32 event_time = 0;
 
-    if (SDL_DBus_CallMethod(fcitx_client.servicename, fcitx_client.icname, FCITX_IC_DBUS_INTERFACE, "ProcessKeyEvent",
-            DBUS_TYPE_UINT32, &keysym, DBUS_TYPE_UINT32, &keycode, DBUS_TYPE_UINT32, &state, DBUS_TYPE_INT32, &type, DBUS_TYPE_UINT32, &event_time, DBUS_TYPE_INVALID,
-            DBUS_TYPE_INT32, &handled, DBUS_TYPE_INVALID)) {
+    if (!fcitx_client.ic_path) {
+        return SDL_FALSE;
+    }
+
+    if (SDL_DBus_CallMethod(FCITX_DBUS_SERVICE, fcitx_client.ic_path, FCITX_IC_DBUS_INTERFACE, "ProcessKeyEvent",
+            DBUS_TYPE_UINT32, &keysym, DBUS_TYPE_UINT32, &keycode, DBUS_TYPE_UINT32, &state, DBUS_TYPE_BOOLEAN, &is_release, DBUS_TYPE_UINT32, &event_time, DBUS_TYPE_INVALID,
+            DBUS_TYPE_BOOLEAN, &handled, DBUS_TYPE_INVALID)) {
         if (handled) {
             SDL_Fcitx_UpdateTextRect(NULL);
             return SDL_TRUE;
@@ -350,7 +408,7 @@ SDL_Fcitx_UpdateTextRect(SDL_Rect *rect)
     x += cursor->x;
     y += cursor->y;
 
-    SDL_DBus_CallVoidMethod(fcitx_client.servicename, fcitx_client.icname, FCITX_IC_DBUS_INTERFACE, "SetCursorRect",
+    SDL_DBus_CallVoidMethod(FCITX_DBUS_SERVICE, fcitx_client.ic_path, FCITX_IC_DBUS_INTERFACE, "SetCursorRect",
         DBUS_TYPE_INT32, &x, DBUS_TYPE_INT32, &y, DBUS_TYPE_INT32, &cursor->w, DBUS_TYPE_INT32, &cursor->h, DBUS_TYPE_INVALID);
 }
 
@@ -367,7 +425,5 @@ SDL_Fcitx_PumpEvents(void)
         usleep(10);
     }
 }
-
-#endif /* HAVE_FCITX_FRONTEND_H */
 
 /* vi: set ts=4 sw=4 expandtab: */

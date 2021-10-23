@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -30,10 +30,9 @@ extern "C" {
 #include "../SDL_sysvideo.h"
 
 
-extern void BE_VideoQuit(_THIS);
-extern int BE_VideoInit(_THIS);
-extern void BE_DeleteDevice(_THIS);
-extern int BE_Available(void);
+extern void HAIKU_VideoQuit(_THIS);
+extern int HAIKU_VideoInit(_THIS);
+extern void HAIKU_DeleteDevice(_THIS);
 
 #ifdef __cplusplus
 }

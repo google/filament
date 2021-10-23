@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,7 @@
 */
 #include "../../SDL_internal.h"
 
-#if !SDL_RENDER_DISABLED
+#if SDL_VIDEO_RENDER_SW && !SDL_RENDER_DISABLED
 
 #include "../SDL_sysrender.h"
 #include "SDL_render_sw_c.h"
@@ -36,64 +36,12 @@
 
 /* SDL surface based renderer implementation */
 
-static SDL_Renderer *SW_CreateRenderer(SDL_Window * window, Uint32 flags);
-static void SW_WindowEvent(SDL_Renderer * renderer,
-                           const SDL_WindowEvent *event);
-static int SW_GetOutputSize(SDL_Renderer * renderer, int *w, int *h);
-static int SW_CreateTexture(SDL_Renderer * renderer, SDL_Texture * texture);
-static int SW_SetTextureColorMod(SDL_Renderer * renderer,
-                                 SDL_Texture * texture);
-static int SW_SetTextureAlphaMod(SDL_Renderer * renderer,
-                                 SDL_Texture * texture);
-static int SW_SetTextureBlendMode(SDL_Renderer * renderer,
-                                  SDL_Texture * texture);
-static int SW_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
-                            const SDL_Rect * rect, const void *pixels,
-                            int pitch);
-static int SW_LockTexture(SDL_Renderer * renderer, SDL_Texture * texture,
-                          const SDL_Rect * rect, void **pixels, int *pitch);
-static void SW_UnlockTexture(SDL_Renderer * renderer, SDL_Texture * texture);
-static int SW_SetRenderTarget(SDL_Renderer * renderer, SDL_Texture * texture);
-static int SW_UpdateViewport(SDL_Renderer * renderer);
-static int SW_UpdateClipRect(SDL_Renderer * renderer);
-static int SW_RenderClear(SDL_Renderer * renderer);
-static int SW_RenderDrawPoints(SDL_Renderer * renderer,
-                               const SDL_FPoint * points, int count);
-static int SW_RenderDrawLines(SDL_Renderer * renderer,
-                              const SDL_FPoint * points, int count);
-static int SW_RenderFillRects(SDL_Renderer * renderer,
-                              const SDL_FRect * rects, int count);
-static int SW_RenderCopy(SDL_Renderer * renderer, SDL_Texture * texture,
-                         const SDL_Rect * srcrect, const SDL_FRect * dstrect);
-static int SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
-                          const SDL_Rect * srcrect, const SDL_FRect * dstrect,
-                          const double angle, const SDL_FPoint * center, const SDL_RendererFlip flip);
-static int SW_RenderReadPixels(SDL_Renderer * renderer, const SDL_Rect * rect,
-                               Uint32 format, void * pixels, int pitch);
-static void SW_RenderPresent(SDL_Renderer * renderer);
-static void SW_DestroyTexture(SDL_Renderer * renderer, SDL_Texture * texture);
-static void SW_DestroyRenderer(SDL_Renderer * renderer);
-
-
-SDL_RenderDriver SW_RenderDriver = {
-    SW_CreateRenderer,
-    {
-     "software",
-     SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE,
-     8,
-     {
-      SDL_PIXELFORMAT_ARGB8888,
-      SDL_PIXELFORMAT_ABGR8888,
-      SDL_PIXELFORMAT_RGBA8888,
-      SDL_PIXELFORMAT_BGRA8888,
-      SDL_PIXELFORMAT_RGB888,
-      SDL_PIXELFORMAT_BGR888,
-      SDL_PIXELFORMAT_RGB565,
-      SDL_PIXELFORMAT_RGB555
-     },
-     0,
-     0}
-};
+typedef struct
+{
+    const SDL_Rect *viewport;
+    const SDL_Rect *cliprect;
+    SDL_bool surface_cliprect_dirty;
+} SW_DrawStateCache;
 
 typedef struct
 {
@@ -114,80 +62,9 @@ SW_ActivateRenderer(SDL_Renderer * renderer)
         SDL_Surface *surface = SDL_GetWindowSurface(renderer->window);
         if (surface) {
             data->surface = data->window = surface;
-
-            SW_UpdateViewport(renderer);
-            SW_UpdateClipRect(renderer);
         }
     }
     return data->surface;
-}
-
-SDL_Renderer *
-SW_CreateRendererForSurface(SDL_Surface * surface)
-{
-    SDL_Renderer *renderer;
-    SW_RenderData *data;
-
-    if (!surface) {
-        SDL_SetError("Can't create renderer for NULL surface");
-        return NULL;
-    }
-
-    renderer = (SDL_Renderer *) SDL_calloc(1, sizeof(*renderer));
-    if (!renderer) {
-        SDL_OutOfMemory();
-        return NULL;
-    }
-
-    data = (SW_RenderData *) SDL_calloc(1, sizeof(*data));
-    if (!data) {
-        SW_DestroyRenderer(renderer);
-        SDL_OutOfMemory();
-        return NULL;
-    }
-    data->surface = surface;
-    data->window = surface;
-
-    renderer->WindowEvent = SW_WindowEvent;
-    renderer->GetOutputSize = SW_GetOutputSize;
-    renderer->CreateTexture = SW_CreateTexture;
-    renderer->SetTextureColorMod = SW_SetTextureColorMod;
-    renderer->SetTextureAlphaMod = SW_SetTextureAlphaMod;
-    renderer->SetTextureBlendMode = SW_SetTextureBlendMode;
-    renderer->UpdateTexture = SW_UpdateTexture;
-    renderer->LockTexture = SW_LockTexture;
-    renderer->UnlockTexture = SW_UnlockTexture;
-    renderer->SetRenderTarget = SW_SetRenderTarget;
-    renderer->UpdateViewport = SW_UpdateViewport;
-    renderer->UpdateClipRect = SW_UpdateClipRect;
-    renderer->RenderClear = SW_RenderClear;
-    renderer->RenderDrawPoints = SW_RenderDrawPoints;
-    renderer->RenderDrawLines = SW_RenderDrawLines;
-    renderer->RenderFillRects = SW_RenderFillRects;
-    renderer->RenderCopy = SW_RenderCopy;
-    renderer->RenderCopyEx = SW_RenderCopyEx;
-    renderer->RenderReadPixels = SW_RenderReadPixels;
-    renderer->RenderPresent = SW_RenderPresent;
-    renderer->DestroyTexture = SW_DestroyTexture;
-    renderer->DestroyRenderer = SW_DestroyRenderer;
-    renderer->info = SW_RenderDriver.info;
-    renderer->driverdata = data;
-
-    SW_ActivateRenderer(renderer);
-
-    return renderer;
-}
-
-SDL_Renderer *
-SW_CreateRenderer(SDL_Window * window, Uint32 flags)
-{
-    SDL_Surface *surface;
-
-    surface = SDL_GetWindowSurface(window);
-    if (!surface) {
-        return NULL;
-    }
-    return SW_CreateRendererForSurface(surface);
 }
 
 static void
@@ -204,20 +81,25 @@ SW_WindowEvent(SDL_Renderer * renderer, const SDL_WindowEvent *event)
 static int
 SW_GetOutputSize(SDL_Renderer * renderer, int *w, int *h)
 {
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
+    SW_RenderData *data = (SW_RenderData *) renderer->driverdata;
 
-    if (surface) {
+    if (data->surface) {
         if (w) {
-            *w = surface->w;
+            *w = data->surface->w;
         }
         if (h) {
-            *h = surface->h;
+            *h = data->surface->h;
         }
         return 0;
-    } else {
-        SDL_SetError("Software renderer doesn't have an output surface");
-        return -1;
     }
+
+    if (renderer->window) {
+        SDL_GetWindowSize(renderer->window, w, h);
+        return 0;
+    }
+
+    SDL_SetError("Software renderer doesn't have an output surface");
+    return -1;
 }
 
 static int
@@ -250,46 +132,6 @@ SW_CreateTexture(SDL_Renderer * renderer, SDL_Texture * texture)
         return -1;
     }
     return 0;
-}
-
-static int
-SW_SetTextureColorMod(SDL_Renderer * renderer, SDL_Texture * texture)
-{
-    SDL_Surface *surface = (SDL_Surface *) texture->driverdata;
-    /* If the color mod is ever enabled (non-white), permanently disable RLE (which doesn't support
-     * color mod) to avoid potentially frequent RLE encoding/decoding.
-     */
-    if ((texture->r & texture->g & texture->b) != 255) {
-        SDL_SetSurfaceRLE(surface, 0);
-    }
-    return SDL_SetSurfaceColorMod(surface, texture->r, texture->g,
-                                  texture->b);
-}
-
-static int
-SW_SetTextureAlphaMod(SDL_Renderer * renderer, SDL_Texture * texture)
-{
-    SDL_Surface *surface = (SDL_Surface *) texture->driverdata;
-    /* If the texture ever has multiple alpha values (surface alpha plus alpha channel), permanently
-     * disable RLE (which doesn't support this) to avoid potentially frequent RLE encoding/decoding.
-     */
-    if (texture->a != 255 && surface->format->Amask) {
-        SDL_SetSurfaceRLE(surface, 0);
-    }
-    return SDL_SetSurfaceAlphaMod(surface, texture->a);
-}
-
-static int
-SW_SetTextureBlendMode(SDL_Renderer * renderer, SDL_Texture * texture)
-{
-    SDL_Surface *surface = (SDL_Surface *) texture->driverdata;
-    /* If add or mod blending are ever enabled, permanently disable RLE (which doesn't support
-     * them) to avoid potentially frequent RLE encoding/decoding.
-     */
-    if ((texture->blendMode == SDL_BLENDMODE_ADD || texture->blendMode == SDL_BLENDMODE_MOD)) {
-        SDL_SetSurfaceRLE(surface, 0);
-    }
-    return SDL_SetSurfaceBlendMode(surface, texture->blendMode);
 }
 
 static int
@@ -336,12 +178,17 @@ SW_UnlockTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 {
 }
 
+static void
+SW_SetTextureScaleMode(SDL_Renderer * renderer, SDL_Texture * texture, SDL_ScaleMode scaleMode)
+{
+}
+
 static int
 SW_SetRenderTarget(SDL_Renderer * renderer, SDL_Texture * texture)
 {
     SW_RenderData *data = (SW_RenderData *) renderer->driverdata;
 
-    if (texture ) {
+    if (texture) {
         data->surface = (SDL_Surface *) texture->driverdata;
     } else {
         data->surface = data->window;
@@ -350,263 +197,149 @@ SW_SetRenderTarget(SDL_Renderer * renderer, SDL_Texture * texture)
 }
 
 static int
-SW_UpdateViewport(SDL_Renderer * renderer)
+SW_QueueSetViewport(SDL_Renderer * renderer, SDL_RenderCommand *cmd)
 {
-    SW_RenderData *data = (SW_RenderData *) renderer->driverdata;
-    SDL_Surface *surface = data->surface;
+    return 0;  /* nothing to do in this backend. */
+}
 
-    if (!surface) {
-        /* We'll update the viewport after we recreate the surface */
-        return 0;
+static int
+SW_QueueDrawPoints(SDL_Renderer * renderer, SDL_RenderCommand *cmd, const SDL_FPoint * points, int count)
+{
+    SDL_Point *verts = (SDL_Point *) SDL_AllocateRenderVertices(renderer, count * sizeof (SDL_Point), 0, &cmd->data.draw.first);
+    int i;
+
+    if (!verts) {
+        return -1;
     }
 
-    SDL_SetClipRect(data->surface, &renderer->viewport);
+    cmd->data.draw.count = count;
+
+    if (renderer->viewport.x || renderer->viewport.y) {
+        const int x = renderer->viewport.x;
+        const int y = renderer->viewport.y;
+        for (i = 0; i < count; i++, verts++, points++) {
+            verts->x = (int)(x + points->x);
+            verts->y = (int)(y + points->y);
+        }
+    } else {
+        for (i = 0; i < count; i++, verts++, points++) {
+            verts->x = (int)points->x;
+            verts->y = (int)points->y;
+        }
+    }
+
     return 0;
 }
 
 static int
-SW_UpdateClipRect(SDL_Renderer * renderer)
+SW_QueueFillRects(SDL_Renderer * renderer, SDL_RenderCommand *cmd, const SDL_FRect * rects, int count)
 {
-    SW_RenderData *data = (SW_RenderData *) renderer->driverdata;
-    SDL_Surface *surface = data->surface;
-    if (surface) {
-        if (renderer->clipping_enabled) {
-            SDL_Rect clip_rect;
-            clip_rect = renderer->clip_rect;
-            clip_rect.x += renderer->viewport.x;
-            clip_rect.y += renderer->viewport.y;
-            SDL_IntersectRect(&renderer->viewport, &clip_rect, &clip_rect);
-            SDL_SetClipRect(surface, &clip_rect);
-        } else {
-            SDL_SetClipRect(surface, &renderer->viewport);
+    SDL_Rect *verts = (SDL_Rect *) SDL_AllocateRenderVertices(renderer, count * sizeof (SDL_Rect), 0, &cmd->data.draw.first);
+    int i;
+
+    if (!verts) {
+        return -1;
+    }
+
+    cmd->data.draw.count = count;
+
+    if (renderer->viewport.x || renderer->viewport.y) {
+        const int x = renderer->viewport.x;
+        const int y = renderer->viewport.y;
+
+        for (i = 0; i < count; i++, verts++, rects++) {
+            verts->x = (int)(x + rects->x);
+            verts->y = (int)(y + rects->y);
+            verts->w = SDL_max((int)rects->w, 1);
+            verts->h = SDL_max((int)rects->h, 1);
+        }
+    } else {
+        for (i = 0; i < count; i++, verts++, rects++) {
+            verts->x = (int)rects->x;
+            verts->y = (int)rects->y;
+            verts->w = SDL_max((int)rects->w, 1);
+            verts->h = SDL_max((int)rects->h, 1);
         }
     }
+
     return 0;
 }
 
 static int
-SW_RenderClear(SDL_Renderer * renderer)
+SW_QueueCopy(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * texture,
+             const SDL_Rect * srcrect, const SDL_FRect * dstrect)
 {
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
-    Uint32 color;
-    SDL_Rect clip_rect;
+    SDL_Rect *verts = (SDL_Rect *) SDL_AllocateRenderVertices(renderer, 2 * sizeof (SDL_Rect), 0, &cmd->data.draw.first);
 
-    if (!surface) {
+    if (!verts) {
         return -1;
     }
 
-    color = SDL_MapRGBA(surface->format,
-                        renderer->r, renderer->g, renderer->b, renderer->a);
+    cmd->data.draw.count = 1;
 
-    /* By definition the clear ignores the clip rect */
-    clip_rect = surface->clip_rect;
-    SDL_SetClipRect(surface, NULL);
-    SDL_FillRect(surface, NULL, color);
-    SDL_SetClipRect(surface, &clip_rect);
+    SDL_memcpy(verts, srcrect, sizeof (SDL_Rect));
+    verts++;
+
+    if (renderer->viewport.x || renderer->viewport.y) {
+        verts->x = (int)(renderer->viewport.x + dstrect->x);
+        verts->y = (int)(renderer->viewport.y + dstrect->y);
+    } else {
+        verts->x = (int)dstrect->x;
+        verts->y = (int)dstrect->y;
+    }
+    verts->w = (int)dstrect->w;
+    verts->h = (int)dstrect->h;
+
+    return 0;
+}
+
+typedef struct CopyExData
+{
+    SDL_Rect srcrect;
+    SDL_Rect dstrect;
+    double angle;
+    SDL_FPoint center;
+    SDL_RendererFlip flip;
+} CopyExData;
+
+static int
+SW_QueueCopyEx(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * texture,
+               const SDL_Rect * srcrect, const SDL_FRect * dstrect,
+               const double angle, const SDL_FPoint *center, const SDL_RendererFlip flip)
+{
+    CopyExData *verts = (CopyExData *) SDL_AllocateRenderVertices(renderer, sizeof (CopyExData), 0, &cmd->data.draw.first);
+
+    if (!verts) {
+        return -1;
+    }
+
+    cmd->data.draw.count = 1;
+
+    SDL_memcpy(&verts->srcrect, srcrect, sizeof (SDL_Rect));
+
+    if (renderer->viewport.x || renderer->viewport.y) {
+        verts->dstrect.x = (int)(renderer->viewport.x + dstrect->x);
+        verts->dstrect.y = (int)(renderer->viewport.y + dstrect->y);
+    } else {
+        verts->dstrect.x = (int)dstrect->x;
+        verts->dstrect.y = (int)dstrect->y;
+    }
+    verts->dstrect.w = (int)dstrect->w;
+    verts->dstrect.h = (int)dstrect->h;
+    verts->angle = angle;
+    SDL_memcpy(&verts->center, center, sizeof (SDL_FPoint));
+    verts->flip = flip;
+
     return 0;
 }
 
 static int
-SW_RenderDrawPoints(SDL_Renderer * renderer, const SDL_FPoint * points,
-                    int count)
-{
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
-    SDL_Point *final_points;
-    int i, status;
-
-    if (!surface) {
-        return -1;
-    }
-
-    final_points = SDL_stack_alloc(SDL_Point, count);
-    if (!final_points) {
-        return SDL_OutOfMemory();
-    }
-    if (renderer->viewport.x || renderer->viewport.y) {
-        int x = renderer->viewport.x;
-        int y = renderer->viewport.y;
-
-        for (i = 0; i < count; ++i) {
-            final_points[i].x = (int)(x + points[i].x);
-            final_points[i].y = (int)(y + points[i].y);
-        }
-    } else {
-        for (i = 0; i < count; ++i) {
-            final_points[i].x = (int)points[i].x;
-            final_points[i].y = (int)points[i].y;
-        }
-    }
-
-    /* Draw the points! */
-    if (renderer->blendMode == SDL_BLENDMODE_NONE) {
-        Uint32 color = SDL_MapRGBA(surface->format,
-                                   renderer->r, renderer->g, renderer->b,
-                                   renderer->a);
-
-        status = SDL_DrawPoints(surface, final_points, count, color);
-    } else {
-        status = SDL_BlendPoints(surface, final_points, count,
-                                renderer->blendMode,
-                                renderer->r, renderer->g, renderer->b,
-                                renderer->a);
-    }
-    SDL_stack_free(final_points);
-
-    return status;
-}
-
-static int
-SW_RenderDrawLines(SDL_Renderer * renderer, const SDL_FPoint * points,
-                   int count)
-{
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
-    SDL_Point *final_points;
-    int i, status;
-
-    if (!surface) {
-        return -1;
-    }
-
-    final_points = SDL_stack_alloc(SDL_Point, count);
-    if (!final_points) {
-        return SDL_OutOfMemory();
-    }
-    if (renderer->viewport.x || renderer->viewport.y) {
-        int x = renderer->viewport.x;
-        int y = renderer->viewport.y;
-
-        for (i = 0; i < count; ++i) {
-            final_points[i].x = (int)(x + points[i].x);
-            final_points[i].y = (int)(y + points[i].y);
-        }
-    } else {
-        for (i = 0; i < count; ++i) {
-            final_points[i].x = (int)points[i].x;
-            final_points[i].y = (int)points[i].y;
-        }
-    }
-
-    /* Draw the lines! */
-    if (renderer->blendMode == SDL_BLENDMODE_NONE) {
-        Uint32 color = SDL_MapRGBA(surface->format,
-                                   renderer->r, renderer->g, renderer->b,
-                                   renderer->a);
-
-        status = SDL_DrawLines(surface, final_points, count, color);
-    } else {
-        status = SDL_BlendLines(surface, final_points, count,
-                                renderer->blendMode,
-                                renderer->r, renderer->g, renderer->b,
-                                renderer->a);
-    }
-    SDL_stack_free(final_points);
-
-    return status;
-}
-
-static int
-SW_RenderFillRects(SDL_Renderer * renderer, const SDL_FRect * rects, int count)
-{
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
-    SDL_Rect *final_rects;
-    int i, status;
-
-    if (!surface) {
-        return -1;
-    }
-
-    final_rects = SDL_stack_alloc(SDL_Rect, count);
-    if (!final_rects) {
-        return SDL_OutOfMemory();
-    }
-    if (renderer->viewport.x || renderer->viewport.y) {
-        int x = renderer->viewport.x;
-        int y = renderer->viewport.y;
-
-        for (i = 0; i < count; ++i) {
-            final_rects[i].x = (int)(x + rects[i].x);
-            final_rects[i].y = (int)(y + rects[i].y);
-            final_rects[i].w = SDL_max((int)rects[i].w, 1);
-            final_rects[i].h = SDL_max((int)rects[i].h, 1);
-        }
-    } else {
-        for (i = 0; i < count; ++i) {
-            final_rects[i].x = (int)rects[i].x;
-            final_rects[i].y = (int)rects[i].y;
-            final_rects[i].w = SDL_max((int)rects[i].w, 1);
-            final_rects[i].h = SDL_max((int)rects[i].h, 1);
-        }
-    }
-
-    if (renderer->blendMode == SDL_BLENDMODE_NONE) {
-        Uint32 color = SDL_MapRGBA(surface->format,
-                                   renderer->r, renderer->g, renderer->b,
-                                   renderer->a);
-        status = SDL_FillRects(surface, final_rects, count, color);
-    } else {
-        status = SDL_BlendFillRects(surface, final_rects, count,
-                                    renderer->blendMode,
-                                    renderer->r, renderer->g, renderer->b,
-                                    renderer->a);
-    }
-    SDL_stack_free(final_rects);
-
-    return status;
-}
-
-static int
-SW_RenderCopy(SDL_Renderer * renderer, SDL_Texture * texture,
-              const SDL_Rect * srcrect, const SDL_FRect * dstrect)
-{
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
-    SDL_Surface *src = (SDL_Surface *) texture->driverdata;
-    SDL_Rect final_rect;
-
-    if (!surface) {
-        return -1;
-    }
-
-    if (renderer->viewport.x || renderer->viewport.y) {
-        final_rect.x = (int)(renderer->viewport.x + dstrect->x);
-        final_rect.y = (int)(renderer->viewport.y + dstrect->y);
-    } else {
-        final_rect.x = (int)dstrect->x;
-        final_rect.y = (int)dstrect->y;
-    }
-    final_rect.w = (int)dstrect->w;
-    final_rect.h = (int)dstrect->h;
-
-    if ( srcrect->w == final_rect.w && srcrect->h == final_rect.h ) {
-        return SDL_BlitSurface(src, srcrect, surface, &final_rect);
-    } else {
-        /* If scaling is ever done, permanently disable RLE (which doesn't support scaling)
-         * to avoid potentially frequent RLE encoding/decoding.
-         */
-        SDL_SetSurfaceRLE(surface, 0);
-        return SDL_BlitScaled(src, srcrect, surface, &final_rect);
-    }
-}
-
-static int
-GetScaleQuality(void)
-{
-    const char *hint = SDL_GetHint(SDL_HINT_RENDER_SCALE_QUALITY);
-
-    if (!hint || *hint == '0' || SDL_strcasecmp(hint, "nearest") == 0) {
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
-static int
-SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
-                const SDL_Rect * srcrect, const SDL_FRect * dstrect,
+SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Surface *surface, SDL_Texture * texture,
+                const SDL_Rect * srcrect, const SDL_Rect * final_rect,
                 const double angle, const SDL_FPoint * center, const SDL_RendererFlip flip)
 {
-    SDL_Surface *surface = SW_ActivateRenderer(renderer);
     SDL_Surface *src = (SDL_Surface *) texture->driverdata;
-    SDL_Rect final_rect, tmp_rect;
+    SDL_Rect tmp_rect;
     SDL_Surface *src_clone, *src_rotated, *src_scaled;
     SDL_Surface *mask = NULL, *mask_rotated = NULL;
     int retval = 0, dstwidth, dstheight, abscenterx, abscentery;
@@ -621,19 +354,10 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
         return -1;
     }
 
-    if (renderer->viewport.x || renderer->viewport.y) {
-        final_rect.x = (int)(renderer->viewport.x + dstrect->x);
-        final_rect.y = (int)(renderer->viewport.y + dstrect->y);
-    } else {
-        final_rect.x = (int)dstrect->x;
-        final_rect.y = (int)dstrect->y;
-    }
-    final_rect.w = (int)dstrect->w;
-    final_rect.h = (int)dstrect->h;
-
-    tmp_rect = final_rect;
     tmp_rect.x = 0;
     tmp_rect.y = 0;
+    tmp_rect.w = final_rect->w;
+    tmp_rect.h = final_rect->h;
 
     /* It is possible to encounter an RLE encoded surface here and locking it is
      * necessary because this code is going to access the pixel buffer directly.
@@ -665,12 +389,17 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
     }
 
     /* If scaling and cropping is necessary, it has to be taken care of before the rotation. */
-    if (!(srcrect->w == final_rect.w && srcrect->h == final_rect.h && srcrect->x == 0 && srcrect->y == 0)) {
+    if (!(srcrect->w == final_rect->w && srcrect->h == final_rect->h && srcrect->x == 0 && srcrect->y == 0)) {
         blitRequired = SDL_TRUE;
     }
 
-    /* The color and alpha modulation has to be applied before the rotation when using the NONE and MOD blend modes. */
-    if ((blendmode == SDL_BLENDMODE_NONE || blendmode == SDL_BLENDMODE_MOD) && (alphaMod & rMod & gMod & bMod) != 255) {
+    /* srcrect is not selecting the whole src surface, so cropping is needed */
+    if (!(srcrect->w == src->w && srcrect->h == src->h && srcrect->x == 0 && srcrect->y == 0)) {
+        blitRequired = SDL_TRUE;
+    }
+
+    /* The color and alpha modulation has to be applied before the rotation when using the NONE, MOD or MUL blend modes. */
+    if ((blendmode == SDL_BLENDMODE_NONE || blendmode == SDL_BLENDMODE_MOD || blendmode == SDL_BLENDMODE_MUL) && (alphaMod & rMod & gMod & bMod) != 255) {
         applyModulation = SDL_TRUE;
         SDL_SetSurfaceAlphaMod(src_clone, alphaMod);
         SDL_SetSurfaceColorMod(src_clone, rMod, gMod, bMod);
@@ -685,7 +414,7 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
      * to clear the pixels in the destination surface. The other steps are explained below.
      */
     if (blendmode == SDL_BLENDMODE_NONE && !isOpaque) {
-        mask = SDL_CreateRGBSurface(0, final_rect.w, final_rect.h, 32,
+        mask = SDL_CreateRGBSurface(0, final_rect->w, final_rect->h, 32,
                                     0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         if (mask == NULL) {
             retval = -1;
@@ -699,13 +428,13 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
      */
     if (!retval && (blitRequired || applyModulation)) {
         SDL_Rect scale_rect = tmp_rect;
-        src_scaled = SDL_CreateRGBSurface(0, final_rect.w, final_rect.h, 32,
+        src_scaled = SDL_CreateRGBSurface(0, final_rect->w, final_rect->h, 32,
                                           0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         if (src_scaled == NULL) {
             retval = -1;
         } else {
             SDL_SetSurfaceBlendMode(src_clone, SDL_BLENDMODE_NONE);
-            retval = SDL_BlitScaled(src_clone, srcrect, src_scaled, &scale_rect);
+            retval = SDL_PrivateUpperBlitScaled(src_clone, srcrect, src_scaled, &scale_rect, texture->scaleMode);
             SDL_FreeSurface(src_clone);
             src_clone = src_scaled;
             src_scaled = NULL;
@@ -717,7 +446,7 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
 
     if (!retval) {
         SDLgfx_rotozoomSurfaceSizeTrig(tmp_rect.w, tmp_rect.h, angle, &dstwidth, &dstheight, &cangle, &sangle);
-        src_rotated = SDLgfx_rotateSurface(src_clone, angle, dstwidth/2, dstheight/2, GetScaleQuality(), flip & SDL_FLIP_HORIZONTAL, flip & SDL_FLIP_VERTICAL, dstwidth, dstheight, cangle, sangle);
+        src_rotated = SDLgfx_rotateSurface(src_clone, angle, dstwidth/2, dstheight/2, (texture->scaleMode == SDL_ScaleModeNearest) ? 0 : 1, flip & SDL_FLIP_HORIZONTAL, flip & SDL_FLIP_VERTICAL, dstwidth, dstheight, cangle, sangle);
         if (src_rotated == NULL) {
             retval = -1;
         }
@@ -730,32 +459,32 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
         }
         if (!retval) {
             /* Find out where the new origin is by rotating the four final_rect points around the center and then taking the extremes */
-            abscenterx = final_rect.x + (int)center->x;
-            abscentery = final_rect.y + (int)center->y;
+            abscenterx = final_rect->x + (int)center->x;
+            abscentery = final_rect->y + (int)center->y;
             /* Compensate the angle inversion to match the behaviour of the other backends */
             sangle = -sangle;
 
             /* Top Left */
-            px = final_rect.x - abscenterx;
-            py = final_rect.y - abscentery;
+            px = final_rect->x - abscenterx;
+            py = final_rect->y - abscentery;
             p1x = px * cangle - py * sangle + abscenterx;
             p1y = px * sangle + py * cangle + abscentery;
 
             /* Top Right */
-            px = final_rect.x + final_rect.w - abscenterx;
-            py = final_rect.y - abscentery;
+            px = final_rect->x + final_rect->w - abscenterx;
+            py = final_rect->y - abscentery;
             p2x = px * cangle - py * sangle + abscenterx;
             p2y = px * sangle + py * cangle + abscentery;
 
             /* Bottom Left */
-            px = final_rect.x - abscenterx;
-            py = final_rect.y + final_rect.h - abscentery;
+            px = final_rect->x - abscenterx;
+            py = final_rect->y + final_rect->h - abscentery;
             p3x = px * cangle - py * sangle + abscenterx;
             p3y = px * sangle + py * cangle + abscentery;
 
             /* Bottom Right */
-            px = final_rect.x + final_rect.w - abscenterx;
-            py = final_rect.y + final_rect.h - abscentery;
+            px = final_rect->x + final_rect->w - abscenterx;
+            py = final_rect->y + final_rect->h - abscentery;
             p4x = px * cangle - py * sangle + abscenterx;
             p4y = px * sangle + py * cangle + abscentery;
 
@@ -831,6 +560,190 @@ SW_RenderCopyEx(SDL_Renderer * renderer, SDL_Texture * texture,
     return retval;
 }
 
+static void
+PrepTextureForCopy(const SDL_RenderCommand *cmd)
+{
+    const Uint8 r = cmd->data.draw.r;
+    const Uint8 g = cmd->data.draw.g;
+    const Uint8 b = cmd->data.draw.b;
+    const Uint8 a = cmd->data.draw.a;
+    const SDL_BlendMode blend = cmd->data.draw.blend;
+    SDL_Texture *texture = cmd->data.draw.texture;
+    SDL_Surface *surface = (SDL_Surface *) texture->driverdata;
+    const SDL_bool colormod = ((r & g & b) != 0xFF);
+    const SDL_bool alphamod = (a != 0xFF);
+    const SDL_bool blending = ((blend == SDL_BLENDMODE_ADD) || (blend == SDL_BLENDMODE_MOD) || (blend == SDL_BLENDMODE_MUL));
+
+    if (colormod || alphamod || blending) {
+        SDL_SetSurfaceRLE(surface, 0);
+    }
+
+    /* !!! FIXME: we can probably avoid some of these calls. */
+    SDL_SetSurfaceColorMod(surface, r, g, b);
+    SDL_SetSurfaceAlphaMod(surface, a);
+    SDL_SetSurfaceBlendMode(surface, blend);
+}
+
+static void
+SetDrawState(SDL_Surface *surface, SW_DrawStateCache *drawstate)
+{
+    if (drawstate->surface_cliprect_dirty) {
+        const SDL_Rect *viewport = drawstate->viewport;
+        const SDL_Rect *cliprect = drawstate->cliprect;
+        SDL_assert(viewport != NULL);  /* the higher level should have forced a SDL_RENDERCMD_SETVIEWPORT */
+
+        if (cliprect != NULL) {
+            SDL_Rect clip_rect;
+            clip_rect.x = cliprect->x + viewport->x;
+            clip_rect.y = cliprect->y + viewport->y;
+            clip_rect.w = cliprect->w;
+            clip_rect.h = cliprect->h;
+            SDL_IntersectRect(viewport, &clip_rect, &clip_rect);
+            SDL_SetClipRect(surface, &clip_rect);
+        } else {
+            SDL_SetClipRect(surface, drawstate->viewport);
+        }
+        drawstate->surface_cliprect_dirty = SDL_FALSE;
+    }
+}
+
+static int
+SW_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *vertices, size_t vertsize)
+{
+    SDL_Surface *surface = SW_ActivateRenderer(renderer);
+    SW_DrawStateCache drawstate;
+
+    if (!surface) {
+        return -1;
+    }
+
+    drawstate.viewport = NULL;
+    drawstate.cliprect = NULL;
+    drawstate.surface_cliprect_dirty = SDL_TRUE;
+
+    while (cmd) {
+        switch (cmd->command) {
+            case SDL_RENDERCMD_SETDRAWCOLOR: {
+                break;  /* Not used in this backend. */
+            }
+
+            case SDL_RENDERCMD_SETVIEWPORT: {
+                drawstate.viewport = &cmd->data.viewport.rect;
+                drawstate.surface_cliprect_dirty = SDL_TRUE;
+                break;
+            }
+
+            case SDL_RENDERCMD_SETCLIPRECT: {
+                drawstate.cliprect = cmd->data.cliprect.enabled ? &cmd->data.cliprect.rect : NULL;                
+                drawstate.surface_cliprect_dirty = SDL_TRUE;
+                break;
+            }
+
+            case SDL_RENDERCMD_CLEAR: {
+                const Uint8 r = cmd->data.color.r;
+                const Uint8 g = cmd->data.color.g;
+                const Uint8 b = cmd->data.color.b;
+                const Uint8 a = cmd->data.color.a;
+                /* By definition the clear ignores the clip rect */
+                SDL_SetClipRect(surface, NULL);
+                SDL_FillRect(surface, NULL, SDL_MapRGBA(surface->format, r, g, b, a));
+                drawstate.surface_cliprect_dirty = SDL_TRUE;
+                break;
+            }
+
+            case SDL_RENDERCMD_DRAW_POINTS: {
+                const Uint8 r = cmd->data.draw.r;
+                const Uint8 g = cmd->data.draw.g;
+                const Uint8 b = cmd->data.draw.b;
+                const Uint8 a = cmd->data.draw.a;
+                const int count = (int) cmd->data.draw.count;
+                const SDL_Point *verts = (SDL_Point *) (((Uint8 *) vertices) + cmd->data.draw.first);
+                const SDL_BlendMode blend = cmd->data.draw.blend;
+                SetDrawState(surface, &drawstate);
+                if (blend == SDL_BLENDMODE_NONE) {
+                    SDL_DrawPoints(surface, verts, count, SDL_MapRGBA(surface->format, r, g, b, a));
+                } else {
+                    SDL_BlendPoints(surface, verts, count, blend, r, g, b, a);
+                }
+                break;
+            }
+
+            case SDL_RENDERCMD_DRAW_LINES: {
+                const Uint8 r = cmd->data.draw.r;
+                const Uint8 g = cmd->data.draw.g;
+                const Uint8 b = cmd->data.draw.b;
+                const Uint8 a = cmd->data.draw.a;
+                const int count = (int) cmd->data.draw.count;
+                const SDL_Point *verts = (SDL_Point *) (((Uint8 *) vertices) + cmd->data.draw.first);
+                const SDL_BlendMode blend = cmd->data.draw.blend;
+                SetDrawState(surface, &drawstate);
+                if (blend == SDL_BLENDMODE_NONE) {
+                    SDL_DrawLines(surface, verts, count, SDL_MapRGBA(surface->format, r, g, b, a));
+                } else {
+                    SDL_BlendLines(surface, verts, count, blend, r, g, b, a);
+                }
+                break;
+            }
+
+            case SDL_RENDERCMD_FILL_RECTS: {
+                const Uint8 r = cmd->data.draw.r;
+                const Uint8 g = cmd->data.draw.g;
+                const Uint8 b = cmd->data.draw.b;
+                const Uint8 a = cmd->data.draw.a;
+                const int count = (int) cmd->data.draw.count;
+                const SDL_Rect *verts = (SDL_Rect *) (((Uint8 *) vertices) + cmd->data.draw.first);
+                const SDL_BlendMode blend = cmd->data.draw.blend;
+                SetDrawState(surface, &drawstate);
+                if (blend == SDL_BLENDMODE_NONE) {
+                    SDL_FillRects(surface, verts, count, SDL_MapRGBA(surface->format, r, g, b, a));
+                } else {
+                    SDL_BlendFillRects(surface, verts, count, blend, r, g, b, a);
+                }
+                break;
+            }
+
+            case SDL_RENDERCMD_COPY: {
+                SDL_Rect *verts = (SDL_Rect *) (((Uint8 *) vertices) + cmd->data.draw.first);
+                const SDL_Rect *srcrect = verts;
+                SDL_Rect *dstrect = verts + 1;
+                SDL_Texture *texture = cmd->data.draw.texture;
+                SDL_Surface *src = (SDL_Surface *) texture->driverdata;
+
+                SetDrawState(surface, &drawstate);
+
+                PrepTextureForCopy(cmd);
+
+                if ( srcrect->w == dstrect->w && srcrect->h == dstrect->h ) {
+                    SDL_BlitSurface(src, srcrect, surface, dstrect);
+                } else {
+                    /* If scaling is ever done, permanently disable RLE (which doesn't support scaling)
+                     * to avoid potentially frequent RLE encoding/decoding.
+                     */
+                    SDL_SetSurfaceRLE(surface, 0);
+                    SDL_PrivateUpperBlitScaled(src, srcrect, surface, dstrect, texture->scaleMode);
+                }
+                break;
+            }
+
+            case SDL_RENDERCMD_COPY_EX: {
+                const CopyExData *copydata = (CopyExData *) (((Uint8 *) vertices) + cmd->data.draw.first);
+                SetDrawState(surface, &drawstate);
+                PrepTextureForCopy(cmd);
+                SW_RenderCopyEx(renderer, surface, cmd->data.draw.texture, &copydata->srcrect,
+                                &copydata->dstrect, copydata->angle, &copydata->center, copydata->flip);
+                break;
+            }
+
+            case SDL_RENDERCMD_NO_OP:
+                break;
+        }
+
+        cmd = cmd->next;
+    }
+
+    return 0;
+}
+
 static int
 SW_RenderReadPixels(SDL_Renderer * renderer, const SDL_Rect * rect,
                     Uint32 format, void * pixels, int pitch)
@@ -889,6 +802,92 @@ SW_DestroyRenderer(SDL_Renderer * renderer)
     SDL_free(renderer);
 }
 
-#endif /* !SDL_RENDER_DISABLED */
+SDL_Renderer *
+SW_CreateRendererForSurface(SDL_Surface * surface)
+{
+    SDL_Renderer *renderer;
+    SW_RenderData *data;
+
+    if (!surface) {
+        SDL_SetError("Can't create renderer for NULL surface");
+        return NULL;
+    }
+
+    renderer = (SDL_Renderer *) SDL_calloc(1, sizeof(*renderer));
+    if (!renderer) {
+        SDL_OutOfMemory();
+        return NULL;
+    }
+
+    data = (SW_RenderData *) SDL_calloc(1, sizeof(*data));
+    if (!data) {
+        SW_DestroyRenderer(renderer);
+        SDL_OutOfMemory();
+        return NULL;
+    }
+    data->surface = surface;
+    data->window = surface;
+
+    renderer->WindowEvent = SW_WindowEvent;
+    renderer->GetOutputSize = SW_GetOutputSize;
+    renderer->CreateTexture = SW_CreateTexture;
+    renderer->UpdateTexture = SW_UpdateTexture;
+    renderer->LockTexture = SW_LockTexture;
+    renderer->UnlockTexture = SW_UnlockTexture;
+    renderer->SetTextureScaleMode = SW_SetTextureScaleMode;
+    renderer->SetRenderTarget = SW_SetRenderTarget;
+    renderer->QueueSetViewport = SW_QueueSetViewport;
+    renderer->QueueSetDrawColor = SW_QueueSetViewport;  /* SetViewport and SetDrawColor are (currently) no-ops. */
+    renderer->QueueDrawPoints = SW_QueueDrawPoints;
+    renderer->QueueDrawLines = SW_QueueDrawPoints;  /* lines and points queue vertices the same way. */
+    renderer->QueueFillRects = SW_QueueFillRects;
+    renderer->QueueCopy = SW_QueueCopy;
+    renderer->QueueCopyEx = SW_QueueCopyEx;
+    renderer->RunCommandQueue = SW_RunCommandQueue;
+    renderer->RenderReadPixels = SW_RenderReadPixels;
+    renderer->RenderPresent = SW_RenderPresent;
+    renderer->DestroyTexture = SW_DestroyTexture;
+    renderer->DestroyRenderer = SW_DestroyRenderer;
+    renderer->info = SW_RenderDriver.info;
+    renderer->driverdata = data;
+
+    SW_ActivateRenderer(renderer);
+
+    return renderer;
+}
+
+static SDL_Renderer *
+SW_CreateRenderer(SDL_Window * window, Uint32 flags)
+{
+    SDL_Surface *surface;
+
+    surface = SDL_GetWindowSurface(window);
+    if (!surface) {
+        return NULL;
+    }
+    return SW_CreateRendererForSurface(surface);
+}
+
+SDL_RenderDriver SW_RenderDriver = {
+    SW_CreateRenderer,
+    {
+     "software",
+     SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE,
+     8,
+     {
+      SDL_PIXELFORMAT_ARGB8888,
+      SDL_PIXELFORMAT_ABGR8888,
+      SDL_PIXELFORMAT_RGBA8888,
+      SDL_PIXELFORMAT_BGRA8888,
+      SDL_PIXELFORMAT_RGB888,
+      SDL_PIXELFORMAT_BGR888,
+      SDL_PIXELFORMAT_RGB565,
+      SDL_PIXELFORMAT_RGB555
+     },
+     0,
+     0}
+};
+
+#endif /* SDL_VIDEO_RENDER_SW && !SDL_RENDER_DISABLED */
 
 /* vi: set ts=4 sw=4 expandtab: */

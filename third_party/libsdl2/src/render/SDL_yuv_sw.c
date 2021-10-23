@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,9 +22,11 @@
 
 /* This is the software implementation of the YUV texture support */
 
-#include "SDL_assert.h"
+#if SDL_HAVE_YUV
+
 
 #include "SDL_yuv_sw_c.h"
+#include "SDL_cpuinfo.h"
 
 
 SDL_SW_YUVTexture *
@@ -83,7 +85,7 @@ SDL_SW_CreateYUVTexture(Uint32 format, int w, int h)
                 SDL_assert(0 && "We should never get here (caught above)");
                 break;
         }
-        swdata->pixels = (Uint8 *) SDL_malloc(dst_size);
+        swdata->pixels = (Uint8 *) SDL_SIMDAlloc(dst_size);
         if (!swdata->pixels) {
             SDL_SW_DestroyYUVTexture(swdata);
             SDL_OutOfMemory();
@@ -298,6 +300,40 @@ SDL_SW_UpdateYUVTexturePlanar(SDL_SW_YUVTexture * swdata, const SDL_Rect * rect,
     return 0;
 }
 
+int SDL_SW_UpdateNVTexturePlanar(SDL_SW_YUVTexture * swdata, const SDL_Rect * rect,
+                                  const Uint8 *Yplane, int Ypitch,
+                                  const Uint8 *UVplane, int UVpitch)
+{
+    const Uint8 *src;
+    Uint8 *dst;
+    int row;
+    size_t length;
+
+    /* Copy the Y plane */
+    src = Yplane;
+    dst = swdata->pixels + rect->y * swdata->w + rect->x;
+    length = rect->w;
+    for (row = 0; row < rect->h; ++row) {
+        SDL_memcpy(dst, src, length);
+        src += Ypitch;
+        dst += swdata->w;
+    }
+
+    /* Copy the UV or VU plane */
+    src = UVplane;
+    dst = swdata->pixels + swdata->h * swdata->w;
+    dst += rect->y * ((swdata->w + 1)/2) + rect->x;
+    length = (rect->w + 1) / 2;
+    length *= 2;
+    for (row = 0; row < (rect->h + 1)/2; ++row) {
+        SDL_memcpy(dst, src, length);
+        src += UVpitch;
+        dst += 2 * ((swdata->w + 1)/2);
+    }
+
+    return 0;
+}
+
 int
 SDL_SW_LockYUVTexture(SDL_SW_YUVTexture * swdata, const SDL_Rect * rect,
                       void **pixels, int *pitch)
@@ -404,11 +440,13 @@ void
 SDL_SW_DestroyYUVTexture(SDL_SW_YUVTexture * swdata)
 {
     if (swdata) {
-        SDL_free(swdata->pixels);
+        SDL_SIMDFree(swdata->pixels);
         SDL_FreeSurface(swdata->stretch);
         SDL_FreeSurface(swdata->display);
         SDL_free(swdata);
     }
 }
+
+#endif /* SDL_HAVE_YUV */
 
 /* vi: set ts=4 sw=4 expandtab: */

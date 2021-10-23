@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,14 +24,16 @@
  * Thanks to Alex Szpakowski, @slime73 on GitHub, for his gist showing
  * how to add a CAMetalLayer backed view.
  */
+#include "../../SDL_internal.h"
 
 #ifndef SDL_cocoametalview_h_
 #define SDL_cocoametalview_h_
 
-#import "../SDL_sysvideo.h"
-#import "SDL_cocoawindow.h"
+#if SDL_VIDEO_DRIVER_COCOA && (SDL_VIDEO_VULKAN || SDL_VIDEO_METAL)
 
-#if SDL_VIDEO_DRIVER_COCOA && (SDL_VIDEO_VULKAN || SDL_VIDEO_RENDER_METAL)
+#import "../SDL_sysvideo.h"
+
+#import "SDL_cocoawindow.h"
 
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
@@ -39,23 +41,29 @@
 
 #define METALVIEW_TAG 255
 
-@interface SDL_cocoametalview : NSView {
-    NSInteger _tag;
-}
+@interface SDL_cocoametalview : NSView
 
 - (instancetype)initWithFrame:(NSRect)frame
-                        scale:(CGFloat)scale;
+                      highDPI:(BOOL)highDPI
+                     windowID:(Uint32)windowID;
+
+- (void)updateDrawableSize;
+- (NSView *)hitTest:(NSPoint)point;
 
 /* Override superclass tag so this class can set it. */
 @property (assign, readonly) NSInteger tag;
 
+@property (nonatomic) BOOL highDPI;
+@property (nonatomic) Uint32 sdlWindowID;
+
 @end
 
-SDL_cocoametalview* Cocoa_Mtl_AddMetalView(SDL_Window* window);
+SDL_MetalView Cocoa_Metal_CreateView(_THIS, SDL_Window * window);
+void Cocoa_Metal_DestroyView(_THIS, SDL_MetalView view);
+void *Cocoa_Metal_GetLayer(_THIS, SDL_MetalView view);
+void Cocoa_Metal_GetDrawableSize(_THIS, SDL_Window * window, int * w, int * h);
 
-void Cocoa_Mtl_GetDrawableSize(SDL_Window * window, int * w, int * h);
-
-#endif /* SDL_VIDEO_DRIVER_COCOA && (SDL_VIDEO_VULKAN || SDL_VIDEO_RENDER_METAL) */
+#endif /* SDL_VIDEO_DRIVER_COCOA && (SDL_VIDEO_VULKAN || SDL_VIDEO_METAL) */
 
 #endif /* SDL_cocoametalview_h_ */
 

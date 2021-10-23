@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -28,10 +28,10 @@ SDL_Rect rect;
 SDL_Event event;
 
 static void
-DrawRects(SDL_Renderer * renderer, SDL_Rect * rect)
+DrawRects(SDL_Renderer * renderer)
 {
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_RenderFillRect(renderer, rect);
+    SDL_RenderFillRect(renderer, &rect);
 }
 
 static void
@@ -63,7 +63,7 @@ loop(){
         if (rect.x > viewport.x + viewport.w) rect.x -= viewport.w;
         if (rect.y > viewport.y + viewport.h) rect.y -= viewport.h;
 
-        DrawRects(renderer, &rect);
+        DrawRects(renderer);
 
         SDL_RenderPresent(renderer);
     }

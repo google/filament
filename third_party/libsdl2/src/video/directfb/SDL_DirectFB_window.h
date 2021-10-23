@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -69,7 +69,8 @@ extern void DirectFB_RaiseWindow(_THIS, SDL_Window * window);
 extern void DirectFB_MaximizeWindow(_THIS, SDL_Window * window);
 extern void DirectFB_MinimizeWindow(_THIS, SDL_Window * window);
 extern void DirectFB_RestoreWindow(_THIS, SDL_Window * window);
-extern void DirectFB_SetWindowGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
+extern void DirectFB_SetWindowMouseGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
+extern void DirectFB_SetWindowKeyboardGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
 extern void DirectFB_DestroyWindow(_THIS, SDL_Window * window);
 extern SDL_bool DirectFB_GetWindowWMInfo(_THIS, SDL_Window * window,
                                          struct SDL_SysWMinfo *info);

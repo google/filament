@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -27,6 +27,12 @@
 #include "SDL_endian.h"
 #include "SDL_surface.h"
 
+/* pixman ARM blitters are 32 bit only : */
+#if defined(__aarch64__)||defined(_M_ARM64)
+#undef SDL_ARM_SIMD_BLITTERS
+#undef SDL_ARM_NEON_BLITTERS
+#endif
+
 /* Table to do pixel byte expansion */
 extern Uint8* SDL_expand_byte[9];
 
@@ -36,6 +42,7 @@ extern Uint8* SDL_expand_byte[9];
 #define SDL_COPY_BLEND              0x00000010
 #define SDL_COPY_ADD                0x00000020
 #define SDL_COPY_MOD                0x00000040
+#define SDL_COPY_MUL                0x00000080
 #define SDL_COPY_COLORKEY           0x00000100
 #define SDL_COPY_NEAREST            0x00000200
 #define SDL_COPY_RLE_DESIRED        0x00001000
@@ -126,7 +133,7 @@ extern SDL_BlitFunc SDL_CalculateBlitA(SDL_Surface * surface);
     b = SDL_expand_byte[fmt->Bloss][((Pixel&fmt->Bmask)>>fmt->Bshift)]; \
 }
 #define RGB_FROM_RGB565(Pixel, r, g, b)                                 \
-    {                                                                   \
+{                                                                       \
     r = SDL_expand_byte[3][((Pixel&0xF800)>>11)];                       \
     g = SDL_expand_byte[2][((Pixel&0x07E0)>>5)];                        \
     b = SDL_expand_byte[3][(Pixel&0x001F)];                             \
@@ -262,18 +269,18 @@ do {                                                                    \
 {                                                                       \
     switch (bpp) {                                                      \
         case 1: {                                                       \
-            Uint8 Pixel;                                                \
+            Uint8 _Pixel;                                               \
                                                                         \
-            PIXEL_FROM_RGB(Pixel, fmt, r, g, b);                        \
-            *((Uint8 *)(buf)) = Pixel;                                  \
+            PIXEL_FROM_RGB(_Pixel, fmt, r, g, b);                       \
+            *((Uint8 *)(buf)) = _Pixel;                                 \
         }                                                               \
         break;                                                          \
                                                                         \
         case 2: {                                                       \
-            Uint16 Pixel;                                               \
+            Uint16 _Pixel;                                              \
                                                                         \
-            PIXEL_FROM_RGB(Pixel, fmt, r, g, b);                        \
-            *((Uint16 *)(buf)) = Pixel;                                 \
+            PIXEL_FROM_RGB(_Pixel, fmt, r, g, b);                       \
+            *((Uint16 *)(buf)) = _Pixel;                                \
         }                                                               \
         break;                                                          \
                                                                         \
@@ -291,10 +298,10 @@ do {                                                                    \
         break;                                                          \
                                                                         \
         case 4: {                                                       \
-            Uint32 Pixel;                                               \
+            Uint32 _Pixel;                                              \
                                                                         \
-            PIXEL_FROM_RGB(Pixel, fmt, r, g, b);                        \
-            *((Uint32 *)(buf)) = Pixel;                                 \
+            PIXEL_FROM_RGB(_Pixel, fmt, r, g, b);                       \
+            *((Uint32 *)(buf)) = _Pixel;                                \
         }                                                               \
         break;                                                          \
     }                                                                   \

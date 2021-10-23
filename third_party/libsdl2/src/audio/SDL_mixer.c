@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -98,11 +98,6 @@ SDL_MixAudioFormat(Uint8 * dst, const Uint8 * src, SDL_AudioFormat format,
 
     case AUDIO_U8:
         {
-#if defined(__GNUC__) && defined(__M68000__) && !defined(__mcoldfire__) && defined(SDL_ASSEMBLY_ROUTINES)
-            SDL_MixAudio_m68k_U8((char *) dst, (char *) src,
-                                 (unsigned long) len, (long) volume,
-                                 (char *) mix8);
-#else
             Uint8 src_sample;
 
             while (len--) {
@@ -112,7 +107,6 @@ SDL_MixAudioFormat(Uint8 * dst, const Uint8 * src, SDL_AudioFormat format,
                 ++dst;
                 ++src;
             }
-#endif
         }
         break;
 
@@ -172,10 +166,6 @@ SDL_MixAudioFormat(Uint8 * dst, const Uint8 * src, SDL_AudioFormat format,
 
     case AUDIO_S16MSB:
         {
-#if defined(__GNUC__) && defined(__M68000__) && !defined(__mcoldfire__) && defined(SDL_ASSEMBLY_ROUTINES)
-            SDL_MixAudio_m68k_S16MSB((short *) dst, (short *) src,
-                                     (unsigned long) len, (long) volume);
-#else
             Sint16 src1, src2;
             int dst_sample;
             const int max_audioval = ((1 << (16 - 1)) - 1);
@@ -198,7 +188,6 @@ SDL_MixAudioFormat(Uint8 * dst, const Uint8 * src, SDL_AudioFormat format,
                 dst[0] = dst_sample & 0xFF;
                 dst += 2;
             }
-#endif
         }
         break;
 

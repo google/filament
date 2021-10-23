@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,17 +26,21 @@
 #include "../../core/android/SDL_android.h"
 #include "../SDL_egl_c.h"
 
-extern int Android_CreateWindow(_THIS, SDL_Window * window);
-extern void Android_SetWindowTitle(_THIS, SDL_Window * window);
-extern void Android_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display, SDL_bool fullscreen);
-extern void Android_DestroyWindow(_THIS, SDL_Window * window);
-extern SDL_bool Android_GetWindowWMInfo(_THIS, SDL_Window * window, struct SDL_SysWMinfo * info);
+extern int Android_CreateWindow(_THIS, SDL_Window *window);
+extern void Android_SetWindowTitle(_THIS, SDL_Window *window);
+extern void Android_SetWindowFullscreen(_THIS, SDL_Window *window, SDL_VideoDisplay *display, SDL_bool fullscreen);
+extern void Android_MinimizeWindow(_THIS, SDL_Window *window);
+
+extern void Android_DestroyWindow(_THIS, SDL_Window *window);
+extern SDL_bool Android_GetWindowWMInfo(_THIS, SDL_Window *window, struct SDL_SysWMinfo *info);
+extern SDL_Window *Android_Window;
 
 typedef struct
 {
     EGLSurface egl_surface;
     EGLContext egl_context; /* We use this to preserve the context when losing focus */
-    ANativeWindow* native_window;
+    SDL_bool   backup_done;
+    ANativeWindow *native_window;
     
 } SDL_WindowData;
 

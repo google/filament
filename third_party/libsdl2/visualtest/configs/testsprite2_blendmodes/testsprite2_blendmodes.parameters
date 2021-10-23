@@ -1,0 +1,5 @@
+# parameter name, type, value range, required, categories
+--blend, enum, [none blend add mod], false, []
+--cyclecolor, boolean, [], false, []
+--cyclealpha, boolean, [], false, []
+--iterations, integer, [1000 1000], true, []

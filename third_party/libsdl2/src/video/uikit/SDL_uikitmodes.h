@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -27,7 +27,10 @@
 
 @interface SDL_DisplayData : NSObject
 
+- (instancetype)initWithScreen:(UIScreen*)screen;
+
 @property (nonatomic, strong) UIScreen *uiscreen;
+@property (nonatomic) float screenDPI;
 
 @end
 
@@ -40,7 +43,10 @@
 extern SDL_bool UIKit_IsDisplayLandscape(UIScreen *uiscreen);
 
 extern int UIKit_InitModes(_THIS);
+extern int UIKit_AddDisplay(UIScreen *uiscreen, SDL_bool send_event);
+extern void UIKit_DelDisplay(UIScreen *uiscreen);
 extern void UIKit_GetDisplayModes(_THIS, SDL_VideoDisplay * display);
+extern int UIKit_GetDisplayDPI(_THIS, SDL_VideoDisplay * display, float * ddpi, float * hdpi, float * vdpi);
 extern int UIKit_SetDisplayMode(_THIS, SDL_VideoDisplay * display, SDL_DisplayMode * mode);
 extern void UIKit_QuitModes(_THIS);
 extern int UIKit_GetDisplayUsableBounds(_THIS, SDL_VideoDisplay * display, SDL_Rect * rect);

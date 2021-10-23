@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -23,7 +23,6 @@
 #if SDL_VIDEO_DRIVER_X11
 
 #include <X11/cursorfont.h>
-#include "SDL_assert.h"
 #include "SDL_x11video.h"
 #include "SDL_x11mouse.h"
 #include "SDL_x11xinput2.h"
@@ -48,7 +47,7 @@ X11_CreateEmptyCursor()
         XColor color;
         Pixmap pixmap;
 
-        SDL_zero(data);
+        SDL_zeroa(data);
         color.red = color.green = color.blue = 0;
         pixmap = X11_XCreateBitmapFromData(display, DefaultRootWindow(display),
                                        data, 1, 1);
@@ -78,7 +77,7 @@ X11_CreateDefaultCursor()
     cursor = SDL_calloc(1, sizeof(*cursor));
     if (cursor) {
         /* None is used to indicate the default cursor */
-        cursor->driverdata = (void*)None;
+        cursor->driverdata = (void*)(uintptr_t)None;
     } else {
         SDL_OutOfMemory();
     }
@@ -217,7 +216,7 @@ X11_CreateCursor(SDL_Surface * surface, int hot_x, int hot_y)
         if (x11_cursor == None) {
             x11_cursor = X11_CreatePixmapCursor(surface, hot_x, hot_y);
         }
-        cursor->driverdata = (void*)x11_cursor;
+        cursor->driverdata = (void*)(uintptr_t)x11_cursor;
     } else {
         SDL_OutOfMemory();
     }
@@ -258,7 +257,7 @@ X11_CreateSystemCursor(SDL_SystemCursor id)
 
         x11_cursor = X11_XCreateFontCursor(GetDisplay(), shape);
 
-        cursor->driverdata = (void*)x11_cursor;
+        cursor->driverdata = (void*)(uintptr_t)x11_cursor;
     } else {
         SDL_OutOfMemory();
     }

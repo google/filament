@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,11 +42,6 @@
 /* unused
 static SDL_bool PSP_initialized = SDL_FALSE;
 */
-static int
-PSP_Available(void)
-{
-    return 1;
-}
 
 static void
 PSP_Destroy(SDL_VideoDevice * device)
@@ -64,14 +59,6 @@ PSP_Create()
     SDL_VideoDevice *device;
     SDL_VideoData *phdata;
     SDL_GLDriverData *gldata;
-    int status;
-
-    /* Check if PSP could be initialized */
-    status = PSP_Available();
-    if (status == 0) {
-        /* PSP could not be used */
-        return NULL;
-    }
 
     /* Initialize SDL_VideoDevice structure */
     device = (SDL_VideoDevice *) SDL_calloc(1, sizeof(SDL_VideoDevice));
@@ -125,7 +112,6 @@ PSP_Create()
     device->MaximizeWindow = PSP_MaximizeWindow;
     device->MinimizeWindow = PSP_MinimizeWindow;
     device->RestoreWindow = PSP_RestoreWindow;
-    device->SetWindowGrab = PSP_SetWindowGrab;
     device->DestroyWindow = PSP_DestroyWindow;
 #if 0
     device->GetWindowWMInfo = PSP_GetWindowWMInfo;
@@ -152,7 +138,6 @@ PSP_Create()
 VideoBootStrap PSP_bootstrap = {
     "PSP",
     "PSP Video Driver",
-    PSP_Available,
     PSP_Create
 };
 
@@ -181,7 +166,7 @@ PSP_VideoInit(_THIS)
     display.current_mode = current_mode;
     display.driverdata = NULL;
 
-    SDL_AddVideoDisplay(&display);
+    SDL_AddVideoDisplay(&display, SDL_FALSE);
 
     return 1;
 }
@@ -279,11 +264,6 @@ PSP_MinimizeWindow(_THIS, SDL_Window * window)
 void
 PSP_RestoreWindow(_THIS, SDL_Window * window)
 {
-}
-void
-PSP_SetWindowGrab(_THIS, SDL_Window * window, SDL_bool grabbed)
-{
-
 }
 void
 PSP_DestroyWindow(_THIS, SDL_Window * window)

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -23,7 +23,9 @@
    configure script knows the C runtime has it and enables it. */
 #ifndef __QNXNTO__
 /* Need this so Linux systems define fseek64o, ftell64o and off64_t */
+#ifndef _LARGEFILE64_SOURCE
 #define _LARGEFILE64_SOURCE
+#endif
 #endif
 
 #include "../SDL_internal.h"
@@ -58,6 +60,236 @@
 
 #if __NACL__
 #include "nacl_io/nacl_io.h"
+#endif
+
+#ifdef __VITA__
+
+#include <psp2/io/fcntl.h>
+#include <psp2/io/stat.h>
+
+#define READAHEAD_BUFFER_SIZE   1024
+static int SDLCALL
+vita_file_open(SDL_RWops * context, const char *filename, const char *mode)
+{
+    int h;
+    int open_flags;
+    SDL_bool has_r;
+    SDL_bool has_w;
+    SDL_bool has_a;
+    SDL_bool has_plus;
+
+    if (!context)
+        return -1;              /* failed (invalid call) */
+
+    context->hidden.vitaio.h = -1;   /* mark this as unusable */
+    context->hidden.vitaio.buffer.data = NULL;
+    context->hidden.vitaio.buffer.size = 0;
+    context->hidden.vitaio.buffer.left = 0;
+
+    open_flags = 0;
+
+    /* "r" = reading, file must exist */
+    /* "w" = writing, truncate existing, file may not exist */
+    /* "r+"= reading or writing, file must exist            */
+    /* "a" = writing, append file may not exist             */
+    /* "a+"= append + read, file may not exist              */
+    /* "w+" = read, write, truncate. file may not exist    */
+
+    has_r = SDL_strchr(mode, 'r') != NULL;
+    has_w = SDL_strchr(mode, 'w') != NULL;
+    has_a = SDL_strchr(mode, 'a') != NULL;
+    has_plus = SDL_strchr(mode, '+') != NULL;
+
+    if (has_plus)
+    {
+        if (has_r || has_w || has_a)
+        {
+            open_flags |= SCE_O_RDWR;
+        }
+    }
+    else
+    {
+        if (has_r)
+        {
+            open_flags |= SCE_O_RDONLY;
+        }
+        if (has_w || has_a)
+        {
+            open_flags |= SCE_O_WRONLY;
+        }
+    }
+    if (has_w || has_a)
+    {
+        open_flags |= SCE_O_CREAT;
+    }
+    if (has_w)
+    {
+        open_flags |= SCE_O_TRUNC;
+    }
+    if (has_a)
+    {
+        open_flags |= SCE_O_APPEND;
+    }
+
+    context->hidden.vitaio.buffer.data =
+        (char *) SDL_malloc(READAHEAD_BUFFER_SIZE);
+    if (!context->hidden.vitaio.buffer.data) {
+        return SDL_OutOfMemory();
+    }
+
+    /* Try to open the file on the filesystem first */
+    h = sceIoOpen(filename, open_flags, 0777);
+
+    if (h < 0) {
+        /* Try opening it from app0:/ container if it's a relative path */
+        char path[4096];
+        SDL_snprintf(path, 4096, "app0:/%s", filename);
+        h = sceIoOpen(path, open_flags, 0777);
+    }
+
+    if (h < 0) {
+        SDL_free(context->hidden.vitaio.buffer.data);
+        context->hidden.vitaio.buffer.data = NULL;
+        SDL_SetError("Couldn't open %s", filename);
+        return -2;              /* failed (sceIoOpen) */
+    }
+    context->hidden.vitaio.h = h;
+
+    return 0;                   /* ok */
+}
+
+static Sint64 SDLCALL
+vita_file_size(SDL_RWops * context)
+{
+    SceIoStat st;
+    if (!context || context->hidden.vitaio.h < 0) {
+        return SDL_SetError("vita_file_size: invalid context/file not opened");
+    }
+
+    if (sceIoGetstatByFd(context->hidden.vitaio.h, &st) < 0)
+    {
+        return SDL_SetError("vita_file_size: could not get file size");
+    }
+    return st.st_size;
+}
+
+static Sint64 SDLCALL
+vita_file_seek(SDL_RWops * context, Sint64 offset, int whence)
+{
+    int vitawhence;
+
+    if (!context || context->hidden.vitaio.h < 0) {
+        return SDL_SetError("vita_file_seek: invalid context/file not opened");
+    }
+
+    /* FIXME: We may be able to satisfy the seek within buffered data */
+    if (whence == RW_SEEK_CUR && context->hidden.vitaio.buffer.left) {
+        offset -= (long)context->hidden.vitaio.buffer.left;
+    }
+    context->hidden.vitaio.buffer.left = 0;
+
+    switch (whence) {
+    case RW_SEEK_SET:
+        vitawhence = SCE_SEEK_SET;
+        break;
+    case RW_SEEK_CUR:
+        vitawhence = SCE_SEEK_CUR;
+        break;
+    case RW_SEEK_END:
+        vitawhence = SCE_SEEK_END;
+        break;
+    default:
+        return SDL_SetError("vita_file_seek: Unknown value for 'whence'");
+    }
+
+    return sceIoLseek(context->hidden.vitaio.h, offset, vitawhence);
+}
+
+static size_t SDLCALL
+vita_file_read(SDL_RWops * context, void *ptr, size_t size, size_t maxnum)
+{
+    size_t total_need;
+    size_t total_read = 0;
+    size_t read_ahead;
+    size_t byte_read;
+
+    total_need = size * maxnum;
+
+    if (!context || context->hidden.vitaio.h < 0
+        || !total_need)
+        return 0;
+
+    if (context->hidden.vitaio.buffer.left > 0) {
+        void *data = (char *) context->hidden.vitaio.buffer.data +
+            context->hidden.vitaio.buffer.size -
+            context->hidden.vitaio.buffer.left;
+        read_ahead =
+            SDL_min(total_need, context->hidden.vitaio.buffer.left);
+        SDL_memcpy(ptr, data, read_ahead);
+        context->hidden.vitaio.buffer.left -= read_ahead;
+
+        if (read_ahead == total_need) {
+            return maxnum;
+        }
+        ptr = (char *) ptr + read_ahead;
+        total_need -= read_ahead;
+        total_read += read_ahead;
+    }
+
+    if (total_need < READAHEAD_BUFFER_SIZE) {
+        byte_read = sceIoRead(context->hidden.vitaio.h, context->hidden.vitaio.buffer.data, READAHEAD_BUFFER_SIZE);
+        read_ahead = SDL_min(total_need, (int) byte_read);
+        SDL_memcpy(ptr, context->hidden.vitaio.buffer.data, read_ahead);
+        context->hidden.vitaio.buffer.size = byte_read;
+        context->hidden.vitaio.buffer.left = byte_read - read_ahead;
+        total_read += read_ahead;
+    } else {
+        byte_read = sceIoRead(context->hidden.vitaio.h, ptr, total_need);
+        total_read += byte_read;
+    }
+    return (total_read / size);
+}
+
+static size_t SDLCALL
+vita_file_write(SDL_RWops * context, const void *ptr, size_t size,
+                 size_t num)
+{
+
+    size_t total_bytes;
+    size_t byte_written;
+    size_t nwritten;
+
+    total_bytes = size * num;
+
+    if (!context || context->hidden.vitaio.h < 0
+        || total_bytes <= 0 || !size)
+        return 0;
+
+    if (context->hidden.vitaio.buffer.left) {
+        sceIoLseek(context->hidden.vitaio.h, -(SceOff)context->hidden.vitaio.buffer.left, SCE_SEEK_CUR);
+        context->hidden.vitaio.buffer.left = 0;
+    }
+
+    byte_written = sceIoWrite(context->hidden.vitaio.h, ptr, total_bytes);
+
+    nwritten = byte_written / size;
+    return nwritten;
+}
+
+static int SDLCALL
+vita_file_close(SDL_RWops * context)
+{
+    if (context) {
+        if (context->hidden.vitaio.h >= 0) {
+            sceIoClose(context->hidden.vitaio.h);
+            context->hidden.vitaio.h = -1;   /* to be sure */
+        }
+        SDL_free(context->hidden.vitaio.buffer.data);
+        context->hidden.vitaio.buffer.data = NULL;
+        SDL_FreeRW(context);
+    }
+    return 0;
+}
 #endif
 
 #ifdef __WIN32__
@@ -361,13 +593,29 @@ stdio_size(SDL_RWops * context)
 static Sint64 SDLCALL
 stdio_seek(SDL_RWops * context, Sint64 offset, int whence)
 {
+    int stdiowhence;
+
+    switch (whence) {
+    case RW_SEEK_SET:
+        stdiowhence = SEEK_SET;
+        break;
+    case RW_SEEK_CUR:
+        stdiowhence = SEEK_CUR;
+        break;
+    case RW_SEEK_END:
+        stdiowhence = SEEK_END;
+        break;
+    default:
+        return SDL_SetError("Unknown value for 'whence'");
+    }
+
 #if defined(FSEEK_OFF_MIN) && defined(FSEEK_OFF_MAX)
     if (offset < (Sint64)(FSEEK_OFF_MIN) || offset > (Sint64)(FSEEK_OFF_MAX)) {
         return SDL_SetError("Seek offset out of range");
     }
 #endif
 
-    if (fseek(context->hidden.stdio.fp, (fseek_off_t)offset, whence) == 0) {
+    if (fseek(context->hidden.stdio.fp, (fseek_off_t)offset, stdiowhence) == 0) {
         Sint64 pos = ftell(context->hidden.stdio.fp);
         if (pos < 0) {
             return SDL_SetError("Couldn't get stream offset");
@@ -462,7 +710,7 @@ mem_read(SDL_RWops * context, void *ptr, size_t size, size_t maxnum)
 
     total_bytes = (maxnum * size);
     if ((maxnum <= 0) || (size <= 0)
-        || ((total_bytes / maxnum) != (size_t) size)) {
+        || ((total_bytes / maxnum) != size)) {
         return 0;
     }
 
@@ -528,6 +776,7 @@ SDL_RWFromFile(const char *file, const char *mode)
         char *path;
         FILE *fp;
 
+        /* !!! FIXME: why not just "char path[PATH_MAX];" ? */
         path = SDL_stack_alloc(char, PATH_MAX);
         if (path) {
             SDL_snprintf(path, PATH_MAX, "%s/%s",
@@ -570,7 +819,20 @@ SDL_RWFromFile(const char *file, const char *mode)
     rwops->write = windows_file_write;
     rwops->close = windows_file_close;
     rwops->type = SDL_RWOPS_WINFILE;
-
+#elif defined(__VITA__)
+    rwops = SDL_AllocRW();
+    if (!rwops)
+        return NULL;            /* SDL_SetError already setup by SDL_AllocRW() */
+    if (vita_file_open(rwops, file, mode) < 0) {
+        SDL_FreeRW(rwops);
+        return NULL;
+    }
+    rwops->size = vita_file_size;
+    rwops->seek = vita_file_seek;
+    rwops->read = vita_file_read;
+    rwops->write = vita_file_write;
+    rwops->close = vita_file_close;
+    rwops->type = SDL_RWOPS_VITAFILE;
 #elif HAVE_STDIO_H
     {
         #ifdef __APPLE__
@@ -584,7 +846,7 @@ SDL_RWFromFile(const char *file, const char *mode)
         if (fp == NULL) {
             SDL_SetError("Couldn't open %s", file);
         } else {
-            rwops = SDL_RWFromFP(fp, 1);
+            rwops = SDL_RWFromFP(fp, SDL_TRUE);
         }
     }
 #else
@@ -749,6 +1011,48 @@ done:
         SDL_RWclose(src);
     }
     return data;
+}
+
+void *
+SDL_LoadFile(const char *file, size_t *datasize)
+{
+   return SDL_LoadFile_RW(SDL_RWFromFile(file, "rb"), datasize, 1);
+}
+
+Sint64
+SDL_RWsize(SDL_RWops *context)
+{
+    return context->size(context);
+}
+
+Sint64
+SDL_RWseek(SDL_RWops *context, Sint64 offset, int whence)
+{
+    return context->seek(context, offset, whence);
+}
+
+Sint64
+SDL_RWtell(SDL_RWops *context)
+{
+    return context->seek(context, 0, RW_SEEK_CUR);
+}
+
+size_t
+SDL_RWread(SDL_RWops *context, void *ptr, size_t size, size_t maxnum)
+{
+    return context->read(context, ptr, size, maxnum);
+}
+
+size_t
+SDL_RWwrite(SDL_RWops *context, const void *ptr, size_t size, size_t num)
+{
+    return context->write(context, ptr, size, num);
+}
+
+int
+SDL_RWclose(SDL_RWops *context)
+{
+    return context->close(context);
 }
 
 /* Functions for dynamically reading and writing endian-specific values */

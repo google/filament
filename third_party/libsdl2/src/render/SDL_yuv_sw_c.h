@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,6 +18,10 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef SDL_yuv_sw_c_h_
+#define SDL_yuv_sw_c_h_
+
 #include "../SDL_internal.h"
 
 #include "SDL_video.h"
@@ -51,6 +55,9 @@ int SDL_SW_UpdateYUVTexturePlanar(SDL_SW_YUVTexture * swdata, const SDL_Rect * r
                                   const Uint8 *Yplane, int Ypitch,
                                   const Uint8 *Uplane, int Upitch,
                                   const Uint8 *Vplane, int Vpitch);
+int SDL_SW_UpdateNVTexturePlanar(SDL_SW_YUVTexture * swdata, const SDL_Rect * rect,
+                                  const Uint8 *Yplane, int Ypitch,
+                                  const Uint8 *UVplane, int UVpitch);
 int SDL_SW_LockYUVTexture(SDL_SW_YUVTexture * swdata, const SDL_Rect * rect,
                           void **pixels, int *pitch);
 void SDL_SW_UnlockYUVTexture(SDL_SW_YUVTexture * swdata);
@@ -59,9 +66,6 @@ int SDL_SW_CopyYUVToRGB(SDL_SW_YUVTexture * swdata, const SDL_Rect * srcrect,
                         int pitch);
 void SDL_SW_DestroyYUVTexture(SDL_SW_YUVTexture * swdata);
 
-/* FIXME: This breaks on various versions of GCC and should be rewritten using intrinsics */
-#if 0 /* (__GNUC__ > 2) && defined(__i386__) && __OPTIMIZE__ && SDL_ASSEMBLY_ROUTINES && !defined(__clang__) */
-#define USE_MMX_ASSEMBLY 1
-#endif
+#endif /* SDL_yuv_sw_c_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */

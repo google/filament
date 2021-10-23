@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -49,6 +49,13 @@ extern void SDL_SetKeyboardFocus(SDL_Window * window);
 
 /* Send a keyboard key event */
 extern int SDL_SendKeyboardKey(Uint8 state, SDL_Scancode scancode);
+extern int SDL_SendKeyboardKeyAutoRelease(SDL_Scancode scancode);
+
+/* Release all the autorelease keys */
+extern void SDL_ReleaseAutoReleaseKeys(void);
+
+/* Return true if any hardware key is pressed */
+extern SDL_bool SDL_HardwareKeyboardKeyPressed(void);
 
 /* Send keyboard text input */
 extern int SDL_SendKeyboardText(const char *text);

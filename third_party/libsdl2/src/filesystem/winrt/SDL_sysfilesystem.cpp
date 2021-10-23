@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -48,7 +48,16 @@ SDL_WinRTGetFSPathUNICODE(SDL_WinRT_Path pathType)
         {
             static wstring path;
             if (path.empty()) {
+#if defined(NTDDI_WIN10_19H1) && (NTDDI_VERSION >= NTDDI_WIN10_19H1) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP) /* Only PC supports mods */
+                /* Windows 1903 supports mods, via the EffectiveLocation API */
+                if (Windows::Foundation::Metadata::ApiInformation::IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8, 0)) {
+                    path = Windows::ApplicationModel::Package::Current->EffectiveLocation->Path->Data();
+                } else {
+                    path = Windows::ApplicationModel::Package::Current->InstalledLocation->Path->Data();
+                }
+#else
                 path = Windows::ApplicationModel::Package::Current->InstalledLocation->Path->Data();
+#endif
             }
             return path.c_str();
         }

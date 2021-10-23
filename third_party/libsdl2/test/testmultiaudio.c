@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,20 +33,20 @@ callback_data cbd[64];
 void SDLCALL
 play_through_once(void *arg, Uint8 * stream, int len)
 {
-    callback_data *cbd = (callback_data *) arg;
-    Uint8 *waveptr = sound + cbd->soundpos;
-    int waveleft = soundlen - cbd->soundpos;
+    callback_data *cbdata = (callback_data *) arg;
+    Uint8 *waveptr = sound + cbdata->soundpos;
+    int waveleft = soundlen - cbdata->soundpos;
     int cpy = len;
     if (cpy > waveleft)
         cpy = waveleft;
 
     SDL_memcpy(stream, waveptr, cpy);
     len -= cpy;
-    cbd->soundpos += cpy;
+    cbdata->soundpos += cpy;
     if (len > 0) {
         stream += cpy;
         SDL_memset(stream, spec.silence, len);
-        SDL_AtomicSet(&cbd->done, 1);
+        SDL_AtomicSet(&cbdata->done, 1);
     }
 }
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -89,10 +89,8 @@
 @end
 
 
-/* Display a Cocoa message box */
-int
-Cocoa_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *buttonid)
-{ @autoreleasepool
+static void
+Cocoa_ShowMessageBoxImpl(const SDL_MessageBoxData *messageboxdata, int *buttonid, int *returnValue)
 {
     Cocoa_RegisterApp();
 
@@ -112,10 +110,19 @@ Cocoa_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *buttonid)
     const SDL_MessageBoxButtonData *buttons = messageboxdata->buttons;
     int i;
     for (i = 0; i < messageboxdata->numbuttons; ++i) {
-        NSButton *button = [alert addButtonWithTitle:[NSString stringWithUTF8String:buttons[i].text]];
-        if (buttons[i].flags & SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT) {
+        const SDL_MessageBoxButtonData *sdlButton;
+        NSButton *button;
+
+        if (messageboxdata->flags & SDL_MESSAGEBOX_BUTTONS_RIGHT_TO_LEFT) {
+            sdlButton = &messageboxdata->buttons[messageboxdata->numbuttons - 1 - i];
+        } else {
+            sdlButton = &messageboxdata->buttons[i];
+        }
+
+        button = [alert addButtonWithTitle:[NSString stringWithUTF8String:sdlButton->text]];
+        if (sdlButton->flags & SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT) {
             [button setKeyEquivalent:@"\r"];
-        } else if (buttons[i].flags & SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT) {
+        } else if (sdlButton->flags & SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT) {
             [button setKeyEquivalent:@"\033"];
         } else {
             [button setKeyEquivalent:@""];
@@ -124,19 +131,33 @@ Cocoa_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *buttonid)
 
     SDLMessageBoxPresenter* presenter = [[[SDLMessageBoxPresenter alloc] initWithParentWindow:messageboxdata->window] autorelease];
 
-    [presenter performSelectorOnMainThread:@selector(showAlert:)
-                                withObject:alert
-                             waitUntilDone:YES];
+    [presenter showAlert:alert];
 
-    int returnValue = 0;
     NSInteger clicked = presenter->clicked;
     if (clicked >= NSAlertFirstButtonReturn) {
         clicked -= NSAlertFirstButtonReturn;
+        if (messageboxdata->flags & SDL_MESSAGEBOX_BUTTONS_RIGHT_TO_LEFT) {
+            clicked = messageboxdata->numbuttons - 1 - clicked;
+        }
         *buttonid = buttons[clicked].buttonid;
+        *returnValue = 0;
     } else {
-        returnValue = SDL_SetError("Did not get a valid `clicked button' id: %ld", (long)clicked);
+        *returnValue = SDL_SetError("Did not get a valid `clicked button' id: %ld", (long)clicked);
     }
+}
 
+/* Display a Cocoa message box */
+int
+Cocoa_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *buttonid)
+{ @autoreleasepool
+{
+    __block int returnValue = 0;
+
+    if ([NSThread isMainThread]) {
+        Cocoa_ShowMessageBoxImpl(messageboxdata, buttonid, &returnValue);
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), ^{ Cocoa_ShowMessageBoxImpl(messageboxdata, buttonid, &returnValue); });
+    }
     return returnValue;
 }}
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,8 +18,10 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-
 #include "../../SDL_internal.h"
+
+#include "SDL_system.h"
+#include "SDL_hints.h"
 
 #include <pthread.h>
 
@@ -34,6 +36,9 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <errno.h>
+
+#include "../../core/linux/SDL_dbus.h"
 #endif /* __LINUX__ */
 
 #if defined(__LINUX__) || defined(__MACOSX__) || defined(__IPHONEOS__)
@@ -43,7 +48,6 @@
 #endif
 #endif
 
-#include "SDL_platform.h"
 #include "SDL_thread.h"
 #include "../SDL_thread_c.h"
 #include "../SDL_systhread.h"
@@ -55,7 +59,6 @@
 #include <kernel/OS.h>
 #endif
 
-#include "SDL_assert.h"
 
 #ifndef __NACL__
 /* List of signals to mask in the subthreads */
@@ -71,7 +74,7 @@ RunThread(void *data)
 #ifdef __ANDROID__
     Android_JNI_SetupThread();
 #endif
-    SDL_RunThread(data);
+    SDL_RunThread((SDL_Thread *) data);
     return NULL;
 }
 
@@ -83,7 +86,7 @@ static SDL_bool checked_setname = SDL_FALSE;
 static int (*ppthread_setname_np)(pthread_t, const char*) = NULL;
 #endif
 int
-SDL_SYS_CreateThread(SDL_Thread * thread, void *args)
+SDL_SYS_CreateThread(SDL_Thread * thread)
 {
     pthread_attr_t type;
 
@@ -108,11 +111,11 @@ SDL_SYS_CreateThread(SDL_Thread * thread, void *args)
     
     /* Set caller-requested stack size. Otherwise: use the system default. */
     if (thread->stacksize) {
-        pthread_attr_setstacksize(&type, (size_t) thread->stacksize);
+        pthread_attr_setstacksize(&type, thread->stacksize);
     }
 
     /* Create the thread and go! */
-    if (pthread_create((pthread_t *) &thread->handle, &type, RunThread, args) != 0) {
+    if (pthread_create(&thread->handle, &type, RunThread, thread) != 0) {
         return SDL_SetError("Not enough resources to create thread");
     }
 
@@ -180,55 +183,115 @@ SDL_ThreadID(void)
     return ((SDL_threadID) pthread_self());
 }
 
+#if __LINUX__
+/**
+   \brief Sets the SDL priority (not nice level) for a thread, using setpriority() if appropriate, and RealtimeKit if available.
+   Differs from SDL_LinuxSetThreadPriority in also taking the desired scheduler policy,
+   such as SCHED_OTHER or SCHED_RR.
+
+   \return 0 on success, or -1 on error.
+ */
+extern DECLSPEC int SDLCALL SDL_LinuxSetThreadPriorityAndPolicy(Sint64 threadID, int sdlPriority, int schedPolicy);
+#endif
+
 int
 SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 {
-#if __NACL__ 
+#if __NACL__ || __RISCOS__
     /* FIXME: Setting thread priority does not seem to be supported in NACL */
-    return 0;
-#elif __LINUX__
-    int value;
-
-    if (priority == SDL_THREAD_PRIORITY_LOW) {
-        value = 19;
-    } else if (priority == SDL_THREAD_PRIORITY_HIGH) {
-        value = -20;
-    } else {
-        value = 0;
-    }
-    if (setpriority(PRIO_PROCESS, syscall(SYS_gettid), value) < 0) {
-        /* Note that this fails if you're trying to set high priority
-           and you don't have root permission. BUT DON'T RUN AS ROOT!
-
-           You can grant the ability to increase thread priority by
-           running the following command on your application binary:
-               sudo setcap 'cap_sys_nice=eip' <application>
-         */
-        return SDL_SetError("setpriority() failed");
-    }
     return 0;
 #else
     struct sched_param sched;
     int policy;
+    int pri_policy;
     pthread_t thread = pthread_self();
+    const char *policyhint = SDL_GetHint(SDL_HINT_THREAD_PRIORITY_POLICY);
+    const SDL_bool timecritical_realtime_hint = SDL_GetHintBoolean(SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL, SDL_FALSE);
 
     if (pthread_getschedparam(thread, &policy, &sched) != 0) {
         return SDL_SetError("pthread_getschedparam() failed");
     }
+
+    /* Higher priority levels may require changing the pthread scheduler policy
+     * for the thread.  SDL will make such changes by default but there is
+     * also a hint allowing that behavior to be overridden. */
+    switch (priority) {
+    case SDL_THREAD_PRIORITY_LOW:
+    case SDL_THREAD_PRIORITY_NORMAL:
+        pri_policy = SCHED_OTHER;
+        break;
+    case SDL_THREAD_PRIORITY_HIGH:
+    case SDL_THREAD_PRIORITY_TIME_CRITICAL:
+#if defined(__MACOSX__) || defined(__IPHONEOS__) || defined(__TVOS__)
+        /* Apple requires SCHED_RR for high priority threads */
+        pri_policy = SCHED_RR;
+        break;
+#else
+        pri_policy = SCHED_OTHER;
+        break;
+#endif
+    default:
+        pri_policy = policy;
+        break;
+    }
+
+    if (timecritical_realtime_hint && priority == SDL_THREAD_PRIORITY_TIME_CRITICAL) {
+        pri_policy = SCHED_RR;
+    }
+
+    if (policyhint) {
+        if (SDL_strcmp(policyhint, "current") == 0) {
+            /* Leave current thread scheduler policy unchanged */
+        } else if (SDL_strcmp(policyhint, "other") == 0) {
+            policy = SCHED_OTHER;
+        } else if (SDL_strcmp(policyhint, "rr") == 0) {
+            policy = SCHED_RR;
+        } else if (SDL_strcmp(policyhint, "fifo") == 0) {
+            policy = SCHED_FIFO;
+        } else {
+            policy = pri_policy;
+        }
+    } else {
+        policy = pri_policy;
+    }
+
+#if __LINUX__
+    {
+        pid_t linuxTid = syscall(SYS_gettid);
+        return SDL_LinuxSetThreadPriorityAndPolicy(linuxTid, priority, policy);
+    }
+#else
     if (priority == SDL_THREAD_PRIORITY_LOW) {
         sched.sched_priority = sched_get_priority_min(policy);
-    } else if (priority == SDL_THREAD_PRIORITY_HIGH) {
+    } else if (priority == SDL_THREAD_PRIORITY_TIME_CRITICAL) {
         sched.sched_priority = sched_get_priority_max(policy);
     } else {
         int min_priority = sched_get_priority_min(policy);
         int max_priority = sched_get_priority_max(policy);
-        sched.sched_priority = (min_priority + (max_priority - min_priority) / 2);
+
+#if defined(__MACOSX__) || defined(__IPHONEOS__) || defined(__TVOS__)
+        if (min_priority == 15 && max_priority == 47) {
+            /* Apple has a specific set of thread priorities */
+            if (priority == SDL_THREAD_PRIORITY_HIGH) {
+                sched.sched_priority = 45;
+            } else {
+                sched.sched_priority = 37;
+            }
+        } else
+#endif /* __MACOSX__ || __IPHONEOS__ || __TVOS__ */
+        {
+            sched.sched_priority = (min_priority + (max_priority - min_priority) / 2);
+            if (priority == SDL_THREAD_PRIORITY_HIGH) {
+                sched.sched_priority += ((max_priority - min_priority) / 4);
+            }
+        }
     }
     if (pthread_setschedparam(thread, policy, &sched) != 0) {
         return SDL_SetError("pthread_setschedparam() failed");
     }
     return 0;
 #endif /* linux */
+#endif /* #if __NACL__ || __RISCOS__ */
 }
 
 void

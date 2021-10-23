@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,7 +24,6 @@
 
 /* Allow access to a raw mixing buffer */
 
-#include "SDL_assert.h"
 #include "SDL_timer.h"
 #include "SDL_loadso.h"
 #include "SDL_audio.h"
@@ -164,7 +163,12 @@ FindAllDevs(LPGUID guid, LPCWSTR desc, LPCWSTR module, LPVOID data)
         if (str != NULL) {
             LPGUID cpyguid = (LPGUID) SDL_malloc(sizeof (GUID));
             SDL_memcpy(cpyguid, guid, sizeof (GUID));
-            SDL_AddAudioDevice(iscapture, str, cpyguid);
+
+            /* Note that spec is NULL, because we are required to connect to the
+             * device before getting the channel mask and output format, making
+             * this information inaccessible at enumeration time
+             */
+            SDL_AddAudioDevice(iscapture, str, NULL, cpyguid);
             SDL_free(str);  /* addfn() makes a copy of this string. */
         }
     }
@@ -477,8 +481,8 @@ DSOUND_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
     SDL_bool tried_format = SDL_FALSE;
     SDL_AudioFormat test_format = SDL_FirstAudioFormat(this->spec.format);
     LPGUID guid = (LPGUID) handle;
-	DWORD bufsize;
-	
+    DWORD bufsize;
+
     /* Initialize all variables that we clean on shutdown */
     this->hidden = (struct SDL_PrivateAudioData *)
         SDL_malloc((sizeof *this->hidden));
@@ -526,7 +530,7 @@ DSOUND_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
                              (int) (DSBSIZE_MAX / numchunks));
             } else {
                 int rc;
-				WAVEFORMATEX wfmt;
+                WAVEFORMATEX wfmt;
                 SDL_zero(wfmt);
                 if (SDL_AUDIO_ISFLOAT(this->spec.format)) {
                     wfmt.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;

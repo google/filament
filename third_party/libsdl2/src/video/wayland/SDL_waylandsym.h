@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,6 +33,8 @@
 #define SDL_WAYLAND_INTERFACE(iface)
 #endif
 
+#include <stdbool.h>
+
 SDL_WAYLAND_MODULE(WAYLAND_CLIENT)
 SDL_WAYLAND_SYM(void, wl_proxy_marshal, (struct wl_proxy *, uint32_t, ...))
 SDL_WAYLAND_SYM(struct wl_proxy *, wl_proxy_create, (struct wl_proxy *, const struct wl_interface *))
@@ -40,6 +42,7 @@ SDL_WAYLAND_SYM(void, wl_proxy_destroy, (struct wl_proxy *))
 SDL_WAYLAND_SYM(int, wl_proxy_add_listener, (struct wl_proxy *, void (**)(void), void *))
 SDL_WAYLAND_SYM(void, wl_proxy_set_user_data, (struct wl_proxy *, void *))
 SDL_WAYLAND_SYM(void *, wl_proxy_get_user_data, (struct wl_proxy *))
+SDL_WAYLAND_SYM(uint32_t, wl_proxy_get_version, (struct wl_proxy *))
 SDL_WAYLAND_SYM(uint32_t, wl_proxy_get_id, (struct wl_proxy *))
 SDL_WAYLAND_SYM(const char *, wl_proxy_get_class, (struct wl_proxy *))
 SDL_WAYLAND_SYM(void, wl_proxy_set_queue, (struct wl_proxy *, struct wl_event_queue *))
@@ -70,18 +73,20 @@ SDL_WAYLAND_SYM(struct wl_proxy *, wl_proxy_marshal_constructor, (struct wl_prox
 SDL_WAYLAND_MODULE(WAYLAND_CLIENT_1_10)
 SDL_WAYLAND_SYM(struct wl_proxy *, wl_proxy_marshal_constructor_versioned, (struct wl_proxy *proxy, uint32_t opcode, const struct wl_interface *interface, uint32_t version, ...))
 
+SDL_WAYLAND_MODULE(WAYLAND_CLIENT_1_18)
+SDL_WAYLAND_SYM(void, wl_proxy_set_tag, (struct wl_proxy *, const char * const *))
+SDL_WAYLAND_SYM(const char * const *, wl_proxy_get_tag, (struct wl_proxy *))
+
 SDL_WAYLAND_INTERFACE(wl_seat_interface)
 SDL_WAYLAND_INTERFACE(wl_surface_interface)
 SDL_WAYLAND_INTERFACE(wl_shm_pool_interface)
 SDL_WAYLAND_INTERFACE(wl_buffer_interface)
 SDL_WAYLAND_INTERFACE(wl_registry_interface)
-SDL_WAYLAND_INTERFACE(wl_shell_surface_interface)
 SDL_WAYLAND_INTERFACE(wl_region_interface)
 SDL_WAYLAND_INTERFACE(wl_pointer_interface)
 SDL_WAYLAND_INTERFACE(wl_keyboard_interface)
 SDL_WAYLAND_INTERFACE(wl_compositor_interface)
 SDL_WAYLAND_INTERFACE(wl_output_interface)
-SDL_WAYLAND_INTERFACE(wl_shell_interface)
 SDL_WAYLAND_INTERFACE(wl_shm_interface)
 SDL_WAYLAND_INTERFACE(wl_data_device_interface)
 SDL_WAYLAND_INTERFACE(wl_data_source_interface)
@@ -117,6 +122,76 @@ SDL_WAYLAND_SYM(enum xkb_state_component, xkb_state_update_mask, (struct xkb_sta
                       xkb_layout_index_t depressed_layout,\
                       xkb_layout_index_t latched_layout,\
                       xkb_layout_index_t locked_layout) )
+SDL_WAYLAND_SYM(struct xkb_compose_table *, xkb_compose_table_new_from_locale, (struct xkb_context *,\
+                      const char *locale, enum xkb_compose_compile_flags) )
+SDL_WAYLAND_SYM(void, xkb_compose_table_unref, (struct xkb_compose_table *) )
+SDL_WAYLAND_SYM(struct xkb_compose_state *, xkb_compose_state_new, (struct xkb_compose_table *, enum xkb_compose_state_flags) )
+SDL_WAYLAND_SYM(void, xkb_compose_state_unref, (struct xkb_compose_state *) )
+SDL_WAYLAND_SYM(enum xkb_compose_feed_result, xkb_compose_state_feed, (struct xkb_compose_state *, xkb_keysym_t) )
+SDL_WAYLAND_SYM(enum xkb_compose_status, xkb_compose_state_get_status, (struct xkb_compose_state *) )
+SDL_WAYLAND_SYM(xkb_keysym_t, xkb_compose_state_get_one_sym, (struct xkb_compose_state *) )
+SDL_WAYLAND_SYM(void, xkb_keymap_key_for_each, (struct xkb_keymap *, xkb_keymap_key_iter_t, void*) )
+SDL_WAYLAND_SYM(int, xkb_keymap_key_get_syms_by_level, (struct xkb_keymap *,
+                                                        xkb_keycode_t,
+                                                        xkb_layout_index_t,
+                                                        xkb_layout_index_t,
+                                                        const xkb_keysym_t **) )
+SDL_WAYLAND_SYM(uint32_t, xkb_keysym_to_utf32, (xkb_keysym_t) )
+
+#ifdef HAVE_LIBDECOR_H
+SDL_WAYLAND_MODULE(WAYLAND_LIBDECOR)
+SDL_WAYLAND_SYM(void, libdecor_unref, (struct libdecor *))
+SDL_WAYLAND_SYM(struct libdecor *, libdecor_new, (struct wl_display *, struct libdecor_interface *))
+SDL_WAYLAND_SYM(struct libdecor_frame *, libdecor_decorate, (struct libdecor *,\
+                                                             struct wl_surface *,\
+                                                             struct libdecor_frame_interface *,\
+                                                             void *))
+SDL_WAYLAND_SYM(void, libdecor_frame_unref, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_title, (struct libdecor_frame *, const char *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_app_id, (struct libdecor_frame *, const char *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_max_content_size, (struct libdecor_frame *frame,\
+                                                            int content_width,\
+                                                            int content_height))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_min_content_size, (struct libdecor_frame *frame,\
+                                                            int content_width,\
+                                                            int content_height))
+SDL_WAYLAND_SYM(void, libdecor_frame_resize, (struct libdecor_frame *,\
+                                              struct wl_seat *,\
+                                              uint32_t,\
+                                              enum libdecor_resize_edge))
+SDL_WAYLAND_SYM(void, libdecor_frame_move, (struct libdecor_frame *,\
+                                            struct wl_seat *,\
+                                            uint32_t))
+SDL_WAYLAND_SYM(void, libdecor_frame_commit, (struct libdecor_frame *,\
+                                              struct libdecor_state *,\
+                                              struct libdecor_configuration *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_minimized, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_maximized, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_unset_maximized, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_fullscreen, (struct libdecor_frame *, struct wl_output *))
+SDL_WAYLAND_SYM(void, libdecor_frame_unset_fullscreen, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_capabilities, (struct libdecor_frame *, \
+                                                        enum libdecor_capabilities))
+SDL_WAYLAND_SYM(void, libdecor_frame_unset_capabilities, (struct libdecor_frame *, \
+                                                          enum libdecor_capabilities))
+SDL_WAYLAND_SYM(bool, libdecor_frame_has_capability, (struct libdecor_frame *, \
+                                                      enum libdecor_capabilities))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_visibility, (struct libdecor_frame *, bool))
+SDL_WAYLAND_SYM(bool, libdecor_frame_is_visible, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(bool, libdecor_frame_is_floating, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_set_parent, (struct libdecor_frame *,\
+                                                  struct libdecor_frame *))
+SDL_WAYLAND_SYM(struct xdg_surface *, libdecor_frame_get_xdg_surface, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(void, libdecor_frame_map, (struct libdecor_frame *))
+SDL_WAYLAND_SYM(struct libdecor_state *, libdecor_state_new, (int, int))
+SDL_WAYLAND_SYM(void, libdecor_state_free, (struct libdecor_state *))
+SDL_WAYLAND_SYM(bool, libdecor_configuration_get_content_size, (struct libdecor_configuration *,\
+                                                                struct libdecor_frame *,\
+                                                                int *,\
+                                                                int *))
+SDL_WAYLAND_SYM(bool, libdecor_configuration_get_window_state, (struct libdecor_configuration *,\
+                                                                enum libdecor_window_state *))
+#endif
 
 #undef SDL_WAYLAND_MODULE
 #undef SDL_WAYLAND_SYM

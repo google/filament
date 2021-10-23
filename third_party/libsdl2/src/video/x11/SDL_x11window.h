@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -68,6 +68,8 @@ typedef struct
     unsigned long user_time;
     Atom xdnd_req;
     Window xdnd_source;
+    SDL_bool flashing_window;
+    Uint32 flash_cancel_time;
 #if SDL_VIDEO_OPENGL_EGL  
     EGLSurface egl_surface;
 #endif
@@ -97,13 +99,17 @@ extern void X11_MinimizeWindow(_THIS, SDL_Window * window);
 extern void X11_RestoreWindow(_THIS, SDL_Window * window);
 extern void X11_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered);
 extern void X11_SetWindowResizable(_THIS, SDL_Window * window, SDL_bool resizable);
+extern void X11_SetWindowAlwaysOnTop(_THIS, SDL_Window * window, SDL_bool on_top);
 extern void X11_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display, SDL_bool fullscreen);
 extern int X11_SetWindowGammaRamp(_THIS, SDL_Window * window, const Uint16 * ramp);
-extern void X11_SetWindowGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
+extern void X11_SetWindowMouseGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
+extern void X11_SetWindowKeyboardGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
 extern void X11_DestroyWindow(_THIS, SDL_Window * window);
 extern SDL_bool X11_GetWindowWMInfo(_THIS, SDL_Window * window,
                                     struct SDL_SysWMinfo *info);
 extern int X11_SetWindowHitTest(SDL_Window *window, SDL_bool enabled);
+extern void X11_AcceptDragAndDrop(SDL_Window * window, SDL_bool accept);
+extern int X11_FlashWindow(_THIS, SDL_Window * window, SDL_FlashOperation operation);
 
 #endif /* SDL_x11window_h_ */
 

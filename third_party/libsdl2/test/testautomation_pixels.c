@@ -10,7 +10,7 @@
 /* Test case functions */
 
 /* Definition of all RGB formats used to test pixel conversions */
-const int _numRGBPixelFormats = 30;
+const int _numRGBPixelFormats = 31;
 Uint32 _RGBPixelFormats[] =
   {
     SDL_PIXELFORMAT_INDEX1LSB,
@@ -20,6 +20,7 @@ Uint32 _RGBPixelFormats[] =
     SDL_PIXELFORMAT_INDEX8,
     SDL_PIXELFORMAT_RGB332,
     SDL_PIXELFORMAT_RGB444,
+    SDL_PIXELFORMAT_BGR444,
     SDL_PIXELFORMAT_RGB555,
     SDL_PIXELFORMAT_BGR555,
     SDL_PIXELFORMAT_ARGB4444,
@@ -53,6 +54,7 @@ char* _RGBPixelFormatsVerbose[] =
     "SDL_PIXELFORMAT_INDEX8",
     "SDL_PIXELFORMAT_RGB332",
     "SDL_PIXELFORMAT_RGB444",
+    "SDL_PIXELFORMAT_BGR444",
     "SDL_PIXELFORMAT_RGB555",
     "SDL_PIXELFORMAT_BGR555",
     "SDL_PIXELFORMAT_ARGB4444",
@@ -119,8 +121,8 @@ char* _invalidPixelFormatsVerbose[] =
 /**
  * @brief Call to SDL_AllocFormat and SDL_FreeFormat
  *
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_AllocFormat
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_FreeFormat
+ * @sa http://wiki.libsdl.org/SDL_AllocFormat
+ * @sa http://wiki.libsdl.org/SDL_FreeFormat
  */
 int
 pixels_allocFreeFormat(void *arg)
@@ -226,7 +228,7 @@ pixels_allocFreeFormat(void *arg)
 /**
  * @brief Call to SDL_GetPixelFormatName
  *
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_GetPixelFormatName
+ * @sa http://wiki.libsdl.org/SDL_GetPixelFormatName
  */
 int
 pixels_getPixelFormatName(void *arg)
@@ -310,8 +312,8 @@ pixels_getPixelFormatName(void *arg)
 /**
  * @brief Call to SDL_AllocPalette and SDL_FreePalette
  *
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_AllocPalette
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_FreePalette
+ * @sa http://wiki.libsdl.org/SDL_AllocPalette
+ * @sa http://wiki.libsdl.org/SDL_FreePalette
  */
 int
 pixels_allocFreePalette(void *arg)
@@ -400,7 +402,7 @@ pixels_allocFreePalette(void *arg)
 /**
  * @brief Call to SDL_CalculateGammaRamp
  *
- * @sa http://wiki.libsdl.org/moin.fcg/SDL_CalculateGammaRamp
+ * @sa http://wiki.libsdl.org/SDL_CalculateGammaRamp
  */
 int
 pixels_calcGammaRamp(void *arg)

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -31,13 +31,17 @@
 #include "SDL_endian.h"
 
 #if defined(HAVE_ICONV) && defined(HAVE_ICONV_H)
+#ifdef __FreeBSD__
+/* Define LIBICONV_PLUG to use iconv from the base instead of ports and avoid linker errors. */
+#define LIBICONV_PLUG 1
+#endif
 #include <iconv.h>
 
 /* Depending on which standard the iconv() was implemented with,
    iconv() may or may not use const char ** for the inbuf param.
    If we get this wrong, it's just a warning, so no big deal.
 */
-#if defined(_XGP6) || defined(__APPLE__) || \
+#if defined(_XGP6) || defined(__APPLE__) || defined(__RISCOS__) || defined(__FREEBSD__) || \
     defined(__EMSCRIPTEN__) || \
     (defined(__GLIBC__) && ((__GLIBC__ > 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 2)) || \
     (defined(_NEWLIB_VERSION)))
@@ -51,13 +55,13 @@ SDL_COMPILE_TIME_ASSERT(iconv_t, sizeof (iconv_t) <= sizeof (SDL_iconv_t));
 SDL_iconv_t
 SDL_iconv_open(const char *tocode, const char *fromcode)
 {
-    return (SDL_iconv_t) ((size_t) iconv_open(tocode, fromcode));
+    return (SDL_iconv_t) ((uintptr_t) iconv_open(tocode, fromcode));
 }
 
 int
 SDL_iconv_close(SDL_iconv_t cd)
 {
-    return iconv_close((iconv_t) ((size_t) cd));
+    return iconv_close((iconv_t) ((uintptr_t) cd));
 }
 
 size_t
@@ -67,9 +71,9 @@ SDL_iconv(SDL_iconv_t cd,
 {
     size_t retCode;
 #ifdef ICONV_INBUF_NONCONST
-    retCode = iconv((iconv_t) ((size_t) cd), (char **) inbuf, inbytesleft, outbuf, outbytesleft);
+    retCode = iconv((iconv_t) ((uintptr_t) cd), (char **) inbuf, inbytesleft, outbuf, outbytesleft);
 #else
-    retCode = iconv((iconv_t) ((size_t) cd), inbuf, inbytesleft, outbuf, outbytesleft);
+    retCode = iconv((iconv_t) ((uintptr_t) cd), inbuf, inbytesleft, outbuf, outbytesleft);
 #endif
     if (retCode == (size_t) - 1) {
         switch (errno) {
@@ -89,13 +93,13 @@ SDL_iconv(SDL_iconv_t cd,
 #else
 
 /* Lots of useful information on Unicode at:
-	http://www.cl.cam.ac.uk/~mgk25/unicode.html
+    http://www.cl.cam.ac.uk/~mgk25/unicode.html
 */
 
-#define UNICODE_BOM	0xFEFF
+#define UNICODE_BOM    0xFEFF
 
-#define UNKNOWN_ASCII	'?'
-#define UNKNOWN_UNICODE	0xFFFD
+#define UNKNOWN_ASCII    '?'
+#define UNKNOWN_UNICODE    0xFFFD
 
 enum
 {
@@ -115,13 +119,13 @@ enum
     ENCODING_UCS4LE,
 };
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-#define ENCODING_UTF16NATIVE	ENCODING_UTF16BE
-#define ENCODING_UTF32NATIVE	ENCODING_UTF32BE
+#define ENCODING_UTF16NATIVE    ENCODING_UTF16BE
+#define ENCODING_UTF32NATIVE    ENCODING_UTF32BE
 #define ENCODING_UCS2NATIVE     ENCODING_UCS2BE
 #define ENCODING_UCS4NATIVE     ENCODING_UCS4BE
 #else
-#define ENCODING_UTF16NATIVE	ENCODING_UTF16LE
-#define ENCODING_UTF32NATIVE	ENCODING_UTF32LE
+#define ENCODING_UTF16NATIVE    ENCODING_UTF16LE
+#define ENCODING_UTF32NATIVE    ENCODING_UTF32LE
 #define ENCODING_UCS2NATIVE     ENCODING_UCS2LE
 #define ENCODING_UCS4NATIVE     ENCODING_UCS4LE
 #endif
@@ -365,33 +369,7 @@ SDL_iconv(SDL_iconv_t cd,
                 Uint8 *p = (Uint8 *) src;
                 size_t left = 0;
                 SDL_bool overlong = SDL_FALSE;
-                if (p[0] >= 0xFC) {
-                    if ((p[0] & 0xFE) != 0xFC) {
-                        /* Skip illegal sequences
-                           return SDL_ICONV_EILSEQ;
-                         */
-                        ch = UNKNOWN_UNICODE;
-                    } else {
-                        if (p[0] == 0xFC && srclen > 1 && (p[1] & 0xFC) == 0x80) {
-                            overlong = SDL_TRUE;
-                        }
-                        ch = (Uint32) (p[0] & 0x01);
-                        left = 5;
-                    }
-                } else if (p[0] >= 0xF8) {
-                    if ((p[0] & 0xFC) != 0xF8) {
-                        /* Skip illegal sequences
-                           return SDL_ICONV_EILSEQ;
-                         */
-                        ch = UNKNOWN_UNICODE;
-                    } else {
-                        if (p[0] == 0xF8 && srclen > 1 && (p[1] & 0xF8) == 0x80) {
-                            overlong = SDL_TRUE;
-                        }
-                        ch = (Uint32) (p[0] & 0x03);
-                        left = 4;
-                    }
-                } else if (p[0] >= 0xF0) {
+                if (p[0] >= 0xF0) {
                     if ((p[0] & 0xF8) != 0xF0) {
                         /* Skip illegal sequences
                            return SDL_ICONV_EILSEQ;
@@ -666,7 +644,7 @@ SDL_iconv(SDL_iconv_t cd,
                     p[2] = 0x80 | (Uint8) (ch & 0x3F);
                     dst += 3;
                     dstlen -= 3;
-                } else if (ch <= 0x1FFFFF) {
+                } else {
                     if (dstlen < 4) {
                         return SDL_ICONV_E2BIG;
                     }
@@ -676,29 +654,6 @@ SDL_iconv(SDL_iconv_t cd,
                     p[3] = 0x80 | (Uint8) (ch & 0x3F);
                     dst += 4;
                     dstlen -= 4;
-                } else if (ch <= 0x3FFFFFF) {
-                    if (dstlen < 5) {
-                        return SDL_ICONV_E2BIG;
-                    }
-                    p[0] = 0xF8 | (Uint8) ((ch >> 24) & 0x03);
-                    p[1] = 0x80 | (Uint8) ((ch >> 18) & 0x3F);
-                    p[2] = 0x80 | (Uint8) ((ch >> 12) & 0x3F);
-                    p[3] = 0x80 | (Uint8) ((ch >> 6) & 0x3F);
-                    p[4] = 0x80 | (Uint8) (ch & 0x3F);
-                    dst += 5;
-                    dstlen -= 5;
-                } else {
-                    if (dstlen < 6) {
-                        return SDL_ICONV_E2BIG;
-                    }
-                    p[0] = 0xFC | (Uint8) ((ch >> 30) & 0x01);
-                    p[1] = 0x80 | (Uint8) ((ch >> 24) & 0x3F);
-                    p[2] = 0x80 | (Uint8) ((ch >> 18) & 0x3F);
-                    p[3] = 0x80 | (Uint8) ((ch >> 12) & 0x3F);
-                    p[4] = 0x80 | (Uint8) ((ch >> 6) & 0x3F);
-                    p[5] = 0x80 | (Uint8) (ch & 0x3F);
-                    dst += 6;
-                    dstlen -= 6;
                 }
             }
             break;
@@ -888,7 +843,7 @@ SDL_iconv_string(const char *tocode, const char *fromcode, const char *inbuf,
     }
 
     stringsize = inbytesleft > 4 ? inbytesleft : 4;
-    string = SDL_malloc(stringsize);
+    string = (char *) SDL_malloc(stringsize);
     if (!string) {
         SDL_iconv_close(cd);
         return NULL;
@@ -898,13 +853,14 @@ SDL_iconv_string(const char *tocode, const char *fromcode, const char *inbuf,
     SDL_memset(outbuf, 0, 4);
 
     while (inbytesleft > 0) {
+        const size_t oldinbytesleft = inbytesleft;
         retCode = SDL_iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
         switch (retCode) {
         case SDL_ICONV_E2BIG:
             {
                 char *oldstring = string;
                 stringsize *= 2;
-                string = SDL_realloc(string, stringsize);
+                string = (char *) SDL_realloc(string, stringsize);
                 if (!string) {
                     SDL_iconv_close(cd);
                     return NULL;
@@ -923,6 +879,11 @@ SDL_iconv_string(const char *tocode, const char *fromcode, const char *inbuf,
         case SDL_ICONV_ERROR:
             /* We can't continue... */
             inbytesleft = 0;
+            break;
+        }
+        /* Avoid infinite loops when nothing gets converted */
+        if (oldinbytesleft == inbytesleft)
+        {
             break;
         }
     }

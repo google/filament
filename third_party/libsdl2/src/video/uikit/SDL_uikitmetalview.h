@@ -1,6 +1,6 @@
 /*
  Simple DirectMedia Layer
- Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+ Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
  
  This software is provided 'as-is', without any express or implied
  warranty.  In no event will the authors be held liable for any damages
@@ -29,10 +29,10 @@
 #ifndef SDL_uikitmetalview_h_
 #define SDL_uikitmetalview_h_
 
-#import "../SDL_sysvideo.h"
-#import "SDL_uikitwindow.h"
+#include "../SDL_sysvideo.h"
+#include "SDL_uikitwindow.h"
 
-#if SDL_VIDEO_DRIVER_UIKIT && (SDL_VIDEO_RENDER_METAL || SDL_VIDEO_VULKAN)
+#if SDL_VIDEO_DRIVER_UIKIT && (SDL_VIDEO_VULKAN || SDL_VIDEO_METAL)
 
 #import <UIKit/UIKit.h>
 #import <Metal/Metal.h>
@@ -47,11 +47,12 @@
 
 @end
 
-SDL_uikitmetalview* UIKit_Mtl_AddMetalView(SDL_Window* window);
+SDL_MetalView UIKit_Metal_CreateView(_THIS, SDL_Window * window);
+void UIKit_Metal_DestroyView(_THIS, SDL_MetalView view);
+void *UIKit_Metal_GetLayer(_THIS, SDL_MetalView view);
+void UIKit_Metal_GetDrawableSize(_THIS, SDL_Window * window, int * w, int * h);
 
-void UIKit_Mtl_GetDrawableSize(SDL_Window * window, int * w, int * h);
-
-#endif /* SDL_VIDEO_DRIVER_UIKIT && (SDL_VIDEO_RENDER_METAL || SDL_VIDEO_VULKAN) */
+#endif /* SDL_VIDEO_DRIVER_UIKIT && (SDL_VIDEO_VULKAN || SDL_VIDEO_METAL) */
 
 #endif /* SDL_uikitmetalview_h_ */
 

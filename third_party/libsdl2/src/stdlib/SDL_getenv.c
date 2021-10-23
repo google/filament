@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -110,7 +110,7 @@ int
 SDL_setenv(const char *name, const char *value, int overwrite)
 {
     int added;
-    int len, i;
+    size_t len, i;
     char **new_env;
     char *new_variable;
 
@@ -218,7 +218,7 @@ SDL_getenv(const char *name)
 char *
 SDL_getenv(const char *name)
 {
-    int len, i;
+    size_t len, i;
     char *value;
 
     /* Input validation */

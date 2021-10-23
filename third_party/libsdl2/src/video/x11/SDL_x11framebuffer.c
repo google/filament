@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -40,14 +40,10 @@ static int shm_errhandler(Display *d, XErrorEvent *e)
         return(X_handler(d,e));
 }
 
-static SDL_bool have_mitshm(void)
+static SDL_bool have_mitshm(Display *dpy)
 {
     /* Only use shared memory on local X servers */
-    if ( (SDL_strncmp(X11_XDisplayName(NULL), ":", 1) == 0) ||
-         (SDL_strncmp(X11_XDisplayName(NULL), "unix:", 5) == 0) ) {
-        return SDL_X11_HAVE_SHM;
-    }
-    return SDL_FALSE;
+    return X11_XShmQueryExtension(dpy) ? SDL_X11_HAVE_SHM : SDL_FALSE;
 }
 
 #endif /* !NO_SHARED_MEMORY */
@@ -86,7 +82,7 @@ X11_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format,
 
     /* Create the actual image */
 #ifndef NO_SHARED_MEMORY
-    if (have_mitshm()) {
+    if (have_mitshm(display)) {
         XShmSegmentInfo *shminfo = &data->shminfo;
 
         shminfo->shmid = shmget(IPC_PRIVATE, window->h*(*pitch), IPC_CREAT | 0777);

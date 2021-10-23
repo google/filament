@@ -83,7 +83,7 @@ void CleanupDestroyRenderer(void *arg)
  * @brief Tests call to SDL_GetNumRenderDrivers
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_GetNumRenderDrivers
+ * http://wiki.libsdl.org/SDL_GetNumRenderDrivers
  */
 int
 render_testGetNumRenderDrivers(void *arg)
@@ -99,9 +99,9 @@ render_testGetNumRenderDrivers(void *arg)
  * @brief Tests the SDL primitives for rendering.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawColor
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderFillRect
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderDrawLine
+ * http://wiki.libsdl.org/SDL_SetRenderDrawColor
+ * http://wiki.libsdl.org/SDL_RenderFillRect
+ * http://wiki.libsdl.org/SDL_RenderDrawLine
  *
  */
 int render_testPrimitives (void *arg)
@@ -206,9 +206,9 @@ int render_testPrimitives (void *arg)
  * @brief Tests the SDL primitives with alpha for rendering.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawColor
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawBlendMode
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderFillRect
+ * http://wiki.libsdl.org/SDL_SetRenderDrawColor
+ * http://wiki.libsdl.org/SDL_SetRenderDrawBlendMode
+ * http://wiki.libsdl.org/SDL_RenderFillRect
  */
 int render_testPrimitivesBlend (void *arg)
 {
@@ -355,8 +355,8 @@ int render_testPrimitivesBlend (void *arg)
  * @brief Tests some blitting routines.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderCopy
- * http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ * http://wiki.libsdl.org/SDL_RenderCopy
+ * http://wiki.libsdl.org/SDL_DestroyTexture
  */
 int
 render_testBlit(void *arg)
@@ -424,9 +424,9 @@ render_testBlit(void *arg)
  * @brief Blits doing color tests.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureColorMod
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderCopy
- * http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ * http://wiki.libsdl.org/SDL_SetTextureColorMod
+ * http://wiki.libsdl.org/SDL_RenderCopy
+ * http://wiki.libsdl.org/SDL_DestroyTexture
  */
 int
 render_testBlitColor (void *arg)
@@ -498,9 +498,9 @@ render_testBlitColor (void *arg)
  * @brief Tests blitting with alpha.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureAlphaMod
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderCopy
- * http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ * http://wiki.libsdl.org/SDL_SetTextureAlphaMod
+ * http://wiki.libsdl.org/SDL_RenderCopy
+ * http://wiki.libsdl.org/SDL_DestroyTexture
  */
 int
 render_testBlitAlpha (void *arg)
@@ -576,8 +576,8 @@ render_testBlitAlpha (void *arg)
  * @brief Tests a blend mode.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureBlendMode
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderCopy
+ * http://wiki.libsdl.org/SDL_SetTextureBlendMode
+ * http://wiki.libsdl.org/SDL_RenderCopy
  */
 static void
 _testBlitBlendMode( SDL_Texture * tface, int mode )
@@ -626,10 +626,10 @@ _testBlitBlendMode( SDL_Texture * tface, int mode )
  * @brief Tests some more blitting routines.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureColorMod
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureAlphaMod
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureBlendMode
- * http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ * http://wiki.libsdl.org/SDL_SetTextureColorMod
+ * http://wiki.libsdl.org/SDL_SetTextureAlphaMod
+ * http://wiki.libsdl.org/SDL_SetTextureBlendMode
+ * http://wiki.libsdl.org/SDL_DestroyTexture
  */
 int
 render_testBlitBlend (void *arg)
@@ -779,8 +779,8 @@ _isSupported( int code )
  * @brief Test to see if we can vary the draw color. Helper function.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawColor
- * http://wiki.libsdl.org/moin.cgi/SDL_GetRenderDrawColor
+ * http://wiki.libsdl.org/SDL_SetRenderDrawColor
+ * http://wiki.libsdl.org/SDL_GetRenderDrawColor
  */
 static int
 _hasDrawColor (void)
@@ -817,8 +817,8 @@ _hasDrawColor (void)
  * @brief Test to see if we can vary the blend mode. Helper function.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawBlendMode
- * http://wiki.libsdl.org/moin.cgi/SDL_GetRenderDrawBlendMode
+ * http://wiki.libsdl.org/SDL_SetRenderDrawBlendMode
+ * http://wiki.libsdl.org/SDL_GetRenderDrawBlendMode
  */
 static int
 _hasBlendModes (void)
@@ -874,7 +874,7 @@ _hasBlendModes (void)
  * @brief Loads the test image 'Face' as texture. Helper function.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_CreateTextureFromSurface
+ * http://wiki.libsdl.org/SDL_CreateTextureFromSurface
  */
 static SDL_Texture *
 _loadTestFace(void)
@@ -902,9 +902,9 @@ _loadTestFace(void)
  * @brief Test to see if can set texture color mode. Helper function.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetTextureColorMod
- * http://wiki.libsdl.org/moin.cgi/SDL_GetTextureColorMod
- * http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ * http://wiki.libsdl.org/SDL_SetTextureColorMod
+ * http://wiki.libsdl.org/SDL_GetTextureColorMod
+ * http://wiki.libsdl.org/SDL_DestroyTexture
  */
 static int
 _hasTexColor (void)
@@ -942,9 +942,9 @@ _hasTexColor (void)
  * @brief Test to see if we can vary the alpha of the texture. Helper function.
  *
  * \sa
- *  http://wiki.libsdl.org/moin.cgi/SDL_SetTextureAlphaMod
- *  http://wiki.libsdl.org/moin.cgi/SDL_GetTextureAlphaMod
- *  http://wiki.libsdl.org/moin.cgi/SDL_DestroyTexture
+ *  http://wiki.libsdl.org/SDL_SetTextureAlphaMod
+ *  http://wiki.libsdl.org/SDL_GetTextureAlphaMod
+ *  http://wiki.libsdl.org/SDL_DestroyTexture
  */
 static int
 _hasTexAlpha(void)
@@ -984,9 +984,9 @@ _hasTexAlpha(void)
  * @param s Image to compare against.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderReadPixels
- * http://wiki.libsdl.org/moin.cgi/SDL_CreateRGBSurfaceFrom
- * http://wiki.libsdl.org/moin.cgi/SDL_FreeSurface
+ * http://wiki.libsdl.org/SDL_RenderReadPixels
+ * http://wiki.libsdl.org/SDL_CreateRGBSurfaceFrom
+ * http://wiki.libsdl.org/SDL_FreeSurface
  */
 static void
 _compare(SDL_Surface *referenceSurface, int allowable_error)
@@ -1027,10 +1027,10 @@ _compare(SDL_Surface *referenceSurface, int allowable_error)
  * @brief Clears the screen. Helper function.
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawColor
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderClear
- * http://wiki.libsdl.org/moin.cgi/SDL_RenderPresent
- * http://wiki.libsdl.org/moin.cgi/SDL_SetRenderDrawBlendMode
+ * http://wiki.libsdl.org/SDL_SetRenderDrawColor
+ * http://wiki.libsdl.org/SDL_RenderClear
+ * http://wiki.libsdl.org/SDL_RenderPresent
+ * http://wiki.libsdl.org/SDL_SetRenderDrawBlendMode
  */
 static int
 _clearScreen(void)

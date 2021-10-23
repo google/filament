@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -44,7 +44,7 @@ static SDL_INLINE SDL_BApp *_GetBeApp() {
 }
 
 /* Passing a NULL path means load pointers from the application */
-int BE_GL_LoadLibrary(_THIS, const char *path)
+int HAIKU_GL_LoadLibrary(_THIS, const char *path)
 {
 /* FIXME: Is this working correctly? */
     image_info info;
@@ -54,7 +54,7 @@ int BE_GL_LoadLibrary(_THIS, const char *path)
         if( get_image_symbol(info.id, "glBegin", B_SYMBOL_TYPE_ANY,
                 &location) == B_OK) {
 
-            _this->gl_config.dll_handle = (void *) (size_t) info.id;
+            _this->gl_config.dll_handle = (void *) (addr_t) info.id;
             _this->gl_config.driver_loaded = 1;
             SDL_strlcpy(_this->gl_config.driver_path, "libGL.so",
                     SDL_arraysize(_this->gl_config.driver_path));
@@ -63,13 +63,13 @@ int BE_GL_LoadLibrary(_THIS, const char *path)
     return 0;
 }
 
-void *BE_GL_GetProcAddress(_THIS, const char *proc)
+void *HAIKU_GL_GetProcAddress(_THIS, const char *proc)
 {
     if (_this->gl_config.dll_handle != NULL) {
         void *location = NULL;
         status_t err;
         if ((err =
-            get_image_symbol((image_id) (size_t) _this->gl_config.dll_handle,
+            get_image_symbol((image_id) (addr_t) _this->gl_config.dll_handle,
                               proc, B_SYMBOL_TYPE_ANY,
                               &location)) == B_OK) {
             return location;
@@ -86,19 +86,19 @@ void *BE_GL_GetProcAddress(_THIS, const char *proc)
 
 
 
-int BE_GL_SwapWindow(_THIS, SDL_Window * window) {
+int HAIKU_GL_SwapWindow(_THIS, SDL_Window * window) {
     _ToBeWin(window)->SwapBuffers();
     return 0;
 }
 
-int BE_GL_MakeCurrent(_THIS, SDL_Window * window, SDL_GLContext context) {
+int HAIKU_GL_MakeCurrent(_THIS, SDL_Window * window, SDL_GLContext context) {
     SDL_BWin* win = (SDL_BWin*)context;
     _GetBeApp()->SetCurrentContext(win ? win->GetGLView() : NULL);
     return 0;
 }
 
 
-SDL_GLContext BE_GL_CreateContext(_THIS, SDL_Window * window) {
+SDL_GLContext HAIKU_GL_CreateContext(_THIS, SDL_Window * window) {
     /* FIXME: Not sure what flags should be included here; may want to have
        most of them */
     SDL_BWin *bwin = _ToBeWin(window);
@@ -127,24 +127,24 @@ SDL_GLContext BE_GL_CreateContext(_THIS, SDL_Window * window) {
     return (SDL_GLContext)(bwin);
 }
 
-void BE_GL_DeleteContext(_THIS, SDL_GLContext context) {
+void HAIKU_GL_DeleteContext(_THIS, SDL_GLContext context) {
     /* Currently, automatically unlocks the view */
     ((SDL_BWin*)context)->RemoveGLView();
 }
 
 
-int BE_GL_SetSwapInterval(_THIS, int interval) {
+int HAIKU_GL_SetSwapInterval(_THIS, int interval) {
     /* TODO: Implement this, if necessary? */
     return SDL_Unsupported();
 }
 
-int BE_GL_GetSwapInterval(_THIS) {
+int HAIKU_GL_GetSwapInterval(_THIS) {
     /* TODO: Implement this, if necessary? */
     return 0;
 }
 
 
-void BE_GL_UnloadLibrary(_THIS) {
+void HAIKU_GL_UnloadLibrary(_THIS) {
     /* TODO: Implement this, if necessary? */
 }
 
@@ -152,7 +152,7 @@ void BE_GL_UnloadLibrary(_THIS) {
 /* FIXME: This function is meant to clear the OpenGL context when the video
    mode changes (see SDL_bmodes.cc), but it doesn't seem to help, and is not
    currently in use. */
-void BE_GL_RebootContexts(_THIS) {
+void HAIKU_GL_RebootContexts(_THIS) {
     SDL_Window *window = _this->windows;
     while(window) {
         SDL_BWin *bwin = _ToBeWin(window);

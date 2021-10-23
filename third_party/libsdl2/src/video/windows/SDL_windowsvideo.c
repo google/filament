@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -63,14 +63,17 @@ UpdateWindowFrameUsableWhileCursorHidden(void *userdata, const char *name, const
     }
 }
 
+static void WIN_SuspendScreenSaver(_THIS)
+{
+    if (_this->suspend_screensaver) {
+        SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED);
+    } else {
+        SetThreadExecutionState(ES_CONTINUOUS);
+    }
+}
+
 
 /* Windows driver bootstrap functions */
-
-static int
-WIN_Available(void)
-{
-    return (1);
-}
 
 static void
 WIN_DeleteDevice(SDL_VideoDevice * device)
@@ -84,7 +87,9 @@ WIN_DeleteDevice(SDL_VideoDevice * device)
     if (data->shcoreDLL) {
         SDL_UnloadObject(data->shcoreDLL);
     }
-
+    if (device->wakeup_lock) {
+        SDL_DestroyMutex(device->wakeup_lock);
+    }
     SDL_free(device->driverdata);
     SDL_free(device);
 }
@@ -110,6 +115,7 @@ WIN_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
+    device->wakeup_lock = SDL_CreateMutex();
 
     data->userDLL = SDL_LoadObject("USER32.DLL");
     if (data->userDLL) {
@@ -136,6 +142,9 @@ WIN_CreateDevice(int devindex)
     device->GetDisplayModes = WIN_GetDisplayModes;
     device->SetDisplayMode = WIN_SetDisplayMode;
     device->PumpEvents = WIN_PumpEvents;
+    device->WaitEventTimeout = WIN_WaitEventTimeout;
+    device->SendWakeupEvent = WIN_SendWakeupEvent;
+    device->SuspendScreenSaver = WIN_SuspendScreenSaver;
 
     device->CreateSDLWindow = WIN_CreateWindow;
     device->CreateSDLWindowFrom = WIN_CreateWindowFrom;
@@ -153,10 +162,12 @@ WIN_CreateDevice(int devindex)
     device->RestoreWindow = WIN_RestoreWindow;
     device->SetWindowBordered = WIN_SetWindowBordered;
     device->SetWindowResizable = WIN_SetWindowResizable;
+    device->SetWindowAlwaysOnTop = WIN_SetWindowAlwaysOnTop;
     device->SetWindowFullscreen = WIN_SetWindowFullscreen;
     device->SetWindowGammaRamp = WIN_SetWindowGammaRamp;
     device->GetWindowGammaRamp = WIN_GetWindowGammaRamp;
-    device->SetWindowGrab = WIN_SetWindowGrab;
+    device->SetWindowMouseGrab = WIN_SetWindowMouseGrab;
+    device->SetWindowKeyboardGrab = WIN_SetWindowKeyboardGrab;
     device->DestroyWindow = WIN_DestroyWindow;
     device->GetWindowWMInfo = WIN_GetWindowWMInfo;
     device->CreateWindowFramebuffer = WIN_CreateWindowFramebuffer;
@@ -164,6 +175,8 @@ WIN_CreateDevice(int devindex)
     device->DestroyWindowFramebuffer = WIN_DestroyWindowFramebuffer;
     device->OnWindowEnter = WIN_OnWindowEnter;
     device->SetWindowHitTest = WIN_SetWindowHitTest;
+    device->AcceptDragAndDrop = WIN_AcceptDragAndDrop;
+    device->FlashWindow = WIN_FlashWindow;
 
     device->shape_driver.CreateShaper = Win32_CreateShaper;
     device->shape_driver.SetWindowShape = Win32_SetWindowShape;
@@ -179,7 +192,7 @@ WIN_CreateDevice(int devindex)
     device->GL_GetSwapInterval = WIN_GL_GetSwapInterval;
     device->GL_SwapWindow = WIN_GL_SwapWindow;
     device->GL_DeleteContext = WIN_GL_DeleteContext;
-#elif SDL_VIDEO_OPENGL_EGL        
+#elif SDL_VIDEO_OPENGL_EGL
     /* Use EGL based functions */
     device->GL_LoadLibrary = WIN_GLES_LoadLibrary;
     device->GL_GetProcAddress = WIN_GLES_GetProcAddress;
@@ -213,12 +226,14 @@ WIN_CreateDevice(int devindex)
 
 
 VideoBootStrap WINDOWS_bootstrap = {
-    "windows", "SDL Windows video driver", WIN_Available, WIN_CreateDevice
+    "windows", "SDL Windows video driver", WIN_CreateDevice
 };
 
 int
 WIN_VideoInit(_THIS)
 {
+    SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
+
     if (WIN_InitModes(_this) < 0) {
         return -1;
     }
@@ -228,6 +243,8 @@ WIN_VideoInit(_THIS)
 
     SDL_AddHintCallback(SDL_HINT_WINDOWS_ENABLE_MESSAGELOOP, UpdateWindowsEnableMessageLoop, NULL);
     SDL_AddHintCallback(SDL_HINT_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN, UpdateWindowFrameUsableWhileCursorHidden, NULL);
+
+    data->_SDL_WAKEUP = RegisterWindowMessageA("_SDL_WAKEUP");
 
     return 0;
 }
@@ -244,7 +261,7 @@ WIN_VideoQuit(_THIS)
 #define D3D_DEBUG_INFO
 #include <d3d9.h>
 
-SDL_bool 
+SDL_bool
 D3D_LoadDLL(void **pD3DDLL, IDirect3D9 **pDirect3D9Interface)
 {
     *pD3DDLL = SDL_LoadObject("D3D9.DLL");
@@ -252,24 +269,24 @@ D3D_LoadDLL(void **pD3DDLL, IDirect3D9 **pDirect3D9Interface)
         typedef IDirect3D9 *(WINAPI *Direct3DCreate9_t) (UINT SDKVersion);
         Direct3DCreate9_t Direct3DCreate9Func;
 
-#ifdef USE_D3D9EX
-        typedef HRESULT (WINAPI *Direct3DCreate9Ex_t)(UINT SDKVersion, IDirect3D9Ex **ppD3D);
-        Direct3DCreate9Ex_t Direct3DCreate9ExFunc;
+        if (SDL_GetHintBoolean(SDL_HINT_WINDOWS_USE_D3D9EX, SDL_FALSE)) {
+            typedef HRESULT(WINAPI* Direct3DCreate9Ex_t)(UINT SDKVersion, IDirect3D9Ex** ppD3D);
+            Direct3DCreate9Ex_t Direct3DCreate9ExFunc;
 
-        Direct3DCreate9ExFunc = (Direct3DCreate9Ex_t)SDL_LoadFunction(*pD3DDLL, "Direct3DCreate9Ex");
-        if (Direct3DCreate9ExFunc) {
-            IDirect3D9Ex *pDirect3D9ExInterface;
-            HRESULT hr = Direct3DCreate9ExFunc(D3D_SDK_VERSION, &pDirect3D9ExInterface);
-            if (SUCCEEDED(hr)) {
-                const GUID IDirect3D9_GUID = { 0x81bdcbca, 0x64d4, 0x426d, { 0xae, 0x8d, 0xad, 0x1, 0x47, 0xf4, 0x27, 0x5c } };
-                hr = IDirect3D9Ex_QueryInterface(pDirect3D9ExInterface, &IDirect3D9_GUID, (void**)pDirect3D9Interface);
-                IDirect3D9Ex_Release(pDirect3D9ExInterface);
+            Direct3DCreate9ExFunc = (Direct3DCreate9Ex_t)SDL_LoadFunction(*pD3DDLL, "Direct3DCreate9Ex");
+            if (Direct3DCreate9ExFunc) {
+                IDirect3D9Ex* pDirect3D9ExInterface;
+                HRESULT hr = Direct3DCreate9ExFunc(D3D_SDK_VERSION, &pDirect3D9ExInterface);
                 if (SUCCEEDED(hr)) {
-                    return SDL_TRUE;
+                    const GUID IDirect3D9_GUID = { 0x81bdcbca, 0x64d4, 0x426d, { 0xae, 0x8d, 0xad, 0x1, 0x47, 0xf4, 0x27, 0x5c } };
+                    hr = IDirect3D9Ex_QueryInterface(pDirect3D9ExInterface, &IDirect3D9_GUID, (void**)pDirect3D9Interface);
+                    IDirect3D9Ex_Release(pDirect3D9ExInterface);
+                    if (SUCCEEDED(hr)) {
+                        return SDL_TRUE;
+                    }
                 }
             }
         }
-#endif /* USE_D3D9EX */
 
         Direct3DCreate9Func = (Direct3DCreate9_t)SDL_LoadFunction(*pD3DDLL, "Direct3DCreate9");
         if (Direct3DCreate9Func) {
@@ -303,7 +320,7 @@ SDL_Direct3D9GetAdapterIndex(int displayIndex)
             SDL_SetError("Invalid display index");
             adapterIndex = -1; /* make sure we return something invalid */
         } else {
-            char *displayName = WIN_StringToUTF8(pData->DeviceName);
+            char *displayName = WIN_StringToUTF8W(pData->DeviceName);
             unsigned int count = IDirect3D9_GetAdapterCount(pD3D);
             unsigned int i;
             for (i=0; i<count; i++) {
@@ -375,7 +392,7 @@ SDL_DXGIGetOutputInfo(int displayIndex, int *adapterIndex, int *outputIndex)
     void *pDXGIDLL;
     char *displayName;
     int nAdapter, nOutput;
-    IDXGIFactory *pDXGIFactory;
+    IDXGIFactory *pDXGIFactory = NULL;
     IDXGIAdapter *pDXGIAdapter;
     IDXGIOutput* pDXGIOutput;
 
@@ -402,14 +419,14 @@ SDL_DXGIGetOutputInfo(int displayIndex, int *adapterIndex, int *outputIndex)
         return SDL_FALSE;
     }
 
-    displayName = WIN_StringToUTF8(pData->DeviceName);
+    displayName = WIN_StringToUTF8W(pData->DeviceName);
     nAdapter = 0;
     while (*adapterIndex == -1 && SUCCEEDED(IDXGIFactory_EnumAdapters(pDXGIFactory, nAdapter, &pDXGIAdapter))) {
         nOutput = 0;
         while (*adapterIndex == -1 && SUCCEEDED(IDXGIAdapter_EnumOutputs(pDXGIAdapter, nOutput, &pDXGIOutput))) {
             DXGI_OUTPUT_DESC outputDesc;
             if (SUCCEEDED(IDXGIOutput_GetDesc(pDXGIOutput, &outputDesc))) {
-                char *outputName = WIN_StringToUTF8(outputDesc.DeviceName);
+                char *outputName = WIN_StringToUTF8W(outputDesc.DeviceName);
                 if (SDL_strcmp(outputName, displayName) == 0) {
                     *adapterIndex = nAdapter;
                     *outputIndex = nOutput;

@@ -125,7 +125,7 @@ add_library(filamentapp-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 # Include and target definitions
 # ==================================================================================================
 
-include_directories(${PUBLIC_HDR_DIR})
+include_directories(${PUBLIC_HDR_DIR} sdl2)
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
@@ -154,3 +154,5 @@ if (_isMultiConfig)
 else()
     target_compile_definitions(${TARGET} PRIVATE RELATIVE_ASSET_PATH=".")
 endif()
+
+add_dependencies(${TARGET} sdl2)

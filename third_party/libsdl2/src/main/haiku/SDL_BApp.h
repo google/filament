@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,7 @@
 #define SDL_BAPP_H
 
 #include <InterfaceKit.h>
+#include <LocaleRoster.h>
 #if SDL_VIDEO_OPENGL
 #include <OpenGLKit.h>
 #endif
@@ -153,6 +154,10 @@ public:
             _HandleWindowResized(message);
             break;
 
+        case B_LOCALE_CHANGED:
+            SDL_SendLocaleChangedEvent();
+            break;
+
         case BAPP_SCREEN_CHANGED:
             /* TODO: Handle screen resize or workspace change */
             break;
@@ -198,7 +203,7 @@ public:
             _current_context->UnlockGL();
         _current_context = newContext;
         if (_current_context)
-	        _current_context->LockGL();
+            _current_context->LockGL();
     }
 #endif
 
@@ -228,10 +233,26 @@ private:
             return;
         }
         win = GetSDLWindow(winID);
-        SDL_SendMouseMotion(win, 0, 0, x, y);
+
+		// Simple relative mode support for mouse.
+		if (SDL_GetMouse()->relative_mode) {
+			int winWidth, winHeight, winPosX, winPosY;
+			SDL_GetWindowSize(win, &winWidth, &winHeight);
+			SDL_GetWindowPosition(win, &winPosX, &winPosY);
+			int dx = x - (winWidth / 2);
+			int dy = y - (winHeight / 2);
+			SDL_SendMouseMotion(win, 0, SDL_GetMouse()->relative_mode, dx, dy);
+			set_mouse_position((winPosX + winWidth / 2), (winPosY + winHeight / 2));
+			if (!be_app->IsCursorHidden())
+				be_app->HideCursor();
+		} else {
+			SDL_SendMouseMotion(win, 0, 0, x, y);
+			if (SDL_ShowCursor(-1) && be_app->IsCursorHidden())
+				be_app->ShowCursor();
+		}
 
         /* Tell the application that the mouse passed over, redraw needed */
-        BE_UpdateWindowFramebuffer(NULL,win,NULL,-1);
+        HAIKU_UpdateWindowFramebuffer(NULL,win,NULL,-1);
     }
 
     void _HandleMouseButton(BMessage *msg) {
@@ -261,7 +282,7 @@ private:
             return;
         }
         win = GetSDLWindow(winID);
-        SDL_SendMouseWheel(win, 0, xTicks, yTicks, SDL_MOUSEWHEEL_NORMAL);
+        SDL_SendMouseWheel(win, 0, xTicks, -yTicks, SDL_MOUSEWHEEL_NORMAL);
     }
 
     void _HandleKey(BMessage *msg) {
@@ -274,18 +295,18 @@ private:
         }
 
         /* Make sure this isn't a repeated event (key pressed and held) */
-        if(state == SDL_PRESSED && BE_GetKeyState(scancode) == SDL_PRESSED) {
+        if(state == SDL_PRESSED && HAIKU_GetKeyState(scancode) == SDL_PRESSED) {
             return;
         }
-        BE_SetKeyState(scancode, state);
-        SDL_SendKeyboardKey(state, BE_GetScancodeFromBeKey(scancode));
+        HAIKU_SetKeyState(scancode, state);
+        SDL_SendKeyboardKey(state, HAIKU_GetScancodeFromBeKey(scancode));
         
         if (state == SDL_PRESSED && SDL_EventState(SDL_TEXTINPUT, SDL_QUERY)) {
             const int8 *keyUtf8;
             ssize_t count;
             if (msg->FindData("key-utf8", B_INT8_TYPE, (const void**)&keyUtf8, &count) == B_OK) {
                 char text[SDL_TEXTINPUTEVENT_TEXT_SIZE];
-                SDL_zero(text);
+                SDL_zeroa(text);
                 SDL_memcpy(text, keyUtf8, count);
                 SDL_SendKeyboardText(text);
             }

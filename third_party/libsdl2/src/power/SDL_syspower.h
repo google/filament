@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -38,9 +38,12 @@ SDL_bool SDL_GetPowerInfo_MacOSX(SDL_PowerState *, int *, int *);
 SDL_bool SDL_GetPowerInfo_Haiku(SDL_PowerState *, int *, int *);
 SDL_bool SDL_GetPowerInfo_Android(SDL_PowerState *, int *, int *);
 SDL_bool SDL_GetPowerInfo_PSP(SDL_PowerState *, int *, int *);
+SDL_bool SDL_GetPowerInfo_VITA(SDL_PowerState *, int *, int *);
 SDL_bool SDL_GetPowerInfo_WinRT(SDL_PowerState *, int *, int *);
 SDL_bool SDL_GetPowerInfo_Emscripten(SDL_PowerState *, int *, int *);
-SDL_bool SDL_GetPowerInfo_Hardwired(SDL_PowerState *, int *, int *);
+
+/* this one is static in SDL_power.c */
+/* SDL_bool SDL_GetPowerInfo_Hardwired(SDL_PowerState *, int *, int *);*/
 
 #endif /* SDL_syspower_h_ */
 

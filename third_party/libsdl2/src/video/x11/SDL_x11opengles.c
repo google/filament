@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,7 @@
 
 #if SDL_VIDEO_DRIVER_X11 && SDL_VIDEO_OPENGL_EGL
 
+#include "SDL_hints.h"
 #include "SDL_x11video.h"
 #include "SDL_x11opengles.h"
 #include "SDL_x11opengl.h"
@@ -34,7 +35,8 @@ X11_GLES_LoadLibrary(_THIS, const char *path)
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
 
     /* If the profile requested is not GL ES, switch over to X11_GL functions  */
-    if (_this->gl_config.profile_mask != SDL_GL_CONTEXT_PROFILE_ES) {
+    if ((_this->gl_config.profile_mask != SDL_GL_CONTEXT_PROFILE_ES) &&
+        !SDL_GetHintBoolean(SDL_HINT_VIDEO_X11_FORCE_EGL, SDL_FALSE)) {
         #if SDL_VIDEO_OPENGL_GLX
         X11_GLES_UnloadLibrary(_this);
         _this->GL_LoadLibrary = X11_GL_LoadLibrary;

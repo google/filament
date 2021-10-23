@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -116,6 +116,7 @@ int
 SDL_TryLockMutex(SDL_mutex * mutex)
 {
     int retval;
+    int result;
 #if FAKE_RECURSIVE_MUTEX
     pthread_t this_thread;
 #endif
@@ -134,18 +135,20 @@ SDL_TryLockMutex(SDL_mutex * mutex)
          We set the locking thread id after we obtain the lock
          so unlocks from other threads will fail.
          */
-        if (pthread_mutex_trylock(&mutex->id) == 0) {
+        result = pthread_mutex_trylock(&mutex->id);
+        if (result == 0) {
             mutex->owner = this_thread;
             mutex->recursive = 0;
-        } else if (errno == EBUSY) {
+        } else if (result == EBUSY) {
             retval = SDL_MUTEX_TIMEDOUT;
         } else {
             retval = SDL_SetError("pthread_mutex_trylock() failed");
         }
     }
 #else
-    if (pthread_mutex_trylock(&mutex->id) != 0) {
-        if (errno == EBUSY) {
+    result = pthread_mutex_trylock(&mutex->id);
+    if (result != 0) {
+        if (result == EBUSY) {
             retval = SDL_MUTEX_TIMEDOUT;
         } else {
             retval = SDL_SetError("pthread_mutex_trylock() failed");

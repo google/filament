@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -28,15 +28,15 @@ extern "C" {
 
 #include "../SDL_sysvideo.h"
 
-extern int32 BE_ColorSpaceToBitsPerPixel(uint32 colorspace);
-extern int32 BE_BPPToSDLPxFormat(int32 bpp);
+extern int32 HAIKU_ColorSpaceToBitsPerPixel(uint32 colorspace);
+extern int32 HAIKU_BPPToSDLPxFormat(int32 bpp);
 
-extern int BE_InitModes(_THIS);
-extern int BE_QuitModes(_THIS);
-extern int BE_GetDisplayBounds(_THIS, SDL_VideoDisplay *display,
+extern int HAIKU_InitModes(_THIS);
+extern int HAIKU_QuitModes(_THIS);
+extern int HAIKU_GetDisplayBounds(_THIS, SDL_VideoDisplay *display,
     SDL_Rect *rect);
-extern void BE_GetDisplayModes(_THIS, SDL_VideoDisplay *display);
-extern int BE_SetDisplayMode(_THIS, SDL_VideoDisplay *display,
+extern void HAIKU_GetDisplayModes(_THIS, SDL_VideoDisplay *display);
+extern int HAIKU_SetDisplayMode(_THIS, SDL_VideoDisplay *display,
     SDL_DisplayMode *mode);
 
 #ifdef __cplusplus

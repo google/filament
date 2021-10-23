@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -80,6 +80,17 @@ do { \
     setpixel; \
 } while (0)
 
+#define DRAW_SETPIXEL_MUL(getpixel, setpixel) \
+do { \
+    unsigned sr, sg, sb, sa; sa = 0xFF; \
+    getpixel; \
+    sr = DRAW_MUL(sr, r) + DRAW_MUL(inva, sr); if (sr > 0xff) sr = 0xff; \
+    sg = DRAW_MUL(sg, g) + DRAW_MUL(inva, sg); if (sg > 0xff) sg = 0xff; \
+    sb = DRAW_MUL(sb, b) + DRAW_MUL(inva, sb); if (sb > 0xff) sb = 0xff; \
+    sa = DRAW_MUL(sa, a) + DRAW_MUL(inva, sa); if (sa > 0xff) sa = 0xff; \
+    setpixel; \
+} while (0)
+
 #define DRAW_SETPIXELXY(x, y, type, bpp, op) \
 do { \
     type *pixel = (type *)((Uint8 *)dst->pixels + (y) * dst->pitch \
@@ -106,6 +117,10 @@ do { \
     DRAW_SETPIXEL_MOD(RGB_FROM_RGB555(*pixel, sr, sg, sb), \
                       RGB555_FROM_RGB(*pixel, sr, sg, sb))
 
+#define DRAW_SETPIXEL_MUL_RGB555 \
+    DRAW_SETPIXEL_MUL(RGB_FROM_RGB555(*pixel, sr, sg, sb), \
+                      RGB555_FROM_RGB(*pixel, sr, sg, sb))
+
 #define DRAW_SETPIXELXY_RGB555(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_RGB555)
 
@@ -117,6 +132,9 @@ do { \
 
 #define DRAW_SETPIXELXY_MOD_RGB555(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MOD_RGB555)
+
+#define DRAW_SETPIXELXY_MUL_RGB555(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MUL_RGB555)
 
 /*
  * Define draw operators for RGB565
@@ -137,6 +155,10 @@ do { \
     DRAW_SETPIXEL_MOD(RGB_FROM_RGB565(*pixel, sr, sg, sb), \
                       RGB565_FROM_RGB(*pixel, sr, sg, sb))
 
+#define DRAW_SETPIXEL_MUL_RGB565 \
+    DRAW_SETPIXEL_MUL(RGB_FROM_RGB565(*pixel, sr, sg, sb), \
+                      RGB565_FROM_RGB(*pixel, sr, sg, sb))
+
 #define DRAW_SETPIXELXY_RGB565(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_RGB565)
 
@@ -148,6 +170,9 @@ do { \
 
 #define DRAW_SETPIXELXY_MOD_RGB565(x, y) \
     DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MOD_RGB565)
+
+#define DRAW_SETPIXELXY_MUL_RGB565(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MUL_RGB565)
 
 /*
  * Define draw operators for RGB888
@@ -168,6 +193,10 @@ do { \
     DRAW_SETPIXEL_MOD(RGB_FROM_RGB888(*pixel, sr, sg, sb), \
                       RGB888_FROM_RGB(*pixel, sr, sg, sb))
 
+#define DRAW_SETPIXEL_MUL_RGB888 \
+    DRAW_SETPIXEL_MUL(RGB_FROM_RGB888(*pixel, sr, sg, sb), \
+                      RGB888_FROM_RGB(*pixel, sr, sg, sb))
+
 #define DRAW_SETPIXELXY_RGB888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_RGB888)
 
@@ -179,6 +208,9 @@ do { \
 
 #define DRAW_SETPIXELXY_MOD_RGB888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGB888)
+
+#define DRAW_SETPIXELXY_MUL_RGB888(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MUL_RGB888)
 
 /*
  * Define draw operators for ARGB8888
@@ -199,6 +231,10 @@ do { \
     DRAW_SETPIXEL_MOD(RGBA_FROM_ARGB8888(*pixel, sr, sg, sb, sa), \
                       ARGB8888_FROM_RGBA(*pixel, sr, sg, sb, sa))
 
+#define DRAW_SETPIXEL_MUL_ARGB8888 \
+    DRAW_SETPIXEL_MUL(RGBA_FROM_ARGB8888(*pixel, sr, sg, sb, sa), \
+                      ARGB8888_FROM_RGBA(*pixel, sr, sg, sb, sa))
+
 #define DRAW_SETPIXELXY_ARGB8888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_ARGB8888)
 
@@ -210,6 +246,9 @@ do { \
 
 #define DRAW_SETPIXELXY_MOD_ARGB8888(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_ARGB8888)
+
+#define DRAW_SETPIXELXY_MUL_ARGB8888(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MUL_ARGB8888)
 
 /*
  * Define draw operators for general RGB
@@ -228,6 +267,10 @@ do { \
 
 #define DRAW_SETPIXEL_MOD_RGB \
     DRAW_SETPIXEL_MOD(RGB_FROM_PIXEL(*pixel, fmt, sr, sg, sb), \
+                      PIXEL_FROM_RGB(*pixel, fmt, sr, sg, sb))
+
+#define DRAW_SETPIXEL_MUL_RGB \
+    DRAW_SETPIXEL_MUL(RGB_FROM_PIXEL(*pixel, fmt, sr, sg, sb), \
                       PIXEL_FROM_RGB(*pixel, fmt, sr, sg, sb))
 
 #define DRAW_SETPIXELXY2_RGB(x, y) \
@@ -254,6 +297,12 @@ do { \
 #define DRAW_SETPIXELXY4_MOD_RGB(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGB)
 
+#define DRAW_SETPIXELXY2_MUL_RGB(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint16, 2, DRAW_SETPIXEL_MUL_RGB)
+
+#define DRAW_SETPIXELXY4_MUL_RGB(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MUL_RGB)
+
 
 /*
  * Define draw operators for general RGBA
@@ -274,6 +323,10 @@ do { \
     DRAW_SETPIXEL_MOD(RGBA_FROM_PIXEL(*pixel, fmt, sr, sg, sb, sa), \
                       PIXEL_FROM_RGBA(*pixel, fmt, sr, sg, sb, sa))
 
+#define DRAW_SETPIXEL_MUL_RGBA \
+    DRAW_SETPIXEL_MUL(RGBA_FROM_PIXEL(*pixel, fmt, sr, sg, sb, sa), \
+                      PIXEL_FROM_RGBA(*pixel, fmt, sr, sg, sb, sa))
+
 #define DRAW_SETPIXELXY4_RGBA(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_RGBA)
 
@@ -285,6 +338,9 @@ do { \
 
 #define DRAW_SETPIXELXY4_MOD_RGBA(x, y) \
     DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MOD_RGBA)
+
+#define DRAW_SETPIXELXY4_MUL_RGBA(x, y) \
+    DRAW_SETPIXELXY(x, y, Uint32, 4, DRAW_SETPIXEL_MUL_RGBA)
 
 /*
  * Define line drawing macro

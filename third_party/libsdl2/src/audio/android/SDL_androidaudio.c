@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,7 +24,6 @@
 
 /* Output audio to Android */
 
-#include "SDL_assert.h"
 #include "SDL_audio.h"
 #include "../SDL_audio_c.h"
 #include "SDL_androidaudio.h"
@@ -57,7 +56,9 @@ ANDROIDAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
 
     test_format = SDL_FirstAudioFormat(this->spec.format);
     while (test_format != 0) { /* no "UNKNOWN" constant */
-        if ((test_format == AUDIO_U8) || (test_format == AUDIO_S16LSB)) {
+        if ((test_format == AUDIO_U8) ||
+			(test_format == AUDIO_S16) ||
+			(test_format == AUDIO_F32)) {
             this->spec.format = test_format;
             break;
         }
@@ -69,25 +70,8 @@ ANDROIDAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
         return SDL_SetError("No compatible audio format!");
     }
 
-    if (this->spec.channels > 1) {
-        this->spec.channels = 2;
-    } else {
-        this->spec.channels = 1;
-    }
-
-    if (this->spec.freq < 8000) {
-        this->spec.freq = 8000;
-    }
-    if (this->spec.freq > 48000) {
-        this->spec.freq = 48000;
-    }
-
-    /* TODO: pass in/return a (Java) device ID */
-    this->spec.samples = Android_JNI_OpenAudioDevice(iscapture, this->spec.freq, this->spec.format == AUDIO_U8 ? 0 : 1, this->spec.channels, this->spec.samples);
-
-    if (this->spec.samples == 0) {
-        /* Init failed? */
-        return SDL_SetError("Java-side initialization failed!");
+    if (Android_JNI_OpenAudioDevice(iscapture, &this->spec) < 0) {
+        return -1;
     }
 
     SDL_CalculateAudioSpec(&this->spec);

@@ -128,6 +128,8 @@
 #include "math_libm.h"
 #include "math_private.h"
 
+#include "SDL_assert.h"
+
 static const int init_jk[] = {2,3,4,6}; /* initial value for jk */
 
 static const double PIo2[] = {
@@ -147,13 +149,19 @@ one    = 1.0,
 two24   =  1.67772160000000000000e+07, /* 0x41700000, 0x00000000 */
 twon24  =  5.96046447753906250000e-08; /* 0x3E700000, 0x00000000 */
 
-int attribute_hidden __kernel_rem_pio2(double *x, double *y, int e0, int nx, int prec, const int32_t *ipio2)
+int32_t attribute_hidden __kernel_rem_pio2(const double *x, double *y, int e0, int nx, const unsigned int prec, const int32_t *ipio2)
 {
 	int32_t jz,jx,jv,jp,jk,carry,n,iq[20],i,j,k,m,q0,ih;
 	double z,fw,f[20],fq[20],q[20];
 
+	if (nx < 1) {
+		return 0;
+	}
+
     /* initialize jk*/
+	SDL_assert(prec < SDL_arraysize(init_jk));
 	jk = init_jk[prec];
+	SDL_assert(jk > 0);
 	jp = jk;
 
     /* determine jx,jv,q0, note that 3>q0 */
@@ -164,6 +172,9 @@ int attribute_hidden __kernel_rem_pio2(double *x, double *y, int e0, int nx, int
     /* set up f[0] to f[jx+jk] where f[jx+jk] = ipio2[jv+jk] */
 	j = jv-jx; m = jx+jk;
 	for(i=0;i<=m;i++,j++) f[i] = (j<0)? zero : (double) ipio2[j];
+	if ((m+1) < SDL_arraysize(f)) {
+	    SDL_memset(&f[m+1], 0, sizeof (f) - ((m+1) * sizeof (f[0])));
+	}
 
     /* compute q[0],q[1],...q[jk] */
 	for (i=0;i<=jk;i++) {
@@ -178,6 +189,9 @@ recompute:
 	    fw    =  (double)((int32_t)(twon24* z));
 	    iq[i] =  (int32_t)(z-two24*fw);
 	    z     =  q[j-1]+fw;
+	}
+	if (jz < SDL_arraysize(iq)) {
+	    SDL_memset(&iq[jz], 0, sizeof (iq) - (jz * sizeof (iq[0])));
 	}
 
     /* compute n */
@@ -238,7 +252,8 @@ recompute:
     /* chop off zero terms */
 	if(z==0.0) {
 	    jz -= 1; q0 -= 24;
-	    while(iq[jz]==0) { jz--; q0-=24;}
+		SDL_assert(jz >= 0);
+	    while(iq[jz]==0) { jz--; SDL_assert(jz >= 0); q0-=24;}
 	} else { /* break z into 24-bit if necessary */
 	    z = scalbn(z,-q0);
 	    if(z>=two24) {
@@ -259,6 +274,9 @@ recompute:
 	for(i=jz;i>=0;i--) {
 	    for(fw=0.0,k=0;k<=jp&&k<=jz-i;k++) fw += PIo2[k]*q[i+k];
 	    fq[jz-i] = fw;
+	}
+	if ((jz+1) < SDL_arraysize(f)) {
+	    SDL_memset(&fq[jz+1], 0, sizeof (fq) - ((jz+1) * sizeof (fq[0])));
 	}
 
     /* compress fq[] into y[] */

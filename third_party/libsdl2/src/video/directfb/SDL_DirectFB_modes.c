@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -258,7 +258,7 @@ DirectFB_InitModes(_THIS)
 
         SDL_DFB_CHECKERR(layer->SetCooperativeLevel(layer, DLSCL_SHARED));
 
-        SDL_AddVideoDisplay(&display);
+        SDL_AddVideoDisplay(&display, SDL_FALSE);
     }
     SDL_DFB_FREE(screencbdata);
     return;

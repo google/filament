@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,31 +33,31 @@ struct SDL_GLDriverData
     SDL_bool HAS_WGL_ARB_create_context_robustness;
     SDL_bool HAS_WGL_ARB_create_context_no_error;
 
-	/* Max version of OpenGL ES context that can be created if the
-	   implementation supports WGL_EXT_create_context_es2_profile.
-	   major = minor = 0 when unsupported.
-	 */
-	struct {
-		int major;
-		int minor;
-	} es_profile_max_supported_version;
+    /* Max version of OpenGL ES context that can be created if the
+       implementation supports WGL_EXT_create_context_es2_profile.
+       major = minor = 0 when unsupported.
+     */
+    struct {
+        int major;
+        int minor;
+    } es_profile_max_supported_version;
 
-	void *(WINAPI * wglGetProcAddress) (const char *proc);
-      HGLRC(WINAPI * wglCreateContext) (HDC hdc);
-      BOOL(WINAPI * wglDeleteContext) (HGLRC hglrc);
-      BOOL(WINAPI * wglMakeCurrent) (HDC hdc, HGLRC hglrc);
-      BOOL(WINAPI * wglShareLists) (HGLRC hglrc1, HGLRC hglrc2);
-      BOOL(WINAPI * wglChoosePixelFormatARB) (HDC hdc,
-                                              const int *piAttribIList,
-                                              const FLOAT * pfAttribFList,
-                                              UINT nMaxFormats,
-                                              int *piFormats,
-                                              UINT * nNumFormats);
-      BOOL(WINAPI * wglGetPixelFormatAttribivARB) (HDC hdc, int iPixelFormat,
-                                                   int iLayerPlane,
-                                                   UINT nAttributes,
-                                                   const int *piAttributes,
-                                                   int *piValues);
+    void *(WINAPI * wglGetProcAddress) (const char *proc);
+    HGLRC(WINAPI * wglCreateContext) (HDC hdc);
+    BOOL(WINAPI * wglDeleteContext) (HGLRC hglrc);
+    BOOL(WINAPI * wglMakeCurrent) (HDC hdc, HGLRC hglrc);
+    BOOL(WINAPI * wglShareLists) (HGLRC hglrc1, HGLRC hglrc2);
+    BOOL(WINAPI * wglChoosePixelFormatARB) (HDC hdc,
+                                            const int *piAttribIList,
+                                            const FLOAT * pfAttribFList,
+                                            UINT nMaxFormats,
+                                            int *piFormats,
+                                            UINT * nNumFormats);
+    BOOL(WINAPI * wglGetPixelFormatAttribivARB) (HDC hdc, int iPixelFormat,
+                                                 int iLayerPlane,
+                                                 UINT nAttributes,
+                                                 const int *piAttributes,
+                                                 int *piValues);
     BOOL (WINAPI * wglSwapIntervalEXT) (int interval);
     int (WINAPI * wglGetSwapIntervalEXT) (void);
 };

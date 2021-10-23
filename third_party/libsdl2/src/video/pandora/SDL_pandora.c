@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -114,7 +114,6 @@ PND_create()
     device->MaximizeWindow = PND_maximizewindow;
     device->MinimizeWindow = PND_minimizewindow;
     device->RestoreWindow = PND_restorewindow;
-    device->SetWindowGrab = PND_setwindowgrab;
     device->DestroyWindow = PND_destroywindow;
 #if 0
     device->GetWindowWMInfo = PND_getwindowwminfo;
@@ -173,7 +172,7 @@ PND_videoinit(_THIS)
     display.current_mode = current_mode;
     display.driverdata = NULL;
 
-    SDL_AddVideoDisplay(&display);
+    SDL_AddVideoDisplay(&display, SDL_FALSE);
 
     return 1;
 }
@@ -284,10 +283,6 @@ PND_minimizewindow(_THIS, SDL_Window * window)
 }
 void
 PND_restorewindow(_THIS, SDL_Window * window)
-{
-}
-void
-PND_setwindowgrab(_THIS, SDL_Window * window, SDL_bool grabbed)
 {
 }
 void

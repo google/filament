@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -27,6 +27,7 @@
 
 #include "SDL_emscriptenvideo.h"
 #include "SDL_emscriptenopengles.h"
+#include "SDL_hints.h"
 
 #define LOAD_FUNC(NAME) _this->egl_data->NAME = NAME;
 
@@ -60,7 +61,9 @@ Emscripten_GLES_LoadLibrary(_THIS, const char *path) {
     LOAD_FUNC(eglWaitNative);
     LOAD_FUNC(eglWaitGL);
     LOAD_FUNC(eglBindAPI);
-    
+    LOAD_FUNC(eglQueryString);
+    LOAD_FUNC(eglGetError);
+
     _this->egl_data->egl_display = _this->egl_data->eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (!_this->egl_data->egl_display) {
         return SDL_SetError("Could not get EGL display");
@@ -79,22 +82,19 @@ Emscripten_GLES_LoadLibrary(_THIS, const char *path) {
     return 0;
 }
 
-void
-Emscripten_GLES_DeleteContext(_THIS, SDL_GLContext context)
-{
-    /*
-    WebGL contexts can't actually be deleted, so we need to reset it.
-    ES2 renderer resets state on init anyway, clearing the canvas should be enough
-    */
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    SDL_EGL_DeleteContext(_this, context);
-}
-
 SDL_EGL_CreateContext_impl(Emscripten)
-SDL_EGL_SwapWindow_impl(Emscripten)
 SDL_EGL_MakeCurrent_impl(Emscripten)
+
+int
+Emscripten_GLES_SwapWindow(_THIS, SDL_Window * window)
+{
+    EGLBoolean ret = SDL_EGL_SwapBuffers(_this, ((SDL_WindowData *) window->driverdata)->egl_surface);
+    if (emscripten_has_asyncify() && SDL_GetHintBoolean(SDL_HINT_EMSCRIPTEN_ASYNCIFY, SDL_TRUE)) {
+        /* give back control to browser for screen refresh */
+        emscripten_sleep(0);
+    }
+    return ret;
+}
 
 void
 Emscripten_GLES_GetDrawableSize(_THIS, SDL_Window * window, int * w, int * h)

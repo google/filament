@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,6 +26,9 @@
  *  after you finish any function and structure declarations in your headers
  */
 
+#ifndef _begin_code_h
+#error close_code.h included without matching begin_code.h
+#endif
 #undef _begin_code_h
 
 /* Reset structure packing at previous byte alignment */

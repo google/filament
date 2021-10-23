@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -49,12 +49,6 @@
 #include "SDL_rpievents_c.h"
 #include "SDL_rpiopengles.h"
 #include "SDL_rpimouse.h"
-
-static int
-RPI_Available(void)
-{
-    return 1;
-}
 
 static void
 RPI_Destroy(SDL_VideoDevice * device)
@@ -126,7 +120,6 @@ RPI_Create()
     device->MaximizeWindow = RPI_MaximizeWindow;
     device->MinimizeWindow = RPI_MinimizeWindow;
     device->RestoreWindow = RPI_RestoreWindow;
-    device->SetWindowGrab = RPI_SetWindowGrab;
     device->DestroyWindow = RPI_DestroyWindow;
 #if 0
     device->GetWindowWMInfo = RPI_GetWindowWMInfo;
@@ -150,32 +143,37 @@ RPI_Create()
 VideoBootStrap RPI_bootstrap = {
     "RPI",
     "RPI Video Driver",
-    RPI_Available,
     RPI_Create
 };
+
 
 /*****************************************************************************/
 /* SDL Video and Display initialization/handling functions                   */
 /*****************************************************************************/
-int
-RPI_VideoInit(_THIS)
+
+static void
+AddDispManXDisplay(const int display_id)
 {
+    DISPMANX_MODEINFO_T modeinfo;
+    DISPMANX_DISPLAY_HANDLE_T handle;
     SDL_VideoDisplay display;
     SDL_DisplayMode current_mode;
     SDL_DisplayData *data;
-    uint32_t w,h;
 
-    /* Initialize BCM Host */
-    bcm_host_init();
-
-    SDL_zero(current_mode);
-
-    if (graphics_get_display_size( 0, &w, &h) < 0) {
-        return -1;
+    handle = vc_dispmanx_display_open(display_id);
+    if (!handle) {
+        return;  /* this display isn't available */
     }
 
-    current_mode.w = w;
-    current_mode.h = h;
+    if (vc_dispmanx_display_get_info(handle, &modeinfo) < 0) {
+        vc_dispmanx_display_close(handle);
+        return;
+    }
+
+    /* RPI_GetRefreshRate() doesn't distinguish between displays. I'm not sure the hardware distinguishes either */
+    SDL_zero(current_mode);
+    current_mode.w = modeinfo.width;
+    current_mode.h = modeinfo.height;
     current_mode.refresh_rate = RPI_GetRefreshRate();
     /* 32 bpp for default */
     current_mode.format = SDL_PIXELFORMAT_ABGR8888;
@@ -189,14 +187,25 @@ RPI_VideoInit(_THIS)
     /* Allocate display internal data */
     data = (SDL_DisplayData *) SDL_calloc(1, sizeof(SDL_DisplayData));
     if (data == NULL) {
-        return SDL_OutOfMemory();
+        vc_dispmanx_display_close(handle);
+        return;  /* oh well */
     }
 
-    data->dispman_display = vc_dispmanx_display_open( 0 /* LCD */);
+    data->dispman_display = handle;
 
     display.driverdata = data;
 
-    SDL_AddVideoDisplay(&display);
+    SDL_AddVideoDisplay(&display, SDL_FALSE);
+}
+
+int
+RPI_VideoInit(_THIS)
+{
+    /* Initialize BCM Host */
+    bcm_host_init();
+
+    AddDispManXDisplay(DISPMANX_ID_MAIN_LCD);  /* your default display */
+    AddDispManXDisplay(DISPMANX_ID_FORCE_OTHER);  /* an "other" display...maybe DSI-connected screen while HDMI is your main */
 
 #ifdef SDL_INPUT_LINUXEV    
     if (SDL_EVDEV_Init() < 0) {
@@ -343,17 +352,17 @@ RPI_DestroyWindow(_THIS, SDL_Window * window)
     SDL_DisplayData *displaydata = (SDL_DisplayData *) display->driverdata;
 
     if(data) {
-	if (data->double_buffer) {
-	    /* Wait for vsync, and then stop vsync callbacks and destroy related stuff, if needed */
-	    SDL_LockMutex(data->vsync_cond_mutex);
-	    SDL_CondWait(data->vsync_cond, data->vsync_cond_mutex);
-	    SDL_UnlockMutex(data->vsync_cond_mutex);
+        if (data->double_buffer) {
+            /* Wait for vsync, and then stop vsync callbacks and destroy related stuff, if needed */
+            SDL_LockMutex(data->vsync_cond_mutex);
+            SDL_CondWait(data->vsync_cond, data->vsync_cond_mutex);
+            SDL_UnlockMutex(data->vsync_cond_mutex);
 
-	    vc_dispmanx_vsync_callback(displaydata->dispman_display, NULL, NULL);
+            vc_dispmanx_vsync_callback(displaydata->dispman_display, NULL, NULL);
 
-	    SDL_DestroyCond(data->vsync_cond);
-	    SDL_DestroyMutex(data->vsync_cond_mutex);
-	}
+            SDL_DestroyCond(data->vsync_cond);
+            SDL_DestroyMutex(data->vsync_cond_mutex);
+        }
 
 #if SDL_VIDEO_OPENGL_EGL
         if (data->egl_surface != EGL_NO_SURFACE) {
@@ -410,11 +419,6 @@ RPI_MinimizeWindow(_THIS, SDL_Window * window)
 void
 RPI_RestoreWindow(_THIS, SDL_Window * window)
 {
-}
-void
-RPI_SetWindowGrab(_THIS, SDL_Window * window, SDL_bool grabbed)
-{
-
 }
 
 /*****************************************************************************/

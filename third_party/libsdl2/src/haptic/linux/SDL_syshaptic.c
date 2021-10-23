@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,12 +22,12 @@
 
 #ifdef SDL_HAPTIC_LINUX
 
-#include "SDL_assert.h"
 #include "SDL_haptic.h"
 #include "../SDL_syshaptic.h"
 #include "SDL_joystick.h"
 #include "../../joystick/SDL_sysjoystick.h"     /* For the real SDL_Joystick */
 #include "../../joystick/linux/SDL_sysjoystick_c.h"     /* For joystick hwdata */
+#include "../../core/linux/SDL_evdev_capabilities.h"
 #include "../../core/linux/SDL_udev.h"
 
 #include <unistd.h>             /* close */
@@ -86,8 +86,6 @@ static SDL_hapticlist_item *SDL_hapticlist = NULL;
 static SDL_hapticlist_item *SDL_hapticlist_tail = NULL;
 static int numhaptics = 0;
 
-#define test_bit(nr, addr) \
-   (((1UL << ((nr) & 31)) & (((const unsigned int *) addr)[(nr) >> 5])) != 0)
 #define EV_TEST(ev,f) \
    if (test_bit((ev), features)) ret |= (f);
 /*
@@ -181,6 +179,9 @@ SDL_SYS_HapticInit(void)
         SDL_UDEV_Quit();
         return SDL_SetError("Could not setup haptic <-> udev callback");
     }
+
+    /* Force a scan to build the initial device list */
+    SDL_UDEV_Scan();
 #endif /* SDL_USE_LIBUDEV */
 
     return numhaptics;
@@ -509,7 +510,15 @@ SDL_SYS_HapticMouse(void)
 int
 SDL_SYS_JoystickIsHaptic(SDL_Joystick * joystick)
 {
-    return EV_IsHaptic(joystick->hwdata->fd);
+#ifdef SDL_JOYSTICK_LINUX
+    if (joystick->driver != &SDL_LINUX_JoystickDriver) {
+        return SDL_FALSE;
+    }
+    if (EV_IsHaptic(joystick->hwdata->fd)) {
+        return SDL_TRUE;
+    }
+#endif
+    return SDL_FALSE;
 }
 
 
@@ -519,11 +528,16 @@ SDL_SYS_JoystickIsHaptic(SDL_Joystick * joystick)
 int
 SDL_SYS_JoystickSameHaptic(SDL_Haptic * haptic, SDL_Joystick * joystick)
 {
+#ifdef SDL_JOYSTICK_LINUX
+    if (joystick->driver != &SDL_LINUX_JoystickDriver) {
+        return 0;
+    }
     /* We are assuming Linux is using evdev which should trump the old
      * joystick methods. */
     if (SDL_strcmp(joystick->hwdata->fname, haptic->hwdata->fname) == 0) {
         return 1;
     }
+#endif
     return 0;
 }
 
@@ -534,11 +548,15 @@ SDL_SYS_JoystickSameHaptic(SDL_Haptic * haptic, SDL_Joystick * joystick)
 int
 SDL_SYS_HapticOpenFromJoystick(SDL_Haptic * haptic, SDL_Joystick * joystick)
 {
+#ifdef SDL_JOYSTICK_LINUX
     int device_index = 0;
     int fd;
     int ret;
     SDL_hapticlist_item *item;
-
+    
+    if (joystick->driver != &SDL_LINUX_JoystickDriver) {
+        return -1;
+    }
     /* Find the joystick in the haptic list. */
     for (item = SDL_hapticlist; item; item = item->next) {
         if (SDL_strcmp(item->fname, joystick->hwdata->fname) == 0) {
@@ -565,6 +583,9 @@ SDL_SYS_HapticOpenFromJoystick(SDL_Haptic * haptic, SDL_Joystick * joystick)
     haptic->hwdata->fname = SDL_strdup( joystick->hwdata->fname );
 
     return 0;
+#else
+    return -1;
+#endif
 }
 
 
@@ -706,7 +727,9 @@ SDL_SYS_ToDirection(Uint16 *dest, SDL_HapticDirection * src)
             *dest = (Uint16) tmp;
         }
         break;
-
+    case SDL_HAPTIC_STEERING_AXIS:
+        *dest = 0x4000;
+        break;
     default:
         return SDL_SetError("Haptic: Unsupported direction type.");
     }
@@ -905,9 +928,9 @@ SDL_SYS_ToFFEffect(struct ff_effect *dest, SDL_HapticEffect * src)
         dest->trigger.button = 0;
         dest->trigger.interval = 0;
 
-        /* Rumble */
-        dest->u.rumble.strong_magnitude = leftright->large_magnitude;
-        dest->u.rumble.weak_magnitude = leftright->small_magnitude;
+        /* Rumble (Linux expects 0-65535, so multiply by 2) */
+        dest->u.rumble.strong_magnitude = CLAMP(leftright->large_magnitude) * 2;
+        dest->u.rumble.weak_magnitude = CLAMP(leftright->small_magnitude) * 2;
 
         break;
 

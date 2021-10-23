@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,6 +33,7 @@ extern void UIKit_HideWindow(_THIS, SDL_Window * window);
 extern void UIKit_RaiseWindow(_THIS, SDL_Window * window);
 extern void UIKit_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered);
 extern void UIKit_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display, SDL_bool fullscreen);
+extern void UIKit_SetWindowMouseGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
 extern void UIKit_DestroyWindow(_THIS, SDL_Window * window);
 extern SDL_bool UIKit_GetWindowWMInfo(_THIS, SDL_Window * window,
                                       struct SDL_SysWMinfo * info);

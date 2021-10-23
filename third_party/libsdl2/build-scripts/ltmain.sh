@@ -5099,14 +5099,7 @@ func_mode_link ()
       # we shouldn't force the makefile maintainer to figure out
       # which system we are compiling for in order to pass an extra
       # flag for every libtool invocation.
-      # allow_undefined=no
-
-      # FIXME: Unfortunately, there are problems with the above when trying
-      # to make a dll which has undefined symbols, in which case not
-      # even a static library is built.  For now, we need to specify
-      # -no-undefined on the libtool link line when we can be certain
-      # that all symbols are satisfied, otherwise we get a static library.
-      allow_undefined=yes
+      allow_undefined=no
       ;;
     *)
       allow_undefined=yes

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -48,7 +48,7 @@ SDL_LoadObject(const char *sofile)
 #endif
 
     handle = dlopen(sofile, RTLD_NOW|RTLD_LOCAL);
-    loaderror = (char *) dlerror();
+    loaderror = dlerror();
     if (handle == NULL) {
         SDL_SetError("Failed loading %s: %s", sofile, loaderror);
     }
@@ -61,12 +61,13 @@ SDL_LoadFunction(void *handle, const char *name)
     void *symbol = dlsym(handle, name);
     if (symbol == NULL) {
         /* append an underscore for platforms that need that. */
+        SDL_bool isstack;
         size_t len = 1 + SDL_strlen(name) + 1;
-        char *_name = SDL_stack_alloc(char, len);
+        char *_name = SDL_small_alloc(char, len, &isstack);
         _name[0] = '_';
         SDL_strlcpy(&_name[1], name, len);
         symbol = dlsym(handle, _name);
-        SDL_stack_free(_name);
+        SDL_small_free(_name, isstack);
         if (symbol == NULL) {
             SDL_SetError("Failed loading %s: %s", name,
                          (const char *) dlerror());

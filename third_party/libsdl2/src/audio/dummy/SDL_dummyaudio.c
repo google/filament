@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -30,6 +30,7 @@
 static int
 DUMMYAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
 {
+    _this->hidden = (void *) 0x1;  /* just something non-NULL */
     return 0;                   /* always succeeds. */
 }
 
@@ -37,10 +38,10 @@ static int
 DUMMYAUDIO_CaptureFromDevice(_THIS, void *buffer, int buflen)
 {
     /* Delay to make this sort of simulate real audio input. */
-    SDL_Delay((this->spec.samples * 1000) / this->spec.freq);
+    SDL_Delay((_this->spec.samples * 1000) / _this->spec.freq);
 
     /* always return a full buffer of silence. */
-    SDL_memset(buffer, this->spec.silence, buflen);
+    SDL_memset(buffer, _this->spec.silence, buflen);
     return buflen;
 }
 

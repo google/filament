@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -282,6 +282,7 @@ SDL_LogMessageV(int category, SDL_LogPriority priority, const char *fmt, va_list
         return;
     }
 
+    /* !!! FIXME: why not just "char message[SDL_MAX_LOG_MESSAGE];" ? */
     message = SDL_stack_alloc(char, SDL_MAX_LOG_MESSAGE);
     if (!message) {
         return;
@@ -321,11 +322,12 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
         char *output;
         size_t length;
         LPTSTR tstr;
+        SDL_bool isstack;
 
 #if !defined(HAVE_STDIO_H) && !defined(__WINRT__)
         BOOL attachResult;
         DWORD attachError;
-        unsigned long charsWritten; 
+        DWORD charsWritten;
         DWORD consoleMode;
 
         /* Maybe attach console and get stderr handle */
@@ -364,7 +366,7 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
 #endif /* !defined(HAVE_STDIO_H) && !defined(__WINRT__) */
 
         length = SDL_strlen(SDL_priority_prefixes[priority]) + 2 + SDL_strlen(message) + 1 + 1 + 1;
-        output = SDL_stack_alloc(char, length);
+        output = SDL_small_alloc(char, length, &isstack);
         SDL_snprintf(output, length, "%s: %s\r\n", SDL_priority_prefixes[priority], message);
         tstr = WIN_UTF8ToString(output);
         
@@ -374,7 +376,7 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
 #if !defined(HAVE_STDIO_H) && !defined(__WINRT__)
         /* Screen output to stderr, if console was attached. */
         if (consoleAttached == 1) {
-                if (!WriteConsole(stderrHandle, tstr, lstrlen(tstr), &charsWritten, NULL)) {
+                if (!WriteConsole(stderrHandle, tstr, (DWORD) SDL_tcslen(tstr), &charsWritten, NULL)) {
                     OutputDebugString(TEXT("Error calling WriteConsole\r\n"));
                     if (GetLastError() == ERROR_NOT_ENOUGH_MEMORY) {
                         OutputDebugString(TEXT("Insufficient heap memory to write message\r\n"));
@@ -382,14 +384,14 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
                 }
 
         } else if (consoleAttached == 2) {
-            if (!WriteFile(stderrHandle, output, lstrlenA(output), &charsWritten, NULL)) {
+            if (!WriteFile(stderrHandle, output, (DWORD) SDL_strlen(output), &charsWritten, NULL)) {
                 OutputDebugString(TEXT("Error calling WriteFile\r\n"));
             }
         }
 #endif /* !defined(HAVE_STDIO_H) && !defined(__WINRT__) */
 
         SDL_free(tstr);
-        SDL_stack_free(output);
+        SDL_small_free(output, isstack);
     }
 #elif defined(__ANDROID__)
     {
@@ -398,13 +400,13 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
         SDL_snprintf(tag, SDL_arraysize(tag), "SDL/%s", GetCategoryPrefix(category));
         __android_log_write(SDL_android_priority[priority], tag, message);
     }
-#elif defined(__APPLE__) && defined(SDL_VIDEO_DRIVER_COCOA)
-    /* Technically we don't need SDL_VIDEO_DRIVER_COCOA, but that's where this function is defined for now.
+#elif defined(__APPLE__) && (defined(SDL_VIDEO_DRIVER_COCOA) || defined(SDL_VIDEO_DRIVER_UIKIT))
+    /* Technically we don't need Cocoa/UIKit, but that's where this function is defined for now.
     */
     extern void SDL_NSLog(const char *text);
     {
         char *text;
-
+        /* !!! FIXME: why not just "char text[SDL_MAX_LOG_MESSAGE];" ? */
         text = SDL_stack_alloc(char, SDL_MAX_LOG_MESSAGE);
         if (text) {
             SDL_snprintf(text, SDL_MAX_LOG_MESSAGE, "%s: %s", SDL_priority_prefixes[priority], message);
@@ -417,6 +419,13 @@ SDL_LogOutput(void *userdata, int category, SDL_LogPriority priority,
     {
         FILE*        pFile;
         pFile = fopen ("SDL_Log.txt", "a");
+        fprintf(pFile, "%s: %s\n", SDL_priority_prefixes[priority], message);
+        fclose (pFile);
+    }
+#elif defined(__VITA__)
+    {
+        FILE*        pFile;
+        pFile = fopen ("ux0:/data/SDL_Log.txt", "a");
         fprintf(pFile, "%s: %s\n", SDL_priority_prefixes[priority], message);
         fclose (pFile);
     }

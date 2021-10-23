@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -55,6 +55,10 @@
 /* On iOS SDL provides a main function that creates an application delegate
    and starts the iOS application run loop.
 
+   If you link with SDL dynamically on iOS, the main function can't be in a
+   shared library, so you need to link with libSDLmain.a, which includes a
+   stub main function that calls into the shared library to start execution.
+
    See src/video/uikit/SDL_uikitappdelegate.m for more details.
  */
 #define SDL_MAIN_NEEDED
@@ -82,12 +86,6 @@
 #endif
 #endif /* SDL_MAIN_HANDLED */
 
-#ifdef __cplusplus
-#define C_LINKAGE   "C"
-#else
-#define C_LINKAGE
-#endif /* __cplusplus */
-
 #ifndef SDLMAIN_DECLSPEC
 #define SDLMAIN_DECLSPEC
 #endif
@@ -111,33 +109,37 @@
 #define main    SDL_main
 #endif
 
-/**
- *  The prototype for the application's main() function
- */
-extern C_LINKAGE SDLMAIN_DECLSPEC int SDL_main(int argc, char *argv[]);
-
-
 #include "begin_code.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- *  This is called by the real SDL main function to let the rest of the
- *  library know that initialization was done properly.
+ *  The prototype for the application's main() function
+ */
+typedef int (*SDL_main_func)(int argc, char *argv[]);
+extern SDLMAIN_DECLSPEC int SDL_main(int argc, char *argv[]);
+
+
+/**
+ * Circumvent failure of SDL_Init() when not using SDL_main() as an entry
+ * point.
  *
- *  Calling this yourself without knowing what you're doing can cause
- *  crashes and hard to diagnose problems with your application.
+ * This function is defined in SDL_main.h, along with the preprocessor rule to
+ * redefine main() as SDL_main(). Thus to ensure that your main() function
+ * will not be changed it is necessary to define SDL_MAIN_HANDLED before
+ * including SDL.h.
+ *
+ * \sa SDL_Init
  */
 extern DECLSPEC void SDLCALL SDL_SetMainReady(void);
 
 #ifdef __WIN32__
 
 /**
- *  This can be called to set the application class at startup
+ * This can be called to set the application class at startup
  */
-extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style,
-                                            void *hInst);
+extern DECLSPEC int SDLCALL SDL_RegisterApp(char *name, Uint32 style, void *hInst);
 extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
 
 #endif /* __WIN32__ */
@@ -146,16 +148,32 @@ extern DECLSPEC void SDLCALL SDL_UnregisterApp(void);
 #ifdef __WINRT__
 
 /**
- *  \brief Initializes and launches an SDL/WinRT application.
+ * Initialize and launch an SDL/WinRT application.
  *
- *  \param mainFunction The SDL app's C-style main().
- *  \param reserved Reserved for future use; should be NULL
- *  \return 0 on success, -1 on failure.  On failure, use SDL_GetError to retrieve more
- *      information on the failure.
+ * \param mainFunction the SDL app's C-style main(), an SDL_main_func
+ * \param reserved reserved for future use; should be NULL
+ * \returns 0 on success or -1 on failure; call SDL_GetError() to retrieve
+ *          more information on the failure.
+ *
+ * \since This function is available since SDL 2.0.3.
  */
-extern DECLSPEC int SDLCALL SDL_WinRTRunApp(int (*mainFunction)(int, char **), void * reserved);
+extern DECLSPEC int SDLCALL SDL_WinRTRunApp(SDL_main_func mainFunction, void * reserved);
 
 #endif /* __WINRT__ */
+
+#if defined(__IPHONEOS__)
+
+/**
+ * Initializes and launches an SDL application.
+ *
+ * \param argc The argc parameter from the application's main() function
+ * \param argv The argv parameter from the application's main() function
+ * \param mainFunction The SDL app's C-style main(), an SDL_main_func
+ * \return the return value from mainFunction
+ */
+extern DECLSPEC int SDLCALL SDL_UIKitRunApp(int argc, char *argv[], SDL_main_func mainFunction);
+
+#endif /* __IPHONEOS__ */
 
 
 #ifdef __cplusplus

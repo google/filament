@@ -1,5 +1,5 @@
 Future work roadmap:
- * http://wiki.libsdl.org/moin.cgi/Roadmap
+ * http://wiki.libsdl.org/Roadmap
 
  * Check 1.2 revisions:
 	3554 - Need to resolve semantics for locking keys on different platforms

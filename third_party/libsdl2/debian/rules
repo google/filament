@@ -4,9 +4,22 @@ DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 confflags = --disable-rpath --disable-video-directfb \
-            --disable-nas --disable-esd --disable-arts \
-            --disable-alsa-shared --disable-pulseaudio-shared \
-            --disable-x11-shared
+            --disable-nas --disable-esd --disable-arts
+
+# These flags can be used to create a package directly linking with external libraries and having the appropriate package dependencies
+#confflags += --disable-alsa-shared
+#confflags += --disable-arts-shared
+#confflags += --disable-directfb-shared
+#confflags += --disable-esd-shared
+#confflags += --disable-fusionsound-shared
+#confflags += --disable-jack-shared
+#confflags += --disable-kmsdrm-shared
+#confflags += --disable-libsamplerate-shared
+#confflags += --disable-nas-shared
+#confflags += --disable-pulseaudio-shared
+#confflags += --disable-sndio-shared
+#confflags += --disable-wayland-shared
+#confflags += --disable-x11-shared
 
 %:
 	dh $@ --parallel

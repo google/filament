@@ -2,6 +2,256 @@
 This is a list of major changes in SDL's version history.
 
 ---------------------------------------------------------------------------
+2.0.16:
+---------------------------------------------------------------------------
+General:
+* Added SDL_FlashWindow() to get a user's attention
+* Added SDL_GetAudioDeviceSpec() to get the preferred audio format of a device
+* Added SDL_SetWindowAlwaysOnTop() to dynamically change the SDL_WINDOW_ALWAYS_ON_TOP flag for a window
+* Added SDL_SetWindowKeyboardGrab() to support grabbing the keyboard independently of the mouse
+* Added SDL_SoftStretchLinear() to do bilinear scaling between 32-bit software surfaces
+* Added SDL_UpdateNVTexture() to update streaming NV12/21 textures
+* Added SDL_GameControllerSendEffect() and SDL_JoystickSendEffect() to allow sending custom trigger effects to the DualSense controller
+* Added SDL_GameControllerGetSensorDataRate() to get the sensor data rate for PlayStation and Nintendo Switch controllers
+* Added support for the Amazon Luna game controller
+* Added rumble support for the Google Stadia controller using the HIDAPI driver
+* Added SDL_GameControllerType constants for the Amazon Luna and Google Stadia controllers
+* Added analog rumble for Nintendo Switch Pro controllers using the HIDAPI driver
+* Reduced CPU usage when using SDL_WaitEvent() and SDL_WaitEventTimeout()
+
+Windows:
+* Added SDL_SetWindowsMessageHook() to set a function that is called for all Windows messages
+* Added SDL_RenderGetD3D11Device() to get the D3D11 device used by the SDL renderer
+
+Linux:
+* Greatly improved Wayland support
+* Added support for audio output and capture using Pipewire
+* Added the hint SDL_HINT_AUDIO_INCLUDE_MONITORS to control whether PulseAudio recording should include monitor devices
+* Added the hint SDL_HINT_AUDIO_DEVICE_STREAM_ROLE to describe the role of your application for audio control panels
+
+Android:
+* Added support for audio output and capture using AAudio
+* Added SDL_AndroidShowToast() to show a lightweight notification
+
+iOS:
+* Added support for mouse relative mode on iOS 14.1 and newer
+* Added support for the Xbox Series X controller
+
+tvOS:
+* Added support for the Xbox Series X controller
+
+
+---------------------------------------------------------------------------
+2.0.14:
+---------------------------------------------------------------------------
+General:
+* Added support for PS5 DualSense and Xbox Series X controllers to the HIDAPI controller driver
+* Added game controller button constants for paddles and new buttons
+* Added game controller functions to get additional information:
+	* SDL_GameControllerGetSerial()
+	* SDL_GameControllerHasAxis()
+	* SDL_GameControllerHasButton()
+	* SDL_GameControllerGetNumTouchpads()
+	* SDL_GameControllerGetNumTouchpadFingers()
+	* SDL_GameControllerGetTouchpadFinger()
+	* SDL_GameControllerHasSensor()
+	* SDL_GameControllerSetSensorEnabled()
+	* SDL_GameControllerIsSensorEnabled()
+	* SDL_GameControllerGetSensorData()
+	* SDL_GameControllerRumbleTriggers()
+	* SDL_GameControllerHasLED()
+	* SDL_GameControllerSetLED()
+* Added the hint SDL_HINT_JOYSTICK_HIDAPI_PS5 to control whether the HIDAPI driver for PS5 controllers should be used.
+* Added joystick functions to get additional information:
+	* SDL_JoystickGetSerial()
+	* SDL_JoystickRumbleTriggers()
+	* SDL_JoystickHasLED()
+	* SDL_JoystickSetLED()
+* Added an API to allow the application to create virtual joysticks:
+	* SDL_JoystickAttachVirtual()
+	* SDL_JoystickDetachVirtual()
+	* SDL_JoystickIsVirtual()
+	* SDL_JoystickSetVirtualAxis()
+	* SDL_JoystickSetVirtualButton()
+	* SDL_JoystickSetVirtualHat()
+* Added SDL_LockSensors() and SDL_UnlockSensors() to guarantee exclusive access to the sensor list
+* Added SDL_HAPTIC_STEERING_AXIS to play an effect on the steering wheel
+* Added the hint SDL_HINT_MOUSE_RELATIVE_SCALING to control whether relative motion is scaled by the screen DPI or renderer logical size
+* The default value for SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS is now false for better compatibility with modern window managers
+* Added SDL_GetPreferredLocales() to get the application's current locale setting
+* Added the hint SDL_HINT_PREFERRED_LOCALES to override your application's default locale setting
+* Added SDL_OpenURL() to open a URL in the system's default browser
+* Added SDL_HasSurfaceRLE() to tell whether a surface is currently using RLE encoding
+* Added SDL_SIMDRealloc() to reallocate memory obtained from SDL_SIMDAlloc()
+* Added SDL_GetErrorMsg() to get the last error in a thread-safe way
+* Added SDL_crc32(), SDL_wcscasecmp(), SDL_wcsncasecmp(), SDL_trunc(), SDL_truncf()
+* Added clearer names for RGB pixel formats, e.g. SDL_PIXELFORMAT_XRGB8888, SDL_PIXELFORMAT_XBGR8888, etc.
+
+Windows:
+* Added the RAWINPUT controller driver to support more than 4 Xbox controllers simultaneously
+* Added the hint SDL_HINT_JOYSTICK_RAWINPUT to control whether the RAWINPUT driver should be used
+* Added the hint SDL_HINT_JOYSTICK_HIDAPI_CORRELATE_XINPUT to control whether XInput and WGI should be used to for complete controller functionality with the RAWINPUT driver.
+
+macOS:
+* Added the SDL_WINDOW_METAL flag to specify that a window should be created with a Metal view
+* Added SDL_Metal_GetLayer() to get the CAMetalLayer backing a Metal view
+* Added SDL_Metal_GetDrawableSize() to get the size of a window's drawable, in pixels
+
+Linux:
+* Added the hint SDL_HINT_AUDIO_DEVICE_APP_NAME to specify the name that shows up in PulseAudio for your application
+* Added the hint SDL_HINT_AUDIO_DEVICE_STREAM_NAME to specify the name that shows up in PulseAudio associated with your audio stream
+* Added the hint SDL_HINT_LINUX_JOYSTICK_DEADZONES to control whether HID defined dead zones should be respected on Linux
+* Added the hint SDL_HINT_THREAD_PRIORITY_POLICY to specify the thread scheduler policy
+* Added the hint SDL_HINT_THREAD_FORCE_REALTIME_TIME_CRITICAL to allow time critical threads to use a realtime scheduling policy
+
+Android:
+* Added SDL_AndroidRequestPermission() to request a specific system permission
+* Added the hint SDL_HINT_ANDROID_BLOCK_ON_PAUSE_PAUSEAUDIO to control whether audio will pause when the application goes intot he background
+
+OS/2:
+* Added support for OS/2, see docs/README-os2.md for details
+
+Emscripten (running in a web browser):
+* Added the hint SDL_HINT_EMSCRIPTEN_ASYNCIFY to control whether SDL should call emscripten_sleep internally
+
+
+---------------------------------------------------------------------------
+2.0.12:
+---------------------------------------------------------------------------
+
+General:
+* Added SDL_GetTextureScaleMode() and SDL_SetTextureScaleMode() to get and set the scaling mode used for a texture
+* Added SDL_LockTextureToSurface(), similar to SDL_LockTexture() but the locked area is exposed as a SDL surface.
+* Added new blend mode, SDL_BLENDMODE_MUL, which does a modulate and blend operation
+* Added the hint SDL_HINT_DISPLAY_USABLE_BOUNDS to override the results of SDL_GetDisplayUsableBounds() for display index 0.
+* Added the window underneath the finger to the SDL_TouchFingerEvent
+* Added SDL_GameControllerTypeForIndex(), SDL_GameControllerGetType() to return the type of a game controller (Xbox 360, Xbox One, PS3, PS4, or Nintendo Switch Pro)
+* Added the hint SDL_HINT_GAMECONTROLLERTYPE to override the automatic game controller type detection
+* Added SDL_JoystickFromPlayerIndex() and SDL_GameControllerFromPlayerIndex() to get the device associated with a player index
+* Added SDL_JoystickSetPlayerIndex() and SDL_GameControllerSetPlayerIndex() to set the player index associated with a device
+* Added the hint SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS to specify whether Nintendo Switch Pro controllers should use the buttons as labeled or swapped to match positional layout. The default is to use the buttons as labeled.
+* Added support for Nintendo GameCube controllers to the HIDAPI driver, and a hint SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE to control whether this is used.
+* Improved support for Xbox 360 and Xbox One controllers when using the HIDAPI driver
+* Added support for many game controllers, including:
+	* 8BitDo FC30 Pro
+	* 8BitDo M30 GamePad
+	* BDA PS4 Fightpad
+	* HORI Fighting Commander
+	* Hyperkin Duke
+	* Hyperkin X91
+	* MOGA XP5-A Plus
+	* NACON GC-400ES
+	* NVIDIA Controller v01.04
+	* PDP Versus Fighting Pad
+	* Razer Raion Fightpad for PS4
+	* Razer Serval
+	* Stadia Controller
+	* SteelSeries Stratus Duo
+	* Victrix Pro Fight Stick for PS4
+	* Xbox One Elite Series 2
+* Fixed blocking game controller rumble calls when using the HIDAPI driver
+* Added SDL_zeroa() macro to zero an array of elements
+* Added SDL_HasARMSIMD() which returns true if the CPU has ARM SIMD (ARMv6+) features
+
+Windows:
+* Fixed crash when using the release SDL DLL with applications built with gcc
+* Fixed performance regression in event handling introduced in 2.0.10
+* Added support for SDL_SetThreadPriority() for UWP applications
+
+Linux:
+* Added the hint SDL_HINT_VIDEO_X11_WINDOW_VISUALID to specify the visual chosen for new X11 windows
+* Added the hint SDL_HINT_VIDEO_X11_FORCE_EGL to specify whether X11 should use GLX or EGL by default
+
+iOS / tvOS / macOS:
+* Added SDL_Metal_CreateView() and SDL_Metal_DestroyView() to create CAMetalLayer-backed NSView/UIView and attach it to the specified window.
+
+iOS/ tvOS:
+* Added support for Bluetooth Steam Controllers as game controllers
+
+tvOS:
+* Fixed support for surround sound on Apple TV
+
+Android:
+* Added SDL_GetAndroidSDKVersion() to return the API level of the current device
+* Added support for audio capture using OpenSL-ES
+* Added support for Bluetooth Steam Controllers as game controllers
+* Fixed rare crashes when the app goes into the background or terminates
+
+
+---------------------------------------------------------------------------
+2.0.10:
+---------------------------------------------------------------------------
+
+General:
+* The SDL_RW* macros have been turned into functions that are available only in 2.0.10 and onward
+* Added SDL_SIMDGetAlignment(), SDL_SIMDAlloc(), and SDL_SIMDFree(), to allocate memory aligned for SIMD operations for the current CPU
+* Added SDL_RenderDrawPointF(), SDL_RenderDrawPointsF(), SDL_RenderDrawLineF(), SDL_RenderDrawLinesF(), SDL_RenderDrawRectF(), SDL_RenderDrawRectsF(), SDL_RenderFillRectF(), SDL_RenderFillRectsF(), SDL_RenderCopyF(), SDL_RenderCopyExF(), to allow floating point precision in the SDL rendering API.
+* Added SDL_GetTouchDeviceType() to get the type of a touch device, which can be a touch screen or a trackpad in relative or absolute coordinate mode.
+* The SDL rendering API now uses batched rendering by default, for improved performance
+* Added SDL_RenderFlush() to force batched render commands to execute, if you're going to mix SDL rendering with native rendering
+* Added the hint SDL_HINT_RENDER_BATCHING to control whether batching should be used for the rendering API. This defaults to "1" if you don't specify what rendering driver to use when creating the renderer.
+* Added the hint SDL_HINT_EVENT_LOGGING to enable logging of SDL events for debugging purposes
+* Added the hint SDL_HINT_GAMECONTROLLERCONFIG_FILE to specify a file that will be loaded at joystick initialization with game controller bindings
+* Added the hint SDL_HINT_MOUSE_TOUCH_EVENTS to control whether SDL will synthesize touch events from mouse events
+* Improved handling of malformed WAVE and BMP files, fixing potential security exploits
+
+Linux:
+* Removed the Mir video driver in favor of Wayland
+
+iOS / tvOS:
+* Added support for Xbox and PS4 wireless controllers in iOS 13 and tvOS 13
+* Added support for text input using Bluetooth keyboards
+
+Android:
+* Added low latency audio using OpenSL ES
+* Removed SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH (replaced by SDL_HINT_MOUSE_TOUCH_EVENTS and SDL_HINT_TOUCH_MOUSE_EVENTS)
+  SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH=1, should be replaced by setting both previous hints to 0.
+  SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH=0, should be replaced by setting both previous hints to 1.
+* Added the hint SDL_HINT_ANDROID_BLOCK_ON_PAUSE to set whether the event loop will block itself when the app is paused.
+
+
+---------------------------------------------------------------------------
+2.0.9:
+---------------------------------------------------------------------------
+
+General:
+* Added a new sensor API, initialized by passing SDL_INIT_SENSOR to SDL_Init(), and defined in SDL_sensor.h
+* Added an event SDL_SENSORUPDATE which is sent when a sensor is updated
+* Added SDL_GetDisplayOrientation() to return the current display orientation
+* Added an event SDL_DISPLAYEVENT which is sent when the display orientation changes
+* Added HIDAPI joystick drivers for more consistent support for Xbox, PS4 and Nintendo Switch Pro controller support across platforms. (Thanks to Valve for contributing the PS4 and Nintendo Switch Pro controller support)
+* Added support for many other popular game controllers
+* Added SDL_JoystickGetDevicePlayerIndex(), SDL_JoystickGetPlayerIndex(), and SDL_GameControllerGetPlayerIndex() to get the player index for a controller. For XInput controllers this returns the XInput index for the controller.
+* Added SDL_GameControllerRumble() and SDL_JoystickRumble() which allow simple rumble without using the haptics API
+* Added SDL_GameControllerMappingForDeviceIndex() to get the mapping for a controller before it's opened
+* Added the hint SDL_HINT_MOUSE_DOUBLE_CLICK_TIME to control the mouse double-click time
+* Added the hint SDL_HINT_MOUSE_DOUBLE_CLICK_RADIUS to control the mouse double-click radius, in pixels
+* Added SDL_HasColorKey() to return whether a surface has a colorkey active
+* Added SDL_HasAVX512F() to return whether the CPU has AVX-512F features
+* Added SDL_IsTablet() to return whether the application is running on a tablet
+* Added SDL_THREAD_PRIORITY_TIME_CRITICAL for threads that must run at the highest priority
+
+Mac OS X:
+* Fixed black screen at start on Mac OS X Mojave
+
+Linux:
+* Added SDL_LinuxSetThreadPriority() to allow adjusting the thread priority of native threads using RealtimeKit if available.
+
+iOS:
+* Fixed Asian IME input
+
+Android:
+* Updated required Android SDK to API 26, to match Google's new App Store requirements
+* Added support for wired USB Xbox, PS4, and Nintendo Switch Pro controllers
+* Added support for relative mouse mode on Android 7.0 and newer (except where it's broken, on Chromebooks and when in DeX mode with Samsung Experience 9.0)
+* Added support for custom mouse cursors on Android 7.0 and newer
+* Added the hint SDL_HINT_ANDROID_TRAP_BACK_BUTTON to control whether the back button will back out of the app (the default) or be passed to the application as SDL_SCANCODE_AC_BACK
+* Added SDL_AndroidBackButton() to trigger the Android system back button behavior when handling the back button in the application
+* Added SDL_IsChromebook() to return whether the app is running in the Chromebook Android runtime
+* Added SDL_IsDeXMode() to return whether the app is running while docked in the Samsung DeX
+
+
+---------------------------------------------------------------------------
 2.0.8:
 ---------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -257,7 +257,12 @@ IBus_GetDBusAddressFilename(void)
     }
     
     if (!*host) {
-        host = "unix";
+        const char *session = SDL_getenv("XDG_SESSION_TYPE");
+        if (session != NULL && SDL_strcmp(session, "wayland") == 0) {
+            host = "unix-wayland";
+        } else {
+            host = "unix";
+        }
     }
         
     SDL_memset(config_dir, 0, sizeof(config_dir));
@@ -479,7 +484,7 @@ IBus_SimpleMessage(const char *method)
 {   
     SDL_DBusContext *dbus = SDL_DBus_GetContext();
     
-    if (IBus_CheckConnection(dbus)) {
+    if ((input_ctx_path != NULL) && (IBus_CheckConnection(dbus))) {
         SDL_DBus_CallVoidMethodOnConnection(ibus_conn, IBUS_SERVICE, input_ctx_path, IBUS_INPUT_INTERFACE, method, DBUS_TYPE_INVALID);
     }
 }

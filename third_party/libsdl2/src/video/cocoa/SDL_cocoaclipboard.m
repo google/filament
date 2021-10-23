@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -32,10 +32,14 @@ Cocoa_SetClipboardText(_THIS, const char *text)
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
     NSPasteboard *pasteboard;
     NSString *format = NSPasteboardTypeString;
+    NSString *nsstr = [NSString stringWithUTF8String:text];
+    if (nsstr == nil) {
+        return SDL_SetError("Couldn't create NSString; is your string data in UTF-8 format?");
+    }
 
     pasteboard = [NSPasteboard generalPasteboard];
     data->clipboard_count = [pasteboard declareTypes:[NSArray arrayWithObject:format] owner:nil];
-    [pasteboard setString:[NSString stringWithUTF8String:text] forType:format];
+    [pasteboard setString:nsstr forType:format];
 
     return 0;
 }}
@@ -61,7 +65,7 @@ Cocoa_GetClipboardText(_THIS)
         } else {
             utf8 = [string UTF8String];
         }
-        text = SDL_strdup(utf8);
+        text = SDL_strdup(utf8 ? utf8 : "");
     } else {
         text = SDL_strdup("");
     }

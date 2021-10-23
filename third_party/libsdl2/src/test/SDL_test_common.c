@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,18 +19,31 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-/* Ported from original test\common.c file. */
+/* Ported from original test/common.c file. */
 
 #include "SDL_config.h"
 #include "SDL_test.h"
 
 #include <stdio.h>
 
-#define VIDEO_USAGE \
-"[--video driver] [--renderer driver] [--gldebug] [--info all|video|modes|render|event] [--log all|error|system|audio|video|render|input] [--display N] [--fullscreen | --fullscreen-desktop | --windows N] [--title title] [--icon icon.bmp] [--center | --position X,Y] [--geometry WxH] [--min-geometry WxH] [--max-geometry WxH] [--logical WxH] [--scale N] [--depth N] [--refresh R] [--vsync] [--noframe] [--resize] [--minimize] [--maximize] [--grab] [--allow-highdpi]"
+static const char *video_usage[] = {
+    "[--video driver]", "[--renderer driver]", "[--gldebug]",
+    "[--info all|video|modes|render|event]",
+    "[--log all|error|system|audio|video|render|input]", "[--display N]",
+    "[--metal-window | --opengl-window | --vulkan-window]",
+    "[--fullscreen | --fullscreen-desktop | --windows N]", "[--title title]",
+    "[--icon icon.bmp]", "[--center | --position X,Y]", "[--geometry WxH]",
+    "[--min-geometry WxH]", "[--max-geometry WxH]", "[--logical WxH]",
+    "[--scale N]", "[--depth N]", "[--refresh R]", "[--vsync]", "[--noframe]",
+    "[--resizable]", "[--minimize]", "[--maximize]", "[--grab]", "[--keyboard-grab]",
+    "[--shown]", "[--hidden]", "[--input-focus]", "[--mouse-focus]",
+    "[--flash-on-focus-loss]", "[--allow-highdpi]", "[--usable-bounds]"
+};
 
-#define AUDIO_USAGE \
-"[--rate N] [--format U8|S8|U16|U16LE|U16BE|S16|S16LE|S16BE] [--channels N] [--samples N]"
+static const char *audio_usage[] = {
+    "[--rate N]", "[--format U8|S8|U16|U16LE|U16BE|S16|S16LE|S16BE]",
+    "[--channels N]", "[--samples N]"
+};
 
 static void SDL_snprintfcat(SDL_OUT_Z_CAP(maxlen) char *text, size_t maxlen, SDL_PRINTF_FORMAT_STRING const char *fmt, ... )
 {
@@ -207,6 +220,18 @@ SDLTest_CommonArg(SDLTest_CommonState * state, int index)
         }
         return 2;
     }
+    if (SDL_strcasecmp(argv[index], "--metal-window") == 0) {
+        state->window_flags |= SDL_WINDOW_METAL;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--opengl-window") == 0) {
+        state->window_flags |= SDL_WINDOW_OPENGL;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--vulkan-window") == 0) {
+        state->window_flags |= SDL_WINDOW_VULKAN;
+        return 1;
+    }
     if (SDL_strcasecmp(argv[index], "--fullscreen") == 0) {
         state->window_flags |= SDL_WINDOW_FULLSCREEN;
         state->num_windows = 1;
@@ -270,6 +295,15 @@ SDLTest_CommonArg(SDLTest_CommonState * state, int index)
         state->window_x = SDL_atoi(x);
         state->window_y = SDL_atoi(y);
         return 2;
+    }
+    if (SDL_strcasecmp(argv[index], "--usable-bounds") == 0) {
+        /* !!! FIXME: this is a bit of a hack, but I don't want to add a
+           !!! FIXME:  flag to the public structure in 2.0.x */
+        state->window_x = -1;
+        state->window_y = -1;
+        state->window_w = -1;
+        state->window_h = -1;
+        return 1;
     }
     if (SDL_strcasecmp(argv[index], "--geometry") == 0) {
         char *w, *h;
@@ -379,7 +413,7 @@ SDLTest_CommonArg(SDLTest_CommonState * state, int index)
         state->window_flags |= SDL_WINDOW_BORDERLESS;
         return 1;
     }
-    if (SDL_strcasecmp(argv[index], "--resize") == 0) {
+    if (SDL_strcasecmp(argv[index], "--resizable") == 0) {
         state->window_flags |= SDL_WINDOW_RESIZABLE;
         return 1;
     }
@@ -391,8 +425,32 @@ SDLTest_CommonArg(SDLTest_CommonState * state, int index)
         state->window_flags |= SDL_WINDOW_MAXIMIZED;
         return 1;
     }
+    if (SDL_strcasecmp(argv[index], "--shown") == 0) {
+        state->window_flags |= SDL_WINDOW_SHOWN;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--hidden") == 0) {
+        state->window_flags |= SDL_WINDOW_HIDDEN;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--input-focus") == 0) {
+        state->window_flags |= SDL_WINDOW_INPUT_FOCUS;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--mouse-focus") == 0) {
+        state->window_flags |= SDL_WINDOW_MOUSE_FOCUS;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--flash-on-focus-loss") == 0) {
+        state->flash_on_focus_loss = SDL_TRUE;
+        return 1;
+    }
     if (SDL_strcasecmp(argv[index], "--grab") == 0) {
-        state->window_flags |= SDL_WINDOW_INPUT_GRABBED;
+        state->window_flags |= SDL_WINDOW_MOUSE_GRABBED;
+        return 1;
+    }
+    if (SDL_strcasecmp(argv[index], "--keyboard-grab") == 0) {
+        state->window_flags |= SDL_WINDOW_KEYBOARD_GRABBED;
         return 1;
     }
     if (SDL_strcasecmp(argv[index], "--rate") == 0) {
@@ -474,18 +532,268 @@ SDLTest_CommonArg(SDLTest_CommonState * state, int index)
     return 0;
 }
 
+void
+SDLTest_CommonLogUsage(SDLTest_CommonState * state, const char *argv0, const char **options)
+{
+    int i;
+
+    SDL_Log("USAGE: %s", argv0);
+    SDL_Log("    %s", "[--trackmem]");
+
+    if (state->flags & SDL_INIT_VIDEO) {
+        for (i = 0; i < SDL_arraysize(video_usage); i++) {
+            SDL_Log("    %s", video_usage[i]);
+        }
+    }
+
+    if (state->flags & SDL_INIT_AUDIO) {
+        for (i = 0; i < SDL_arraysize(audio_usage); i++) {
+            SDL_Log("    %s", audio_usage[i]);
+        }
+    }
+
+    if (options) {
+        for (i = 0; options[i] != NULL; i++) {
+            SDL_Log("    %s", options[i]);
+        }
+    }
+}
+
+static const char *
+BuildCommonUsageString(char **pstr, const char **strlist, const int numitems, const char **strlist2, const int numitems2)
+{
+    char *str = *pstr;
+    if (!str) {
+        size_t len = SDL_strlen("[--trackmem]") + 2;
+        int i;
+        for (i = 0; i < numitems; i++) {
+            len += SDL_strlen(strlist[i]) + 1;
+        }
+        if (strlist2) {
+            for (i = 0; i < numitems2; i++) {
+                len += SDL_strlen(strlist2[i]) + 1;
+            }
+        }
+        str = (char *) SDL_calloc(1, len);
+        if (!str) {
+            return "";  /* oh well. */
+        }
+        SDL_strlcat(str, "[--trackmem] ", len);
+        for (i = 0; i < numitems-1; i++) {
+            SDL_strlcat(str, strlist[i], len);
+            SDL_strlcat(str, " ", len);
+        }
+        SDL_strlcat(str, strlist[i], len);
+        if (strlist2) {
+            SDL_strlcat(str, " ", len);
+            for (i = 0; i < numitems2-1; i++) {
+                SDL_strlcat(str, strlist2[i], len);
+                SDL_strlcat(str, " ", len);
+            }
+            SDL_strlcat(str, strlist2[i], len);
+        }
+        *pstr = str;
+    }
+    return str;
+}
+
+static char *common_usage_video = NULL;
+static char *common_usage_audio = NULL;
+static char *common_usage_videoaudio = NULL;
+
 const char *
 SDLTest_CommonUsage(SDLTest_CommonState * state)
 {
+
     switch (state->flags & (SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
-    case SDL_INIT_VIDEO:
-        return "[--trackmem] " VIDEO_USAGE;
-    case SDL_INIT_AUDIO:
-        return "[--trackmem] " AUDIO_USAGE;
-    case (SDL_INIT_VIDEO | SDL_INIT_AUDIO):
-        return "[--trackmem] " VIDEO_USAGE " " AUDIO_USAGE;
+        case SDL_INIT_VIDEO:
+            return BuildCommonUsageString(&common_usage_video, video_usage, SDL_arraysize(video_usage), NULL, 0);
+        case SDL_INIT_AUDIO:
+            return BuildCommonUsageString(&common_usage_audio, audio_usage, SDL_arraysize(audio_usage), NULL, 0);
+        case (SDL_INIT_VIDEO | SDL_INIT_AUDIO):
+            return BuildCommonUsageString(&common_usage_videoaudio, video_usage, SDL_arraysize(video_usage), audio_usage, SDL_arraysize(audio_usage));
+        default:
+            return "[--trackmem]";
+    }
+}
+
+
+SDL_bool
+SDLTest_CommonDefaultArgs(SDLTest_CommonState *state, const int argc, char **argv)
+{
+    int i = 1;
+    while (i < argc) {
+        const int consumed = SDLTest_CommonArg(state, i);
+        if (consumed == 0) {
+            SDLTest_CommonLogUsage(state, argv[0], NULL);
+            return SDL_FALSE;
+        }
+        i += consumed;
+    }
+    return SDL_TRUE;
+}
+
+static void
+SDLTest_PrintDisplayOrientation(char* text, size_t maxlen, SDL_DisplayOrientation orientation)
+{
+    switch (orientation) {
+    case SDL_ORIENTATION_UNKNOWN:
+        SDL_snprintfcat(text, maxlen, "UNKNOWN");
+        break;
+    case SDL_ORIENTATION_LANDSCAPE:
+        SDL_snprintfcat(text, maxlen, "LANDSCAPE");
+        break;
+    case SDL_ORIENTATION_LANDSCAPE_FLIPPED:
+        SDL_snprintfcat(text, maxlen, "LANDSCAPE_FLIPPED");
+        break;
+    case SDL_ORIENTATION_PORTRAIT:
+        SDL_snprintfcat(text, maxlen, "PORTRAIT");
+        break;
+    case SDL_ORIENTATION_PORTRAIT_FLIPPED:
+        SDL_snprintfcat(text, maxlen, "PORTRAIT_FLIPPED");
+        break;
     default:
-        return "[--trackmem]";
+        SDL_snprintfcat(text, maxlen, "0x%8.8x", orientation);
+        break;
+    }
+}
+
+static void
+SDLTest_PrintWindowFlag(char* text, size_t maxlen, Uint32 flag)
+{
+    switch (flag) {
+    case SDL_WINDOW_FULLSCREEN:
+        SDL_snprintfcat(text, maxlen, "FULLSCREEN");
+        break;
+    case SDL_WINDOW_OPENGL:
+        SDL_snprintfcat(text, maxlen, "OPENGL");
+        break;
+    case SDL_WINDOW_SHOWN:
+        SDL_snprintfcat(text, maxlen, "SHOWN");
+        break;
+    case SDL_WINDOW_HIDDEN:
+        SDL_snprintfcat(text, maxlen, "HIDDEN");
+        break;
+    case SDL_WINDOW_BORDERLESS:
+        SDL_snprintfcat(text, maxlen, "BORDERLESS");
+        break;
+    case SDL_WINDOW_RESIZABLE:
+        SDL_snprintfcat(text, maxlen, "RESIZABLE");
+        break;
+    case SDL_WINDOW_MINIMIZED:
+        SDL_snprintfcat(text, maxlen, "MINIMIZED");
+        break;
+    case SDL_WINDOW_MAXIMIZED:
+        SDL_snprintfcat(text, maxlen, "MAXIMIZED");
+        break;
+    case SDL_WINDOW_MOUSE_GRABBED:
+        SDL_snprintfcat(text, maxlen, "MOUSE_GRABBED");
+        break;
+    case SDL_WINDOW_INPUT_FOCUS:
+        SDL_snprintfcat(text, maxlen, "INPUT_FOCUS");
+        break;
+    case SDL_WINDOW_MOUSE_FOCUS:
+        SDL_snprintfcat(text, maxlen, "MOUSE_FOCUS");
+        break;
+    case SDL_WINDOW_FULLSCREEN_DESKTOP:
+        SDL_snprintfcat(text, maxlen, "FULLSCREEN_DESKTOP");
+        break;
+    case SDL_WINDOW_FOREIGN:
+        SDL_snprintfcat(text, maxlen, "FOREIGN");
+        break;
+    case SDL_WINDOW_ALLOW_HIGHDPI:
+        SDL_snprintfcat(text, maxlen, "ALLOW_HIGHDPI");
+        break;
+    case SDL_WINDOW_MOUSE_CAPTURE:
+        SDL_snprintfcat(text, maxlen, "MOUSE_CAPTURE");
+        break;
+    case SDL_WINDOW_ALWAYS_ON_TOP:
+        SDL_snprintfcat(text, maxlen, "ALWAYS_ON_TOP");
+        break;
+    case SDL_WINDOW_SKIP_TASKBAR:
+        SDL_snprintfcat(text, maxlen, "SKIP_TASKBAR");
+        break;
+    case SDL_WINDOW_UTILITY:
+        SDL_snprintfcat(text, maxlen, "UTILITY");
+        break;
+    case SDL_WINDOW_TOOLTIP:
+        SDL_snprintfcat(text, maxlen, "TOOLTIP");
+        break;
+    case SDL_WINDOW_POPUP_MENU:
+        SDL_snprintfcat(text, maxlen, "POPUP_MENU");
+        break;
+    case SDL_WINDOW_KEYBOARD_GRABBED:
+        SDL_snprintfcat(text, maxlen, "KEYBOARD_GRABBED");
+        break;
+    case SDL_WINDOW_VULKAN:
+        SDL_snprintfcat(text, maxlen, "VULKAN");
+        break;
+    case SDL_WINDOW_METAL:
+        SDL_snprintfcat(text, maxlen, "METAL");
+        break;
+    default:
+        SDL_snprintfcat(text, maxlen, "0x%8.8x", flag);
+        break;
+    }
+}
+
+static void
+SDLTest_PrintWindowFlags(char* text, size_t maxlen, Uint32 flags)
+{
+    const Uint32 window_flags[] = {
+        SDL_WINDOW_FULLSCREEN,
+        SDL_WINDOW_OPENGL,
+        SDL_WINDOW_SHOWN,
+        SDL_WINDOW_HIDDEN,
+        SDL_WINDOW_BORDERLESS,
+        SDL_WINDOW_RESIZABLE,
+        SDL_WINDOW_MINIMIZED,
+        SDL_WINDOW_MAXIMIZED,
+        SDL_WINDOW_MOUSE_GRABBED,
+        SDL_WINDOW_INPUT_FOCUS,
+        SDL_WINDOW_MOUSE_FOCUS,
+        SDL_WINDOW_FULLSCREEN_DESKTOP,
+        SDL_WINDOW_FOREIGN,
+        SDL_WINDOW_ALLOW_HIGHDPI,
+        SDL_WINDOW_MOUSE_CAPTURE,
+        SDL_WINDOW_ALWAYS_ON_TOP,
+        SDL_WINDOW_SKIP_TASKBAR,
+        SDL_WINDOW_UTILITY,
+        SDL_WINDOW_TOOLTIP,
+        SDL_WINDOW_POPUP_MENU,
+        SDL_WINDOW_KEYBOARD_GRABBED,
+        SDL_WINDOW_VULKAN,
+        SDL_WINDOW_METAL
+    };
+
+    int i;
+    int count = 0;
+    for (i = 0; i < (sizeof(window_flags) / sizeof(window_flags[0])); ++i) {
+        const Uint32 flag = window_flags[i];
+        if ((flags & flag) == flag) {
+            if (count > 0) {
+                SDL_snprintfcat(text, maxlen, " | ");
+            }
+            SDLTest_PrintWindowFlag(text, maxlen, flag);
+            ++count;
+        }
+    }
+}
+
+static void
+SDLTest_PrintButtonMask(char* text, size_t maxlen, Uint32 flags)
+{
+    int i;
+    int count = 0;
+    for (i = 1; i <= 32; ++i) {
+        const Uint32 flag = SDL_BUTTON(i);
+        if ((flags & flag) == flag) {
+            if (count > 0) {
+                SDL_snprintfcat(text, maxlen, " | ");
+            }
+            SDL_snprintfcat(text, maxlen, "SDL_BUTTON(%d)", i);
+            ++count;
+        }
     }
 }
 
@@ -538,6 +846,9 @@ SDLTest_PrintPixelFormat(char *text, size_t maxlen, Uint32 format)
         break;
     case SDL_PIXELFORMAT_RGB444:
         SDL_snprintfcat(text, maxlen, "RGB444");
+        break;
+    case SDL_PIXELFORMAT_BGR444:
+        SDL_snprintfcat(text, maxlen, "BGR444");
         break;
     case SDL_PIXELFORMAT_RGB555:
         SDL_snprintfcat(text, maxlen, "RGB555");
@@ -625,7 +936,7 @@ SDLTest_PrintRenderer(SDL_RendererInfo * info)
 
     SDL_Log("  Renderer %s:\n", info->name);
 
-    SDL_snprintf(text, sizeof(text), "    Flags: 0x%8.8X", info->flags);
+    SDL_snprintf(text, sizeof(text), "    Flags: 0x%8.8" SDL_PRIX32, info->flags);
     SDL_snprintfcat(text, sizeof(text), " (");
     count = 0;
     for (i = 0; i < sizeof(info->flags) * 8; ++i) {
@@ -641,7 +952,7 @@ SDLTest_PrintRenderer(SDL_RendererInfo * info)
     SDL_snprintfcat(text, sizeof(text), ")");
     SDL_Log("%s\n", text);
 
-    SDL_snprintf(text, sizeof(text), "    Texture formats (%d): ", info->num_texture_formats);
+    SDL_snprintf(text, sizeof(text), "    Texture formats (%" SDL_PRIu32 "): ", info->num_texture_formats);
     for (i = 0; i < (int) info->num_texture_formats; ++i) {
         if (i > 0) {
             SDL_snprintfcat(text, sizeof(text), ", ");
@@ -822,11 +1133,11 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
                         mode.w, mode.h, mode.refresh_rate, bpp,
                         SDL_GetPixelFormatName(mode.format));
                 if (Rmask || Gmask || Bmask) {
-                    SDL_Log("      Red Mask   = 0x%.8x\n", Rmask);
-                    SDL_Log("      Green Mask = 0x%.8x\n", Gmask);
-                    SDL_Log("      Blue Mask  = 0x%.8x\n", Bmask);
+                    SDL_Log("      Red Mask   = 0x%.8" SDL_PRIx32 "\n", Rmask);
+                    SDL_Log("      Green Mask = 0x%.8" SDL_PRIx32 "\n", Gmask);
+                    SDL_Log("      Blue Mask  = 0x%.8" SDL_PRIx32 "\n", Bmask);
                     if (Amask)
-                        SDL_Log("      Alpha Mask = 0x%.8x\n", Amask);
+                        SDL_Log("      Alpha Mask = 0x%.8" SDL_PRIx32 "\n", Amask);
                 }
 
                 /* Print available fullscreen video modes */
@@ -843,14 +1154,14 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
                                 j, mode.w, mode.h, mode.refresh_rate, bpp,
                                 SDL_GetPixelFormatName(mode.format));
                         if (Rmask || Gmask || Bmask) {
-                            SDL_Log("        Red Mask   = 0x%.8x\n",
+                            SDL_Log("        Red Mask   = 0x%.8" SDL_PRIx32 "\n",
                                     Rmask);
-                            SDL_Log("        Green Mask = 0x%.8x\n",
+                            SDL_Log("        Green Mask = 0x%.8" SDL_PRIx32 "\n",
                                     Gmask);
-                            SDL_Log("        Blue Mask  = 0x%.8x\n",
+                            SDL_Log("        Blue Mask  = 0x%.8" SDL_PRIx32 "\n",
                                     Bmask);
                             if (Amask)
-                                SDL_Log("        Alpha Mask = 0x%.8x\n",
+                                SDL_Log("        Alpha Mask = 0x%.8" SDL_PRIx32 "\n",
                                         Amask);
                         }
                     }
@@ -918,6 +1229,17 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
         }
         for (i = 0; i < state->num_windows; ++i) {
             char title[1024];
+            SDL_Rect r;
+
+            r.x = state->window_x;
+            r.y = state->window_y;
+            r.w = state->window_w;
+            r.h = state->window_h;
+
+            /* !!! FIXME: hack to make --usable-bounds work for now. */
+            if ((r.x == -1) && (r.y == -1) && (r.w == -1) && (r.h == -1)) {
+                SDL_GetDisplayUsableBounds(state->display, &r);
+            }
 
             if (state->num_windows > 1) {
                 SDL_snprintf(title, SDL_arraysize(title), "%s %d",
@@ -926,9 +1248,7 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
                 SDL_strlcpy(title, state->window_title, SDL_arraysize(title));
             }
             state->windows[i] =
-                SDL_CreateWindow(title, state->window_x, state->window_y,
-                                 state->window_w, state->window_h,
-                                 state->window_flags);
+                SDL_CreateWindow(title, r.x, r.y, r.w, r.h, state->window_flags);
             if (!state->windows[i]) {
                 SDL_Log("Couldn't create window: %s\n",
                         SDL_GetError());
@@ -971,7 +1291,7 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
 
             if (!state->skip_renderer
                 && (state->renderdriver
-                    || !(state->window_flags & (SDL_WINDOW_OPENGL | SDL_WINDOW_VULKAN)))) {
+                    || !(state->window_flags & (SDL_WINDOW_OPENGL | SDL_WINDOW_VULKAN | SDL_WINDOW_METAL)))) {
                 m = -1;
                 if (state->renderdriver) {
                     SDL_RendererInfo info;
@@ -999,7 +1319,7 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
                 }
                 if (state->logical_w && state->logical_h) {
                     SDL_RenderSetLogicalSize(state->renderers[i], state->logical_w, state->logical_h);
-                } else if (state->scale) {
+                } else if (state->scale != 0.) {
                     SDL_RenderSetScale(state->renderers[i], state->scale, state->scale);
                 }
                 if (state->verbose & VERBOSE_RENDER) {
@@ -1034,7 +1354,7 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
                     SDL_GetError());
             return SDL_FALSE;
         }
-        if (state->verbose & VERBOSE_VIDEO) {
+        if (state->verbose & VERBOSE_AUDIO) {
             SDL_Log("Audio driver: %s\n",
                     SDL_GetCurrentAudioDriver());
         }
@@ -1046,6 +1366,22 @@ SDLTest_CommonInit(SDLTest_CommonState * state)
     }
 
     return SDL_TRUE;
+}
+
+static const char *
+DisplayOrientationName(int orientation)
+{
+    switch (orientation)
+    {
+#define CASE(X) case SDL_ORIENTATION_##X: return #X
+        CASE(UNKNOWN);
+        CASE(LANDSCAPE);
+        CASE(LANDSCAPE_FLIPPED);
+        CASE(PORTRAIT);
+        CASE(PORTRAIT_FLIPPED);
+#undef CASE
+default: return "???";
+    }
 }
 
 static const char *
@@ -1102,126 +1438,135 @@ SDLTest_PrintEvent(SDL_Event * event)
     }
 
     switch (event->type) {
+    case SDL_DISPLAYEVENT:
+        switch (event->display.event) {
+        case SDL_DISPLAYEVENT_ORIENTATION:
+            SDL_Log("SDL EVENT: Display %" SDL_PRIu32 " changed orientation to %s",
+                    event->display.display, DisplayOrientationName(event->display.data1));
+            break;
+        default:
+            SDL_Log("SDL EVENT: Display %" SDL_PRIu32 " got unknown event 0x%4.4x",
+                    event->display.display, event->display.event);
+            break;
+        }
+        break;
     case SDL_WINDOWEVENT:
         switch (event->window.event) {
         case SDL_WINDOWEVENT_SHOWN:
-            SDL_Log("SDL EVENT: Window %d shown", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " shown", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_HIDDEN:
-            SDL_Log("SDL EVENT: Window %d hidden", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " hidden", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_EXPOSED:
-            SDL_Log("SDL EVENT: Window %d exposed", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " exposed", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_MOVED:
-            SDL_Log("SDL EVENT: Window %d moved to %d,%d",
-                    event->window.windowID, event->window.data1,
-                    event->window.data2);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " moved to %" SDL_PRIs32 ",%" SDL_PRIs32,
+                    event->window.windowID, event->window.data1, event->window.data2);
             break;
         case SDL_WINDOWEVENT_RESIZED:
-            SDL_Log("SDL EVENT: Window %d resized to %dx%d",
-                    event->window.windowID, event->window.data1,
-                    event->window.data2);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " resized to %" SDL_PRIs32 "x%" SDL_PRIs32,
+                    event->window.windowID, event->window.data1, event->window.data2);
             break;
         case SDL_WINDOWEVENT_SIZE_CHANGED:
-            SDL_Log("SDL EVENT: Window %d changed size to %dx%d",
-                    event->window.windowID, event->window.data1,
-                    event->window.data2);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " changed size to %" SDL_PRIs32 "x%" SDL_PRIs32,
+                    event->window.windowID, event->window.data1, event->window.data2);
             break;
         case SDL_WINDOWEVENT_MINIMIZED:
-            SDL_Log("SDL EVENT: Window %d minimized", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " minimized", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_MAXIMIZED:
-            SDL_Log("SDL EVENT: Window %d maximized", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " maximized", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_RESTORED:
-            SDL_Log("SDL EVENT: Window %d restored", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " restored", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_ENTER:
-            SDL_Log("SDL EVENT: Mouse entered window %d",
+            SDL_Log("SDL EVENT: Mouse entered window %" SDL_PRIu32 "",
                     event->window.windowID);
             break;
         case SDL_WINDOWEVENT_LEAVE:
-            SDL_Log("SDL EVENT: Mouse left window %d", event->window.windowID);
+            SDL_Log("SDL EVENT: Mouse left window %" SDL_PRIu32 "", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_FOCUS_GAINED:
-            SDL_Log("SDL EVENT: Window %d gained keyboard focus",
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " gained keyboard focus",
                     event->window.windowID);
             break;
         case SDL_WINDOWEVENT_FOCUS_LOST:
-            SDL_Log("SDL EVENT: Window %d lost keyboard focus",
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " lost keyboard focus",
                     event->window.windowID);
             break;
         case SDL_WINDOWEVENT_CLOSE:
-            SDL_Log("SDL EVENT: Window %d closed", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " closed", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_TAKE_FOCUS:
-            SDL_Log("SDL EVENT: Window %d take focus", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " take focus", event->window.windowID);
             break;
         case SDL_WINDOWEVENT_HIT_TEST:
-            SDL_Log("SDL EVENT: Window %d hit test", event->window.windowID);
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " hit test", event->window.windowID);
             break;
         default:
-            SDL_Log("SDL EVENT: Window %d got unknown event 0x%4.4x",
+            SDL_Log("SDL EVENT: Window %" SDL_PRIu32 " got unknown event 0x%4.4x",
                     event->window.windowID, event->window.event);
             break;
         }
         break;
     case SDL_KEYDOWN:
-        SDL_Log("SDL EVENT: Keyboard: key pressed  in window %d: scancode 0x%08X = %s, keycode 0x%08X = %s",
+        SDL_Log("SDL EVENT: Keyboard: key pressed  in window %" SDL_PRIu32 ": scancode 0x%08X = %s, keycode 0x%08" SDL_PRIX32 " = %s",
                 event->key.windowID,
                 event->key.keysym.scancode,
                 SDL_GetScancodeName(event->key.keysym.scancode),
                 event->key.keysym.sym, SDL_GetKeyName(event->key.keysym.sym));
         break;
     case SDL_KEYUP:
-        SDL_Log("SDL EVENT: Keyboard: key released in window %d: scancode 0x%08X = %s, keycode 0x%08X = %s",
+        SDL_Log("SDL EVENT: Keyboard: key released in window %" SDL_PRIu32 ": scancode 0x%08X = %s, keycode 0x%08" SDL_PRIX32 " = %s",
                 event->key.windowID,
                 event->key.keysym.scancode,
                 SDL_GetScancodeName(event->key.keysym.scancode),
                 event->key.keysym.sym, SDL_GetKeyName(event->key.keysym.sym));
         break;
     case SDL_TEXTEDITING:
-        SDL_Log("SDL EVENT: Keyboard: text editing \"%s\" in window %d",
+        SDL_Log("SDL EVENT: Keyboard: text editing \"%s\" in window %" SDL_PRIu32,
                 event->edit.text, event->edit.windowID);
         break;
     case SDL_TEXTINPUT:
-        SDL_Log("SDL EVENT: Keyboard: text input \"%s\" in window %d",
+        SDL_Log("SDL EVENT: Keyboard: text input \"%s\" in window %" SDL_PRIu32,
                 event->text.text, event->text.windowID);
         break;
     case SDL_KEYMAPCHANGED:
         SDL_Log("SDL EVENT: Keymap changed");
         break;
     case SDL_MOUSEMOTION:
-        SDL_Log("SDL EVENT: Mouse: moved to %d,%d (%d,%d) in window %d",
+        SDL_Log("SDL EVENT: Mouse: moved to %" SDL_PRIs32 ",%" SDL_PRIs32 " (%" SDL_PRIs32 ",%" SDL_PRIs32 ") in window %" SDL_PRIu32,
                 event->motion.x, event->motion.y,
                 event->motion.xrel, event->motion.yrel,
                 event->motion.windowID);
         break;
     case SDL_MOUSEBUTTONDOWN:
-        SDL_Log("SDL EVENT: Mouse: button %d pressed at %d,%d with click count %d in window %d",
+        SDL_Log("SDL EVENT: Mouse: button %d pressed at %" SDL_PRIs32 ",%" SDL_PRIs32 " with click count %d in window %" SDL_PRIu32,
                 event->button.button, event->button.x, event->button.y, event->button.clicks,
                 event->button.windowID);
         break;
     case SDL_MOUSEBUTTONUP:
-        SDL_Log("SDL EVENT: Mouse: button %d released at %d,%d with click count %d in window %d",
+        SDL_Log("SDL EVENT: Mouse: button %d released at %" SDL_PRIs32 ",%" SDL_PRIs32 " with click count %d in window %" SDL_PRIu32,
                 event->button.button, event->button.x, event->button.y, event->button.clicks,
                 event->button.windowID);
         break;
     case SDL_MOUSEWHEEL:
-        SDL_Log("SDL EVENT: Mouse: wheel scrolled %d in x and %d in y (reversed: %d) in window %d",
+        SDL_Log("SDL EVENT: Mouse: wheel scrolled %" SDL_PRIs32 " in x and %" SDL_PRIs32 " in y (reversed: %" SDL_PRIu32 ") in window %" SDL_PRIu32,
                 event->wheel.x, event->wheel.y, event->wheel.direction, event->wheel.windowID);
         break;
     case SDL_JOYDEVICEADDED:
-        SDL_Log("SDL EVENT: Joystick index %d attached",
+        SDL_Log("SDL EVENT: Joystick index %" SDL_PRIs32 " attached",
             event->jdevice.which);
         break;
     case SDL_JOYDEVICEREMOVED:
-        SDL_Log("SDL EVENT: Joystick %d removed",
+        SDL_Log("SDL EVENT: Joystick %" SDL_PRIs32 " removed",
             event->jdevice.which);
         break;
     case SDL_JOYBALLMOTION:
-        SDL_Log("SDL EVENT: Joystick %d: ball %d moved by %d,%d",
+        SDL_Log("SDL EVENT: Joystick %" SDL_PRIs32 ": ball %d moved by %d,%d",
                 event->jball.which, event->jball.ball, event->jball.xrel,
                 event->jball.yrel);
         break;
@@ -1257,40 +1602,40 @@ SDLTest_PrintEvent(SDL_Event * event)
                 position = "LEFTUP";
                 break;
             }
-            SDL_Log("SDL EVENT: Joystick %d: hat %d moved to %s", event->jhat.which,
-                event->jhat.hat, position);
+            SDL_Log("SDL EVENT: Joystick %" SDL_PRIs32 ": hat %d moved to %s",
+                    event->jhat.which, event->jhat.hat, position);
         }
         break;
     case SDL_JOYBUTTONDOWN:
-        SDL_Log("SDL EVENT: Joystick %d: button %d pressed",
+        SDL_Log("SDL EVENT: Joystick %" SDL_PRIs32 ": button %d pressed",
                 event->jbutton.which, event->jbutton.button);
         break;
     case SDL_JOYBUTTONUP:
-        SDL_Log("SDL EVENT: Joystick %d: button %d released",
+        SDL_Log("SDL EVENT: Joystick %" SDL_PRIs32 ": button %d released",
                 event->jbutton.which, event->jbutton.button);
         break;
     case SDL_CONTROLLERDEVICEADDED:
-        SDL_Log("SDL EVENT: Controller index %d attached",
+        SDL_Log("SDL EVENT: Controller index %" SDL_PRIs32 " attached",
             event->cdevice.which);
         break;
     case SDL_CONTROLLERDEVICEREMOVED:
-        SDL_Log("SDL EVENT: Controller %d removed",
+        SDL_Log("SDL EVENT: Controller %" SDL_PRIs32 " removed",
             event->cdevice.which);
         break;
     case SDL_CONTROLLERAXISMOTION:
-        SDL_Log("SDL EVENT: Controller %d axis %d ('%s') value: %d",
+        SDL_Log("SDL EVENT: Controller %" SDL_PRIs32 " axis %d ('%s') value: %d",
             event->caxis.which,
             event->caxis.axis,
             ControllerAxisName((SDL_GameControllerAxis)event->caxis.axis),
             event->caxis.value);
         break;
     case SDL_CONTROLLERBUTTONDOWN:
-        SDL_Log("SDL EVENT: Controller %d button %d ('%s') down",
+        SDL_Log("SDL EVENT: Controller %" SDL_PRIs32 "button %d ('%s') down",
             event->cbutton.which, event->cbutton.button,
             ControllerButtonName((SDL_GameControllerButton)event->cbutton.button));
         break;
     case SDL_CONTROLLERBUTTONUP:
-        SDL_Log("SDL EVENT: Controller %d button %d ('%s') up",
+        SDL_Log("SDL EVENT: Controller %" SDL_PRIs32 " button %d ('%s') up",
             event->cbutton.which, event->cbutton.button,
             ControllerButtonName((SDL_GameControllerButton)event->cbutton.button));
         break;
@@ -1349,15 +1694,26 @@ SDLTest_PrintEvent(SDL_Event * event)
     case SDL_APP_DIDENTERFOREGROUND:
         SDL_Log("SDL EVENT: App entered the foreground");
         break;
-
+    case SDL_DROPBEGIN:
+        SDL_Log("SDL EVENT: Drag and drop beginning");
+        break;
+    case SDL_DROPFILE:
+        SDL_Log("SDL EVENT: Drag and drop file: '%s'", event->drop.file);
+        break;
+    case SDL_DROPTEXT:
+        SDL_Log("SDL EVENT: Drag and drop text: '%s'", event->drop.file);
+        break;
+    case SDL_DROPCOMPLETE:
+        SDL_Log("SDL EVENT: Drag and drop ending");
+        break;
     case SDL_QUIT:
         SDL_Log("SDL EVENT: Quit requested");
         break;
     case SDL_USEREVENT:
-        SDL_Log("SDL EVENT: User event %d", event->user.code);
+        SDL_Log("SDL EVENT: User event %" SDL_PRIs32, event->user.code);
         break;
     default:
-        SDL_Log("Unknown event 0x%4.4x", event->type);
+        SDL_Log("Unknown event 0x%4.4" SDL_PRIu32, event->type);
         break;
     }
 }
@@ -1455,6 +1811,16 @@ SDLTest_CommonEvent(SDLTest_CommonState * state, SDL_Event * event, int *done)
                     }
                 }
             }
+            break;
+        case SDL_WINDOWEVENT_FOCUS_LOST:
+            if (state->flash_on_focus_loss) {
+                SDL_Window *window = SDL_GetWindowFromID(event->window.windowID);
+                if (window) {
+                    SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
+                }
+            }
+            break;
+        default:
             break;
         }
         break;
@@ -1606,12 +1972,30 @@ SDLTest_CommonEvent(SDLTest_CommonState * state, SDL_Event * event, int *done)
                 SDL_free(text);
             }
             break;
+        case SDLK_f:
+            if (withControl) {
+                /* Ctrl-F flash the window */
+                SDL_Window *window = SDL_GetWindowFromID(event->key.windowID);
+                if (window) {
+                    SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
+                }
+            }
+            break;
         case SDLK_g:
             if (withControl) {
-                /* Ctrl-G toggle grab */
+                /* Ctrl-G toggle mouse grab */
                 SDL_Window *window = SDL_GetWindowFromID(event->key.windowID);
                 if (window) {
                     SDL_SetWindowGrab(window, !SDL_GetWindowGrab(window) ? SDL_TRUE : SDL_FALSE);
+                }
+            }
+            break;
+        case SDLK_k:
+            if (withControl) {
+                /* Ctrl-K toggle keyboard grab */
+                SDL_Window* window = SDL_GetWindowFromID(event->key.windowID);
+                if (window) {
+                    SDL_SetWindowKeyboardGrab(window, !SDL_GetWindowKeyboardGrab(window) ? SDL_TRUE : SDL_FALSE);
                 }
             }
             break;
@@ -1729,7 +2113,8 @@ SDLTest_CommonEvent(SDLTest_CommonState * state, SDL_Event * event, int *done)
             char message[256];
             SDL_Window *window = SDL_GetWindowFromID(event->key.windowID);
 
-            SDL_snprintf(message, sizeof(message), "(%i, %i), rel (%i, %i)\n", lastEvent.x, lastEvent.y, lastEvent.xrel, lastEvent.yrel);
+            SDL_snprintf(message, sizeof(message), "(%" SDL_PRIs32 ", %" SDL_PRIs32 "), rel (%" SDL_PRIs32 ", %" SDL_PRIs32 ")\n",
+                    lastEvent.x, lastEvent.y, lastEvent.xrel, lastEvent.yrel);
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Last mouse position", message, window);
             break;
         }
@@ -1744,6 +2129,11 @@ SDLTest_CommonEvent(SDLTest_CommonState * state, SDL_Event * event, int *done)
     case SDL_MOUSEMOTION:
         lastEvent = event->motion;
         break;
+
+    case SDL_DROPFILE:
+    case SDL_DROPTEXT:
+        SDL_free(event->drop.file);
+        break;
     }
 }
 
@@ -1751,6 +2141,13 @@ void
 SDLTest_CommonQuit(SDLTest_CommonState * state)
 {
     int i;
+
+    SDL_free(common_usage_video);
+    SDL_free(common_usage_audio);
+    SDL_free(common_usage_videoaudio);
+    common_usage_video = NULL;
+    common_usage_audio = NULL;
+    common_usage_videoaudio = NULL;
 
     SDL_free(state->windows);
     if (state->targets) {
@@ -1778,6 +2175,117 @@ SDLTest_CommonQuit(SDLTest_CommonState * state)
     SDL_free(state);
     SDL_Quit();
     SDLTest_LogAllocations();
+}
+
+void
+SDLTest_CommonDrawWindowInfo(SDL_Renderer * renderer, SDL_Window * window)
+{
+    char text[1024];
+    int textY = 0;
+    const int lineHeight = 10;
+    int x, y, w, h;
+    SDL_Rect rect;
+    SDL_DisplayMode mode;
+    float ddpi, hdpi, vdpi;
+    Uint32 flags;
+    const int windowDisplayIndex = SDL_GetWindowDisplayIndex(window);
+
+    /* Renderer */
+
+    if (0 == SDL_GetRendererOutputSize(renderer, &w, &h)) {
+        SDL_snprintf(text, sizeof(text), "SDL_GetRendererOutputSize: %dx%d", w, h);
+        SDLTest_DrawString(renderer, 0, textY, text);
+        textY += lineHeight;
+    }
+
+    SDL_RenderGetViewport(renderer, &rect);
+    SDL_snprintf(text, sizeof(text), "SDL_RenderGetViewport: %d,%d, %dx%d",
+                 rect.x, rect.y, rect.w, rect.h);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    /* Window */
+
+    SDLTest_DrawString(renderer, 0, textY, "----");
+    textY += lineHeight;
+
+    SDL_GetWindowPosition(window, &x, &y);
+    SDL_snprintf(text, sizeof(text), "SDL_GetWindowPosition: %d,%d", x, y);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    SDL_GetWindowSize(window, &w, &h);
+    SDL_snprintf(text, sizeof(text), "SDL_GetWindowSize: %dx%d", w, h);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    SDL_snprintf(text, sizeof(text), "SDL_GetWindowFlags: ");
+    SDLTest_PrintWindowFlags(text, sizeof(text), SDL_GetWindowFlags(window));
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    /* Display */
+
+    SDLTest_DrawString(renderer, 0, textY, "----");
+    textY += lineHeight;
+
+    SDL_snprintf(text, sizeof(text), "SDL_GetWindowDisplayIndex: %d", windowDisplayIndex);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    SDL_snprintf(text, sizeof(text), "SDL_GetDisplayName: %s", SDL_GetDisplayName(windowDisplayIndex));
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    if (0 == SDL_GetDisplayBounds(windowDisplayIndex, &rect)) {
+        SDL_snprintf(text, sizeof(text), "SDL_GetDisplayBounds: %d,%d, %dx%d",
+                     rect.x, rect.y, rect.w, rect.h);
+        SDLTest_DrawString(renderer, 0, textY, text);
+        textY += lineHeight;
+    }
+
+    if (0 == SDL_GetCurrentDisplayMode(windowDisplayIndex, &mode)) {
+        SDL_snprintf(text, sizeof(text), "SDL_GetCurrentDisplayMode: %dx%d@%d",
+                     mode.w, mode.h, mode.refresh_rate);
+        SDLTest_DrawString(renderer, 0, textY, text);
+        textY += lineHeight;
+    }
+
+    if (0 == SDL_GetDesktopDisplayMode(windowDisplayIndex, &mode)) {
+        SDL_snprintf(text, sizeof(text), "SDL_GetDesktopDisplayMode: %dx%d@%d",
+                     mode.w, mode.h, mode.refresh_rate);
+        SDLTest_DrawString(renderer, 0, textY, text);
+        textY += lineHeight;
+    }
+
+    if (0 == SDL_GetDisplayDPI(windowDisplayIndex, &ddpi, &hdpi, &vdpi)) {
+        SDL_snprintf(text, sizeof(text), "SDL_GetDisplayDPI: ddpi: %f, hdpi: %f, vdpi: %f",
+                     ddpi, hdpi, vdpi);
+        SDLTest_DrawString(renderer, 0, textY, text);
+        textY += lineHeight;
+    }
+
+    SDL_snprintf(text, sizeof(text), "SDL_GetDisplayOrientation: ");
+    SDLTest_PrintDisplayOrientation(text, sizeof(text), SDL_GetDisplayOrientation(windowDisplayIndex));
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    /* Mouse */
+
+    SDLTest_DrawString(renderer, 0, textY, "----");
+    textY += lineHeight;
+
+    flags = SDL_GetMouseState(&x, &y);
+    SDL_snprintf(text, sizeof(text), "SDL_GetMouseState: %d,%d ", x, y);
+    SDLTest_PrintButtonMask(text, sizeof(text), flags);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
+
+    flags = SDL_GetGlobalMouseState(&x, &y);
+    SDL_snprintf(text, sizeof(text), "SDL_GetGlobalMouseState: %d,%d ", x, y);
+    SDLTest_PrintButtonMask(text, sizeof(text), flags);
+    SDLTest_DrawString(renderer, 0, textY, text);
+    textY += lineHeight;
 }
 
 /* vi: set ts=4 sw=4 expandtab: */

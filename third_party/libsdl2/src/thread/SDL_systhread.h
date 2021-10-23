@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,11 +33,11 @@
    on success.
 */
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
-extern int SDL_SYS_CreateThread(SDL_Thread * thread, void *args,
+extern int SDL_SYS_CreateThread(SDL_Thread * thread,
                                 pfnSDL_CurrentBeginThread pfnBeginThread,
                                 pfnSDL_CurrentEndThread pfnEndThread);
 #else
-extern int SDL_SYS_CreateThread(SDL_Thread * thread, void *args);
+extern int SDL_SYS_CreateThread(SDL_Thread * thread);
 #endif
 
 /* This function does any necessary setup in the child thread */

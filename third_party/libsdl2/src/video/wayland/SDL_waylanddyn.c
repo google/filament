@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,9 +26,6 @@
 
 #include "SDL_waylanddyn.h"
 
-#if DEBUG_DYNAMIC_WAYLAND
-#include "SDL_log.h"
-#endif
 
 #ifdef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC
 
@@ -41,9 +38,6 @@ typedef struct
     const char *libname;
 } waylanddynlib;
 
-#ifndef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC
-#define SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC NULL
-#endif
 #ifndef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_EGL
 #define SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_EGL NULL
 #endif
@@ -53,12 +47,16 @@ typedef struct
 #ifndef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_XKBCOMMON
 #define SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_XKBCOMMON NULL
 #endif
+#ifndef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_LIBDECOR
+#define SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_LIBDECOR NULL
+#endif
 
 static waylanddynlib waylandlibs[] = {
     {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC},
     {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_EGL},
     {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_CURSOR},
-    {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_XKBCOMMON}
+    {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_XKBCOMMON},
+    {NULL, SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_LIBDECOR}
 };
 
 static void *

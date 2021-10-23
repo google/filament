@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,6 +24,6 @@
 
 extern void Android_InitTouch(void);
 extern void Android_QuitTouch(void);
-extern void Android_OnTouch( int touch_device_id_in, int pointer_finger_id_in, int action, float x, float y, float p);
+extern void Android_OnTouch(SDL_Window *window, int touch_device_id_in, int pointer_finger_id_in, int action, float x, float y, float p);
 
 /* vi: set ts=4 sw=4 expandtab: */

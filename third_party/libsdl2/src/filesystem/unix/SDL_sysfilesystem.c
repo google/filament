@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -78,6 +78,60 @@ readSymLink(const char *path)
 }
 #endif
 
+
+#if defined(__OPENBSD__)
+static char *search_path_for_binary(const char *bin)
+{
+    char *envr = getenv("PATH");
+    size_t alloc_size;
+    char *exe = NULL;
+    char *start = envr;
+    char *ptr;
+
+    if (!envr) {
+        SDL_SetError("No $PATH set");
+        return NULL;
+    }
+
+    envr = SDL_strdup(envr);
+    if (!envr) {
+        SDL_OutOfMemory();
+        return NULL;
+    }
+
+    SDL_assert(bin != NULL);
+
+    alloc_size = SDL_strlen(bin) + SDL_strlen(envr) + 2;
+    exe = (char *) SDL_malloc(alloc_size);
+
+    do {
+        ptr = SDL_strchr(start, ':');  /* find next $PATH separator. */
+        if (ptr != start) {
+            if (ptr) {
+                *ptr = '\0';
+            }
+
+            /* build full binary path... */
+            SDL_snprintf(exe, alloc_size, "%s%s%s", start, (ptr && (ptr[-1] == '/')) ? "" : "/", bin);
+
+            if (access(exe, X_OK) == 0) { /* Exists as executable? We're done. */
+                SDL_free(envr);
+                return exe;
+            }
+        }
+        start = ptr + 1;  /* start points to beginning of next element. */
+    } while (ptr != NULL);
+
+    SDL_free(envr);
+    SDL_free(exe);
+
+    SDL_SetError("Process not found in $PATH");
+    return NULL;  /* doesn't exist in path. */
+}
+#endif
+
+
+
 char *
 SDL_GetBasePath(void)
 {
@@ -96,21 +150,47 @@ SDL_GetBasePath(void)
     }
 #endif
 #if defined(__OPENBSD__)
-    char **retvalargs;
+    /* Please note that this will fail if the process was launched with a relative path and the cwd has changed, or argv is altered. So don't do that. Or add a new sysctl to OpenBSD. */
+    char **cmdline;
     size_t len;
     const int mib[] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
     if (sysctl(mib, 4, NULL, &len, NULL, 0) != -1) {
-        retvalargs = SDL_malloc(len);
-        if (!retvalargs) {
+        char *exe;
+        char *realpathbuf = (char *) SDL_malloc(PATH_MAX + 1);
+        if (!realpathbuf) {
             SDL_OutOfMemory();
             return NULL;
         }
-        sysctl(mib, 4, retvalargs, &len, NULL, 0);
-        retval = SDL_malloc(PATH_MAX + 1);
-        if (retval)
-            realpath(retvalargs[0], retval);
 
-        SDL_free(retvalargs);
+        cmdline = SDL_malloc(len);
+        if (!cmdline) {
+            SDL_free(realpathbuf);
+            SDL_OutOfMemory();
+            return NULL;
+        }
+
+        sysctl(mib, 4, cmdline, &len, NULL, 0);
+
+        exe = cmdline[0];
+        if (SDL_strchr(exe, '/') == NULL) {  /* not a relative or absolute path, check $PATH for it */
+            exe = search_path_for_binary(cmdline[0]);
+        }
+
+        if (exe) {
+            if (realpath(exe, realpathbuf) != NULL) {
+                retval = realpathbuf;
+            }
+
+            if (exe != cmdline[0]) {
+                SDL_free(exe);
+            }
+        }
+
+        if (!retval) {
+            SDL_free(realpathbuf);
+        }
+
+        SDL_free(cmdline);
     }
 #endif
 #if defined(__SOLARIS__)
@@ -140,7 +220,7 @@ SDL_GetBasePath(void)
         if (retval == NULL) {
             /* older kernels don't have /proc/self ... try PID version... */
             char path[64];
-            const int rc = (int) SDL_snprintf(path, sizeof(path),
+            const int rc = SDL_snprintf(path, sizeof(path),
                                               "/proc/%llu/exe",
                                               (unsigned long long) getpid());
             if ( (rc > 0) && (rc < sizeof(path)) ) {

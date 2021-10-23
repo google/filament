@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -24,6 +24,8 @@
 #define SDL_x11events_h_
 
 extern void X11_PumpEvents(_THIS);
+extern int  X11_WaitEventTimeout(_THIS, int timeout);
+extern void X11_SendWakeupEvent(_THIS, SDL_Window *window);
 extern void X11_SuspendScreenSaver(_THIS);
 
 #endif /* SDL_x11events_h_ */

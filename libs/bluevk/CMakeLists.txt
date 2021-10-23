@@ -28,9 +28,11 @@ target_link_libraries(${TARGET} utils math)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # test_bluevk is not supported on mobile or Windows
-if (NOT ANDROID AND NOT IOS AND NOT WIN32)
+if (IS_HOST_PLATFORM AND NOT ANDROID AND NOT IOS AND NOT WIN32)
     add_executable(test_bluevk tests/test_bluevk_sdl.cpp)
+    target_include_directories(test_bluevk PRIVATE sdl2)
     target_link_libraries(test_bluevk PRIVATE dl bluevk sdl2)
+    add_dependencies(test_bluevk sdl2)
 endif()
 
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

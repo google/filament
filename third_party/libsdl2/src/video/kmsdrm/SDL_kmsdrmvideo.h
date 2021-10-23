@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -28,46 +28,76 @@
 
 #include <fcntl.h>
 #include <unistd.h>
-#include <poll.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <gbm.h>
-#if SDL_VIDEO_OPENGL_EGL
 #include <EGL/egl.h>
-#endif
 
 typedef struct SDL_VideoData
 {
     int devindex;               /* device index that was passed on creation */
     int drm_fd;                 /* DRM file desc */
-    struct gbm_device *gbm;
-    drmEventContext drm_evctx;  /* DRM event context */
-    struct pollfd drm_pollfd;   /* pollfd containing DRM file desc */
-    drmModeCrtc *saved_crtc;    /* Saved CRTC to restore on quit */
-    uint32_t saved_conn_id;     /* Saved DRM connector ID */
-    uint32_t crtc_id;           /* CRTC in use */
+    char devpath[32];           /* DRM dev path. */
+
+    struct gbm_device *gbm_dev;
+
+    SDL_bool video_init;             /* Has VideoInit succeeded? */
+    SDL_bool vulkan_mode;            /* Are we in Vulkan mode? One VK window is enough to be. */
+    SDL_bool async_pageflip_support; /* Does the hardware support async. pageflips? */ 
+
+    SDL_Window **windows;
+    int max_windows;
+    int num_windows;
+
+    /* Even if we have several displays, we only have to
+       open 1 FD and create 1 gbm device. */
+    SDL_bool gbm_init;
+
 } SDL_VideoData;
+
+
+typedef struct SDL_DisplayModeData
+{
+    int mode_index;
+} SDL_DisplayModeData;
 
 
 typedef struct SDL_DisplayData
 {
-    uint32_t encoder_id;
-    uint32_t crtc_id;
-    drmModeModeInfo cur_mode;
-} SDL_DisplayData;
+    drmModeConnector *connector;
+    drmModeCrtc *crtc;
+    drmModeModeInfo mode;
+    drmModeModeInfo original_mode;
+    drmModeModeInfo fullscreen_mode;
 
+    drmModeCrtc *saved_crtc;    /* CRTC to restore on quit */
+
+    /* DRM & GBM cursor stuff lives here, not in an SDL_Cursor's driverdata struct,
+       because setting/unsetting up these is done on window creation/destruction,
+       where we may not have an SDL_Cursor at all (so no SDL_Cursor driverdata).
+       There's only one cursor GBM BO because we only support one cursor. */
+    struct gbm_bo *cursor_bo;
+    uint64_t cursor_w, cursor_h;
+
+    SDL_bool default_cursor_init;
+} SDL_DisplayData;
 
 typedef struct SDL_WindowData
 {
+    SDL_VideoData *viddata;
+    /* SDL internals expect EGL surface to be here, and in KMSDRM the GBM surface is
+       what supports the EGL surface on the driver side, so all these surfaces and buffers
+       are expected to be here, in the struct pointed by SDL_Window driverdata pointer:
+       this one. So don't try to move these to dispdata!  */
     struct gbm_surface *gs;
-    struct gbm_bo *current_bo;
+    struct gbm_bo *bo;
     struct gbm_bo *next_bo;
+
     SDL_bool waiting_for_flip;
-    SDL_bool crtc_ready;
     SDL_bool double_buffer;
-#if SDL_VIDEO_OPENGL_EGL
+
     EGLSurface egl_surface;
-#endif
+    SDL_bool egl_surface_dirty;
 } SDL_WindowData;
 
 typedef struct KMSDRM_FBInfo
@@ -77,8 +107,10 @@ typedef struct KMSDRM_FBInfo
 } KMSDRM_FBInfo;
 
 /* Helper functions */
+int KMSDRM_CreateSurfaces(_THIS, SDL_Window * window);
 KMSDRM_FBInfo *KMSDRM_FBFromBO(_THIS, struct gbm_bo *bo);
-SDL_bool KMSDRM_WaitPageFlip(_THIS, SDL_WindowData *wdata, int timeout);
+KMSDRM_FBInfo *KMSDRM_FBFromBO2(_THIS, struct gbm_bo *bo, int w, int h);
+SDL_bool KMSDRM_WaitPageflip(_THIS, SDL_WindowData *windata);
 
 /****************************************************************************/
 /* SDL_VideoDevice functions declaration                                    */
@@ -95,13 +127,15 @@ void KMSDRM_SetWindowTitle(_THIS, SDL_Window * window);
 void KMSDRM_SetWindowIcon(_THIS, SDL_Window * window, SDL_Surface * icon);
 void KMSDRM_SetWindowPosition(_THIS, SDL_Window * window);
 void KMSDRM_SetWindowSize(_THIS, SDL_Window * window);
+void KMSDRM_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * _display, SDL_bool fullscreen);
+int KMSDRM_SetWindowGammaRamp(_THIS, SDL_Window * window, const Uint16 * ramp);
+int KMSDRM_GetWindowGammaRamp(_THIS, SDL_Window * window, Uint16 * ramp);
 void KMSDRM_ShowWindow(_THIS, SDL_Window * window);
 void KMSDRM_HideWindow(_THIS, SDL_Window * window);
 void KMSDRM_RaiseWindow(_THIS, SDL_Window * window);
 void KMSDRM_MaximizeWindow(_THIS, SDL_Window * window);
 void KMSDRM_MinimizeWindow(_THIS, SDL_Window * window);
 void KMSDRM_RestoreWindow(_THIS, SDL_Window * window);
-void KMSDRM_SetWindowGrab(_THIS, SDL_Window * window, SDL_bool grabbed);
 void KMSDRM_DestroyWindow(_THIS, SDL_Window * window);
 
 /* Window manager function */

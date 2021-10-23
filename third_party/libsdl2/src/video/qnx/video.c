@@ -47,7 +47,7 @@ videoInit(_THIS)
 
     SDL_zero(display);
 
-    if (SDL_AddVideoDisplay(&display) < 0) {
+    if (SDL_AddVideoDisplay(&display, SDL_FALSE) < 0) {
         return -1;
     }
 
@@ -352,13 +352,7 @@ createDevice(int devindex)
     return device;
 }
 
-static int
-available()
-{
-    return 1;
-}
-
 VideoBootStrap QNX_bootstrap = {
     "qnx", "QNX Screen",
-    available, createDevice
+    createDevice
 };

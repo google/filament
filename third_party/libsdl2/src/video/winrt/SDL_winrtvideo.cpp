@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -28,6 +28,12 @@
    was based off of SDL's "dummy" video driver.
  */
 
+/* Standard C++11 includes */
+#include <functional>
+#include <string>
+#include <sstream>
+using namespace std;
+
 /* Windows includes */
 #include <agile.h>
 #include <windows.graphics.display.h>
@@ -42,8 +48,8 @@ using namespace Windows::UI::ViewManagement;
 
 
 /* [re]declare Windows GUIDs locally, to limit the amount of external lib(s) SDL has to link to */
-static const GUID IID_IDisplayRequest   = { 0xe5732044, 0xf49f, 0x4b60, { 0x8d, 0xd4, 0x5e, 0x7e, 0x3a, 0x63, 0x2a, 0xc0 } };
-static const GUID IID_IDXGIFactory2     = { 0x50c83a1c, 0xe072, 0x4c48, { 0x87, 0xb0, 0x36, 0x30, 0xfa, 0x36, 0xa6, 0xd0 } };
+static const GUID SDL_IID_IDisplayRequest   = { 0xe5732044, 0xf49f, 0x4b60, { 0x8d, 0xd4, 0x5e, 0x7e, 0x3a, 0x63, 0x2a, 0xc0 } };
+static const GUID SDL_IID_IDXGIFactory2     = { 0x50c83a1c, 0xe072, 0x4c48, { 0x87, 0xb0, 0x36, 0x30, 0xfa, 0x36, 0xa6, 0xd0 } };
 
 
 /* SDL includes */
@@ -67,7 +73,7 @@ extern "C" {
 #include "SDL_winrtmouse_c.h"
 #include "SDL_main.h"
 #include "SDL_system.h"
-//#include "SDL_log.h"
+#include "SDL_hints.h"
 
 
 /* Initialization/Query functions */
@@ -95,12 +101,6 @@ SDL_Window * WINRT_GlobalSDLWindow = NULL;
 
 
 /* WinRT driver bootstrap functions */
-
-static int
-WINRT_Available(void)
-{
-    return (1);
-}
 
 static void
 WINRT_DeleteDevice(SDL_VideoDevice * device)
@@ -175,8 +175,70 @@ WINRT_CreateDevice(int devindex)
 #define WINRTVID_DRIVER_NAME "winrt"
 VideoBootStrap WINRT_bootstrap = {
     WINRTVID_DRIVER_NAME, "SDL WinRT video driver",
-    WINRT_Available, WINRT_CreateDevice
+    WINRT_CreateDevice
 };
+
+static void SDLCALL
+WINRT_SetDisplayOrientationsPreference(void *userdata, const char *name, const char *oldValue, const char *newValue)
+{
+    SDL_assert(SDL_strcmp(name, SDL_HINT_ORIENTATIONS) == 0);
+
+    /* HACK: prevent SDL from altering an app's .appxmanifest-set orientation
+     * from being changed on startup, by detecting when SDL_HINT_ORIENTATIONS
+     * is getting registered.
+     *
+     * TODO, WinRT: consider reading in an app's .appxmanifest file, and apply its orientation when 'newValue == NULL'.
+     */
+    if ((oldValue == NULL) && (newValue == NULL)) {
+        return;
+    }
+
+    // Start with no orientation flags, then add each in as they're parsed
+    // from newValue.
+    unsigned int orientationFlags = 0;
+    if (newValue) {
+        std::istringstream tokenizer(newValue);
+        while (!tokenizer.eof()) {
+            std::string orientationName;
+            std::getline(tokenizer, orientationName, ' ');
+            if (orientationName == "LandscapeLeft") {
+                orientationFlags |= (unsigned int) DisplayOrientations::LandscapeFlipped;
+            } else if (orientationName == "LandscapeRight") {
+                orientationFlags |= (unsigned int) DisplayOrientations::Landscape;
+            } else if (orientationName == "Portrait") {
+                orientationFlags |= (unsigned int) DisplayOrientations::Portrait;
+            } else if (orientationName == "PortraitUpsideDown") {
+                orientationFlags |= (unsigned int) DisplayOrientations::PortraitFlipped;
+            }
+        }
+    }
+
+    // If no valid orientation flags were specified, use a reasonable set of defaults:
+    if (!orientationFlags) {
+        // TODO, WinRT: consider seeing if an app's default orientation flags can be found out via some API call(s).
+        orientationFlags = (unsigned int) ( \
+            DisplayOrientations::Landscape |
+            DisplayOrientations::LandscapeFlipped |
+            DisplayOrientations::Portrait |
+            DisplayOrientations::PortraitFlipped);
+    }
+
+    // Set the orientation/rotation preferences.  Please note that this does
+    // not constitute a 100%-certain lock of a given set of possible
+    // orientations.  According to Microsoft's documentation on WinRT [1]
+    // when a device is not capable of being rotated, Windows may ignore
+    // the orientation preferences, and stick to what the device is capable of
+    // displaying.
+    //
+    // [1] Documentation on the 'InitialRotationPreference' setting for a
+    // Windows app's manifest file describes how some orientation/rotation
+    // preferences may be ignored.  See
+    // http://msdn.microsoft.com/en-us/library/windows/apps/hh700343.aspx
+    // for details.  Microsoft's "Display orientation sample" also gives an
+    // outline of how Windows treats device rotation
+    // (http://code.msdn.microsoft.com/Display-Orientation-Sample-19a58e93).
+    WINRT_DISPLAY_PROPERTY(AutoRotationPreferences) = (DisplayOrientations) orientationFlags;
+}
 
 int
 WINRT_VideoInit(_THIS)
@@ -185,6 +247,11 @@ WINRT_VideoInit(_THIS)
     if (WINRT_InitModes(_this) < 0) {
         return -1;
     }
+
+    // Register the hint, SDL_HINT_ORIENTATIONS, with SDL.
+    // TODO, WinRT: see if an app's default orientation can be found out via WinRT API(s), then set the initial value of SDL_HINT_ORIENTATIONS accordingly.
+    SDL_AddHintCallback(SDL_HINT_ORIENTATIONS, WINRT_SetDisplayOrientationsPreference, NULL);
+
     WINRT_InitMouse(_this);
     WINRT_InitTouch(_this);
     WINRT_InitGameBar(_this);
@@ -300,7 +367,7 @@ WINRT_AddDisplaysForOutput (_THIS, IDXGIAdapter1 * dxgiAdapter1, int outputIndex
         }
     }
 
-    if (SDL_AddVideoDisplay(&display) < 0) {
+    if (SDL_AddVideoDisplay(&display, SDL_FALSE) < 0) {
         goto done;
     }
 
@@ -383,7 +450,7 @@ WINRT_AddDisplaysForAdapter (_THIS, IDXGIFactory2 * dxgiFactory2, int adapterInd
                 display.desktop_mode = mode;
                 display.current_mode = mode;
                 if ((SDL_AddDisplayMode(&display, &mode) < 0) ||
-                    (SDL_AddVideoDisplay(&display) < 0))
+                    (SDL_AddVideoDisplay(&display, SDL_FALSE) < 0))
                 {
                     return SDL_SetError("Failed to apply DXGI Display-detection workaround");
                 }
@@ -409,7 +476,7 @@ WINRT_InitModes(_THIS)
     HRESULT hr;
     IDXGIFactory2 * dxgiFactory2 = NULL;
 
-    hr = CreateDXGIFactory1(IID_IDXGIFactory2, (void **)&dxgiFactory2);
+    hr = CreateDXGIFactory1(SDL_IID_IDXGIFactory2, (void **)&dxgiFactory2);
     if (FAILED(hr)) {
         WIN_SetErrorFromHRESULT(__FUNCTION__ ", CreateDXGIFactory1() failed", hr);
         return -1;
@@ -789,7 +856,7 @@ WINRT_CreateDisplayRequest(_THIS)
     ABI::Windows::System::Display::IDisplayRequest * pDisplayRequest = nullptr;
     HRESULT hr;
 
-    hr = ::WindowsCreateString(wClassName, (UINT32)wcslen(wClassName), &hClassName);
+    hr = ::WindowsCreateString(wClassName, (UINT32)SDL_wcslen(wClassName), &hClassName);
     if (FAILED(hr)) {
         goto done;
     }
@@ -804,7 +871,7 @@ WINRT_CreateDisplayRequest(_THIS)
         goto done;
     }
 
-    hr = pDisplayRequestRaw->QueryInterface(IID_IDisplayRequest, (void **) &pDisplayRequest);
+    hr = pDisplayRequestRaw->QueryInterface(SDL_IID_IDisplayRequest, (void **) &pDisplayRequest);
     if (FAILED(hr)) {
         goto done;
     }

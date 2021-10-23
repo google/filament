@@ -42,8 +42,8 @@ int SDLCALL _events_sampleNullEventFilter(void *userdata, SDL_Event *event)
 /**
  * @brief Test pumping and peeking events.
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_PumpEvents
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_PollEvent
+ * @sa http://wiki.libsdl.org/SDL_PumpEvents
+ * @sa http://wiki.libsdl.org/SDL_PollEvent
  */
 int
 events_pushPumpAndPollUserevent(void *arg)
@@ -76,8 +76,8 @@ events_pushPumpAndPollUserevent(void *arg)
 /**
  * @brief Adds and deletes an event watch function with NULL userdata
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_AddEventWatch
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_DelEventWatch
+ * @sa http://wiki.libsdl.org/SDL_AddEventWatch
+ * @sa http://wiki.libsdl.org/SDL_DelEventWatch
  *
  */
 int
@@ -126,8 +126,8 @@ events_addDelEventWatch(void *arg)
 /**
  * @brief Adds and deletes an event watch function with userdata
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_AddEventWatch
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_DelEventWatch
+ * @sa http://wiki.libsdl.org/SDL_AddEventWatch
+ * @sa http://wiki.libsdl.org/SDL_DelEventWatch
  *
  */
 int

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -71,6 +71,7 @@
 #define HAVE_STRCHR 1
 #define HAVE_STRRCHR    1
 #define HAVE_STRSTR 1
+#define HAVE_STRTOK_R 1
 #define HAVE_STRTOL 1
 #define HAVE_STRTOUL    1
 #define HAVE_STRTOLL    1
@@ -98,6 +99,8 @@
 #define HAVE_COPYSIGNF  1
 #define HAVE_COS    1
 #define HAVE_COSF   1
+#define HAVE_EXP    1
+#define HAVE_EXPF   1
 #define HAVE_FABS   1
 #define HAVE_FABSF  1
 #define HAVE_FLOOR  1
@@ -108,8 +111,12 @@
 #define HAVE_LOGF   1
 #define HAVE_LOG10  1
 #define HAVE_LOG10F 1
+#define HAVE_LROUND 1
+#define HAVE_LROUNDF 1
 #define HAVE_POW    1
 #define HAVE_POWF   1
+#define HAVE_ROUND  1
+#define HAVE_ROUNDF 1
 #define HAVE_SCALBN 1
 #define HAVE_SCALBNF    1
 #define HAVE_SIN    1
@@ -118,21 +125,34 @@
 #define HAVE_SQRTF  1
 #define HAVE_TAN    1
 #define HAVE_TANF   1
+#define HAVE_TRUNC    1
+#define HAVE_TRUNCF   1
 #define HAVE_SIGACTION 1
 #define HAVE_SETJMP 1
 #define HAVE_NANOSLEEP  1
 #define HAVE_SYSCONF    1
 #define HAVE_CLOCK_GETTIME  1
 
+#ifdef __LP64__
+#define SIZEOF_VOIDP 8
+#else
 #define SIZEOF_VOIDP 4
+#endif
 
 /* Enable various audio drivers */
 #define SDL_AUDIO_DRIVER_ANDROID    1
+#define SDL_AUDIO_DRIVER_OPENSLES   1
+#define SDL_AUDIO_DRIVER_AAUDIO     0
 #define SDL_AUDIO_DRIVER_DUMMY  1
 
 /* Enable various input drivers */
 #define SDL_JOYSTICK_ANDROID    1
-#define SDL_HAPTIC_ANDROID    1
+#define SDL_JOYSTICK_HIDAPI     1
+#define SDL_JOYSTICK_VIRTUAL    1
+#define SDL_HAPTIC_ANDROID  1
+
+/* Enable sensor driver */
+#define SDL_SENSOR_ANDROID  1
 
 /* Enable various shared object loading systems */
 #define SDL_LOADSO_DLOPEN   1

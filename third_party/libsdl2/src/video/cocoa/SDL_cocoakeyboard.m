@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -29,7 +29,6 @@
 #include "../../events/scancodes_darwin.h"
 
 #include <Carbon/Carbon.h>
-#include <IOKit/hid/IOHIDLib.h>
 
 /*#define DEBUG_IME NSLog */
 #define DEBUG_IME(...)
@@ -187,115 +186,6 @@
 
 @end
 
-/*------------------------------------------------------------------------------
-Set up a HID callback to properly detect Caps Lock up/down events.
-Derived from:
-http://stackoverflow.com/questions/7190852/using-iohidmanager-to-get-modifier-key-events
-*/
-
-static IOHIDManagerRef s_hidManager = NULL;
-
-static void
-HIDCallback(void *context, IOReturn result, void *sender, IOHIDValueRef value)
-{
-    if (context != s_hidManager) {
-        /* An old callback, ignore it (related to bug 2157 below) */
-        return;
-    }
-
-    IOHIDElementRef elem = IOHIDValueGetElement(value);
-    if (IOHIDElementGetUsagePage(elem) != kHIDPage_KeyboardOrKeypad
-        || IOHIDElementGetUsage(elem) != kHIDUsage_KeyboardCapsLock) {
-        return;
-    }
-    CFIndex pressed = IOHIDValueGetIntegerValue(value);
-    SDL_SendKeyboardKey(pressed ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_CAPSLOCK);
-}
-
-static CFDictionaryRef
-CreateHIDDeviceMatchingDictionary(UInt32 usagePage, UInt32 usage)
-{
-    CFMutableDictionaryRef dict = CFDictionaryCreateMutable(kCFAllocatorDefault,
-        0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    if (dict) {
-        CFNumberRef number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usagePage);
-        if (number) {
-            CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsagePageKey), number);
-            CFRelease(number);
-            number = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usage);
-            if (number) {
-                CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsageKey), number);
-                CFRelease(number);
-                return dict;
-            }
-        }
-        CFRelease(dict);
-    }
-    return NULL;
-}
-
-static void
-QuitHIDCallback()
-{
-    if (!s_hidManager) {
-        return;
-    }
-
-#if 0 /* Releasing here causes a crash on Mac OS X 10.10 and earlier,
-       * so just leak it for now. See bug 2157 for details.
-       */
-    IOHIDManagerUnscheduleFromRunLoop(s_hidManager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-    IOHIDManagerRegisterInputValueCallback(s_hidManager, NULL, NULL);
-    IOHIDManagerClose(s_hidManager, 0);
-
-    CFRelease(s_hidManager);
-#endif
-    s_hidManager = NULL;
-}
-
-static void
-InitHIDCallback()
-{
-    s_hidManager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
-    if (!s_hidManager) {
-        return;
-    }
-    CFDictionaryRef keyboard = NULL, keypad = NULL;
-    CFArrayRef matches = NULL;
-    keyboard = CreateHIDDeviceMatchingDictionary(kHIDPage_GenericDesktop, kHIDUsage_GD_Keyboard);
-    if (!keyboard) {
-        goto fail;
-    }
-    keypad = CreateHIDDeviceMatchingDictionary(kHIDPage_GenericDesktop, kHIDUsage_GD_Keypad);
-    if (!keypad) {
-        goto fail;
-    }
-    CFDictionaryRef matchesList[] = { keyboard, keypad };
-    matches = CFArrayCreate(kCFAllocatorDefault, (const void **)matchesList, 2, NULL);
-    if (!matches) {
-        goto fail;
-    }
-    IOHIDManagerSetDeviceMatchingMultiple(s_hidManager, matches);
-    IOHIDManagerRegisterInputValueCallback(s_hidManager, HIDCallback, s_hidManager);
-    IOHIDManagerScheduleWithRunLoop(s_hidManager, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
-    if (IOHIDManagerOpen(s_hidManager, kIOHIDOptionsTypeNone) == kIOReturnSuccess) {
-        goto cleanup;
-    }
-
-fail:
-    QuitHIDCallback();
-
-cleanup:
-    if (matches) {
-        CFRelease(matches);
-    }
-    if (keypad) {
-        CFRelease(keypad);
-    }
-    if (keyboard) {
-        CFRelease(keyboard);
-    }
-}
 
 /* This is a helper function for HandleModifierSide. This
  * function reverts back to behavior before the distinction between
@@ -583,10 +473,8 @@ Cocoa_InitKeyboard(_THIS)
     SDL_SetScancodeName(SDL_SCANCODE_RALT, "Right Option");
     SDL_SetScancodeName(SDL_SCANCODE_RGUI, "Right Command");
 
-    data->modifierFlags = [NSEvent modifierFlags];
+    data->modifierFlags = (unsigned int)[NSEvent modifierFlags];
     SDL_ToggleModState(KMOD_CAPS, (data->modifierFlags & NSEventModifierFlagCapsLock) != 0);
-
-    InitHIDCallback();
 }
 
 void
@@ -702,7 +590,7 @@ Cocoa_HandleKeyEvent(_THIS, NSEvent *event)
         break;
     case NSEventTypeFlagsChanged:
         /* FIXME CW 2007-08-14: check if this whole mess that takes up half of this file is really necessary */
-        HandleModifiers(_this, scancode, [event modifierFlags]);
+        HandleModifiers(_this, scancode, (unsigned int)[event modifierFlags]);
         break;
     default: /* just to avoid compiler warnings */
         break;
@@ -712,7 +600,23 @@ Cocoa_HandleKeyEvent(_THIS, NSEvent *event)
 void
 Cocoa_QuitKeyboard(_THIS)
 {
-    QuitHIDCallback();
+}
+
+typedef int CGSConnection;
+typedef enum {
+    CGSGlobalHotKeyEnable = 0,
+    CGSGlobalHotKeyDisable = 1,
+} CGSGlobalHotKeyOperatingMode;
+
+extern CGSConnection _CGSDefaultConnection(void);
+extern CGError CGSSetGlobalHotKeyOperatingMode(CGSConnection connection, CGSGlobalHotKeyOperatingMode mode);
+
+void
+Cocoa_SetWindowKeyboardGrab(_THIS, SDL_Window * window, SDL_bool grabbed)
+{
+#if SDL_MAC_NO_SANDBOX
+    CGSSetGlobalHotKeyOperatingMode(_CGSDefaultConnection(), grabbed ? CGSGlobalHotKeyDisable : CGSGlobalHotKeyEnable);
+#endif
 }
 
 #endif /* SDL_VIDEO_DRIVER_COCOA */

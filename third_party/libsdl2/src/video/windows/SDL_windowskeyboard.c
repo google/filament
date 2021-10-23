@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -749,7 +749,7 @@ static void
 IME_SendInputEvent(SDL_VideoData *videodata)
 {
     char *s = 0;
-    s = WIN_StringToUTF8(videodata->ime_composition);
+    s = WIN_StringToUTF8W(videodata->ime_composition);
     SDL_SendKeyboardText(s);
     SDL_free(s);
 
@@ -774,7 +774,7 @@ IME_SendEditingEvent(SDL_VideoData *videodata)
     else {
         SDL_wcslcpy(buffer, videodata->ime_composition, size);
     }
-    s = WIN_StringToUTF8(buffer);
+    s = WIN_StringToUTF8W(buffer);
     SDL_SendEditingText(s, videodata->ime_cursor + (int)SDL_wcslen(videodata->ime_readingstring), 0);
     SDL_free(s);
 }

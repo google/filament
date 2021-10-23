@@ -49,7 +49,7 @@ while test $# -gt 0; do
 @ENABLE_SHARED_TRUE@      ;;
 @ENABLE_STATIC_TRUE@@ENABLE_SHARED_TRUE@    --static-libs)
 @ENABLE_STATIC_TRUE@@ENABLE_SHARED_FALSE@    --libs|--static-libs)
-@ENABLE_STATIC_TRUE@      echo -L@libdir@ @SDL_RLD_FLAGS@ @SDL_STATIC_LIBS@
+@ENABLE_STATIC_TRUE@      echo -L@libdir@ @SDL_LIBS@ @SDL_STATIC_LIBS@
 @ENABLE_STATIC_TRUE@      ;;
     *)
       echo "${usage}" 1>&2

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -37,7 +37,7 @@ typedef struct JoyStick_DeviceData
     BYTE SubType;
     Uint8 XInputUserId;
     DIDEVICEINSTANCE dxdevice;
-    WCHAR hidPath[MAX_PATH];
+    char hidPath[MAX_PATH];
     struct JoyStick_DeviceData *pNext;
 } JoyStick_DeviceData;
 
@@ -66,8 +66,6 @@ typedef struct input_t
 struct joystick_hwdata
 {
     SDL_JoystickGUID guid;
-    SDL_bool removed;
-    SDL_bool send_remove_event;
 
 #if SDL_JOYSTICK_DINPUT
     LPDIRECTINPUTDEVICE8 InputDevice;
@@ -76,6 +74,9 @@ struct joystick_hwdata
     input_t Inputs[MAX_INPUTS];
     int NumInputs;
     int NumSliders;
+    SDL_bool ff_initialized;
+    DIEFFECT *ffeffect;
+    LPDIRECTINPUTEFFECT ffeffect_ref;
 #endif
 
     SDL_bool bXInputDevice; /* SDL_TRUE if this device supports using the xinput API rather than DirectInput */
@@ -88,6 +89,6 @@ struct joystick_hwdata
 extern const DIDATAFORMAT SDL_c_dfDIJoystick2;
 #endif
 
-extern void SDL_SYS_AddJoystickDevice(JoyStick_DeviceData *device);
+extern void WINDOWS_AddJoystickDevice(JoyStick_DeviceData *device);
 
 /* vi: set ts=4 sw=4 expandtab: */

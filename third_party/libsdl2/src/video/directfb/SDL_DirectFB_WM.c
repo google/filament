@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -287,9 +287,8 @@ WMPos(DFB_WindowData * p, int x, int y)
 int
 DirectFB_WM_ProcessEvent(_THIS, SDL_Window * window, DFBWindowEvent * evt)
 {
-    SDL_DFB_DEVICEDATA(_this);
     SDL_DFB_WINDOWDATA(window);
-    DFB_WindowData *gwindata = ((devdata->grabbed_window) ? (DFB_WindowData *) ((devdata->grabbed_window)->driverdata) : NULL);
+    SDL_Window *grabbed_window = SDL_GetGrabbedWindow();
     IDirectFBWindow *dfbwin = windata->dfbwin;
     DFBWindowOptions wopts;
 
@@ -327,9 +326,9 @@ DirectFB_WM_ProcessEvent(_THIS, SDL_Window * window, DFBWindowEvent * evt)
                 /* fall through */
             default:
                 windata->wm_grab = pos;
-                if (gwindata != NULL)
-                    SDL_DFB_CHECK(gwindata->dfbwin->UngrabPointer(gwindata->dfbwin));
-                SDL_DFB_CHECK(dfbwin->GrabPointer(dfbwin));
+                if (grabbed_window != NULL)
+                    DirectFB_SetWindowMouseGrab(_this, grabbed_window, SDL_FALSE);
+                DirectFB_SetWindowMouseGrab(_this, window, SDL_TRUE);
                 windata->wm_lastx = evt->cx;
                 windata->wm_lasty = evt->cy;
             }
@@ -359,9 +358,9 @@ DirectFB_WM_ProcessEvent(_THIS, SDL_Window * window, DFBWindowEvent * evt)
                     SDL_DFB_CHECK(dfbwin->Resize(dfbwin, cw + dx, ch + dy));
                 }
             }
-            SDL_DFB_CHECK(dfbwin->UngrabPointer(dfbwin));
-            if (gwindata != NULL)
-                SDL_DFB_CHECK(gwindata->dfbwin->GrabPointer(gwindata->dfbwin));
+            DirectFB_SetWindowMouseGrab(_this, window, SDL_FALSE);
+            if (grabbed_window != NULL)
+                DirectFB_SetWindowMouseGrab(_this, grabbed_window, SDL_TRUE);
             windata->wm_grab = WM_POS_NONE;
             return 1;
         }

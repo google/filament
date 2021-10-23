@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,11 +42,8 @@ SDL_GetPowerInfo_Hardwired(SDL_PowerState * state, int *seconds, int *percent)
     return SDL_TRUE;
 }
 #endif
-#endif
-
 
 static SDL_GetPowerInfo_Impl implementations[] = {
-#ifndef SDL_POWER_DISABLED
 #ifdef SDL_POWER_LINUX          /* in order of preference. More than could work. */
     SDL_GetPowerInfo_Linux_org_freedesktop_upower,
     SDL_GetPowerInfo_Linux_sys_class_power_supply,
@@ -71,6 +68,9 @@ static SDL_GetPowerInfo_Impl implementations[] = {
 #ifdef SDL_POWER_PSP        /* handles PSP. */
     SDL_GetPowerInfo_PSP,
 #endif
+#ifdef SDL_POWER_VITA        /* handles PSVita. */
+    SDL_GetPowerInfo_VITA,
+#endif
 #ifdef SDL_POWER_WINRT          /* handles WinRT */
     SDL_GetPowerInfo_WinRT,
 #endif
@@ -81,31 +81,34 @@ static SDL_GetPowerInfo_Impl implementations[] = {
 #ifdef SDL_POWER_HARDWIRED
     SDL_GetPowerInfo_Hardwired,
 #endif
-#endif
 };
+#endif
 
 SDL_PowerState
 SDL_GetPowerInfo(int *seconds, int *percent)
 {
+#ifndef SDL_POWER_DISABLED
     const int total = sizeof(implementations) / sizeof(implementations[0]);
-    int _seconds, _percent;
     SDL_PowerState retval = SDL_POWERSTATE_UNKNOWN;
     int i;
+#endif
 
+    int _seconds, _percent;
     /* Make these never NULL for platform-specific implementations. */
     if (seconds == NULL) {
         seconds = &_seconds;
     }
-
     if (percent == NULL) {
         percent = &_percent;
     }
 
+#ifndef SDL_POWER_DISABLED
     for (i = 0; i < total; i++) {
         if (implementations[i](&retval, seconds, percent)) {
             return retval;
         }
     }
+#endif
 
     /* nothing was definitive. */
     *seconds = -1;

@@ -4,7 +4,7 @@ Upstream-Contact: Sam Lantinga <slouken@libsdl.org>
 Source: http://www.libsdl.org/
 
 Files: *
-Copyright: 1997-2018 Sam Lantinga <slouken@libsdl.org>
+Copyright: 1997-2021 Sam Lantinga <slouken@libsdl.org>
 License: zlib/libpng
 
 Files: src/libm/*
@@ -12,7 +12,7 @@ Copyright: 1993 by Sun Microsystems, Inc. All rights reserved.
 License: SunPro
 
 Files: src/main/windows/SDL_windows_main.c
-Copyright: 2018 Sam Lantinga
+Copyright: 2021 Sam Lantinga
 License: PublicDomain_Sam_Lantinga
 Comment: SDL_main.c, placed in the public domain by Sam Lantinga  4/13/98
 
@@ -32,7 +32,7 @@ Copyright: 1995 Erik Corry
 License: BrownUn_UnCalifornia_ErikCorry
 
 Files: src/test/SDL_test_md5.c
-Copyright: 1997-2018 Sam Lantinga <slouken@libsdl.org>
+Copyright: 1997-2021 Sam Lantinga <slouken@libsdl.org>
            1990 RSA Data Security, Inc.
 License: zlib/libpng and RSA_Data_Security
 
@@ -46,12 +46,12 @@ Copyright: 1994-2003 The XFree86 Project, Inc.
 License: MIT/X11
 
 Files: test/testhaptic.c
-Copyright: 1997-2018 Sam Lantinga <slouken@libsdl.org>
+Copyright: 1997-2021 Sam Lantinga <slouken@libsdl.org>
            2008 Edgar Simo Serra
 License: BSD_3_clause
 
 Files: test/testrumble.c
-Copyright: 1997-2018 Sam Lantinga <slouken@libsdl.org>
+Copyright: 1997-2021 Sam Lantinga <slouken@libsdl.org>
            2011 Edgar Simo Serra
 License: BSD_3_clause
 
@@ -169,7 +169,7 @@ License: BSD_3_clause
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Comment:
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
   .
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages

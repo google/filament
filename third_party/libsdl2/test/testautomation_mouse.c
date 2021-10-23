@@ -192,8 +192,8 @@ static SDL_Cursor *_initArrowCursor(const char *image[])
 /**
  * @brief Check call to SDL_CreateCursor and SDL_FreeCursor
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_CreateCursor
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_FreeCursor
+ * @sa http://wiki.libsdl.org/SDL_CreateCursor
+ * @sa http://wiki.libsdl.org/SDL_FreeCursor
  */
 int
 mouse_createFreeCursor(void *arg)
@@ -218,8 +218,8 @@ mouse_createFreeCursor(void *arg)
 /**
  * @brief Check call to SDL_CreateColorCursor and SDL_FreeCursor
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_CreateColorCursor
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_FreeCursor
+ * @sa http://wiki.libsdl.org/SDL_CreateColorCursor
+ * @sa http://wiki.libsdl.org/SDL_FreeCursor
  */
 int
 mouse_createFreeColorCursor(void *arg)
@@ -275,7 +275,7 @@ void _changeCursorVisibility(int state)
 /**
  * @brief Check call to SDL_ShowCursor
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_ShowCursor
+ * @sa http://wiki.libsdl.org/SDL_ShowCursor
  */
 int
 mouse_showCursor(void *arg)
@@ -305,7 +305,7 @@ mouse_showCursor(void *arg)
 /**
  * @brief Check call to SDL_SetCursor
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_SetCursor
+ * @sa http://wiki.libsdl.org/SDL_SetCursor
  */
 int
 mouse_setCursor(void *arg)
@@ -338,7 +338,7 @@ mouse_setCursor(void *arg)
 /**
  * @brief Check call to SDL_GetCursor
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_GetCursor
+ * @sa http://wiki.libsdl.org/SDL_GetCursor
  */
 int
 mouse_getCursor(void *arg)
@@ -356,8 +356,8 @@ mouse_getCursor(void *arg)
 /**
  * @brief Check call to SDL_GetRelativeMouseMode and SDL_SetRelativeMouseMode
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_GetRelativeMouseMode
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_SetRelativeMouseMode
+ * @sa http://wiki.libsdl.org/SDL_GetRelativeMouseMode
+ * @sa http://wiki.libsdl.org/SDL_SetRelativeMouseMode
  */
 int
 mouse_getSetRelativeMouseMode(void *arg)
@@ -440,7 +440,7 @@ void _destroyMouseSuiteTestWindow(SDL_Window *window)
 /**
  * @brief Check call to SDL_WarpMouseInWindow
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_WarpMouseInWindow
+ * @sa http://wiki.libsdl.org/SDL_WarpMouseInWindow
  */
 int
 mouse_warpMouseInWindow(void *arg)
@@ -502,7 +502,7 @@ mouse_warpMouseInWindow(void *arg)
 /**
  * @brief Check call to SDL_GetMouseFocus
  *
- * @sa http://wiki.libsdl.org/moin.cgi/SDL_GetMouseFocus
+ * @sa http://wiki.libsdl.org/SDL_GetMouseFocus
  */
 int
 mouse_getMouseFocus(void *arg)

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -36,6 +36,8 @@ extern int X11_HandleXinput2Event(SDL_VideoData *videodata,XGenericEventCookie *
 extern int X11_Xinput2IsInitialized(void);
 extern int X11_Xinput2IsMultitouchSupported(void);
 extern void X11_Xinput2SelectTouch(_THIS, SDL_Window *window);
+extern void X11_Xinput2GrabTouch(_THIS, SDL_Window *window);
+extern void X11_Xinput2UngrabTouch(_THIS, SDL_Window *window);
 
 #endif /* SDL_x11xinput2_h_ */
 

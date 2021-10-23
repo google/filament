@@ -5,4 +5,5 @@ usr/lib/*/*.la
 usr/lib/*/*.so
 usr/lib/*/pkgconfig/sdl2.pc
 usr/lib/*/cmake/SDL2/sdl2-config.cmake
+usr/lib/*/cmake/SDL2/sdl2-config-version.cmake
 usr/share/aclocal/sdl2.m4

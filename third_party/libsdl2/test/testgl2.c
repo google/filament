@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -218,6 +218,7 @@ main(int argc, char *argv[])
     Uint32 then, now, frames;
     int status;
     int dw, dh;
+    int swap_interval = 0;
 
     /* Enable standard application logging */
     SDL_LogSetPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO);
@@ -247,8 +248,8 @@ main(int argc, char *argv[])
             }
         }
         if (consumed < 0) {
-            SDL_Log("Usage: %s %s [--fsaa n] [--accel n]\n", argv[0],
-                    SDLTest_CommonUsage(state));
+            static const char *options[] = { "[--fsaa n]", "[--accel n]", NULL };
+            SDLTest_CommonLogUsage(state, argv[0], options);
             quit(1);
         }
         i += consumed;
@@ -289,11 +290,15 @@ main(int argc, char *argv[])
 
     if (state->render_flags & SDL_RENDERER_PRESENTVSYNC) {
         /* try late-swap-tearing first. If not supported, try normal vsync. */
-        if (SDL_GL_SetSwapInterval(-1) == -1) {
+        if (SDL_GL_SetSwapInterval(-1) == 0) {
+            swap_interval = -1;
+        } else {
             SDL_GL_SetSwapInterval(1);
+            swap_interval = 1;
         }
     } else {
         SDL_GL_SetSwapInterval(0);  /* disable vsync. */
+        swap_interval = 0;
     }
 
     SDL_GetCurrentDisplayMode(0, &mode);
@@ -377,16 +382,35 @@ main(int argc, char *argv[])
     then = SDL_GetTicks();
     done = 0;
     while (!done) {
+        SDL_bool update_swap_interval = SDL_FALSE;
+
         /* Check for events */
         ++frames;
         while (SDL_PollEvent(&event)) {
             SDLTest_CommonEvent(state, &event, &done);
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_o) {
+                    swap_interval--;
+                    update_swap_interval = SDL_TRUE;
+                } else if (event.key.keysym.sym == SDLK_p) {
+                    swap_interval++;
+                    update_swap_interval = SDL_TRUE;
+                }
+            }
         }
+
+        if (update_swap_interval) {
+            SDL_Log("Swap interval to be set to %d\n", swap_interval);
+        }
+
         for (i = 0; i < state->num_windows; ++i) {
             int w, h;
             if (state->windows[i] == NULL)
                 continue;
             SDL_GL_MakeCurrent(state->windows[i], context);
+            if (update_swap_interval) {
+                SDL_GL_SetSwapInterval(swap_interval);
+            }
             SDL_GL_GetDrawableSize(state->windows[i], &w, &h);
             ctx.glViewport(0, 0, w, h);
             Render();

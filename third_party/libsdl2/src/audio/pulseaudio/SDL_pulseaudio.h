@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,6 +42,12 @@ struct SDL_PrivateAudioData
     /* Raw mixing buffer */
     Uint8 *mixbuf;
     int mixlen;
+
+    /* Pointer to the actual buffer in use in the current
+       GetDeviceBuf() -> PlayDevice() iteration.
+       Can be either the pointer returned by pa_stream_begin_write()
+       or mixbuf */
+    void *pabuf;
 
     const Uint8 *capturebuf;
     int capturelen;

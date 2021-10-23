@@ -64,6 +64,21 @@ macro(LISTTOSTR _LIST _OUTPUT)
   endforeach()
 endmacro()
 
+macro(LISTTOSTRREV _LIST _OUTPUT)
+  if(${ARGC} EQUAL 3)
+    # prefix for each element
+    set(_LPREFIX ${ARGV2})
+  else()
+    set(_LPREFIX "")
+  endif()
+  # Do not use string(REPLACE ";" " ") here to avoid messing up list
+  # entries
+  foreach(_ITEM ${${_LIST}})
+    set(${_OUTPUT} "${${_OUTPUT}} ${_LPREFIX}${_ITEM}")
+  endforeach()
+endmacro()
+
+
 macro(CHECK_OBJC_SOURCE_COMPILES SOURCE VAR)
   set(PREV_REQUIRED_DEFS "${CMAKE_REQUIRED_DEFINITIONS}")
   set(CMAKE_REQUIRED_DEFINITIONS "-x objective-c ${PREV_REQUIRED_DEFS}")

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,10 +18,16 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef SDL_blendline_h_
+#define SDL_blendline_h_
+
 #include "../../SDL_internal.h"
 
 
 extern int SDL_BlendLine(SDL_Surface * dst, int x1, int y1, int x2, int y2, SDL_BlendMode blendMode, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 extern int SDL_BlendLines(SDL_Surface * dst, const SDL_Point * points, int count, SDL_BlendMode blendMode, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+
+#endif /* SDL_blendline_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */

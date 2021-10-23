@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -19,11 +19,16 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef SDL_evdev_kbd_h_
+#define SDL_evdev_kbd_h_
+
 struct SDL_EVDEV_keyboard_state;
 typedef struct SDL_EVDEV_keyboard_state SDL_EVDEV_keyboard_state;
 
 extern SDL_EVDEV_keyboard_state *SDL_EVDEV_kbd_init(void);
 extern void SDL_EVDEV_kbd_keycode(SDL_EVDEV_keyboard_state *state, unsigned int keycode, int down);
 extern void SDL_EVDEV_kbd_quit(SDL_EVDEV_keyboard_state *state);
+
+#endif /* SDL_evdev_kbd_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */

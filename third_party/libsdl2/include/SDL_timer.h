@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -38,45 +38,75 @@ extern "C" {
 #endif
 
 /**
- * \brief Get the number of milliseconds since the SDL library initialization.
+ * Get the number of milliseconds since SDL library initialization.
  *
- * \note This value wraps if the program runs for more than ~49 days.
+ * This value wraps if the program runs for more than ~49 days.
+ *
+ * \returns an unsigned 32-bit value representing the number of milliseconds
+ *          since the SDL library initialized.
+ *
+ * \sa SDL_TICKS_PASSED
  */
 extern DECLSPEC Uint32 SDLCALL SDL_GetTicks(void);
 
 /**
- * \brief Compare SDL ticks values, and return true if A has passed B
+ * Compare SDL ticks values, and return true if `A` has passed `B`.
  *
- * e.g. if you want to wait 100 ms, you could do this:
- *  Uint32 timeout = SDL_GetTicks() + 100;
- *  while (!SDL_TICKS_PASSED(SDL_GetTicks(), timeout)) {
- *      ... do work until timeout has elapsed
- *  }
+ * For example, if you want to wait 100 ms, you could do this:
+ *
+ * ```c++
+ * Uint32 timeout = SDL_GetTicks() + 100;
+ * while (!SDL_TICKS_PASSED(SDL_GetTicks(), timeout)) {
+ *     // ... do work until timeout has elapsed
+ * }
+ * ```
  */
 #define SDL_TICKS_PASSED(A, B)  ((Sint32)((B) - (A)) <= 0)
 
 /**
- * \brief Get the current value of the high resolution counter
+ * Get the current value of the high resolution counter.
+ *
+ * This function is typically used for profiling.
+ *
+ * The counter values are only meaningful relative to each other. Differences
+ * between values can be converted to times by using
+ * SDL_GetPerformanceFrequency().
+ *
+ * \returns the current counter value.
+ *
+ * \sa SDL_GetPerformanceFrequency
  */
 extern DECLSPEC Uint64 SDLCALL SDL_GetPerformanceCounter(void);
 
 /**
- * \brief Get the count per second of the high resolution counter
+ * Get the count per second of the high resolution counter.
+ *
+ * \returns a platform-specific count per second.
+ *
+ * \since This function is available since SDL 2.0.0.
+ *
+ * \sa SDL_GetPerformanceCounter
  */
 extern DECLSPEC Uint64 SDLCALL SDL_GetPerformanceFrequency(void);
 
 /**
- * \brief Wait a specified number of milliseconds before returning.
+ * Wait a specified number of milliseconds before returning.
+ *
+ * This function waits a specified number of milliseconds before returning. It
+ * waits at least the specified time, but possibly longer due to OS
+ * scheduling.
+ *
+ * \param ms the number of milliseconds to delay
  */
 extern DECLSPEC void SDLCALL SDL_Delay(Uint32 ms);
 
 /**
- *  Function prototype for the timer callback function.
+ * Function prototype for the timer callback function.
  *
- *  The callback function is passed the current timer interval and returns
- *  the next timer interval.  If the returned value is the same as the one
- *  passed in, the periodic alarm continues, otherwise a new alarm is
- *  scheduled.  If the callback returns 0, the periodic alarm is cancelled.
+ * The callback function is passed the current timer interval and returns
+ * the next timer interval. If the returned value is the same as the one
+ * passed in, the periodic alarm continues, otherwise a new alarm is
+ * scheduled. If the callback returns 0, the periodic alarm is cancelled.
  */
 typedef Uint32 (SDLCALL * SDL_TimerCallback) (Uint32 interval, void *param);
 
@@ -86,20 +116,47 @@ typedef Uint32 (SDLCALL * SDL_TimerCallback) (Uint32 interval, void *param);
 typedef int SDL_TimerID;
 
 /**
- * \brief Add a new timer to the pool of timers already running.
+ * Call a callback function at a future time.
  *
- * \return A timer ID, or 0 when an error occurs.
+ * If you use this function, you must pass `SDL_INIT_TIMER` to SDL_Init().
+ *
+ * The callback function is passed the current timer interval and the user
+ * supplied parameter from the SDL_AddTimer() call and should return the next
+ * timer interval. If the value returned from the callback is 0, the timer is
+ * canceled.
+ *
+ * The callback is run on a separate thread.
+ *
+ * Timers take into account the amount of time it took to execute the
+ * callback. For example, if the callback took 250 ms to execute and returned
+ * 1000 (ms), the timer would only wait another 750 ms before its next
+ * iteration.
+ *
+ * Timing may be inexact due to OS scheduling. Be sure to note the current
+ * time with SDL_GetTicks() or SDL_GetPerformanceCounter() in case your
+ * callback needs to adjust for variances.
+ *
+ * \param interval the timer delay, in milliseconds, passed to `callback`
+ * \param callback the SDL_TimerCallback function to call when the specified
+ *                 `interval` elapses
+ * \param param a pointer that is passed to `callback`
+ * \returns a timer ID or 0 if an error occurs; call SDL_GetError() for more
+ *          information.
+ *
+ * \sa SDL_RemoveTimer
  */
 extern DECLSPEC SDL_TimerID SDLCALL SDL_AddTimer(Uint32 interval,
                                                  SDL_TimerCallback callback,
                                                  void *param);
 
 /**
- * \brief Remove a timer knowing its ID.
+ * Remove a timer created with SDL_AddTimer().
  *
- * \return A boolean value indicating success or failure.
+ * \param id the ID of the timer to remove
+ * \returns SDL_TRUE if the timer is removed or SDL_FALSE if the timer wasn't
+ *          found.
  *
- * \warning It is not safe to remove a timer multiple times.
+ * \sa SDL_AddTimer
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_RemoveTimer(SDL_TimerID id);
 

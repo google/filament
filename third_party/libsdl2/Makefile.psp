@@ -42,12 +42,15 @@ OBJS= src/SDL.o \
       src/render/software/SDL_drawpoint.o \
       src/render/software/SDL_render_sw.o \
       src/render/software/SDL_rotate.o \
+      src/sensor/SDL_sensor.o \
+      src/sensor/dummy/SDL_dummysensor.o \
       src/stdlib/SDL_getenv.o \
       src/stdlib/SDL_iconv.o \
       src/stdlib/SDL_malloc.o \
       src/stdlib/SDL_qsort.o \
       src/stdlib/SDL_stdlib.o \
       src/stdlib/SDL_string.o \
+      src/stdlib/SDL_strtokr.o \
       src/thread/SDL_thread.o \
       src/thread/generic/SDL_systls.o \
       src/thread/psp/SDL_syssem.o \
@@ -76,7 +79,7 @@ OBJS= src/SDL.o \
       src/video/psp/SDL_pspevents.o \
       src/video/psp/SDL_pspvideo.o \
       src/video/psp/SDL_pspgl.o \
-      src/video/psp/SDL_pspmouse.o \
+      src/video/psp/SDL_pspmouse.o
 
 INCDIR = ./include
 CFLAGS = -g -O2 -G0 -Wall -D__PSP__ -DHAVE_OPENGL

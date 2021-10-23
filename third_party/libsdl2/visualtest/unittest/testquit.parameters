@@ -1,0 +1,3 @@
+--exit-code, integer, [-1 1], false, [] # The exit code returned by the executable
+--crash, boolean, [], false, [] # Crashes the SUT executable
+--hang, boolean, [], false, [] # Runs the SUT in the infinite loop and ignores all events

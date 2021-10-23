@@ -77,20 +77,20 @@ void STD_FUNCTION_NAME(
 {
 	const YUV2RGBParam *const param = &(YUV2RGB[yuv_type]);
 #if YUV_FORMAT == YUV_FORMAT_420
-	const int y_pixel_stride = 1;
-	const int uv_pixel_stride = 1;
-	const int uv_x_sample_interval = 2;
-	const int uv_y_sample_interval = 2;
+	#define y_pixel_stride 1
+	#define uv_pixel_stride 1
+	#define uv_x_sample_interval 2
+	#define uv_y_sample_interval 2
 #elif YUV_FORMAT == YUV_FORMAT_422
-	const int y_pixel_stride = 2;
-	const int uv_pixel_stride = 4;
-	const int uv_x_sample_interval = 2;
-	const int uv_y_sample_interval = 1;
+	#define y_pixel_stride 2
+	#define uv_pixel_stride 4
+	#define uv_x_sample_interval 2
+	#define uv_y_sample_interval 1
 #elif YUV_FORMAT == YUV_FORMAT_NV12
-	const int y_pixel_stride = 1;
-	const int uv_pixel_stride = 2;
-	const int uv_x_sample_interval = 2;
-	const int uv_y_sample_interval = 2;
+	#define y_pixel_stride 1
+	#define uv_pixel_stride 2
+	#define uv_x_sample_interval 2
+	#define uv_y_sample_interval 2
 #endif
 
 	uint32_t x, y;
@@ -101,9 +101,12 @@ void STD_FUNCTION_NAME(
 			*u_ptr=U+(y/uv_y_sample_interval)*UV_stride,
 			*v_ptr=V+(y/uv_y_sample_interval)*UV_stride;
 		
-		uint8_t *rgb_ptr1=RGB+y*RGB_stride,
-			*rgb_ptr2=RGB+(y+1)*RGB_stride;
-		
+		uint8_t *rgb_ptr1=RGB+y*RGB_stride;
+
+		#if uv_y_sample_interval > 1
+        uint8_t *rgb_ptr2=RGB+(y+1)*RGB_stride;
+		#endif
+
 		for(x=0; x<(width-(uv_x_sample_interval-1)); x+=uv_x_sample_interval)
 		{
 			// Compute U and V contributions, common to the four pixels
@@ -123,13 +126,13 @@ void STD_FUNCTION_NAME(
 			y_tmp = ((y_ptr1[y_pixel_stride]-param->y_shift)*param->y_factor);
 			PACK_PIXEL(rgb_ptr1);
 			
-			if (uv_y_sample_interval > 1) {
-				y_tmp = ((y_ptr2[0]-param->y_shift)*param->y_factor);
-				PACK_PIXEL(rgb_ptr2);
+			#if uv_y_sample_interval > 1
+			y_tmp = ((y_ptr2[0]-param->y_shift)*param->y_factor);
+			PACK_PIXEL(rgb_ptr2);
 				
-				y_tmp = ((y_ptr2[y_pixel_stride]-param->y_shift)*param->y_factor);
-				PACK_PIXEL(rgb_ptr2);
-			}
+			y_tmp = ((y_ptr2[y_pixel_stride]-param->y_shift)*param->y_factor);
+			PACK_PIXEL(rgb_ptr2);
+			#endif
 
 			y_ptr1+=2*y_pixel_stride;
 			y_ptr2+=2*y_pixel_stride;
@@ -154,10 +157,10 @@ void STD_FUNCTION_NAME(
 			int32_t y_tmp = ((y_ptr1[0]-param->y_shift)*param->y_factor);
 			PACK_PIXEL(rgb_ptr1);
 			
-			if (uv_y_sample_interval > 1) {
-				y_tmp = ((y_ptr2[0]-param->y_shift)*param->y_factor);
-				PACK_PIXEL(rgb_ptr2);
-			}
+			#if uv_y_sample_interval > 1
+			y_tmp = ((y_ptr2[0]-param->y_shift)*param->y_factor);
+			PACK_PIXEL(rgb_ptr2);
+			#endif
 		}
 	}
 
@@ -212,6 +215,11 @@ void STD_FUNCTION_NAME(
 			PACK_PIXEL(rgb_ptr1);
 		}
 	}
+
+	#undef y_pixel_stride
+	#undef uv_pixel_stride
+	#undef uv_x_sample_interval
+	#undef uv_y_sample_interval
 }
 
 #undef STD_FUNCTION_NAME

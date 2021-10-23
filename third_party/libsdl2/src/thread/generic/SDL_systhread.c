@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -27,12 +27,12 @@
 
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
 int
-SDL_SYS_CreateThread(SDL_Thread * thread, void *args,
+SDL_SYS_CreateThread(SDL_Thread * thread,
                      pfnSDL_CurrentBeginThread pfnBeginThread,
                      pfnSDL_CurrentEndThread pfnEndThread)
 #else
 int
-SDL_SYS_CreateThread(SDL_Thread * thread, void *args)
+SDL_SYS_CreateThread(SDL_Thread * thread)
 #endif /* SDL_PASSED_BEGINTHREAD_ENDTHREAD */
 {
     return SDL_SetError("Threads are not supported on this platform");

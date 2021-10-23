@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -53,10 +53,11 @@
 #endif
 
 #if defined(__WATCOMC__) && defined(__386__)
+SDL_COMPILE_TIME_ASSERT(intsize, 4==sizeof(int));
 #define HAVE_WATCOM_ATOMICS
 extern _inline int _SDL_xchg_watcom(volatile int *a, int v);
 #pragma aux _SDL_xchg_watcom = \
-  "xchg [ecx], eax" \
+  "lock xchg [ecx], eax" \
   parm [ecx] [eax] \
   value [eax] \
   modify exact [eax];
@@ -287,6 +288,10 @@ SDL_AtomicGetPtr(void **a)
     return value;
 #endif
 }
+
+#ifdef SDL_MEMORY_BARRIER_USES_FUNCTION
+#error This file should be built in arm mode so the mcr instruction is available for memory barriers
+#endif
 
 void
 SDL_MemoryBarrierReleaseFunction(void)

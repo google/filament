@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,6 +20,7 @@
 
 static SDL_TLSID tls;
 static int alive = 0;
+static int testprio = 0;
 
 /* Call this instead of exit(), so we can clean up SDL: atexit() is evil. */
 static void
@@ -29,14 +30,37 @@ quit(int rc)
     exit(rc);
 }
 
+static const char *
+getprioritystr(SDL_ThreadPriority priority)
+{
+    switch(priority)
+    {
+    case SDL_THREAD_PRIORITY_LOW: return "SDL_THREAD_PRIORITY_LOW";
+    case SDL_THREAD_PRIORITY_NORMAL: return "SDL_THREAD_PRIORITY_NORMAL";
+    case SDL_THREAD_PRIORITY_HIGH: return "SDL_THREAD_PRIORITY_HIGH";
+    case SDL_THREAD_PRIORITY_TIME_CRITICAL: return "SDL_THREAD_PRIORITY_TIME_CRITICAL";
+    }
+
+    return "???";
+}
+
 int SDLCALL
 ThreadFunc(void *data)
 {
+    SDL_ThreadPriority prio = SDL_THREAD_PRIORITY_NORMAL;
+
     SDL_TLSSet(tls, "baby thread", NULL);
     SDL_Log("Started thread %s: My thread id is %lu, thread data = %s\n",
            (char *) data, SDL_ThreadID(), (const char *)SDL_TLSGet(tls));
     while (alive) {
         SDL_Log("Thread '%s' is alive!\n", (char *) data);
+
+        if (testprio) {
+            SDL_Log("SDL_SetThreadPriority(%s):%d\n", getprioritystr(prio), SDL_SetThreadPriority(prio));
+            if (++prio > SDL_THREAD_PRIORITY_TIME_CRITICAL)
+                prio = SDL_THREAD_PRIORITY_LOW;
+        }
+
         SDL_Delay(1 * 1000);
     }
     SDL_Log("Thread '%s' exiting!\n", (char *) data);
@@ -55,6 +79,7 @@ killed(int sig)
 int
 main(int argc, char *argv[])
 {
+    int arg = 1;
     SDL_Thread *thread;
 
     /* Enable standard application logging */
@@ -64,6 +89,13 @@ main(int argc, char *argv[])
     if (SDL_Init(0) < 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
         return (1);
+    }
+
+    while (argv[arg] && *argv[arg] == '-') {
+        if (SDL_strcmp(argv[arg], "--prio") == 0) {
+            testprio = 1;
+        }
+        ++arg;
     }
 
     tls = SDL_TLSCreate();

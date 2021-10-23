@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -27,7 +27,6 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <limits.h>
 
 #include "../SDL_sysvideo.h"
@@ -37,10 +36,8 @@
 #include "SDL_waylandvideo.h"
 #include "SDL_waylandevents_c.h"
 
-#include "SDL_waylanddyn.h"
 #include "wayland-cursor.h"
 
-#include "SDL_assert.h"
 
 
 typedef struct {
@@ -125,6 +122,8 @@ create_buffer_from_shm(Wayland_CursorData *d,
         return SDL_SetError("mmap() failed.");
     }
 
+    SDL_assert(d->shm_data != NULL);
+
     shm_pool = wl_shm_create_pool(data->shm, shm_fd, size);
     d->buffer = wl_shm_pool_create_buffer(shm_pool,
                                           0,
@@ -147,14 +146,14 @@ Wayland_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y)
 {
     SDL_Cursor *cursor;
 
-    cursor = calloc(1, sizeof (*cursor));
+    cursor = SDL_calloc(1, sizeof (*cursor));
     if (cursor) {
         SDL_VideoDevice *vd = SDL_GetVideoDevice ();
         SDL_VideoData *wd = (SDL_VideoData *) vd->driverdata;
-        Wayland_CursorData *data = calloc (1, sizeof (Wayland_CursorData));
+        Wayland_CursorData *data = SDL_calloc (1, sizeof (Wayland_CursorData));
         if (!data) {
             SDL_OutOfMemory();
-            free(cursor);
+            SDL_free(cursor);
             return NULL;
         }
         cursor->driverdata = (void *) data;
@@ -169,8 +168,8 @@ Wayland_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y)
                                     surface->h,
                                     WL_SHM_FORMAT_ARGB8888) < 0)
         {
-            free (cursor->driverdata);
-            free (cursor);
+            SDL_free (cursor->driverdata);
+            SDL_free (cursor);
             return NULL;
         }
 
@@ -197,12 +196,12 @@ CreateCursorFromWlCursor(SDL_VideoData *d, struct wl_cursor *wlcursor)
 {
     SDL_Cursor *cursor;
 
-    cursor = calloc(1, sizeof (*cursor));
+    cursor = SDL_calloc(1, sizeof (*cursor));
     if (cursor) {
-        Wayland_CursorData *data = calloc (1, sizeof (Wayland_CursorData));
+        Wayland_CursorData *data = SDL_calloc (1, sizeof (Wayland_CursorData));
         if (!data) {
             SDL_OutOfMemory();
-            free(cursor);
+            SDL_free(cursor);
             return NULL;
         }
         cursor->driverdata = (void *) data;
@@ -308,7 +307,7 @@ Wayland_FreeCursor(SDL_Cursor *cursor)
         wl_surface_destroy(d->surface);
 
     /* Not sure what's meant to happen to shm_data */
-    free (cursor->driverdata);
+    SDL_free (cursor->driverdata);
     SDL_free(cursor);
 }
 
@@ -317,6 +316,7 @@ Wayland_ShowCursor(SDL_Cursor *cursor)
 {
     SDL_VideoDevice *vd = SDL_GetVideoDevice();
     SDL_VideoData *d = vd->driverdata;
+    struct SDL_WaylandInput *input = d->input;
 
     struct wl_pointer *pointer = d->pointer;
 
@@ -327,7 +327,8 @@ Wayland_ShowCursor(SDL_Cursor *cursor)
     {
         Wayland_CursorData *data = cursor->driverdata;
 
-        wl_pointer_set_cursor (pointer, 0,
+        wl_pointer_set_cursor (pointer,
+                               input->pointer_enter_serial,
                                data->surface,
                                data->hot_x,
                                data->hot_y);
@@ -337,7 +338,8 @@ Wayland_ShowCursor(SDL_Cursor *cursor)
     }
     else
     {
-        wl_pointer_set_cursor (pointer, 0,
+        wl_pointer_set_cursor (pointer,
+                               input->pointer_enter_serial,
                                NULL,
                                0,
                                0);

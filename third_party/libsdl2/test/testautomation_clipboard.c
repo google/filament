@@ -16,13 +16,12 @@
  * \brief Check call to SDL_HasClipboardText
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_HasClipboardText
+ * http://wiki.libsdl.org/SDL_HasClipboardText
  */
 int
 clipboard_testHasClipboardText(void *arg)
 {
-    SDL_bool result;
-    result = SDL_HasClipboardText();
+    SDL_HasClipboardText();
     SDLTest_AssertPass("Call to SDL_HasClipboardText succeeded");
 
     return TEST_COMPLETED;
@@ -32,7 +31,7 @@ clipboard_testHasClipboardText(void *arg)
  * \brief Check call to SDL_GetClipboardText
  *
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_GetClipboardText
+ * http://wiki.libsdl.org/SDL_GetClipboardText
  */
 int
 clipboard_testGetClipboardText(void *arg)
@@ -49,7 +48,7 @@ clipboard_testGetClipboardText(void *arg)
 /**
  * \brief Check call to SDL_SetClipboardText
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_SetClipboardText
+ * http://wiki.libsdl.org/SDL_SetClipboardText
  */
 int
 clipboard_testSetClipboardText(void *arg)
@@ -78,9 +77,9 @@ clipboard_testSetClipboardText(void *arg)
 /**
  * \brief End-to-end test of SDL_xyzClipboardText functions
  * \sa
- * http://wiki.libsdl.org/moin.cgi/SDL_HasClipboardText
- * http://wiki.libsdl.org/moin.cgi/SDL_GetClipboardText
- * http://wiki.libsdl.org/moin.cgi/SDL_SetClipboardText
+ * http://wiki.libsdl.org/SDL_HasClipboardText
+ * http://wiki.libsdl.org/SDL_GetClipboardText
+ * http://wiki.libsdl.org/SDL_SetClipboardText
  */
 int
 clipboard_testClipboardTextFunctions(void *arg)

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -23,13 +23,19 @@
 #if SDL_VIDEO_VULKAN && SDL_VIDEO_DRIVER_X11
 
 #include "SDL_x11video.h"
-#include "SDL_assert.h"
 
 #include "SDL_loadso.h"
 #include "SDL_x11vulkan.h"
 
 #include <X11/Xlib.h>
 /*#include <xcb/xcb.h>*/
+
+#if defined(__OpenBSD__)
+#define DEFAULT_VULKAN  "libvulkan.so"
+#else
+#define DEFAULT_VULKAN  "libvulkan.so.1"
+#endif
+
 /*
 typedef uint32_t xcb_window_t;
 typedef uint32_t xcb_visualid_t;
@@ -52,7 +58,7 @@ int X11_Vulkan_LoadLibrary(_THIS, const char *path)
     if(!path)
         path = SDL_getenv("SDL_VULKAN_LIBRARY");
     if(!path)
-        path = "libvulkan.so.1";
+        path = DEFAULT_VULKAN;
     _this->vulkan_config.loader_handle = SDL_LoadObject(path);
     if(!_this->vulkan_config.loader_handle)
         return -1;
@@ -182,7 +188,7 @@ SDL_bool X11_Vulkan_CreateSurface(_THIS,
     if(videoData->vulkan_xlib_xcb_library)
     {
         PFN_vkCreateXcbSurfaceKHR vkCreateXcbSurfaceKHR =
-            (PFN_vkCreateXcbSurfaceKHR)vkGetInstanceProcAddr((VkInstance)instance,
+            (PFN_vkCreateXcbSurfaceKHR)vkGetInstanceProcAddr(instance,
                                                              "vkCreateXcbSurfaceKHR");
         VkXcbSurfaceCreateInfoKHR createInfo;
         VkResult result;
@@ -213,7 +219,7 @@ SDL_bool X11_Vulkan_CreateSurface(_THIS,
     else
     {
         PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR =
-            (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr((VkInstance)instance,
+            (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(instance,
                                                               "vkCreateXlibSurfaceKHR");
         VkXlibSurfaceCreateInfoKHR createInfo;
         VkResult result;

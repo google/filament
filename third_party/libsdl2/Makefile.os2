@@ -1,0 +1,163 @@
+# Open Watcom makefile to build SDL2.dll for OS/2
+# wmake -f Makefile.os2
+
+LIBNAME = SDL2
+VERSION = 2.0.16
+DESCRIPTION = Simple DirectMedia Layer 2
+
+LIBHOME = .
+DLLFILE = $(LIBHOME)/$(LIBNAME).dll
+LIBFILE = $(LIBHOME)/$(LIBNAME).lib
+LNKFILE = $(LIBNAME).lnk
+
+INCPATH = -I"$(%WATCOM)/h/os2" -I"$(%WATCOM)/h"
+INCPATH+= -Iinclude
+INCPATH+= -I"src/core/os2" -I"src/core/os2/geniconv"
+
+LIBM = libm.lib
+LIBS = mmpm2.lib libuls.lib libconv.lib $(LIBM)
+
+CFLAGS = -bt=os2 -d0 -q -bm -5s -fp5 -fpi87 -sg -oteanbmier -ei
+# max warnings:
+CFLAGS+= -wx
+# newer OpenWatcom versions enable W303 by default
+CFLAGS+= -wcd=303
+# building dll:
+CFLAGS+= -bd
+# the include paths :
+CFLAGS+= $(INCPATH)
+# building SDL itself (for DECLSPEC):
+CFLAGS+= -DBUILD_SDL
+
+# Debug options:
+# - debug messages from OS/2 related code to stdout:
+#CFLAGS+= -DOS2DEBUG
+# - debug messages from OS/2 code via SDL_LogDebug():
+#CFLAGS+= -DOS2DEBUG=2
+
+MSRCS= e_atan2.c e_exp.c e_fmod.c e_log10.c e_log.c e_pow.c e_rem_pio2.c e_sqrt.c &
+       k_cos.c k_rem_pio2.c k_sin.c k_tan.c &
+       s_atan.c s_copysign.c s_cos.c s_fabs.c s_floor.c s_scalbn.c s_sin.c s_tan.c
+
+SRCS = SDL.c SDL_assert.c SDL_error.c SDL_log.c SDL_dataqueue.c SDL_hints.c
+SRCS+= SDL_getenv.c SDL_iconv.c SDL_malloc.c SDL_qsort.c SDL_stdlib.c SDL_string.c SDL_strtokr.c SDL_crc32.c
+SRCS+= SDL_cpuinfo.c SDL_atomic.c SDL_spinlock.c SDL_thread.c SDL_timer.c
+SRCS+= SDL_rwops.c SDL_power.c
+SRCS+= SDL_audio.c SDL_audiocvt.c SDL_audiodev.c SDL_audiotypecvt.c SDL_mixer.c SDL_wave.c
+SRCS+= SDL_events.c SDL_quit.c SDL_keyboard.c SDL_mouse.c SDL_windowevents.c &
+       SDL_clipboardevents.c SDL_dropevents.c SDL_displayevents.c SDL_gesture.c &
+       SDL_sensor.c SDL_touch.c
+SRCS+= SDL_haptic.c SDL_gamecontroller.c SDL_joystick.c
+SRCS+= SDL_render.c yuv_rgb.c SDL_yuv.c SDL_yuv_sw.c SDL_blendfillrect.c &
+       SDL_blendline.c SDL_blendpoint.c SDL_drawline.c SDL_drawpoint.c &
+       SDL_render_sw.c SDL_rotate.c
+SRCS+= SDL_blit.c SDL_blit_0.c SDL_blit_1.c SDL_blit_A.c SDL_blit_auto.c &
+       SDL_blit_copy.c SDL_blit_N.c SDL_blit_slow.c SDL_fillrect.c SDL_bmp.c &
+       SDL_pixels.c SDL_rect.c SDL_RLEaccel.c SDL_shape.c SDL_stretch.c &
+       SDL_surface.c SDL_video.c SDL_clipboard.c SDL_vulkan_utils.c SDL_egl.c
+
+SRCS+= SDL_syscond.c SDL_sysmutex.c SDL_syssem.c SDL_systhread.c SDL_systls.c
+SRCS+= SDL_systimer.c
+SRCS+= SDL_sysloadso.c
+SRCS+= SDL_sysfilesystem.c
+SRCS+= SDL_os2joystick.c SDL_syshaptic.c SDL_sysjoystick.c
+SRCS+= SDL_virtualjoystick.c
+SRCS+= SDL_hidapi.c
+SRCS+= SDL_hidapijoystick.c SDL_hidapi_rumble.c SDL_hidapi_gamecube.c SDL_hidapi_luna.c SDL_hidapi_ps4.c SDL_hidapi_ps5.c SDL_hidapi_stadia.c SDL_hidapi_switch.c SDL_hidapi_xbox360.c SDL_hidapi_xbox360w.c SDL_hidapi_xboxone.c SDL_hidapi_steam.c
+SRCS+= SDL_dummyaudio.c SDL_diskaudio.c
+SRCS+= SDL_nullvideo.c SDL_nullframebuffer.c SDL_nullevents.c
+SRCS+= SDL_dummysensor.c
+SRCS+= SDL_locale.c SDL_syslocale.c
+SRCS+= SDL_url.c SDL_sysurl.c
+
+SRCS+= SDL_os2.c geniconv.c os2cp.c os2iconv.c sys2utf8.c
+SRCS+= SDL_os2audio.c
+SRCS+= SDL_os2video.c SDL_os2util.c SDL_os2dive.c SDL_os2vman.c &
+       SDL_os2mouse.c SDL_os2messagebox.c
+
+SRCS+= SDL_dynapi.c
+
+OBJS = $(SRCS:.c=.obj)
+MOBJS= $(MSRCS:.c=.obj)
+
+.extensions:
+.extensions: .lib .dll .obj .c .asm
+
+.c: ./src;./src/dynapi;./src/audio;./src/cpuinfo;./src/events;./src/file;./src/haptic;./src/joystick;./src/power;./src/render;./src/render/software;./src/sensor;./src/stdlib;./src/thread;./src/timer;./src/video;./src/video/yuv2rgb;./src/atomic;./src/audio/disk;
+.c: ./src/haptic/dummy;./src/joystick/dummy;./src/joystick/virtual;./src/audio/dummy;./src/video/dummy;./src/sensor/dummy;
+.c: ./src/core/os2;./src/core/os2/geniconv;./src/audio/os2;./src/loadso/os2;./src/filesystem/os2;./src/joystick/os2;./src/thread/os2;./src/timer/os2;./src/video/os2;
+.c: ./src/locale/;./src/locale/unix;./src/misc;./src/misc/dummy;./src/joystick/hidapi;./src/hidapi
+
+all: $(DLLFILE) $(LIBFILE) .symbolic
+
+$(DLLFILE): $(OBJS) $(LIBM) $(LNKFILE)
+    @echo * Linking: $@
+    wlink @$(LNKFILE)
+
+$(LIBFILE): $(DLLFILE)
+    @echo * Creating LIB file: $@
+    wlib -q -b -n -c -pa -s -t -zld -ii -io $* $(DLLFILE)
+
+.c.obj:
+    wcc386 $(CFLAGS) -fo=$^@ $<
+
+SDL_syscond.obj: "src/thread/generic/SDL_syscond.c"
+    wcc386 $(CFLAGS) -fo=$^@ $<
+
+SDL_cpuinfo.obj: SDL_cpuinfo.c
+    wcc386 $(CFLAGS) -wcd=200 -fo=$^@ $<
+
+SDL_rwops.obj: SDL_rwops.c
+    wcc386 $(CFLAGS) -wcd=136 -fo=$^@ $<
+
+SDL_wave.obj: SDL_wave.c
+    wcc386 $(CFLAGS) -wcd=124 -fo=$^@ $<
+
+SDL_blendfillrect.obj: SDL_blendfillrect.c
+    wcc386 $(CFLAGS) -wcd=200 -fo=$^@ $<
+
+SDL_blendline.obj: SDL_blendline.c
+    wcc386 $(CFLAGS) -wcd=200 -fo=$^@ $<
+
+SDL_blendpoint.obj: SDL_blendpoint.c
+    wcc386 $(CFLAGS) -wcd=200 -fo=$^@ $<
+
+SDL_RLEaccel.obj: SDL_RLEaccel.c
+    wcc386 $(CFLAGS) -wcd=201 -fo=$^@ $<
+
+# c99 mode needed because of structs with flexible array members in libusb.h
+SDL_hidapi.obj: SDL_hidapi.c
+    wcc386 $(CFLAGS) -za99 -I"src/hidapi/hidapi" -fo=$^@ $<
+
+.c: ./src/libm;
+$(LIBM): $(MOBJS)
+    wlib -q -b -n -c -pa -s -t -zld -ii -io $@ $(MOBJS)
+
+$(LNKFILE):
+    @echo * Creating linker file: $@
+    @%create $@
+    @%append $@ SYSTEM os2v2_dll INITINSTANCE TERMINSTANCE
+    @%append $@ NAME $(DLLFILE)
+    @for %i in ($(OBJS)) do @%append $@ FILE %i
+    @for %i in ($(LIBS)) do @%append $@ LIB %i
+    @%append $@ OPTION QUIET
+    @%append $@ OPTION IMPF=$(LIBHOME)/$^&.exp
+    @%append $@ OPTION MAP=$(LIBHOME)/$^&.map
+    @%append $@ OPTION DESCRIPTION '@$#libsdl org:$(VERSION)$#@$(DESCRIPTION)'
+    @%append $@ OPTION ELIMINATE
+    @%append $@ OPTION MANYAUTODATA
+    @%append $@ OPTION OSNAME='OS/2 and eComStation'
+    @%append $@ OPTION SHOWDEAD
+
+clean: .SYMBOLIC
+    @ echo * Clean: $(LIBNAME)
+    @if exist *.obj rm *.obj
+    @if exist *.err rm *.err
+    @if exist $(LNKFILE) rm $(LNKFILE)
+    @if exist $(LIBM) rm $(LIBM)
+
+distclean: .SYMBOLIC clean
+    @if exist $(LIBHOME)/*.exp rm $(LIBHOME)/*.exp
+    @if exist $(LIBHOME)/*.map rm $(LIBHOME)/*.map
+    @if exist $(LIBFILE) rm $(LIBFILE)
+    @if exist $(DLLFILE) rm $(DLLFILE)

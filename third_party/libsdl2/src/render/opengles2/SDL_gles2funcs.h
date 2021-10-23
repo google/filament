@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -41,7 +41,6 @@ SDL_PROC(void, glEnableVertexAttribArray, (GLuint))
 SDL_PROC(void, glFinish, (void))
 SDL_PROC(void, glGenFramebuffers, (GLsizei, GLuint *))
 SDL_PROC(void, glGenTextures, (GLsizei, GLuint *))
-SDL_PROC(void, glGetBooleanv, (GLenum, GLboolean *))
 SDL_PROC(const GLubyte *, glGetString, (GLenum))
 SDL_PROC(GLenum, glGetError, (void))
 SDL_PROC(void, glGetIntegerv, (GLenum, GLint *))
@@ -54,7 +53,7 @@ SDL_PROC(void, glPixelStorei, (GLenum, GLint))
 SDL_PROC(void, glReadPixels, (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid*))
 SDL_PROC(void, glScissor, (GLint, GLint, GLsizei, GLsizei))
 SDL_PROC(void, glShaderBinary, (GLsizei, const GLuint *, GLenum, const void *, GLsizei))
-#if __NACL__ || __ANDROID__
+#if __NACL__
 SDL_PROC(void, glShaderSource, (GLuint, GLsizei, const GLchar **, const GLint *))
 #else
 SDL_PROC(void, glShaderSource, (GLuint, GLsizei, const GLchar* const*, const GLint *))
@@ -75,6 +74,7 @@ SDL_PROC(void, glDeleteFramebuffers, (GLsizei, const GLuint *))
 SDL_PROC(GLint, glGetAttribLocation, (GLuint, const GLchar *))
 SDL_PROC(void, glGetProgramInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*))
 SDL_PROC(void, glGenBuffers, (GLsizei, GLuint *))
+SDL_PROC(void, glDeleteBuffers, (GLsizei, const GLuint *))
 SDL_PROC(void, glBindBuffer, (GLenum, GLuint))
 SDL_PROC(void, glBufferData, (GLenum, GLsizeiptr, const GLvoid *, GLenum))
 SDL_PROC(void, glBufferSubData, (GLenum, GLintptr, GLsizeiptr, const GLvoid *))

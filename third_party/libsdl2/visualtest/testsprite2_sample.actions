@@ -1,0 +1,3 @@
+00:00:02 SCREENSHOT # Take a screenshot of each window owned by the SUT process
+00:00:05 VERIFY # Verify each screenshot taken with verification images
+00:00:10 QUIT # Gracefully quit the SUT process

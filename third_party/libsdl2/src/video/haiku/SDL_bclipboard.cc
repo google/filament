@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -35,55 +35,55 @@
 extern "C" {
 #endif
 
-int BE_SetClipboardText(_THIS, const char *text) {
-	BMessage *clip = NULL;
-	if(be_clipboard->Lock()) {
-		be_clipboard->Clear();
-		if((clip = be_clipboard->Data())) {
-			/* Presumably the string of characters is ascii-format */
-			ssize_t asciiLength = 0;
-			for(; text[asciiLength] != 0; ++asciiLength) {}
-			clip->AddData("text/plain", B_MIME_TYPE, text, asciiLength);
-			be_clipboard->Commit();
-		}
-		be_clipboard->Unlock();
-	}
-	return 0;
+int HAIKU_SetClipboardText(_THIS, const char *text) {
+    BMessage *clip = NULL;
+    if(be_clipboard->Lock()) {
+        be_clipboard->Clear();
+        if((clip = be_clipboard->Data())) {
+            /* Presumably the string of characters is ascii-format */
+            ssize_t asciiLength = 0;
+            for(; text[asciiLength] != 0; ++asciiLength) {}
+            clip->AddData("text/plain", B_MIME_TYPE, text, asciiLength);
+            be_clipboard->Commit();
+        }
+        be_clipboard->Unlock();
+    }
+    return 0;
 }
 
-char *BE_GetClipboardText(_THIS) {
-	BMessage *clip = NULL;
-	const char *text = NULL;	
-	ssize_t length;
-	char *result;
-	if(be_clipboard->Lock()) {
-		if((clip = be_clipboard->Data())) {
-			/* Presumably the string of characters is ascii-format */
-			clip->FindData("text/plain", B_MIME_TYPE, (const void**)&text,
-				&length);
-		}
-		be_clipboard->Unlock();
-	} 
-	
-	if (!text) {
-		result = SDL_strdup("");
-	} else {
-		/* Copy the data and pass on to SDL */
-		result = (char *)SDL_malloc((length + 1) * sizeof(char));
-		SDL_strlcpy(result, text, length + 1);
-	}
-	
-	return result;
+char *HAIKU_GetClipboardText(_THIS) {
+    BMessage *clip = NULL;
+    const char *text = NULL;    
+    ssize_t length;
+    char *result;
+    if(be_clipboard->Lock()) {
+        if((clip = be_clipboard->Data())) {
+            /* Presumably the string of characters is ascii-format */
+            clip->FindData("text/plain", B_MIME_TYPE, (const void**)&text,
+                &length);
+        }
+        be_clipboard->Unlock();
+    } 
+    
+    if (!text) {
+        result = SDL_strdup("");
+    } else {
+        /* Copy the data and pass on to SDL */
+        result = (char *)SDL_malloc((length + 1) * sizeof(char));
+        SDL_strlcpy(result, text, length + 1);
+    }
+    
+    return result;
 }
 
-SDL_bool BE_HasClipboardText(_THIS) {
-	SDL_bool result = SDL_FALSE;
-	char *text = BE_GetClipboardText(_this);
-	if (text) {
-		result = text[0] != '\0' ? SDL_TRUE : SDL_FALSE;
-		SDL_free(text);
-	} 
-	return result;
+SDL_bool HAIKU_HasClipboardText(_THIS) {
+    SDL_bool result = SDL_FALSE;
+    char *text = HAIKU_GetClipboardText(_this);
+    if (text) {
+        result = text[0] != '\0' ? SDL_TRUE : SDL_FALSE;
+        SDL_free(text);
+    } 
+    return result;
 }
 
 #ifdef __cplusplus

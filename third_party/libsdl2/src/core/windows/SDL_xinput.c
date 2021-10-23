@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,6 @@
 */
 #include "../../SDL_internal.h"
 
-#include "SDL_assert.h"
 #include "SDL_xinput.h"
 
 
@@ -82,18 +81,22 @@ WIN_LoadXInputDLL(void)
         return 0;  /* already loaded */
     }
 
+    /* NOTE: Don't load XinputUap.dll
+     * This is XInput emulation over Windows.Gaming.Input, and has all the
+     * limitations of that API (no devices at startup, no background input, etc.)
+     */
     version = (1 << 16) | 4;
-    s_pXInputDLL = LoadLibrary(L"XInput1_4.dll");  /* 1.4 Ships with Windows 8. */
+    s_pXInputDLL = LoadLibrary(TEXT("XInput1_4.dll"));  /* 1.4 Ships with Windows 8. */
     if (!s_pXInputDLL) {
         version = (1 << 16) | 3;
-        s_pXInputDLL = LoadLibrary(L"XInput1_3.dll");  /* 1.3 can be installed as a redistributable component. */
+        s_pXInputDLL = LoadLibrary(TEXT("XInput1_3.dll"));  /* 1.3 can be installed as a redistributable component. */
     }
     if (!s_pXInputDLL) {
-        s_pXInputDLL = LoadLibrary(L"bin\\XInput1_3.dll");
+        s_pXInputDLL = LoadLibrary(TEXT("bin\\XInput1_3.dll"));
     }
     if (!s_pXInputDLL) {
         /* "9.1.0" Ships with Vista and Win7, and is more limited than 1.3+ (e.g. XInputGetStateEx is not available.)  */
-        s_pXInputDLL = LoadLibrary(L"XInput9_1_0.dll");
+        s_pXInputDLL = LoadLibrary(TEXT("XInput9_1_0.dll"));
     }
     if (!s_pXInputDLL) {
         return -1;

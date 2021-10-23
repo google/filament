@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+   Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
    This software is provided 'as-is', without any express or implied
    warranty.  In no event will the authors be held liable for any damages
@@ -29,7 +29,7 @@ SDL_Surface *surface;
 int done;
 
 void
-DrawChessBoard(SDL_Renderer * renderer)
+DrawChessBoard()
 {
     int row = 0,column = 0,x = 0;
     SDL_Rect rect, darea;
@@ -90,7 +90,7 @@ loop()
         }
     }
 
-    DrawChessBoard(renderer);
+    DrawChessBoard();
 
     /* Got everything on rendering surface,
        now Update the drawing image on window screen */

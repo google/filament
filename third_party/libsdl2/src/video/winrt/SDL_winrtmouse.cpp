@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -34,12 +34,10 @@ using Windows::UI::Core::CoreCursor;
  * SDL includes:
  */
 extern "C" {
-#include "SDL_assert.h"
 #include "../../events/SDL_mouse_c.h"
 #include "../../events/SDL_touch_c.h"
 #include "../SDL_sysvideo.h"
 #include "SDL_events.h"
-#include "SDL_log.h"
 }
 
 #include "../../core/winrt/SDL_winrtapp_direct3d.h"

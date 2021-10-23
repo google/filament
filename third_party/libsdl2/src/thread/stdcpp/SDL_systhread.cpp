@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -26,7 +26,6 @@ extern "C" {
 #include "SDL_thread.h"
 #include "../SDL_thread_c.h"
 #include "../SDL_systhread.h"
-#include "SDL_log.h"
 }
 
 #include <mutex>
@@ -40,16 +39,16 @@ extern "C" {
 static void
 RunThread(void *args)
 {
-    SDL_RunThread(args);
+    SDL_RunThread((SDL_Thread *) args);
 }
 
 extern "C"
 int
-SDL_SYS_CreateThread(SDL_Thread * thread, void *args)
+SDL_SYS_CreateThread(SDL_Thread * thread)
 {
     try {
         // !!! FIXME: no way to set a thread stack size here.
-        std::thread cpp_thread(RunThread, args);
+        std::thread cpp_thread(RunThread, thread);
         thread->handle = (void *) new std::thread(std::move(cpp_thread));
         return 0;
     } catch (std::system_error & ex) {
@@ -96,19 +95,30 @@ extern "C"
 int
 SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 {
-    // Thread priorities do not look to be settable via C++11's thread
-    // interface, at least as of this writing (Nov 2012).  std::thread does
-    // provide access to the OS' native handle, however, and some form of
-    // priority-setting could, in theory, be done through this interface.
-    //
-    // WinRT: UPDATE (Aug 20, 2013): thread priorities cannot be changed
-    // on WinRT, at least not for any thread that's already been created.
-    // WinRT threads appear to be based off of the WinRT class,
-    // ThreadPool, more info on which can be found at:
-    // http://msdn.microsoft.com/en-us/library/windows/apps/windows.system.threading.threadpool.aspx
-    //
-    // For compatibility sake, 0 will be returned here.
-    return (0);
+#ifdef __WINRT__
+    int value;
+
+    if (priority == SDL_THREAD_PRIORITY_LOW) {
+        value = THREAD_PRIORITY_LOWEST;
+    }
+    else if (priority == SDL_THREAD_PRIORITY_HIGH) {
+        value = THREAD_PRIORITY_HIGHEST;
+    }
+    else if (priority == SDL_THREAD_PRIORITY_TIME_CRITICAL) {
+        // FIXME: WinRT does not support TIME_CRITICAL! -flibit
+        SDL_LogWarn(SDL_LOG_CATEGORY_SYSTEM, "TIME_CRITICAL unsupported, falling back to HIGHEST");
+        value = THREAD_PRIORITY_HIGHEST;
+    }
+    else {
+        value = THREAD_PRIORITY_NORMAL;
+    }
+    if (!SetThreadPriority(GetCurrentThread(), value)) {
+        return WIN_SetError("SetThreadPriority()");
+    }
+    return 0;
+#else
+    return SDL_Unsupported();
+#endif
 }
 
 extern "C"

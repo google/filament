@@ -23,6 +23,8 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
+option(FILAMENT_SUPPORTS_WAYLAND "Include Wayland support in Linux builds" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -100,6 +102,14 @@ if (LINUX)
 
     if (FILAMENT_SUPPORTS_XLIB)
         add_definitions(-DFILAMENT_SUPPORTS_XLIB)
+    endif()
+
+    if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
+        add_definitions(-DFILAMENT_SUPPORTS_X11)
+    endif()
+
+    if (FILAMENT_SUPPORTS_WAYLAND)
+        add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
     endif()
 endif()
 
@@ -239,16 +249,15 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CXX_STANDARD "-std=c++17")
-if (WIN32)
-    set(CXX_STANDARD "/std:c++17")
-endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_EXTENSIONS FALSE)
 
 if (MSVC)
     set(CXX_STANDARD "/std:c++latest")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0 /Zc:__cplusplus")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 
 if (FILAMENT_USE_EXTERNAL_GLES3)
@@ -650,7 +659,6 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    add_subdirectory(${LIBRARIES}/bluevk)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
 endif()
 
@@ -694,6 +702,10 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/rgb-to-lmsr)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
+endif()
+
+if (FILAMENT_SUPPORTS_VULKAN)
+    add_subdirectory(${LIBRARIES}/bluevk)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)

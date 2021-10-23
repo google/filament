@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,7 +20,7 @@
 */
 #include "../../SDL_internal.h"
 
-#if !SDL_RENDER_DISABLED
+#if SDL_VIDEO_RENDER_SW && !SDL_RENDER_DISABLED
 
 #include "SDL_draw.h"
 #include "SDL_blendfillrect.h"
@@ -41,6 +41,9 @@ SDL_BlendFillRect_RGB555(SDL_Surface * dst, const SDL_Rect * rect,
         break;
     case SDL_BLENDMODE_MOD:
         FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB555);
+        break;
+    case SDL_BLENDMODE_MUL:
+        FILLRECT(Uint16, DRAW_SETPIXEL_MUL_RGB555);
         break;
     default:
         FILLRECT(Uint16, DRAW_SETPIXEL_RGB555);
@@ -65,6 +68,9 @@ SDL_BlendFillRect_RGB565(SDL_Surface * dst, const SDL_Rect * rect,
     case SDL_BLENDMODE_MOD:
         FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB565);
         break;
+    case SDL_BLENDMODE_MUL:
+        FILLRECT(Uint16, DRAW_SETPIXEL_MUL_RGB565);
+        break;
     default:
         FILLRECT(Uint16, DRAW_SETPIXEL_RGB565);
         break;
@@ -88,6 +94,9 @@ SDL_BlendFillRect_RGB888(SDL_Surface * dst, const SDL_Rect * rect,
     case SDL_BLENDMODE_MOD:
         FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGB888);
         break;
+    case SDL_BLENDMODE_MUL:
+        FILLRECT(Uint32, DRAW_SETPIXEL_MUL_RGB888);
+        break;
     default:
         FILLRECT(Uint32, DRAW_SETPIXEL_RGB888);
         break;
@@ -110,6 +119,9 @@ SDL_BlendFillRect_ARGB8888(SDL_Surface * dst, const SDL_Rect * rect,
         break;
     case SDL_BLENDMODE_MOD:
         FILLRECT(Uint32, DRAW_SETPIXEL_MOD_ARGB8888);
+        break;
+    case SDL_BLENDMODE_MUL:
+        FILLRECT(Uint32, DRAW_SETPIXEL_MUL_ARGB8888);
         break;
     default:
         FILLRECT(Uint32, DRAW_SETPIXEL_ARGB8888);
@@ -137,6 +149,9 @@ SDL_BlendFillRect_RGB(SDL_Surface * dst, const SDL_Rect * rect,
         case SDL_BLENDMODE_MOD:
             FILLRECT(Uint16, DRAW_SETPIXEL_MOD_RGB);
             break;
+        case SDL_BLENDMODE_MUL:
+            FILLRECT(Uint16, DRAW_SETPIXEL_MUL_RGB);
+            break;
         default:
             FILLRECT(Uint16, DRAW_SETPIXEL_RGB);
             break;
@@ -152,6 +167,9 @@ SDL_BlendFillRect_RGB(SDL_Surface * dst, const SDL_Rect * rect,
             break;
         case SDL_BLENDMODE_MOD:
             FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGB);
+            break;
+        case SDL_BLENDMODE_MUL:
+            FILLRECT(Uint32, DRAW_SETPIXEL_MUL_RGB);
             break;
         default:
             FILLRECT(Uint32, DRAW_SETPIXEL_RGB);
@@ -181,6 +199,9 @@ SDL_BlendFillRect_RGBA(SDL_Surface * dst, const SDL_Rect * rect,
             break;
         case SDL_BLENDMODE_MOD:
             FILLRECT(Uint32, DRAW_SETPIXEL_MOD_RGBA);
+            break;
+        case SDL_BLENDMODE_MUL:
+            FILLRECT(Uint32, DRAW_SETPIXEL_MUL_RGBA);
             break;
         default:
             FILLRECT(Uint32, DRAW_SETPIXEL_RGBA);
@@ -331,6 +352,6 @@ SDL_BlendFillRects(SDL_Surface * dst, const SDL_Rect * rects, int count,
     return status;
 }
 
-#endif /* !SDL_RENDER_DISABLED */
+#endif /* SDL_VIDEO_RENDER_SW && !SDL_RENDER_DISABLED */
 
 /* vi: set ts=4 sw=4 expandtab: */

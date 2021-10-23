@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -93,7 +93,7 @@ main(int argc, char **argv)
     SDL_WriteLE32(io, 0x45564157);      /* WAVE */
     SDL_WriteLE32(io, 0x20746D66);      /* fmt */
     SDL_WriteLE32(io, 16);      /* chunk size */
-    SDL_WriteLE16(io, 1);       /* uncompressed */
+    SDL_WriteLE16(io, SDL_AUDIO_ISFLOAT(spec.format) ? 3 : 1);       /* uncompressed */
     SDL_WriteLE16(io, cvtchans);   /* channels */
     SDL_WriteLE32(io, cvtfreq); /* sample rate */
     SDL_WriteLE32(io, avgbytes);        /* average bytes per second */

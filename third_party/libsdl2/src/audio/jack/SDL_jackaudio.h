@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,7 +33,6 @@ struct SDL_PrivateAudioData
     jack_client_t *client;
     SDL_sem *iosem;
     float *iobuffer;
-    const char **devports;
     jack_port_t **sdlports;
 };
 

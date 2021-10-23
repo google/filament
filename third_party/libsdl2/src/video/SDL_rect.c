@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -22,7 +22,6 @@
 
 #include "SDL_rect.h"
 #include "SDL_rect_c.h"
-#include "SDL_assert.h"
 
 SDL_bool
 SDL_HasIntersection(const SDL_Rect * A, const SDL_Rect * B)

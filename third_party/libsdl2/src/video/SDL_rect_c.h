@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,8 +18,14 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef SDL_rect_c_h_
+#define SDL_rect_c_h_
+
 #include "../SDL_internal.h"
 
 extern SDL_bool SDL_GetSpanEnclosingRect(int width, int height, int numrects, const SDL_Rect * rects, SDL_Rect *span);
+
+#endif /* SDL_rect_c_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */

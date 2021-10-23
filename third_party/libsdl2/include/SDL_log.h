@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -61,7 +61,7 @@ extern "C" {
  *  at the VERBOSE level and all other categories are enabled at the
  *  CRITICAL level.
  */
-enum
+typedef enum
 {
     SDL_LOG_CATEGORY_APPLICATION,
     SDL_LOG_CATEGORY_ERROR,
@@ -94,7 +94,7 @@ enum
        };
      */
     SDL_LOG_CATEGORY_CUSTOM
-};
+} SDL_LogCategory;
 
 /**
  *  \brief The predefined log priorities
@@ -112,90 +112,255 @@ typedef enum
 
 
 /**
- *  \brief Set the priority of all log categories
+ * Set the priority of all log categories.
+ *
+ * \param priority the SDL_LogPriority to assign
+ *
+ * \sa SDL_LogSetPriority
  */
 extern DECLSPEC void SDLCALL SDL_LogSetAllPriority(SDL_LogPriority priority);
 
 /**
- *  \brief Set the priority of a particular log category
+ * Set the priority of a particular log category.
+ *
+ * \param category the category to assign a priority to
+ * \param priority the SDL_LogPriority to assign
+ *
+ * \sa SDL_LogGetPriority
+ * \sa SDL_LogSetAllPriority
  */
 extern DECLSPEC void SDLCALL SDL_LogSetPriority(int category,
                                                 SDL_LogPriority priority);
 
 /**
- *  \brief Get the priority of a particular log category
+ * Get the priority of a particular log category.
+ *
+ * \param category the category to query
+ * \returns the SDL_LogPriority for the requested category
+ *
+ * \sa SDL_LogSetPriority
  */
 extern DECLSPEC SDL_LogPriority SDLCALL SDL_LogGetPriority(int category);
 
 /**
- *  \brief Reset all priorities to default.
+ * Reset all priorities to default.
  *
- *  \note This is called in SDL_Quit().
+ * This is called by SDL_Quit().
+ *
+ * \sa SDL_LogSetAllPriority
+ * \sa SDL_LogSetPriority
  */
 extern DECLSPEC void SDLCALL SDL_LogResetPriorities(void);
 
 /**
- *  \brief Log a message with SDL_LOG_CATEGORY_APPLICATION and SDL_LOG_PRIORITY_INFO
+ * Log a message with SDL_LOG_CATEGORY_APPLICATION and SDL_LOG_PRIORITY_INFO.
+ *
+ * = * \param fmt a printf() style message format string
+ *
+ * \param ... additional parameters matching % tokens in the `fmt` string, if
+ *            any
+ *
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_Log(SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(1);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_VERBOSE
+ * Log a message with SDL_LOG_PRIORITY_VERBOSE.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogVerbose(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_DEBUG
+ * Log a message with SDL_LOG_PRIORITY_DEBUG.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogDebug(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_INFO
+ * Log a message with SDL_LOG_PRIORITY_INFO.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogInfo(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_WARN
+ * Log a message with SDL_LOG_PRIORITY_WARN.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
  */
 extern DECLSPEC void SDLCALL SDL_LogWarn(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_ERROR
+ * Log a message with SDL_LOG_PRIORITY_ERROR.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogError(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with SDL_LOG_PRIORITY_CRITICAL
+ * Log a message with SDL_LOG_PRIORITY_CRITICAL.
+ *
+ * \param category the category of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogCritical(int category, SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(2);
 
 /**
- *  \brief Log a message with the specified category and priority.
+ * Log a message with the specified category and priority.
+ *
+ * \param category the category of the message
+ * \param priority the priority of the message
+ * \param fmt a printf() style message format string
+ * \param ... additional parameters matching % tokens in the **fmt** string,
+ *            if any
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessageV
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogMessage(int category,
                                             SDL_LogPriority priority,
                                             SDL_PRINTF_FORMAT_STRING const char *fmt, ...) SDL_PRINTF_VARARG_FUNC(3);
 
 /**
- *  \brief Log a message with the specified category and priority.
+ * Log a message with the specified category and priority.
+ *
+ * \param category the category of the message
+ * \param priority the priority of the message
+ * \param fmt a printf() style message format string
+ * \param ap a variable argument list
+ *
+ * \since This function is available since SDL 2.0.0.
+ *
+ * \sa SDL_Log
+ * \sa SDL_LogCritical
+ * \sa SDL_LogDebug
+ * \sa SDL_LogError
+ * \sa SDL_LogInfo
+ * \sa SDL_LogMessage
+ * \sa SDL_LogVerbose
+ * \sa SDL_LogWarn
  */
 extern DECLSPEC void SDLCALL SDL_LogMessageV(int category,
                                              SDL_LogPriority priority,
                                              const char *fmt, va_list ap);
 
 /**
- *  \brief The prototype for the log output function
+ * The prototype for the log output callback function.
+ *
+ * This function is called by SDL when there is new text to be logged.
+ *
+ * \param userdata what was passed as `userdata` to SDL_LogSetOutputFunction()
+ * \param category the category of the message
+ * \param priority the priority of the message
+ * \param message the message being output
  */
 typedef void (SDLCALL *SDL_LogOutputFunction)(void *userdata, int category, SDL_LogPriority priority, const char *message);
 
 /**
- *  \brief Get the current log output function.
+ * Get the current log output function.
+ *
+ * \param callback an SDL_LogOutputFunction filled in with the current log
+ *                 callback
+ * \param userdata a pointer filled in with the pointer that is passed to
+ *                 `callback`
+ *
+ * \sa SDL_LogSetOutputFunction
  */
 extern DECLSPEC void SDLCALL SDL_LogGetOutputFunction(SDL_LogOutputFunction *callback, void **userdata);
 
 /**
- *  \brief This function allows you to replace the default log output
- *         function with one of your own.
+ * Replace the default log output function with one of your own.
+ *
+ * \param callback an SDL_LogOutputFunction to call instead of the default
+ * \param userdata a pointer that is passed to `callback`
+ *
+ * \sa SDL_LogGetOutputFunction
  */
 extern DECLSPEC void SDLCALL SDL_LogSetOutputFunction(SDL_LogOutputFunction callback, void *userdata);
 

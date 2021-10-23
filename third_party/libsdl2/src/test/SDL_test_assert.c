@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -36,10 +36,10 @@
 #define SDLTEST_ASSERT_SUMMARY_FORMAT "Assert Summary: Total=%d Passed=%d Failed=%d"
 
 /* ! \brief counts the failed asserts */
-static Uint32 SDLTest_AssertsFailed = 0;
+static int SDLTest_AssertsFailed = 0;
 
 /* ! \brief counts the passed asserts */
-static Uint32 SDLTest_AssertsPassed = 0;
+static int SDLTest_AssertsPassed = 0;
 
 /*
  *  Assert that logs and break execution flow on failures (i.e. for harness errors).
@@ -122,7 +122,7 @@ void SDLTest_ResetAssertSummary()
  */
 void SDLTest_LogAssertSummary()
 {
-    Uint32 totalAsserts = SDLTest_AssertsPassed + SDLTest_AssertsFailed;
+    int totalAsserts = SDLTest_AssertsPassed + SDLTest_AssertsFailed;
     if (SDLTest_AssertsFailed == 0)
     {
         SDLTest_Log(SDLTEST_ASSERT_SUMMARY_FORMAT, totalAsserts, SDLTest_AssertsPassed, SDLTest_AssertsFailed);

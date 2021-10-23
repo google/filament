@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,12 +20,17 @@
 */
 
 #include "../../SDL_internal.h"
+#include "SDL_stdinc.h"
 
 #ifndef SDL_waylandvideo_h_
 #define SDL_waylandvideo_h_
 
 #include <EGL/egl.h>
 #include "wayland-util.h"
+
+#include "../SDL_sysvideo.h"
+#include "../../core/linux/SDL_dbus.h"
+#include "../../core/linux/SDL_ime.h"
 
 struct xkb_context;
 struct SDL_WaylandInput;
@@ -38,19 +43,26 @@ struct qt_windowmanager;
 
 typedef struct {
     struct wl_display *display;
+    int display_disconnected;
     struct wl_registry *registry;
     struct wl_compositor *compositor;
     struct wl_shm *shm;
     struct wl_cursor_theme *cursor_theme;
     struct wl_pointer *pointer;
     struct {
-        /* !!! FIXME: add stable xdg_shell from 1.12 */
-        struct zxdg_shell_v6 *zxdg;
-        struct wl_shell *wl;
+        struct xdg_wm_base *xdg;
+#ifdef HAVE_LIBDECOR_H
+        struct libdecor *libdecor;
+#endif
     } shell;
     struct zwp_relative_pointer_manager_v1 *relative_pointer_manager;
     struct zwp_pointer_constraints_v1 *pointer_constraints;
     struct wl_data_device_manager *data_device_manager;
+    struct zxdg_decoration_manager_v1 *decoration_manager;
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *key_inhibitor_manager;
+    struct zwp_idle_inhibit_manager_v1 *idle_inhibit_manager;
+    struct xdg_activation_v1 *activation_manager;
+    struct zwp_text_input_manager_v3 *text_input_manager;
 
     EGLDisplay edpy;
     EGLContext context;
@@ -69,6 +81,24 @@ typedef struct {
 
     int relative_mouse_mode;
 } SDL_VideoData;
+
+typedef struct {
+    struct wl_output *output;
+    float scale_factor;
+    int x, y, width, height, refresh, transform;
+    int physical_width, physical_height;
+    float ddpi, hdpi, vdpi;
+    SDL_VideoDisplay placeholder;
+    SDL_bool done;
+} SDL_WaylandOutputData;
+
+/* Needed here to get wl_surface declaration, fixes GitHub#4594 */
+#include "SDL_waylanddyn.h"
+
+extern void SDL_WAYLAND_register_surface(struct wl_surface *surface);
+extern void SDL_WAYLAND_register_output(struct wl_output *output);
+extern SDL_bool SDL_WAYLAND_own_surface(struct wl_surface *surface);
+extern SDL_bool SDL_WAYLAND_own_output(struct wl_output *output);
 
 #endif /* SDL_waylandvideo_h_ */
 

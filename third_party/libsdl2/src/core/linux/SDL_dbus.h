@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -39,9 +39,8 @@ typedef struct SDL_DBusContext {
     void (*bus_add_match)(DBusConnection *, const char *, DBusError *);
     DBusConnection * (*connection_open_private)(const char *, DBusError *);
     void (*connection_set_exit_on_disconnect)(DBusConnection *, dbus_bool_t);
-    dbus_bool_t (*connection_get_is_connected)(DBusConnection *); 	
-    dbus_bool_t (*connection_add_filter)(DBusConnection *, DBusHandleMessageFunction,
-	    void *, DBusFreeFunction);
+    dbus_bool_t (*connection_get_is_connected)(DBusConnection *);
+    dbus_bool_t (*connection_add_filter)(DBusConnection *, DBusHandleMessageFunction, void *, DBusFreeFunction);
     dbus_bool_t (*connection_try_register_object_path)(DBusConnection *, const char *,
         const DBusObjectPathVTable *, void *, DBusError *);
     dbus_bool_t (*connection_send)(DBusConnection *, DBusMessage *, dbus_uint32_t *);
@@ -51,18 +50,23 @@ typedef struct SDL_DBusContext {
     void (*connection_flush)(DBusConnection *);
     dbus_bool_t (*connection_read_write)(DBusConnection *, int);
     DBusDispatchStatus (*connection_dispatch)(DBusConnection *);
-    dbus_bool_t (*message_is_signal)(DBusMessage *, const char *, const char *); 	
+    dbus_bool_t (*message_is_signal)(DBusMessage *, const char *, const char *); 
     DBusMessage *(*message_new_method_call)(const char *, const char *, const char *, const char *);
     dbus_bool_t (*message_append_args)(DBusMessage *, int, ...);
     dbus_bool_t (*message_append_args_valist)(DBusMessage *, int, va_list);
+    void (*message_iter_init_append)(DBusMessage *, DBusMessageIter *);
+    dbus_bool_t (*message_iter_open_container)(DBusMessageIter *, int, const char *, DBusMessageIter *);
+    dbus_bool_t (*message_iter_append_basic)(DBusMessageIter *, int, const void *);
+    dbus_bool_t (*message_iter_close_container)(DBusMessageIter *, DBusMessageIter *);
     dbus_bool_t (*message_get_args)(DBusMessage *, DBusError *, int, ...);
     dbus_bool_t (*message_get_args_valist)(DBusMessage *, DBusError *, int, va_list);
     dbus_bool_t (*message_iter_init)(DBusMessage *, DBusMessageIter *);
     dbus_bool_t (*message_iter_next)(DBusMessageIter *);
     void (*message_iter_get_basic)(DBusMessageIter *, void *);
     int (*message_iter_get_arg_type)(DBusMessageIter *);
-    void (*message_iter_recurse)(DBusMessageIter *, DBusMessageIter *); 	 	
+    void (*message_iter_recurse)(DBusMessageIter *, DBusMessageIter *); 
     void (*message_unref)(DBusMessage *);
+    dbus_bool_t (*threads_init_default)(void);
     void (*error_init)(DBusError *);
     dbus_bool_t (*error_is_set)(const DBusError *);
     void (*error_free)(DBusError *);

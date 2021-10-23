@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -37,13 +37,8 @@
 #include "SDL_vivantevideo.h"
 #include "SDL_vivanteplatform.h"
 #include "SDL_vivanteopengles.h"
+#include "SDL_vivantevulkan.h"
 
-
-static int
-VIVANTE_Available(void)
-{
-    return 1;
-}
 
 static void
 VIVANTE_Destroy(SDL_VideoDevice * device)
@@ -109,6 +104,13 @@ VIVANTE_Create()
     device->GL_DeleteContext = VIVANTE_GLES_DeleteContext;
 #endif
 
+#if SDL_VIDEO_VULKAN
+    device->Vulkan_LoadLibrary = VIVANTE_Vulkan_LoadLibrary;
+    device->Vulkan_UnloadLibrary = VIVANTE_Vulkan_UnloadLibrary;
+    device->Vulkan_GetInstanceExtensions = VIVANTE_Vulkan_GetInstanceExtensions;
+    device->Vulkan_CreateSurface = VIVANTE_Vulkan_CreateSurface;
+#endif
+
     device->PumpEvents = VIVANTE_PumpEvents;
 
     return device;
@@ -117,7 +119,6 @@ VIVANTE_Create()
 VideoBootStrap VIVANTE_bootstrap = {
     "vivante",
     "Vivante EGL Video Driver",
-    VIVANTE_Available,
     VIVANTE_Create
 };
 
@@ -169,7 +170,7 @@ VIVANTE_AddVideoDisplays(_THIS)
     display.desktop_mode = current_mode;
     display.current_mode = current_mode;
     display.driverdata = data;
-    SDL_AddVideoDisplay(&display);
+    SDL_AddVideoDisplay(&display, SDL_FALSE);
     return 0;
 }
 

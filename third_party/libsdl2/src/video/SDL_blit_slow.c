@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -40,7 +40,7 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
     Uint32 dstpixel;
     Uint32 dstR, dstG, dstB, dstA;
     int srcy, srcx;
-    int posy, posx;
+    Uint32 posy, posx;
     int incy, incx;
     SDL_PixelFormat *src_fmt = info->src_fmt;
     SDL_PixelFormat *dst_fmt = info->dst_fmt;
@@ -49,30 +49,19 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
     Uint32 rgbmask = ~src_fmt->Amask;
     Uint32 ckey = info->colorkey & rgbmask;
 
-    srcy = 0;
-    posy = 0;
     incy = (info->src_h << 16) / info->dst_h;
     incx = (info->src_w << 16) / info->dst_w;
+    posy = incy / 2; /* start at the middle of pixel */
 
     while (info->dst_h--) {
         Uint8 *src = 0;
-        Uint8 *dst = (Uint8 *) info->dst;
+        Uint8 *dst = info->dst;
         int n = info->dst_w;
-        srcx = -1;
-        posx = 0x10000L;
-        while (posy >= 0x10000L) {
-            ++srcy;
-            posy -= 0x10000L;
-        }
+        posx = incx / 2; /* start at the middle of pixel */
+        srcy = posy >> 16;
         while (n--) {
-            if (posx >= 0x10000L) {
-                while (posx >= 0x10000L) {
-                    ++srcx;
-                    posx -= 0x10000L;
-                }
-                src =
-                    (info->src + (srcy * info->src_pitch) + (srcx * srcbpp));
-            }
+            srcx = posx >> 16;
+            src = (info->src + (srcy * info->src_pitch) + (srcx * srcbpp));
             if (src_fmt->Amask) {
                 DISEMBLE_RGBA(src, srcbpp, src_fmt, srcpixel, srcR, srcG,
                               srcB, srcA);
@@ -118,7 +107,7 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
                     srcB = (srcB * srcA) / 255;
                 }
             }
-            switch (flags & (SDL_COPY_BLEND | SDL_COPY_ADD | SDL_COPY_MOD)) {
+            switch (flags & (SDL_COPY_BLEND | SDL_COPY_ADD | SDL_COPY_MOD | SDL_COPY_MUL)) {
             case 0:
                 dstR = srcR;
                 dstG = srcG;
@@ -146,6 +135,20 @@ SDL_Blit_Slow(SDL_BlitInfo * info)
                 dstR = (srcR * dstR) / 255;
                 dstG = (srcG * dstG) / 255;
                 dstB = (srcB * dstB) / 255;
+                break;
+            case SDL_COPY_MUL:
+                dstR = ((srcR * dstR) + (dstR * (255 - srcA))) / 255;
+                if (dstR > 255)
+                    dstR = 255;
+                dstG = ((srcG * dstG) + (dstG * (255 - srcA))) / 255;
+                if (dstG > 255)
+                    dstG = 255;
+                dstB = ((srcB * dstB) + (dstB * (255 - srcA))) / 255;
+                if (dstB > 255)
+                    dstB = 255;
+                dstA = ((srcA * dstA) + (dstA * (255 - srcA))) / 255;
+                if (dstA > 255)
+                    dstA = 255;
                 break;
             }
             if (dst_fmt->Amask) {

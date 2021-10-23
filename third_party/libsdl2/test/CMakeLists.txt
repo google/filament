@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.0.0)
 project(SDL2 C)
 
 # Global settings for all of the test targets
@@ -13,7 +13,14 @@ if(WINDOWS)
     add_definitions(-Dmain=SDL_main)
 endif()
 
+find_package(OpenGL)
+
+if (OPENGL_FOUND)
+add_definitions(-DHAVE_OPENGL)
+endif()
+
 add_executable(checkkeys checkkeys.c)
+add_executable(checkkeysthreads checkkeysthreads.c)
 add_executable(loopwave loopwave.c)
 add_executable(loopwavequeue loopwavequeue.c)
 add_executable(testresample testresample.c)
@@ -86,37 +93,77 @@ add_executable(testbounds testbounds.c)
 add_executable(testcustomcursor testcustomcursor.c)
 add_executable(controllermap controllermap.c)
 add_executable(testvulkan testvulkan.c)
+add_executable(testoffscreen testoffscreen.c)
+
+if(OPENGL_FOUND)
+add_dependencies(testshader OpenGL::GL)
+add_dependencies(testgl2 OpenGL::GL)
+target_link_libraries(testshader OpenGL::GL)
+target_link_libraries(testgl2 OpenGL::GL)
+endif()
 
 # HACK: Dummy target to cause the resource files to be copied to the build directory.
 # Need to make it an executable so we can use the TARGET_FILE_DIR generator expression.
 # This is needed so they get copied to the correct Debug/Release subdirectory in Xcode.
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/resources_dummy.c "int main(int argc, const char **argv){ return 1; }\n")
-add_executable(SDL2_test_resoureces ${CMAKE_CURRENT_BINARY_DIR}/resources_dummy.c)
+add_executable(SDL2_test_resources ${CMAKE_CURRENT_BINARY_DIR}/resources_dummy.c)
 
-file(GLOB RESOURCE_FILES *.bmp *.wav)
+file(GLOB RESOURCE_FILES *.bmp *.wav *.hex moose.dat utf8.txt)
 foreach(RESOURCE_FILE ${RESOURCE_FILES})
-    add_custom_command(TARGET SDL2_test_resoureces POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${RESOURCE_FILE} $<TARGET_FILE_DIR:SDL2_test_resoureces>)
+    add_custom_command(TARGET SDL2_test_resources POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${RESOURCE_FILE} $<TARGET_FILE_DIR:SDL2_test_resources>)
 endforeach(RESOURCE_FILE)
 
 file(COPY ${RESOURCE_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # TODO: Might be easier to make all targets depend on the resources...?
-add_dependencies(testscale SDL2_test_resoureces)
-add_dependencies(testrendercopyex SDL2_test_resoureces)
-add_dependencies(controllermap SDL2_test_resoureces)
-add_dependencies(testyuv SDL2_test_resoureces)
-add_dependencies(testgamecontroller SDL2_test_resoureces)
-add_dependencies(testshape SDL2_test_resoureces)
-add_dependencies(testshader SDL2_test_resoureces)
-add_dependencies(testnative SDL2_test_resoureces)
-add_dependencies(testspriteminimal SDL2_test_resoureces)
-add_dependencies(testautomation SDL2_test_resoureces)
-add_dependencies(testcustomcursor SDL2_test_resoureces)
-add_dependencies(testrendertarget SDL2_test_resoureces)
-add_dependencies(testsprite2 SDL2_test_resoureces)
 
-add_dependencies(loopwave SDL2_test_resoureces)
-add_dependencies(loopwavequeue SDL2_test_resoureces)
-add_dependencies(testresample SDL2_test_resoureces)
-add_dependencies(testaudiohotplug SDL2_test_resoureces)
-add_dependencies(testmultiaudio SDL2_test_resoureces)
+set(NEEDS_RESOURCES
+    testscale
+    testrendercopyex
+    controllermap
+    testyuv
+    testgamecontroller
+    testshape
+    testshader
+    testnative
+    testspriteminimal
+    testautomation
+    testcustomcursor
+    testrendertarget
+    testsprite2
+    loopwave
+    loopwavequeue
+    testresample
+    testaudiohotplug
+    testmultiaudio
+)
+foreach(APP IN LISTS NEEDS_RESOURCES)
+    add_dependencies(${APP} SDL2_test_resources)
+    if(APPLE)
+        # Make sure resource files get installed into macOS/iOS .app bundles.  
+        target_sources(${APP} PRIVATE "${RESOURCE_FILES}")
+        set_target_properties(${APP} PROPERTIES RESOURCE "${RESOURCE_FILES}")
+    endif()
+endforeach()
+
+# Set Apple App ID / Bundle ID.  This is needed to launch apps on some Apple
+# platforms (iOS, for example).
+if(APPLE)
+    if(${CMAKE_VERSION} VERSION_LESS "3.7.0")
+        # CMake's 'BUILDSYSTEM_TARGETS' property is only available in
+        # CMake 3.7 and above.
+        message(WARNING "Unable to set Bundle ID for Apple .app builds due to old CMake (pre 3.7).")
+    else()
+        get_property(TARGETS DIRECTORY ${CMAKE_CURRENT_LIST_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+        foreach(CURRENT_TARGET IN LISTS TARGETS)
+            get_property(TARGET_TYPE TARGET ${CURRENT_TARGET} PROPERTY TYPE)
+            if(TARGET_TYPE STREQUAL "EXECUTABLE")
+                set_target_properties("${CURRENT_TARGET}" PROPERTIES
+                    MACOSX_BUNDLE_GUI_IDENTIFIER "org.libsdl.${CURRENT_TARGET}"
+                    MACOSX_BUNDLE_BUNDLE_VERSION "${SDL_VERSION}"
+                    MACOSX_BUNDLE_SHORT_VERSION_STRING "${SDL_VERSION}"
+                )
+            endif()
+        endforeach()
+    endif()
+endif()

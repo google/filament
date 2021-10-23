@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -25,11 +25,20 @@
 
 #include "SDL_touch.h"
 
+#if !TARGET_OS_TV && defined(__IPHONE_13_4)
+@interface SDL_uikitview : UIView <UIPointerInteractionDelegate>
+#else
 @interface SDL_uikitview : UIView
+#endif
 
 - (instancetype)initWithFrame:(CGRect)frame;
 
 - (void)setSDLWindow:(SDL_Window *)window;
+
+#if !TARGET_OS_TV && defined(__IPHONE_13_4)
+- (UIPointerRegion *)pointerInteraction:(UIPointerInteraction *)interaction regionForRequest:(UIPointerRegionRequest *)request defaultRegion:(UIPointerRegion *)defaultRegion API_AVAILABLE(ios(13.4));
+- (UIPointerStyle *)pointerInteraction:(UIPointerInteraction *)interaction styleForRegion:(UIPointerRegion *)region  API_AVAILABLE(ios(13.4));
+#endif
 
 - (CGPoint)touchLocation:(UITouch *)touch shouldNormalize:(BOOL)normalize;
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event;

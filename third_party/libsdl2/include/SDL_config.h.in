@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -33,7 +33,7 @@
 
 /* Make sure that this isn't included by Visual C++ */
 #ifdef _MSC_VER
-#error You should run hg revert SDL_config.h 
+#error You should run hg revert SDL_config.h
 #endif
 
 /* C language features */
@@ -42,11 +42,12 @@
 #undef volatile
 
 /* C datatypes */
-#ifdef __LP64__
+#if defined(__LP64__) || defined(_LP64) || defined(_WIN64)
 #define SIZEOF_VOIDP 8
 #else
 #define SIZEOF_VOIDP 4
 #endif
+
 #undef HAVE_GCC_ATOMICS
 #undef HAVE_GCC_SYNC_LOCK_TEST_AND_SET
 
@@ -99,7 +100,15 @@
 #undef HAVE_WCSLEN
 #undef HAVE_WCSLCPY
 #undef HAVE_WCSLCAT
+#undef HAVE__WCSDUP
+#undef HAVE_WCSDUP
+#undef HAVE_WCSSTR
 #undef HAVE_WCSCMP
+#undef HAVE_WCSNCMP
+#undef HAVE_WCSCASECMP
+#undef HAVE__WCSICMP
+#undef HAVE_WCSNCASECMP
+#undef HAVE__WCSNICMP
 #undef HAVE_STRLEN
 #undef HAVE_STRLCPY
 #undef HAVE_STRLCAT
@@ -111,6 +120,7 @@
 #undef HAVE_STRCHR
 #undef HAVE_STRRCHR
 #undef HAVE_STRSTR
+#undef HAVE_STRTOK_R
 #undef HAVE_ITOA
 #undef HAVE__LTOA
 #undef HAVE__UITOA
@@ -149,6 +159,8 @@
 #undef HAVE_COPYSIGNF
 #undef HAVE_COS
 #undef HAVE_COSF
+#undef HAVE_EXP
+#undef HAVE_EXPF
 #undef HAVE_FABS
 #undef HAVE_FABSF
 #undef HAVE_FLOOR
@@ -159,8 +171,12 @@
 #undef HAVE_LOGF
 #undef HAVE_LOG10
 #undef HAVE_LOG10F
+#undef HAVE_LROUND
+#undef HAVE_LROUNDF
 #undef HAVE_POW
 #undef HAVE_POWF
+#undef HAVE_ROUND
+#undef HAVE_ROUNDF
 #undef HAVE_SCALBN
 #undef HAVE_SCALBNF
 #undef HAVE_SIN
@@ -169,6 +185,8 @@
 #undef HAVE_SQRTF
 #undef HAVE_TAN
 #undef HAVE_TANF
+#undef HAVE_TRUNC
+#undef HAVE_TRUNCF
 #undef HAVE_FOPEN64
 #undef HAVE_FSEEKO
 #undef HAVE_FSEEKO64
@@ -186,27 +204,39 @@
 #undef HAVE_PTHREAD_SET_NAME_NP
 #undef HAVE_SEM_TIMEDWAIT
 #undef HAVE_GETAUXVAL
+#undef HAVE_ELF_AUX_INFO
 #undef HAVE_POLL
+#undef HAVE__EXIT
 
 #else
-#define HAVE_STDARG_H   1
-#define HAVE_STDDEF_H   1
-#define HAVE_STDINT_H   1
+#define HAVE_STDARG_H 1
+#define HAVE_STDDEF_H 1
+#define HAVE_STDINT_H 1
 #endif /* HAVE_LIBC */
 
 #undef HAVE_ALTIVEC_H
 #undef HAVE_DBUS_DBUS_H
-#undef HAVE_FCITX_FRONTEND_H
+#undef HAVE_FCITX
+#undef HAVE_SYS_INOTIFY_H
+#undef HAVE_INOTIFY_INIT
+#undef HAVE_INOTIFY_INIT1
+#undef HAVE_INOTIFY
 #undef HAVE_IBUS_IBUS_H
 #undef HAVE_IMMINTRIN_H
-#undef HAVE_LIBSAMPLERATE_H
 #undef HAVE_LIBUDEV_H
+#undef HAVE_LIBSAMPLERATE_H
+#undef HAVE_LIBDECOR_H
 
 #undef HAVE_DDRAW_H
 #undef HAVE_DINPUT_H
 #undef HAVE_DSOUND_H
 #undef HAVE_DXGI_H
 #undef HAVE_XINPUT_H
+
+#undef HAVE_MMDEVICEAPI_H
+#undef HAVE_AUDIOCLIENT_H
+#undef HAVE_SENSORSAPI_H
+
 #undef HAVE_XINPUT_GAMEPAD_EX
 #undef HAVE_XINPUT_STATE_EX
 
@@ -221,6 +251,7 @@
 #undef SDL_FILE_DISABLED
 #undef SDL_JOYSTICK_DISABLED
 #undef SDL_HAPTIC_DISABLED
+#undef SDL_SENSOR_DISABLED
 #undef SDL_LOADSO_DISABLED
 #undef SDL_RENDER_DISABLED
 #undef SDL_THREADS_DISABLED
@@ -254,6 +285,8 @@
 #undef SDL_AUDIO_DRIVER_OSS
 #undef SDL_AUDIO_DRIVER_OSS_SOUNDCARD_H
 #undef SDL_AUDIO_DRIVER_PAUDIO
+#undef SDL_AUDIO_DRIVER_PIPEWIRE
+#undef SDL_AUDIO_DRIVER_PIPEWIRE_DYNAMIC
 #undef SDL_AUDIO_DRIVER_PULSEAUDIO
 #undef SDL_AUDIO_DRIVER_PULSEAUDIO_DYNAMIC
 #undef SDL_AUDIO_DRIVER_QSA
@@ -262,22 +295,29 @@
 #undef SDL_AUDIO_DRIVER_SUNAUDIO
 #undef SDL_AUDIO_DRIVER_WASAPI
 #undef SDL_AUDIO_DRIVER_WINMM
+#undef SDL_AUDIO_DRIVER_OS2
 
 /* Enable various input drivers */
 #undef SDL_INPUT_LINUXEV
+#undef SDL_INPUT_FBSDKBIO
 #undef SDL_INPUT_LINUXKD
-#undef SDL_INPUT_TSLIB
+#undef SDL_INPUT_WSCONS
 #undef SDL_JOYSTICK_HAIKU
 #undef SDL_JOYSTICK_DINPUT
 #undef SDL_JOYSTICK_XINPUT
 #undef SDL_JOYSTICK_DUMMY
 #undef SDL_JOYSTICK_IOKIT
+#undef SDL_JOYSTICK_MFI
 #undef SDL_JOYSTICK_LINUX
 #undef SDL_JOYSTICK_ANDROID
 #undef SDL_JOYSTICK_WINMM
+#undef SDL_JOYSTICK_OS2
 #undef SDL_JOYSTICK_USBHID
-#undef SDL_JOYSTICK_USBHID_MACHINE_JOYSTICK_H
+#undef SDL_HAVE_MACHINE_JOYSTICK_H
+#undef SDL_JOYSTICK_HIDAPI
+#undef SDL_JOYSTICK_RAWINPUT
 #undef SDL_JOYSTICK_EMSCRIPTEN
+#undef SDL_JOYSTICK_VIRTUAL
 #undef SDL_HAPTIC_DUMMY
 #undef SDL_HAPTIC_ANDROID
 #undef SDL_HAPTIC_LINUX
@@ -285,23 +325,33 @@
 #undef SDL_HAPTIC_DINPUT
 #undef SDL_HAPTIC_XINPUT
 
+/* Enable various sensor drivers */
+#undef SDL_SENSOR_ANDROID
+#undef SDL_SENSOR_COREMOTION
+#undef SDL_SENSOR_WINDOWS
+#undef SDL_SENSOR_DUMMY
+
 /* Enable various shared object loading systems */
 #undef SDL_LOADSO_DLOPEN
 #undef SDL_LOADSO_DUMMY
 #undef SDL_LOADSO_LDG
 #undef SDL_LOADSO_WINDOWS
+#undef SDL_LOADSO_OS2
 
 /* Enable various threading systems */
+#undef SDL_THREAD_GENERIC_COND_SUFFIX
 #undef SDL_THREAD_PTHREAD
 #undef SDL_THREAD_PTHREAD_RECURSIVE_MUTEX
 #undef SDL_THREAD_PTHREAD_RECURSIVE_MUTEX_NP
 #undef SDL_THREAD_WINDOWS
+#undef SDL_THREAD_OS2
 
 /* Enable various timer systems */
 #undef SDL_TIMER_HAIKU
 #undef SDL_TIMER_DUMMY
 #undef SDL_TIMER_UNIX
 #undef SDL_TIMER_WINDOWS
+#undef SDL_TIMER_OS2
 
 /* Enable various video drivers */
 #undef SDL_VIDEO_DRIVER_HAIKU
@@ -316,9 +366,7 @@
 #undef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_EGL
 #undef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_CURSOR
 #undef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_XKBCOMMON
-#undef SDL_VIDEO_DRIVER_MIR
-#undef SDL_VIDEO_DRIVER_MIR_DYNAMIC
-#undef SDL_VIDEO_DRIVER_MIR_DYNAMIC_XKBCOMMON
+#undef SDL_VIDEO_DRIVER_WAYLAND_DYNAMIC_LIBDECOR
 #undef SDL_VIDEO_DRIVER_X11
 #undef SDL_VIDEO_DRIVER_RPI
 #undef SDL_VIDEO_DRIVER_KMSDRM
@@ -349,6 +397,7 @@
 #undef SDL_VIDEO_DRIVER_NACL
 #undef SDL_VIDEO_DRIVER_VIVANTE
 #undef SDL_VIDEO_DRIVER_VIVANTE_VDK
+#undef SDL_VIDEO_DRIVER_OS2
 #undef SDL_VIDEO_DRIVER_QNX
 
 #undef SDL_VIDEO_RENDER_D3D
@@ -374,6 +423,9 @@
 /* Enable Vulkan support */
 #undef SDL_VIDEO_VULKAN
 
+/* Enable Metal support */
+#undef SDL_VIDEO_METAL
+
 /* Enable system power support */
 #undef SDL_POWER_LINUX
 #undef SDL_POWER_WINDOWS
@@ -392,16 +444,22 @@
 #undef SDL_FILESYSTEM_NACL
 #undef SDL_FILESYSTEM_ANDROID
 #undef SDL_FILESYSTEM_EMSCRIPTEN
+#undef SDL_FILESYSTEM_OS2
 
 /* Enable assembly routines */
 #undef SDL_ASSEMBLY_ROUTINES
 #undef SDL_ALTIVEC_BLITTERS
+#undef SDL_ARM_SIMD_BLITTERS
+#undef SDL_ARM_NEON_BLITTERS
 
 /* Enable ime support */
 #undef SDL_USE_IME
 
 /* Enable dynamic udev support */
 #undef SDL_UDEV_DYNAMIC
+
+/* Enable dynamic libusb support */
+#undef SDL_LIBUSB_DYNAMIC
 
 /* Enable dynamic libsamplerate support */
 #undef SDL_LIBSAMPLERATE_DYNAMIC

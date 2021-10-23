@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2018 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2021 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -36,12 +36,9 @@
 #ifndef WS_OVERLAPPEDWINDOW
 #define WS_OVERLAPPEDWINDOW 0
 #endif
-#else  /* fprintf, _exit(), etc. */
+#else  /* fprintf, etc. */
 #include <stdio.h>
 #include <stdlib.h>
-#if ! defined(__WINRT__)
-#include <unistd.h>
-#endif
 #endif
 
 #if defined(__EMSCRIPTEN__)
@@ -120,20 +117,20 @@ static void SDL_GenerateAssertionReport(void)
 }
 
 
-static SDL_NORETURN void SDL_ExitProcess(int exitcode)
-{
-#ifdef __WIN32__
-    ExitProcess(exitcode);
-#elif defined(__EMSCRIPTEN__)
-    emscripten_cancel_main_loop();  /* this should "kill" the app. */
-    emscripten_force_exit(exitcode);  /* this should "kill" the app. */
-    exit(exitcode);
-#else
-    _exit(exitcode);
+/* This is not declared in any header, although it is shared between some
+    parts of SDL, because we don't want anything calling it without an
+    extremely good reason. */
+#if defined(__WATCOMC__)
+extern void SDL_ExitProcess(int exitcode);
+#pragma aux SDL_ExitProcess aborts;
 #endif
-}
+extern SDL_NORETURN void SDL_ExitProcess(int exitcode);
 
 
+#if defined(__WATCOMC__)
+static void SDL_AbortAssertion (void);
+#pragma aux SDL_AbortAssertion aborts;
+#endif
 static SDL_NORETURN void SDL_AbortAssertion(void)
 {
     SDL_Quit();
@@ -168,6 +165,7 @@ SDL_PromptAssertion(const SDL_assert_data *data, void *userdata)
 
     (void) userdata;  /* unused in default handler. */
 
+    /* !!! FIXME: why is this using SDL_stack_alloc and not just "char message[SDL_MAX_LOG_MESSAGE];" ? */
     message = SDL_stack_alloc(char, SDL_MAX_LOG_MESSAGE);
     if (!message) {
         /* Uh oh, we're in real trouble now... */
@@ -239,7 +237,7 @@ SDL_PromptAssertion(const SDL_assert_data *data, void *userdata)
             SDL_bool okay = SDL_TRUE;
             char *buf = (char *) EM_ASM_INT({
                 var str =
-                    Pointer_stringify($0) + '\n\n' +
+                    UTF8ToString($0) + '\n\n' +
                     'Abort/Retry/Ignore/AlwaysIgnore? [ariA] :';
                 var reply = window.prompt(str, "i");
                 if (reply === null) {
@@ -359,10 +357,6 @@ SDL_ReportAssertion(SDL_assert_data *data, const char *func, const char *file,
 
     switch (state)
     {
-        case SDL_ASSERTION_ABORT:
-            SDL_AbortAssertion();
-            return SDL_ASSERTION_IGNORE;  /* shouldn't return, but oh well. */
-
         case SDL_ASSERTION_ALWAYS_IGNORE:
             state = SDL_ASSERTION_IGNORE;
             data->always_ignore = 1;
@@ -372,6 +366,10 @@ SDL_ReportAssertion(SDL_assert_data *data, const char *func, const char *file,
         case SDL_ASSERTION_RETRY:
         case SDL_ASSERTION_BREAK:
             break;  /* macro handles these. */
+
+        case SDL_ASSERTION_ABORT:
+            SDL_AbortAssertion();
+            /*break;  ...shouldn't return, but oh well. */
     }
 
     assertion_running--;
