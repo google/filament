@@ -46,7 +46,12 @@
         #include "opengl/platforms/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkLinux.h"
+        #if defined (FILAMENT_SUPPORTS_X11)
+            #include "vulkan/PlatformVkLinuxX.h"
+        #endif
+        #if defined (FILAMENT_SUPPORTS_WAYLAND)
+            #include "vulkan/PlatformVkLinuxWayland.h"
+        #endif
     #endif
 #elif defined(WIN32)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
@@ -115,7 +120,11 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
             #elif defined(IOS)
                 return new PlatformVkCocoaTouch();
             #elif defined(__linux__)
-                return new PlatformVkLinux();
+                #if defined (FILAMENT_SUPPORTS_WAYLAND)
+                    return new PlatformVkLinuxWayland();
+                #elif defined (FILAMENT_SUPPORTS_X11)
+                    return new PlatformVkLinuxX();
+                #endif
             #elif defined(__APPLE__)
                 return new PlatformVkCocoa();
             #elif defined(WIN32)

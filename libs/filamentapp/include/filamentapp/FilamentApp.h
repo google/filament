@@ -185,6 +185,16 @@ private:
         filament::Renderer* mRenderer = nullptr;
         filament::Engine::Backend mBackend;
 
+        #if defined(FILAMENT_SUPPORTS_WAYLAND)
+            struct {
+                struct wl_display *display;             /**< Wayland display */
+                struct wl_surface *surface;             /**< Wayland surface */
+                void *shell_surface;                    /**< DEPRECATED Wayland shell_surface (window manager handle) */
+                struct wl_egl_window *egl_window;       /**< Wayland EGL window (native window) */
+                struct xdg_surface *xdg_surface;        /**< Wayland xdg surface (window manager handle) */
+            } mWayland;
+        #endif
+
         CameraManipulator* mMainCameraMan;
         CameraManipulator* mDebugCameraMan;
         filament::SwapChain* mSwapChain = nullptr;

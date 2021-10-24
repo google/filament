@@ -2729,7 +2729,7 @@ if(NOT (WINDOWS OR CYGWIN OR MINGW))
   endif()
   install(PROGRAMS ${SDL2_BINARY_DIR}/sdl2-config DESTINATION "${CMAKE_INSTALL_BINDIR}")
   # TODO: what about the .spec file? Is it only needed for RPM creation?
-  #install(FILES "${SDL2_SOURCE_DIR}/sdl2.m4" DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/aclocal")
+  install(FILES "${SDL2_SOURCE_DIR}/sdl2.m4" DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/aclocal")
 endif()
 
 ##### Uninstall target #####
