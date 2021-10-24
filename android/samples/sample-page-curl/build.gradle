@@ -1,5 +1,8 @@
-apply plugin: 'com.android.application'
-apply plugin: FilamentToolsPlugin
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'filament-tools-plugin'
+}
 
 project.ext.isSample = true
 
