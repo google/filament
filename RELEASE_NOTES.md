@@ -8,6 +8,9 @@ A new header is inserted each time a *tag* is created.
 ## v1.12.10
 
 - engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+- Java: fix missing ASTC texture enum.
+- tools: Fix normal map issues in mipgen.
+- WebGL: expose some `SurfaceOrientation` functions.
 
 ## v1.12.9
 
