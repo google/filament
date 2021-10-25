@@ -19,7 +19,9 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#if defined(FILAMENT_SUPPORTS_METAL)
 #include <CoreVideo/CoreVideo.h>
+#endif
 
 namespace {
 
@@ -132,6 +134,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     executeCommands();
 }
 
+#if defined(FILAMENT_SUPPORTS_METAL)
 TEST_F(BackendTest, RenderExternalImage) {
     TrianglePrimitive triangle(getDriverApi());
 
@@ -247,5 +250,6 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     executeCommands();
 }
+#endif
 
 } // namespace test

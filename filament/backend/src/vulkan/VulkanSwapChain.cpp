@@ -168,7 +168,14 @@ void VulkanSwapChain::create() {
         }
     }
 
+    ////////////////////////////////
+    //TODO - needs to call platform specific code to determine correct extent
+    // ** NOT TO BE CHECKED IN **
+    ////////////////////////////////
+    caps.currentExtent.width = 1024;
+    caps.currentExtent.height = 640;
     clientSize = caps.currentExtent;
+    ////////////////////////////////
 
     const auto compositionCaps = caps.supportedCompositeAlpha;
     const auto compositeAlpha = (compositionCaps & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
@@ -308,7 +315,7 @@ void VulkanSwapChain::makePresentable() {
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
         // If nothing was rendered, then the layout was never transitioned to COLOR_ATTACHMENT_OPTIMAL.
-        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
         .newLayout = swapContext.layout,

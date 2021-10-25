@@ -376,7 +376,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
-if (APPLE)
+if (APPLE OR LINUX)
     add_library(backend_test STATIC
         test/BackendTest.cpp
         test/ShaderGenerator.cpp
