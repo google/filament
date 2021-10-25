@@ -105,6 +105,7 @@ if (LINUX)
     endif()
 
     if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
+        set(FILAMENT_SUPPORTS_X11 TRUE)
         add_definitions(-DFILAMENT_SUPPORTS_X11)
     endif()
 

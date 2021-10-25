@@ -59,7 +59,9 @@ void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* insta
        .surface = ptrval->surface
     };
 
-    vkCreateWaylandSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+    VkResult result = vkCreateWaylandSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
+    return (void*) surface;
 
     return surface;
 }
