@@ -315,7 +315,7 @@ void VulkanSwapChain::makePresentable() {
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 #else
         // If nothing was rendered, then the layout was never transitioned to COLOR_ATTACHMENT_OPTIMAL.
-        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .oldLayout = firstRenderPass ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 #endif
 
         .newLayout = swapContext.layout,
