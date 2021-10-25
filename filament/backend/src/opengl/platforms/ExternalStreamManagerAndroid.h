@@ -31,20 +31,37 @@ typedef struct ASurfaceTexture ASurfaceTexture;
 
 namespace filament {
 
+/*
+ * ExternalStreamManagerAndroid::Stream is basically a wrapper for SurfaceTexture.
+ *
+ * This class DOES DEPEND on having a GLES context, because that's how SurfaceTexture works.
+ */
 class ExternalStreamManagerAndroid {
 public:
     using Stream = backend::Platform::Stream;
 
-    ExternalStreamManagerAndroid() noexcept;
-    static ExternalStreamManagerAndroid& get() noexcept;
+    // must be called on GLES thread
+    static ExternalStreamManagerAndroid& create() noexcept;
+
+    // must be called on GLES thread
+    static void destroy(ExternalStreamManagerAndroid* pExternalStreamManagerAndroid) noexcept;
 
     Stream* acquire(jobject surfaceTexture) noexcept;
     void release(Stream* stream) noexcept;
+
+    // attach Stream to current GLES context
     void attach(Stream* stream, intptr_t tname) noexcept;
+
+    // detach Stream to current GLES context
     void detach(Stream* stream) noexcept;
+
+    // must be called on GLES context thread, updates the stream content
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
 
 private:
+    ExternalStreamManagerAndroid() noexcept;
+    ~ExternalStreamManagerAndroid() noexcept;
+
     VirtualMachineEnv& mVm;
     JNIEnv* mJniEnv = nullptr;
 
@@ -63,17 +80,17 @@ private:
 
     JNIEnv* getEnvironmentSlow() noexcept;
 
-    jmethodID mSurfaceTextureClass_updateTexImage;
-    jmethodID mSurfaceTextureClass_getTimestamp;
-    jmethodID mSurfaceTextureClass_attachToGLContext;
-    jmethodID mSurfaceTextureClass_detachFromGLContext;
+    jmethodID mSurfaceTextureClass_updateTexImage{};
+    jmethodID mSurfaceTextureClass_getTimestamp{};
+    jmethodID mSurfaceTextureClass_attachToGLContext{};
+    jmethodID mSurfaceTextureClass_detachFromGLContext{};
 
-    ASurfaceTexture* (*ASurfaceTexture_fromSurfaceTexture)(JNIEnv*, jobject);
-    void (*ASurfaceTexture_release)(ASurfaceTexture*);
-    int  (*ASurfaceTexture_attachToGLContext)(ASurfaceTexture*, uint32_t);
-    int  (*ASurfaceTexture_detachFromGLContext)(ASurfaceTexture*);
-    int  (*ASurfaceTexture_updateTexImage)(ASurfaceTexture*);
-    int64_t (*ASurfaceTexture_getTimestamp)(ASurfaceTexture*);   // available since api 28
+    ASurfaceTexture* (*ASurfaceTexture_fromSurfaceTexture)(JNIEnv*, jobject){};
+    void (*ASurfaceTexture_release)(ASurfaceTexture*){};
+    int  (*ASurfaceTexture_attachToGLContext)(ASurfaceTexture*, uint32_t){};
+    int  (*ASurfaceTexture_detachFromGLContext)(ASurfaceTexture*){};
+    int  (*ASurfaceTexture_updateTexImage)(ASurfaceTexture*){};
+    int64_t (*ASurfaceTexture_getTimestamp)(ASurfaceTexture*){};   // available since api 28
 };
 
 } // namespace filament

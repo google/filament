@@ -53,6 +53,9 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
+static constexpr float PID_CONTROLLER_Ki = 0.002f;
+static constexpr float PID_CONTROLLER_Kd = 0.0f;
+
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUniforms(engine),
@@ -60,8 +63,29 @@ FView::FView(FEngine& engine)
     DriverApi& driver = engine.getDriverApi();
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+
     debugRegistry.registerProperty("d.view.camera_at_origin",
             &engine.debug.view.camera_at_origin);
+
+    // Integral term is used to fight back the dead-band below, we limit how much it can act.
+    mPidController.setIntegralLimits(-100.0f, 100.0f);
+
+    // dead-band, 1% for scaling down, 5% for scaling up. This stabilizes all the jitters.
+    mPidController.setOutputDeadBand(-0.01f, 0.05f);
+
+#ifndef NDEBUG
+    debugRegistry.registerDataSource("d.view.frame_info",
+            mDebugFrameHistory.data(), mDebugFrameHistory.size());
+    debugRegistry.registerProperty("d.view.pid.kp", &engine.debug.view.pid.kp);
+    debugRegistry.registerProperty("d.view.pid.ki", &engine.debug.view.pid.ki);
+    debugRegistry.registerProperty("d.view.pid.kd", &engine.debug.view.pid.kd);
+    // default parameters for debugging UI
+    engine.debug.view.pid.kp = 1.0f - std::exp(-1.0f / 8.0f);
+    engine.debug.view.pid.ki = PID_CONTROLLER_Ki;
+    engine.debug.view.pid.kd = PID_CONTROLLER_Kd;
+    mPidController.setParallelGains(
+            engine.debug.view.pid.kp, engine.debug.view.pid.ki, engine.debug.view.pid.kd);
+#endif
 
     // allocate ubos
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
@@ -131,7 +155,15 @@ void FView::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcep
     mFroxelizer.setOptions(zLightNear, zLightFar);
 }
 
-float2 FView::updateScale(FrameInfo const& info) noexcept {
+float2 FView::updateScale(FEngine& engine,
+        FrameInfo const& info,
+        Renderer::FrameRateOptions const& frameRateOptions,
+        Renderer::DisplayInfo const& displayInfo) noexcept {
+
+    // scale factor returned to the caller is modified so the scaled viewport is rounded to
+    // 8 pixels. The internal scale factor, mScale, doesn't have this rounding.
+    float2 roundedScale = mScale;
+
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
         if (!UTILS_UNLIKELY(info.valid)) {
@@ -140,10 +172,42 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             return mScale;
         }
 
-        // scaling factor we need to apply on the whole surface
-        const float scale = info.scale;
-        const float w = mViewport.width;
-        const float h = mViewport.height;
+#ifndef NDEBUG
+        const float Kp = engine.debug.view.pid.kp;
+        const float Ki = engine.debug.view.pid.ki;
+        const float Kd = engine.debug.view.pid.kd;
+#else
+        const float Kp = (1.0f - std::exp(-frameRateOptions.scaleRate));
+        const float Ki = PID_CONTROLLER_Ki;
+        const float Kd = PID_CONTROLLER_Kd;
+#endif
+        mPidController.setParallelGains(Kp, Ki, Kd);
+
+        // all values in ms below
+        using std::chrono::duration;
+        const float dt = 1.0f; // we don't really need dt here, setting it to 1, means our parameters are in "frames"
+        const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
+        const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
+        float measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
+        float out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
+
+        // maps pid command to a scale (absolute or relative, see below)
+         const float command = out < 0.0f ? (1.0f / (1.0f - out)) : (1.0f + out);
+
+        /*
+         * There is two ways we can control the scale factor, either by having the PID controller
+         * output a new scale factor directly (like a "position" control), or having it evaluate
+         * a relative scale factor (like a "velocity" control).
+         * More experimentation is needed to figure out which works better in more cases.
+         */
+
+        // direct scaling ("position" control)
+        //const float scale = command;
+        // relative scaling ("velocity" control)
+        const float scale = mScale.x * mScale.y * command;
+
+        const float w = float(mViewport.width);
+        const float h = float(mViewport.height);
         if (scale < 1.0f && !options.homogeneousScaling) {
             // figure out the major and minor axis
             const float major = std::max(w, h);
@@ -159,7 +223,7 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             // if we have some scaling capacity left, scale homogeneously
             const float homogeneousScale = scale / (majorScale * minorScale);
 
-            // finally write the scale factors
+            // finally, write the scale factors
             float& majorRef = w > h ? mScale.x : mScale.y;
             float& minorRef = w > h ? mScale.y : mScale.x;
             majorRef = std::sqrt(homogeneousScale) * majorScale;
@@ -169,32 +233,44 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             mScale = std::sqrt(scale);
         }
 
+        // always clamp to the min/max scale range
+        const auto s = mScale;
+        mScale = clamp(s, options.minScale, options.maxScale);
+
+        // disable the integration term when we're outside the controllable range
+        // (i.e. we clamped). This help not to have to wait too long for the Integral term
+        // to kick in after a clamping event.
+        mPidController.setIntegralInhibitionEnabled(mScale != s);
+
         // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
         // i.e. 8x8=64 fragments, to try to help with warp sizes.
-        mScale = (floor(mScale * float2{ w, h } / 8) * 8) / float2{ w, h };
-
-        // always clamp to the min/max scale range
-        mScale = clamp(mScale, options.minScale, options.maxScale);
-
-//#define DEBUG_DYNAMIC_RESOLUTION
-#if defined(DEBUG_DYNAMIC_RESOLUTION)
-        static int sLogCounter = 15;
-        if (!--sLogCounter) {
-            sLogCounter = 15;
-            slog.d << info.denoisedFrameTime.count() * 1000.0f << " ms"
-                   << ", " << info.smoothedWorkLoad
-                   << ", " << mScale.x
-                   << ", " << mScale.y
-                   << ", " << mViewport.width  * mScale.x
-                   << ", " << mViewport.height * mScale.y
-                   << io::endl;
-        }
-#endif
+        roundedScale.x = mScale.x == 1.0f ? 1.0f : (std::floor(mScale.x * float{ w } / 8) * 8) / float{ w };
+        roundedScale.y = mScale.y == 1.0f ? 1.0f : (std::floor(mScale.y * float{ h } / 8) * 8) / float{ h };
     } else {
         mScale = 1.0f;
+        roundedScale = 1.0f;
     }
 
-    return mScale;
+#ifndef NDEBUG
+    // only for debugging...
+    using duration_ms = std::chrono::duration<float, std::milli>;
+    const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
+    const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
+    std::move(mDebugFrameHistory.begin() + 1,
+            mDebugFrameHistory.end(), mDebugFrameHistory.begin());
+    mDebugFrameHistory.back() = {
+            .target             = target,
+            .targetWithHeadroom = targetWithHeadroom,
+            .frameTime          = std::chrono::duration_cast<duration_ms>(info.frameTime).count(),
+            .frameTimeDenoised  = std::chrono::duration_cast<duration_ms>(info.denoisedFrameTime).count(),
+            .scale              = mScale.x * mScale.y,
+            .pid_e              = mPidController.getError(),
+            .pid_i              = mPidController.getIntegral(),
+            .pid_d              = mPidController.getDerivative()
+    };
+#endif
+
+    return roundedScale;
 }
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {

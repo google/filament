@@ -19,8 +19,8 @@
 
 #include "PlatformCocoaGL.h"
 
-#include "OpenGLDriverFactory.h"
-#include "gl_headers.h"
+#include "opengl/OpenGLDriverFactory.h"
+#include "opengl/gl_headers.h"
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>

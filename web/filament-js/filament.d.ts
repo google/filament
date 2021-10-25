@@ -653,6 +653,8 @@ export class SurfaceOrientation$Builder {
 
 export class SurfaceOrientation {
     public getQuats(quatCount: number): Int16Array;
+    public getQuatsHalf4(quatCount: number): Uint16Array;
+    public getQuatsFloat4(quatCount: number): Float32Array;
     public delete(): void;
 }
 

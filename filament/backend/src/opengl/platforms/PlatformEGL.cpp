@@ -16,9 +16,9 @@
 
 #include "PlatformEGL.h"
 
-#include "OpenGLDriver.h"
-#include "OpenGLContext.h"
-#include "OpenGLDriverFactory.h"
+#include "opengl/OpenGLDriver.h"
+#include "opengl/OpenGLContext.h"
+#include "opengl/OpenGLDriverFactory.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>

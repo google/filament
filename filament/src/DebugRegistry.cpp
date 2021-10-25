@@ -31,9 +31,7 @@ using namespace utils;
 
 namespace filament {
 
-FDebugRegistry::FDebugRegistry() noexcept {
-    mProperties.reserve(8);
-}
+FDebugRegistry::FDebugRegistry() noexcept = default;
 
 UTILS_NOINLINE
 void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
@@ -48,13 +46,8 @@ void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
 void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type type) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
-        mProperties.push_back({ name.c_str(), type });
         propertyMap[name] = p;
     }
-}
-
-DebugRegistry::PropertyArray FDebugRegistry::getProperties() const noexcept {
-    return {mProperties.data(), mProperties.size()};
 }
 
 inline bool FDebugRegistry::hasProperty(const char *name) const noexcept {
@@ -83,13 +76,26 @@ inline bool FDebugRegistry::getProperty(const char* name, T* UTILS_RESTRICT p) c
     return false;
 }
 
+void FDebugRegistry::registerDataSource(StaticString name, void const* data, size_t count) noexcept {
+    auto& dataSourceMap = mDataSourceMap;
+    if (dataSourceMap.find(name) == dataSourceMap.end()) {
+        dataSourceMap[name] = { data, count };
+    }
+}
+
+DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
+    StaticString key = StaticString::make(name, strlen(name));
+    auto &dataSourceMap = mDataSourceMap;
+    auto const& it = dataSourceMap.find(key);
+    if (it == dataSourceMap.end()) {
+        return { nullptr, 0u };
+    }
+    return it->second;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
-
-DebugRegistry::PropertyArray DebugRegistry::getProperties() const noexcept {
-    return upcast(this)->getProperties();
-}
 
 bool DebugRegistry::hasProperty(const char* name) const noexcept {
     return upcast(this)->hasProperty(name);
@@ -147,6 +153,11 @@ bool DebugRegistry::getProperty(const char* name, float4* v) const noexcept {
 void *DebugRegistry::getPropertyAddress(const char *name) noexcept {
     return  upcast(this)->getPropertyAddress(name);
 }
+
+DebugRegistry::DataSource DebugRegistry::getDataSource(const char* name) const noexcept {
+    return  upcast(this)->getDataSource(name);
+}
+
 
 } // namespace filament
 

@@ -21,7 +21,7 @@
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
 
-#include "GLUtils.h"
+#include "../GLUtils.h"
 
 #include <math/vec2.h>
 

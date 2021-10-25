@@ -16,6 +16,7 @@
 
 #include "details/Renderer.h"
 
+#include "PostProcessManager.h"
 #include "RenderPass.h"
 #include "ResourceAllocator.h"
 
@@ -53,8 +54,8 @@ using namespace backend;
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        mFrameSkipper(engine, 1u),
-        mFrameInfoManager(engine),
+        mFrameSkipper(1u),
+        mFrameInfoManager(engine.getDriverApi()),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
@@ -129,7 +130,8 @@ void FRenderer::terminate(FEngine& engine) {
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
         engine.execute();
     }
-    mFrameInfoManager.terminate();
+    mFrameInfoManager.terminate(driver);
+    mFrameSkipper.terminate(driver);
 }
 
 void FRenderer::resetUserTime() {
@@ -229,7 +231,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
-    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameInfo());
+    float2 scale = view.updateScale(engine, mFrameInfoManager.getLastFrameInfo(), mFrameRateOptions, mDisplayInfo);
     auto msaaOptions = view.getMultiSampleAntiAliasingOptions();
     auto dsrOptions = view.getDynamicResolutionOptions();
     auto bloomOptions = view.getBloomOptions();
@@ -632,7 +634,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // * This is because the default render target is not multi-sampled, so we need an
     //   intermediate buffer when MSAA is enabled.
     // * We also need an extra buffer for blending the result to the framebuffer if the view
-    //   is translucent.
+    //   is translucent AND we've not already done it as part of upscaling.
     // * And we can't use the default rendertarget if MRT is required (e.g. with color grading
     //   as a subpass)
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
@@ -645,7 +647,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (UTILS_LIKELY(!blending)) {
             input = ppm.opaqueBlit(fg, input, {
                     .width = vp.width, .height = vp.height,
-                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
+                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
         } else {
             input = ppm.blendBlit(fg, blending, {
                     .quality = QualityLevel::LOW
@@ -1058,12 +1060,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
-        mFrameInfoManager.beginFrame({
-                .targetFrameTime = FrameInfo::duration{
-                        float(mFrameRateOptions.interval) / mDisplayInfo.refreshRate
-                },
-                .headRoomRatio = mFrameRateOptions.headRoomRatio,
-                .oneOverTau = mFrameRateOptions.scaleRate,
+
+        mFrameInfoManager.beginFrame(driver, {
                 .historySize = mFrameRateOptions.history
         }, mFrameId);
 
@@ -1103,7 +1101,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare();
     };
 
-    if (mFrameSkipper.beginFrame()) {
+    if (mFrameSkipper.beginFrame(driver)) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
         // so do the beginFrame work right now, instead of requiring a call to render()
         beginFrameInternal();
@@ -1137,8 +1135,8 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
-    mFrameInfoManager.endFrame();
-    mFrameSkipper.endFrame();
+    mFrameInfoManager.endFrame(driver);
+    mFrameSkipper.endFrame(driver);
 
     if (mSwapChain) {
         mSwapChain->commit(driver);

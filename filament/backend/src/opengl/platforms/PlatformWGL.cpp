@@ -18,7 +18,7 @@
 
 #include <Wingdi.h>
 
-#include "OpenGLDriverFactory.h"
+#include "../OpenGLDriverFactory.h"
 
 #ifdef _MSC_VER
     // this variable is checked in BlueGL.h (included from "gl_headers.h" right after this), 
@@ -27,7 +27,7 @@
     #define FILAMENT_PLATFORM_WGL
 #endif
 
-#include "gl_headers.h"
+#include "../gl_headers.h"
 
 #include "Windows.h"
 #include <GL/gl.h>

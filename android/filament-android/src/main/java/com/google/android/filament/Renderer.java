@@ -107,12 +107,12 @@ public class Renderer {
         /**
          * Rate at which the scale will change to reach the target frame rate.
          */
-        public float scaleRate = 0.125f;
+        public float scaleRate = 1.0f / 15.0f;
 
         /**
-         * History size. higher values, tend to filter more (clamped to 30).
+         * History size. higher values, tend to filter more (clamped to 31).
          */
-        public int history = 9;
+        public int history = 15;
     }
 
     /**

@@ -15,7 +15,7 @@
  */
 
 #include "PlatformWebGL.h"
-#include "OpenGLDriverFactory.h"
+#include "../OpenGLDriverFactory.h"
 
 namespace filament {
 

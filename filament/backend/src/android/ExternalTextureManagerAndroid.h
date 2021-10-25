@@ -31,6 +31,15 @@
 
 namespace filament {
 
+/*
+ * ExternalTextureManagerAndroid::ExternalTexture is basically a wrapper for AHardwareBuffer.
+ *
+ * This class doesn't rely on GL or EGL, and could be used for other Android platform if needed
+ * (e.g. Vulkan).
+ *
+ * ExternalTextureManagerAndroid handle allocation/destruction using either Java or the NDK,
+ * whichever is available.
+ */
 class ExternalTextureManagerAndroid {
 public:
 
@@ -39,26 +48,27 @@ public:
         AHardwareBuffer* hardwareBuffer = nullptr;
     };
 
-    static ExternalTextureManagerAndroid& get() noexcept;
+    // must be called on backend thread
+    static ExternalTextureManagerAndroid& create() noexcept;
 
-    // called on gl thread
-    ExternalTextureManagerAndroid() noexcept;
+    // must be called on backend thread
+    static void destroy(ExternalTextureManagerAndroid* pExternalTextureManager) noexcept;
 
-    // not quite sure on which thread this is going to be called
-    ~ExternalTextureManagerAndroid() noexcept;
-
-    // called on gl thread
-    backend::Platform::ExternalTexture* create() noexcept;
+    // must be called on backend thread (only because we don't synchronize
+    backend::Platform::ExternalTexture* createExternalTexture() noexcept;
 
     // called on app thread
     void reallocate(
         backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
         backend::TextureFormat format, uint64_t usage) noexcept;
 
-    // called on gl thread
+    // must be called on backend thread
     void destroy(backend::Platform::ExternalTexture* ets) noexcept;
 
 private:
+    ExternalTextureManagerAndroid() noexcept;
+    ~ExternalTextureManagerAndroid() noexcept;
+
     // called on app thread
     void alloc(backend::Platform::ExternalTexture* ets,
                uint32_t w, uint32_t h, backend::TextureFormat format, uint64_t usage) noexcept;

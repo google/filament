@@ -23,7 +23,7 @@
 #include <GL/glx.h>
 #include <GL/glxext.h>
 
-#include "OpenGLDriverFactory.h"
+#include "../OpenGLDriverFactory.h"
 
 #include <dlfcn.h>
 

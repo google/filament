@@ -79,7 +79,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             include/private/backend/OpenGLPlatform.h
     )
     if (EGL)
-        list(APPEND SRCS src/opengl/PlatformEGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformEGL.cpp)
     endif()
     if (ANDROID)
         # FIXME: this should be included when we build for JAVA (which is implied by ANDROID)
@@ -87,22 +87,22 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         list(APPEND SRCS src/VirtualMachineEnv.cpp)
     endif ()
     if (ANDROID)
-        list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
+        list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
-        list(APPEND SRCS src/opengl/PlatformEGLAndroid.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
-        list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
-        list(APPEND SRCS src/opengl/CocoaTouchExternalImage.mm)
+        list(APPEND SRCS src/opengl/platforms/PlatformCocoaTouchGL.mm)
+        list(APPEND SRCS src/opengl/platforms/CocoaTouchExternalImage.mm)
     elseif (APPLE)
-        list(APPEND SRCS src/opengl/PlatformCocoaGL.mm)
+        list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
     elseif (WEBGL)
-        list(APPEND SRCS src/opengl/PlatformWebGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
-        list(APPEND SRCS src/opengl/PlatformGLX.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
     elseif (WIN32)
-        list(APPEND SRCS src/opengl/PlatformWGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
     else()
-        list(APPEND SRCS src/opengl/PlatformDummyGL.cpp)
+        list(APPEND SRCS src/opengl/platforms/PlatformDummyGL.cpp)
     endif()
 endif()
 
@@ -133,9 +133,9 @@ if (FILAMENT_SUPPORTS_METAL)
         # Objective-C++ sources need an additional compiler flag on iOS to disable exceptions.
         set_property(SOURCE
             ${METAL_SRCS}
-            src/opengl/PlatformCocoaTouchGL.mm
-            src/opengl/CocoaTouchExternalImage.mm
-            src/opengl/PlatformCocoaGL.mm
+                src/opengl/platforms/PlatformCocoaTouchGL.mm
+                src/opengl/platforms/CocoaTouchExternalImage.mm
+                src/opengl/platforms/PlatformCocoaGL.mm
             PROPERTY COMPILE_FLAGS -fno-objc-exceptions)
     endif()
 

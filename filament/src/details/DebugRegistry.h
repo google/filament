@@ -24,7 +24,7 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
-#include <tsl/robin_map.h>
+#include <unordered_map>
 
 namespace filament {
 
@@ -33,8 +33,6 @@ class FEngine;
 class FDebugRegistry : public DebugRegistry {
 public:
     FDebugRegistry() noexcept;
-
-    PropertyArray getProperties() const noexcept;
 
     bool hasProperty(const char* name) const noexcept;
 
@@ -58,10 +56,14 @@ public:
         registerProperty(name, p, type);
     }
 
+    void registerDataSource(utils::StaticString name, void const* data, size_t count) noexcept;
+
+    DataSource getDataSource(const char* name) const noexcept;
+
 private:
     void registerProperty(utils::StaticString name, void* p, Type type) noexcept;
-    std::vector<Property> mProperties;
-    tsl::robin_map<utils::StaticString, void*> mPropertyMap;
+    std::unordered_map<utils::StaticString, void*> mPropertyMap;
+    std::unordered_map<utils::StaticString, DataSource> mDataSourceMap;
 };
 
 FILAMENT_UPCAST(DebugRegistry)

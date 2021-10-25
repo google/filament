@@ -16,11 +16,11 @@
 
 #include "PlatformEGLAndroid.h"
 
-#include "OpenGLDriver.h"
-#include "OpenGLContext.h"
+#include "opengl/OpenGLDriver.h"
+#include "opengl/OpenGLContext.h"
 
 #include "android/ExternalTextureManagerAndroid.h"
-#include "android/ExternalStreamManagerAndroid.h"
+#include "ExternalStreamManagerAndroid.h"
 #include "private/backend/VirtualMachineEnv.h"
 
 #include <android/api-level.h>
@@ -73,8 +73,8 @@ using EGLStream = Platform::Stream;
 
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : PlatformEGL(),
-          mExternalStreamManager(ExternalStreamManagerAndroid::get()),
-          mExternalTextureManager(ExternalTextureManagerAndroid::get()) {
+          mExternalStreamManager(ExternalStreamManagerAndroid::create()),
+          mExternalTextureManager(ExternalTextureManagerAndroid::create()) {
 
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);
@@ -85,6 +85,15 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         length = __system_property_get("ro.build.version.sdk", scratch);
         mOSVersion = length >= 0 ? atoi(scratch) : 1;
     }
+}
+
+PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
+
+
+void PlatformEGLAndroid::terminate() noexcept {
+    ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
+    ExternalTextureManagerAndroid::destroy(&mExternalTextureManager);
+    PlatformEGL::terminate();
 }
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext) noexcept {
@@ -146,7 +155,7 @@ void PlatformEGLAndroid::updateTexImage(Stream* stream, int64_t* timestamp) noex
 }
 
 Platform::ExternalTexture* PlatformEGLAndroid::createExternalTextureStorage() noexcept {
-    return mExternalTextureManager.create();
+    return mExternalTextureManager.createExternalTexture();
 }
 
 void PlatformEGLAndroid::reallocateExternalStorage(
