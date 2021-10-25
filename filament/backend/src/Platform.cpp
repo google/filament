@@ -46,11 +46,10 @@
         #include "opengl/platforms/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #if defined (FILAMENT_SUPPORTS_X11)
-            #include "vulkan/PlatformVkLinuxX.h"
-        #endif
         #if defined (FILAMENT_SUPPORTS_WAYLAND)
             #include "vulkan/PlatformVkLinuxWayland.h"
+        #elif defined (FILAMENT_SUPPORTS_X11)
+            #include "vulkan/PlatformVkLinuxX.h"
         #endif
     #endif
 #elif defined(WIN32)
