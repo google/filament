@@ -112,6 +112,14 @@ if (LINUX)
     if (FILAMENT_SUPPORTS_WAYLAND)
         add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
     endif()
+
+    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+
+    if ("${LIB64}" STREQUAL "TRUE")
+        set(LIBSUFFIX 64)
+    else()
+        set(LIBSUFFIX "")
+    endif()
 endif()
 
 if (ANDROID OR WEBGL OR IOS)
