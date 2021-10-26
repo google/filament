@@ -4,13 +4,11 @@
 
 set(THIRD_PARTY_STAGING_DIR ${CMAKE_BINARY_DIR}/staging${CMAKE_INSTALL_PREFIX})
 
-message(STATUS "FILAMENT_SUPPORTS_WAYLAND=${FILAMENT_SUPPORTS_WAYLAND}")
-
 include(ExternalProject)
 ExternalProject_Add(_sdl2
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/libsdl2
-    DOWNLOAD_COMMAND ""
-    CMAKE_ARGS
+        SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/libsdl2
+        DOWNLOAD_COMMAND ""
+        CMAKE_ARGS
         -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -D CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -51,15 +49,15 @@ ExternalProject_Add(_sdl2
         -D SDL_SENSOR=FALSE
         -D SDL_LOCALE=FALSE
         -D SDL_SHARED=FALSE
-        -D SDL_LOADSO=TRUE
-)
+        -D SDL_STATIC_PIC=ON
+        )
 
 add_library(sdl2 INTERFACE)
 
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-  target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2d)
+    target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2d)
 else ()
-  target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2)
+    target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2)
 endif ()
 
 target_include_directories(sdl2 INTERFACE ${THIRD_PARTY_STAGING_DIR}/include/SDL2)
@@ -69,15 +67,15 @@ if (FILAMENT_SUPPORTS_WINDOWS)
     target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_WINDOWS)
 elseif (FILAMENT_SUPPORTS_WAYLAND)
     target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_WAYLAND)
-elseif(FILAMENT_SUPPORTS_X11)
+elseif (FILAMENT_SUPPORTS_X11)
     target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_X11)
-endif()
+endif ()
 
 include_directories(${THIRD_PARTY_STAGING_DIR}/include)
 
 set_target_properties(
-    sdl2
-    PROPERTIES
+        sdl2
+        PROPERTIES
         INTERFACE_FILAMENT_NAME "SDL2 Library"
         INTERFACE_FILAMENT_URL "https://www.libsdl.org"
         INTERFACE_FILAMENT_AUTHOR "SDL authors"
