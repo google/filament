@@ -14,7 +14,9 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
@@ -27,14 +29,18 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.incremental.InputFileDetails
+import org.gradle.api.model.ObjectFactory
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.process.ExecOperations
 import org.gradle.work.ChangeType
 import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
 
 import java.nio.file.Paths
 
-class TaskWithBinary extends DefaultTask {
+import javax.inject.Inject
+
+abstract class TaskWithBinary extends DefaultTask {
     private final String binaryName
     private Property<String> binaryPath = null
 
@@ -42,15 +48,20 @@ class TaskWithBinary extends DefaultTask {
         binaryName = name
     }
 
+    @Inject abstract ObjectFactory getObjects()
+    @Inject abstract ProviderFactory getProviders()
+
     @Input
     Property<String> getBinary() {
         if (binaryPath == null) {
             def tool = ["/bin/${binaryName}.exe", "/bin/${binaryName}"]
             def fullPath = tool.collect { path ->
-                Paths.get(project.ext.filamentToolsPath.absolutePath, path).toFile()
+                def filamentToolsPath = providers.gradleProperty("filamentToolsPath").forUseAtConfigurationTime().get()
+                Paths.get(filamentToolsPath.absolutePath, path).toFile()
             }
 
-            binaryPath = project.objects.property(String.class)
+
+            binaryPath = objects.property(String.class)
             binaryPath.set(
                     (OperatingSystem.current().isWindows() ? fullPath[0] : fullPath[1]).toString())
         }
@@ -84,6 +95,11 @@ abstract class MaterialCompiler extends TaskWithBinary {
     @OutputDirectory
     abstract DirectoryProperty getOutputDir()
 
+    @Inject abstract FileSystemOperations getFs()
+    @Inject abstract ExecOperations getExec()
+    @Inject abstract ObjectFactory getObjects()
+    @Inject abstract ProviderFactory getProviders()
+
     MaterialCompiler() {
         super("matc")
     }
@@ -91,7 +107,7 @@ abstract class MaterialCompiler extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*.filamat' })
+            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*.filamat' })})
         }
 
         inputs.getFileChanges(inputDir).each { InputFileDetails change ->
@@ -115,12 +131,13 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 }
 
                 def matcArgs = []
-                if (!project.hasProperty("filament_exclude_vulkan")) {
+                def exclude_vulkan = providers.gradleProperty("filament_exclude_vulkan").forUseAtConfigurationTime().present
+                if (!exclude_vulkan) {
                     matcArgs += ['-a', 'vulkan']
                 }
                 matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
 
-                project.exec {
+                exec.exec {
                     standardOutput out
                     errorOutput err
                     executable "${binary.get()}"
@@ -149,6 +166,10 @@ abstract class IblGenerator extends TaskWithBinary {
     @OutputDirectory
     abstract DirectoryProperty getOutputDir()
 
+    @Inject abstract FileSystemOperations getFs()
+    @Inject abstract ExecOperations getExec()
+    @Inject abstract ObjectFactory getObjects()
+
     IblGenerator() {
         super("cmgen")
     }
@@ -156,7 +177,7 @@ abstract class IblGenerator extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*' })
+            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*' })})
         }
 
         inputs.getFileChanges(inputFile).each { InputFileDetails change ->
@@ -188,7 +209,7 @@ abstract class IblGenerator extends TaskWithBinary {
                 }
                 commandArgs = commandArgs + " " + file
 
-                project.exec {
+                exec.exec {
                     standardOutput out
                     errorOutput err
                     executable "${binary.get()}"
@@ -213,6 +234,9 @@ abstract class MeshCompiler extends TaskWithBinary {
     @OutputDirectory
     abstract DirectoryProperty getOutputDir()
 
+    @Inject abstract FileSystemOperations getFs()
+    @Inject abstract ExecOperations getExec()
+
     MeshCompiler() {
         super("filamesh")
     }
@@ -220,7 +244,7 @@ abstract class MeshCompiler extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir.asFile.get()).matching { include '*.filamesh' })
+            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*.filamesh' })})
         }
 
         inputs.getFileChanges(inputFile).each { InputFileDetails change ->
@@ -243,7 +267,7 @@ abstract class MeshCompiler extends TaskWithBinary {
                             " Ensure Filament has been built/installed before building this app.")
                 }
 
-                project.exec {
+                exec.exec {
                     standardOutput out
                     errorOutput err
                     executable "${binary.get()}"
@@ -280,9 +304,10 @@ class FilamentToolsPlugin implements Plugin<Project> {
         extension.meshInputFile = project.objects.fileProperty()
         extension.meshOutputDir = project.objects.directoryProperty()
 
-        project.ext.filamentToolsPath = project.file("../../../out/release/filament")
+        project.properties.put("filamentToolsPath", project.file("../../../out/release/filament"))
+        // project.setProperty("filamentToolsPath", project.file("../../../out/release/filament"))
         if (project.hasProperty("filament_tools_dir")) {
-            project.ext.filamentToolsPath = project.file(project.property("filament_tools_dir"))
+            project.setProperty("filamentToolsPath", project.file(project.property("filament_tools_dir")))
         }
 
         project.tasks.register("filamentCompileMaterials", MaterialCompiler) {
