@@ -87,8 +87,14 @@ OpenGLContext::OpenGLContext() noexcept {
         }
         // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
         bugs.dont_use_timer_query = true;
+
         // Blits to texture arrays are failing
-        bugs.disable_sidecar_blit_into_texture_array = true;
+        //   This bug doesn't happen anymore, but we don't know why. The standalone sample
+        //   app that was written to show this problem still does. We have tested this on
+        //   several V@0490.0 on several devices and the problem appears to have gone away.
+        //   The working hypthesis is that some other state affects this behavior.
+        bugs.disable_sidecar_blit_into_texture_array = false;
+
         // early exit condition is flattened in EASU code
         bugs.split_easu = true;
         bugs.invalidate_end_only_if_invalidate_start = true;
