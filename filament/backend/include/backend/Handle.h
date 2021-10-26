@@ -21,6 +21,8 @@
 #include <utils/Log.h>
 #include <utils/debug.h>
 
+#include <limits>
+
 namespace filament {
 namespace backend {
 
