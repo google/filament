@@ -1,6 +1,6 @@
-# if(TARGET sdl2)
-#    return()
-# endif()
+if(TARGET sdl2)
+   return()
+endif()
 
 set(THIRD_PARTY_STAGING_DIR ${CMAKE_BINARY_DIR}/staging${CMAKE_INSTALL_PREFIX})
 
