@@ -1,26 +1,28 @@
 // This script accepts the following parameters:
 //
-// filament_dist_dir
+// com.google.android.filament.dist-dir
 //     Path to the Filament distribution/install directory for Android
 //     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
 //
-// filament_tools_dir
+// com.google.android.filament.tools-dir
 //     Path to the Filament distribution/install directory for desktop.
 //     This directory must contain bin/matc.
 //
-// filament_exclude_vulkan
+// com.google.android.filament.exclude-vulkan
 //     When set, support for Vulkan will be excluded.
 //
-// filament_skip_samples
+// com.google.android.filament.skip-samples
 //     Exclude samples from the project. Useful to speed up compilation.
 //
-// filament_abis
+// com.google.android.filament.abis
 //     List of supported ABIs to build as a comma separated list. Available options are:
 //         arm64-v8a, armeabi-v7a, x86_64, x86, all
 //     Defaults to all.
 //
 // Example:
-//     ./gradlew -Pfilament_dist_dir=../dist-android-release assembleRelease -Pfilament_abis=x86
+//     ./gradlew -Pcom.google.android.filament.dist-dir=../dist-android-release \
+//               -Pcom.google.android.filament.abis=x86 \
+//               assembleRelease
 
 // Publishing to Maven Central:
 //   - Build and upload artifacts with ./gradlew publish
@@ -41,19 +43,19 @@
 
 buildscript {
     def filamentPath = file("../out/android-release/filament").absolutePath
-    if (project.hasProperty("filament_dist_dir")) {
-        filamentPath = file(project.property("filament_dist_dir")).absolutePath
+    if (project.hasProperty("com.google.android.filament.dist-dir")) {
+        filamentPath = file(project.property("com.google.android.filament.dist-dir")).absolutePath
     }
     // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
     // variable, so here we convert the native path to a forward-slash path.
     filamentPath = filamentPath.replace(File.separator, '/')
 
     // Warning: changing this property does not work well with incremental builds.
-    def excludeVulkan = project.hasProperty("filament_exclude_vulkan")
+    def excludeVulkan = project.hasProperty("com.google.android.filament.exclude-vulkan")
 
     def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
-    if (project.hasProperty("filament_abis")) {
-        def newAbis = project.property("filament_abis").split(',')
+    if (project.hasProperty("com.google.android.filament.abis")) {
+        def newAbis = project.property("com.google.android.filament.abis").split(',')
         if (!newAbis.contains("all")) {
             abis = newAbis
         }
@@ -187,7 +189,8 @@ subprojects {
 gradle.taskGraph.whenReady {
     gradle.taskGraph.allTasks.each {
         it.onlyIf {
-            !it.project.ext.has('isSample') || !project.hasProperty('filament_skip_samples')
+            !it.project.ext.has('isSample') ||
+                    !project.hasProperty('com.google.android.filament.skip-samples')
          }
     }
 }

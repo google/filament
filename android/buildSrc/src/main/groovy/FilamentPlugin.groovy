@@ -1,14 +1,14 @@
 // This plugin accepts the following parameters:
 //
-// filament_tools_dir
+// com.google.android.filament.tools-dir
 //     Path to the Filament distribution/install directory for desktop.
 //     This directory must contain bin/matc.
 //
-// filament_exclude_vulkan
+// com.google.android.filament.exclude-vulkan
 //     When set, support for Vulkan will be excluded.
 //
 // Example:
-//     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
+//     ./gradlew -Pcom.google.android.filament.tools-dir=../../dist-release assembleDebug
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -56,10 +56,13 @@ abstract class TaskWithBinary extends DefaultTask {
         if (binaryPath == null) {
             def tool = ["/bin/${binaryName}.exe", "/bin/${binaryName}"]
             def fullPath = tool.collect { path ->
-                def filamentToolsPath = providers.gradleProperty("filamentToolsPath").forUseAtConfigurationTime().get()
-                Paths.get(filamentToolsPath.absolutePath, path).toFile()
+                def filamentToolsPath = providers
+                        .gradleProperty("com.google.android.filament.tools-dir")
+                        .forUseAtConfigurationTime().get()
+                def directory = objects.fileProperty()
+                        .fileValue(new File(filamentToolsPath)).getAsFile().get()
+                Paths.get(directory.absolutePath, path).toFile()
             }
-
 
             binaryPath = objects.property(String.class)
             binaryPath.set(
@@ -107,7 +110,9 @@ abstract class MaterialCompiler extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*.filamat' })})
+            fs.delete({
+                delete(objects.fileTree().from(outputDir).matching { include '*.filamat' })
+            })
         }
 
         inputs.getFileChanges(inputDir).each { InputFileDetails change ->
@@ -131,7 +136,9 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 }
 
                 def matcArgs = []
-                def exclude_vulkan = providers.gradleProperty("filament_exclude_vulkan").forUseAtConfigurationTime().present
+                def exclude_vulkan = providers
+                        .gradleProperty("com.google.android.filament.exclude-vulkan")
+                        .forUseAtConfigurationTime().present
                 if (!exclude_vulkan) {
                     matcArgs += ['-a', 'vulkan']
                 }
@@ -177,7 +184,9 @@ abstract class IblGenerator extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*' })})
+            fs.delete({
+                delete(objects.fileTree().from(outputDir).matching { include '*' })
+            })
         }
 
         inputs.getFileChanges(inputFile).each { InputFileDetails change ->
@@ -244,7 +253,9 @@ abstract class MeshCompiler extends TaskWithBinary {
     @TaskAction
     void execute(InputChanges inputs) {
         if (!inputs.incremental) {
-            fs.delete({ delete(objects.fileTree().from(outputDir).matching { include '*.filamesh' })})
+            fs.delete({
+                delete(objects.fileTree().from(outputDir).matching { include '*.filamesh' })
+            })
         }
 
         inputs.getFileChanges(inputFile).each { InputFileDetails change ->
@@ -303,12 +314,6 @@ class FilamentToolsPlugin implements Plugin<Project> {
         extension.iblOutputDir = project.objects.directoryProperty()
         extension.meshInputFile = project.objects.fileProperty()
         extension.meshOutputDir = project.objects.directoryProperty()
-
-        project.properties.put("filamentToolsPath", project.file("../../../out/release/filament"))
-        // project.setProperty("filamentToolsPath", project.file("../../../out/release/filament"))
-        if (project.hasProperty("filament_tools_dir")) {
-            project.setProperty("filamentToolsPath", project.file(project.property("filament_tools_dir")))
-        }
 
         project.tasks.register("filamentCompileMaterials", MaterialCompiler) {
             enabled =
