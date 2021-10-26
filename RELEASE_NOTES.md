@@ -6,7 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.12.12 (currently main branch)
 
 - Android: Gradle configuration caching is now enabled
-- Android: Filament's Gradle properties have all be renamed to `com.google.android.filament.xxx`
+- Android: Filament's Gradle properties have all been renamed to `com.google.android.filament.xxx`
   where `xxx` is the property name. See `android/build.gradle` for a complete list [⚠️]
 - Android: The Gradle property `filament_tools_dir` (now called
   `com.google.android.filament.tools-dir`) does not have a default value anymore. Please specify
