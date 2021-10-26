@@ -522,7 +522,12 @@ function(combine_static_libs TARGET OUTPUT DEPS)
     # Loop through the dependent libraries and query their location on disk.
     set(DEPS_FILES )
     foreach(DEPENDENCY ${DEPS})
-        list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+        if(TARGET ${DEPENDENCY})
+            get_property(dep_type TARGET ${DEPENDENCY} PROPERTY TYPE)
+            if(dep_type STREQUAL "STATIC_LIBRARY")
+                list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+            endif()
+        endif()
     endforeach()
 
     add_custom_command(
