@@ -61,7 +61,7 @@ struct ShadowMappingUniforms {
 class ShadowMapManager {
 public:
 
-    using ShadowMappingUniforms = ShadowMappingUniforms;
+    using ShadowMappingUniforms = struct ShadowMappingUniforms;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,

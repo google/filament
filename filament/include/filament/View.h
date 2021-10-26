@@ -66,22 +66,22 @@ class Viewport;
  */
 class UTILS_PUBLIC View : public FilamentAPI {
 public:
-    using QualityLevel = QualityLevel;
-    using BlendMode = BlendMode;
-    using AntiAliasing = AntiAliasing;
-    using Dithering = Dithering;
-    using ShadowType = ShadowType;
+    using QualityLevel = enum QualityLevel;
+    using BlendMode = enum BlendMode;
+    using AntiAliasing = enum AntiAliasing;
+    using Dithering = enum Dithering;
+    using ShadowType = enum ShadowType;
 
-    using DynamicResolutionOptions = DynamicResolutionOptions;
-    using BloomOptions = BloomOptions;
-    using FogOptions = FogOptions;
-    using DepthOfFieldOptions = DepthOfFieldOptions;
-    using VignetteOptions = VignetteOptions;
-    using RenderQuality = RenderQuality;
-    using AmbientOcclusionOptions = AmbientOcclusionOptions;
-    using TemporalAntiAliasingOptions = TemporalAntiAliasingOptions;
-    using MultiSampleAntiAliasingOptions = MultiSampleAntiAliasingOptions;
-    using VsmShadowOptions = VsmShadowOptions;
+    using DynamicResolutionOptions = struct DynamicResolutionOptions;
+    using BloomOptions = struct BloomOptions;
+    using FogOptions = struct FogOptions;
+    using DepthOfFieldOptions = struct DepthOfFieldOptions;
+    using VignetteOptions = struct VignetteOptions;
+    using RenderQuality = struct RenderQuality;
+    using AmbientOcclusionOptions = struct AmbientOcclusionOptions;
+    using TemporalAntiAliasingOptions = struct TemporalAntiAliasingOptions;
+    using MultiSampleAntiAliasingOptions = struct MultiSampleAntiAliasingOptions;
+    using VsmShadowOptions = struct VsmShadowOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.

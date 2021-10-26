@@ -35,7 +35,7 @@ void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
 }
 
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
-    using ElementType = ElementType;
+    using ElementType = enum ElementType;
     if (normalized) {
         switch (type) {
             // Single Component Types
@@ -99,7 +99,7 @@ VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
 }
 
 VkFormat getVkFormat(TextureFormat format) {
-    using TextureFormat = TextureFormat;
+    using TextureFormat = enum TextureFormat;
     switch (format) {
         // 8 bits per element.
         case TextureFormat::R8:                return VK_FORMAT_R8_UNORM;

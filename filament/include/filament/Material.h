@@ -48,11 +48,11 @@ class UTILS_PUBLIC Material : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using BlendingMode = BlendingMode;
-    using Shading = Shading;
-    using Interpolation = Interpolation;
-    using VertexDomain = VertexDomain;
-    using TransparencyMode = TransparencyMode;
+    using BlendingMode = enum BlendingMode;
+    using Shading = enum Shading;
+    using Interpolation = enum Interpolation;
+    using VertexDomain = enum VertexDomain;
+    using TransparencyMode = enum TransparencyMode;
 
     using ParameterType = backend::UniformType;
     using Precision = backend::Precision;
