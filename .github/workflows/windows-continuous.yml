@@ -1,12 +1,12 @@
 name: Windows
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
       - release
       - rc/**
+      - wayland
 
 jobs:
   build-windows:

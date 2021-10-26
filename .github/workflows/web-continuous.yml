@@ -1,12 +1,12 @@
 name: Web
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
       - release
       - rc/**
+      - wayland
 
 jobs:
   build-web:

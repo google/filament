@@ -1,10 +1,10 @@
 name: Presubmit
 
 on:
-  workflow_dispatch:
   push:
     branches:
     - main
+    - wayland
   pull_request:
     branches:
     - main
