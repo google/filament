@@ -96,21 +96,22 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (LINUX)
-    if (FILAMENT_SUPPORTS_XCB)
-        add_definitions(-DFILAMENT_SUPPORTS_XCB)
-    endif()
-
-    if (FILAMENT_SUPPORTS_XLIB)
-        add_definitions(-DFILAMENT_SUPPORTS_XLIB)
-    endif()
-
-    if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
-        set(FILAMENT_SUPPORTS_X11 TRUE)
-        add_definitions(-DFILAMENT_SUPPORTS_X11)
-    endif()
-
     if (FILAMENT_SUPPORTS_WAYLAND)
         add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
+        set(FILAMENT_SUPPORTS_X11 FALSE)
+    else ()
+        if (FILAMENT_SUPPORTS_XCB)
+            add_definitions(-DFILAMENT_SUPPORTS_XCB)
+        endif()
+
+        if (FILAMENT_SUPPORTS_XLIB)
+            add_definitions(-DFILAMENT_SUPPORTS_XLIB)
+        endif()
+
+        if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
+            add_definitions(-DFILAMENT_SUPPORTS_X11)
+            set(FILAMENT_SUPPORTS_X11 TRUE)
+        endif()
     endif()
 
     get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
@@ -122,13 +123,15 @@ if (LINUX)
     endif()
 endif()
 
-if (ANDROID OR WEBGL OR IOS)
+if (ANDROID OR WEBGL OR IOS OR (LINUX AND CMAKE_CROSSCOMPILING))
     set(IS_MOBILE_TARGET TRUE)
-endif()
+    message(STATUS "Target Build")
+endif ()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND (LINUX AND NOT CMAKE_CROSSCOMPILING))
     set(IS_HOST_PLATFORM TRUE)
-endif()
+    message(STATUS "Host Build")
+endif ()
 
 if (IOS)
     # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
@@ -293,11 +296,11 @@ if (LINUX)
     # Only linux, clang doesn't want to use a shared library that is not PIC.
     # /usr/bin/ld: ../bluegl/libbluegl.a(BlueGL.cpp.o): relocation R_X86_64_32S
     # against `.bss' can not be used when making a shared object; recompile with -fPIC
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 if (ANDROID)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 if (CYGWIN)
