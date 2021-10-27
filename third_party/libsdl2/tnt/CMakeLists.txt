@@ -52,7 +52,7 @@ ExternalProject_Add(_sdl2
         -D SDL_SHARED=FALSE
         )
 
-ExternalProject_Get_property(_sdl CFLAGS EXTRA_CFLAGS EXTRA_LDFLAGS EXTRA_LIBS)
+ExternalProject_Get_property(_sdl2 CFLAGS EXTRA_CFLAGS EXTRA_LDFLAGS EXTRA_LIBS)
 
 # path of generated headers
 set(_SDL2_BUILD_DIR ${CMAKE_BINARY_DIR}/third_party/libsdl2/tnt/_sdl2-prefix/src/_sdl2-build)
@@ -60,13 +60,15 @@ set(_SDL2_BUILD_DIR ${CMAKE_BINARY_DIR}/third_party/libsdl2/tnt/_sdl2-prefix/src
 
 add_library(sdl2 INTERFACE)
 
+add_dependencies(sdl2 _sdl2)
+
 target_include_directories(sdl2 INTERFACE
     ${_SDL2_BUILD_DIR}/include
     ${THIRD_PARTY_STAGING_DIR}/include
     ${THIRD_PARTY_STAGING_DIR}/include/SDL2
 )
 
-target_compile_features(_sdl INTERFACE ${CFLAGS} ${EXTRA_CFLAGS})
+target_compile_features(sdl2 INTERFACE ${CFLAGS} ${EXTRA_CFLAGS})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(DEBUG_SUFFIX "d")
@@ -87,8 +89,6 @@ set_target_properties(
     INTERFACE_SDL2_AUTHOR "SDL authors"
     INTERFACE_SDL2_LICENSE ${CMAKE_CURRENT_LIST_DIR}/../LICENSE.txt
 )
-
-add_dependencies(sdl2 _sdl2)
 
 set(CFLAGS)
 set(EXTRA_CFLAGS)
