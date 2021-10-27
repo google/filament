@@ -148,7 +148,7 @@ private:
     void computeShadowCameraDirectional(
             math::float3 const& direction,
             ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
-            SceneInfo cascadeParams) noexcept;
+            SceneInfo const& cascadeParams) noexcept;
     void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
             float outerConeAngle, float radius, ShadowCameraInfo const& camera,
             FLightManager::ShadowParams const& params) noexcept;
