@@ -52,31 +52,45 @@ ExternalProject_Add(_sdl2
         -D SDL_SHARED=FALSE
         )
 
-add_library(sdl2 INTERFACE)
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2d)
-else ()
-    target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2)
-endif ()
-
-target_include_directories(sdl2 INTERFACE ${THIRD_PARTY_STAGING_DIR}/include/SDL2)
+ExternalProject_Get_property(_sdl CFLAGS EXTRA_CFLAGS EXTRA_LDFLAGS EXTRA_LIBS)
 
 # path of generated headers
 set(_SDL2_BUILD_DIR ${CMAKE_BINARY_DIR}/third_party/libsdl2/tnt/_sdl2-prefix/src/_sdl2-build)
 
-include_directories(
-        ${_SDL2_BUILD_DIR}/include
-        ${THIRD_PARTY_STAGING_DIR}/include
+
+add_library(sdl2 INTERFACE)
+
+target_include_directories(sdl2 INTERFACE
+    ${_SDL2_BUILD_DIR}/include
+    ${THIRD_PARTY_STAGING_DIR}/include
+    ${THIRD_PARTY_STAGING_DIR}/include/SDL2
+)
+
+target_compile_features(_sdl INTERFACE ${CFLAGS} ${EXTRA_CFLAGS})
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(DEBUG_SUFFIX "d")
+endif ()
+
+target_link_libraries(sdl2 INTERFACE
+    ${EXTRA_LDFLAGS}
+    -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX}
+    -lSDL2${DEBUG_SUFFIX}
+    ${EXTRA_LIBS}
 )
 
 set_target_properties(
-        sdl2
-        PROPERTIES
-        INTERFACE_FILAMENT_NAME "SDL2 Library"
-        INTERFACE_FILAMENT_URL "https://www.libsdl.org"
-        INTERFACE_FILAMENT_AUTHOR "SDL authors"
-        INTERFACE_FILAMEN_LICENSE ${CMAKE_CURRENT_LIST_DIR}/../LICENSE.txt
+    sdl2
+    PROPERTIES
+    INTERFACE_SDL2_NAME "SDL2 Library"
+    INTERFACE_SDL2_URL "https://www.libsdl.org"
+    INTERFACE_SDL2_AUTHOR "SDL authors"
+    INTERFACE_SDL2_LICENSE ${CMAKE_CURRENT_LIST_DIR}/../LICENSE.txt
 )
 
 add_dependencies(sdl2 _sdl2)
+
+set(CFLAGS)
+set(EXTRA_CFLAGS)
+set(EXTRA_LDFLAGS)
+set(EXTRA_LIBS)
