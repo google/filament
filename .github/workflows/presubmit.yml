@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - main
+    - wayland
   pull_request:
     branches:
     - main

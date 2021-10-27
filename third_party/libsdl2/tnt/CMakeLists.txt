@@ -1,6 +1,6 @@
-# if(TARGET sdl2)
-#    return()
-# endif()
+if(TARGET sdl2)
+   return()
+endif()
 
 set(THIRD_PARTY_STAGING_DIR ${CMAKE_BINARY_DIR}/staging${CMAKE_INSTALL_PREFIX})
 
@@ -21,7 +21,7 @@ ExternalProject_Add(_sdl2
         -D CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
         -D VIDEO_METAL=${FILAMENT_SUPPORTS_METAL}
         -D VIDEO_OPENGL=${FILAMENT_SUPPORTS_OPENGL}
-        -D VIDEO_OPENGLES=${FILAMENT_SUPPORTS_WAYLAND}
+        -D VIDEO_OPENGLES=$<OR:$<BOOL:FILAMENT_USE_EXTERNAL_GLES3>,$<BOOL:FILAMENT_SUPPORTS_WAYLAND>>
         -D VIDEO_VULKAN=${FILAMENT_SUPPORTS_VULKAN}
         -D VIDEO_WAYLAND=${FILAMENT_SUPPORTS_WAYLAND}
         -D VIDEO_WAYLAND_QT_TOUCH=${FILAMENT_SUPPORTS_WAYLAND}
@@ -38,40 +38,37 @@ ExternalProject_Add(_sdl2
         -D WAYLAND_SHARED=${FILAMENT_SUPPORTS_WAYLAND}
         -D X11_SHARED=${FILAMENT_SUPPORTS_X11}
         -D XINPUT=$<OR:$<BOOL:FILAMENT_SUPPORTS_X11>,$<BOOL:FILAMENT_SUPPORTS_WAYLAND>>
+        -D SDL_STATIC_PIC=$<BOOL:CMAKE_POSITION_INDEPENDENT_CODE>
         -D SDL_AUDIO=FALSE
         -D SDL_JOYSTICK=TRUE
-        -D SDL_RENDERER=FALSE
+        -D SDL_RENDER=FALSE
         -D SDL_HAPTIC=FALSE
         -D SDL_POWER=FALSE
-        -D SDL_FILE=FALSE
+        -D SDL_FILE=$<BOOL:APPLE>
         -D SDL_CPUINFO=FALSE
         -D SDL_FILESYSTEM=FALSE
         -D SDL_SENSOR=FALSE
         -D SDL_LOCALE=FALSE
         -D SDL_SHARED=FALSE
-        -D SDL_STATIC_PIC=ON
         )
 
 add_library(sdl2 INTERFACE)
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2d)
 else ()
     target_link_libraries(sdl2 INTERFACE -L${THIRD_PARTY_STAGING_DIR}/lib${LIBSUFFIX} -lSDL2)
 endif ()
 
 target_include_directories(sdl2 INTERFACE ${THIRD_PARTY_STAGING_DIR}/include/SDL2)
-target_compile_options(sdl2 INTERFACE ${SDL_CFLAGS_OTHER})
 
-if (FILAMENT_SUPPORTS_WINDOWS)
-    target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_WINDOWS)
-elseif (FILAMENT_SUPPORTS_WAYLAND)
-    target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_WAYLAND)
-elseif (FILAMENT_SUPPORTS_X11)
-    target_compile_options(sdl2 INTERFACE -DSDL_VIDEO_DRIVER_X11)
-endif ()
+# path of generated headers
+set(_SDL2_BUILD_DIR ${CMAKE_BINARY_DIR}/third_party/libsdl2/tnt/_sdl2-prefix/src/_sdl2-build)
 
-include_directories(${THIRD_PARTY_STAGING_DIR}/include)
+include_directories(
+        ${_SDL2_BUILD_DIR}/include
+        ${THIRD_PARTY_STAGING_DIR}/include
+)
 
 set_target_properties(
         sdl2

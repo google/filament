@@ -6,6 +6,7 @@ on:
       - main
       - release
       - rc/**
+      - wayland
 
 jobs:
   build-windows:

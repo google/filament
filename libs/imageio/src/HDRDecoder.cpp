@@ -22,6 +22,7 @@
 
 #include <utils/Log.h>
 
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <sstream>
