@@ -34,7 +34,7 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-ShadowMapManager::ShadowMapManager(FEngine& engine) {
+ShadowMapManager::ShadowMapManager(FEngine& engine) { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // initialize our ShadowMap array in-place
     for (auto& entry : mShadowMapCache) {
         new (&entry) ShadowMap(engine);
@@ -163,9 +163,9 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
     const float4 vsmClearColor{ vsmMoment1, vsmMoment2, 0.0f, 0.0f };
 
     struct ShadowPassData {
-        FrameGraphId<FrameGraphTexture> tempBlurSrc;    // temporary shadowmap when blurring
-        uint32_t blurRt;
-        uint32_t shadowRt;
+        FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
+        uint32_t blurRt{};
+        uint32_t shadowRt{};
     };
 
     auto shadows = prepareShadowPass.getData().shadows;
@@ -240,7 +240,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                         renderTargetDesc.clearFlags = TargetBufferFlags::DEPTH;
                     }
 
-                    // finally create the shadowmap render target -- one per layer.
+                    // finally, create the shadowmap render target -- one per layer.
                     data.shadowRt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 },
                 [=, &engine, &view](FrameGraphResources const& resources,
@@ -261,7 +261,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
 
                     view.prepareCamera(cameraInfo);
 
-                    // We set a viewport with a 1-texel border for when we index outside of the
+                    // We set a viewport with a 1-texel border for when we index outside the
                     // texture.
                     // DON'T CHANGE this unless ShadowMap::getTextureCoordsMapping() is updated too.
                     // see: ShadowMap::getTextureCoordsMapping()
@@ -276,7 +276,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                     view.prepareViewport(viewport);
 
                     // set uniforms needed to render this ShadowMap
-                    // Currently these uniforms are owned by View and are global, but eventully
+                    // Currently these uniforms are owned by View and are global, but eventually
                     // this will set a separate per shadowmap UBO
                     view.prepareShadowMap();
 
@@ -298,7 +298,7 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
                 const float sigma = (blurWidth + 1.0f) / 6.0f;
                 size_t kernelWidth = std::ceil((blurWidth - 5.0f) / 4.0f);
                 kernelWidth = kernelWidth * 4 + 5;
-                const float ratio = (kernelWidth + 1.0f) / sigma;
+                const float ratio = float(kernelWidth + 1) / sigma;
                 ppm.gaussianBlurPass(fg,
                         shadowPass->tempBlurSrc, 0,
                         shadows, 0, layer,
@@ -414,7 +414,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
     ShadowTechnique shadowTechnique{};
     uint32_t directionalShadowsMask = 0;
     uint32_t cascadeHasVisibleShadows = 0;
-    float screenSpaceShadowDistance = 0.0f;
     for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
         auto& entry = mCascadeShadowMaps[i];
 
@@ -440,7 +439,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
     }
 
     // screen-space contact shadows for the directional light
-    screenSpaceShadowDistance = options.maxShadowDistance;
+    float screenSpaceShadowDistance = options.maxShadowDistance;
     if (options.screenSpaceContactShadows) {
         shadowTechnique |= ShadowTechnique::SCREEN_SPACE;
     }
@@ -475,7 +474,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
     const uint16_t textureSize = mTextureRequirements.size;
 
-    // shadow-map shadows for point/spot lights
+    // shadow-map shadows for point/spotlights
     auto& lcm = engine.getLightManager();
     FScene::ShadowInfo* const shadowInfo = lightData.data<FScene::SHADOW_INFO>();
     for (size_t i = 0, c = mSpotShadowMaps.size(); i < c; i++) {
@@ -519,7 +518,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
         }
     }
 
-    // screen-space contact shadows for point/spot lights
+    // screen-space contact shadows for point/spotlights
     auto *pInstance = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = 0, c = lightData.size(); i < c; i++) {
         // screen-space contact shadows
@@ -539,7 +538,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
 
     // Lay out the shadow maps. For now, we take the largest requested dimension and allocate a
     // texture of that size. Each cascade / shadow map gets its own layer in the array texture.
-    // The directional shadow cascades start on layer 0, followed by spot lights.
+    // The directional shadow cascades start on layer 0, followed by spotlights.
     uint8_t layer = 0;
     uint32_t maxDimension = 0;
     for (auto& entry : mCascadeShadowMaps) {
