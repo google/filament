@@ -53,7 +53,7 @@ namespace filament {
         //
         // Standard variants:
         //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 (-24)
+        //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    40 (-24)
         //                      +-----+-----+-----+-----+-----+-----+-----+-----+
         //      Vertex shader            0     0     0     X     X     X     X
         //    Fragment shader            X     X     0     0     X     X     X
@@ -62,14 +62,18 @@ namespace filament {
         //
         // Depth variants:
         //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-        //                      |  0  | VSM | PCK |  1  | SKN |  0  |  0  |  0  |     8 (-58)
+        //                      |  0  | VSM | PCK |  1  | SKN |  0  |  0  |  0  |     6 (-58)
         //                      +-----+-----+-----+-----+-----+-----+-----+-----+
         //       Vertex depth            X     0     1     X     0     0     0
         //     Fragment depth            X     X     1     0     0     0     0
         //           Reserved            1     1     1     X     0     0     0
-        //           Reserved            X     X     1     X     X     X     1
-        //           Reserved            X     X     1     X     X     1     X
-        //           Reserved            X     X     1     X     1     X     X
+        //           Reserved            X     X     1     X     0     0     1
+        //           Reserved            X     X     1     X     0     1     0
+        //           Reserved            X     X     1     X     0     1     1
+        //           Reserved            X     X     1     X     1     0     0
+        //           Reserved            X     X     1     X     1     0     1
+        //           Reserved            X     X     1     X     1     1     0
+        //           Reserved            X     X     1     X     1     1     1
         //
         // 46 variants used, 82 reserved
         //
@@ -87,14 +91,16 @@ namespace filament {
         static constexpr uint8_t PICKING                = 0x20; // picking (depth)
         static constexpr uint8_t VSM                    = 0x40; // variance shadow maps
 
-        static constexpr uint8_t DEPTH_MASK = DIRECTIONAL_LIGHTING |
-                                              DYNAMIC_LIGHTING |
-                                              SHADOW_RECEIVER |
-                                              DEPTH;
+        static constexpr uint8_t STANDARD_VARIANT = 0u;
+        static constexpr uint8_t STANDARD_MASK = DEPTH;
 
         // the depth variant deactivates all variants that make no sense when writing the depth
         // only -- essentially, all fragment-only variants.
         static constexpr uint8_t DEPTH_VARIANT = DEPTH;
+        static constexpr uint8_t DEPTH_MASK = DIRECTIONAL_LIGHTING |
+                                              DYNAMIC_LIGHTING |
+                                              SHADOW_RECEIVER |
+                                              DEPTH;
 
         // this mask filters out the lighting variants
         static constexpr uint8_t UNLIT_MASK    = SKINNING_OR_MORPHING | FOG;
@@ -118,22 +124,31 @@ namespace filament {
         inline void setVsm(bool v) noexcept { set(v, VSM); }
 
         inline static constexpr bool isValidDepthVariant(uint8_t variantKey) noexcept {
-            // VSM and PICKING are mutually exclusive for DEPTH variants
+            // Can't have VSM and PICKING together with DEPTH variants
+            constexpr uint8_t RESERVED_MASK  = VSM | PICKING | DEPTH;
+            constexpr uint8_t RESERVED_VALUE = VSM | PICKING | DEPTH;
             return (variantKey & DEPTH_MASK) == DEPTH_VARIANT &&
-                    variantKey != 0b1110000u &&
-                    variantKey != 0b1111000u;
+                   ((variantKey & RESERVED_MASK) != RESERVED_VALUE);
+        }
+
+        inline static constexpr bool isValidStandardVariant(uint8_t variantKey) noexcept {
+            // can't have shadow receiver if we don't have any lighting
+            constexpr uint8_t RESERVED0_MASK  = SHADOW_RECEIVER | DYNAMIC_LIGHTING | DIRECTIONAL_LIGHTING;
+            constexpr uint8_t RESERVED0_VALUE = SHADOW_RECEIVER;
+            // can't have VSM without shadow receiver
+            constexpr uint8_t RESERVED1_MASK  = VSM | SHADOW_RECEIVER;
+            constexpr uint8_t RESERVED1_VALUE = VSM;
+            return (variantKey & STANDARD_MASK) == STANDARD_VARIANT &&
+                   (variantKey & RESERVED0_MASK) != RESERVED0_VALUE &&
+                   (variantKey & RESERVED1_MASK) != RESERVED1_VALUE;
         }
 
         static constexpr bool isReserved(uint8_t variantKey) noexcept {
             // reserved variants that should just be skipped
-            // 1. If the DEPTH bit is set, then it must be a valid depth variant. Otherwise, the
-            // variant is reserved.
-            // 2. If SRE is set, either DYN or DIR must also be set (it makes no sense to have
-            // shadows without lights).
-            // 3. If VSM is set, then SRE must be set.
-            return ((variantKey & DEPTH) && !isValidDepthVariant(variantKey)) ||
-                    (variantKey & 0b0010111u) == 0b0000100u ||
-                    (variantKey & 0b1010100u) == 0b1000000u;
+            if (variantKey & DEPTH) {
+                return !isValidDepthVariant(variantKey);
+            }
+            return !isValidStandardVariant(variantKey);
         }
 
         static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {

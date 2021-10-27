@@ -453,23 +453,23 @@ function build_android {
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         ./gradlew \
-            -Pfilament_dist_dir=../out/android-debug/filament \
-            -Pfilament_abis=${ABI_GRADLE_OPTION} \
+            -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
 
         ./gradlew \
-            -Pfilament_dist_dir=../out/android-debug/filament \
-            -Pfilament_abis=${ABI_GRADLE_OPTION} \
+            -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             :filamat-android:assembleDebug
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
-                    -Pfilament_dist_dir=../out/android-debug/filament \
-                    -Pfilament_abis=${ABI_GRADLE_OPTION} \
+                    -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
+                    -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     :samples:${sample}:assembleDebug
             done
         fi
@@ -502,23 +502,23 @@ function build_android {
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         ./gradlew \
-            -Pfilament_dist_dir=../out/android-release/filament \
-            -Pfilament_abis=${ABI_GRADLE_OPTION} \
+            -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
 
         ./gradlew \
-            -Pfilament_dist_dir=../out/android-release/filament \
-            -Pfilament_abis=${ABI_GRADLE_OPTION} \
+            -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             :filamat-android:assembleRelease
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
             for sample in ${ANDROID_SAMPLES}; do
                 ./gradlew \
-                    -Pfilament_dist_dir=../out/android-release/filament \
-                    -Pfilament_abis=${ABI_GRADLE_OPTION} \
+                    -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
+                    -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     :samples:${sample}:assembleRelease
             done
         fi
@@ -831,7 +831,7 @@ while getopts ":hacCfijmp:q:uvslwtdk:" opt; do
             ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
-            VULKAN_ANDROID_GRADLE_OPTION="-Pfilament_exclude_vulkan"
+            VULKAN_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.exclude-vulkan"
             echo "Disabling support for Vulkan in the core Filament library."
             echo "Consider using -c after changing this option to clear the Gradle cache."
             ;;

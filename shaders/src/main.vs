@@ -82,13 +82,14 @@ void main() {
 #endif
 
     // The world position can be changed by the user in materialVertex()
-    vertex_worldPosition = material.worldPosition.xyz;
+    vertex_worldPosition.xyz = material.worldPosition.xyz;
+
 #ifdef HAS_ATTRIBUTE_TANGENTS
     vertex_worldNormal = material.worldNormal;
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePosition(vertex_worldPosition, vertex_worldNormal,
+    vertex_lightSpacePosition = computeLightSpacePosition(vertex_worldPosition.xyz, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
 
@@ -106,6 +107,19 @@ void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
     // GL convention to inverted DX convention (must happen after clipSpaceTransform)
     gl_Position.z = gl_Position.z * -0.5 + 0.5;
+#endif
+
+#if defined(HAS_VSM)
+    // For VSM, we use the linear-light space Z coordinate as the depth metric, which works for both
+    // directional and spot lights and can be safely interpolated.
+    // The value is guaranteed to be between [0, -zfar] by construction of viewFromWorldMatrix,
+    // (see ShadowMap.cpp).
+    // Use vertex_worldPosition.w which is otherwise not used to store the interpolated
+    // light-space depth.
+    highp float z = (frameUniforms.viewFromWorldMatrix * vec4(material.worldPosition.xyz, 1.0)).z;
+    highp float depth = -z / abs(frameUniforms.cameraFar); // rescale the depth between [0, 1]
+    depth = depth * 2.0 - 1.0;
+    vertex_worldPosition.w = frameUniforms.vsmExponent * depth;
 #endif
 
     // this must happen before we compensate for vulkan below
