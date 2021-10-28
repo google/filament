@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.12.11
 
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
+
 ## v1.12.10
 
 - engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
