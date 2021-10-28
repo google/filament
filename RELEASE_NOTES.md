@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.13.0 (currently main branch)
+## v1.13.1 (currently main branch)
+
+## v1.13.0
 
 - Android: Gradle configuration caching is now enabled
 - Android: Filament's Gradle properties have all been renamed to `com.google.android.filament.xxx`
@@ -14,6 +16,9 @@ A new header is inserted each time a *tag* is created.
 - Engine: Fix spotlights direction and falloff.  [⚠️ **Material breakage**].
 
 ## v1.12.11
+
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
 
 ## v1.12.10
 
