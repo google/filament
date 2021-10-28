@@ -16,9 +16,7 @@
 
 #include <jni.h>
 
-namespace filament {
-    extern jint JNI_OnLoad(JavaVM* vm, void* reserved);
-};
+#include "private/backend/VirtualMachineEnv.h"
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
@@ -26,9 +24,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         return -1;
     }
 
-#if ANDROID
-    ::filament::JNI_OnLoad(vm, reserved);
-#endif
+    // This must be called when the library is loaded. We need this to get a reference to the
+    // global VM
+    ::filament::VirtualMachineEnv::JNI_OnLoad(vm);
 
     return JNI_VERSION_1_6;
 }
