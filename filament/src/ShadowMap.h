@@ -213,8 +213,8 @@ private:
 
     math::mat4 getTextureCoordsMapping() const noexcept;
 
-    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpace,
-            const math::mat4f& Mv, float zfar) noexcept;
+    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
+            const math::mat4f& Mv, float znear, float zfar) noexcept;
 
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
