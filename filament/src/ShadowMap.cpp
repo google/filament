@@ -427,7 +427,7 @@ void ShadowMap::computeShadowCameraDirectional(
         if (!mShadowMapInfo.vsm) {
             mLightSpace = St;
         } else {
-            mLightSpace = computeVsmLightSpaceMatrix(St, Mv, zfar);
+            mLightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
         }
 
         // We apply the constant bias in world space (as opposed to light-space) to account
@@ -485,7 +485,7 @@ void ShadowMap::computeShadowCameraSpot(
     if (!mShadowMapInfo.vsm) {
         mLightSpace = St;
     } else {
-        mLightSpace = computeVsmLightSpaceMatrix(St, Mv, farPlane);
+        mLightSpace = computeVsmLightSpaceMatrix(St, Mv, nearPlane, farPlane);
     }
 
     const float constantBias = mShadowMapInfo.vsm ? 0.0f : params.options.constantBias;
@@ -631,22 +631,22 @@ mat4 ShadowMap::getTextureCoordsMapping() const noexcept {
     return mat4(Mf * Mb * Mv * Mt);
 }
 
-math::mat4f ShadowMap::computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
-        const math::mat4f& Mv, float zfar) noexcept {
+mat4f ShadowMap::computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
+        const math::mat4f& Mv, float znear, float zfar) noexcept {
     // The lightSpacePcf matrix transforms coordinates from world space into (u, v, z) coordinates,
     // where (u, v) are used to access the shadow map, and z is the (non-linear) PCF comparison
     // value [0, 1].
-    //
-    // For VSM, we want to leave the z coordinate in linear light space, normalized between [0, 1]
-    // (the normalization factor is therefore -1/zfar).
-    //
+    // For VSM, we want to leave the z coordinate in linear light-space, normalized between [0, 1],
+    //  i.e. remapping [near, far] to [0, 1].
     // When sampling a VSM shadow map, the shader follows suit, and doesn't divide by w for the z
-    // coordinate. See getters.fs.
+    // coordinate. See shadowing.fs.
+    // compute z' = -(Mv * position).z / (far - near) - (near / (far - near))
+    const float scale =   1.0f / (zfar - znear);
     math::mat4f lightSpaceVsm{ lightSpacePcf };
-    lightSpaceVsm[0].z = Mv[0].z * (-1.0f / zfar);
-    lightSpaceVsm[1].z = Mv[1].z * (-1.0f / zfar);
-    lightSpaceVsm[2].z = Mv[2].z * (-1.0f / zfar);
-    lightSpaceVsm[3].z = Mv[3].z * (-1.0f / zfar);
+    lightSpaceVsm[0].z =  -Mv[0].z * scale;
+    lightSpaceVsm[1].z =  -Mv[1].z * scale;
+    lightSpaceVsm[2].z =  -Mv[2].z * scale;
+    lightSpaceVsm[3].z = (-Mv[3].z - znear) * scale;
     return lightSpaceVsm;
 }
 

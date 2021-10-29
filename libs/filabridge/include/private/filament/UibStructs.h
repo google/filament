@@ -88,7 +88,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 
     float iblRoughnessOneLevel;       // level for roughness == 1
-    float cameraFar;                  // camera *culling* far-plane distance (projection far is at +inf)
+    float cameraFar;                  // camera *culling* far-plane distance, always positive (projection far is at +inf)
     float refractionLodOffset;
 
     // bit 0: directional (sun) shadow enabled
@@ -129,8 +129,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmReserved0;
 
     float lodBias;
-    float reserved1;
-    float reserved2;
+    float oneOverFarMinusNear;          // 1 / (f-n), always positive
+    float nearOverFarMinusNear;         // n / (f-n), always positive
     float reserved3;
 
     // bring PerViewUib to 2 KiB
