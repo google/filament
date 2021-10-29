@@ -59,8 +59,20 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
         FScene::LightSoa& lightData) noexcept {
     calculateTextureRequirements(engine, view, lightData);
     ShadowTechnique shadowTechnique = {};
-    shadowTechnique |= updateCascadeShadowMaps(engine, view, renderableData, lightData);
-    shadowTechnique |= updateSpotShadowMaps(engine, view, shadowUb, renderableData, lightData);
+
+    ShadowMap::SceneInfo sceneInfo(view.getVisibleLayers());
+
+    // Compute scene-dependent values shared across all shadow maps
+    ShadowMap::initSceneInfo(
+            *view.getScene(), view.getCameraInfo(),
+            sceneInfo);
+
+    shadowTechnique |= updateCascadeShadowMaps(
+            engine, view, renderableData, lightData, sceneInfo);
+
+    shadowTechnique |= updateSpotShadowMaps(
+            engine, view, renderableData, lightData, sceneInfo, shadowUb);
+
     return shadowTechnique;
 }
 
@@ -321,26 +333,18 @@ void ShadowMapManager::render(FrameGraph& fg, FEngine& engine, backend::DriverAp
     fg.getBlackboard().put("shadows", shadows);
 }
 
-ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
-        FEngine& engine, FView& view, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa& lightData) noexcept {
+ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
+        FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+        ShadowMap::SceneInfo& sceneInfo) noexcept {
     FScene* scene = view.getScene();
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
-    uint8_t visibleLayers = view.getVisibleLayers();
     const uint16_t textureSize = mTextureRequirements.size;
     auto& lcm = engine.getLightManager();
 
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     LightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
 
-    ShadowMap::SceneInfo sceneInfo;
-
     if (!mCascadeShadowMaps.empty()) {
-        // Compute scene-dependent values shared across all cascades
-        const float3 dir = lightData.elementAt<FScene::DIRECTION>(0);
-        ShadowMap::computeSceneInfo(dir,
-                *scene, viewingCameraInfo, visibleLayers, sceneInfo);
-
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
         ShadowMapEntry& entry = mCascadeShadowMaps[0];
@@ -354,7 +358,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
                 .vsm = view.hasVsm()
         };
 
-        map.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
+        map.update(lightData, 0, viewingCameraInfo, shadowMapInfo, *scene, sceneInfo);
 
         Frustum const& frustum = map.getCamera().getCullingFrustum();
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
@@ -430,7 +434,11 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
                 .vsm = view.hasVsm()
         };
         sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
-        shadowMap.update(lightData, 0, viewingCameraInfo, shadowMapInfo, sceneInfo);
+
+        shadowMap.update(lightData, 0,
+                viewingCameraInfo, shadowMapInfo,
+                *scene,sceneInfo);
+
         if (shadowMap.hasVisibleShadows()) {
             mShadowMappingUniforms.lightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
@@ -466,9 +474,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(
     return shadowTechnique;
 }
 
-ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
-        FEngine& engine, FView& view, TypedUniformBuffer<ShadowUib>& shadowUb,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
+ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
+        FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+        ShadowMap::SceneInfo& sceneInfo, TypedUniformBuffer <ShadowUib>& shadowUb) noexcept {
 
     ShadowTechnique shadowTechnique{};
     const CameraInfo& viewingCameraInfo = view.getCameraInfo();
@@ -492,16 +500,19 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(
                 .shadowDimension = (uint16_t)(textureDimension - 2),
                 .vsm = view.hasVsm()
         };
-        shadowMap.update(lightData, l, viewingCameraInfo, shadowMapInfo, {});
+
+        shadowMap.update(lightData, l,
+                viewingCameraInfo, shadowMapInfo,
+                *view.getScene(), sceneInfo);
 
         FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
         if (shadowMap.hasVisibleShadows()) {
             // Cull shadow casters
-            auto& s = shadowUb.edit();
             Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(i));
 
+            auto& s = shadowUb.edit();
             s.spotLightFromWorldMatrix[i] = shadowMap.getLightSpaceMatrix();
 
             shadowInfo[l].castsShadows = true;
