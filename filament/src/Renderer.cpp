@@ -977,6 +977,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                         auto reprojection =
                                 *historyProjection *
                                 inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                        // TODO: this shouldn't be called in a conditional. We need to enable/disable SSR globally.
                         view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
                                 ssrOptions);
                     } else {

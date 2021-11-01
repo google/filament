@@ -141,7 +141,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrThickness;
     float ssrBias;
     float ssrDistance;
-    float reserved6;
+    float ssrEnabled;
 
     // bring PerViewUib to 2 KiB
     math::float4 padding2[53];

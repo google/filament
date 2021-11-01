@@ -117,11 +117,12 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
             .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
 
+            // Screen-space reflection parameters
             .add("ssrReprojection",         1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrDistance",             1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved6",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("ssrEnabled",              1, UniformInterfaceBlock::Type::UINT)
 
             // bring PerViewUib to 2 KiB
             .add("padding2", 53, UniformInterfaceBlock::Type::FLOAT4)
