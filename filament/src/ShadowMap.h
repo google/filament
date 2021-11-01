@@ -44,10 +44,6 @@ public:
     ~ShadowMap();
 
     struct ShadowMapInfo {
-        // the smallest increment in depth precision
-        // e.g., for 16 bit depth textures, is this 1 / (2^16)
-        float zResolution = 0.0f;
-
         // the dimension of the encompassing texture atlas
         uint16_t atlasDimension = 0;
 
@@ -59,8 +55,14 @@ public:
         // e.g., for a texture dimension of 512, shadowDimension would be 510
         uint16_t shadowDimension = 0;
 
+        // This spot shadowmap index.
+        uint16_t spotIndex = 0;
+
         // whether we're using vsm
         bool vsm = false;
+
+        // polygon offset
+        backend::PolygonOffset polygonOffset{};
     };
 
     struct SceneInfo {
@@ -73,10 +75,10 @@ public:
 
         // light's near/far expressed in light-space, calculated from the scene's content
         // assuming the light is at the origin.
-        math::float2 lsNearFar;
+        math::float2 lsNearFar{};
 
         // Viewing camera's near/far expressed in view-space, calculated from the scene's content
-        math::float2 vsNearFar;
+        math::float2 vsNearFar{};
 
         // World-space shadow-casters volume
         Aabb wsShadowCastersVolume;
@@ -92,7 +94,13 @@ public:
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
-    void update(const FScene::LightSoa& lightData, size_t index, filament::CameraInfo const& camera,
+    void updateDirectional(const FScene::LightSoa& lightData, size_t index,
+            filament::CameraInfo const& camera,
+            const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+            SceneInfo& sceneInfo) noexcept;
+
+    void updateSpot(const FScene::LightSoa& lightData, size_t index,
+            filament::CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
             SceneInfo& sceneInfo) noexcept;
 
@@ -116,7 +124,7 @@ public:
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
 
-    backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+    backend::PolygonOffset getPolygonOffset() const noexcept { return mShadowMapInfo.polygonOffset; }
 
     // Call once per frame to populate the SceneInfo struct, then pass to update().
     // This computes values constant across all shadow maps.
@@ -126,6 +134,9 @@ public:
     // Update SceneInfo struct for a given light
     static void updateSceneInfo(const math::mat4f& Mv, FScene const& scene,
             ShadowMap::SceneInfo& sceneInfo);
+
+    static void updateSceneInfo(const math::mat4f& Mv, FScene const& scene,
+            ShadowMap::SceneInfo& sceneInfo, uint16_t index);
 
 private:
     struct ShadowCameraInfo {
@@ -152,17 +163,8 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
-    void computeShadowCameraDirectional(math::float3 const& dir, ShadowCameraInfo const& camera,
-            FLightManager::ShadowParams const& params, FScene const& scene,
-            SceneInfo& sceneInfo) noexcept;
-
-    void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
-            float outerConeAngle, float radius, ShadowCameraInfo const& camera,
-            FLightManager::ShadowParams const& params, FScene const& scene,
-            SceneInfo& sceneInfo) noexcept;
-
     static math::mat4f applyLISPSM(math::mat4f& Wp,
-            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
+            filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMpMv,
             FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
             const math::float3& dir);
@@ -247,9 +249,8 @@ private:
     float mTexelSizeWs = 0.0f;                  //  4
 
     // set-up in update()
-    ShadowMapInfo mShadowMapInfo;               // 12
+    ShadowMapInfo mShadowMapInfo;               // 20
     bool mHasVisibleShadows = false;            //  1
-    backend::PolygonOffset mPolygonOffset{};    //  8
 
     FEngine& mEngine;                           //  8
     const bool mClipSpaceFlipped;               //  1
