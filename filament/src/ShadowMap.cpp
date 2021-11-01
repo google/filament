@@ -1068,6 +1068,8 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
 
 void ShadowMap::initSceneInfo(FScene const& scene, filament::CameraInfo const& camera,
         ShadowMap::SceneInfo& sceneInfo) {
+    sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
+
     // We assume the light is at the origin to compute the SceneInfo. This is consumed later by
     // computeShadowCameraDirectional() which takes this into account.
     const mat4f V = camera.view;
@@ -1097,7 +1099,6 @@ void ShadowMap::initSceneInfo(FScene const& scene, filament::CameraInfo const& c
 void ShadowMap::updateSceneInfo(const mat4f& Mv, FScene const& scene,
         ShadowMap::SceneInfo& sceneInfo) {
     sceneInfo.lsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     visitScene(scene, sceneInfo.visibleLayers,
             [&](Aabb caster) {
                 float2 nf = ShadowMap::computeNearFar(Mv, caster);
