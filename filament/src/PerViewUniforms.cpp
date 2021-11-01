@@ -84,6 +84,8 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.cameraPosition = float3{ camera.getPosition() };
     s.worldOffset = camera.worldOffset;
     s.cameraFar = camera.zf;
+    s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
+    s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
     s.clipControl = mClipControl;
 }
 

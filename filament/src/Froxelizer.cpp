@@ -560,14 +560,19 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
         const mat4f& projection = mProjection;
         const mat3f& vn = camera.view.upperLeft();
 
+        // We use minimum cone angle of 0.5 degrees because too small angles cause issues in the
+        // sphere/cone intersection test, due to floating-point precision.
+        constexpr float maxInvSin = 114.59301f;         // 1 / sin(0.5 degrees)
+        constexpr float maxCosSquared = 0.99992385f;    // cos(0.5 degrees)^2
+
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
             LightParams light = {
                     .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
-                    .cosSqr = lcm.getCosOuterSquared(li),   // spot only
-                    .axis = vn * directions[j],             // spot only
-                    .invSin = lcm.getSinInverse(li),        // spot only
+                    .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
+                    .axis = vn * directions[j],                                     // spot only
+                    .invSin = std::min(maxInvSin, lcm.getSinInverse(li)),           // spot only
                     .radius = spheres[j].w,
             };
 

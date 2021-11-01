@@ -64,6 +64,8 @@ public:
     };
 
     struct SceneInfo {
+        explicit SceneInfo(uint8_t visibleLayers) noexcept : visibleLayers(visibleLayers) { }
+
         // The near and far planes, in clip space, to use for this shadow map
         math::float2 csNearFar = { -1.0f, 1.0f };
 
@@ -81,22 +83,18 @@ public:
 
         // World-space shadow-receivers volume
         Aabb wsShadowReceiversVolume;
+
+        uint8_t visibleLayers;
     };
 
-    static math::mat4f getLightViewMatrix(
-            math::float3 position, math::float3 direction) noexcept;
-
-    // Call once per frame to populate the CascadeParameters struct, then pass to update().
-    // This computes values constant across all cascades.
-    static void computeSceneInfo(math::float3 dir,
-            FScene const& scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
-            SceneInfo& sceneInfo);
+    static math::mat4f getDirectionalLightViewMatrix(
+            math::float3 direction, math::float3 position = {}) noexcept;
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
-    void update(const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera,
-            const ShadowMapInfo& shadowMapInfo, const SceneInfo& cascadeParams) noexcept;
+    void update(const FScene::LightSoa& lightData, size_t index, filament::CameraInfo const& camera,
+            const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+            SceneInfo& sceneInfo) noexcept;
 
     void render(FScene const& scene, utils::Range<uint32_t> range,
             FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
@@ -119,6 +117,15 @@ public:
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
 
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+
+    // Call once per frame to populate the SceneInfo struct, then pass to update().
+    // This computes values constant across all shadow maps.
+    static void initSceneInfo(FScene const& scene, filament::CameraInfo const& camera,
+            ShadowMap::SceneInfo& sceneInfo);
+
+    // Update SceneInfo struct for a given light
+    static void updateSceneInfo(const math::mat4f& Mv, FScene const& scene,
+            ShadowMap::SceneInfo& sceneInfo);
 
 private:
     struct ShadowCameraInfo {
@@ -145,13 +152,14 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
-    void computeShadowCameraDirectional(
-            math::float3 const& direction,
-            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
-            SceneInfo cascadeParams) noexcept;
+    void computeShadowCameraDirectional(math::float3 const& dir, ShadowCameraInfo const& camera,
+            FLightManager::ShadowParams const& params, FScene const& scene,
+            SceneInfo& sceneInfo) noexcept;
+
     void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
             float outerConeAngle, float radius, ShadowCameraInfo const& camera,
-            FLightManager::ShadowParams const& params) noexcept;
+            FLightManager::ShadowParams const& params, FScene const& scene,
+            SceneInfo& sceneInfo) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
@@ -213,8 +221,8 @@ private:
 
     math::mat4 getTextureCoordsMapping() const noexcept;
 
-    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpace,
-            const math::mat4f& Mv, float zfar) noexcept;
+    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
+            const math::mat4f& Mv, float znear, float zfar) noexcept;
 
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;

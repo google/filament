@@ -88,7 +88,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 
     float iblRoughnessOneLevel;       // level for roughness == 1
-    float cameraFar;                  // camera *culling* far-plane distance (projection far is at +inf)
+    float cameraFar;                  // camera *culling* far-plane distance, always positive (projection far is at +inf)
     float refractionLodOffset;
 
     // bit 0: directional (sun) shadow enabled
@@ -129,8 +129,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmReserved0;
 
     float lodBias;
-    float reserved1;
-    float reserved2;
+    float oneOverFarMinusNear;          // 1 / (f-n), always positive
+    float nearOverFarMinusNear;         // n / (f-n), always positive
     float reserved3;
 
     // bring PerViewUib to 2 KiB
@@ -164,13 +164,14 @@ static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be 
 struct LightsUib {
     static constexpr utils::StaticString _name{ "LightsUniforms" };
     math::float4 positionFalloff;     // { float3(pos), 1/falloff^2 }
-    math::half4 color;                // { half3(col),  0           }
-    math::half4 directionIES;         // { half3(dir),  IES index   }
-    math::half2 spotScaleOffset;      // { scale, offset }
-    float intensity;                            // float
-    uint32_t typeShadow;                        // 0x00.ll.ii.ct (t: 0=point, 1=spot, c:contact, ii: index, ll: layer)
-    uint32_t channels;                          // 0x000c00ll (ll: light channels, c: caster)
-    math::float4 reserved;            // 0
+    math::float3 direction;           // dir
+    float reserved1;                  // 0
+    math::half4 colorIES;             // { half3(col),  IES index   }
+    math::float2 spotScaleOffset;     // { scale, offset }
+    float reserved3;                  // 0
+    float intensity;                  // float
+    uint32_t typeShadow;              // 0x00.ll.ii.ct (t: 0=point, 1=spot, c:contact, ii: index, ll: layer)
+    uint32_t channels;                // 0x000c00ll (ll: light channels, c: caster)
 
     static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index, uint8_t layer) noexcept {
         return (type & 0xF) | (contactShadow ? 0x10 : 0x00) | (index << 8) | (layer << 16);
