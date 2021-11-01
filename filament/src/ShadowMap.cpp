@@ -439,7 +439,8 @@ void ShadowMap::computeShadowCameraSpot(float3 const& position, float3 const& di
     // find decent near/far
     // TODO: we can do much better by rejecting objects that don't intersect our frustum
     ShadowMap::updateSceneInfo(Mv, scene, sceneInfo);
-    float nearPlane = -sceneInfo.lsNearFar.x;
+    // FIXME: we need a configuration minimum near plane (for now hardcoded to 1cm)
+    float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar.x);
     float farPlane  = std::min(radius, -sceneInfo.lsNearFar.y);
 
     float outerConeAngleDegrees = outerConeAngle * f::RAD_TO_DEG;
