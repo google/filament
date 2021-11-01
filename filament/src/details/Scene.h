@@ -106,7 +106,7 @@ public:
         VISIBILITY_STATE,       //  1 | visibility data of the component
         SKINNING_BUFFER,        //  8 | bones uniform buffer handle, count, offset
         WORLD_AABB_CENTER,      // 12 | world-space bounding box center of the renderable
-        VISIBLE_MASK,           //  1 | each bit represents a visibility in a pass
+        VISIBLE_MASK,           //  2 | each bit represents a visibility in a pass
         MORPH_WEIGHTS,          //  4 | floats for morphing
         CHANNELS,               //  1 | currently light channels only
 

@@ -114,11 +114,13 @@ public:
 
 private:
 
-    struct TextureRequirements {
+    // Atlas requirements, updated in ShadowMapManager::update(),
+    // consumed in ShadowMapManager::render()
+    struct TextureAtlasRequirements {
         uint16_t size = 0;
         uint8_t layers = 0;
         uint8_t levels = 0;
-    } mTextureRequirements;
+    } mTextureAtlasRequirements;
 
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
@@ -200,7 +202,6 @@ private:
     // TODO: make it an option.
     // TODO: iOS does not support the DEPTH16 texture format.
     backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
-    float mTextureZResolution = 1.0f / (1u << 16u);
 
     ShadowMappingUniforms mShadowMappingUniforms;
 
