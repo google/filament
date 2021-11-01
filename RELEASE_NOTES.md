@@ -3,7 +3,12 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.11 (currently main branch)
+## v1.12.12 (currently main branch)
+
+## v1.12.11
+
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
 
 ## v1.12.10
 

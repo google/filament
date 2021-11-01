@@ -64,16 +64,19 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
 
     initializeSupportedGpuFamilies(mContext);
 
-    utils::slog.d << "Supported GPU families: " << utils::io::endl;
+    utils::slog.v << "Supported GPU families: " << utils::io::endl;
     if (mContext->highestSupportedGpuFamily.common > 0) {
-        utils::slog.d << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyCommon" << (int) mContext->highestSupportedGpuFamily.common << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.apple > 0) {
-        utils::slog.d << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyApple" << (int) mContext->highestSupportedGpuFamily.apple << utils::io::endl;
     }
     if (mContext->highestSupportedGpuFamily.mac > 0) {
-        utils::slog.d << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
+        utils::slog.v << "  MTLGPUFamilyMac" << (int) mContext->highestSupportedGpuFamily.mac << utils::io::endl;
     }
+    utils::slog.v << "Features:" << utils::io::endl;
+    utils::slog.v << "  readWriteTextureSupport: " <<
+            (bool) mContext->device.readWriteTextureSupport << utils::io::endl;
 
     // In order to support texture swizzling, the GPU needs to support it and the system be running
     // iOS 13+.
@@ -650,11 +653,10 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameBufferFetchSupported() {
-#if defined(IOS) && !defined(FILAMENT_IOS_SIMULATOR)
-    return true;
-#else
-    return false;
-#endif
+    // FrameBuffer fetch is achievable via "programmable blending" in Metal, and only supported on
+    // Apple GPUs with readWriteTextureSupport.
+    return mContext->highestSupportedGpuFamily.apple >= 1 &&
+            mContext->device.readWriteTextureSupport;
 }
 
 bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
