@@ -98,7 +98,11 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (WEBGL)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
-        list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        if (FILAMENT_SUPPORTS_WAYLAND)
+            list(APPEND SRCS src/opengl/platforms/PlatformEGLWayland.cpp)
+        elseif (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
     else()
@@ -185,7 +189,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanUtility.h
     )
     if (LINUX)
-        list(APPEND SRCS src/vulkan/PlatformVkLinux.cpp)
+        if (FILAMENT_SUPPORTS_WAYLAND)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxWayland.cpp)
+        elseif (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxX11.cpp)
+        endif()
     elseif (APPLE AND NOT IOS)
         list(APPEND SRCS src/vulkan/PlatformVkCocoa.mm)
     elseif (IOS)
@@ -203,7 +211,6 @@ endif()
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2 )
 
-
 # ==================================================================================================
 # Includes & target definition
 # ==================================================================================================
@@ -217,6 +224,15 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+if (FILAMENT_SUPPORTS_WAYLAND)
+    # Do not reference X11 headers in EGL, also affects EGL typedefs
+    # MESA_EGL_NO_X11_HEADERS is for compatibility - deprecated in favor of EGL_NO_X11
+    target_compile_definitions(${TARGET} PUBLIC
+        EGL_NO_X11
+        MESA_EGL_NO_X11_HEADERS
+    )
+endif()
 
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
@@ -273,6 +289,12 @@ if (ANDROID)
         target_link_libraries(${TARGET} PUBLIC GLESv3 EGL)
     endif()
     target_link_libraries(${TARGET} PUBLIC android)
+endif()
+
+if (LINUX)
+    if (FILAMENT_SUPPORTS_OPENGL AND FILAMENT_SUPPORTS_WAYLAND)
+        target_link_libraries(${TARGET} PUBLIC GLESv2 EGL)
+    endif()
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
@@ -372,7 +394,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
-if (APPLE)
+if (APPLE OR LINUX)
     add_library(backend_test STATIC
         test/BackendTest.cpp
         test/ShaderGenerator.cpp
@@ -434,6 +456,11 @@ if (APPLE AND NOT IOS)
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
     # linker from removing "unused" symbols.
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+endif()
+
+if (LINUX)
+    add_executable(backend_test_linux test/linux_runner.cpp)
+    target_link_libraries(backend_test_linux PRIVATE backend_test)
 endif()
 
 if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)

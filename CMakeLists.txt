@@ -23,6 +23,8 @@ option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
+option(FILAMENT_SUPPORTS_WAYLAND "Include Wayland support in Linux builds" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -94,12 +96,22 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (LINUX)
-    if (FILAMENT_SUPPORTS_XCB)
-        add_definitions(-DFILAMENT_SUPPORTS_XCB)
-    endif()
+    if (FILAMENT_SUPPORTS_WAYLAND)
+        add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
+        set(FILAMENT_SUPPORTS_X11 FALSE)
+    else ()
+        if (FILAMENT_SUPPORTS_XCB)
+            add_definitions(-DFILAMENT_SUPPORTS_XCB)
+        endif()
 
-    if (FILAMENT_SUPPORTS_XLIB)
-        add_definitions(-DFILAMENT_SUPPORTS_XLIB)
+        if (FILAMENT_SUPPORTS_XLIB)
+            add_definitions(-DFILAMENT_SUPPORTS_XLIB)
+        endif()
+
+        if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
+            add_definitions(-DFILAMENT_SUPPORTS_X11)
+            set(FILAMENT_SUPPORTS_X11 TRUE)
+        endif()
     endif()
 endif()
 
