@@ -73,8 +73,8 @@ public:
 
     void setDropHandler(DropCallback handler) { mDropHandler = handler; }
 
-    void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
+    void run(const Config& config, const SetupCallback& setup, const CleanupCallback& cleanup,
+            ImGuiCallback imgui = ImGuiCallback(), const PreRenderCallback& preRender = PreRenderCallback(),
             PostRenderCallback postRender = PostRenderCallback(),
             size_t width = 1024, size_t height = 640);
 

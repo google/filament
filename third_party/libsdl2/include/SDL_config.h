@@ -42,7 +42,11 @@
 #elif defined(__PSP__)
 #include "SDL_config_psp.h"
 #elif defined(__LINUX__)
-#include "SDL_config_linux.h"
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+#include "SDL_config_linux_wayland.h"
+#elif defined(FILAMENT_SUPPORTS_X11)
+#include "SDL_config_linux_x11.h"
+#endif
 #else
 /* This is a minimal configuration just to get SDL running on new platforms */
 #include "SDL_config_minimal.h"

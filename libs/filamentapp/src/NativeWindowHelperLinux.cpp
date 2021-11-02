@@ -24,6 +24,16 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
     SDL_SysWMinfo wmi;
     SDL_VERSION(&wmi.version);
     ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
-    Window win = (Window) wmi.info.x11.window;
-    return (void*) win;
+    if (wmi.subsystem == SDL_SYSWM_X11) {
+#if defined(FILAMENT_SUPPORTS_X11)
+        Window win = (Window) wmi.info.x11.window;
+        return (void *) win;
+#endif
+    }
+    else if (wmi.subsystem == SDL_SYSWM_WAYLAND) {
+#if defined(FILAMENT_SUPPORTS_WAYLAND)
+        return wmi.info.wl.display;
+#endif
+    }
+    return nullptr;
 }

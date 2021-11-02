@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__) || defined(FILAMENT_SUPPORTS_WAYLAND)
 
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>

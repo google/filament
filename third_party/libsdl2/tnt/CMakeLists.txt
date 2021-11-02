@@ -86,7 +86,6 @@ endif()
 if (LINUX)
     file(GLOB SRCS_LINUX
             ${SRC_DIR}/core/unix/*.c
-            ${SRC_DIR}/video/x11/*.c
             ${SRC_DIR}/thread/pthread/*.c
             ${SRC_DIR}/power/linux/*.c
             ${SRC_DIR}/filesystem/unix/*.c
@@ -96,6 +95,54 @@ if (LINUX)
             ${SRC_DIR}/loadso/dlopen/*.c
     )
     set(SRCS ${SRCS} ${SRCS_LINUX})
+
+    if (FILAMENT_SUPPORTS_WAYLAND)
+        file(GLOB SRCS_LINUX_WAYLAND ${SRC_DIR}/video/wayland/*.c)
+        list(APPEND SRCS ${SRCS_LINUX_WAYLAND})
+    elseif(FILAMENT_SUPPORTS_X11)
+        file(GLOB SRCS_LINUX_X11 ${SRC_DIR}/video/x11/*.c)
+        list(APPEND SRCS ${SRCS_LINUX_X11})
+    endif()
+
+    if (FILAMENT_SUPPORTS_WAYLAND)
+        find_program(WAYLAND_SCANNER_EXECUTABLE NAMES wayland-scanner)
+
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(WAYLAND REQUIRED xkbcommon wayland-egl wayland-cursor wayland-client)
+        pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols>=1.13)
+        pkg_get_variable(WAYLAND_PROTOCOLS_BASE wayland-protocols pkgdatadir)
+        pkg_get_variable(WAYLAND_CLIENT_PKGDATADIR wayland-client pkgdatadir)
+
+        macro(wayland_generate protocol_file output_file)
+            add_custom_command(OUTPUT "${output_file}.h"
+                    COMMAND "${WAYLAND_SCANNER_EXECUTABLE}" client-header "${protocol_file}" "${output_file}.h"
+                    DEPENDS "${protocol_file}"
+                    VERBATIM)
+            add_custom_command(OUTPUT "${output_file}.c"
+                    COMMAND "${WAYLAND_SCANNER_EXECUTABLE}" private-code "${protocol_file}" "${output_file}.c"
+                    DEPENDS "${protocol_file}"
+                    VERBATIM)
+            list(APPEND SRCS "${output_file}.h" "${output_file}.c")
+        endmacro()
+
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/autogen/wayland)
+        include_directories(${CMAKE_BINARY_DIR}/autogen/wayland)
+
+        list(APPEND EXTRA_LIBS ${WAYLAND_LIBRARIES})
+
+        wayland_generate(
+                "${WAYLAND_CLIENT_PKGDATADIR}/wayland.xml"
+                "${CMAKE_BINARY_DIR}/autogen/wayland/wayland-client-protocol")
+        wayland_generate(
+                "${WAYLAND_PROTOCOLS_BASE}/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+                "${CMAKE_BINARY_DIR}/autogen/wayland/pointer-constraints-unstable-v1-client-protocol")
+        wayland_generate(
+                "${WAYLAND_PROTOCOLS_BASE}/unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+                "${CMAKE_BINARY_DIR}/autogen/wayland/relative-pointer-unstable-v1-client-protocol")
+        wayland_generate(
+                "${WAYLAND_PROTOCOLS_BASE}/unstable/xdg-shell/xdg-shell-unstable-v6.xml"
+                "${CMAKE_BINARY_DIR}/autogen/wayland/xdg-shell-unstable-v6-client-protocol")
+    endif()
 endif()
 ###################################################################################################
 
