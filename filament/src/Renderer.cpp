@@ -1057,7 +1057,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine::DriverApi& driver = engine.getDriverApi();
 
         driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
-        mWithinFrame = true;
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
@@ -1138,7 +1137,6 @@ void FRenderer::endFrame() {
 
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.endFrame(driver);
-    mWithinFrame = false;
 
     if (mSwapChain) {
         mSwapChain->commit(driver);
@@ -1174,7 +1172,8 @@ void FRenderer::endFrame() {
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& buffer) {
 #ifndef NDEBUG
-    ASSERT_PRECONDITION(mWithinFrame, "readPixels() on a SwapChain must be called after"
+    const bool withinFrame = mSwapChain != nullptr;
+    ASSERT_PRECONDITION(withinFrame, "readPixels() on a SwapChain must be called after"
             " beginFrame() and before endFrame().");
 #endif
     readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
