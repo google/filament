@@ -125,12 +125,10 @@ endif()
 
 if (ANDROID OR WEBGL OR IOS)
     set(IS_MOBILE_TARGET TRUE)
-    message(STATUS "Target Build")
 endif ()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     set(IS_HOST_PLATFORM TRUE)
-    message(STATUS "Host Build")
 endif ()
 
 if (IOS)
