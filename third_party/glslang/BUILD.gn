@@ -69,6 +69,23 @@ action("glslang_build_info") {
   ]
 }
 
+action("glslang_extension_headers") {
+  script = "gen_extension_headers.py"
+
+  out_file = "${target_gen_dir}/include/glslang/glsl_intrinsic_header.h"
+
+  inputs = [
+    script
+  ]
+  outputs = [ out_file ]
+  args = [
+    "-i",
+    rebase_path("glslang/ExtensionHeaders", root_build_dir),
+    "-o",
+    rebase_path(out_file, root_build_dir),
+  ]
+}
+
 spirv_tools_dir = glslang_spirv_tools_dir
 if (!defined(glslang_angle)) {
   glslang_angle = false
@@ -302,6 +319,7 @@ executable("glslang_validator") {
     ":glslang_build_info",
     ":glslang_default_resource_limits_sources",
     ":glslang_sources",
+    ":glslang_extension_headers",
   ]
   public_configs = [ ":glslang_hlsl" ]
 

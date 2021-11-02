@@ -235,6 +235,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"hlsl.groupid.comp", "main"},
         {"hlsl.identifier.sample.frag", "main"},
         {"hlsl.if.frag", "PixelShaderFunction"},
+        {"hlsl.imageload-subvec4.comp", "main"},
         {"hlsl.imagefetch-subvec4.comp", "main"},
         {"hlsl.implicitBool.frag", "main"},
         {"hlsl.inf.vert", "main"},

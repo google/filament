@@ -72,7 +72,7 @@ if(BUILD_TESTING)
             install(TARGETS glslangtests EXPORT glslangtestsTargets
                     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 			install(EXPORT glslangtestsTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-        endif(ENABLE_GLSLANG_INSTALL)
+        endif()
 
         set(GLSLANG_TEST_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../Test")
         # Supply a default test root directory, so that manual testing
@@ -90,7 +90,7 @@ if(BUILD_TESTING)
             target_include_directories(glslangtests
                 PRIVATE ${spirv-tools_SOURCE_DIR}/include
             )
-        endif(ENABLE_OPT)
+        endif()
 
         set(LIBRARIES
             glslang OSDependent OGLCompiler glslang
@@ -102,7 +102,7 @@ if(BUILD_TESTING)
 
         if(ENABLE_HLSL)
             set(LIBRARIES ${LIBRARIES} HLSL)
-        endif(ENABLE_HLSL)
+        endif()
         target_link_libraries(glslangtests PRIVATE ${LIBRARIES} gmock)
 
         add_test(NAME glslang-gtests
