@@ -345,32 +345,33 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     FLightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
 
+    const ShadowMap::ShadowMapInfo shadowMapInfo{
+            .atlasDimension   = mTextureAtlasRequirements.size,
+            .textureDimension = uint16_t(options.mapSize),
+            .shadowDimension  = uint16_t(options.mapSize - 2u),
+            .vsm = view.hasVsm(),
+            .polygonOffset = { // handle reversed Z
+                    .slope    = view.hasVsm() ? 0.0f : -params.options.polygonOffsetSlope,
+                    .constant = view.hasVsm() ? 0.0f : -params.options.polygonOffsetConstant
+            }
+    };
+
     if (!mCascadeShadowMaps.empty()) {
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
         ShadowMapEntry& entry = mCascadeShadowMaps[0];
-        ShadowMap& map = entry.getShadowMap();
-        const ShadowMap::ShadowMapInfo shadowMapInfo{
-                .atlasDimension   = mTextureAtlasRequirements.size,
-                .textureDimension = uint16_t(options.mapSize),
-                .shadowDimension  = uint16_t(options.mapSize - 2u),
-                .vsm = view.hasVsm(),
-                .polygonOffset = { // handle reversed Z
-                        .slope = -params.options.polygonOffsetSlope,
-                        .constant = -params.options.polygonOffsetConstant
-                }
-        };
+        ShadowMap& shadowMap = entry.getShadowMap();
 
-        map.updateDirectional(lightData, 0, viewingCameraInfo, shadowMapInfo, *scene, sceneInfo);
+        shadowMap.updateDirectional(lightData, 0, viewingCameraInfo, shadowMapInfo, *scene, sceneInfo);
 
-        Frustum const& frustum = map.getCamera().getCullingFrustum();
+        Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                 VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
 
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : lcm.getShadowNormalBias(0);
         // Set shadowBias, using the first directional cascade.
-        const float texelSizeWorldSpace = map.getTexelSizeWorldSpace();
+        const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
         mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * texelSizeWorldSpace, 0 };
     }
 
@@ -428,16 +429,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         ShadowMap& shadowMap = entry.getShadowMap();
         assert_invariant(entry.getLightIndex() == 0);
 
-        const ShadowMap::ShadowMapInfo shadowMapInfo{
-                .atlasDimension   = mTextureAtlasRequirements.size,
-                .textureDimension = uint16_t(options.mapSize),
-                .shadowDimension  = uint16_t(options.mapSize - 2u),
-                .vsm = view.hasVsm(),
-                .polygonOffset = { // handle reversed Z
-                        .slope = -params.options.polygonOffsetSlope,
-                        .constant = -params.options.polygonOffsetConstant
-                }
-        };
         sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
 
         shadowMap.updateDirectional(lightData, 0,
@@ -506,8 +497,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
                 .spotIndex = uint16_t(i),
                 .vsm = view.hasVsm(),
                 .polygonOffset = { // handle reversed Z
-                        .slope = -params.options.polygonOffsetSlope,
-                        .constant = -params.options.polygonOffsetConstant
+                        .slope    = view.hasVsm() ? 0.0f : -params.options.polygonOffsetSlope,
+                        .constant = view.hasVsm() ? 0.0f : -params.options.polygonOffsetConstant
                 }
         };
 

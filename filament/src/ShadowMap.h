@@ -139,19 +139,6 @@ public:
             ShadowMap::SceneInfo& sceneInfo, uint16_t index);
 
 private:
-    struct ShadowCameraInfo {
-        math::mat4f projection;
-        math::mat4f model;
-        math::mat4f view;
-        math::mat4f worldOrigin;
-        float zn = 0;
-        float zf = 0;
-        math::float3 const& getPosition() const noexcept { return model[3].xyz; }
-        math::float3 getForwardVector() const noexcept {
-            return -normalize(model[2].xyz);   // the camera looks towards -z
-        }
-    };
-
     struct Segment {
         uint8_t v0, v1;
     };
