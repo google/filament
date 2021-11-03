@@ -273,6 +273,7 @@ public:
          * Constant bias in depth-resolution units by which shadows are moved away from the
          * light. The default value of 0.5 is used to round depth values up.
          * Generally this value shouldn't be changed or at least be small and positive.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         float polygonOffsetConstant = 0.5f;
 
@@ -281,6 +282,7 @@ public:
          * away from the light. The default value of 2.0 works well with SHADOW_SAMPLING_PCF_LOW.
          * Generally this value is between 0.5 and the size in texel of the PCF filter.
          * Setting this value correctly is essential for LISPSM shadow-maps.
+         * This is ignored when the View's ShadowType is set to VSM.
          */
         float polygonOffsetSlope = 2.0f;
 

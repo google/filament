@@ -244,13 +244,13 @@ public class LightManager {
          * light. 1mm by default.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        public float constantBias = 0.05f;
+        public float constantBias = 0.001f;
 
         /** Amount by which the maximum sampling error is scaled. The resulting value is used
          * to move the shadow away from the fragment normal. Should be 1.0.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        public float normalBias = 0.4f;
+        public float normalBias = 1.0f;
 
         /** Distance from the camera after which shadows are clipped. This is used to clip
          * shadows that are too far and wouldn't contribute to the scene much, improving
@@ -279,7 +279,24 @@ public class LightManager {
          * When set to true, all resolution enhancing features that can affect stability are
          * disabling, resulting in significantly lower resolution shadows, albeit stable ones.
          */
-        public boolean stable = true;
+        public boolean stable = false;
+
+        /**
+         * Constant bias in depth-resolution units by which shadows are moved away from the
+         * light. The default value of 0.5 is used to round depth values up.
+         * Generally this value shouldn't be changed or at least be small and positive.
+         * This is ignored when the View's ShadowType is set to VSM.
+         */
+        float polygonOffsetConstant = 0.5f;
+
+        /**
+         * Bias based on the change in depth in depth-resolution units by which shadows are moved
+         * away from the light. The default value of 2.0 works well with SHADOW_SAMPLING_PCF_LOW.
+         * Generally this value is between 0.5 and the size in texel of the PCF filter.
+         * Setting this value correctly is essential for LISPSM shadow-maps.
+         * This is ignored when the View's ShadowType is set to VSM.
+         */
+        float polygonOffsetSlope = 2.0f;
 
         /**
          * Whether screen-space contact shadows are used. This applies regardless of whether a
@@ -471,7 +488,9 @@ public class LightManager {
             nBuilderShadowOptions(mNativeBuilder,
                     options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
                     options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
-                    options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
+                    options.shadowFarHint, options.stable,
+                    options.polygonOffsetConstant, options.polygonOffsetSlope,
+                    options.screenSpaceContactShadows,
                     options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
                     options.blurWidth);
             return this;
@@ -1131,7 +1150,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, float polygonOffsetConstant, float polygonOffsetSlope, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);
