@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.13.1 (currently main branch)
+## v1.14.0 (currently main branch)
+
+- engine: internal materials can use structures as parameters [⚠️ **Material breakage**].
 
 ## v1.13.0
 

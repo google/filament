@@ -185,9 +185,14 @@ static_assert(sizeof(LightsUib) == 64, "the actual UBO is an array of 256 mat4")
 // UBO for punctual (spot light) shadows.
 struct ShadowUib {
     static constexpr utils::StaticString _name{ "ShadowUniforms" };
-    math::mat4f spotLightFromWorldMatrix[CONFIG_MAX_SHADOW_CASTING_SPOTS];
-    math::float4 directionShadowBias[CONFIG_MAX_SHADOW_CASTING_SPOTS]; // light direction, normal bias
+    struct alignas(16) ShadowData {
+        math::mat4f lightFromWorldMatrix;
+        math::float3 direction;
+        float normalBias;
+    };
+    ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };
+static_assert(sizeof(ShadowUib) <= 16384, "ShadowUib exceed max UBO size");
 
 // UBO froxel record buffer.
 struct FroxelRecordUib {
@@ -203,9 +208,8 @@ struct PerRenderableUibBone {
     math::float4 s = { 1, 1, 1, 0 };
     math::float4 ns = { 1, 1, 1, 0 };
 };
-
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
-        "Bones exceed max UBO size");
+        "PerRenderableUibBone exceed max UBO size");
 
 } // namespace filament
 

@@ -13,12 +13,12 @@ highp vec4 computeLightSpacePosition(const highp vec3 p, const highp vec3 n, con
         const float b, const highp mat4 lightFromWorldMatrix) {
 #if defined(HAS_VSM)
     // VSM don't apply the shadow bias
-    highp vec4 lightSpacePosition = (lightFromWorldMatrix * vec4(p, 1.0));
+    highp vec4 lightSpacePosition = mulMat4x4Float3(lightFromWorldMatrix, p);
 #else
     float NoL = saturate(dot(n, l));
     float sinTheta = sqrt(1.0 - NoL * NoL);
     highp vec3 offsetPosition = p + n * (sinTheta * b);
-    highp vec4 lightSpacePosition = (lightFromWorldMatrix * vec4(offsetPosition, 1.0));
+    highp vec4 lightSpacePosition = mulMat4x4Float3(lightFromWorldMatrix, offsetPosition);
 #endif
     return lightSpacePosition;
 }
