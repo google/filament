@@ -427,8 +427,11 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     //      Project receivers, casters and view onto near plane,
     //      compute intersection of that which gives the l,r,t,b planes
 
-    // FIXME: texelSizeWorldSpace doesn't work for spotlights
-    mTexelSizeWs = 0; //texelSizeWorldSpace(Mp, mat4f(MbMt));
+    // For spotlights, we store the texel size at 1 world unit
+    // The size of a texel in world unit is given by: (near/dimension) / lightspace.z,
+    // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+    // Note: this would not work with LISPSM, which warps the texture space.
+    mTexelSizeWs = 0.5f * nearPlane / float(mShadowMapInfo.shadowDimension);
 
     if (!mShadowMapInfo.vsm) {
         mLightSpace = St;
