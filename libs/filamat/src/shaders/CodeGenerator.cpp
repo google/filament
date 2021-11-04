@@ -326,7 +326,7 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderType shader
     }
     out << "std140) uniform " << blockName.c_str() << " {\n";
     for (auto const& info : infos) {
-        char const* const type = getUniformTypeName(info.type);
+        char const* const type = getUniformTypeName(info);
         char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,
                 uniformPrecision, defaultPrecision);
         out << "    " << precision;
@@ -673,9 +673,9 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
     }
 }
 
-char const* CodeGenerator::getUniformTypeName(UniformInterfaceBlock::Type type) noexcept {
+char const* CodeGenerator::getUniformTypeName(UniformInterfaceBlock::UniformInfo const& info) noexcept {
     using Type = UniformInterfaceBlock::Type;
-    switch (type) {
+    switch (info.type) {
         case Type::BOOL:   return "bool";
         case Type::BOOL2:  return "bvec2";
         case Type::BOOL3:  return "bvec3";
@@ -694,6 +694,7 @@ char const* CodeGenerator::getUniformTypeName(UniformInterfaceBlock::Type type) 
         case Type::UINT4:  return "uvec4";
         case Type::MAT3:   return "mat3";
         case Type::MAT4:   return "mat4";
+        case Type::STRUCT: return info.structName.c_str();
     }
 }
 
@@ -777,6 +778,7 @@ bool CodeGenerator::hasPrecision(UniformInterfaceBlock::Type type) noexcept {
         case UniformType::BOOL2:
         case UniformType::BOOL3:
         case UniformType::BOOL4:
+        case UniformType::STRUCT:
             return false;
         default:
             return true;

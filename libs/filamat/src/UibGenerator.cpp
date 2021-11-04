@@ -145,8 +145,7 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(ShadowUib::_name)
-            .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("shadows", CONFIG_MAX_SHADOW_CASTING_SPOTS, "ShadowData", sizeof(ShadowUib::ShadowData))
             .build();
     return uib;
 }
