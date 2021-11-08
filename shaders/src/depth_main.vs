@@ -25,7 +25,21 @@ void main() {
 #endif
 
 #if defined(HAS_VSM)
-    vertex_worldPosition = material.worldPosition.xyz;
+    // For VSM, we use the linear light-space Z coordinate as the depth metric, which works for both
+    // directional and spot lights and can be safely interpolated.
+    // The value is guaranteed to be between [-znear, -zfar] by construction of viewFromWorldMatrix,
+    // (see ShadowMap.cpp).
+    // Use vertex_worldPosition.w which is otherwise not used to store the interpolated
+    // light-space depth.
+    highp float z = (frameUniforms.viewFromWorldMatrix * vec4(material.worldPosition.xyz, 1.0)).z;
+
+    // rescale [near, far] to [0, 1]
+    highp float depth = -z * frameUniforms.oneOverFarMinusNear - frameUniforms.nearOverFarMinusNear;
+
+    // EVSM pre-mapping
+    depth = frameUniforms.vsmExponent * (depth * 2.0 - 1.0);
+
+    vertex_worldPosition.w = depth;
 #endif
 
     // this must happen before we compensate for vulkan below

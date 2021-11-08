@@ -122,20 +122,20 @@ The Gradle project used to generate the AAR is located at `<filament>\android`.
 
 ```
 cd android
-gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease
+gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament assembleRelease
 copy filament-android\build\outputs\aar\filament-android-release.aar ..\..\out\
 ```
 
-If you're only interested in building for a single ABI, you'll need to pass a `filament_abis` parameter:
+If you're only interested in building for a single ABI, you'll need to pass a `com.google.android.filament.abis` parameter:
 
 ```
-gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease -Pfilament_abis=x86
+gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament assembleRelease -Pcom.google.android.filament.abis=x86
 ```
 
-If you're only interested in building SDK, you may skip samples build by passing a `filament_skip_samples` flag:
+If you're only interested in building SDK, you may skip samples build by passing a `com.google.android.filament.skip-samples` flag:
 
 ```
-gradlew -Pfilament_dist_dir=..\out\android-release\filament assembleRelease -Pfilament_skip_samples
+gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament assembleRelease -Pfilament_skip_samples
 ```
 
 

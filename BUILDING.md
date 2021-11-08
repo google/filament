@@ -291,11 +291,11 @@ Alternatively you can build the AAR from the command line by executing the follo
 `android/` directory:
 
 ```
-$ ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+$ ./gradlew -Pcom.google.android.filament.dist-dir=../../out/android-release/filament assembleRelease
 ```
 
-The `-Pfilament_dist_dir` can be used to specify a different installation directory (it must match
-the CMake install prefix used in the previous steps).
+The `-Pcom.google.android.filament.dist-dir` can be used to specify a different installation
+directory (it must match the CMake install prefix used in the previous steps).
 
 #### Using Filament's AAR
 

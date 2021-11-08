@@ -120,12 +120,13 @@ private:
         uint8_t levels = 0;
     } mTextureRequirements;
 
-    ShadowTechnique updateCascadeShadowMaps(FEngine& engine, FView& view,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
+            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+            ShadowMap::SceneInfo& sceneInfo) noexcept;
 
-    ShadowTechnique updateSpotShadowMaps(FEngine& engine, FView& view,
-            TypedUniformBuffer<ShadowUib>& shadowUb,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine,
+            FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
+            ShadowMap::SceneInfo& sceneInfo, TypedUniformBuffer<ShadowUib>& shadowUb) noexcept;
 
     void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
 
