@@ -32,7 +32,7 @@ using namespace filament;
 using namespace backend;
 using namespace utils;
 
-io::sstream& CodeGenerator::generateSeparator(io::sstream& out) const {
+io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     out << '\n';
     return out;
 }
@@ -137,12 +137,12 @@ Precision CodeGenerator::getDefaultUniformPrecision() const {
     }
 }
 
-io::sstream& CodeGenerator::generateEpilog(io::sstream& out) const {
+io::sstream& CodeGenerator::generateEpilog(io::sstream& out) {
     out << "\n"; // For line compression all shaders finish with a newline character.
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
         out << SHADERS_MAIN_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
@@ -151,7 +151,7 @@ io::sstream& CodeGenerator::generateShaderMain(io::sstream& out, ShaderType type
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
         out << SHADERS_POST_PROCESS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
@@ -161,7 +161,7 @@ io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderType
 }
 
 io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderType type,
-        const CString& name, size_t index) const {
+        const CString& name, size_t index) {
 
     if (!name.empty()) {
         if (type == ShaderType::VERTEX) {
@@ -176,7 +176,7 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderType type,
 }
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType type,
-        const AttributeBitset& attributes, Interpolation interpolation) const {
+        const AttributeBitset& attributes, Interpolation interpolation) {
 
     const char* shading = getInterpolationQualifier(interpolation);
     out << "#define SHADING_INTERPOLATION " << shading << "\n";
@@ -242,8 +242,8 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderType ty
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, ShaderType type,
-        const utils::CString& name, size_t index,
+io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderType type,
+        const CString& name, size_t index,
         MaterialBuilder::VariableQualifier qualifier,
         MaterialBuilder::OutputType outputType) const {
     if (name.empty() || type == ShaderType::VERTEX) {
@@ -285,7 +285,7 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
 }
 
 
-io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderType type) {
     assert(type != ShaderType::VERTEX);
     if (type == ShaderType::FRAGMENT) {
         out << SHADERS_DEPTH_MAIN_FS_DATA;
@@ -294,7 +294,7 @@ io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderType
 }
 
 const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precision precision,
-        Precision uniformPrecision, Precision defaultPrecision) const noexcept {
+        Precision uniformPrecision, Precision defaultPrecision) noexcept {
     if (!hasPrecision(type)) {
         return "";
     }
@@ -384,8 +384,8 @@ io::sstream& CodeGenerator::generateSamplers(
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateSubpass(utils::io::sstream& out,
-        SubpassInfo subpass) const {
+io::sstream& CodeGenerator::generateSubpass(io::sstream& out,
+        SubpassInfo subpass) {
     if (!subpass.isValid) {
         return out;
     }
@@ -453,31 +453,31 @@ void CodeGenerator::fixupExternalSamplers(
 }
 
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, bool value) const {
+io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, bool value) {
     if (value) {
         out << "#define " << name << "\n";
     }
     return out;
 }
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, uint32_t value) const {
+io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, uint32_t value) {
     out << "#define " << name << " " << value << "\n";
     return out;
 }
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, const char* string) const {
+io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, const char* string) {
     out << "#define " << name << " " << string << "\n";
     return out;
 }
 
 io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* name,
-        uint32_t index, uint32_t value) const {
+        uint32_t index, uint32_t value) {
     out << "#define " << name << index << " " << value << "\n";
     return out;
 }
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
-        MaterialBuilder::Property property, bool isSet) const {
+        MaterialBuilder::Property property, bool isSet) {
     if (isSet) {
         out << "#define " << "MATERIAL_HAS_" << getConstantName(property) << "\n";
     }
@@ -514,7 +514,7 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) {
     out << SHADERS_COMMON_MATH_FS_DATA;
     out << SHADERS_COMMON_SHADOWING_FS_DATA;
     if (type == ShaderType::VERTEX) {
@@ -526,7 +526,7 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) co
     return out;
 }
 
-io::sstream& CodeGenerator::generateFog(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateFog(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_FOG_FS_DATA;
@@ -534,7 +534,7 @@ io::sstream& CodeGenerator::generateFog(io::sstream& out, ShaderType type) const
     return out;
 }
 
-io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
         out << SHADERS_MATERIAL_INPUTS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
@@ -543,7 +543,7 @@ io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType 
     return out;
 }
 
-io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
         out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
@@ -552,8 +552,8 @@ io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderTy
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generatePostProcessGetters(utils::io::sstream& out,
-        ShaderType type) const {
+io::sstream& CodeGenerator::generatePostProcessGetters(io::sstream& out,
+        ShaderType type) {
     out << SHADERS_COMMON_GETTERS_FS_DATA;
     if (type == ShaderType::VERTEX) {
         out << SHADERS_POST_PROCESS_GETTERS_VS_DATA;
@@ -561,7 +561,7 @@ utils::io::sstream& CodeGenerator::generatePostProcessGetters(utils::io::sstream
     return out;
 }
 
-io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderType type) {
     out << SHADERS_COMMON_GETTERS_FS_DATA;
     if (type == ShaderType::VERTEX) {
         out << SHADERS_GETTERS_VS_DATA;
@@ -571,7 +571,7 @@ io::sstream& CodeGenerator::generateGetters(io::sstream& out, ShaderType type) c
     return out;
 }
 
-io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderType type) const {
+io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderType type) {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_SHADING_PARAMETERS_FS_DATA;
@@ -580,7 +580,7 @@ io::sstream& CodeGenerator::generateParameters(io::sstream& out, ShaderType type
 }
 
 io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
-        filament::Variant variant, filament::Shading shading, bool customSurfaceShading) const {
+        filament::Variant variant, Shading shading, bool customSurfaceShading) {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         out << SHADERS_COMMON_LIGHTING_FS_DATA;
@@ -626,7 +626,7 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
 }
 
 io::sstream& CodeGenerator::generateShaderUnlit(io::sstream& out, ShaderType type,
-        filament::Variant variant, bool hasShadowMultiplier) const {
+        filament::Variant variant, bool hasShadowMultiplier) {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
         if (hasShadowMultiplier) {
