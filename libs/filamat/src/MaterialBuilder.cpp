@@ -17,6 +17,7 @@
 #include "filamat/MaterialBuilder.h"
 
 #include <atomic>
+#include <utility>
 #include <vector>
 
 #include <utils/JobSystem.h>
@@ -147,7 +148,7 @@ MaterialBuilder& MaterialBuilder::material(const char* code, size_t line) noexce
 }
 
 MaterialBuilder& MaterialBuilder::includeCallback(IncludeCallback callback) noexcept {
-    mIncludeCallback = callback;
+    mIncludeCallback = std::move(callback);
     return *this;
 }
 
@@ -587,7 +588,7 @@ bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
             .lineNumberOffset = getLineOffset(),
             .name = utils::CString("")
         };
-        if (!::filamat::resolveIncludes(source, callback, options)) {
+        if (!::filamat::resolveIncludes(source, std::move(callback), options)) {
             return false;
         }
         mCode = source.text;
@@ -742,7 +743,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 if (targetApi == TargetApi::OPENGL) {
                     if (targetLanguage == TargetLanguage::SPIRV) {
-                        sg.fixupExternalSamplers(shaderModel, shader, info);
+                        ShaderGenerator::fixupExternalSamplers(shaderModel, shader, info);
                     }
                 }
 
