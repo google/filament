@@ -133,23 +133,25 @@ ShaderGenerator::ShaderGenerator(
         utils::CString const& materialCode, size_t lineOffset,
         utils::CString const& materialVertexCode, size_t vertexLineOffset,
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
+
     std::copy(std::begin(properties), std::end(properties), std::begin(mProperties));
     std::copy(std::begin(variables), std::end(variables), std::begin(mVariables));
     std::copy(std::begin(outputs), std::end(outputs), std::back_inserter(mOutputs));
 
-    mMaterialCode = materialCode;
+    mMaterialFragmentCode = materialCode;
     mMaterialVertexCode = materialVertexCode;
+    mIsMaterialVertexShaderEmpty = materialVertexCode.empty();
     mMaterialLineOffset = lineOffset;
     mMaterialVertexLineOffset = vertexLineOffset;
     mMaterialDomain = materialDomain;
     mDefines = defines;
 
-    if (mMaterialCode.empty()) {
+    if (mMaterialFragmentCode.empty()) {
         if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
-            mMaterialCode =
+            mMaterialFragmentCode =
                     utils::CString("void material(inout MaterialInputs m) {\n    prepareMaterial(m);\n}\n");
         } else if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-            mMaterialCode =
+            mMaterialFragmentCode =
                     utils::CString("void postProcess(inout PostProcessInputs p) {\n}\n");
         }
     }
@@ -167,7 +169,7 @@ ShaderGenerator::ShaderGenerator(
 std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
-        filament::VertexDomain vertexDomain) const noexcept {
+        VertexDomain vertexDomain) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return createPostProcessVertexProgram(shaderModel, targetApi,
                 targetLanguage, material, variantKey, material.samplerBindings);
@@ -187,7 +189,8 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
 
     cg.generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
 
-    bool litVariants = lit || material.hasShadowMultiplier;
+    const bool litVariants = lit || material.hasShadowMultiplier;
+
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
@@ -244,10 +247,8 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateGetters(vs, ShaderType::VERTEX);
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
-    if (filament::Variant::isValidDepthVariant(variantKey) &&
-            material.blendingMode != BlendingMode::MASKED &&
-            !material.hasTransparentShadow &&
-            !hasCustomDepthShader()) {
+    const bool useOptimizedDepthVertexShader = mIsMaterialVertexShaderEmpty;
+    if (filament::Variant::isValidDepthVariant(variantKey) && useOptimizedDepthVertexShader) {
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
         cg.generateDepthShaderMain(vs, ShaderType::VERTEX);
@@ -260,15 +261,6 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateEpilog(vs);
 
     return vs.c_str();
-}
-
-bool ShaderGenerator::hasCustomDepthShader() const noexcept {
-    for (const auto& variable : mVariables) {
-        if (!variable.empty()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 static bool isMobileTarget(filament::backend::ShaderModel model) {
@@ -446,14 +438,16 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
 
     // shading model
     if (filament::Variant::isValidDepthVariant(variantKey)) {
+        // In MASKED mode or with transparent shadows, we need the alpha channel computed by
+        // the material (user code), so we append it here.
         if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
-            appendShader(fs, mMaterialCode, mMaterialLineOffset);
+            appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
         }
         // these variants are special and are treated as DEPTH variants. Filament will never
         // request that variant for the color pass.
         cg.generateDepthShaderMain(fs, ShaderType::FRAGMENT);
     } else {
-        appendShader(fs, mMaterialCode, mMaterialLineOffset);
+        appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
         if (material.isLit) {
             cg.generateShaderLit(fs, ShaderType::FRAGMENT, variant, material.shading,
                     material.hasCustomSurfaceShading);
@@ -470,7 +464,7 @@ std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderMode
 }
 
 void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
-        std::string& shader, MaterialInfo const& material) const noexcept {
+        std::string& shader, MaterialInfo const& material) noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
     if (material.hasExternalSamplers && sm == ShaderModel::GL_ES_30) {
@@ -571,7 +565,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(
 
     cg.generatePostProcessInputs(fs, ShaderType::FRAGMENT);
 
-    appendShader(fs, mMaterialCode, mMaterialLineOffset);
+    appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
 
     cg.generatePostProcessMain(fs, ShaderType::FRAGMENT);
     cg.generateEpilog(fs);

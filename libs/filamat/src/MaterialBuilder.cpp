@@ -141,8 +141,8 @@ MaterialBuilder& MaterialBuilder::fileName(const char* fileName) noexcept {
 }
 
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t line) noexcept {
-    mMaterialCode.setUnresolved(CString(code));
-    mMaterialCode.setLineOffset(line);
+    mMaterialFragmentCode.setUnresolved(CString(code));
+    mMaterialFragmentCode.setLineOffset(line);
     return *this;
 }
 
@@ -520,7 +520,7 @@ bool MaterialBuilder::findAllProperties() noexcept {
     return true;
 #else
     GLSLToolsLite glslTools;
-    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialCode.getResolved(), mProperties)) {
+    if (glslTools.findProperties(ShaderType::FRAGMENT, mMaterialFragmentCode.getResolved(), mProperties)) {
         return glslTools.findProperties(
                 ShaderType::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
     }
@@ -635,17 +635,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     // End: must be protected by lock
 
     ShaderGenerator sg(
-            mProperties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
-            mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
+            mProperties, mVariables, mOutputs, mDefines, mMaterialFragmentCode.getResolved(),
+            mMaterialFragmentCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
-    bool emptyVertexCode = mMaterialVertexCode.getResolved().empty();
-    bool customDepth = sg.hasCustomDepthShader() ||
-            mBlendingMode == BlendingMode::MASKED ||
-            ((mBlendingMode == BlendingMode::TRANSPARENT ||mBlendingMode == BlendingMode::FADE) &&
-                    mTransparentShadow) ||
-            !emptyVertexCode;
-    container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
+    container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, needsStandardDepthProgram());
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -915,7 +909,7 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     }
 
     // Resolve all the #include directives within user code.
-    if (!mMaterialCode.resolveIncludes(mIncludeCallback, mFileName) ||
+    if (!mMaterialFragmentCode.resolveIncludes(mIncludeCallback, mFileName) ||
         !mMaterialVertexCode.resolveIncludes(mIncludeCallback, mFileName)) {
         return Package::invalidPackage();
     }
@@ -967,10 +961,30 @@ Package MaterialBuilder::build(JobSystem& jobSystem) noexcept {
     return package;
 }
 
-const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
+bool MaterialBuilder::hasCustomVaryings() const noexcept {
+    for (const auto& variable : mVariables) {
+        if (!variable.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    return !hasEmptyVertexCode ||
+           hasCustomVaryings() ||
+           mBlendingMode == BlendingMode::MASKED ||
+           (mTransparentShadow &&
+            (mBlendingMode == BlendingMode::TRANSPARENT ||
+             mBlendingMode == BlendingMode::FADE));
+}
+
+std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
-    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mMaterialCode.getResolved(),
-            mMaterialCode.getLineOffset(), mMaterialVertexCode.getResolved(),
+
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mMaterialFragmentCode.getResolved(),
+            mMaterialFragmentCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
     MaterialInfo info;
@@ -987,8 +1001,6 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         return sg.createFragmentProgram(ShaderModel(params.shaderModel), params.targetApi,
                 params.targetLanguage, info, 0, mInterpolation);
     }
-
-    return std::string("");
 }
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
