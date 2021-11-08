@@ -190,6 +190,7 @@ public:
     using MaterialDomain = filament::MaterialDomain;
     using RefractionMode = filament::RefractionMode;
     using RefractionType = filament::RefractionType;
+    using VertexAttribute = filament::VertexAttribute;
 
     using ShaderQuality = filament::ShaderQuality;
     using BlendingMode = filament::BlendingMode;
@@ -285,10 +286,10 @@ public:
      *
      * position is always required and normal depends on the shading model.
      */
-    MaterialBuilder& require(filament::VertexAttribute attribute) noexcept;
+    MaterialBuilder& require(VertexAttribute attribute) noexcept;
 
     //! Specify the domain that this material will operate in.
-    MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
+    MaterialBuilder& materialDomain(filament::MaterialDomain materialDomain) noexcept;
 
     /**
      * Set the code content of this material.

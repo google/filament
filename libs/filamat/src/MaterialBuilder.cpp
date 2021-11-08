@@ -244,12 +244,12 @@ MaterialBuilder& MaterialBuilder::parameter(SubpassType subpassType, const char*
     return parameter(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
-MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) noexcept {
+MaterialBuilder& MaterialBuilder::require(VertexAttribute attribute) noexcept {
     mRequiredAttributes.set(attribute);
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
+MaterialBuilder& MaterialBuilder::materialDomain(filament::MaterialDomain materialDomain) noexcept {
     mMaterialDomain = materialDomain;
     return *this;
 }
