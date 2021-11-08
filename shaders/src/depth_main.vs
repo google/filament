@@ -1,9 +1,12 @@
+/*
+ * This file is used when the user vertex shader is empty, in that case we can remove all
+ * computations that don't contribute to the depth (e.g.: tangents, colors, etc...)
+ */
+
 // The sole purpose of this no-op function is to improve parity between the depth vertex shader
 // and color vertex shader, thus working around a variance issue seen with NVIDIA drivers.
 void materialVertex(inout MaterialVertexInputs m) { }
 
-// NOTE: This shader is only used when the user's material does not have custom vertex code.
-//       There is no need to check anything related to material inputs in this file.
 void main() {
 
 // World position is used to compute gl_Position, except for vertices already in the device domain.
@@ -13,6 +16,7 @@ void main() {
     // Run initMaterialVertex to compute material.worldPosition.
     MaterialVertexInputs material;
     initMaterialVertex(material);
+    // materialVertex() is guaranteed to be empty here
     materialVertex(material);
 #endif
 
