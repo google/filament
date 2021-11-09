@@ -7,7 +7,11 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.14.0
 
-- engine: internal materials can use structures as parameters [⚠️ **Material breakage**].
+- engine: Internal materials can use structures as parameters [⚠️ **Material breakage**].
+- engine: `readPixels` on a `SwapChain` must be called within `beginFrame` / `endFrame` [⚠️ **API
+  Change**].
+- engine: Fix normal bias and improve spotlight quality.
+- Java: Fix shadow biases.
 
 ## v1.13.0
 
