@@ -191,8 +191,12 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
 
     const bool litVariants = lit || material.hasShadowMultiplier;
 
+    // note: even if the user vertex shader is empty, we can't use the "optimized" version if
+    // we're in masked mode because fragment shader needs the color varyings
     const bool useOptimizedDepthVertexShader =
-            filament::Variant::isValidDepthVariant(variantKey) && mIsMaterialVertexShaderEmpty;
+            filament::Variant::isValidDepthVariant(variantKey) &&
+            mIsMaterialVertexShaderEmpty &&
+            material.blendingMode != BlendingMode::MASKED;
 
     cg.generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER", useOptimizedDepthVertexShader);
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
