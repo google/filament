@@ -191,6 +191,10 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
 
     const bool litVariants = lit || material.hasShadowMultiplier;
 
+    const bool useOptimizedDepthVertexShader =
+            filament::Variant::isValidDepthVariant(variantKey) && mIsMaterialVertexShaderEmpty;
+
+    cg.generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER", useOptimizedDepthVertexShader);
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
@@ -247,16 +251,9 @@ std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel 
     cg.generateGetters(vs, ShaderType::VERTEX);
     cg.generateCommonMaterial(vs, ShaderType::VERTEX);
 
-    const bool useOptimizedDepthVertexShader = mIsMaterialVertexShaderEmpty;
-    if (filament::Variant::isValidDepthVariant(variantKey) && useOptimizedDepthVertexShader) {
-        // these variants are special and are treated as DEPTH variants. Filament will never
-        // request that variant for the color pass.
-        cg.generateDepthShaderMain(vs, ShaderType::VERTEX);
-    } else {
-        // main entry point
-        appendShader(vs, mMaterialVertexCode, mMaterialVertexLineOffset);
-        cg.generateShaderMain(vs, ShaderType::VERTEX);
-    }
+    // main entry point
+    appendShader(vs, mMaterialVertexCode, mMaterialVertexLineOffset);
+    cg.generateShaderMain(vs, ShaderType::VERTEX);
 
     cg.generateEpilog(vs);
 
