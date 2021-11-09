@@ -286,9 +286,8 @@ utils::io::sstream& CodeGenerator::generateOutput(utils::io::sstream& out, Shade
 
 
 io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderType type) const {
-    if (type == ShaderType::VERTEX) {
-        out << SHADERS_DEPTH_MAIN_VS_DATA;
-    } else if (type == ShaderType::FRAGMENT) {
+    assert(type != ShaderType::VERTEX);
+    if (type == ShaderType::FRAGMENT) {
         out << SHADERS_DEPTH_MAIN_FS_DATA;
     }
     return out;

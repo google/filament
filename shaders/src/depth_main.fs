@@ -37,7 +37,7 @@ void main() {
 #endif
 
 #if defined(HAS_VSM)
-    // interpolated depth is stored in vertex_worldPosition.w (see depth_main.vs / main.vs)
+    // interpolated depth is stored in vertex_worldPosition.w (see main.vs)
     highp float depth = exp(vertex_worldPosition.w);
 
     // computes the moments
