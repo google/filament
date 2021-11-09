@@ -33,6 +33,13 @@ using namespace filament::math;
 using namespace utils;
 using namespace backend;
 
+static void logCompilationError(utils::io::ostream& out,
+        backend::Program::Shader shaderType, const char* name,
+        GLuint shaderId, std::string_view source) noexcept;
+
+static void logProgramLinkError(utils::io::ostream& out,
+        const char* name, GLuint program) noexcept;
+
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
 
@@ -57,7 +64,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         if (!shadersSource[i].empty()) {
             GLint status;
-            auto shader = shadersSource[i];
+            Program::ShaderBlob shader = shadersSource[i];
             std::string temp;
             std::string_view shaderView((const char*)shader.data(), shader.size());
 
@@ -123,17 +130,18 @@ highp uint packHalf2x16(vec2 v) {
                 shaderView = temp;
             }
 
-            const char * const source = shaderView.data();
-            GLint length = (GLint)shaderView.length();
-
             GLuint shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, 1, &source, &length);
-            glCompileShader(shaderId);
+            { // scope for source/length (we don't want them to leak out)
+                const char* const source = shaderView.data();
+                const GLint length = (GLint)shaderView.length();
+                glShaderSource(shaderId, 1, &source, &length);
+                glCompileShader(shaderId);
+            }
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
             if (UTILS_UNLIKELY(status != GL_TRUE)) {
                 logCompilationError(slog.e, type,
-                        programBuilder.getName().c_str_safe(), shaderId, source);
+                        programBuilder.getName().c_str_safe(), shaderId, shaderView);
                 glDeleteShader(shaderId);
                 return;
             }
@@ -315,8 +323,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId, char const* source) noexcept {
+void logCompilationError(io::ostream& out, Program::Shader shaderType,
+        const char* name, GLuint shaderId, std::string_view shader) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
@@ -333,23 +341,26 @@ void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shader
         << io::endl;
 
     size_t lc = 1;
-    char* shader = strdup(source);
-    char* start = shader;
-    char* endl = strchr(start, '\n');
-
-    while (endl != nullptr) {
-        *endl = '\0';
-        out << lc++ << ":   ";
-        out << start << io::endl;
-        start = endl + 1;
-        endl = strchr(start, '\n');
+    size_t start = 0;
+    std::string line;
+    while (true) {
+        size_t end = shader.find('\n', start);
+        if (end == std::string::npos) {
+            line = shader.substr(start);
+        } else {
+            line = shader.substr(start, end - start);
+        }
+        out << lc++ << ":   "<< line.c_str() << '\n';
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
     }
-
-    free(shader);
+    out << io::endl;
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
+void logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
     char error[1024];
     glGetProgramInfoLog(program, sizeof(error), nullptr, error);
 
