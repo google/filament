@@ -32,6 +32,11 @@ android {
         targetSdkVersion versions.targetSdk
         missingDimensionStrategy 'functionality', 'full'
     }
+    // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
+    //       is not configuration-cache friendly yet; this is only useful for Play publication
+    dependenciesInfo {
+        includeInApk = false
+    }
 }
 
 dependencies {
