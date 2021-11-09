@@ -4,7 +4,7 @@ plugins {
     id 'filament-tools-plugin'
 }
 
-//project.ext.isSample = true
+project.ext.isSample = true
 
 filamentTools {
     cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/default_env"
