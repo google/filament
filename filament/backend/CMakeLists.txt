@@ -377,7 +377,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
-if (APPLE OR LINUX)
+if (APPLE)
     add_library(backend_test STATIC
         test/BackendTest.cpp
         test/ShaderGenerator.cpp
@@ -439,11 +439,6 @@ if (APPLE AND NOT IOS)
     # Because each test case is a separate file, the -force_load flag is necessary to prevent the
     # linker from removing "unused" symbols.
     target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
-endif()
-
-if (LINUX)
-    add_executable(backend_test_linux test/linux_runner.cpp)
-    target_link_libraries(backend_test_linux PRIVATE backend_test)
 endif()
 
 if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)
