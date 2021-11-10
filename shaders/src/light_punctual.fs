@@ -211,8 +211,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                visibility = shadow(light_shadowMap, light.shadowLayer,
-                    getSpotLightSpacePosition(light.shadowIndex));
+                visibility = shadow(false, light_shadowMap, light.shadowLayer, light.shadowIndex, 0u);
             }
             if (light.contactShadows && visibility > 0.0) {
                 if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {

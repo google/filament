@@ -167,16 +167,46 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
  */
 
 // PCF sampling
-float shadow(const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArrayShadow shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return ShadowSample_PCF(shadowMap, layer, position);
 }
 
 // VSM sampling
-float shadow(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArray shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
     //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
     //  see: computeLightSpacePosition() in common_shadowing.fs
