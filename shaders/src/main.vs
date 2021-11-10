@@ -113,7 +113,7 @@ void main() {
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePositionDirectional(
+    vertex_lightSpacePosition = computeLightSpacePosition(
             vertex_worldPosition.xyz, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
