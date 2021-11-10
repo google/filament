@@ -572,9 +572,13 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
                     .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
                     .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
                     .axis = vn * directions[j],                                     // spot only
-                    .invSin = std::min(maxInvSin, lcm.getSinInverse(li)),           // spot only
+                    .invSin = lcm.getSinInverse(li),                                // spot only
                     .radius = spheres[j].w,
             };
+            // infinity means "pointlight"
+            if (light.invSin != std::numeric_limits<float>::infinity()) {
+                light.invSin = std::min(maxInvSin, light.invSin);
+            }
 
             const size_t group = i % GROUP_COUNT;
             const size_t bit   = i / GROUP_COUNT;
