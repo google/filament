@@ -43,9 +43,6 @@
     #endif
 #elif defined(__linux__)
     #if defined(FILAMENT_SUPPORTS_WAYLAND)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-            #include "opengl/platforms/PlatformEGLWayland.h"
-        #endif
         #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #include "vulkan/PlatformVkLinuxWayland.h"
         #endif
@@ -158,9 +155,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
         #elif defined(__APPLE__)
             return new PlatformCocoaGL();
         #elif defined(__linux__)
-            #if defined(FILAMENT_SUPPORTS_WAYLAND)
-                return new PlatformEGLWayland();
-            #elif defined(FILAMENT_SUPPORTS_X11)
+            #if defined(FILAMENT_SUPPORTS_X11)
                 return new PlatformGLX();
             #endif
         #elif defined(WIN32)

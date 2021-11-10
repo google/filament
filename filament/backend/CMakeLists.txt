@@ -98,9 +98,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (WEBGL)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
-        if (FILAMENT_SUPPORTS_WAYLAND)
-            list(APPEND SRCS src/opengl/platforms/PlatformEGLWayland.cpp)
-        elseif (FILAMENT_SUPPORTS_X11)
+        if (FILAMENT_SUPPORTS_X11)
             list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
         endif()
     elseif (WIN32)
@@ -225,15 +223,6 @@ add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-if (FILAMENT_SUPPORTS_WAYLAND)
-    # Do not reference X11 headers in EGL, also affects EGL typedefs
-    # MESA_EGL_NO_X11_HEADERS is for compatibility - deprecated in favor of EGL_NO_X11
-    target_compile_definitions(${TARGET} PUBLIC
-        EGL_NO_X11
-        MESA_EGL_NO_X11_HEADERS
-    )
-endif()
-
 # ==================================================================================================
 # Expose a header-only target to minimize dependencies.
 # ==================================================================================================
@@ -289,12 +278,6 @@ if (ANDROID)
         target_link_libraries(${TARGET} PUBLIC GLESv3 EGL)
     endif()
     target_link_libraries(${TARGET} PUBLIC android)
-endif()
-
-if (LINUX)
-    if (FILAMENT_SUPPORTS_OPENGL AND FILAMENT_SUPPORTS_WAYLAND)
-        target_link_libraries(${TARGET} PUBLIC GLESv2 EGL)
-    endif()
 endif()
 
 if (FILAMENT_USE_SWIFTSHADER)
