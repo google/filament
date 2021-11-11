@@ -198,7 +198,10 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/separableGaussianBlur.mat
+        src/materials/separableGaussianBlur1.mat
+        src/materials/separableGaussianBlur2.mat
+        src/materials/separableGaussianBlur3.mat
+        src/materials/separableGaussianBlur4.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
@@ -390,6 +393,34 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur1.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur2.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur3.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur4.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
         APPEND
 )
 

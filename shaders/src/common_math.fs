@@ -57,6 +57,18 @@ float max3(const vec3 v) {
     return max(v.x, max(v.y, v.z));
 }
 
+float vmax(const vec2 v) {
+    return max(v.x, v.y);
+}
+
+float vmax(const vec3 v) {
+    return max(v.x, max(v.y, v.z));
+}
+
+float vmax(const vec4 v) {
+    return max(max(v.x, v.y), max(v.y, v.z));
+}
+
 /**
  * Returns the minimum component of the specified vector.
  *
@@ -64,6 +76,18 @@ float max3(const vec3 v) {
  */
 float min3(const vec3 v) {
     return min(v.x, min(v.y, v.z));
+}
+
+float vmin(const vec2 v) {
+    return min(v.x, v.y);
+}
+
+float vmin(const vec3 v) {
+    return min(v.x, min(v.y, v.z));
+}
+
+float vmin(const vec4 v) {
+    return min(min(v.x, v.y), min(v.y, v.z));
 }
 
 //------------------------------------------------------------------------------
