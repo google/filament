@@ -1,5 +1,29 @@
+/*
+ * This is the main vertex shader of surface materials. It can be invoked with
+ * USE_OPTIMIZED_DEPTH_VERTEX_SHADER defined, and in this case we are guaranteed that the
+ * DEPTH variant is active *AND* there is no custom vertex shader (i.e.: materialVertex() is
+ * empty).
+ * We can use this to remove all code that doesn't participate in the depth computation.
+ */
+
 void main() {
     // Initialize the inputs to sensible default values, see material_inputs.vs
+#if defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
+
+    // In USE_OPTIMIZED_DEPTH_VERTEX_SHADER mode, we can even skip this if we're already in
+    // VERTEX_DOMAIN_DEVICE and we don't have VSM.
+#if !defined(VERTEX_DOMAIN_DEVICE) || defined(HAS_VSM)
+    // Run initMaterialVertex to compute material.worldPosition.
+    MaterialVertexInputs material;
+    initMaterialVertex(material);
+#endif
+
+    // materialVertex() is guaranteed to be empty here, but we keep it to workaround some problem
+    // in NVIDA drivers related to depth invariance.
+    materialVertex(material);
+
+#else // defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
+
     MaterialVertexInputs material;
     initMaterialVertex(material);
 
@@ -89,9 +113,13 @@ void main() {
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePosition(vertex_worldPosition.xyz, vertex_worldNormal,
+    vertex_lightSpacePosition = computeLightSpacePositionDirectional(
+            vertex_worldPosition.xyz, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
+
+#endif // !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
+
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
@@ -100,9 +128,11 @@ void main() {
     gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
+#if !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 #if defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM)
     gl_Position = getClipSpaceTransform(material) * gl_Position;
 #endif
+#endif // !USE_OPTIMIZED_DEPTH_VERTEX_SHADER
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // GL convention to inverted DX convention (must happen after clipSpaceTransform)

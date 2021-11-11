@@ -1171,6 +1171,11 @@ void FRenderer::endFrame() {
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& buffer) {
+#ifndef NDEBUG
+    const bool withinFrame = mSwapChain != nullptr;
+    ASSERT_PRECONDITION(withinFrame, "readPixels() on a SwapChain must be called after"
+            " beginFrame() and before endFrame().");
+#endif
     readPixels(mRenderTarget, xoffset, yoffset, width, height, std::move(buffer));
 }
 

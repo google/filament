@@ -341,7 +341,7 @@ public:
      *
      *  Framebuffer as seen on User buffer (PixelBufferDescriptor&)
      *  screen
-     *  
+     *
      *      +--------------------+
      *      |                    |                .stride         .alignment
      *      |                    |         ----------------------->-->
@@ -359,7 +359,8 @@ public:
      *      O------------+-------+
      *
      *
-     * Typically readPixels() will be called after render() and before endFrame().
+     * readPixels() must be called within a frame, meaning after beginFrame() and before endFrame().
+     * Typically, readPixels() will be called after render().
      *
      * After issuing this method, the callback associated with `buffer` will be invoked on the
      * main thread, indicating that the read-back has completed. Typically, this will happen

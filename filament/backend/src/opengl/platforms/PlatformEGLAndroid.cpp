@@ -245,11 +245,6 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     return { eglImage, patchedCallback, closure, source.handler };
 }
 
-// This must be called when the library is loaded. We need this to get a reference to the global VM
-void JNI_OnLoad(JavaVM* vm, void* reserved) {
-    ::filament::VirtualMachineEnv::JNI_OnLoad(vm);
-}
-
 } // namespace filament
 
 // ---------------------------------------------------------------------------------------------

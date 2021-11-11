@@ -100,10 +100,10 @@ highp vec3 getNormalizedViewportCoord2() {
 
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
 highp vec4 getSpotLightSpacePosition(uint index) {
-    vec3 dir = shadowUniforms.directionShadowBias[index].xyz;
-    float bias = shadowUniforms.directionShadowBias[index].w;
-    return computeLightSpacePosition(vertex_worldPosition.xyz,
-            vertex_worldNormal, dir, bias, shadowUniforms.spotLightFromWorldMatrix[index]);
+    highp vec3 dir = shadowUniforms.shadows[index].direction;
+    float bias = shadowUniforms.shadows[index].normalBias;
+    return computeLightSpacePositionSpot(vertex_worldPosition.xyz,
+            vertex_worldNormal, dir, bias, shadowUniforms.shadows[index].lightFromWorldMatrix);
 }
 #endif
 
@@ -128,13 +128,13 @@ uint getShadowCascade() {
 highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
-    // the matrix multiply inside computeLightSpacePosition.
+    // the matrix multiply inside computeLightSpacePositionDirectional.
     if (cascade == 0u) {
         // Note: this branch may cause issues with derivatives
         return vertex_lightSpacePosition;
     }
 
-    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+    return computeLightSpacePositionDirectional(getWorldPosition(), getWorldNormalVector(),
         frameUniforms.lightDirection, frameUniforms.shadowBias.y,
         frameUniforms.lightFromWorldMatrix[cascade]);
 }

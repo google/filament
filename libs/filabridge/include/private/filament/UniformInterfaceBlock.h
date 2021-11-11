@@ -63,10 +63,21 @@ public:
         Builder& add(utils::StaticString const& uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
 
+        // Add a known struct
+        Builder& add(utils::CString const& uniformName, size_t size,
+                utils::CString const& structName, size_t stride);
+
         template<size_t N>
         Builder& add(utils::StringLiteral<N> const& uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT) {
             return add(utils::StaticString{ uniformName }, size, type, precision);
+        }
+
+        template<size_t N0, size_t N1>
+        Builder& add(utils::StringLiteral<N0> const& uniformName, size_t size,
+                utils::StringLiteral<N1> const& structName, size_t stride) {
+            return add(utils::StaticString{ uniformName }, size,
+                    utils::StaticString{ structName }, stride);
         }
 
         // build and return the UniformInterfaceBlock
@@ -75,11 +86,15 @@ public:
         friend class UniformInterfaceBlock;
         struct Entry {
             Entry(utils::CString name, uint32_t size, Type type, Precision precision) noexcept
-                    : name(std::move(name)), size(size), type(type), precision(precision) { }
+                    : name(std::move(name)), size(size), type(type), precision(precision), stride(strideForType(type, 0)) { }
+            Entry(utils::CString name, uint32_t size, utils::CString structName, size_t stride) noexcept
+                    : name(std::move(name)), size(size), type(Type::STRUCT), structName(std::move(structName)), stride(stride) { }
             utils::CString name;
             uint32_t size;
             Type type;
-            Precision precision;
+            Precision precision{};
+            utils::CString structName{};
+            uint32_t stride;
         };
         utils::CString mName;
         std::vector<Entry> mEntries;
@@ -92,6 +107,7 @@ public:
         Type type;          // type of this uniform
         uint32_t size;      // size of the array in elements, or 1 if not an array
         Precision precision;// precision of this uniform
+        utils::CString structName;// name of this uniform structure if type is STRUCT
         // returns offset in bytes of this uniform (at index if an array)
         inline size_t getBufferOffset(size_t index = 0) const {
             assert(index < size);
@@ -125,7 +141,7 @@ private:
     explicit UniformInterfaceBlock(Builder const& builder) noexcept;
 
     static uint8_t baseAlignmentForType(Type type) noexcept;
-    static uint8_t strideForType(Type type) noexcept;
+    static uint8_t strideForType(Type type, uint32_t stride) noexcept;
 
     utils::CString mName;
     std::vector<UniformInfo> mUniformsInfoList;

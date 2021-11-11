@@ -3,17 +3,27 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.13.0 (currently main branch)
+## v1.14.1 (currently main branch)
 
-- Android: Gradle configuration caching is now enabled
+## v1.14.0
+
+- engine: internal materials can use structures as parameters [⚠️ **Material breakage**].
+
+## v1.13.0
+
+- Android: Gradle configuration caching is now enabled.
 - Android: Filament's Gradle properties have all been renamed to `com.google.android.filament.xxx`
   where `xxx` is the property name. See `android/build.gradle` for a complete list [⚠️]
 - Android: The Gradle property `filament_tools_dir` (now called
-  `com.google.android.filament.tools-dir`) does not have a default value anymore. Please specify
-  one in your `gradle.properties` if you reuse the Gradle plugin in your projects  [⚠️]
-- Engine: Fix spotlights direction and falloff.  [⚠️ **Material breakage**].
+  `com.google.android.filament.tools-dir`) does not have a default value anymore. Please specify one
+  in your `gradle.properties` if you reuse the Gradle plugin in your projects [⚠️]
+- engine: Fix spotlights direction and falloff [⚠️ **Material breakage**].
+- engine: Improvements to VSM and spotlight shadows.
 
 ## v1.12.11
+
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
 
 ## v1.12.10
 

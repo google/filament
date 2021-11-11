@@ -437,8 +437,9 @@ public class Renderer {
      *</pre>
      *
      *
-     * <p>Typically <code>readPixels</code> will be called after {@link #render} and before
-     * {@link #endFrame}.</p>
+     * <p><code>readPixels</code> must be called within a frame, meaning after {@link #beginFrame}
+     * and before {@link #endFrame}. Typically, <code>readPixels</code> will be called after
+     * {@link #render}.</p>
      * <br>
      * <p>After calling this method, the callback associated with <code>buffer</code>
      * will be invoked on the main thread, indicating that the read-back has completed.
