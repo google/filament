@@ -15,7 +15,7 @@ layout(location = 0) out highp uint2 outPicking;
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 
-#if defined(BLEND_MODE_MASKED) || (defined(BLEND_MODE_TRANSPARENT) && defined(HAS_TRANSPARENT_SHADOW))
+#if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);
