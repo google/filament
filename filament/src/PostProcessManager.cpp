@@ -224,7 +224,10 @@ static const MaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
-        { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR) },
+        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR1) },
+        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR2) },
+        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR3) },
+        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR4) },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
         { "fsr_easu",                   MATERIAL(FSR_EASU) },
@@ -844,7 +847,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                auto const& separableGaussianBlur = getPostProcessMaterial("separableGaussianBlur");
+                auto hwTempRT = resources.getRenderPassInfo(0);
+                auto hwOutRT = resources.getRenderPassInfo(1);
+                auto hwTemp = resources.getTexture(data.temp);
+                auto hwIn = resources.getTexture(data.in);
+                auto const& inDesc = resources.getDescriptor(data.in);
+                auto const& outDesc = resources.getDescriptor(data.out);
+                auto const& tempDesc = resources.getDescriptor(data.temp);
+
+                utils::StaticString materialName;
+                switch (backend::getFormatSize(outDesc.format)) {
+                    case 1: materialName = "separableGaussianBlur1";    break;
+                    case 2: materialName = "separableGaussianBlur2";    break;
+                    case 3: materialName = "separableGaussianBlur3";    break;
+                    default: materialName = "separableGaussianBlur4";   break;
+                }
+
+                auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
                 FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance();
                 const size_t kernelStorageSize = mi->getMaterial()->reflect("kernel")->size;
 
@@ -853,13 +872,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
                 // horizontal pass
-                auto hwTempRT = resources.getRenderPassInfo(0);
-                auto hwOutRT = resources.getRenderPassInfo(1);
-                auto hwTemp = resources.getTexture(data.temp);
-                auto hwIn = resources.getTexture(data.in);
-                auto const& inDesc = resources.getDescriptor(data.in);
-                auto const& outDesc = resources.getDescriptor(data.out);
-                auto const& tempDesc = resources.getDescriptor(data.temp);
 
                 mi->setParameter("source", hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
