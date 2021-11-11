@@ -33,7 +33,7 @@
 #if __has_attribute(visibility)
 #    define UTILS_PUBLIC  __attribute__((visibility("default")))
 #else
-#    define UTILS_PUBLIC  
+#define UTILS_PUBLIC
 #endif
 
 #if __has_attribute(deprecated)
@@ -65,19 +65,21 @@
 #endif
 
 #define UTILS_NO_SANITIZE_THREAD
-#if defined(__has_feature)
-#    if __has_feature(thread_sanitizer)
-#        undef UTILS_NO_SANITIZE_THREAD
-#        define UTILS_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
-#    endif
+#if __has_feature(thread_sanitizer)
+#undef UTILS_NO_SANITIZE_THREAD
+#define UTILS_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
+#endif
+
+#define UTILS_HAS_SANITIZE_THREAD 0
+#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#undef UTILS_HAS_SANITIZE_THREAD
+#define UTILS_HAS_SANITIZE_THREAD 1
 #endif
 
 #define UTILS_HAS_SANITIZE_MEMORY 0
-#if defined(__has_feature)
-#    if __has_feature(memory_sanitizer)
-#        undef UTILS_HAS_SANITIZE_MEMORY
-#        define UTILS_HAS_SANITIZE_MEMORY 1
-#    endif
+#if __has_feature(memory_sanitizer)
+#undef UTILS_HAS_SANITIZE_MEMORY
+#define UTILS_HAS_SANITIZE_MEMORY 1
 #endif
 
 /*
