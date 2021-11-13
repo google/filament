@@ -533,15 +533,15 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             shadowInfo[lightIndex].layer = entry.getLayer();
 
             const float wsTexelSizeAtOneMeter = shadowMap.getTexelSizAtOneMeterWs();
-            // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
             // note: normalBias is set to zero for VSM
-            const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * options->normalBias;
+            const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
 
             auto& s = shadowUb.edit();
+            s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             s.shadows[i].direction = direction;
             s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
+            s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
             s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
-            s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
 
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         }

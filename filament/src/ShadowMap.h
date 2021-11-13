@@ -117,6 +117,7 @@ public:
 
     // return the size of a texel in world space (pre-warping)
     float getTexelSizAtOneMeterWs() const noexcept { return mTexelSizeAtOneMeterWs; }
+    math::float4 getLightFromWorldZ() const noexcept { return mLightFromWorldZ; }
 
     // Returns the light's projection. Valid after calling update().
     FCamera const& getCamera() const noexcept { return *mCamera; }
@@ -234,6 +235,7 @@ private:
     FCamera* mDebugCamera = nullptr;            //  8
     math::mat4f mLightSpace;                    // 64
     float mTexelSizeAtOneMeterWs = 0.0f;        //  4
+    math::float4 mLightFromWorldZ{};
 
     // set-up in update()
     ShadowMapInfo mShadowMapInfo;               // 20
