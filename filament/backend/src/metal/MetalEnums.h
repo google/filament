@@ -177,6 +177,27 @@ inline MTLPixelFormat getMetalFormat(PixelDataFormat format, PixelDataType type)
     return MTLPixelFormatInvalid;
 }
 
+inline bool metalFormatOrderInvariantEqual(MTLPixelFormat lhs, MTLPixelFormat rhs) {
+    if (lhs == rhs) {
+        return true;
+    }
+
+    if (lhs == MTLPixelFormatBGRA8Unorm && rhs == MTLPixelFormatRGBA8Unorm) {
+        return true;
+    }
+    if (lhs == MTLPixelFormatBGRA8Unorm_sRGB && rhs == MTLPixelFormatRGBA8Unorm_sRGB) {
+        return true;
+    }
+    if (lhs == MTLPixelFormatRGBA8Unorm && rhs == MTLPixelFormatBGRA8Unorm) {
+        return true;
+    }
+    if (lhs == MTLPixelFormatRGBA8Unorm_sRGB && rhs == MTLPixelFormatBGRA8Unorm_sRGB) {
+        return true;
+    }
+
+    return false;
+}
+
 inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     switch (format) {
         case MTLPixelFormatR8Unorm_sRGB: return MTLPixelFormatR8Unorm;

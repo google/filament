@@ -267,7 +267,7 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
             "Imported id<MTLTexture> levels (%d) != Filament texture levels (%d)",
             metalTexture.mipmapLevelCount, levels);
     MTLPixelFormat filamentMetalFormat = getMetalFormat(mContext, format);
-    ASSERT_PRECONDITION(metalTexture.pixelFormat == filamentMetalFormat,
+    ASSERT_PRECONDITION(metalFormatOrderInvariantEqual(metalTexture.pixelFormat, filamentMetalFormat),
             "Imported id<MTLTexture> format (%d) != Filament texture format (%d)",
             metalTexture.pixelFormat, filamentMetalFormat);
     MTLTextureType filamentMetalType = getMetalType(target);
