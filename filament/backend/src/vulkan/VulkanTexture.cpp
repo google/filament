@@ -245,12 +245,14 @@ void VulkanTexture::updateWithCopyBuffer(const PixelBufferDescriptor& hostData, 
 
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
 
-    // We can't blindly use LAYOUT_UNDEFINED because it may destroy the data, and because
-    // we're potentially updating only a sub-region it would be a problem.
+    // We may use LAYOUT_UNDEFINED if we can tell the update is not partial.
+    // Besides, the newly created texture is LAYOUT_UNDEFINED, and thus an error will occur from
+    // the khronos validation layer if we blindly use the LAYOUT_SHADER_READ_ONLY_OPTIMAL.
+    bool fullupdate = (width == this->width) && (height == this->height) && (depth == this->depth);
     VkImageLayout textureLayout = mContext.getTextureLayout(usage);
     transitionImageLayout(cmdbuffer, textureTransitionHelper({
             .image = mTextureImage,
-            .oldLayout = textureLayout,
+            .oldLayout = fullupdate ? VK_IMAGE_LAYOUT_UNDEFINED : textureLayout,
             .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             .subresources = {
                     mAspect,
