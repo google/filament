@@ -7,6 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.14.1
 
+- engine: Improvements to shadowing.
+
 ## v1.14.0
 
 - engine: Internal materials can use structures as parameters [⚠️ **Material breakage**].
