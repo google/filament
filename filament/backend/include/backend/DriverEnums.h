@@ -220,7 +220,8 @@ enum class UniformType : uint8_t {
     UINT3,
     UINT4,
     MAT3,   //!< a 3x3 float matrix
-    MAT4    //!< a 4x4 float matrix
+    MAT4,   //!< a 4x4 float matrix
+    STRUCT
 };
 
 enum class Precision : uint8_t {

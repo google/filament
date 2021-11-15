@@ -316,21 +316,21 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
 
-        if (UTILS_LIKELY(!light)) {
+        if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
         }
 
-        if (UTILS_LIKELY(!lcm.isShadowCaster(light))) {
+        if (UTILS_LIKELY(!lcm.isShadowCaster(li))) {
             continue; // doesn't cast shadows
         }
 
-        if (UTILS_LIKELY(!lcm.isSpotLight(light))) {
-            continue; // is not a spot-light (we're not supporting point-lights yet)
+        if (UTILS_LIKELY(!lcm.isSpotLight(li))) {
+            continue; // is not a spot-li (we're not supporting point-lights yet)
         }
 
-        const auto& shadowOptions = lcm.getShadowOptions(light);
+        const auto& shadowOptions = lcm.getShadowOptions(li);
         mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
         ++shadowCastingSpotCount;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {

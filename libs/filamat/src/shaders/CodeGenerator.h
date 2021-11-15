@@ -154,7 +154,7 @@ private:
     TargetLanguage mTargetLanguage;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
-    static char const* getUniformTypeName(filament::UniformInterfaceBlock::Type uniformType) noexcept;
+    static char const* getUniformTypeName(filament::UniformInterfaceBlock::UniformInfo const& info) noexcept;
 
     // return type name of output  (e.g.: "vec3", "vec4", "float")
     static char const* getOutputTypeName(MaterialBuilder::OutputType type) noexcept;
