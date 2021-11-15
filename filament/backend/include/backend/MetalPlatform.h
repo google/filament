@@ -25,7 +25,7 @@
 namespace filament {
 namespace backend {
 
-class MetalPlatform : public DefaultPlatform {
+class UTILS_PUBLIC MetalPlatform : public DefaultPlatform {
 public:
     ~MetalPlatform() override;
 

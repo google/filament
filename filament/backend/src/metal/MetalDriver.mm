@@ -27,7 +27,7 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "private/backend/MetalPlatform.h"
+#include "backend/MetalPlatform.h"
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/MetalPlatform.h"
+#include "backend/MetalPlatform.h"
 
 #include "MetalDriverFactory.h"
 
