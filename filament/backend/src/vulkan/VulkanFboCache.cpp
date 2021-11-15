@@ -242,11 +242,15 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
                 index = subpasses[1].inputAttachmentCount++;
                 inputAttachmentRef[index].layout = subpassLayout;
                 inputAttachmentRef[index].attachment = attachmentIndex;
-            }
 
-            index = subpasses[1].colorAttachmentCount++;
-            colorAttachmentRefs[1][index].layout = subpassLayout;
-            colorAttachmentRefs[1][index].attachment = attachmentIndex;
+                index = subpasses[1].colorAttachmentCount++;
+                colorAttachmentRefs[1][index].attachment = VK_ATTACHMENT_UNUSED;
+            }
+            else {
+                index = subpasses[1].colorAttachmentCount++;
+                colorAttachmentRefs[1][index].layout = subpassLayout;
+                colorAttachmentRefs[1][index].attachment = attachmentIndex;
+            }
         }
 
         const TargetBufferFlags flag = TargetBufferFlags(int(TargetBufferFlags::COLOR0) << i);
@@ -257,7 +261,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .format = config.colorFormat[i],
             .samples = (VkSampleCountFlagBits) config.samples,
             .loadOp = clear ? kClear : (discard ? kDontCare : kKeep),
-            .storeOp = config.samples == 1 ? kEnableStore : kDisableStore,
+            .storeOp = (config.samples == 1 && !(hasSubpasses && (config.subpassMask & (1 << i)))) ? kEnableStore : kDisableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
             .initialLayout = colorLayouts[i].initial,
@@ -280,7 +284,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             continue;
         }
 
-        if (!(config.needsResolveMask & (1 << i))) {
+        if ((!(config.needsResolveMask & (1 << i))) || (hasSubpasses && (config.subpassMask & (1 << i)))) {
             pResolveAttachment->attachment = VK_ATTACHMENT_UNUSED;
             ++pResolveAttachment;
             continue;
