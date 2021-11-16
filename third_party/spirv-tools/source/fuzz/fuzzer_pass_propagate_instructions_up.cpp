@@ -25,9 +25,10 @@ namespace fuzz {
 FuzzerPassPropagateInstructionsUp::FuzzerPassPropagateInstructionsUp(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
-    protobufs::TransformationSequence* transformations)
+    protobufs::TransformationSequence* transformations,
+    bool ignore_inapplicable_transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations) {}
+                 transformations, ignore_inapplicable_transformations) {}
 
 void FuzzerPassPropagateInstructionsUp::Apply() {
   for (const auto& function : *GetIRContext()->module()) {

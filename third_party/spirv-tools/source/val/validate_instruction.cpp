@@ -318,10 +318,9 @@ spv_result_t VersionCheck(ValidationState_t& _, const Instruction* inst) {
 
     if (module_version < min_version) {
       return _.diag(SPV_ERROR_WRONG_VERSION, inst)
-             << spvOpcodeString(opcode) << " requires "
-             << spvTargetEnvDescription(
-                    static_cast<spv_target_env>(min_version))
-             << " at minimum.";
+             << spvOpcodeString(opcode) << " requires SPIR-V version "
+             << SPV_SPIRV_VERSION_MAJOR_PART(min_version) << "."
+             << SPV_SPIRV_VERSION_MINOR_PART(min_version) << " at minimum.";
     }
   } else if (!_.HasAnyOfExtensions(exts)) {
     // Otherwise, we only error out when no enabling extensions are

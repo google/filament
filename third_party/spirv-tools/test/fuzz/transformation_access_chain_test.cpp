@@ -26,6 +26,7 @@ namespace {
 TEST(TransformationAccessChainTest, BasicTest) {
   std::string shader = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main" %48 %54
@@ -63,7 +64,6 @@ TEST(TransformationAccessChainTest, BasicTest) {
          %85 = OpConstant %10 5
          %52 = OpTypeArray %50 %51
          %53 = OpTypePointer Private %52
-         %45 = OpUndef %9
          %46 = OpConstantNull %9
          %47 = OpTypePointer Private %8
          %48 = OpVariable %47 Private
@@ -204,15 +204,6 @@ TEST(TransformationAccessChainTest, BasicTest) {
 #ifndef NDEBUG
   // Bad: pointer is null
   ASSERT_DEATH(
-      TransformationAccessChain(100, 45, {80},
-                                MakeInstructionDescriptor(24, SpvOpLoad, 0))
-          .IsApplicable(context.get(), transformation_context),
-      "Access chains should not be created from null/undefined pointers");
-#endif
-
-#ifndef NDEBUG
-  // Bad: pointer is undef
-  ASSERT_DEATH(
       TransformationAccessChain(100, 46, {80},
                                 MakeInstructionDescriptor(24, SpvOpLoad, 0))
           .IsApplicable(context.get(), transformation_context),
@@ -331,6 +322,7 @@ TEST(TransformationAccessChainTest, BasicTest) {
 
   std::string after_transformation = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main" %48 %54
@@ -368,7 +360,6 @@ TEST(TransformationAccessChainTest, BasicTest) {
          %85 = OpConstant %10 5
          %52 = OpTypeArray %50 %51
          %53 = OpTypePointer Private %52
-         %45 = OpUndef %9
          %46 = OpConstantNull %9
          %47 = OpTypePointer Private %8
          %48 = OpVariable %47 Private

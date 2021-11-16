@@ -31,7 +31,7 @@ class TransformationAddGlobalUndef : public Transformation {
   TransformationAddGlobalUndef(uint32_t fresh_id, uint32_t type_id);
 
   // - |message_.fresh_id| must be fresh
-  // - |message_.type_id| must be the id of a non-function type
+  // - |message_.type_id| must be the id of a non-function, non-pointer type
   bool IsApplicable(
       opt::IRContext* ir_context,
       const TransformationContext& transformation_context) const override;

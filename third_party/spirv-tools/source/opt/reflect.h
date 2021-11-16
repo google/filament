@@ -34,7 +34,7 @@ inline bool IsDebug2Inst(SpvOp opcode) {
 inline bool IsDebug3Inst(SpvOp opcode) {
   return opcode == SpvOpModuleProcessed;
 }
-inline bool IsDebugLineInst(SpvOp opcode) {
+inline bool IsOpLineInst(SpvOp opcode) {
   return opcode == SpvOpLine || opcode == SpvOpNoLine;
 }
 inline bool IsAnnotationInst(SpvOp opcode) {
@@ -51,7 +51,8 @@ inline bool IsTypeInst(SpvOp opcode) {
          opcode == SpvOpTypeCooperativeMatrixNV;
 }
 inline bool IsConstantInst(SpvOp opcode) {
-  return opcode >= SpvOpConstantTrue && opcode <= SpvOpSpecConstantOp;
+  return (opcode >= SpvOpConstantTrue && opcode <= SpvOpSpecConstantOp) ||
+         opcode == SpvOpConstantFunctionPointerINTEL;
 }
 inline bool IsCompileTimeConstantInst(SpvOp opcode) {
   return opcode >= SpvOpConstantTrue && opcode <= SpvOpConstantNull;

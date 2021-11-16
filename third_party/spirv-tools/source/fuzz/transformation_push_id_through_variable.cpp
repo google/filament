@@ -155,7 +155,7 @@ void TransformationPushIdThroughVariable::Apply(
 
   // We should be able to create a synonym of |value_id| if it's not irrelevant.
   if (fuzzerutil::CanMakeSynonymOf(ir_context, *transformation_context,
-                                   value_instruction) &&
+                                   *value_instruction) &&
       !transformation_context->GetFactManager()->IdIsIrrelevant(
           message_.value_synonym_id())) {
     // Adds the fact that |message_.value_synonym_id|

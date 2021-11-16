@@ -1,7 +1,44 @@
 Revision history for SPIRV-Tools
 
-v2021.3-dev 2021-06-22
- - Start v2021.3-dev
+v2021.4 2021-11-11
+  - General
+    - Add a WebAssembly build (#3752)
+    - Make cxx exceptions controllable (#4591)
+  - Validator
+    - Improve decoration validation (#4490)
+  - Optimizer
+    - Add spirv-opt pass to replace descriptor accesses based on variable indices (#4574)
+    - Do not fold snegate feeding sdiv (#4600)
+    - Handle overflowing id in merge return (#4606)
+  - Fuzzer
+    - Add libFuzzer target for spirv-fuzz (#4434)
+  - Linter
+
+v2021.3 2021-08-24
+ - General
+    - Initial support for SPV_KHR_integer_dot_product (#4327)
+    - Add non-semantic vulkan extended instruction set (#4362)
+    - Add common enum for debug info instructions from either opencl or vulkan (#4377)
+ - Validator
+    - Add validation for SPV_EXT_shader_atomic_float16_add (#4325)
+    - Disallow loading a runtime-sized array (#4473)
+    - spirv-val: Validate vulkan debug info similarly to opencl debug info (#4466)
+ - Optimizer
+    - spirv-opt: support SPV_EXT_shader_image_int64 (#4379)
+    - spirv-opt: Add dataflow analysis framework (#4402)
+    - Add control dependence analysis to opt (#4380)
+    - Add spirv-opt convert-to-sampled-image pass (#4340)
+    - spirv-opt: Add handling of vulkan debug info to DebugInfoManager (#4423)
+ - Fuzz
+    - spirv-fuzz: support AtomicLoad (#4330)
+    - spirv-fuzz: Support AtomicStore (#4440)
+    - spirv-fuzz: TransformationWrapVectorSynonym that rewrites scalar operations using vectors (#4376)
+    - spirv-fuzz: Add minimal SPIR-V example to test shaders (#4415)
+    - spirv-fuzz: support building using gn (#4365)
+ - Linter
+    - Add new target for spirv-lint (#4446)
+    - spirv-lint: add basic CLI argument handling (#4478)
+    - Add divergence analysis to linter (#4465)
 
 v2021.2 2021-06-18
  - General

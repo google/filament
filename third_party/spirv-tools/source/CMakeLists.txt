@@ -17,10 +17,10 @@ set(VIMSYNTAX_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_vim_sy
 set(XML_REGISTRY_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_registry_tables.py")
 set(LANG_HEADER_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_language_headers.py")
 
-# For now, assume the DebugInfo grammar file is in the current directory.
-# It might migrate to SPIRV-Headers.
+# Pull in grammar files that have migrated to SPIRV-Headers
 set(DEBUGINFO_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.debuginfo.grammar.json")
 set(CLDEBUGINFO100_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json")
+set(VKDEBUGINFO100_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json")
 
 # macro() definitions are used in the following because we need to append .inc
 # file paths into some global lists (*_CPP_DEPENDS). And those global lists are
@@ -113,6 +113,9 @@ endmacro(spvtools_opencl_tables)
 macro(spvtools_vendor_tables VENDOR_TABLE SHORT_NAME OPERAND_KIND_PREFIX)
   set(INSTS_FILE "${spirv-tools_BINARY_DIR}/${VENDOR_TABLE}.insts.inc")
   set(GRAMMAR_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.${VENDOR_TABLE}.grammar.json")
+  if(NOT EXISTS ${GRAMMAR_FILE})
+    set(GRAMMAR_FILE "${spirv-tools_SOURCE_DIR}/source/extinst.${VENDOR_TABLE}.grammar.json")
+  endif()
   add_custom_command(OUTPUT ${INSTS_FILE}
     COMMAND ${PYTHON_EXECUTABLE} ${GRAMMAR_PROCESSING_SCRIPT}
       --extinst-vendor-grammar=${GRAMMAR_FILE}
@@ -148,9 +151,11 @@ spvtools_vendor_tables("spv-amd-gcn-shader" "spv-amd-gs" "")
 spvtools_vendor_tables("spv-amd-shader-ballot" "spv-amd-sb" "")
 spvtools_vendor_tables("debuginfo" "debuginfo" "")
 spvtools_vendor_tables("opencl.debuginfo.100" "cldi100" "CLDEBUG100_")
+spvtools_vendor_tables("nonsemantic.shader.debuginfo.100" "shdi100" "SHDEBUG100_")
 spvtools_vendor_tables("nonsemantic.clspvreflection" "clspvreflection" "")
 spvtools_extinst_lang_headers("DebugInfo" ${DEBUGINFO_GRAMMAR_JSON_FILE})
 spvtools_extinst_lang_headers("OpenCLDebugInfo100" ${CLDEBUGINFO100_GRAMMAR_JSON_FILE})
+spvtools_extinst_lang_headers("NonSemanticShaderDebugInfo100" ${VKDEBUGINFO100_GRAMMAR_JSON_FILE})
 
 spvtools_vimsyntax("unified1" "1.0")
 add_custom_target(spirv-tools-vimsyntax DEPENDS ${VIMSYNTAX_FILE})
@@ -211,6 +216,7 @@ add_subdirectory(opt)
 add_subdirectory(reduce)
 add_subdirectory(fuzz)
 add_subdirectory(link)
+add_subdirectory(lint)
 
 set(SPIRV_SOURCES
   ${spirv-tools_SOURCE_DIR}/include/spirv-tools/libspirv.h
@@ -226,6 +232,7 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/assembly_grammar.h
   ${CMAKE_CURRENT_SOURCE_DIR}/binary.h
   ${CMAKE_CURRENT_SOURCE_DIR}/cfa.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common_debug_info.h
   ${CMAKE_CURRENT_SOURCE_DIR}/diagnostic.h
   ${CMAKE_CURRENT_SOURCE_DIR}/disassemble.h
   ${CMAKE_CURRENT_SOURCE_DIR}/enum_set.h
@@ -364,15 +371,13 @@ endfunction()
 
 # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and
 # unlike the other SPIRV_TOOLS target, defaults to hidden symbol visibility.
-# Filament specific changes
-# add_library(${SPIRV_TOOLS}-shared SHARED ${SPIRV_SOURCES})
-# spirv_tools_default_target_options(${SPIRV_TOOLS}-shared)
-# set_target_properties(${SPIRV_TOOLS}-shared PROPERTIES CXX_VISIBILITY_PRESET hidden)
-# target_compile_definitions(${SPIRV_TOOLS}-shared
-#   PRIVATE SPIRV_TOOLS_IMPLEMENTATION
-#   PUBLIC SPIRV_TOOLS_SHAREDLIB
-# )
-# End Filament specific changes
+add_library(${SPIRV_TOOLS}-shared SHARED ${SPIRV_SOURCES})
+spirv_tools_default_target_options(${SPIRV_TOOLS}-shared)
+set_target_properties(${SPIRV_TOOLS}-shared PROPERTIES CXX_VISIBILITY_PRESET hidden)
+target_compile_definitions(${SPIRV_TOOLS}-shared
+  PRIVATE SPIRV_TOOLS_IMPLEMENTATION
+  PUBLIC SPIRV_TOOLS_SHAREDLIB
+)
 
 if(SPIRV_TOOLS_BUILD_STATIC)
   add_library(${SPIRV_TOOLS}-static STATIC ${SPIRV_SOURCES})
@@ -388,17 +393,11 @@ if(SPIRV_TOOLS_BUILD_STATIC)
     add_library(${SPIRV_TOOLS} ALIAS ${SPIRV_TOOLS}-static)
   endif()
 
-# Filament specific changes
-  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static ${SPIRV_TOOLS}-shared)
-  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static)
-# End Filament specific changes
+  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static ${SPIRV_TOOLS}-shared)
 else()
   add_library(${SPIRV_TOOLS} ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_SOURCES})
   spirv_tools_default_target_options(${SPIRV_TOOLS})
-# Filament specific changes
-  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS} ${SPIRV_TOOLS}-shared)
-  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS})
-# End Filament specific changes
+  set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS} ${SPIRV_TOOLS}-shared)
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
@@ -429,8 +428,10 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
   # Special config file for root library compared to other libs.
   file(WRITE ${CMAKE_BINARY_DIR}/${SPIRV_TOOLS}Config.cmake
     "include(\${CMAKE_CURRENT_LIST_DIR}/${SPIRV_TOOLS}Target.cmake)\n"
-    "set(${SPIRV_TOOLS}_LIBRARIES ${SPIRV_TOOLS})\n"
-    "get_target_property(${SPIRV_TOOLS}_INCLUDE_DIRS ${SPIRV_TOOLS} INTERFACE_INCLUDE_DIRECTORIES)\n")
+    "if(TARGET ${SPIRV_TOOLS})\n"
+    "    set(${SPIRV_TOOLS}_LIBRARIES ${SPIRV_TOOLS})\n"
+    "    get_target_property(${SPIRV_TOOLS}_INCLUDE_DIRS ${SPIRV_TOOLS} INTERFACE_INCLUDE_DIRECTORIES)\n"
+    "endif()\n")
   install(FILES ${CMAKE_BINARY_DIR}/${SPIRV_TOOLS}Config.cmake DESTINATION ${PACKAGE_DIR})
 endif(ENABLE_SPIRV_TOOLS_INSTALL)
 

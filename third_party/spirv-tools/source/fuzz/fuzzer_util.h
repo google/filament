@@ -118,7 +118,7 @@ bool CanInsertOpcodeBeforeInstruction(
 // does not participate in IdIsIrrelevant fact.
 bool CanMakeSynonymOf(opt::IRContext* ir_context,
                       const TransformationContext& transformation_context,
-                      opt::Instruction* inst);
+                      const opt::Instruction& inst);
 
 // Determines whether the given type is a composite; that is: an array, matrix,
 // struct or vector.
@@ -168,6 +168,10 @@ uint32_t GetArraySize(const opt::Instruction& array_type_instruction,
 // matrix. |composite_type_inst| must be the type of a composite.
 uint32_t GetBoundForCompositeIndex(const opt::Instruction& composite_type_inst,
                                    opt::IRContext* ir_context);
+
+// Returns memory semantics mask for specific storage class.
+SpvMemorySemanticsMask GetMemorySemanticsForStorageClass(
+    SpvStorageClass storage_class);
 
 // Returns true if and only if |context| is valid, according to the validator
 // instantiated with |validator_options|.  |consumer| is used for error
@@ -273,8 +277,10 @@ uint32_t InOperandIndexFromOperandIndex(const opt::Instruction& inst,
                                         uint32_t absolute_index);
 
 // Returns true if and only if |type| is one of the types for which it is legal
-// to have an OpConstantNull value.
-bool IsNullConstantSupported(const opt::analysis::Type& type);
+// to have an OpConstantNull value. This may depend on the capabilities declared
+// in |context|.
+bool IsNullConstantSupported(opt::IRContext* context,
+                             const opt::Instruction& type);
 
 // Returns true if and only if the SPIR-V version being used requires that
 // global variables accessed in the static call graph of an entry point need
@@ -597,6 +603,21 @@ bool NewTerminatorPreservesDominationRules(opt::IRContext* ir_context,
 // module()->end().
 opt::Module::iterator GetFunctionIterator(opt::IRContext* ir_context,
                                           uint32_t function_id);
+
+// Returns true if the instruction with opcode |opcode| does not change its
+// behaviour depending on the signedness of the operand at
+// |use_in_operand_index|.
+// Assumes that the operand must be the id of an integer scalar or vector.
+bool IsAgnosticToSignednessOfOperand(SpvOp opcode,
+                                     uint32_t use_in_operand_index);
+
+// Returns true if |type_id_1| and |type_id_2| represent compatible types
+// given the context of the instruction with |opcode| (i.e. we can replace
+// an operand of |opcode| of the first type with an id of the second type
+// and vice-versa).
+bool TypesAreCompatible(opt::IRContext* ir_context, SpvOp opcode,
+                        uint32_t use_in_operand_index, uint32_t type_id_1,
+                        uint32_t type_id_2);
 
 }  // namespace fuzzerutil
 }  // namespace fuzz

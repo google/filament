@@ -247,12 +247,6 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x1.804p4", 0x00004e01},
     }));
 
-TEST(CreateContext, InvalidEnvironment) {
-  spv_target_env env;
-  std::memset(&env, 99, sizeof(env));
-  EXPECT_THAT(spvContextCreate(env), IsNull());
-}
-
 TEST(CreateContext, UniversalEnvironment) {
   auto c = spvContextCreate(SPV_ENV_UNIVERSAL_1_0);
   EXPECT_THAT(c, NotNull());

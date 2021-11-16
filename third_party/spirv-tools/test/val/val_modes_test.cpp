@@ -63,12 +63,13 @@ OpEntryPoint GLCompute %main "main"
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
-              AnyVUID("VUID-StandaloneSpirv-LocalSize-04683"));
+              AnyVUID("VUID-StandaloneSpirv-LocalSize-06426"));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("In the Vulkan environment, GLCompute execution model entry "
-                "points require either the LocalSize execution mode or an "
-                "object decorated with WorkgroupSize must be specified."));
+      HasSubstr(
+          "In the Vulkan environment, GLCompute execution model entry "
+          "points require either the LocalSize or LocalSizeId execution mode "
+          "or an object decorated with WorkgroupSize must be specified."));
 }
 
 TEST_F(ValidateMode, GLComputeNoModeVulkanWorkgroupSize) {
@@ -98,6 +99,40 @@ OpExecutionMode %main LocalSize 1 1 1
 
   spv_target_env env = SPV_ENV_VULKAN_1_0;
   CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_SUCCESS, ValidateInstructions(env));
+}
+
+TEST_F(ValidateMode, GLComputeVulkanLocalSizeIdBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionModeId %main LocalSizeId %int_1 %int_1 %int_1
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_1;  // need SPIR-V 1.2
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("LocalSizeId mode is not allowed by the current environment."));
+}
+
+TEST_F(ValidateMode, GLComputeVulkanLocalSizeIdGood) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionModeId %main LocalSizeId %int_1 %int_1 %int_1
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_1;  // need SPIR-V 1.2
+  CompileSuccessfully(spirv, env);
+  spvValidatorOptionsSetAllowLocalSizeId(getValidatorOptions(), true);
   EXPECT_THAT(SPV_SUCCESS, ValidateInstructions(env));
 }
 
@@ -672,7 +707,7 @@ INSTANTIATE_TEST_SUITE_P(ValidateModeKernelOnlyGoodSpv13, ValidateModeExecution,
                                  Values("Kernel"),
                                  Values("LocalSizeHint 1 1 1", "VecTypeHint 4",
                                         "ContractionOff",
-                                        "LocalSizeHintId %int1"),
+                                        "LocalSizeHintId %int1 %int1 %int1"),
                                  Values(SPV_ENV_UNIVERSAL_1_3)));
 
 INSTANTIATE_TEST_SUITE_P(
@@ -684,7 +719,7 @@ INSTANTIATE_TEST_SUITE_P(
         Values("Geometry", "TessellationControl", "TessellationEvaluation",
                "GLCompute", "Vertex", "Fragment"),
         Values("LocalSizeHint 1 1 1", "VecTypeHint 4", "ContractionOff",
-               "LocalSizeHintId %int1"),
+               "LocalSizeHintId %int1 %int1 %int1"),
         Values(SPV_ENV_UNIVERSAL_1_3)));
 
 INSTANTIATE_TEST_SUITE_P(
@@ -863,7 +898,7 @@ OpCapability Kernel
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Kernel %main "main"
-OpExecutionMode %main LocalSizeHintId %int_1
+OpExecutionMode %main LocalSizeHintId %int_1 %int_1 %int_1
 %int = OpTypeInt 32 0
 %int_1 = OpConstant %int 1
 )" + kVoidFunction;
@@ -882,7 +917,7 @@ OpCapability Kernel
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Kernel %main "main"
-OpExecutionModeId %main LocalSizeHintId %int_1
+OpExecutionModeId %main LocalSizeHintId %int_1 %int_1 %int_1
 %int = OpTypeInt 32 0
 %int_1 = OpConstant %int 1
 )" + kVoidFunction;
@@ -898,7 +933,7 @@ OpCapability Kernel
 OpCapability Shader
 OpMemoryModel Logical GLSL450
 OpEntryPoint Vertex %main "main"
-OpExecutionModeId %main LocalSizeHintId %int_1
+OpExecutionModeId %main LocalSizeHintId %int_1 %int_1 %int_1
 %int = OpTypeInt 32 0
 %int_ptr = OpTypePointer Private %int
 %int_1 = OpVariable %int_ptr Private

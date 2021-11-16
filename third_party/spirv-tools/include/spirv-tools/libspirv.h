@@ -309,6 +309,7 @@ typedef enum spv_ext_inst_type_t {
   SPV_EXT_INST_TYPE_DEBUGINFO,
   SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100,
   SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
+  SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100,
 
   // Multiple distinct extended instruction set types could return this
   // value, if they are prefixed with NonSemantic. and are otherwise
@@ -515,6 +516,7 @@ typedef enum {
 
   SPV_ENV_UNIVERSAL_1_5,  // SPIR-V 1.5 latest revision, no other restrictions.
   SPV_ENV_VULKAN_1_2,     // Vulkan 1.2 latest revision.
+  SPV_ENV_MAX             // Keep this as the last enum value.
 } spv_target_env;
 
 // SPIR-V Validator can be parameterized with the following Universal Limits.
@@ -656,6 +658,11 @@ SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetWorkgroupScalarBlockLayout(
 // Records whether or not the validator should skip validating standard
 // uniform/storage block layout.
 SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetSkipBlockLayout(
+    spv_validator_options options, bool val);
+
+// Records whether or not the validator should allow the LocalSizeId
+// decoration where the environment otherwise would not allow it.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetAllowLocalSizeId(
     spv_validator_options options, bool val);
 
 // Creates an optimizer options object with default options. Returns a valid
