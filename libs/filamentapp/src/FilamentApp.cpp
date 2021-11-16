@@ -75,9 +75,9 @@ View* FilamentApp::getGuiView() const noexcept {
     return mImGuiHelper->getView();
 }
 
-void FilamentApp::run(const Config& config, const SetupCallback& setupCallback,
-        const CleanupCallback& cleanupCallback, ImGuiCallback imguiCallback,
-        const PreRenderCallback& preRender, PostRenderCallback postRender,
+void FilamentApp::run(const Config& config, SetupCallback setupCallback,
+        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
+        PreRenderCallback preRender, PostRenderCallback postRender,
         size_t width, size_t height) {
     mWindowTitle = config.title;
     std::unique_ptr<FilamentApp::Window> window(
@@ -537,20 +537,16 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
 #if defined(FILAMENT_SUPPORTS_WAYLAND)
         struct {
-            void *eglSharedContext;
             struct wl_display *display;
             struct wl_surface *surface;
-            struct wl_egl_window *egl_window;
         } wayland{};
 
         SDL_SysWMinfo wmi;
         SDL_VERSION(&wmi.version);
         ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(mWindow, &wmi), "SDL version unsupported!");
         if (wmi.subsystem == SDL_SYSWM_WAYLAND) {
-            wayland.eglSharedContext = nullptr;
             wayland.display = wmi.info.wl.display;
             wayland.surface = wmi.info.wl.surface;
-            wayland.egl_window = nullptr; //TODO - needs to come from SDL -> only 2.0.15+ exposes
         }
         void* nativeWindow = &wayland;
 
