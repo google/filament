@@ -125,8 +125,21 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
     }
-    const bool isSwapChain = config.colorLayout[0] == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    const bool hasSubpasses = config.subpassMask != 0;
+
+    // The Driver API consolidates all color attachments from the first and second subpasses
+    // into a single list, and uses a bitmask to mark attachments that belong only to the
+    // second subpass and should be available as inputs.
+
+    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
+    // For simplicity, create an array that can hold the maximum possible number of attachments.
+    // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
+    VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
+
+    // If there are subpasses, we require the input attachment to be the first attachment.
+    // Breaking this assumption would likely require enhancements to the Driver API in order
+    // to supply Vulkan with all the information needed.
+    assert_invariant(config.subpassMask == 0 || config.subpassMask == 1);
+    const bool hasSubpasses = (config.subpassMask != 0);
 
     // Set up some const aliases for terseness.
     const VkAttachmentLoadOp kClear = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -135,34 +148,9 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     const VkAttachmentStoreOp kDisableStore = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     const VkAttachmentStoreOp kEnableStore = VK_ATTACHMENT_STORE_OP_STORE;
 
-    // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
-    // pass, and the attachment description specifies the layout to transition to at the end.
-    // However we use render passes to cause layout transitions only when drawing directly into the
-    // swap chain. We keep our offscreen images in GENERAL layout, which is simple and prevents
-    // thrashing the layout. Note that pipeline barriers are more powerful than render passes for
-    // performing layout transitions, because they allow for per-miplevel transitions.
-    const bool discard = any(config.discardStart & TargetBufferFlags::COLOR);
-    struct { VkImageLayout subpass, initial, final; } colorLayouts[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT];
-    if (isSwapChain) {
-        colorLayouts[0].subpass = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        // It is legal to always use UNDEFINED for "initial", but we wish to avoid warnings
-        // when the load op is LOAD.
-        colorLayouts[0].initial = discard ? VK_IMAGE_LAYOUT_UNDEFINED :
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        colorLayouts[0].final = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    } else {
-        for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-            colorLayouts[i].subpass = config.colorLayout[i];
-            colorLayouts[i].initial = config.colorLayout[i];
-            colorLayouts[i].final = config.colorLayout[i];
-        }
-    }
-
     VkAttachmentReference inputAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference colorAttachmentRefs[2][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VkAttachmentReference resolveAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkAttachmentReference resolveAttachmentRef[2][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference depthAttachmentRef = {};
 
     const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
@@ -171,21 +159,16 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .pInputAttachments = nullptr,
         .pColorAttachments = colorAttachmentRefs[0],
-        .pResolveAttachments = resolveAttachmentRef,
+        .pResolveAttachments = resolveAttachmentRef[0],
         .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
     },
     {
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .pInputAttachments = inputAttachmentRef,
         .pColorAttachments = colorAttachmentRefs[1],
-        .pResolveAttachments = resolveAttachmentRef,
+        .pResolveAttachments = resolveAttachmentRef[1],
         .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
     }};
-
-    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
-    // For simplicity, create an array that can hold the maximum possible number of attachments.
-    // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
-    VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
 
     // We support 2 subpasses, which means we need to supply 1 dependency struct.
     VkSubpassDependency dependencies[1] = {{
@@ -215,53 +198,54 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         if (config.colorFormat[i] == VK_FORMAT_UNDEFINED) {
             continue;
         }
-        const VkImageLayout subpassLayout = colorLayouts[i].subpass;
+
         uint32_t index;
 
         if (!hasSubpasses) {
             index = subpasses[0].colorAttachmentCount++;
-            colorAttachmentRefs[0][index].layout = subpassLayout;
+            colorAttachmentRefs[0][index].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             colorAttachmentRefs[0][index].attachment = attachmentIndex;
         } else {
-
-            // The Driver API consolidates all color attachments from the first and second subpasses
-            // into a single list, and uses a bitmask to mark attachments that belong only to the
-            // second subpass and should be available as inputs. All color attachments in the first
-            // subpass are automatically made available to the second subpass.
-
-            // If there are subpasses, we require the input attachment to be the first attachment.
-            // Breaking this assumption would likely require enhancements to the Driver API in order
-            // to supply Vulkan with all the information needed.
-            assert_invariant(config.subpassMask == 1);
-
             if (config.subpassMask & (1 << i)) {
+                // An attachment used as both an input attachment and a color attachment must be in the LAYOUT_GENERAL.
                 index = subpasses[0].colorAttachmentCount++;
-                colorAttachmentRefs[0][index].layout = subpassLayout;
+                colorAttachmentRefs[0][index].layout = VK_IMAGE_LAYOUT_GENERAL;
                 colorAttachmentRefs[0][index].attachment = attachmentIndex;
 
                 index = subpasses[1].inputAttachmentCount++;
-                inputAttachmentRef[index].layout = subpassLayout;
+                inputAttachmentRef[index].layout = VK_IMAGE_LAYOUT_GENERAL;
                 inputAttachmentRef[index].attachment = attachmentIndex;
-            }
 
-            index = subpasses[1].colorAttachmentCount++;
-            colorAttachmentRefs[1][index].layout = subpassLayout;
-            colorAttachmentRefs[1][index].attachment = attachmentIndex;
+                index = subpasses[1].colorAttachmentCount++;
+                colorAttachmentRefs[1][index].attachment = VK_ATTACHMENT_UNUSED;
+            }
+            else {
+                index = subpasses[1].colorAttachmentCount++;
+                colorAttachmentRefs[1][index].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                colorAttachmentRefs[1][index].attachment = attachmentIndex;
+            }
         }
 
         const TargetBufferFlags flag = TargetBufferFlags(int(TargetBufferFlags::COLOR0) << i);
         const bool clear = any(config.clear & flag);
-        const bool discard = any(config.discardStart & flag);
+        const bool discardStart = any(config.discardStart & flag);
+
+        // The mission here is to ensure that the initial layout matches the current layout of the image.
+        VkImageLayout realLayout = (i == 0) ? ((config.colorLayout[0] == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) ?
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : config.colorLayout[0]) :
+                    config.colorLayout[i];
+
+        const bool discardEnd = ((config.needsResolveMask & (1 << i)) || (hasSubpasses && (config.subpassMask & (1 << i))));
 
         attachments[attachmentIndex++] = {
             .format = config.colorFormat[i],
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discard ? kDontCare : kKeep),
-            .storeOp = config.samples == 1 ? kEnableStore : kDisableStore,
+            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
+            .storeOp =  discardEnd ? kDisableStore: kEnableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout = colorLayouts[i].initial,
-            .finalLayout = colorLayouts[i].final
+            .initialLayout = (clear || discardStart) ? VK_IMAGE_LAYOUT_UNDEFINED : realLayout,
+            .finalLayout = realLayout
         };
     }
 
@@ -274,21 +258,53 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     }
 
     // Populate the Resolve Attachments.
-    VkAttachmentReference* pResolveAttachment = resolveAttachmentRef;
+    VkAttachmentReference* pResolveAttachment0 = resolveAttachmentRef[0];
+    VkAttachmentReference* pResolveAttachment1 = resolveAttachmentRef[1];
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (config.colorFormat[i] == VK_FORMAT_UNDEFINED) {
             continue;
         }
 
-        if (!(config.needsResolveMask & (1 << i))) {
-            pResolveAttachment->attachment = VK_ATTACHMENT_UNUSED;
-            ++pResolveAttachment;
-            continue;
+        if (!hasSubpasses) {
+            if (!(config.needsResolveMask & (1 << i))) {
+                pResolveAttachment0->attachment = VK_ATTACHMENT_UNUSED;
+                ++pResolveAttachment0;
+                continue;
+            }
+
+            pResolveAttachment0->attachment = attachmentIndex;
+            pResolveAttachment0->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            ++pResolveAttachment0;
+        }
+        else
+        {
+            if (!(config.needsResolveMask & (1 << i))) {
+                pResolveAttachment0->attachment = VK_ATTACHMENT_UNUSED;
+                ++pResolveAttachment0;
+                pResolveAttachment1->attachment = VK_ATTACHMENT_UNUSED;
+                ++pResolveAttachment1;
+                continue;
+            }
+
+            if (config.subpassMask & (1 << i)) {
+                pResolveAttachment0->attachment = attachmentIndex;
+                pResolveAttachment0->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                ++pResolveAttachment0;
+
+                pResolveAttachment1->attachment = VK_ATTACHMENT_UNUSED;
+                ++pResolveAttachment1;
+            }
+            else {
+                pResolveAttachment1->attachment = attachmentIndex;
+                pResolveAttachment1->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                ++pResolveAttachment1;
+            }
         }
 
-        pResolveAttachment->attachment = attachmentIndex;
-        pResolveAttachment->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        ++pResolveAttachment;
+
+        VkImageLayout realLayout = (i == 0) ? ((config.colorLayout[0] == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) ?
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : config.colorLayout[0]) :
+                    config.colorLayout[i];
 
         attachments[attachmentIndex++] = {
             .format = config.colorFormat[i],
@@ -298,7 +314,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = colorLayouts[i].final
+            .finalLayout = realLayout
         };
     }
 
@@ -307,7 +323,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
-        depthAttachmentRef.layout = config.depthLayout;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depthAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
@@ -316,7 +332,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = config.depthLayout,
+            .initialLayout = (clear || discardStart) ? VK_IMAGE_LAYOUT_UNDEFINED : config.depthLayout,
             .finalLayout = config.depthLayout
         };
     }
