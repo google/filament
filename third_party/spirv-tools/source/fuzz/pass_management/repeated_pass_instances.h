@@ -73,6 +73,7 @@
 #include "source/fuzz/fuzzer_pass_split_blocks.h"
 #include "source/fuzz/fuzzer_pass_swap_conditional_branch_operands.h"
 #include "source/fuzz/fuzzer_pass_wrap_regions_in_selections.h"
+#include "source/fuzz/fuzzer_pass_wrap_vector_synonym.h"
 
 namespace spvtools {
 namespace fuzz {
@@ -168,6 +169,7 @@ class RepeatedPassInstances {
   REPEATED_PASS_INSTANCE(SplitBlocks);
   REPEATED_PASS_INSTANCE(SwapBranchConditionalOperands);
   REPEATED_PASS_INSTANCE(WrapRegionsInSelections);
+  REPEATED_PASS_INSTANCE(WrapVectorSynonym);
 #undef REPEATED_PASS_INSTANCE
 
  public:

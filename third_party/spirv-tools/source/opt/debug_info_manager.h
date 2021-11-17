@@ -67,8 +67,8 @@ class DebugInlinedAtContext {
   std::unordered_map<uint32_t, uint32_t> callee_inlined_at2chain_;
 };
 
-// A class for analyzing, managing, and creating OpenCL.DebugInfo.100 extension
-// instructions.
+// A class for analyzing, managing, and creating OpenCL.DebugInfo.100 and
+// NonSemantic.Shader.DebugInfo.100 extension instructions.
 class DebugInfoManager {
  public:
   // Constructs a debug information manager from the given |context|.
@@ -85,7 +85,7 @@ class DebugInfoManager {
     return !(lhs == rhs);
   }
 
-  // Analyzes OpenCL.DebugInfo.100 instruction |dbg_inst|.
+  // Analyzes DebugInfo instruction |dbg_inst|.
   void AnalyzeDebugInst(Instruction* dbg_inst);
 
   // Creates new DebugInlinedAt and returns its id. Its line operand is the
@@ -164,6 +164,9 @@ class DebugInfoManager {
   // Erases |instr| from data structures of this class.
   void ClearDebugInfo(Instruction* instr);
 
+  // Return the opcode for the Vulkan DebugOperation inst
+  uint32_t GetVulkanDebugOperation(Instruction* inst);
+
   // Returns the id of Value operand if |inst| is DebugValue who has Deref
   // operation and its Value operand is a result id of OpVariable with
   // Function storage class. Otherwise, returns 0.
@@ -190,9 +193,12 @@ class DebugInfoManager {
  private:
   IRContext* context() { return context_; }
 
-  // Analyzes OpenCL.DebugInfo.100 instructions in the given |module| and
+  // Analyzes DebugInfo instructions in the given |module| and
   // populates data structures in this class.
   void AnalyzeDebugInsts(Module& module);
+
+  // Get the DebugInfo ExtInstImport Id, or 0 if no DebugInfo is available.
+  uint32_t GetDbgSetImportId();
 
   // Returns the debug instruction whose id is |id|. Returns |nullptr| if one
   // does not exists.
@@ -230,7 +236,7 @@ class DebugInfoManager {
 
   IRContext* context_;
 
-  // Mapping from ids of OpenCL.DebugInfo.100 extension instructions
+  // Mapping from ids of DebugInfo extension instructions.
   // to their Instruction instances.
   std::unordered_map<uint32_t, Instruction*> id_to_dbg_inst_;
 

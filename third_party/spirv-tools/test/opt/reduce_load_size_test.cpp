@@ -17,6 +17,12 @@
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
+namespace {
+
+const double kDefaultLoadReductionThreshold = 0.9;
+
+}  // namespace
+
 namespace spvtools {
 namespace opt {
 namespace {
@@ -104,7 +110,8 @@ TEST_F(ReduceLoadSizeTest, cbuffer_load_extract) {
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  SinglePassRunAndMatch<ReduceLoadSize>(test, false);
+  SinglePassRunAndMatch<ReduceLoadSize>(test, false,
+                                        kDefaultLoadReductionThreshold);
 }
 
 TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_not_affected_by_debug_instr) {
@@ -202,7 +209,8 @@ TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_not_affected_by_debug_instr) {
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  SinglePassRunAndMatch<ReduceLoadSize>(test, false);
+  SinglePassRunAndMatch<ReduceLoadSize>(test, false,
+                                        kDefaultLoadReductionThreshold);
 }
 
 TEST_F(ReduceLoadSizeTest, cbuffer_load_extract_vector) {
@@ -280,7 +288,8 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false);
+  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false,
+                                        kDefaultLoadReductionThreshold);
 }
 
 TEST_F(ReduceLoadSizeTest, cbuffer_load_5_extract) {
@@ -351,7 +360,8 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false);
+  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false,
+                                        kDefaultLoadReductionThreshold);
 }
 
 TEST_F(ReduceLoadSizeTest, cbuffer_load_fully_used) {
@@ -416,7 +426,76 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
                         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
-  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false);
+  SinglePassRunAndCheck<ReduceLoadSize>(test, test, true, false,
+                                        kDefaultLoadReductionThreshold);
+}
+
+TEST_F(ReduceLoadSizeTest, replace_cbuffer_load_fully_used) {
+  const std::string test =
+      R"(
+               OpCapability Shader
+               OpCapability SampledBuffer
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %out_var_SV_Target0
+               OpExecutionMode %main OriginUpperLeft
+               OpSource HLSL 600
+               OpName %type_MaterialInstancing_cbuffer "type.MaterialInstancing_cbuffer"
+               OpMemberName %type_MaterialInstancing_cbuffer 0 "MaterialInstancing_constants"
+               OpName %MaterialInstancing_Constants "MaterialInstancing_Constants"
+               OpMemberName %MaterialInstancing_Constants 0 "offset0"
+               OpMemberName %MaterialInstancing_Constants 1 "params"
+               OpName %InstancingParams_Constants "InstancingParams_Constants"
+               OpMemberName %InstancingParams_Constants 0 "offset1"
+               OpName %MaterialInstancing_cbuffer "MaterialInstancing_cbuffer"
+               OpName %out_var_SV_Target0 "out.var.SV_Target0"
+               OpName %main "main"
+               OpDecorate %out_var_SV_Target0 Location 0
+               OpDecorate %MaterialInstancing_cbuffer DescriptorSet 6
+               OpDecorate %MaterialInstancing_cbuffer Binding 0
+               OpMemberDecorate %InstancingParams_Constants 0 Offset 0
+               OpMemberDecorate %MaterialInstancing_Constants 0 Offset 0
+               OpMemberDecorate %MaterialInstancing_Constants 1 Offset 16
+               OpMemberDecorate %type_MaterialInstancing_cbuffer 0 Offset 0
+               OpDecorate %type_MaterialInstancing_cbuffer Block
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %v4int = OpTypeVector %int 4
+%InstancingParams_Constants = OpTypeStruct %v4int
+%MaterialInstancing_Constants = OpTypeStruct %v4int %InstancingParams_Constants
+%type_MaterialInstancing_cbuffer = OpTypeStruct %MaterialInstancing_Constants
+%_ptr_Uniform_type_MaterialInstancing_cbuffer = OpTypePointer Uniform %type_MaterialInstancing_cbuffer
+%_ptr_Output_int = OpTypePointer Output %int
+       %void = OpTypeVoid
+         %60 = OpTypeFunction %void
+%_ptr_Uniform_MaterialInstancing_Constants = OpTypePointer Uniform %MaterialInstancing_Constants
+%MaterialInstancing_cbuffer = OpVariable %_ptr_Uniform_type_MaterialInstancing_cbuffer Uniform
+%out_var_SV_Target0 = OpVariable %_ptr_Output_int Output
+       %main = OpFunction %void None %60
+         %80 = OpLabel
+        %131 = OpAccessChain %_ptr_Uniform_MaterialInstancing_Constants %MaterialInstancing_cbuffer %int_0
+        %132 = OpLoad %MaterialInstancing_Constants %131
+; CHECK: [[ac1:%\w+]] = OpAccessChain {{%\w+}} %MaterialInstancing_cbuffer %int_0
+; CHECK: [[ac2:%\w+]] = OpAccessChain {{%\w+}} [[ac1]] %uint_0
+; CHECK: OpLoad %v4int [[ac2]]
+
+; CHECK: [[ac3:%\w+]] = OpAccessChain {{%\w+}} [[ac1]] %uint_1
+; CHECK: [[ac4:%\w+]] = OpAccessChain {{%\w+}} [[ac3]] %uint_0
+; CHECK: OpLoad %v4int [[ac4]]
+        %134 = OpCompositeExtract %v4int %132 0
+        %135 = OpCompositeExtract %InstancingParams_Constants %132 1
+        %136 = OpCompositeExtract %v4int %135 0
+        %149 = OpCompositeExtract %int %134 0
+        %185 = OpCompositeExtract %int %136 0
+        %156 = OpIAdd %int %149 %185
+               OpStore %out_var_SV_Target0 %156
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<ReduceLoadSize>(test, false, 1.1);
 }
 
 }  // namespace

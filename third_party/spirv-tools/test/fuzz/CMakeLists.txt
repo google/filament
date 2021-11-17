@@ -122,6 +122,7 @@ if (${SPIRV_BUILD_FUZZER})
           transformation_vector_shuffle_test.cpp
           transformation_wrap_early_terminator_in_function_test.cpp
           transformation_wrap_region_in_selection_test.cpp
+          transformation_wrap_vector_synonym_test.cpp
           uniform_buffer_element_descriptor_test.cpp)
 
   if (${SPIRV_ENABLE_LONG_FUZZER_TESTS})

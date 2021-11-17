@@ -760,7 +760,7 @@ void LoopUnrollerUtilsImpl::FoldConditionBlock(BasicBlock* condition_block,
           IRContext::Analysis::kAnalysisInstrToBlockMapping);
   Instruction* new_branch = builder.AddBranch(new_target);
 
-  new_branch->set_dbg_line_insts(lines);
+  if (!lines.empty()) new_branch->AddDebugLine(&lines.back());
   new_branch->SetDebugScope(scope);
 }
 
@@ -873,6 +873,10 @@ void LoopUnrollerUtilsImpl::AssignNewResultIds(BasicBlock* basic_block) {
   def_use_mgr->AnalyzeInstDefUse(basic_block->GetLabelInst());
 
   for (Instruction& inst : *basic_block) {
+    // Do def/use analysis on new lines
+    for (auto& line : inst.dbg_line_insts())
+      def_use_mgr->AnalyzeInstDefUse(&line);
+
     uint32_t old_id = inst.result_id();
 
     // Ignore stores etc.
@@ -1098,6 +1102,10 @@ void LoopUtils::Finalize() {
 Pass::Status LoopUnroller::Process() {
   bool changed = false;
   for (Function& f : *context()->module()) {
+    if (f.IsDeclaration()) {
+      continue;
+    }
+
     LoopDescriptor* LD = context()->GetLoopDescriptor(&f);
     for (Loop& loop : *LD) {
       LoopUtils loop_utils{context(), &loop};

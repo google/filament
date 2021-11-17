@@ -20,7 +20,6 @@
 #include <set>
 #include <vector>
 
-#include "OpenCLDebugInfo100.h"
 #include "source/cfa.h"
 #include "source/opt/basic_block.h"
 #include "source/opt/dominator_analysis.h"
@@ -87,8 +86,8 @@ bool MemPass::IsPtr(uint32_t ptrId) {
   }
   const SpvOp op = ptrInst->opcode();
   if (op == SpvOpVariable || IsNonPtrAccessChain(op)) return true;
-  if (op != SpvOpFunctionParameter) return false;
   const uint32_t varTypeId = ptrInst->type_id();
+  if (varTypeId == 0) return false;
   const Instruction* varTypeInst = get_def_use_mgr()->GetDef(varTypeId);
   return varTypeInst->opcode() == SpvOpTypePointer;
 }
@@ -226,9 +225,9 @@ MemPass::MemPass() {}
 
 bool MemPass::HasOnlySupportedRefs(uint32_t varId) {
   return get_def_use_mgr()->WhileEachUser(varId, [this](Instruction* user) {
-    auto dbg_op = user->GetOpenCL100DebugOpcode();
-    if (dbg_op == OpenCLDebugInfo100DebugDeclare ||
-        dbg_op == OpenCLDebugInfo100DebugValue) {
+    auto dbg_op = user->GetCommonDebugOpcode();
+    if (dbg_op == CommonDebugInfoDebugDeclare ||
+        dbg_op == CommonDebugInfoDebugValue) {
       return true;
     }
     SpvOp op = user->opcode();

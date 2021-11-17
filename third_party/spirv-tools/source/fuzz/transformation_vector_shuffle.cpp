@@ -204,7 +204,7 @@ void TransformationVectorShuffle::AddDataSynonymFacts(
       // Check that the first vector can participate in data synonym facts.
       if (!fuzzerutil::CanMakeSynonymOf(
               ir_context, *transformation_context,
-              ir_context->get_def_use_mgr()->GetDef(message_.vector1()))) {
+              *ir_context->get_def_use_mgr()->GetDef(message_.vector1()))) {
         continue;
       }
       descriptor_for_source_component =
@@ -213,7 +213,7 @@ void TransformationVectorShuffle::AddDataSynonymFacts(
       // Check that the second vector can participate in data synonym facts.
       if (!fuzzerutil::CanMakeSynonymOf(
               ir_context, *transformation_context,
-              ir_context->get_def_use_mgr()->GetDef(message_.vector2()))) {
+              *ir_context->get_def_use_mgr()->GetDef(message_.vector2()))) {
         continue;
       }
       auto index_into_vector_2 =

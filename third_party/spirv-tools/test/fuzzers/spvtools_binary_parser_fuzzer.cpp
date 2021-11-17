@@ -16,16 +16,18 @@
 #include <vector>
 
 #include "spirv-tools/libspirv.hpp"
+#include "test/fuzzers/random_generator.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  if (size < sizeof(spv_target_env) + 1) return 0;
+  if (size < 1) {
+    return 0;
+  }
 
-  const spv_context context =
-      spvContextCreate(*reinterpret_cast<const spv_target_env*>(data));
-  if (context == nullptr) return 0;
-
-  data += sizeof(spv_target_env);
-  size -= sizeof(spv_target_env);
+  spvtools::fuzzers::RandomGenerator random_gen(data, size);
+  const spv_context context = spvContextCreate(random_gen.GetTargetEnv());
+  if (context == nullptr) {
+    return 0;
+  }
 
   std::vector<uint32_t> input;
   input.resize(size >> 2);

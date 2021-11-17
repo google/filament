@@ -145,20 +145,21 @@ void Module::ToBinary(std::vector<uint32_t>* binary, bool skip_nop) const {
   DebugScope last_scope(kNoDebugScope, kNoInlinedAt);
   const Instruction* last_line_inst = nullptr;
   bool between_merge_and_branch = false;
+  bool between_label_and_phi_var = false;
   auto write_inst = [binary, skip_nop, &last_scope, &last_line_inst,
-                     &between_merge_and_branch, this](const Instruction* i) {
+                     &between_merge_and_branch, &between_label_and_phi_var,
+                     this](const Instruction* i) {
     // Skip emitting line instructions between merge and branch instructions.
     auto opcode = i->opcode();
-    if (between_merge_and_branch &&
-        (opcode == SpvOpLine || opcode == SpvOpNoLine)) {
+    if (between_merge_and_branch && i->IsLineInst()) {
       return;
     }
     between_merge_and_branch = false;
     if (last_line_inst != nullptr) {
-      // If the current instruction is OpLine and it is the same with
-      // the last line instruction that is still effective (can be applied
+      // If the current instruction is OpLine or DebugLine and it is the same
+      // as the last line instruction that is still effective (can be applied
       // to the next instruction), we skip writing the current instruction.
-      if (opcode == SpvOpLine) {
+      if (i->IsLine()) {
         uint32_t operand_index = 0;
         if (last_line_inst->WhileEachInOperand(
                 [&operand_index, i](const uint32_t* word) {
@@ -167,39 +168,67 @@ void Module::ToBinary(std::vector<uint32_t>* binary, bool skip_nop) const {
                 })) {
           return;
         }
-      } else if (opcode != SpvOpNoLine && i->dbg_line_insts().empty()) {
+      } else if (!i->IsNoLine() && i->dbg_line_insts().empty()) {
         // If the current instruction does not have the line information,
         // the last line information is not effective any more. Emit OpNoLine
-        // to specify it.
-        binary->push_back((1 << 16) | static_cast<uint16_t>(SpvOpNoLine));
+        // or DebugNoLine to specify it.
+        uint32_t shader_set_id = context()
+                                     ->get_feature_mgr()
+                                     ->GetExtInstImportId_Shader100DebugInfo();
+        if (shader_set_id != 0) {
+          binary->push_back((5 << 16) | static_cast<uint16_t>(SpvOpExtInst));
+          binary->push_back(context()->get_type_mgr()->GetVoidTypeId());
+          binary->push_back(context()->TakeNextId());
+          binary->push_back(shader_set_id);
+          binary->push_back(NonSemanticShaderDebugInfo100DebugNoLine);
+        } else {
+          binary->push_back((1 << 16) | static_cast<uint16_t>(SpvOpNoLine));
+        }
         last_line_inst = nullptr;
       }
     }
+
+    if (opcode == SpvOpLabel) {
+      between_label_and_phi_var = true;
+    } else if (opcode != SpvOpVariable && opcode != SpvOpPhi &&
+               !spvtools::opt::IsOpLineInst(opcode)) {
+      between_label_and_phi_var = false;
+    }
+
     if (!(skip_nop && i->IsNop())) {
       const auto& scope = i->GetDebugScope();
       if (scope != last_scope) {
-        // Emit DebugScope |scope| to |binary|.
-        auto dbg_inst = ext_inst_debuginfo_.begin();
-        scope.ToBinary(dbg_inst->type_id(), context()->TakeNextId(),
-                       dbg_inst->GetSingleWordOperand(2), binary);
+        // Can only emit nonsemantic instructions after all phi instructions
+        // in a block so don't emit scope instructions before phi instructions
+        // for NonSemantic.Shader.DebugInfo.100.
+        if (!between_label_and_phi_var ||
+            context()
+                ->get_feature_mgr()
+                ->GetExtInstImportId_OpenCL100DebugInfo()) {
+          // Emit DebugScope |scope| to |binary|.
+          auto dbg_inst = ext_inst_debuginfo_.begin();
+          scope.ToBinary(dbg_inst->type_id(), context()->TakeNextId(),
+                         dbg_inst->GetSingleWordOperand(2), binary);
+        }
         last_scope = scope;
       }
 
       i->ToBinaryWithoutAttachedDebugInsts(binary);
     }
     // Update the last line instruction.
-    if (spvOpcodeIsBlockTerminator(opcode) || opcode == SpvOpNoLine) {
+    if (spvOpcodeIsBlockTerminator(opcode) || i->IsNoLine()) {
       last_line_inst = nullptr;
     } else if (opcode == SpvOpLoopMerge || opcode == SpvOpSelectionMerge) {
       between_merge_and_branch = true;
       last_line_inst = nullptr;
-    } else if (opcode == SpvOpLine) {
+    } else if (i->IsLine()) {
       last_line_inst = i;
     }
   };
   ForEachInst(write_inst, true);
 
-  // We create new instructions for DebugScope. The bound must be updated.
+  // We create new instructions for DebugScope and DebugNoLine. The bound must
+  // be updated.
   binary->data()[bound_idx] = header_.bound;
 }
 

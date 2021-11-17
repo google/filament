@@ -34,6 +34,7 @@
 #include "source/opt/pass_manager.h"
 #include "source/opt/remove_duplicates_pass.h"
 #include "source/opt/type_manager.h"
+#include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/util/make_unique.h"
 #include "spirv-tools/libspirv.hpp"
@@ -207,7 +208,7 @@ spv_result_t GenerateHeader(const MessageConsumer& consumer,
 
   header->magic_number = SpvMagicNumber;
   header->version = version;
-  header->generator = 17u;
+  header->generator = SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_LINKER, 0);
   header->bound = max_id_bound;
   header->reserved = 0u;
 

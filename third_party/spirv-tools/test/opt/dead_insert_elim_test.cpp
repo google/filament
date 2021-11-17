@@ -170,6 +170,72 @@ OpFunctionEnd
                                             after_predefs + after, true, true);
 }
 
+TEST_F(DeadInsertElimTest, DeadInsertForLinkage) {
+  const std::string before =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+%int = OpTypeInt 32 1
+%int_1 = OpConstant %int 1
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+%14 = OpTypeFunction %v2float %_ptr_Function_v2float
+%_ptr_Function_float = OpTypePointer Function %float
+%main = OpFunction %v2float None %14
+%BaseColor = OpFunctionParameter %_ptr_Function_v2float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v2float Function
+%16 = OpLoad %v2float %v
+%17 = OpAccessChain %_ptr_Function_float %BaseColor %int_1
+%18 = OpLoad %float %17
+%19 = OpCompositeInsert %v2float %18 %16 0
+%20 = OpCompositeInsert %v2float %float_0 %19 0
+OpReturnValue %20
+OpFunctionEnd
+)";
+  const std::string after =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+%int = OpTypeInt 32 1
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+%14 = OpTypeFunction %v2float %_ptr_Function_v2float
+%_ptr_Function_float = OpTypePointer Function %float
+%main = OpFunction %v2float None %14
+%BaseColor = OpFunctionParameter %_ptr_Function_v2float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v2float Function
+%16 = OpLoad %v2float %v
+%20 = OpCompositeInsert %v2float %float_0 %16 0
+OpReturnValue %20
+OpFunctionEnd
+)";
+  SinglePassRunAndCheck<DeadInsertElimPass>(before, after, true, true);
+}
+
 TEST_F(DeadInsertElimTest, DeadInsertInChainWithPhi) {
   // Dead insert eliminated with phi in insertion chain.
   //

@@ -142,7 +142,7 @@ inline IteratorRange<IteratorType> make_range(const IteratorType& begin,
 template <typename IteratorType>
 inline IteratorRange<IteratorType> make_range(IteratorType&& begin,
                                               IteratorType&& end) {
-  return {std::move(begin), std::move(end)};
+  return {std::forward<IteratorType>(begin), std::forward<IteratorType>(end)};
 }
 
 // Returns a (begin, end) iterator pair for the given container.

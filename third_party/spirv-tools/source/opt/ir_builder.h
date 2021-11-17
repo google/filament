@@ -359,8 +359,9 @@ class InstructionBuilder {
     return AddInstruction(std::move(select));
   }
 
-  // Adds a signed int32 constant to the binary.
-  // The |value| parameter is the constant value to be added.
+  // Returns a pointer to the definition of a signed 32-bit integer constant
+  // with the given value. Returns |nullptr| if the constant does not exist and
+  // cannot be created.
   Instruction* GetSintConstant(int32_t value) {
     return GetIntConstant<int32_t>(value, true);
   }
@@ -381,21 +382,24 @@ class InstructionBuilder {
                         GetContext()->TakeNextId(), ops));
     return AddInstruction(std::move(construct));
   }
-  // Adds an unsigned int32 constant to the binary.
-  // The |value| parameter is the constant value to be added.
+
+  // Returns a pointer to the definition of an unsigned 32-bit integer constant
+  // with the given value. Returns |nullptr| if the constant does not exist and
+  // cannot be created.
   Instruction* GetUintConstant(uint32_t value) {
     return GetIntConstant<uint32_t>(value, false);
   }
 
   uint32_t GetUintConstantId(uint32_t value) {
     Instruction* uint_inst = GetUintConstant(value);
-    return uint_inst->result_id();
+    return (uint_inst != nullptr ? uint_inst->result_id() : 0);
   }
 
   // Adds either a signed or unsigned 32 bit integer constant to the binary
-  // depedning on the |sign|. If |sign| is true then the value is added as a
+  // depending on the |sign|. If |sign| is true then the value is added as a
   // signed constant otherwise as an unsigned constant. If |sign| is false the
-  // value must not be a negative number.
+  // value must not be a negative number.  Returns false if the constant does
+  // not exists and could be be created.
   template <typename T>
   Instruction* GetIntConstant(T value, bool sign) {
     // Assert that we are not trying to store a negative number in an unsigned
@@ -410,6 +414,10 @@ class InstructionBuilder {
     // memory for the rebuilt type.
     uint32_t type_id =
         GetContext()->get_type_mgr()->GetTypeInstruction(&int_type);
+
+    if (type_id == 0) {
+      return nullptr;
+    }
 
     // Get the memory managed type so that it is safe to be stored by
     // GetConstant.

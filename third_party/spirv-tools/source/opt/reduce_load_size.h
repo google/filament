@@ -27,6 +27,9 @@ namespace opt {
 // See optimizer.hpp for documentation.
 class ReduceLoadSize : public Pass {
  public:
+  explicit ReduceLoadSize(double replacement_threshold)
+      : replacement_threshold_(replacement_threshold) {}
+
   const char* name() const override { return "reduce-load-size"; }
   Status Process() override;
 
@@ -53,6 +56,11 @@ class ReduceLoadSize : public Pass {
   // it is a load.  |should_replace_cache_| is used to cache the results based
   // on the load feeding |inst|.
   bool ShouldReplaceExtract(Instruction* inst);
+
+  // Threshold to determine whether we have to replace the load or not. If the
+  // ratio of the used components of the load is less than the threshold, we
+  // replace the load.
+  double replacement_threshold_;
 
   // Maps the result id of an OpLoad instruction to the result of whether or
   // not the OpCompositeExtract that use the id should be replaced.

@@ -1,0 +1,9 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: SPIRV-Headers
+Description: Header files from the SPIR-V registry
+Version: @CMAKE_PROJECT_VERSION@
+Requires:
+Libs:
+Cflags: -I${includedir}

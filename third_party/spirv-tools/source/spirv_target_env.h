@@ -28,6 +28,9 @@ bool spvIsOpenCLEnv(spv_target_env env);
 // Returns true if |env| is an OPENGL environment, false otherwise.
 bool spvIsOpenGLEnv(spv_target_env env);
 
+// Returns true if |env| is an implemented/valid environment, false otherwise.
+bool spvIsValidEnv(spv_target_env env);
+
 // Returns the version number for the given SPIR-V target environment.
 uint32_t spvVersionForTargetEnv(spv_target_env env);
 

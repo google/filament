@@ -27,7 +27,6 @@ namespace {
 const uint32_t kExtractCompositeIdInIdx = 0;
 const uint32_t kVariableStorageClassInIdx = 0;
 const uint32_t kLoadPointerInIdx = 0;
-const double kThreshold = 0.9;
 
 }  // namespace
 
@@ -139,7 +138,7 @@ bool ReduceLoadSize::ShouldReplaceExtract(Instruction* inst) {
 
   all_elements_used =
       !def_use_mgr->WhileEachUser(op_inst, [&elements_used](Instruction* use) {
-        if (use->IsOpenCL100DebugInstr()) return true;
+        if (use->IsCommonDebugInstr()) return true;
         if (use->opcode() != SpvOpCompositeExtract ||
             use->NumInOperands() == 1) {
           return false;
@@ -151,6 +150,8 @@ bool ReduceLoadSize::ShouldReplaceExtract(Instruction* inst) {
   bool should_replace = false;
   if (all_elements_used) {
     should_replace = false;
+  } else if (1.0 <= replacement_threshold_) {
+    should_replace = true;
   } else {
     analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
     analysis::TypeManager* type_mgr = context()->get_type_mgr();
@@ -172,7 +173,7 @@ bool ReduceLoadSize::ShouldReplaceExtract(Instruction* inst) {
     }
     double percent_used = static_cast<double>(elements_used.size()) /
                           static_cast<double>(total_size);
-    should_replace = (percent_used < kThreshold);
+    should_replace = (percent_used < replacement_threshold_);
   }
 
   should_replace_cache_[op_inst->result_id()] = should_replace;

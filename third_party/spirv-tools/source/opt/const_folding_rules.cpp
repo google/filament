@@ -1002,7 +1002,7 @@ const analysis::Constant* FoldClamp1(
          "Expecting a GLSLstd450 extended instruction.");
 
   // Make sure all Clamp operands are constants.
-  for (uint32_t i = 1; i < 3; i++) {
+  for (uint32_t i = 1; i < 4; i++) {
     if (constants[i] == nullptr) {
       return nullptr;
     }
@@ -1017,7 +1017,7 @@ const analysis::Constant* FoldClamp1(
                         context);
 }
 
-// Fold a clamp instruction when |x >= min_val|.
+// Fold a clamp instruction when |x <= min_val|.
 const analysis::Constant* FoldClamp2(
     IRContext* context, Instruction* inst,
     const std::vector<const analysis::Constant*>& constants) {
