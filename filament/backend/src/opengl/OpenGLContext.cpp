@@ -90,7 +90,7 @@ OpenGLContext::OpenGLContext() noexcept {
 
         // Blits to texture arrays are failing
         //   This bug continues to reproduce, though at times we've seen it appear to "go away". The
-        //   standalone sample app that was written to show this problem still reprdocues.
+        //   standalone sample app that was written to show this problem still reproduces.
         //   The working hypthesis is that some other state affects this behavior.
         bugs.disable_sidecar_blit_into_texture_array = true;
 
