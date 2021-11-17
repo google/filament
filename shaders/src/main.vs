@@ -16,11 +16,10 @@ void main() {
     // Run initMaterialVertex to compute material.worldPosition.
     MaterialVertexInputs material;
     initMaterialVertex(material);
-#endif
-
     // materialVertex() is guaranteed to be empty here, but we keep it to workaround some problem
     // in NVIDA drivers related to depth invariance.
     materialVertex(material);
+#endif
 
 #else // defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 
