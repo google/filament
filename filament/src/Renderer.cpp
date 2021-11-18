@@ -848,7 +848,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
     };
 
     FrameGraphId<FrameGraphTexture> colorHistory;
-    mat4f const* historyProjection = nullptr;
+    mat4f historyProjection;
     if (config.hasScreenSpaceReflections) {
         colorHistory = getColorHistory(fg, view.getFrameHistory());
         if (UTILS_UNLIKELY(!colorHistory)) {
@@ -856,7 +856,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         } else {
             const FrameHistory& frameHistory = view.getFrameHistory();
             FrameHistoryEntry const& entry = frameHistory[0];
-            historyProjection = &entry.projection;
+            historyProjection = entry.projection;
         }
     }
 
@@ -970,19 +970,21 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : ppm.getOneTexture());
 
-                if (data.ssr) {
-                    if (config.hasScreenSpaceReflections) {
-                        const auto& ssrOptions = view.getScreenSpaceReflectionsOptions();
-                        const auto& cameraInfo = view.getCameraInfo();
-                        auto reprojection =
-                                *historyProjection *
-                                inverse(cameraInfo.view * cameraInfo.worldOrigin);
-                        // TODO: this shouldn't be called in a conditional. We need to enable/disable SSR globally.
-                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
-                                ssrOptions);
-                    } else {
-                        view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
-                    }
+                // set screen-space reflections
+                auto ssrOptions = view.getScreenSpaceReflectionsOptions();
+                ssrOptions.enabled &= data.ssr;
+                const auto& cameraInfo = view.getCameraInfo();
+                auto reprojection =
+                        historyProjection *
+                        inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                view.prepareSSReflections(data.ssr && config.hasScreenSpaceReflections ?
+                        resources.getTexture(data.ssr) : ppm.getOneTexture(),
+                        reprojection, ssrOptions);
+
+                // set screen-space refractions
+                if (data.ssr && !config.hasScreenSpaceReflections) {
+                    // We only allow either SS reflections or refractions.
+                    view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                 }
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
