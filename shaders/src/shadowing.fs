@@ -1,75 +1,25 @@
 //------------------------------------------------------------------------------
-// Shadowing configuration
+// PCF Shadow Sampling
 //------------------------------------------------------------------------------
-
-#define SHADOW_SAMPLING_ERROR_DISABLED              0
-#define SHADOW_SAMPLING_ERROR_ENABLED               1
-
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED   0
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED    1
-
-#define SHADOW_SAMPLING_ERROR             SHADOW_SAMPLING_ERROR_DISABLED
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
-
-//------------------------------------------------------------------------------
-// Shadow sampling methods
-//------------------------------------------------------------------------------
-
-vec2 computeReceiverPlaneDepthBias(const highp vec3 position) {
-    // see: GDC '06: Shadow Mapping: GPU-based Tips and Techniques
-    vec2 bias;
-#if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
-    highp vec3 du = dFdx(position);
-    highp vec3 dv = dFdy(position);
-
-    // Chain rule we use:
-    //     | du.x   du.y |^-T      |  dv.y  -du.y |T    |  dv.y  -dv.x |
-    // D * | dv.x   dv.y |     =   | -dv.x   du.x |  =  | -du.y   du.x |
-
-    bias = inverse(mat2(du.xy, dv.xy)) * vec2(du.z, dv.z);
-#else
-    bias = vec2(0.0);
-#endif
-    return bias;
-}
-
-float samplingBias(float depth, const vec2 rpdb, const highp vec2 texelSize) {
-#if SHADOW_SAMPLING_ERROR == SHADOW_SAMPLING_ERROR_ENABLED
-    // note: if filtering is set to NEAREST, the 2.0 factor below can be changed to 1.0
-    float samplingError = min(2.0 * dot(texelSize, abs(rpdb)), 0.01);
-    depth += samplingError;
-#endif
-    return depth;
-}
 
 float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
-        const highp vec2 base, const highp vec2 dudv, float depth, vec2 rpdb) {
-#if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
-    depth += dot(dudv, rpdb);
-#endif
+        const highp vec2 uv, float depth) {
     // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
     // value from the depth texture (which is never greater than 1.0) with a greater-than-one
     // comparison value (which is possible with floating-point formats).
-    return texture(map, vec4(base + dudv, layer, saturate(depth)));
+    return texture(map, vec4(uv, layer, saturate(depth)));
 }
 
+// use hardware assisted PCF
 float ShadowSample_PCF(const mediump sampler2DArrayShadow map,
         const uint layer, const highp vec3 position) {
-    highp vec2 size = vec2(textureSize(map, 0));
-    highp vec2 texelSize = vec2(1.0) / size;
-    vec2 rpdb = computeReceiverPlaneDepthBias(position);
-    float depth = samplingBias(position.z, rpdb, texelSize);
-    // use hardware assisted PCF
-    return sampleDepth(map,layer, position.xy, vec2(0.0f), depth, rpdb);
+    return sampleDepth(map, layer, position.xy, position.z);
 }
 
+// use manual PCF
 float ShadowSample_PCF(const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec3 position) {
     highp vec2 size = vec2(textureSize(shadowMap, 0));
-    highp vec2 texelSize = vec2(1.0) / size;
-    vec2 rpdb = computeReceiverPlaneDepthBias(position);
-    float depth = samplingBias(position.z, rpdb, texelSize);
-    // use manual PCF
     highp vec2 st = position.xy * size - 0.5;
     vec4 d;
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
@@ -81,7 +31,7 @@ float ShadowSample_PCF(const mediump sampler2DArray shadowMap,
     d[2] = texelFetchOffset(shadowMap, tc, 0, ivec2(1, 0)).r;
     d[3] = texelFetchOffset(shadowMap, tc, 0, ivec2(0, 0)).r;
 #endif
-    vec4 pcf = step(0.0, d - vec4(depth));
+    vec4 pcf = step(0.0, d - position.zzzz);
     highp vec2 grad = fract(st);
     return mix(mix(pcf.w, pcf.z, grad.x), mix(pcf.x, pcf.y, grad.x), grad.y);
 }
@@ -190,20 +140,26 @@ float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
     return mean <= moments.x ? 1.0 : pMax;
 }
 
+float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
+    highp float depthScale = frameUniforms.vsmDepthScale * depth;
+    highp float minVariance = depthScale * depthScale;
+    return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
+}
+
 float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec3 position) {
     // Read the shadow map with all available filtering
-    highp vec2 moments = texture(shadowMap, vec3(position.xy, layer)).xy;
+    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
     highp float depth = position.z;
 
     // EVSM depth warping
     depth = depth * 2.0 - 1.0;
-    depth = exp(frameUniforms.vsmExponent * depth);
 
-    highp float depthScale = frameUniforms.vsmDepthScale * depth;
-    highp float minVariance = depthScale * depthScale;
-    float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
-    return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
+    depth = exp(frameUniforms.vsmExponent * depth);
+    float p = evaluateShadowVSM(moments.xy, depth);
+    // enable for full EVSM (needed for large blurs). RGBA16F needed.
+    //p = min(p, evaluateShadowVSM(moments.zw, -1.0/depth));
+    return p;
 }
 
 //------------------------------------------------------------------------------
@@ -217,16 +173,46 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
  */
 
 // PCF sampling
-float shadow(const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArrayShadow shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return ShadowSample_PCF(shadowMap, layer, position);
 }
 
 // VSM sampling
-float shadow(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArray shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
     //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
     //  see: computeLightSpacePosition() in common_shadowing.fs

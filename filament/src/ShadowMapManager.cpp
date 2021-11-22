@@ -368,11 +368,14 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                 VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
 
-        // note: normalBias is set to zero for VSM
-        const float normalBias = shadowMapInfo.vsm ? 0.0f : lcm.getShadowNormalBias(0);
         // Set shadowBias, using the first directional cascade.
-        const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
-        mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * texelSizeWorldSpace, 0 };
+        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
+        // Texel size is constant for directional light (although that's not true when LISPSM
+        // is used, but in that case we're pretending it is).
+        const float wsTexelSize = shadowMap.getTexelSizAtOneMeterWs();
+        mShadowMappingUniforms.shadowBias = float3{ 0, normalBias * wsTexelSize, 0 };
     }
 
     // Adjust the near and far planes to tightly bound the scene.
@@ -529,13 +532,15 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             shadowInfo[lightIndex].index = i;
             shadowInfo[lightIndex].layer = entry.getLayer();
 
+            const float wsTexelSizeAtOneMeter = shadowMap.getTexelSizAtOneMeterWs();
+            // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
             // note: normalBias is set to zero for VSM
-            const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
-            const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
+            const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * options->normalBias;
 
             auto& s = shadowUb.edit();
             s.shadows[i].direction = direction;
-            s.shadows[i].normalBias = normalBias * texelSizeWorldSpace;
+            s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
+            s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
             s.shadows[i].lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
 
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;

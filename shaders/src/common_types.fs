@@ -29,4 +29,5 @@ struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec3 direction;
     float normalBias;
+    float texelSizeAtOneMeter;
 };
