@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #if defined(WIN32)
 #    include <locale.h>
+#elif defined(__linux__)
+#    include <locale.h>
 #else
 #    include <xlocale.h>
 #endif
