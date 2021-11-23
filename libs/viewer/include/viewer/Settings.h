@@ -66,6 +66,8 @@ using Dithering = filament::View::Dithering;
 using FogOptions = filament::View::FogOptions;
 using RenderQuality = filament::View::RenderQuality;
 using ShadowType = filament::View::ShadowType;
+using DynamicResolutionOptions = filament::View::DynamicResolutionOptions;
+using MultiSampleAntiAliasingOptions = filament::View::MultiSampleAntiAliasingOptions;
 using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
@@ -103,10 +105,10 @@ private:
 };
 
 struct GenericToneMapperSettings {
-    float contrast = 1.4f;
+    float contrast = 1.585f;
     float shoulder = 0.5f;
     float midGrayIn = 0.18f;
-    float midGrayOut = 0.266f;
+    float midGrayOut = 0.268f;
     float hdrMax = 10.0f;
     bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
     bool operator==(const GenericToneMapperSettings &rhs) const;
@@ -118,7 +120,9 @@ struct ColorGradingSettings {
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     GenericToneMapperSettings genericToneMapper;
     bool luminanceScaling = false;
+    bool gamutMapping = false;
     float exposure = 0.0f;
+    float nightAdaptation = 0.0f;
     float temperature = 0.0f;
     float tint = 0.0f;
     math::float3 outRed{1.0f, 0.0f, 0.0f};
@@ -149,21 +153,27 @@ struct DynamicLightingSettings {
 
 // This defines fields in the same order as the setter methods in filament::View.
 struct ViewSettings {
-    uint8_t sampleCount = 1;
+    // standalone View settings
     AntiAliasing antiAliasing = AntiAliasing::FXAA;
-    TemporalAntiAliasingOptions taa;
-    ColorGradingSettings colorGrading;
+    Dithering dithering = Dithering::TEMPORAL;
+    ShadowType shadowType = ShadowType::PCF;
+    bool postProcessingEnabled = true;
+
+    // View Options (sorted)
     AmbientOcclusionOptions ssao;
     BloomOptions bloom;
-    FogOptions fog;
     DepthOfFieldOptions dof;
-    VignetteOptions vignette;
-    Dithering dithering = Dithering::TEMPORAL;
+    DynamicResolutionOptions dsr;
+    FogOptions fog;
+    MultiSampleAntiAliasingOptions msaa;
     RenderQuality renderQuality;
-    DynamicLightingSettings dynamicLighting;
-    ShadowType shadowType = ShadowType::PCF;
+    TemporalAntiAliasingOptions taa;
+    VignetteOptions vignette;
     VsmShadowOptions vsmShadowOptions;
-    bool postProcessingEnabled = true;
+
+    // Custom View Options
+    ColorGradingSettings colorGrading;
+    DynamicLightingSettings dynamicLighting;
 };
 
 template <typename T>

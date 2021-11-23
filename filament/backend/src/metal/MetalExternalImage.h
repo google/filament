@@ -17,6 +17,8 @@
 #ifndef TNT_METALEXTERNALIMAGE_H
 #define TNT_METALEXTERNALIMAGE_H
 
+#import <backend/DriverEnums.h>
+
 #include <CoreVideo/CoreVideo.h>
 #include <Metal/Metal.h>
 
@@ -34,7 +36,11 @@ class MetalExternalImage {
 
 public:
 
-    MetalExternalImage(MetalContext& context) noexcept;
+    MetalExternalImage(MetalContext& context,
+            TextureSwizzle r = TextureSwizzle::CHANNEL_0,
+            TextureSwizzle g = TextureSwizzle::CHANNEL_1,
+            TextureSwizzle b = TextureSwizzle::CHANNEL_2,
+            TextureSwizzle a = TextureSwizzle::CHANNEL_3) noexcept;
 
     /**
      * @return true, if this MetalExternalImage is holding a live external image. Returns false
@@ -94,6 +100,8 @@ private:
     CVMetalTextureRef createTextureFromImage(CVPixelBufferRef image, MTLPixelFormat format,
             size_t plane);
     id<MTLTexture> createRgbTexture(size_t width, size_t height);
+    id<MTLTexture> createSwizzledTextureView(id<MTLTexture> texture) const;
+    id<MTLTexture> createSwizzledTextureView(CVMetalTextureRef texture) const;
     void ensureComputePipelineState();
     id<MTLCommandBuffer> encodeColorConversionPass(id<MTLTexture> inYPlane, id<MTLTexture>
             inCbCrTexture, id<MTLTexture> outTexture);
@@ -105,8 +113,10 @@ private:
 
     // If the external image has a single plane, mImage and mTexture hold references to the image
     // and created Metal texture, respectively.
+    // mTextureView is a view of mTexture with any swizzling applied.
     CVPixelBufferRef mImage = nullptr;
     CVMetalTextureRef mTexture = nullptr;
+    id<MTLTexture> mTextureView = nullptr;
     size_t mWidth = 0;
     size_t mHeight = 0;
 
@@ -114,6 +124,9 @@ private:
     // texture.
     id<MTLTexture> mRgbTexture = nil;
 
+    struct {
+        TextureSwizzle r, g, b, a;
+    } mSwizzle;
 };
 
 } // namespace metal

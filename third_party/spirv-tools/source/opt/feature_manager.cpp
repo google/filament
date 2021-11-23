@@ -80,6 +80,8 @@ void FeatureManager::AddExtInstImportIds(Module* module) {
   extinst_importid_GLSLstd450_ = module->GetExtInstImportId("GLSL.std.450");
   extinst_importid_OpenCL100DebugInfo_ =
       module->GetExtInstImportId("OpenCL.DebugInfo.100");
+  extinst_importid_Shader100DebugInfo_ =
+      module->GetExtInstImportId("NonSemantic.Shader.DebugInfo.100");
 }
 
 bool operator==(const FeatureManager& a, const FeatureManager& b) {
@@ -104,6 +106,11 @@ bool operator==(const FeatureManager& a, const FeatureManager& b) {
 
   if (a.extinst_importid_OpenCL100DebugInfo_ !=
       b.extinst_importid_OpenCL100DebugInfo_) {
+    return false;
+  }
+
+  if (a.extinst_importid_Shader100DebugInfo_ !=
+      b.extinst_importid_Shader100DebugInfo_) {
     return false;
   }
 

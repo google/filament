@@ -184,7 +184,7 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       }
 
       // Can't use result_type because OpAtomicStore doesn't have a result
-      if (_.GetBitWidth(data_type) == 64 && _.IsIntScalarType(data_type) &&
+      if ( _.IsIntScalarType(data_type) &&_.GetBitWidth(data_type) == 64 &&
           !_.HasCapability(SpvCapabilityInt64Atomics)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)

@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_RENDERPASS_H
-#define TNT_UTILS_RENDERPASS_H
+#ifndef TNT_FILAMENT_RENDERPASS_H
+#define TNT_FILAMENT_RENDERPASS_H
 
-#include "details/Allocators.h"
+#include "Allocators.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
@@ -28,11 +29,11 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/Allocator.h>
+#include <utils/Range.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Allocator.h>
-#include <utils/Range.h>
 
 #include <functional>
 #include <limits>
@@ -238,6 +239,7 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
     static constexpr RenderFlags HAS_FOG                 = 0x10;
     static constexpr RenderFlags HAS_VSM                 = 0x20;
+    static constexpr RenderFlags HAS_PICKING             = 0x40;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -269,7 +271,7 @@ public:
     // specifies camera information (e.g. used for sorting commands)
     void setCamera(const CameraInfo& camera) noexcept { mCamera = camera; }
 
-    //  flags controling how commands are generated
+    //  flags controlling how commands are generated
     void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
 
     // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine
@@ -423,4 +425,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_UTILS_RENDERPASS_H
+#endif // TNT_FILAMENT_RENDERPASS_H

@@ -109,8 +109,13 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
 
+            .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
+            .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
+            .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+
             // bring PerViewUib to 2 KiB
-            .add("padding2", 59, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }
@@ -123,7 +128,7 @@ UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
             .add("morphWeights", 1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             .add("flags", 1, UniformInterfaceBlock::Type::UINT)
             .add("channels", 1, UniformInterfaceBlock::Type::UINT)
-            .add("reserved1", 1, UniformInterfaceBlock::Type::UINT)
+            .add("objectId", 1, UniformInterfaceBlock::Type::UINT)
             .add("userData", 1, UniformInterfaceBlock::Type::FLOAT)
             .build();
     return uib;
@@ -140,8 +145,7 @@ UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(ShadowUib::_name)
-            .add("spotLightFromWorldMatrix", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
-            .add("directionShadowBias", CONFIG_MAX_SHADOW_CASTING_SPOTS, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
+            .add("shadows", CONFIG_MAX_SHADOW_CASTING_SPOTS, "ShadowData", sizeof(ShadowUib::ShadowData))
             .build();
     return uib;
 }

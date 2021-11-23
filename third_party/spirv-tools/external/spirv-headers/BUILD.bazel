@@ -92,6 +92,11 @@ filegroup(
 )
 
 filegroup(
+    name = "spirv_ext_inst_nonsemantic_shader_debuginfo_100_grammar_unified1",
+    srcs = ["include/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json"],
+)
+
+filegroup(
     name = "spirv_ext_inst_spv_amd_gcn_shader_grammar_unified1",
     srcs = ["include/spirv/unified1/extinst.spv-amd-gcn-shader.grammar.json"],
 )

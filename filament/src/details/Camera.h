@@ -71,26 +71,35 @@ public:
 
     const math::double2 getShift() const noexcept { return mShiftCS * 0.5; }
 
-    // returns the projection matrix
+    // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
+    // other transforms needed by the shaders
     math::mat4 getProjectionMatrix() const noexcept;
 
+    // culling the projection matrix to be used for culling, contains scaling/shift
     math::mat4 getCullingProjectionMatrix() const noexcept;
+
+    // viewing projection matrix set by the user
+    math::mat4 getUserProjectionMatrix() const noexcept { return mProjection; }
+
+    // culling projection matrix set by the user
+    math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
 
     float getNear() const noexcept { return mNear; }
 
     float getCullingFar() const noexcept { return mFar; }
 
     // sets the camera's view matrix (must be a rigid transform)
+    void setModelMatrix(const math::mat4& modelMatrix) noexcept;
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
     // sets the camera's view matrix
     void lookAt(const math::float3& eye, const math::float3& center, const math::float3& up = { 0, 1, 0 })  noexcept;
 
     // returns the view matrix
-    math::mat4f const& getModelMatrix() const noexcept;
+    math::mat4 getModelMatrix() const noexcept;
 
     // returns the inverse of the view matrix
-    math::mat4f getViewMatrix() const noexcept;
+    math::mat4 getViewMatrix() const noexcept;
 
     template <typename T>
     static math::details::TMat44<T> rigidTransformInverse(math::details::TMat44<T> const& v) noexcept {
@@ -103,7 +112,7 @@ public:
         return math::details::TMat44<T>(rt, -t);
     }
 
-    math::float3 const& getPosition() const noexcept {
+    math::double3 getPosition() const noexcept {
         return getModelMatrix()[3].xyz;
     }
 
@@ -135,8 +144,8 @@ public:
         return getFieldOfView(direction) * math::f::RAD_TO_DEG;
     }
 
-    // returns a Frustum object in world space
-    Frustum getFrustum() const noexcept;
+    // Returns the camera's culling Frustum in world space
+    Frustum getCullingFrustum() const noexcept;
 
     // sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
     void setExposure(float aperture, float shutterSpeed, float sensitivity) noexcept;
@@ -174,9 +183,6 @@ public:
         return mEntity;
     }
 
-    static math::mat4f getViewMatrix(math::mat4f const& model) noexcept;
-    static Frustum getFrustum(math::mat4 const& projection, math::mat4f const& viewMatrix) noexcept;
-
 private:
     FEngine& mEngine;
     utils::Entity mEntity;
@@ -198,7 +204,7 @@ private:
 struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera, const math::mat4f& worldOriginCamera) noexcept;
+    CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
 
     math::mat4f projection;         // projection matrix for drawing (infinite zfar)
     math::mat4f cullingProjection;  // projection matrix for culling

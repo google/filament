@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "details/RenderPrimitive.h"
+#include "RenderPrimitive.h"
 
 #include "details/Engine.h"
-#include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/Material.h"
+#include "details/VertexBuffer.h"
 
 #include <utils/debug.h>
 

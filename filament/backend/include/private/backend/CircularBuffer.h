@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_CIRCULARBUFFER_H
-#define TNT_FILAMENT_DRIVER_CIRCULARBUFFER_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -88,4 +88,4 @@ private:
 } // namespace backend
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_CIRCULARBUFFER_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H

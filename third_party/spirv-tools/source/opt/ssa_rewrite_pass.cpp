@@ -753,6 +753,9 @@ Pass::Status SSARewriter::RewriteFunctionIntoSSA(Function* fp) {
 Pass::Status SSARewritePass::Process() {
   Status status = Status::SuccessWithoutChange;
   for (auto& fn : *get_module()) {
+    if (fn.IsDeclaration()) {
+      continue;
+    }
     status =
         CombineStatus(status, SSARewriter(this).RewriteFunctionIntoSSA(&fn));
     // Kill DebugDeclares for target variables.

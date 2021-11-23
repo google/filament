@@ -108,7 +108,7 @@ struct App {
     AutomationEngine* automationEngine = nullptr;
 };
 
-static const char* DEFAULT_IBL = "default_env";
+static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -343,13 +343,6 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     app.scene.groundMaterial = shadowMaterial;
 }
 
-static LinearColor inverseTonemapSRGB(sRGBColor x) {
-    return (x * -0.155) / (x - 1.019);
-}
-
-static float sGlobalScale = 1.0f;
-static float sGlobalScaleAnamorphism = 0.0f;
-
 int main(int argc, char** argv) {
     App app;
 
@@ -571,14 +564,48 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::CollapsingHeader("Debug")) {
+                auto& debug = engine->getDebugRegistry();
                 if (ImGui::Button("Capture frame")) {
-                    auto& debug = engine->getDebugRegistry();
                     bool* captureFrame =
                         debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
-                ImGui::SliderFloat("scale", &sGlobalScale, 0.25f, 1.0f);
-                ImGui::SliderFloat("anamorphism", &sGlobalScaleAnamorphism, -1.0f, 1.0f);
+                auto dataSource = debug.getDataSource("d.view.frame_info");
+                if (dataSource.data) {
+                    ImGuiExt::PlotLinesSeries("FrameInfo", 6,
+                            [](int series) {
+                                const ImVec4 colors[] = {
+                                        { 1,    0, 0, 1 }, // target
+                                        { 0, 0.5f, 0, 1 }, // frame-time
+                                        { 0,    1, 0, 1 }, // frame-time denoised
+                                        { 1,    1, 0, 1 }, // i
+                                        { 1,    0, 1, 1 }, // d
+                                        { 0,    1, 1, 1 }, // e
+
+                                };
+                                ImGui::PushStyleColor(ImGuiCol_PlotLines, colors[series]);
+                            },
+                            [](int series, void* buffer, int i) -> float {
+                                auto const* p = (DebugRegistry::FrameHistory const*)buffer + i;
+                                switch (series) {
+                                    case 0:     return 0.03f * p->target;
+                                    case 1:     return 0.03f * p->frameTime;
+                                    case 2:     return 0.03f * p->frameTimeDenoised;
+                                    case 3:     return p->pid_i * 0.5f / 100.0f + 0.5f;
+                                    case 4:     return p->pid_d * 0.5f / 0.100f + 0.5f;
+                                    case 5:     return p->pid_e * 0.5f / 1.000f + 0.5f;
+                                    default:    return 0.0f;
+                                }
+                            },
+                            [](int series) {
+                                if (series < 6) ImGui::PopStyleColor();
+                            },
+                            const_cast<void*>(dataSource.data), int(dataSource.count), 0,
+                            nullptr, 0.0f, 1.0f, { 0, 100 });
+                }
+                ImGui::SliderFloat("Kp", debug.getPropertyAddress<float>("d.view.pid.kp"), 0, 2);
+                ImGui::SliderFloat("Ki", debug.getPropertyAddress<float>("d.view.pid.ki"), 0, 10);
+                ImGui::SliderFloat("Kd", debug.getPropertyAddress<float>("d.view.pid.kd"), 0, 10);
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -690,22 +717,6 @@ int main(int argc, char** argv) {
         } else {
             view->setColorGrading(nullptr);
         }
-
-        view->setDynamicResolutionOptions({
-                .minScale = {
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
-                },
-                .maxScale = {
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism >= 0.0f ? sGlobalScaleAnamorphism : 0.0f),
-                        lerp(sGlobalScale, 1.0f,
-                                sGlobalScaleAnamorphism <= 0.0f ? -sGlobalScaleAnamorphism : 0.0f),
-                },
-                .enabled = sGlobalScale != 1.0f,
-        });
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {

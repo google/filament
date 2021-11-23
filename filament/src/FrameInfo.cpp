@@ -24,7 +24,9 @@
 #include <cmath>
 
 namespace filament {
+
 using namespace utils;
+using namespace backend;
 
 // this is to avoid a call to memmove
 template<class InputIterator, class OutputIterator>
@@ -35,8 +37,7 @@ void move_backward(InputIterator first, InputIterator last, OutputIterator resul
     }
 }
 
-FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept {
     for (auto& query : mQueries) {
         query = driver.createTimerQuery();
     }
@@ -44,15 +45,13 @@ FrameInfoManager::FrameInfoManager(FEngine& engine) : mEngine(engine) {
 
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
-void FrameInfoManager::terminate() {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::terminate(DriverApi& driver) noexcept {
     for (auto& query : mQueries) {
         driver.destroyTimerQuery(query);
     }
 }
 
-void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::beginFrame(DriverApi& driver,Config const& config, uint32_t frameId) noexcept {
     driver.beginTimerQuery(mQueries[mIndex]);
     uint64_t elapsed = 0;
     if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
@@ -60,16 +59,15 @@ void FrameInfoManager::beginFrame(Config const& config, uint32_t frameId) {
         // conversion to our duration happens here
         mFrameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
     }
-    update(config,mFrameTime);
+    update(config, mFrameTime);
 }
 
-void FrameInfoManager::endFrame() {
-    backend::DriverApi& driver = mEngine.getDriverApi();
+void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     driver.endTimerQuery(mQueries[mIndex]);
     mIndex = (mIndex + 1) % POOL_COUNT;
 }
 
-void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) {
+void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) noexcept {
     // keep an history of frame times
     auto& history = mFrameTimeHistory;
 
@@ -95,34 +93,7 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
     duration denoisedFrameTime = median[size / 2];
 
     history[0].denoisedFrameTime = denoisedFrameTime;
-
-    // how much we need to scale the current workload to fit in our target, at this instant
-    const duration targetWithHeadroom = config.targetFrameTime * (1.0f - config.headRoomRatio);
-    const duration measured = denoisedFrameTime;
-
-    // We use a P.I.D. controller below to figure out the scaling factor to apply. In practice we
-    // don't use the Derivative gain (so it's really a PI controller).
-    const float Kp = (1.0f - std::exp(-config.oneOverTau));
-    const float Ki = Kp / 10.0f;
-    const float Kd = 0.0;
-
-    history[0].pid.error = (targetWithHeadroom - measured) / targetWithHeadroom;
-    history[0].pid.integral = history[1].pid.integral + Ki * history[0].pid.error;
-    history[0].pid.integral = math::clamp(history[0].pid.integral, -6.0f, 2.0f);
-
-    const float derivative = Kd * (history[0].pid.error - history[1].pid.error);
-    const float out = Kp * history[0].pid.error + history[0].pid.integral + derivative;
-
-    // maps the command to a ratio, it really doesn't mater much how the conversion is done
-    // the system will find the right value automatically
-    const float scale = std::exp2(out);
-    history[0].scale = scale;
     history[0].valid = true;
-
-    SYSTRACE_CONTEXT();
-    SYSTRACE_VALUE32("info_e", history[0].pid.error * 100);
-    SYSTRACE_VALUE32("info_s", scale * 100);
-//    slog.d << history[0].pid.error * 100 << "%, " << scale << io::endl;
 }
 
 

@@ -142,7 +142,7 @@ include_directories(
 add_definitions(-D_THREAD_SAFE)
 
 # we're building a library
-add_library(${TARGET} SHARED ${SRCS})
+add_library(${TARGET} STATIC ${SRCS})
 
 # libraries we're linking against
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
@@ -172,7 +172,8 @@ if (WIN32)
 else()
     target_compile_options(${TARGET} PRIVATE -fvisibility=hidden)
 
-    # FIXME: the way SDL does atomics is insane, just disable all atomics because there are no implementation for
-    #        aarch64 on certain targets. ideally, we would just std::atomic
+    # FIXME: the way SDL does atomics is insane, just disable all atomics because there are no
+    #        implementation for aarch64 on certain targets. ideally, we would just std::atomic
     target_compile_definitions(${TARGET} PRIVATE SDL_ATOMIC_DISABLED=1)
 endif()
+

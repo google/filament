@@ -151,8 +151,6 @@ public:
     static void onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
             size_t packageSize);
 
-    using VariantList = utils::bitset<uint64_t, VARIANT_COUNT>;
-
     /**
      * Returns a list of "active" variants.
      *

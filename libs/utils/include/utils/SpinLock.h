@@ -75,8 +75,8 @@ private:
 };
 } // namespace details
 
-#if defined(__SANITIZE_THREAD__)
-// Unfortunately TSAN doesn't support homegrown synchronization primitives
+#if UTILS_HAS_SANITIZE_THREAD
+// Active spins with atomics slow down execution too much under ThreadSanitizer.
 using SpinLock = Mutex;
 #elif defined(__ARM_ARCH_7A__)
 // We've had problems with  "wfe" on some ARM-V7 devices, causing spurious SIGILL
@@ -87,4 +87,4 @@ using SpinLock = details::SpinLock;
 
 } // namespace utils
 
-#endif //TNT_UTILS_SPINLOCK_H
+#endif // TNT_UTILS_SPINLOCK_H

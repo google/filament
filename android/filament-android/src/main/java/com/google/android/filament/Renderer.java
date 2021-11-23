@@ -107,12 +107,12 @@ public class Renderer {
         /**
          * Rate at which the scale will change to reach the target frame rate.
          */
-        public float scaleRate = 0.125f;
+        public float scaleRate = 1.0f / 15.0f;
 
         /**
-         * History size. higher values, tend to filter more (clamped to 30).
+         * History size. higher values, tend to filter more (clamped to 31).
          */
-        public int history = 9;
+        public int history = 15;
     }
 
     /**
@@ -437,8 +437,9 @@ public class Renderer {
      *</pre>
      *
      *
-     * <p>Typically <code>readPixels</code> will be called after {@link #render} and before
-     * {@link #endFrame}.</p>
+     * <p><code>readPixels</code> must be called within a frame, meaning after {@link #beginFrame}
+     * and before {@link #endFrame}. Typically, <code>readPixels</code> will be called after
+     * {@link #render}.</p>
      * <br>
      * <p>After calling this method, the callback associated with <code>buffer</code>
      * will be invoked on the main thread, indicating that the read-back has completed.

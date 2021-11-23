@@ -156,7 +156,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     float3 ap1 = clamp(AP0_to_AP1 * ap0, 0.0f, (float) std::numeric_limits<half>::max());
 
     // Global desaturation
-    ap1 = mix(float3(dot(ap1, LUMA_AP1)), ap1, RRT_SAT_FACTOR);
+    ap1 = mix(float3(dot(ap1, LUMINANCE_AP1)), ap1, RRT_SAT_FACTOR);
 
     // NOTE: This is specific to Filament and added only to match ACES to our legacy tone mapper
     //       which was a fit of ACES in Rec.709 but with a brightness boost.
@@ -175,7 +175,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     float3 linearCV = darkSurround_to_dimSurround(rgbPost);
 
     // Apply desaturation to compensate for luminance difference
-    linearCV = mix(float3(dot(linearCV, LUMA_AP1)), linearCV, ODT_SAT_FACTOR);
+    linearCV = mix(float3(dot(linearCV, LUMINANCE_AP1)), linearCV, ODT_SAT_FACTOR);
 
     return AP1_to_REC2020 * linearCV;
 }
@@ -260,7 +260,8 @@ float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
 
     // The 5th color in the array (cyan) represents middle gray (18%)
     // Every stop above or below middle gray causes a color shift
-    float v = log2(dot(c, LUMA_REC709) / 0.18f);
+    // TODO: This should depend on the working color grading color space
+    float v = log2(dot(c, LUMINANCE_REC2020) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
     size_t index = size_t(v);
@@ -346,7 +347,7 @@ GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs)  noexcept : mOptio
     rhs.mOptions = nullptr;
 }
 
-GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper& rhs) noexcept {
+GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper&& rhs) noexcept {
     mOptions = rhs.mOptions;
     rhs.mOptions = nullptr;
     return *this;

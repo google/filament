@@ -151,7 +151,8 @@ bool TransformationAddSynonym::IsInstructionValid(
     return false;
   }
 
-  if (!fuzzerutil::CanMakeSynonymOf(ir_context, transformation_context, inst)) {
+  if (!fuzzerutil::CanMakeSynonymOf(ir_context, transformation_context,
+                                    *inst)) {
     return false;
   }
 

@@ -48,12 +48,22 @@ void main() {
 }
 )");
 
-std::string fragment (R"(#version 450 core
+std::string fragmentFloat (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
 void main() {
     fragColor = vec4(1.0);
+}
+
+)");
+
+std::string fragmentUint (R"(#version 450 core
+
+layout(location = 0) out uvec4 fragColor;
+
+void main() {
+    fragColor = uvec4(1);
 }
 
 )");
@@ -104,22 +114,10 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         size_t bufferDimension = getRenderTargetSize();
 
         size_t getBufferSizeBytes() const {
-            auto getPixelSize = [] (PixelDataType type) {
-                switch(type) {
-                    case PixelDataType::FLOAT:
-                        return sizeof(float);
-
-                    case PixelDataType::UBYTE:
-                        return sizeof(uint8_t);
-
-                    case PixelDataType::UINT:
-                        return sizeof(uint32_t);
-
-                    default:
-                        return 0ul;
-                }
-            };
-            return bufferDimension * bufferDimension * 4 * getPixelSize(type);
+            size_t components;
+            int bpp;
+            getPixelInfo(format, type, components, bpp);
+            return bufferDimension * bufferDimension * bpp;
         }
 
         // The offset and stride set on the pixel buffer.
@@ -146,8 +144,19 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             #endif
         }
 
+        void exportRawBytes(void* pixelData) const {
+            std::string out = std::string(testName) + ".raw";
+            std::ofstream outputStream(out.c_str(), std::ios::binary | std::ios::trunc);
+            outputStream.write((char*) pixelData, getBufferSizeBytes());
+            outputStream.close();
+        }
+
+        // The format and type for the readPixels call.
         PixelDataFormat format = PixelDataFormat::RGBA;
         PixelDataType type = PixelDataType::UBYTE;
+
+        // The texture format of the render target.
+        TextureFormat textureFormat = TextureFormat::RGBA8;
     };
 
     // The normative read pixels test case. Render a white triangle over a blue background and read
@@ -194,7 +203,36 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     t5.top = 64;
     t5.hash = 0xbaefdb54;
 
-    TestCase testCases[] = { t, t2, t3, t4, t5 };
+    // Check that readPixels works with integer formats.
+    TestCase t6;
+    t6.testName = "readPixels_UINT";
+    t6.format = PixelDataFormat::R_INTEGER;
+    t6.type = PixelDataType::UINT;
+    t6.textureFormat = TextureFormat::R32UI;
+    t6.hash = 0x9d91227;
+
+    // Check that readPixels works with half formats.
+    TestCase t7;
+    t7.testName = "readPixels_half";
+    t7.format = PixelDataFormat::RG;
+    t7.type = PixelDataType::HALF;
+    t7.textureFormat = TextureFormat::RG16F;
+    t7.hash = 3726805703;
+
+    TestCase testCases[] = { t, t2, t3, t4, t5, t6, t7 };
+
+    // Create programs.
+    Handle<HwProgram> programFloat, programUint;
+    {
+        ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
+        Program p = shaderGen.getProgram();
+        programFloat = getDriverApi().createProgram(std::move(p));
+    }
+    {
+        ShaderGenerator shaderGen(vertex, fragmentUint, sBackend, sIsMobilePlatform);
+        Program p = shaderGen.getProgram();
+        programUint = getDriverApi().createProgram(std::move(p));
+    }
 
     for (const auto& t : testCases)
     {
@@ -203,33 +241,18 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                 t.getRenderTargetSize(), 0);
         getDriverApi().makeCurrent(swapChain, swapChain);
 
-        // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
-        auto program = getDriverApi().createProgram(std::move(p));
-
         // Create a Texture and RenderTarget to render into.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> texture = getDriverApi().createTexture(
-                    SamplerType::SAMPLER_2D,            // target
-                    t.mipLevels,                        // levels
-                    TextureFormat::RGBA8,               // format
-                    1,                                  // samples
-                    renderTargetBaseSize,               // width
-                    renderTargetBaseSize,               // height
-                    1,                                  // depth
-                    usage);                             // usage
+        Handle<HwTexture> texture = getDriverApi().createTexture(SamplerType::SAMPLER_2D,
+                t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
+                usage);
 
+        // The width and height must match the width and height of the respective mip
+        // level (at least for OpenGL).
         Handle<HwRenderTarget> renderTarget = getDriverApi().createRenderTarget(
-                TargetBufferFlags::COLOR,
-                // The width and height must match the width and height of the respective mip
-                // level (at least for OpenGL).
-                t.getRenderTargetSize(),                   // width
-                t.getRenderTargetSize(),                   // height
-                t.samples,                                 // samples
-                TargetBufferInfo(texture, t.mipLevel),     // color
-                {},                                        // depth
-                {});                                       // stencil
+                TargetBufferFlags::COLOR, t.getRenderTargetSize(),
+                t.getRenderTargetSize(), t.samples, TargetBufferInfo(texture, t.mipLevel), {},
+                {});
 
         TrianglePrimitive triangle(getDriverApi());
 
@@ -249,7 +272,10 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         getDriverApi().beginRenderPass(renderTarget, params);
 
         PipelineState state;
-        state.program = program;
+        state.program = programFloat;
+        if (isUnsignedIntFormat(t.textureFormat)) {
+            state.program = programUint;
+        }
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -263,13 +289,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             // correct mip.
             RenderPassParams p = params;
             Handle<HwRenderTarget> mipLevelOneRT = getDriverApi().createRenderTarget(
-                    TargetBufferFlags::COLOR,
-                    renderTargetBaseSize,                      // width
-                    renderTargetBaseSize,                      // height
-                    1,                                         // samples
-                    TargetBufferInfo(texture, 0),              // color
-                    {},                                        // depth
-                    {});                                       // stencil
+                    TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1,
+                    TargetBufferInfo(texture, 0), {},
+                    {});
             p.clearColor = {1.f, 0.f, 0.f, 1.f};
             getDriverApi().beginRenderPass(mipLevelOneRT, p);
             getDriverApi().endRenderPass();
@@ -282,10 +304,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         PixelBufferDescriptor descriptor(buffer, t.getBufferSizeBytes(), t.format, t.type,
                 t.alignment, t.left, t.top, t.getPixelBufferStride(), [](void* buffer, size_t size,
                     void* user) {
-                    const TestCase* test = (const TestCase*) user;
+                    const auto* test = (const TestCase*) user;
                     assert_invariant(test);
 
                     test->exportScreenshot(buffer);
+                    //test->exportRawBytes(buffer);
 
                     // Hash the contents of the buffer and check that they match.
                     uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
@@ -309,11 +332,13 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         getDriverApi().commit(swapChain);
         getDriverApi().endFrame(0);
 
-        getDriverApi().destroyProgram(program);
         getDriverApi().destroySwapChain(swapChain);
         getDriverApi().destroyRenderTarget(renderTarget);
         getDriverApi().destroyTexture(texture);
     }
+
+    getDriverApi().destroyProgram(programFloat);
+    getDriverApi().destroyProgram(programUint);
 
     // This ensures all driver commands have finished before exiting the test.
     getDriverApi().finish();
@@ -332,7 +357,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     getDriverApi().makeCurrent(swapChain, swapChain);
 
     // Create a program.
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    ShaderGenerator shaderGen(vertex, fragmentFloat, sBackend, sIsMobilePlatform);
     Program p = shaderGen.getProgram();
     auto program = getDriverApi().createProgram(std::move(p));
 

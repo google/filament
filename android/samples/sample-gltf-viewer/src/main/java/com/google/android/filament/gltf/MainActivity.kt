@@ -27,6 +27,7 @@ import android.widget.Toast
 import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
+import com.google.android.filament.View
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,14 +96,36 @@ class MainActivity : Activity() {
         setStatusText("To load a new model, go to the above URL on your host machine.")
 
         val view = modelViewer.view
+
+        /*
+         * Note: The settings below are overriden when connecting to the remote UI.
+         */
+
+        // on mobile, better use lower quality color buffer
+        view.renderQuality = view.renderQuality.apply {
+            hdrColorBuffer = View.QualityLevel.MEDIUM
+        }
+
+        // dynamic resolution often helps a lot
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+            enabled = true
+            quality = View.QualityLevel.MEDIUM
+        }
+
+        // MSAA is needed with dynamic resolution MEDIUM
+        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
             enabled = true
         }
 
+        // FXAA is pretty cheap and helps a lot
+        view.antiAliasing = View.AntiAliasing.FXAA;
+
+        // ambient occlusion is the cheapest effect that adds a lot of quality
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
             enabled = true
         }
 
+        // bloom is pretty expensive but adds a fair amount of realism
         view.bloomOptions = view.bloomOptions.apply {
             enabled = true
         }
@@ -193,6 +216,10 @@ class MainActivity : Activity() {
                          .build(engine)
 
                 val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
+
+                specularFilter.destroy();
+                equirectToCubemap.destroy();
+                context.destroy();
 
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl

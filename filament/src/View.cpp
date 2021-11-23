@@ -16,15 +16,15 @@
 
 #include "details/View.h"
 
+#include "Culler.h"
+#include "DFG.h"
+#include "Froxelizer.h"
 #include "ResourceAllocator.h"
 
 #include "details/Engine.h"
-#include "details/Culler.h"
-#include "details/DFG.h"
-#include "details/Froxelizer.h"
 #include "details/IndirectLight.h"
-#include "details/Renderer.h"
 #include "details/RenderTarget.h"
+#include "details/Renderer.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
 
@@ -53,39 +53,48 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
+static constexpr float PID_CONTROLLER_Ki = 0.002f;
+static constexpr float PID_CONTROLLER_Kd = 0.0f;
+
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
-      mPerViewSb(PerViewSib::SAMPLER_COUNT),
+      mPerViewUniforms(engine),
       mShadowMapManager(engine) {
     DriverApi& driver = engine.getDriverApi();
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+
     debugRegistry.registerProperty("d.view.camera_at_origin",
             &engine.debug.view.camera_at_origin);
 
-    // set-up samplers
-    mPerViewSb.setSampler(PerViewSib::FROXELS,{ mFroxelizer.getFroxelTexture() });
+    // Integral term is used to fight back the dead-band below, we limit how much it can act.
+    mPidController.setIntegralLimits(-100.0f, 100.0f);
 
-    if (engine.getDFG()->isValid()) {
-        TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
-        mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
-                engine.getDFG()->getTexture(), sampler.getSamplerParams());
-    }
-    mPerViewSbh = driver.createSamplerGroup(mPerViewSb.getSize());
+    // dead-band, 1% for scaling down, 5% for scaling up. This stabilizes all the jitters.
+    mPidController.setOutputDeadBand(-0.01f, 0.05f);
+
+#ifndef NDEBUG
+    debugRegistry.registerDataSource("d.view.frame_info",
+            mDebugFrameHistory.data(), mDebugFrameHistory.size());
+    debugRegistry.registerProperty("d.view.pid.kp", &engine.debug.view.pid.kp);
+    debugRegistry.registerProperty("d.view.pid.ki", &engine.debug.view.pid.ki);
+    debugRegistry.registerProperty("d.view.pid.kd", &engine.debug.view.pid.kd);
+    // default parameters for debugging UI
+    engine.debug.view.pid.kp = 1.0f - std::exp(-1.0f / 8.0f);
+    engine.debug.view.pid.ki = PID_CONTROLLER_Ki;
+    engine.debug.view.pid.kd = PID_CONTROLLER_Kd;
+    mPidController.setParallelGains(
+            engine.debug.view.pid.kp, engine.debug.view.pid.ki, engine.debug.view.pid.kd);
+#endif
 
     // allocate ubos
-    mPerViewUbh = driver.createBufferObject(mPerViewUb.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+
     mShadowUbh = driver.createBufferObject(mShadowUb.getSize(),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
-
-    // with a clip-space of [-w, w] ==> z' = -z
-    // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    mClipControl = driver.getClipSpaceParams();
 
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
 }
@@ -94,11 +103,19 @@ FView::~FView() noexcept = default;
 
 void FView::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated or we own (currently none).
+
+    while (mActivePickingQueriesList) {
+        FPickingQuery* const pQuery = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery->next;
+        pQuery->callback(pQuery->result, pQuery);
+        FPickingQuery::put(pQuery);
+    }
+
+    mPerViewUniforms.terminate(engine);
+
     DriverApi& driver = engine.getDriverApi();
-    driver.destroyBufferObject(mPerViewUbh);
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mShadowUbh);
-    driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
     mFroxelizer.terminate(driver);
@@ -129,6 +146,8 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
         // clamp maxScale to 2x because we're doing bilinear filtering, so super-sampling
         // is not useful above that.
         dynamicResolution.maxScale = min(dynamicResolution.maxScale, float2(2.0f));
+
+        dynamicResolution.sharpness = clamp(dynamicResolution.sharpness, 0.0f, 2.0f);
     }
 }
 
@@ -136,18 +155,59 @@ void FView::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcep
     mFroxelizer.setOptions(zLightNear, zLightFar);
 }
 
-float2 FView::updateScale(FrameInfo const& info) noexcept {
+float2 FView::updateScale(FEngine& engine,
+        FrameInfo const& info,
+        Renderer::FrameRateOptions const& frameRateOptions,
+        Renderer::DisplayInfo const& displayInfo) noexcept {
+
+    // scale factor returned to the caller is modified so the scaled viewport is rounded to
+    // 8 pixels. The internal scale factor, mScale, doesn't have this rounding.
+    float2 roundedScale = mScale;
+
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
         if (!UTILS_UNLIKELY(info.valid)) {
-            mScale = 1.0f;
+            // always clamp to the min/max scale range
+            mScale = clamp(1.0f, options.minScale, options.maxScale);
             return mScale;
         }
 
-        // scaling factor we need to apply on the whole surface
-        const float scale = info.scale;
-        const float w = mViewport.width;
-        const float h = mViewport.height;
+#ifndef NDEBUG
+        const float Kp = engine.debug.view.pid.kp;
+        const float Ki = engine.debug.view.pid.ki;
+        const float Kd = engine.debug.view.pid.kd;
+#else
+        const float Kp = (1.0f - std::exp(-frameRateOptions.scaleRate));
+        const float Ki = PID_CONTROLLER_Ki;
+        const float Kd = PID_CONTROLLER_Kd;
+#endif
+        mPidController.setParallelGains(Kp, Ki, Kd);
+
+        // all values in ms below
+        using std::chrono::duration;
+        const float dt = 1.0f; // we don't really need dt here, setting it to 1, means our parameters are in "frames"
+        const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
+        const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
+        float measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
+        float out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
+
+        // maps pid command to a scale (absolute or relative, see below)
+         const float command = out < 0.0f ? (1.0f / (1.0f - out)) : (1.0f + out);
+
+        /*
+         * There is two ways we can control the scale factor, either by having the PID controller
+         * output a new scale factor directly (like a "position" control), or having it evaluate
+         * a relative scale factor (like a "velocity" control).
+         * More experimentation is needed to figure out which works better in more cases.
+         */
+
+        // direct scaling ("position" control)
+        //const float scale = command;
+        // relative scaling ("velocity" control)
+        const float scale = mScale.x * mScale.y * command;
+
+        const float w = float(mViewport.width);
+        const float h = float(mViewport.height);
         if (scale < 1.0f && !options.homogeneousScaling) {
             // figure out the major and minor axis
             const float major = std::max(w, h);
@@ -163,7 +223,7 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             // if we have some scaling capacity left, scale homogeneously
             const float homogeneousScale = scale / (majorScale * minorScale);
 
-            // finally write the scale factors
+            // finally, write the scale factors
             float& majorRef = w > h ? mScale.x : mScale.y;
             float& minorRef = w > h ? mScale.y : mScale.x;
             majorRef = std::sqrt(homogeneousScale) * majorScale;
@@ -173,32 +233,44 @@ float2 FView::updateScale(FrameInfo const& info) noexcept {
             mScale = std::sqrt(scale);
         }
 
+        // always clamp to the min/max scale range
+        const auto s = mScale;
+        mScale = clamp(s, options.minScale, options.maxScale);
+
+        // disable the integration term when we're outside the controllable range
+        // (i.e. we clamped). This help not to have to wait too long for the Integral term
+        // to kick in after a clamping event.
+        mPidController.setIntegralInhibitionEnabled(mScale != s);
+
         // now tweak the scaling factor to get multiples of 8 (to help quad-shading)
         // i.e. 8x8=64 fragments, to try to help with warp sizes.
-        mScale = (floor(mScale * float2{ w, h } / 8) * 8) / float2{ w, h };
-
-        // always clamp to the min/max scale range
-        mScale = clamp(mScale, options.minScale, options.maxScale);
-
-//#define DEBUG_DYNAMIC_RESOLUTION
-#if defined(DEBUG_DYNAMIC_RESOLUTION)
-        static int sLogCounter = 15;
-        if (!--sLogCounter) {
-            sLogCounter = 15;
-            slog.d << info.denoisedFrameTime.count() * 1000.0f << " ms"
-                   << ", " << info.smoothedWorkLoad
-                   << ", " << mScale.x
-                   << ", " << mScale.y
-                   << ", " << mViewport.width  * mScale.x
-                   << ", " << mViewport.height * mScale.y
-                   << io::endl;
-        }
-#endif
+        roundedScale.x = mScale.x == 1.0f ? 1.0f : (std::floor(mScale.x * float{ w } / 8) * 8) / float{ w };
+        roundedScale.y = mScale.y == 1.0f ? 1.0f : (std::floor(mScale.y * float{ h } / 8) * 8) / float{ h };
     } else {
         mScale = 1.0f;
+        roundedScale = 1.0f;
     }
 
-    return mScale;
+#ifndef NDEBUG
+    // only for debugging...
+    using duration_ms = std::chrono::duration<float, std::milli>;
+    const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
+    const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
+    std::move(mDebugFrameHistory.begin() + 1,
+            mDebugFrameHistory.end(), mDebugFrameHistory.begin());
+    mDebugFrameHistory.back() = {
+            .target             = target,
+            .targetWithHeadroom = targetWithHeadroom,
+            .frameTime          = std::chrono::duration_cast<duration_ms>(info.frameTime).count(),
+            .frameTimeDenoised  = std::chrono::duration_cast<duration_ms>(info.denoisedFrameTime).count(),
+            .scale              = mScale.x * mScale.y,
+            .pid_e              = mPidController.getError(),
+            .pid_i              = mPidController.getIntegral(),
+            .pid_d              = mPidController.getDerivative()
+    };
+#endif
+
+    return roundedScale;
 }
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
@@ -210,7 +282,7 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
+void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -244,21 +316,21 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance light = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
 
-        if (UTILS_LIKELY(!light)) {
+        if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
         }
 
-        if (UTILS_LIKELY(!lcm.isShadowCaster(light))) {
+        if (UTILS_LIKELY(!lcm.isShadowCaster(li))) {
             continue; // doesn't cast shadows
         }
 
-        if (UTILS_LIKELY(!lcm.isSpotLight(light))) {
-            continue; // is not a spot-light (we're not supporting point-lights yet)
+        if (UTILS_LIKELY(!lcm.isSpotLight(li))) {
+            continue; // is not a spot-li (we're not supporting point-lights yet)
         }
 
-        const auto& shadowOptions = lcm.getShadowOptions(light);
+        const auto& shadowOptions = lcm.getShadowOptions(li);
         mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
         ++shadowCastingSpotCount;
         if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
@@ -267,7 +339,8 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
     }
 
     auto shadowTechnique = mShadowMapManager.update(engine, *this,
-            mPerViewUb, mShadowUb, renderableData,lightData);
+            mShadowUb, renderableData, lightData);
+
     mHasShadowing = any(shadowTechnique);
     mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
 }
@@ -275,9 +348,6 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport) noexcept {
     SYSTRACE_CALL();
-
-    auto& u = mPerViewUb;
-    auto& s = u.edit();
 
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
@@ -292,7 +362,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         scene->prepareDynamicLights(camera, arena, mLightUbh);
         Froxelizer& froxelizer = mFroxelizer;
         if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
-            froxelizer.updateUniforms(s); // update our uniform buffer if needed
+            // update our uniform buffer if needed
+            mPerViewUniforms.prepareDynamicLights(mFroxelizer);
         }
     }
 
@@ -304,8 +375,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
      */
 
     const float exposure = Exposure::exposure(camera.ev100);
-    s.exposure = exposure;
-    s.ev100 = camera.ev100;
+
+    mPerViewUniforms.prepareExposure(camera.ev100);
 
     /*
      * Indirect light (IBL)
@@ -313,8 +384,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     // If the scene does not have an IBL, use the black 1x1 IBL and honor the fallback intensity
     // associated with the skybox.
-    FIndirectLight const* ibl = scene->getIndirectLight();
     float intensity;
+    FIndirectLight const* ibl = scene->getIndirectLight();
     if (UTILS_LIKELY(ibl)) {
         intensity = ibl->getIntensity();
     } else {
@@ -323,62 +394,19 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
     }
 
-    // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
-    float iblRoughnessOneLevel = ibl->getLevelCount() - 1.0f;
-    s.iblRoughnessOneLevel = iblRoughnessOneLevel;
-    s.iblLuminance = intensity * exposure;
-    std::transform(ibl->getSH(), ibl->getSH() + 9, s.iblSH, [](float3 v){
-        return float4(v, 0.0f);
-    });
-
-    // We always sample from the reflection texture, so provide a dummy texture if necessary.
-    backend::Handle<backend::HwTexture> reflection = ibl->getReflectionHwHandle();
-    if (!reflection) {
-        reflection = engine.getDummyCubemap()->getHwHandle();
-    }
-    mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR, { reflection, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-    }});
+    mPerViewUniforms.prepareAmbientLight(*ibl, intensity, exposure);
 
     /*
      * Directional light (always at index 0)
      */
 
-    auto& lcm = engine.getLightManager();
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
+    mPerViewUniforms.prepareDirectionalLight(exposure, sceneSpaceDirection, directionalLight);
     mHasDirectionalLight = directionalLight.isValid();
-    if (mHasDirectionalLight) {
-        const float3 l = -lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
-        const float4 colorIntensity = {
-                lcm.getColor(directionalLight), lcm.getIntensity(directionalLight) * exposure };
-
-        s.lightDirection = l;
-        s.lightColorIntensity = colorIntensity;
-        s.lightChannels = lcm.getLightChannels(directionalLight);
-
-        const bool isSun = lcm.isSunLight(directionalLight);
-        // The last parameter must be < 0.0f for regular directional lights
-        float4 sun{ 0.0f, 0.0f, 0.0f, -1.0f };
-        if (UTILS_UNLIKELY(isSun && colorIntensity.w > 0.0f)) {
-            // currently we have only a single directional light, so it's probably likely that it's
-            // also the Sun. However, conceptually, most directional lights won't be sun lights.
-            float radius = lcm.getSunAngularRadius(directionalLight);
-            float haloSize = lcm.getSunHaloSize(directionalLight);
-            float haloFalloff = lcm.getSunHaloFalloff(directionalLight);
-            sun.x = fast::cos(radius);
-            sun.y = fast::sin(radius);
-            sun.z = 1.0f / (fast::cos(radius * haloSize) - sun.x);
-            sun.w = haloFalloff;
-        }
-        s.sun = sun;
-    } else {
-        // Disable the sun if there's no directional light
-        s.sun = float4{ 0.0f, 0.0f, 0.0f, -1.0f };
-    }
 }
 
-void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
+void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport, float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
@@ -394,13 +422,13 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * The "world origin" could also be useful for other things, like keeping the origin
      * close to the camera position to improve fp precision in the shader for large scenes.
      */
-    mat4f worldOriginScene;
+    mat4 worldOriginScene;
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
         // the IBL transformation must be a rigid transform
         mat3f rotation{ scene->getIndirectLight()->getRotation() };
         // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4f{ transpose(rotation) };
+        worldOriginScene = mat4{ transpose(rotation) };
     }
 
     /*
@@ -421,9 +449,9 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
     // is set
     mViewingCameraInfo = CameraInfo(*camera, worldOriginScene);
 
-    mCullingFrustum = FCamera::getFrustum(
-            mCullingCamera->getCullingProjectionMatrix(),
-            FCamera::getViewMatrix(worldOriginScene * mCullingCamera->getModelMatrix()));
+    mCullingFrustum = Frustum(mat4f{
+                    mCullingCamera->getCullingProjectionMatrix() *
+                    inverse(worldOriginScene * mCullingCamera->getModelMatrix()) });
 
     /*
      * Gather all information needed to render this scene. Apply the world origin to all
@@ -494,7 +522,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
         auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
         computeVisibilityMasks(getVisibleLayers(), layers, visibility, cullingMask.begin(),
-                renderableData.size(), hasVsm());
+                renderableData.size());
 
         auto const beginRenderables = renderableData.begin();
         auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
@@ -524,7 +552,7 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
                 driver.destroyBufferObject(mRenderableUbh);
                 mRenderableUbh = driver.createBufferObject(mRenderableUBOSize,
-                        BufferObjectBinding::UNIFORM, backend::BufferUsage::STREAM);
+                        BufferObjectBinding::UNIFORM, BufferUsage::STREAM);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
             }
@@ -545,35 +573,8 @@ void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& are
      * Update driver state
      */
 
-    auto& u = mPerViewUb;
-    auto& s = u.edit();
-
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
-    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
-    s.time = fraction;
-    s.userTime = userTime;
-
-    auto const& fogOptions = mFogOptions;
-
-    // this can't be too high because we need density / heightFalloff to produce something
-    // close to fogOptions.density in the fragment shader which use 16-bits floats.
-    constexpr float epsilon = 0.001f;
-    const float heightFalloff = std::max(epsilon, fogOptions.heightFalloff);
-
-    // precalculate the constant part of density  integral and correct for exp2() in the shader
-    const float density = ((fogOptions.density / heightFalloff) *
-            std::exp(-heightFalloff * (camera->getPosition().y - fogOptions.height)))
-                    * float(1.0f / F_LN2);
-
-    s.fogStart             = fogOptions.distance;
-    s.fogMaxOpacity        = fogOptions.maximumOpacity;
-    s.fogHeight            = fogOptions.height;
-    s.fogHeightFalloff     = heightFalloff;
-    s.fogColor             = fogOptions.color;
-    s.fogDensity           = density;
-    s.fogInscatteringStart = fogOptions.inScatteringStart;
-    s.fogInscatteringSize  = fogOptions.inScatteringSize;
-    s.fogColorFromIbl      = fogOptions.fogColorFromIbl ? 1.0f : 0.0f;
+    mPerViewUniforms.prepareTime(engine, userTime);
+    mPerViewUniforms.prepareFog(mViewingCameraInfo, mFogOptions);
 
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);
@@ -583,7 +584,7 @@ void FView::computeVisibilityMasks(
         uint8_t visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
-        uint8_t* UTILS_RESTRICT visibleMask, size_t count, bool hasVsm) {
+        Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
     // __restrict__ seems to only be taken into account as function parameters. This is very
     // important here, otherwise, this loop doesn't get vectorized.
     // This is vectorized 16x.
@@ -636,110 +637,49 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareCamera(const CameraInfo& camera) const noexcept {
+void FView::prepareUpscaler(float2 scale) const noexcept {
     SYSTRACE_CALL();
-
-    const mat4f viewFromWorld(camera.view);
-    const mat4f worldFromView(camera.model);
-    const mat4f projectionMatrix(camera.projection);
-
-    const mat4f clipFromView(projectionMatrix);
-    const mat4f viewFromClip(inverse(clipFromView));
-    const mat4f clipFromWorld(clipFromView * viewFromWorld);
-    const mat4f worldFromClip(worldFromView * viewFromClip);
-
-    auto& s = mPerViewUb.edit();
-    s.viewFromWorldMatrix = viewFromWorld;    // view
-    s.worldFromViewMatrix = worldFromView;    // model
-    s.clipFromViewMatrix = clipFromView;      // projection
-    s.viewFromClipMatrix = viewFromClip;      // 1/projection
-    s.clipFromWorldMatrix = clipFromWorld;    // projection * view
-    s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.cameraPosition = float3{camera.getPosition()};
-    s.worldOffset = camera.worldOffset;
-    s.cameraFar = camera.zf;
-    s.clipControl = mClipControl;
-
+    mPerViewUniforms.prepareUpscaler(scale, mDynamicResolution);
 }
 
-void FView::prepareViewport(const filament::Viewport &viewport) const noexcept {
+void FView::prepareCamera(const CameraInfo& camera) const noexcept {
     SYSTRACE_CALL();
-    const float w = viewport.width;
-    const float h = viewport.height;
-    auto& s = mPerViewUb.edit();
-    s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
-    s.origin = float2{ viewport.left, viewport.bottom };
+    mPerViewUniforms.prepareCamera(camera);
+}
+
+void FView::prepareViewport(const filament::Viewport& viewport) const noexcept {
+    SYSTRACE_CALL();
+    mPerViewUniforms.prepareViewport(viewport);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
-    // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
-    // least set to high and of course only if upsampling is needed.
-    const bool highQualitySampling = mAmbientOcclusionOptions.upsampling >= QualityLevel::HIGH
-            && mAmbientOcclusionOptions.resolution < 1.0f;
-
-    // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
-    mPerViewSb.setSampler(PerViewSib::SSAO, ssao, {
-            .filterMag = mAmbientOcclusionOptions.enabled && !highQualitySampling ?
-                         SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
-    });
-
-    const float edgeDistance = 1.0f / mAmbientOcclusionOptions.bilateralThreshold;
-    auto& s = mPerViewUb.edit();
-    s.aoSamplingQualityAndEdgeDistance =
-            mAmbientOcclusionOptions.enabled && highQualitySampling ? edgeDistance : 0.0f;
-    s.aoBentNormals =
-            mAmbientOcclusionOptions.enabled && mAmbientOcclusionOptions.bentNormals ? 1.0f : 0.0f;
+    mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset) const noexcept {
-    mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-    });
-    auto& s = mPerViewUb.edit();
-    s.refractionLodOffset = refractionLodOffset;
+void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
+    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
 }
 
-void FView::prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept {
+void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
     // sampler must be NEAREST
-    mPerViewSb.setSampler(PerViewSib::STRUCTURE, structure, {});
+    mPerViewUniforms.prepareStructure(structure);
 }
 
-void FView::prepareShadow(backend::Handle<backend::HwTexture> texture) const noexcept {
-    uint8_t anisotropy = 0;
-    SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
+void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     if (hasVsm()) {
-        auto const& vsmShadowOptions = mVsmShadowOptions;
-        anisotropy = vsmShadowOptions.anisotropy;
-        if (anisotropy > 0 || vsmShadowOptions.mipmapping) {
-            filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
-        }
+        mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+    } else {
+        mPerViewUniforms.prepareShadowPCF(texture);
     }
-
-    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, {
-            texture, {
-                    .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = filterMin,
-                    .anisotropyLog2 = anisotropy,                          // ignored for PCF
-                    .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE, // ignored for VSM
-                    .compareFunc = SamplerCompareFunc::GE                  // ignored for VSM
-            }});
 }
 
 void FView::prepareShadowMap() const noexcept {
-    auto const& vsmShadowOptions = mVsmShadowOptions;
-    auto& s = mPerViewUb.edit();
-    s.vsmExponent = vsmShadowOptions.exponent;  // fp16: max 5.54f, fp32: max 42.0
-    s.vsmDepthScale = vsmShadowOptions.minVarianceScale * 0.01f * vsmShadowOptions.exponent;
-    s.vsmLightBleedReduction = vsmShadowOptions.lightBleedReduction;
+    mPerViewUniforms.prepareShadowMapping(
+            mShadowMapManager.getShadowMappingUniforms(), mVsmShadowOptions);
 }
 
 void FView::cleanupRenderPasses() const noexcept {
-    auto& samplerGroup = mPerViewSb;
-    samplerGroup.clearSampler(PerViewSib::SSAO);
-    samplerGroup.clearSampler(PerViewSib::SSR);
-    samplerGroup.clearSampler(PerViewSib::STRUCTURE);
-    samplerGroup.clearSampler(PerViewSib::SHADOW_MAP);
+    mPerViewUniforms.unbindSamplers();
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {
@@ -748,21 +688,14 @@ void FView::froxelize(FEngine& engine) const noexcept {
     mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
 }
 
-void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
-    if (mPerViewUb.isDirty()) {
-        driver.updateBufferObject(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver), 0);
-    }
-
+void FView::commitUniforms(DriverApi& driver) const noexcept {
+    mPerViewUniforms.commit(driver);
     if (mShadowUb.isDirty()) {
         driver.updateBufferObject(mShadowUbh, mShadowUb.toBufferDescriptor(driver), 0);
     }
-
-    if (mPerViewSb.isDirty()) {
-        driver.updateSamplerGroup(mPerViewSbh, std::move(mPerViewSb.toCommandStream()));
-    }
 }
 
-void FView::commitFroxels(backend::DriverApi& driverApi) const noexcept {
+void FView::commitFroxels(DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
         mFroxelizer.commit(driverApi);
     }
@@ -948,6 +881,31 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
     }
 }
 
+void FView::executePickingQueries(backend::DriverApi& driver,
+        backend::RenderTargetHandle handle, float scale) noexcept {
+
+    while (mActivePickingQueriesList) {
+        FPickingQuery* const pQuery = mActivePickingQueriesList;
+        mActivePickingQueriesList = pQuery->next;
+
+        // adjust for dynamic resolution and structure buffer scale
+        const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
+        const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
+        driver.readPixels(handle, x, y, 1, 1, {
+                &pQuery->result.renderable, 4*4, // 4*uint
+                // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
+                backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
+                pQuery->handler, [](void* buffer, size_t size, void* user) {
+                    FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
+                    pQuery->result.fragCoords = {
+                            pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };
+                    pQuery->callback(pQuery->result, pQuery);
+                    FPickingQuery::put(pQuery);
+                }, pQuery
+        });
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
@@ -1039,6 +997,14 @@ void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) n
 
 const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
     return upcast(this)->getTemporalAntiAliasingOptions();
+}
+
+void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
+    upcast(this)->setMultiSampleAntiAliasingOptions(options);
+}
+
+const View::MultiSampleAntiAliasingOptions& View::getMultiSampleAntiAliasingOptions() const noexcept {
+    return upcast(this)->getMultiSampleAntiAliasingOptions();
 }
 
 void View::setColorGrading(ColorGrading* colorGrading) noexcept {
@@ -1175,6 +1141,11 @@ void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
 
 bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return upcast(this)->isScreenSpaceRefractionEnabled();
+}
+
+View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
+        View::PickingQueryResultCallback callback) noexcept {
+    return upcast(this)->pick(x, y, handler, callback);
 }
 
 } // namespace filament

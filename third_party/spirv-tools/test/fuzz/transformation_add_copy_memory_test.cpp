@@ -26,6 +26,7 @@ namespace {
 TEST(TransformationAddCopyMemoryTest, BasicTest) {
   std::string shader = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main"
@@ -64,7 +65,6 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
          %67 = OpTypePointer Function %66
          %83 = OpTypePointer Private %66
          %86 = OpVariable %79 Private %20
-         %87 = OpUndef %79
          %88 = OpConstantNull %79
           %4 = OpFunction %2 None %3
           %5 = OpLabel
@@ -182,12 +182,6 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
                                   90, 40, SpvStorageClassPrivate, 0)
           .IsApplicable(context.get(), transformation_context));
 
-  // Source instruction is OpUndef.
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(41, SpvOpLoad, 0),
-                                  90, 87, SpvStorageClassPrivate, 0)
-          .IsApplicable(context.get(), transformation_context));
-
   // Source instruction is OpConstantNull.
   ASSERT_FALSE(
       TransformationAddCopyMemory(MakeInstructionDescriptor(41, SpvOpLoad, 0),
@@ -255,6 +249,7 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
 
   std::string expected = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main"
@@ -293,7 +288,6 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
          %67 = OpTypePointer Function %66
          %83 = OpTypePointer Private %66
          %86 = OpVariable %79 Private %20
-         %87 = OpUndef %79
          %88 = OpConstantNull %79
          %90 = OpVariable %79 Private %20
          %92 = OpVariable %78 Private %25

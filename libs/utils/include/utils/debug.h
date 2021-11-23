@@ -30,4 +30,4 @@ void panic(const char *func, const char * file, int line, const char *assertion)
             (UTILS_LIKELY(e) ? ((void)0) : utils::panic(__func__, __FILE__, __LINE__, #e))
 #endif // NDEBUG
 
-#endif //TNT_UTILS_DEBUG_H
+#endif // TNT_UTILS_DEBUG_H

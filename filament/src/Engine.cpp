@@ -19,28 +19,30 @@
 #include "MaterialParser.h"
 #include "ResourceAllocator.h"
 
-#include "backend/DriverEnums.h"
+#include "DFG.h"
+#include "RenderPrimitive.h"
+
 #include "details/BufferObject.h"
-#include "details/DFG.h"
-#include "details/VertexBuffer.h"
-#include "details/Fence.h"
 #include "details/Camera.h"
+#include "details/Fence.h"
 #include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
 #include "details/Renderer.h"
-#include "details/RenderPrimitive.h"
 #include "details/Scene.h"
-#include "details/Skybox.h"
 #include "details/SkinningBuffer.h"
+#include "details/Skybox.h"
 #include "details/Stream.h"
 #include "details/SwapChain.h"
 #include "details/Texture.h"
+#include "details/VertexBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/SibGenerator.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -394,17 +396,11 @@ void FEngine::prepare() {
 
 void FEngine::gc() {
     // Note: this runs in a Job
-
-    JobSystem& js = mJobSystem;
-    auto *parent = js.createJob();
-    auto em = std::ref(mEntityManager);
-
-    js.run(jobs::createJob(js, parent, &FRenderableManager::gc, &mRenderableManager, em));
-    js.run(jobs::createJob(js, parent, &FLightManager::gc, &mLightManager, em));
-    js.run(jobs::createJob(js, parent, &FTransformManager::gc, &mTransformManager, em));
-    js.run(jobs::createJob(js, parent, &FCameraManager::gc, &mCameraManager, em));
-
-    js.runAndWait(parent);
+    auto& em = mEntityManager;
+    mRenderableManager.gc(em);
+    mLightManager.gc(em);
+    mTransformManager.gc(em);
+    mCameraManager.gc(em);
 }
 
 void FEngine::flush() {
@@ -1046,6 +1042,10 @@ TransformManager& Engine::getTransformManager() noexcept {
     return upcast(this)->getTransformManager();
 }
 
+void Engine::enableAccurateTranslations() noexcept  {
+    getTransformManager().setAccurateTranslationsEnabled(true);
+}
+
 void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
     return upcast(this)->streamAlloc(size, alignment);
 }
@@ -1064,6 +1064,10 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {
     return upcast(this)->getDebugRegistry();
+}
+
+void Engine::pumpMessageQueues() {
+    upcast(this)->pumpMessageQueues();
 }
 
 } // namespace filament

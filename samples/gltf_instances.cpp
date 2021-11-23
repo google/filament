@@ -70,7 +70,7 @@ struct App {
     std::vector<FilamentInstance*> instances;
 };
 
-static const char* DEFAULT_IBL = "default_env";
+static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());

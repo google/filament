@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_GENERIC_CONDITION_H
-#define UTILS_GENERIC_CONDITION_H
+#ifndef TNT_UTILS_GENERIC_CONDITION_H
+#define TNT_UTILS_GENERIC_CONDITION_H
 
 #include <condition_variable>
 
@@ -36,4 +36,4 @@ public:
 
 } // namespace utils
 
-#endif // UTILS_GENERIC_CONDITION_H
+#endif // TNT_UTILS_GENERIC_CONDITION_H

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_COLOR_SPACE_H
-#define TNT_FILAMENT_COLOR_SPACE_H
+#ifndef TNT_FILAMENT_COLORSPACE_H
+#define TNT_FILAMENT_COLORSPACE_H
 
 #include <utils/compiler.h>
 
@@ -53,27 +53,27 @@ constexpr mat3f sRGB_to_XYZ{
 };
 
 constexpr mat3f REC2020_to_XYZ{
-     0.6369580f,  0.2627002f,  0.0000000f,
-     0.1446169f,  0.6779981f,  0.0280727f,
-     0.1688810f,  0.0593017f,  1.0609851f
+     0.6369530f,  0.2626983f,  0.0000000f,
+     0.1446169f,  0.6780088f,  0.0280731f,
+     0.1688558f,  0.0592929f,  1.0608272f
 };
 
 constexpr mat3f XYZ_to_REC2020{
-     1.7166512f, -0.6666844f,  0.0176399f,
-    -0.3556708f,  1.6164812f, -0.0427706f,
-    -0.2533663f,  0.0157685f,  0.9421031f
+    1.7166634f,  -0.6666738f,  0.0176425f,
+    -0.3556733f,  1.6164557f, -0.0427770f,
+    -0.2533681f,  0.0157683f,  0.9422433f
 };
 
-constexpr mat3f XYZ_to_CIECAT02{
-     0.7328000f, -0.7036000f,  0.0030000f,
-     0.4296000f,  1.6975000f,  0.0136000f,
-    -0.1624000f,  0.0061000f,  0.9834000f
+constexpr mat3f XYZ_to_CIECAT16{
+     0.401288f, -0.250268f, -0.002079f,
+     0.650173f,  1.204414f,  0.048952f,
+    -0.051461f,  0.045854f,  0.953127f
 };
 
-constexpr mat3f CIECAT02_to_XYZ{
-     1.0961200f,  0.4543690f, -0.0096276f,
-    -0.2788690f,  0.4735330f, -0.0056980f,
-     0.1827450f,  0.0720978f,  1.0153300f
+constexpr mat3f CIECAT16_to_XYZ{
+     1.862068f,  0.387527f, -0.015841f,
+    -1.011255f,  0.621447f, -0.034123f,
+     0.149187f, -0.008974f,  1.049964f
 };
 
 constexpr mat3f AP1_to_XYZ{
@@ -112,13 +112,53 @@ constexpr mat3f sRGB_to_AP1{
      0.04737f,  0.01345f,  0.86961f
 };
 
+constexpr mat3f AP0_to_sRGB{
+     2.52169f, -0.27648f, -0.01538f,
+    -1.13413f,  1.37272f, -0.15298f,
+    -0.38756f, -0.09624f,  1.16835f
+};
+
+constexpr mat3f sRGB_to_AP0{
+     0.4397010f, 0.0897923f, 0.0175440f,
+     0.3829780f, 0.8134230f, 0.1115440f,
+     0.1773350f, 0.0967616f, 0.8707040f
+};
+
+constexpr mat3f sRGB_to_OkLab_LMS{
+     0.4122214708f, 0.2119034982f, 0.0883024619f,
+     0.5363325363f, 0.6806995451f, 0.2817188376f,
+     0.0514459929f, 0.1073969566f, 0.6299787005f
+};
+
+constexpr mat3f OkLab_LMS_to_OkLab{
+     0.2104542553f,  1.9779984951f,  0.0259040371f,
+     0.7936177850f, -2.4285922050f,  0.7827717662f,
+    -0.0040720468f,  0.4505937099f, -0.8086757660f
+};
+
+constexpr mat3f OkLab_to_OkLab_LMS{
+     1.0000000000f,  1.0000000000f,  1.0000000000f,
+     0.3963377774f, -0.1055613458f, -0.0894841775f,
+     0.2158037573f, -0.0638541728f, -1.2914855480f
+};
+
+constexpr mat3f OkLab_LMS_to_sRGB{
+     4.0767416621f, -1.2684380046f, -0.0041960863f,
+    -3.3077115913f,  2.6097574011f, -0.7034186147f,
+     0.2309699292f, -0.3413193965f,  1.7076147010f
+};
+
 constexpr mat3f sRGB_to_REC2020 = XYZ_to_REC2020 * sRGB_to_XYZ;
 
 constexpr mat3f REC2020_to_sRGB = XYZ_to_sRGB * REC2020_to_XYZ;
 
-constexpr mat3f sRGB_to_LMS = XYZ_to_CIECAT02 * sRGB_to_XYZ;
+constexpr mat3f sRGB_to_LMS_CAT16 = XYZ_to_CIECAT16 * sRGB_to_XYZ;
 
-constexpr mat3f LMS_to_sRGB = XYZ_to_sRGB * CIECAT02_to_XYZ;
+constexpr mat3f LMS_CAT16_to_sRGB = XYZ_to_sRGB * CIECAT16_to_XYZ;
+
+constexpr mat3f REC2020_to_LMS_CAT16 = XYZ_to_CIECAT16 * REC2020_to_XYZ;
+
+constexpr mat3f LMS_CAT16_to_REC2020 = XYZ_to_REC2020 * CIECAT16_to_XYZ;
 
 constexpr mat3f REC2020_to_AP0 = AP1_to_AP0 * XYZ_to_AP1 * REC2020_to_XYZ;
 
@@ -131,21 +171,21 @@ constexpr mat3f AP1_to_REC2020 = XYZ_to_REC2020 * AP1_to_XYZ;
 // Standard CIE 1931 2° illuminant D65, in xyY space
 constexpr float3 ILLUMINANT_D65_xyY{0.31271f, 0.32902f, 1.0f};
 
-// Standard CIE 1931 2° illuminant D65, in LMS space (CIECAT02)
-// Result of: XYZ_to_CIECAT02 * xyY_to_XYZ(ILLUMINANT_D65_xyY);
-constexpr float3 ILLUMINANT_D65_LMS{0.949237f, 1.03542f, 1.08728f};
+// Standard CIE 1931 2° illuminant D65, in LMS space (CIECAT16)
+// Result of: XYZ_to_CIECAT16 * xyY_to_XYZ(ILLUMINANT_D65_xyY);
+constexpr float3 ILLUMINANT_D65_LMS_CAT16{0.975533f, 1.016483f, 1.084837f};
 
 // RGB to luminance coefficients for Rec.2020, from REC2020_to_XYZ
-constexpr float3 LUMA_REC2020{0.2627002f, 0.6779981f, 0.0593017f};
+constexpr float3 LUMINANCE_REC2020{0.2627002f, 0.6779981f, 0.0593017f};
 
 // RGB to luminance coefficients for ACEScg (AP1), from AP1_to_XYZ
-constexpr float3 LUMA_AP1{0.272229f, 0.674082f, 0.0536895f};
+constexpr float3 LUMINANCE_AP1{0.272229f, 0.674082f, 0.0536895f};
 
 // RGB to luminance coefficients for Rec.709, from sRGB_to_XYZ
-constexpr float3 LUMA_REC709{0.2126730f, 0.7151520f, 0.0721750f};
+constexpr float3 LUMINANCE_REC709{0.2126730f, 0.7151520f, 0.0721750f};
 
 // RGB to luminance coefficients for Rec.709 with HK-like weighting
-constexpr float3 LUMA_HK_REC709{0.13913043f, 0.73043478f, 0.13043478f};
+constexpr float3 LUMINANCE_HK_REC709{0.13913043f, 0.73043478f, 0.13043478f};
 
 constexpr float MIDDLE_GRAY_ACEScg = 0.18f;
 
@@ -173,6 +213,18 @@ inline constexpr XYZ xyY_to_XYZ(xyY v) noexcept {
 
 inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
     return float3(v.xy / max(v.x + v.y + v.z, 1e-5f), v.y);
+}
+
+inline float3 sRGB_to_OkLab(float3 x) noexcept {
+    return OkLab_LMS_to_OkLab * cbrt(sRGB_to_OkLab_LMS * x);
+}
+
+inline constexpr float3 pow3(float3 x) noexcept {
+    return x * x * x;
+}
+
+inline float3 OkLab_to_sRGB(float3 x) noexcept {
+    return OkLab_LMS_to_sRGB * pow3(OkLab_to_OkLab_LMS * x);
 }
 
 //------------------------------------------------------------------------------
@@ -220,7 +272,7 @@ inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
     return x;
 }
 
-inline float3 OECF_sRGB(float3 x) noexcept {
+inline float3 OETF_sRGB(float3 x) noexcept {
     constexpr float a  = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float b  = 12.92f;
@@ -231,7 +283,7 @@ inline float3 OECF_sRGB(float3 x) noexcept {
     return x;
 }
 
-inline float3 EOCF_sRGB(float3 x) noexcept {
+inline float3 EOTF_sRGB(float3 x) noexcept {
     constexpr float a  = 0.055f;
     constexpr float a1 = 1.055f;
     constexpr float b  = 1.0f / 12.92f;
@@ -242,7 +294,7 @@ inline float3 EOCF_sRGB(float3 x) noexcept {
     return x;
 }
 
-inline float3 OECF_PQ(float3 x, float maxPqValue) {
+inline float3 OETF_PQ(float3 x, float maxPqValue) {
     constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
     constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
     constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;
@@ -257,7 +309,7 @@ inline float3 OECF_PQ(float3 x, float maxPqValue) {
     return pow(numerator / denominator, PQ_constant_M);
 }
 
-inline float3 EOCF_PQ(float3 x, float maxPqValue) {
+inline float3 EOTF_PQ(float3 x, float maxPqValue) {
     constexpr float PQ_constant_N  = 2610.0f / 4096.0f /   4.0f;
     constexpr float PQ_constant_M  = 2523.0f / 4096.0f * 128.0f;
     constexpr float PQ_constant_C1 = 3424.0f / 4096.0f;
@@ -272,6 +324,12 @@ inline float3 EOCF_PQ(float3 x, float maxPqValue) {
     return linearColor * maxPqValue;
 }
 
+//------------------------------------------------------------------------------
+// Gamut mapping
+//------------------------------------------------------------------------------
+
+float3 gamutMapping_sRGB(float3 rgb) noexcept;
+
 } // namespace filament
 
-#endif //TNT_FILAMENT_COLOR_SPACE_H
+#endif // TNT_FILAMENT_COLORSPACE_H

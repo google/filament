@@ -18,6 +18,7 @@ package com.google.android.filament.streamtest
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.os.Bundle
 import android.view.Choreographer
 import android.view.Surface
@@ -33,7 +34,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
 import android.opengl.*
+import android.os.Build
 import android.view.MotionEvent
+import androidx.annotation.RequiresApi
 import com.google.android.filament.android.DisplayHelper
 
 
@@ -78,6 +81,13 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
     private var externalTextureID: Int = 0
 
+    @RequiresApi(30)
+    class Api30Impl {
+        companion object {
+            fun getDisplay(context: Context) = context.display!!
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -94,7 +104,15 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         setupScene()
 
         externalTextureID = createExternalTexture()
-        streamHelper = StreamHelper(engine, materialInstance, windowManager.defaultDisplay, externalTextureID)
+
+        @Suppress("deprecation")
+        val display = if (Build.VERSION.SDK_INT >= 30) {
+            Api30Impl.getDisplay(this)
+        } else {
+            windowManager.defaultDisplay!!
+        }
+
+        streamHelper = StreamHelper(engine, materialInstance, display, externalTextureID)
         this.title = streamHelper.getTestName()
     }
 

@@ -24,10 +24,11 @@ namespace fuzz {
 // flow graph into their own functions.
 class FuzzerPassOutlineFunctions : public FuzzerPass {
  public:
-  FuzzerPassOutlineFunctions(
-      opt::IRContext* ir_context, TransformationContext* transformation_context,
-      FuzzerContext* fuzzer_context,
-      protobufs::TransformationSequence* transformations);
+  FuzzerPassOutlineFunctions(opt::IRContext* ir_context,
+                             TransformationContext* transformation_context,
+                             FuzzerContext* fuzzer_context,
+                             protobufs::TransformationSequence* transformations,
+                             bool ignore_inapplicable_transformations);
 
   void Apply() override;
 

@@ -20,6 +20,7 @@
 
 #include <utils/Log.h>
 
+#include <cstring>
 #include <vector>
 
 using namespace utils;

@@ -49,6 +49,11 @@ py_binary(
     srcs = ["build_info.py"],
 )
 
+py_binary(
+    name = "gen_extension_headers",
+    srcs = ["gen_extension_headers.py"],
+)
+
 genrule(
     name = "gen_build_info_h",
     srcs = ["CHANGES.md", "build_info.h.tmpl"],
@@ -56,6 +61,14 @@ genrule(
     cmd_bash = "$(location build_info) $$(dirname $(location CHANGES.md)) -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
     cmd_bat = "for %F in ($(location CHANGES.md)) do $(location build_info) %~dpF -i $(location build_info.h.tmpl) -o $(location glslang/build_info.h)",
     tools = [":build_info"],
+)
+
+genrule(
+    name = "gen_extension_headers_h",
+    srcs = ["glslang/ExtensionHeaders", "gen_extension_headers.py"],
+    outs = ["glslang/glsl_intrinsic_header.h"],
+    cmd_bash = "$(location gen_extension_headers) -i  $(location glslang/ExtensionHeaders) -o $(location glslang/glsl_intrinsic_header.h)",
+    tools = [":gen_extension_headers"],
 )
 
 COMMON_COPTS = select({
@@ -206,6 +219,7 @@ cc_binary(
     srcs = [
         "StandAlone/StandAlone.cpp",
         "StandAlone/Worklist.h",
+        ":glslang/glsl_intrinsic_header.h"
     ],
     copts = COMMON_COPTS,
     deps = [

@@ -22,3 +22,12 @@
 
 #define float3x3 mat3
 #define float4x4 mat4
+
+// Adreno drivers seem to ignore precision qualifiers in structs, unless they're used in
+// UBOs, which is is the case here.
+struct ShadowData {
+    highp mat4 lightFromWorldMatrix;
+    highp vec3 direction;
+    float normalBias;
+    float texelSizeAtOneMeter;
+};

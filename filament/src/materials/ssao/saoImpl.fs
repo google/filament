@@ -25,7 +25,7 @@
 #include "geometry.fs"
 
 #ifndef COMPUTE_BENT_NORMAL
-#error "COMPUTE_BENT_NORMAL must be set"
+#error COMPUTE_BENT_NORMAL must be set
 #endif
 
 const float kLog2LodRate = 3.0;
@@ -68,7 +68,7 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
     vec2 uvSamplePos = uv + vec2(ssRadius * tap.xy) * materialParams.resolution.zw;
 
     float level = clamp(floor(log2(ssRadius)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
-    highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvSamplePos, level, materialParams.depthParams);
+    highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvSamplePos, level);
     highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth, materialParams.positionParams);
 
     // now we have the sample, compute AO
@@ -107,7 +107,7 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
 
 void scalableAmbientObscurance(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
-    float noise = random(getFragCoord(materialParams.resolution));
+    float noise = random(getFragCoord(materialParams.resolution.xy));
     highp vec2 tapPosition = startPosition(noise);
     highp mat2 angleStep = tapAngleStep();
 

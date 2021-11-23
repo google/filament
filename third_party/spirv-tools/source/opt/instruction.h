@@ -22,7 +22,9 @@
 #include <utility>
 #include <vector>
 
+#include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
+#include "source/common_debug_info.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_spirv_header.h"
 #include "source/opcode.h"
@@ -250,11 +252,6 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Clear line-related debug instructions attached to this instruction.
   void clear_dbg_line_insts() { dbg_line_insts_.clear(); }
 
-  // Set line-related debug instructions.
-  void set_dbg_line_insts(const std::vector<Instruction>& lines) {
-    dbg_line_insts_ = lines;
-  }
-
   // Same semantics as in the base class except the list the InstructionList
   // containing |pos| will now assume ownership of |this|.
   // inline void MoveBefore(Instruction* pos);
@@ -304,8 +301,21 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Sets DebugScope.
   inline void SetDebugScope(const DebugScope& scope);
   inline const DebugScope& GetDebugScope() const { return dbg_scope_; }
+  // Add debug line inst. Renew result id if Debug[No]Line
+  void AddDebugLine(const Instruction* inst);
   // Updates DebugInlinedAt of DebugScope and OpLine.
   void UpdateDebugInlinedAt(uint32_t new_inlined_at);
+  // Clear line-related debug instructions attached to this instruction
+  // along with def-use entries.
+  void ClearDbgLineInsts();
+  // Return true if Shader100:Debug[No]Line
+  bool IsDebugLineInst() const;
+  // Return true if Op[No]Line or Shader100:Debug[No]Line
+  bool IsLineInst() const;
+  // Return true if OpLine or Shader100:DebugLine
+  bool IsLine() const;
+  // Return true if OpNoLine or Shader100:DebugNoLine
+  bool IsNoLine() const;
   inline uint32_t GetDebugInlinedAt() const {
     return dbg_scope_.GetInlinedAt();
   }
@@ -454,6 +464,10 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // storage buffer.
   bool IsVulkanStorageBuffer() const;
 
+  // Returns true if the instruction defines a variable in StorageBuffer or
+  // Uniform storage class with a pointer type that points to a storage buffer.
+  bool IsVulkanStorageBufferVariable() const;
+
   // Returns true if the instruction defines a pointer type that points to a
   // uniform buffer.
   bool IsVulkanUniformBuffer() const;
@@ -550,9 +564,28 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // OpenCLDebugInfo100InstructionsMax.
   OpenCLDebugInfo100Instructions GetOpenCL100DebugOpcode() const;
 
+  // Returns debug opcode of an NonSemantic.Shader.DebugInfo.100 instruction. If
+  // it is not an NonSemantic.Shader.DebugInfo.100 instruction, just return
+  // NonSemanticShaderDebugInfo100InstructionsMax.
+  NonSemanticShaderDebugInfo100Instructions GetShader100DebugOpcode() const;
+
+  // Returns debug opcode of an OpenCL.100.DebugInfo or
+  // NonSemantic.Shader.DebugInfo.100 instruction. Since these overlap, we
+  // return the OpenCLDebugInfo code
+  CommonDebugInfoInstructions GetCommonDebugOpcode() const;
+
   // Returns true if it is an OpenCL.DebugInfo.100 instruction.
   bool IsOpenCL100DebugInstr() const {
     return GetOpenCL100DebugOpcode() != OpenCLDebugInfo100InstructionsMax;
+  }
+
+  // Returns true if it is an NonSemantic.Shader.DebugInfo.100 instruction.
+  bool IsShader100DebugInstr() const {
+    return GetShader100DebugOpcode() !=
+           NonSemanticShaderDebugInfo100InstructionsMax;
+  }
+  bool IsCommonDebugInstr() const {
+    return GetCommonDebugOpcode() != CommonDebugInfoInstructionsMax;
   }
 
   // Returns true if this instructions a non-semantic instruction.
@@ -588,9 +621,9 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   uint32_t unique_id_;  // Unique instruction id
   // All logical operands, including result type id and result id.
   OperandList operands_;
-  // Opline and OpNoLine instructions preceding this instruction. Note that for
-  // Instructions representing OpLine or OpNonLine itself, this field should be
-  // empty.
+  // Op[No]Line or Debug[No]Line instructions preceding this instruction. Note
+  // that for Instructions representing Op[No]Line or Debug[No]Line themselves,
+  // this field should be empty.
   std::vector<Instruction> dbg_line_insts_;
 
   // DebugScope that wraps this instruction.

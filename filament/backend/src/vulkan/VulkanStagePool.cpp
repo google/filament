@@ -100,6 +100,24 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
 
     assert_invariant(result == VK_SUCCESS);
 
+    VkImageAspectFlags aspectFlags = isDepthFormat(vkformat) ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                             : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+
+    // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
+    // "Host access to image memory is only well-defined for linear images and for image
+    // subresources of those images which are currently in either the
+    // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
+    // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
+    // valid for either of those image layouts."
+    transitionImageLayout(cmdbuffer, blitterTransitionHelper({
+            .image = image->image,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .subresources = { aspectFlags, 0, 1, 0, 1 }
+    }));
+
     return image;
 }
 

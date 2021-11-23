@@ -142,12 +142,17 @@ vec4 computeWorldPosition() {
     mat4 transform = getWorldFromViewMatrix();
     vec3 position = getPosition().xyz;
     return mulMat4x4Float3(transform, position);
-#else
+#elif defined(VERTEX_DOMAIN_DEVICE)
     mat4 transform = getWorldFromClipMatrix();
-    vec4 position = transform * getPosition();
+    vec4 p = getPosition();
+    // GL convention to inverted DX convention
+    p.z = p.z * -0.5 + 0.5;
+    vec4 position = transform * p;
     if (abs(position.w) < MEDIUMP_FLT_MIN) {
         position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
     }
     return position * (1.0 / position.w);
+#else
+#error Unknown Vertex Domain
 #endif
 }

@@ -37,15 +37,15 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     }
 #endif
 
-    addEmissive(material, color);
-
 #if defined(HAS_DIRECTIONAL_LIGHTING)
 #if defined(HAS_SHADOWING)
     float visibility = 1.0;
-    if ((frameUniforms.directionalShadows & 1u) != 0u) {
-        uint cascade = getShadowCascade();
+    uint cascade = getShadowCascade();
+    bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
+    bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
+    if (hasDirectionalShadows && cascadeHasVisibleShadows) {
         uint layer = cascade;
-        visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
+        visibility = shadow(true, light_shadowMap, layer, 0u, cascade);
     }
     if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
         if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
@@ -59,6 +59,8 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #elif defined(HAS_SHADOW_MULTIPLIER)
     color = vec4(0.0);
 #endif
+
+    addEmissive(material, color);
 
     return color;
 }

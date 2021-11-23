@@ -103,8 +103,8 @@ class Module {
   // This is due to decision by the SPIR Working Group, pending publication.
   inline void AddDebug3Inst(std::unique_ptr<Instruction> d);
 
-  // Appends a debug info extension (OpenCL.DebugInfo.100 or DebugInfo)
-  // instruction to this module.
+  // Appends a debug info extension (OpenCL.DebugInfo.100,
+  // NonSemantic.Shader.DebugInfo.100, or DebugInfo) instruction to this module.
   inline void AddExtInstDebugInfo(std::unique_ptr<Instruction> d);
 
   // Appends an annotation instruction to this module.
@@ -192,8 +192,8 @@ class Module {
   inline IteratorRange<const_inst_iterator> debugs3() const;
 
   // Iterators for debug info instructions (excluding OpLine & OpNoLine)
-  // contained in this module.  These are OpExtInst for OpenCL.DebugInfo.100
-  // or DebugInfo extension placed between section 9 and 10.
+  // contained in this module.  These are OpExtInst for DebugInfo extension
+  // placed between section 9 and 10.
   inline inst_iterator ext_inst_debuginfo_begin();
   inline inst_iterator ext_inst_debuginfo_end();
   inline IteratorRange<inst_iterator> ext_inst_debuginfo();

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_TONE_MAPPER_H
-#define TNT_FILAMENT_TONE_MAPPER_H
+#ifndef TNT_FILAMENT_TONEMAPPER_H
+#define TNT_FILAMENT_TONEMAPPER_H
 
 #include <utils/compiler.h>
 
@@ -74,7 +74,7 @@ struct UTILS_PUBLIC LinearToneMapper final : public ToneMapper {
     LinearToneMapper() noexcept;
     ~LinearToneMapper() noexcept final;
 
-    math::float3 operator()(math::float3 c) const noexcept;
+    math::float3 operator()(math::float3 c) const noexcept override;
 };
 
 /**
@@ -86,7 +86,7 @@ struct UTILS_PUBLIC ACESToneMapper final : public ToneMapper {
     ACESToneMapper() noexcept;
     ~ACESToneMapper() noexcept final;
 
-    math::float3 operator()(math::float3 c) const noexcept;
+    math::float3 operator()(math::float3 c) const noexcept override;
 };
 
 /**
@@ -99,7 +99,7 @@ struct UTILS_PUBLIC ACESLegacyToneMapper final : public ToneMapper {
     ACESLegacyToneMapper() noexcept;
     ~ACESLegacyToneMapper() noexcept final;
 
-    math::float3 operator()(math::float3 c) const noexcept;
+    math::float3 operator()(math::float3 c) const noexcept override;
 };
 
 /**
@@ -112,7 +112,7 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
     FilmicToneMapper() noexcept;
     ~FilmicToneMapper() noexcept final;
 
-    math::float3 operator()(math::float3 x) const noexcept;
+    math::float3 operator()(math::float3 x) const noexcept override;
 };
 
 /**
@@ -145,11 +145,11 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
      * @param hdrMax: defines the maximum input value that will be mapped to
      *                output white. Must be >= 1.0.
      */
-    GenericToneMapper(
-            float contrast = 1.4f,
+    explicit GenericToneMapper(
+            float contrast = 1.585f,
             float shoulder = 0.5f,
             float midGrayIn = 0.18f,
-            float midGrayOut = 0.266f,
+            float midGrayOut = 0.268f,
             float hdrMax = 10.0f
     ) noexcept;
     ~GenericToneMapper() noexcept final;
@@ -157,9 +157,9 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
     GenericToneMapper(GenericToneMapper const&) = delete;
     GenericToneMapper& operator=(GenericToneMapper const&) = delete;
     GenericToneMapper(GenericToneMapper&& rhs)  noexcept;
-    GenericToneMapper& operator=(GenericToneMapper& rhs) noexcept;
+    GenericToneMapper& operator=(GenericToneMapper&& rhs) noexcept;
 
-    math::float3 operator()(math::float3 x) const noexcept;
+    math::float3 operator()(math::float3 x) const noexcept override;
 
     /** Returns the contrast of the curve as a strictly positive value. */
     float getContrast() const noexcept;
@@ -225,11 +225,11 @@ private:
  */
 struct UTILS_PUBLIC DisplayRangeToneMapper final : public ToneMapper {
     DisplayRangeToneMapper() noexcept;
-    ~DisplayRangeToneMapper() noexcept;
+    ~DisplayRangeToneMapper() noexcept override;
 
-    math::float3 operator()(math::float3 c) const noexcept;
+    math::float3 operator()(math::float3 c) const noexcept override;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_TONE_MAPPER_H
+#endif // TNT_FILAMENT_TONEMAPPER_H

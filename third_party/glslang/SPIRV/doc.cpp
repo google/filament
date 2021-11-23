@@ -426,6 +426,7 @@ const char* BuiltInString(int builtIn)
     case BuiltInSMCountNV:              return "SMCountNV";
     case BuiltInWarpIDNV:               return "WarpIDNV";
     case BuiltInSMIDNV:                 return "SMIDNV";
+    case BuiltInCurrentRayTimeNV:       return "CurrentRayTimeNV";
 
     default: return "Bad";
     }
@@ -916,6 +917,7 @@ const char* CapabilityString(int info)
     case CapabilityPerViewAttributesNV:             return "PerViewAttributesNV";
     case CapabilityGroupNonUniformPartitionedNV:    return "GroupNonUniformPartitionedNV";
     case CapabilityRayTracingNV:                    return "RayTracingNV";
+    case CapabilityRayTracingMotionBlurNV:          return "RayTracingMotionBlurNV";
     case CapabilityRayTracingKHR:                   return "RayTracingKHR";
     case CapabilityRayQueryKHR:                     return "RayQueryKHR";
     case CapabilityRayTracingProvisionalKHR:        return "RayTracingProvisionalKHR";
@@ -1382,6 +1384,7 @@ const char* OpcodeString(int op)
     case OpTerminateRayNV:                    return "OpTerminateRayNV";
     case OpTerminateRayKHR:                   return "OpTerminateRayKHR";
     case OpTraceNV:                           return "OpTraceNV";
+    case OpTraceRayMotionNV:                  return "OpTraceRayMotionNV";
     case OpTraceRayKHR:                       return "OpTraceRayKHR";
     case OpTypeAccelerationStructureKHR:      return "OpTypeAccelerationStructureKHR";
     case OpExecuteCallableNV:                 return "OpExecuteCallableNV";
@@ -2811,6 +2814,20 @@ void Parameterize()
     InstructionDesc[OpTraceNV].operands.push(OperandId, "'TMax'");
     InstructionDesc[OpTraceNV].operands.push(OperandId, "'Payload'");
     InstructionDesc[OpTraceNV].setResultAndType(false, false);
+
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Acceleration Structure'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Ray Flags'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Cull Mask'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'SBT Record Offset'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'SBT Record Stride'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Miss Index'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Ray Origin'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'TMin'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Ray Direction'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'TMax'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Time'");
+    InstructionDesc[OpTraceRayMotionNV].operands.push(OperandId, "'Payload'");
+    InstructionDesc[OpTraceRayMotionNV].setResultAndType(false, false);
 
     InstructionDesc[OpTraceRayKHR].operands.push(OperandId, "'Acceleration Structure'");
     InstructionDesc[OpTraceRayKHR].operands.push(OperandId, "'Ray Flags'");

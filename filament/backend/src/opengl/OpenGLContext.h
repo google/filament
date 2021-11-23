@@ -26,7 +26,9 @@
 
 #include "GLUtils.h"
 
+#include <array>
 #include <set>
+#include <utility>
 
 namespace filament {
 
@@ -188,7 +190,51 @@ public:
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
         bool disable_sidecar_blit_into_texture_array = false;
+
+        // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
+        // case we need an alternative algorithm
+        bool split_easu = false;
+
+        // As of Android R some qualcomm drivers invalidate buffers for the whole render pass
+        // even if glInvalidateFramebuffer() is called at the end of it.
+        bool invalidate_end_only_if_invalidate_start = false;
     } bugs;
+
+    const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
+            {   bugs.disable_glFlush,
+                    "disable_glFlush",
+                    ""},
+            {   bugs.vao_doesnt_store_element_array_buffer_binding,
+                    "vao_doesnt_store_element_array_buffer_binding",
+                    ""},
+            {   bugs.disable_shared_context_draws,
+                    "disable_shared_context_draws",
+                    ""},
+            {   bugs.texture_external_needs_rebind,
+                    "texture_external_needs_rebind",
+                    ""},
+            {   bugs.disable_invalidate_framebuffer,
+                    "disable_invalidate_framebuffer",
+                    ""},
+            {   bugs.texture_filter_anisotropic_broken_on_sampler,
+                    "texture_filter_anisotropic_broken_on_sampler",
+                    ""},
+            {   bugs.disable_feedback_loops,
+                    "disable_feedback_loops",
+                    ""},
+            {   bugs.dont_use_timer_query,
+                    "dont_use_timer_query",
+                    ""},
+            {   bugs.disable_sidecar_blit_into_texture_array,
+                    "disable_sidecar_blit_into_texture_array",
+                    ""},
+            {   bugs.split_easu,
+                    "split_easu",
+                    ""},
+            {   bugs.invalidate_end_only_if_invalidate_start,
+                    "invalidate_end_only_if_invalidate_start",
+                    ""},
+    }};
 
     // state getters -- as needed.
     GLuint getDrawFbo() const noexcept { return state.draw_fbo; }

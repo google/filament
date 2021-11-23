@@ -319,8 +319,6 @@ def gather_docstrings(paths):
                 stack[-1] = entity
             elif 'retval' in tags or 'argument' in tags:
                 stack[-1]["children"].append(entity)
-            else:
-                assert False
             previous = entity
         else:
             brief = previous["brief"]

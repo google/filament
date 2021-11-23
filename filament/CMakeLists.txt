@@ -28,6 +28,7 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
+        include/filament/Options.h
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
         include/filament/Renderer.h
@@ -51,6 +52,7 @@ set(SRCS
         src/Camera.cpp
         src/Color.cpp
         src/ColorGrading.cpp
+        src/ColorSpace.cpp
         src/Culler.cpp
         src/DFG.cpp
         src/DebugRegistry.cpp
@@ -61,11 +63,13 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/fsr.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -92,52 +96,55 @@ set(SRCS
         src/fg2/Blackboard.cpp
         src/fg2/DependencyGraph.cpp
         src/fg2/FrameGraph.cpp
-        src/fg2/FrameGraphResources.cpp
         src/fg2/FrameGraphPass.cpp
+        src/fg2/FrameGraphResources.cpp
+        src/fg2/FrameGraphTexture.cpp
         src/fg2/PassNode.cpp
         src/fg2/ResourceNode.cpp
-        src/fg2/FrameGraphTexture.cpp
 )
 
 set(PRIVATE_HDRS
+        src/Allocators.h
+        src/ColorSpace.h
+        src/Culler.h
+        src/DFG.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
+        src/FrameSkipper.h
+        src/Froxelizer.h
         src/Intersections.h
         src/MaterialParser.h
+        src/PerViewUniforms.h
+        src/PIDController.h
         src/PostProcessManager.h
         src/RenderPass.h
+        src/RenderPrimitive.h
         src/ResourceAllocator.h
+        src/ResourceList.h
+        src/ShadowMap.h
+        src/ShadowMapManager.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
-        src/details/Allocators.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
-        src/details/Culler.h
-        src/details/DFG.h
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
-        src/details/FrameSkipper.h
-        src/details/Froxelizer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/Material.h
         src/details/MaterialInstance.h
-        src/details/RenderPrimitive.h
         src/details/RenderTarget.h
         src/details/Renderer.h
-        src/details/ResourceList.h
         src/details/Scene.h
-        src/details/ShadowMap.h
-        src/details/ShadowMapManager.h
-        src/details/Skybox.h
         src/details/SkinningBuffer.h
+        src/details/Skybox.h
         src/details/Stream.h
         src/details/SwapChain.h
         src/details/Texture.h
@@ -146,22 +153,31 @@ set(PRIVATE_HDRS
         src/fg2/Blackboard.h
         src/fg2/FrameGraph.h
         src/fg2/FrameGraphId.h
-        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphPass.h
         src/fg2/FrameGraphRenderPass.h
-        src/fg2/Resource.cpp
+        src/fg2/FrameGraphResources.h
         src/fg2/FrameGraphTexture.h
+        src/fg2/Resource.cpp
         src/fg2/details/DependencyGraph.h
         src/fg2/details/PassNode.h
         src/fg2/details/Resource.h
         src/fg2/details/ResourceNode.h
         src/fg2/details/Utilities.h
+        src/fsr.h
+        src/materials/fsr/ffx_a.h
+        src/materials/fsr/ffx_fsr1.h
+        src/materials/fsr/ffx_fsr1_mobile.fs
         src/upcast.h
 )
 
 set(MATERIAL_SRCS
+        src/materials/fsr/fsr_easu.mat
+        src/materials/fsr/fsr_easu_mobile.mat
+        src/materials/fsr/fsr_easu_mobileF.mat
+        src/materials/fsr/fsr_rcas.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
+        src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
@@ -174,8 +190,6 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMedian.mat
         src/materials/flare/flare.mat
         src/materials/blitLow.mat
-        src/materials/blitMedium.mat
-        src/materials/blitHigh.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomUpsample.mat
         src/materials/ssao/bilateralBlur.mat
@@ -184,7 +198,10 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/separableGaussianBlur.mat
+        src/materials/separableGaussianBlur1.mat
+        src/materials/separableGaussianBlur2.mat
+        src/materials/separableGaussianBlur3.mat
+        src/materials/separableGaussianBlur4.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
@@ -261,6 +278,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
@@ -268,6 +286,7 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
         DEPENDS ../shaders/src/dithering.fs
         DEPENDS ../shaders/src/vignette.fs
+        DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
@@ -344,6 +363,64 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/bilateralBlurBentNormals.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobile.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_easu_mobileF.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        DEPENDS src/materials/fsr/ffx_fsr1_mobile.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
+        DEPENDS src/materials/fsr/ffx_a.h
+        DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur1.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur2.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur3.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/separableGaussianBlur4.filamat"
+        DEPENDS src/materials/separableGaussianBlur.vs
+        DEPENDS src/materials/separableGaussianBlur.fs
         APPEND
 )
 

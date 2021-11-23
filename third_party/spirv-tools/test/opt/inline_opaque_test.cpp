@@ -226,6 +226,115 @@ OpFunctionEnd
       predefs + before + post_defs, predefs + after + post_defs, true, true);
 }
 
+TEST_F(InlineOpaqueTest, InlineOpaqueForLinkage) {
+  const std::string predefs_1 =
+      R"(OpCapability Shader
+OpCapability Linkage
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %S_t "S_t"
+OpMemberName %S_t 0 "v0"
+OpMemberName %S_t 1 "v1"
+OpMemberName %S_t 2 "smp"
+OpName %foo_struct_S_t_vf2_vf21_ "foo(struct-S_t-vf2-vf21;"
+OpName %s "s"
+OpName %outColor "outColor"
+OpName %sampler15 "sampler15"
+OpName %s0 "s0"
+OpName %texCoords "texCoords"
+OpName %param "param"
+OpDecorate %main LinkageAttributes "main" Export
+)";
+
+  const std::string name = R"(OpName %return_value "return_value"
+)";
+
+  const std::string predefs_2 = R"(OpDecorate %sampler15 DescriptorSet 0
+%void = OpTypeVoid
+%13 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%outColor = OpVariable %_ptr_Output_v4float Output
+%18 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%19 = OpTypeSampledImage %18
+%S_t = OpTypeStruct %v2float %v2float %19
+%_ptr_Function_S_t = OpTypePointer Function %S_t
+%21 = OpTypeFunction %void %_ptr_Function_S_t
+%_ptr_UniformConstant_19 = OpTypePointer UniformConstant %19
+%_ptr_Function_19 = OpTypePointer Function %19
+%sampler15 = OpVariable %_ptr_UniformConstant_19 UniformConstant
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%int_2 = OpConstant %int 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%texCoords = OpVariable %_ptr_Input_v2float Input
+)";
+
+  const std::string before =
+      R"(%main = OpFunction %void None %13
+%29 = OpLabel
+%s0 = OpVariable %_ptr_Function_S_t Function
+%param = OpVariable %_ptr_Function_S_t Function
+%30 = OpLoad %v2float %texCoords
+%31 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
+OpStore %31 %30
+%32 = OpLoad %19 %sampler15
+%33 = OpAccessChain %_ptr_Function_19 %s0 %int_2
+OpStore %33 %32
+%34 = OpLoad %S_t %s0
+OpStore %param %34
+%return_value = OpFunctionCall %void %foo_struct_S_t_vf2_vf21_ %param
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(%main = OpFunction %void None %13
+%29 = OpLabel
+%s0 = OpVariable %_ptr_Function_S_t Function
+%param = OpVariable %_ptr_Function_S_t Function
+%30 = OpLoad %v2float %texCoords
+%31 = OpAccessChain %_ptr_Function_v2float %s0 %int_0
+OpStore %31 %30
+%32 = OpLoad %19 %sampler15
+%33 = OpAccessChain %_ptr_Function_19 %s0 %int_2
+OpStore %33 %32
+%34 = OpLoad %S_t %s0
+OpStore %param %34
+%42 = OpAccessChain %_ptr_Function_19 %param %int_2
+%43 = OpLoad %19 %42
+%44 = OpAccessChain %_ptr_Function_v2float %param %int_0
+%45 = OpLoad %v2float %44
+%46 = OpImageSampleImplicitLod %v4float %43 %45
+OpStore %outColor %46
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string post_defs =
+      R"(%foo_struct_S_t_vf2_vf21_ = OpFunction %void None %21
+%s = OpFunctionParameter %_ptr_Function_S_t
+%35 = OpLabel
+%36 = OpAccessChain %_ptr_Function_19 %s %int_2
+%37 = OpLoad %19 %36
+%38 = OpAccessChain %_ptr_Function_v2float %s %int_0
+%39 = OpLoad %v2float %38
+%40 = OpImageSampleImplicitLod %v4float %37 %39
+OpStore %outColor %40
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<InlineOpaquePass>(
+      predefs_1 + name + predefs_2 + before + post_defs,
+      predefs_1 + predefs_2 + after + post_defs, true, true);
+}
+
 TEST_F(InlineOpaqueTest, InlineInNonEntryPointFunction) {
   // This demonstrates opaque inlining in a function that is not
   // an entry point function (main2) but is in the call tree of an

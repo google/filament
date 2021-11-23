@@ -30,6 +30,7 @@
 #include "sca/GLSLTools.h"
 
 #include <utils/Log.h>
+#include <filament/MaterialEnums.h>
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -120,10 +121,16 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
 
     CompilerMSL::Options mslOptions = {};
     mslOptions.platform = platform,
-    mslOptions.msl_version = CompilerMSL::Options::make_msl_version(1, 1);
+    mslOptions.msl_version = config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
+        CompilerMSL::Options::make_msl_version(2, 0) : CompilerMSL::Options::make_msl_version(2, 2);
 
-    if (config.shaderModel == filament::backend::ShaderModel::GL_ES_30) {
+    if (config.hasFramebufferFetch) {
         mslOptions.use_framebuffer_fetch_subpasses = true;
+        // On macOS, framebuffer fetch is only available starting with MSL 2.3. Filament will only
+        // use framebuffer fetch materials on devices that support it.
+        if (config.shaderModel == filament::backend::ShaderModel::GL_CORE_41) {
+            mslOptions.msl_version = CompilerMSL::Options::make_msl_version(2, 3);
+        }
     }
 
     mslCompiler.set_msl_options(mslOptions);
@@ -201,6 +208,12 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     if (!ok) {
         utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return false;
+    }
+
+    // add texture lod bias
+    if (config.shaderType == filament::backend::FRAGMENT &&
+        config.domain == filament::MaterialDomain::SURFACE) {
+        GLSLTools::textureLodBias(tShader);
     }
 
     program.addShader(&tShader);
@@ -343,6 +356,11 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
         CompilerGLSL glslCompiler(move(spirv));
         glslCompiler.set_common_options(glslOptions);
+
+        if (tShader.getStage() == EShLangFragment && !glslOptions.es) {
+            // enable GL_ARB_shading_language_packing if available
+            glslCompiler.add_header_line("#extension GL_ARB_shading_language_packing : enable");
+        }
 
         if (tShader.getStage() == EShLangFragment && glslOptions.es) {
             for (auto i : config.glsl.subpassInputToColorLocation) {

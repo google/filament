@@ -21,6 +21,7 @@
 #include <utils/Panic.h>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -407,4 +408,4 @@ private:
 
 } // namespace utils
 
-#endif //TNT_UTILS_FIXEDCAPACITYVECTOR_H
+#endif // TNT_UTILS_FIXEDCAPACITYVECTOR_H

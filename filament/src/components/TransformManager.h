@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_TRANSFORMMANAGER_H
-#define TNT_FILAMENT_DETAILS_TRANSFORMMANAGER_H
+#ifndef TNT_FILAMENT_COMPONENTS_TRANSFORMMANAGER_H
+#define TNT_FILAMENT_COMPONENTS_TRANSFORMMANAGER_H
 
 #include "upcast.h"
 
@@ -53,9 +53,17 @@ public:
         return Instance(mManager.getInstance(e));
     }
 
+    void setAccurateTranslationsEnabled(bool enable) noexcept;
+
+    bool isAccurateTranslationsEnabled() const noexcept {
+        return mAccurateTranslations;
+    }
+
     void create(utils::Entity entity);
 
     void create(utils::Entity entity, Instance parent, const math::mat4f& localTransform);
+
+    void create(utils::Entity entity, Instance parent, const math::mat4& localTransform);
 
     void destroy(utils::Entity e) noexcept;
 
@@ -83,12 +91,30 @@ public:
 
     void setTransform(Instance ci, const math::mat4f& model) noexcept;
 
+    void setTransform(Instance ci, const math::mat4& model) noexcept;
+
     const math::mat4f& getTransform(Instance ci) const noexcept {
         return mManager[ci].local;
     }
 
     const math::mat4f& getWorldTransform(Instance ci) const noexcept {
         return mManager[ci].world;
+    }
+
+    math::mat4 getTransformAccurate(Instance ci) const noexcept {
+        math::mat4f const& local = mManager[ci].local;
+        math::float3 localTranslationLo = mManager[ci].localTranslationLo;
+        math::mat4 r(local);
+        r[3].xyz += localTranslationLo;
+        return r;
+    }
+
+    math::mat4 getWorldTransformAccurate(Instance ci) const noexcept {
+        math::mat4f const& world = mManager[ci].world;
+        math::float3 worldTranslationLo = mManager[ci].worldTranslationLo;
+        math::mat4 r(world);
+        r[3].xyz += worldTranslationLo;
+        return r;
     }
 
 private:
@@ -100,13 +126,22 @@ private:
     void updateNodeTransform(Instance i) noexcept;
     void insertNode(Instance i, Instance p) noexcept;
     void swapNode(Instance i, Instance j) noexcept;
-    static void transformChildren(Sim& manager, Instance firstChild) noexcept;
+    void transformChildren(Sim& manager, Instance firstChild) noexcept;
+
+    void computeAllWorldTransforms() noexcept;
+
+    void computeWorldTransform(math::mat4f& outWorld, math::float3& inoutWorldTranslationLo,
+            math::mat4f const& pt, math::mat4f const& local,
+            math::float3 const& ptTranslationLo, math::float3 const& localTranslationLo,
+            bool accurate);
 
     friend class TransformManager::children_iterator;
 
     enum {
         LOCAL,          // local transform (relative to parent), world if no parent
         WORLD,          // world transform
+        LOCAL_LO,       // accurate local translation
+        WORLD_LO,       // accurate world translation
         PARENT,         // instance to the parent
         FIRST_CHILD,    // instance to our first child
         NEXT,           // instance to our next sibling
@@ -114,12 +149,14 @@ private:
     };
 
     using Base = utils::SingleInstanceComponentManager<
-            math::mat4f,
-            math::mat4f,
-            Instance,
-            Instance,
-            Instance,
-            Instance
+            math::mat4f,    // local
+            math::mat4f,    // world
+            math::float3,   // accurate local translation
+            math::float3,   // accurate world translation
+            Instance,       // parent
+            Instance,       // firstChild
+            Instance,       // next
+            Instance        // prev
     >;
 
     struct Sim : public Base {
@@ -138,6 +175,8 @@ private:
                 // this specific usage of union is permitted. All fields are identical
                 Field<LOCAL>        local;
                 Field<WORLD>        world;
+                Field<LOCAL_LO>     localTranslationLo;
+                Field<WORLD_LO>     worldTranslationLo;
                 Field<PARENT>       parent;
                 Field<FIRST_CHILD>  firstChild;
                 Field<NEXT>         next;
@@ -155,10 +194,11 @@ private:
 
     Sim mManager;
     bool mLocalTransformTransactionOpen = false;
+    bool mAccurateTranslations = false;
 };
 
 FILAMENT_UPCAST(TransformManager)
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_TRANSFORMMANAGER_H
+#endif // TNT_FILAMENT_COMPONENTS_TRANSFORMMANAGER_H

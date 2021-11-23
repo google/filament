@@ -33,6 +33,13 @@ using namespace filament::math;
 using namespace utils;
 using namespace backend;
 
+static void logCompilationError(utils::io::ostream& out,
+        backend::Program::Shader shaderType, const char* name,
+        GLuint shaderId, std::string_view source) noexcept;
+
+static void logProgramLinkError(utils::io::ostream& out,
+        const char* name, GLuint program) noexcept;
+
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
 
@@ -57,7 +64,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
         if (!shadersSource[i].empty()) {
             GLint status;
-            auto shader = shadersSource[i];
+            Program::ShaderBlob shader = shadersSource[i];
             std::string temp;
             std::string_view shaderView((const char*)shader.data(), shader.size());
 
@@ -81,8 +88,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
                 std::string unpackHalf2x16{ R"(
 
+// these don't handle denormals, NaNs or inf
 float u16tofp32(highp uint v) {
-    // this doesn't handle denormals, NaNs or inf
     v <<= 16u;
     highp uint s = v & 0x80000000u;
     highp uint n = v & 0x7FFFFFFFu;
@@ -92,9 +99,30 @@ float u16tofp32(highp uint v) {
 vec2 unpackHalf2x16(highp uint v) {
     return vec2(u16tofp32(v&0xFFFFu), u16tofp32(v>>16u));
 }
-
+uint fp32tou16(float val) {
+    uint f32 = floatBitsToUint(val);
+    uint f16 = 0u;
+    uint sign = (f32 >> 16) & 0x8000u;
+    int exponent = int((f32 >> 23) & 0xFFu) - 127;
+    uint mantissa = f32 & 0x007FFFFFu;
+    if (exponent > 15) {
+        f16 = sign | (0x1Fu << 10);
+    } else if (exponent > -15) {
+        exponent += 15;
+        mantissa >>= 13;
+        f16 = sign | uint(exponent << 10) | mantissa;
+    } else {
+        f16 = sign;
+    }
+    return f16;
+}
+highp uint packHalf2x16(vec2 v) {
+    highp uint x = fp32tou16(v.x);
+    highp uint y = fp32tou16(v.y);
+    return (y << 16) | x;
+}
 )"};
-                // a good point for insertion is just before the first occurence of an uniform block
+                // a good point for insertion is just before the first occurrence of an uniform block
                 auto pos = temp.find("layout(std140)");
                 if (pos != std::string_view::npos) {
                     temp.insert(pos, unpackHalf2x16);
@@ -102,17 +130,18 @@ vec2 unpackHalf2x16(highp uint v) {
                 shaderView = temp;
             }
 
-            const char * const source = shaderView.data();
-            GLint length = (GLint)shaderView.length();
-
             GLuint shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, 1, &source, &length);
-            glCompileShader(shaderId);
+            { // scope for source/length (we don't want them to leak out)
+                const char* const source = shaderView.data();
+                const GLint length = (GLint)shaderView.length();
+                glShaderSource(shaderId, 1, &source, &length);
+                glCompileShader(shaderId);
+            }
 
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
             if (UTILS_UNLIKELY(status != GL_TRUE)) {
                 logCompilationError(slog.e, type,
-                        programBuilder.getName().c_str_safe(), shaderId, source);
+                        programBuilder.getName().c_str_safe(), shaderId, shaderView);
                 glDeleteShader(shaderId);
                 return;
             }
@@ -294,8 +323,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) noexcept {
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shaderType,
-        const char* name, GLuint shaderId, char const* source) noexcept {
+void logCompilationError(io::ostream& out, Program::Shader shaderType,
+        const char* name, GLuint shaderId, std::string_view shader) noexcept {
 
     auto to_string = [](Program::Shader type) -> const char* {
         switch (type) {
@@ -312,23 +341,26 @@ void OpenGLProgram::logCompilationError(io::ostream& out, Program::Shader shader
         << io::endl;
 
     size_t lc = 1;
-    char* shader = strdup(source);
-    char* start = shader;
-    char* endl = strchr(start, '\n');
-
-    while (endl != nullptr) {
-        *endl = '\0';
-        out << lc++ << ":   ";
-        out << start << io::endl;
-        start = endl + 1;
-        endl = strchr(start, '\n');
+    size_t start = 0;
+    std::string line;
+    while (true) {
+        size_t end = shader.find('\n', start);
+        if (end == std::string::npos) {
+            line = shader.substr(start);
+        } else {
+            line = shader.substr(start, end - start);
+        }
+        out << lc++ << ":   "<< line.c_str() << '\n';
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
     }
-
-    free(shader);
+    out << io::endl;
 }
 
 UTILS_NOINLINE
-void OpenGLProgram::logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
+void logProgramLinkError(io::ostream& out, char const* name, GLuint program) noexcept {
     char error[1024];
     glGetProgramInfoLog(program, sizeof(error), nullptr, error);
 

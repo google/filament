@@ -28,11 +28,19 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, 
         : mBufferSize(size), mContext(context) {
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
-    const bool dynamicUsage = usage == BufferUsage::DYNAMIC || usage == BufferUsage::STREAM;
-    if (size <= 4 * 1024 && dynamicUsage && !forceGpuBuffer) {
-        mBufferPoolEntry = nullptr;
-        mCpuBuffer = malloc(size);
+    if (size <= 4 * 1024) {
+        // We'll take the same approach for STREAM buffers under 4K.
+        if (usage == BufferUsage::STREAM) {
+            usage = BufferUsage::DYNAMIC;
+        }
+
+        if (usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
+            mBufferPoolEntry = nullptr;
+            mCpuBuffer = malloc(size);
+        }
     }
+
+    mUsage = usage;
 }
 
 MetalBuffer::~MetalBuffer() {
@@ -54,6 +62,13 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
             "Attempting to copy %d bytes into a buffer of size %d at offset %d",
             size, mBufferSize, byteOffset);
 
+    if (mUsage == BufferUsage::STREAM) {
+        // byteOffset must be 0 for STREAM buffers.
+        assert_invariant(byteOffset == 0);
+        copyIntoStreamBuffer(src, size);
+        return;
+    }
+
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
         memcpy(static_cast<uint8_t*>(mCpuBuffer) + byteOffset, src, size);
@@ -68,6 +83,34 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
 
     mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
     memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + byteOffset, src, size);
+}
+
+void MetalBuffer::copyIntoStreamBuffer(void* src, size_t size) {
+    // Stream buffers are handled a bit differently. In STREAM mode, we have a single large buffer.
+    // At each update we "advance" into the buffer, keeping track of the where we're at, and bind
+    // the buffer at that location. Effectively, "byteOffset" is managed automatically.
+
+    assert_invariant(size <= mBufferSize);
+    assert_invariant(!mCpuBuffer);
+
+    mCurrentStreamStart = mCurrentStreamEnd;
+    mCurrentStreamEnd += size;
+
+    if (mCurrentStreamEnd > mBufferSize) {
+        // Allocate a new buffer and reset the stream offset.
+        mCurrentStreamStart = 0;
+        mCurrentStreamEnd = size;
+
+        if (mBufferPoolEntry) { mContext.bufferPool->releaseBuffer(mBufferPoolEntry); }
+        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
+    }
+
+    // Lazily acquire a new buffer if we haven't already.
+    if (!mBufferPoolEntry) {
+        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
+    }
+
+    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + mCurrentStreamStart, src, size);
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
@@ -121,7 +164,7 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
             continue;
         }
         metalBuffers[b] = gpuBuffer;
-        metalOffsets[b] = offsets[b];
+        metalOffsets[b] = offsets[b] + buffer->mCurrentStreamStart;
     }
 
     if (stages & Stage::VERTEX) {

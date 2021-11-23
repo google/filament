@@ -1,6 +1,8 @@
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: FilamentToolsPlugin
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'filament-tools-plugin'
+}
 
 project.ext.isSample = true
 
@@ -29,6 +31,12 @@ android {
     // but comes with certain restrictions. See "Filamat Lite" in libs/filamat/README.md.
     defaultConfig {
         missingDimensionStrategy 'functionality', 'full'
+    }
+
+    // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
+    //       is not configuration-cache friendly yet; this is only useful for Play publication
+    dependenciesInfo {
+        includeInApk = false
     }
 
     // We use the .filamat extension for materials compiled with matc

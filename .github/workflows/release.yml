@@ -1,14 +1,25 @@
 name: Release
 
 # This Workflow can be triggered two ways:
-# 1. A GitHub release is created (using the GitHub web UI). This triggers all of the platforms to build and upload assets.
-# 2. A repository_dispatch API event is sent. This triggers a build for only the platform specified in the dispatch event.
+# 1. A GitHub release is created (using the GitHub web UI). This triggers all of the platforms to
+# build and upload assets.
+# 2. A workflow_dispatch event is triggered from the GitHub web UI. This triggers a build for only
+# the platform specified in the dispatch event.
 
 env:
-  RELEASE_TAG: ${{ github.event.client_payload.release_tag }}
+  RELEASE_TAG: ${{ github.event.inputs.release_tag }}
 
 on:
-  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build (desktop, web, android, ios, windows)'
+        required: true
+        default: 'desktop'
+      release_tag:
+        description: 'Release tag to build (e.g., v1.13.0)'
+        required: true
+        default: 'v1.13.0'
   release:
     types: [created]
 
@@ -16,7 +27,7 @@ jobs:
   build-desktop:
     name: build-desktop
     runs-on: ${{ matrix.os }}
-    if: github.event_name == 'release' || github.event.client_payload.platform == 'desktop'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
 
     strategy:
       matrix:
@@ -51,7 +62,7 @@ jobs:
   build-web:
     name: build-web
     runs-on: macos-latest
-    if: github.event_name == 'release' || github.event.client_payload.platform == 'web'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
       - name: Decide Git ref
@@ -80,7 +91,7 @@ jobs:
   build-android:
     name: build-android
     runs-on: macos-latest
-    if: github.event_name == 'release' || github.event.client_payload.platform == 'android'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'android'
 
     steps:
       - name: Decide Git ref
@@ -129,7 +140,7 @@ jobs:
   build-ios:
     name: build-ios
     runs-on: macos-latest
-    if: github.event_name == 'release' || github.event.client_payload.platform == 'ios'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
 
     steps:
       - name: Decide Git ref
@@ -158,7 +169,7 @@ jobs:
   build-windows:
     name: build-windows
     runs-on: windows-latest
-    if: github.event_name == 'release' || github.event.client_payload.platform == 'windows'
+    if: github.event_name == 'release' || github.event.inputs.platform == 'windows'
 
     steps:
       - name: Decide Git ref

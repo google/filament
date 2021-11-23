@@ -16,9 +16,15 @@
 #include <vector>
 
 #include "spirv-tools/optimizer.hpp"
+#include "test/fuzzers/random_generator.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  spvtools::Optimizer optimizer(SPV_ENV_UNIVERSAL_1_3);
+  if (size < 1) {
+    return 0;
+  }
+
+  spvtools::fuzzers::RandomGenerator random_gen(data, size);
+  spvtools::Optimizer optimizer(random_gen.GetTargetEnv());
   optimizer.SetMessageConsumer([](spv_message_level_t, const char*,
                                   const spv_position_t&, const char*) {});
 

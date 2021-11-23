@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEINFO_H
 #define TNT_FILAMENT_FRAMEINFO_H
 
-#include "details/Engine.h"
-
 #include "backend/Handle.h"
+#include <private/backend/DriverApi.h>
 
 #include <array>
 #include <chrono>
@@ -30,38 +29,35 @@ namespace filament {
 class FEngine;
 
 struct FrameInfo {
-    using duration = std::chrono::duration<float>;
+    using duration = std::chrono::duration<float, std::milli>;
     duration frameTime{};            // frame period
     duration denoisedFrameTime{};    // frame period (median filter)
     bool valid = false;
-    float scale = 1.0f;
-    struct {
-        float integral{};
-        float error{};
-    } pid;
 };
 
 class FrameInfoManager {
-    static constexpr size_t POOL_COUNT = 8;
-    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+    static constexpr size_t POOL_COUNT = 4;
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 31u;
 
 public:
     using duration = FrameInfo::duration;
 
     struct Config {
-        duration targetFrameTime;
-        float headRoomRatio;
-        float oneOverTau;
         uint32_t historySize;
     };
 
-    explicit FrameInfoManager(FEngine& engine);
-    ~FrameInfoManager() noexcept;
-    void terminate();
-    void beginFrame(Config const& config, uint32_t frameId);  // call this immediately after "make current"
-    void endFrame(); // call this immediately before "swap buffers"
+    explicit FrameInfoManager(backend::DriverApi& driver) noexcept;
 
-    FrameInfo const& getLastFrameInfo() const {
+    ~FrameInfoManager() noexcept;
+    void terminate(backend::DriverApi& driver) noexcept;
+
+    // call this immediately after "make current"
+    void beginFrame(backend::DriverApi& driver, Config const& config, uint32_t frameId) noexcept;
+
+    // call this immediately before "swap buffers"
+    void endFrame(backend::DriverApi& driver) noexcept;
+
+    FrameInfo const& getLastFrameInfo() const noexcept {
         return mFrameTimeHistory[0];
     }
 
@@ -69,10 +65,8 @@ public:
         return getLastFrameInfo().frameTime;
     }
 
-
 private:
-    void update(Config const& config, duration lastFrameTime);
-    FEngine& mEngine;
+    void update(Config const& config, duration lastFrameTime) noexcept;
     backend::Handle<backend::HwTimerQuery> mQueries[POOL_COUNT];
     duration mFrameTime{};
     uint32_t mIndex = 0;

@@ -18,8 +18,9 @@
 
 #include <jni.h>
 
-#include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+
+#include <backend/CallbackHandler.h>
 
 #include <filament/Engine.h>
 
@@ -35,57 +36,49 @@ struct CallbackJni {
 void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils);
 void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler, jobject callback);
 
-struct JniBufferCallback {
+struct JniCallback : private filament::backend::CallbackHandler {
+    JniCallback(JniCallback const &) = delete;
+    JniCallback(JniCallback&&) = delete;
+
+    static JniCallback* make(JNIEnv* env, jobject handler, jobject runnable);
+
+    static void postToJavaAndDestroy(JniCallback* callback);
+
+    void post(void* user, Callback callback) override;
+
+    filament::backend::CallbackHandler* getHandler() noexcept { return this; }
+
+    jobject getCallbackObject() { return mCallback; }
+
+protected:
+    JniCallback(JNIEnv* env, jobject handler, jobject runnable);
+    virtual ~JniCallback();
+    jobject mHandler;
+    jobject mCallback;
+    CallbackJni mCallbackUtils;
+};
+
+
+struct JniBufferCallback : public JniCallback {
     static JniBufferCallback* make(filament::Engine* engine,
             JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
 
-    static void invoke(void* buffer, size_t n, void* user);
+    static void postToJavaAndDestroy(void*, size_t, void* user);
 
 private:
     JniBufferCallback(JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer);
-    JniBufferCallback(JniBufferCallback const &) = delete;
-    JniBufferCallback(JniBufferCallback&&) = delete;
-    ~JniBufferCallback();
-
-    JNIEnv* mEnv;
-    jobject mHandler;
-    jobject mCallback;
+    virtual ~JniBufferCallback();
     AutoBuffer mBuffer;
-    CallbackJni mCallbackUtils;
 };
 
-struct JniImageCallback {
+struct JniImageCallback : public JniCallback {
     static JniImageCallback* make(filament::Engine* engine, JNIEnv* env, jobject handler,
             jobject runnable, long image);
 
-    static void invoke(void* image, void* user);
+    static void postToJavaAndDestroy(void*, void* user);
 
 private:
     JniImageCallback(JNIEnv* env, jobject handler, jobject runnable, long image);
-    JniImageCallback(JniImageCallback const &) = delete;
-    JniImageCallback(JniImageCallback&&) = delete;
-    ~JniImageCallback();
-
-    JNIEnv* mEnv;
-    jobject mHandler;
-    jobject mCallback;
+    virtual ~JniImageCallback();
     long mImage;
-    CallbackJni mCallbackUtils;
-};
-
-struct JniCallback {
-    static JniCallback* make(JNIEnv* env, jobject handler, jobject runnable);
-
-    static void invoke(void* user);
-
-private:
-    JniCallback(JNIEnv* env, jobject handler, jobject runnable);
-    JniCallback(JniCallback const &) = delete;
-    JniCallback(JniCallback&&) = delete;
-    ~JniCallback();
-
-    JNIEnv* mEnv;
-    jobject mHandler;
-    jobject mCallback;
-    CallbackJni mCallbackUtils;
 };

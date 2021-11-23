@@ -12,6 +12,10 @@ material {
             precision: medium
         },
         {
+            type : float2,
+            name : lutSize
+        },
+        {
             type : sampler2d,
             name : bloomBuffer,
             precision: medium
@@ -75,8 +79,9 @@ fragment {
 
 #include "../../../../shaders/src/dithering.fs"
 #include "../../../../shaders/src/vignette.fs"
+#include "colorGrading.fs"
 
-void dummy(){ }
+void dummy(){}
 
 float starburst(const vec2 uv) {
     // get an offset that continuously moves with the camera
@@ -119,64 +124,52 @@ vec3 bloom(const vec3 color) {
     return result;
 }
 
-vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
-    // Alexa LogC EI 1000
-    const float a = 5.555556;
-    const float b = 0.047996;
-    const float c = 0.244161 / log2(10.0);
-    const float d = 0.386036;
-    vec3 logc = c * log2(a * x + b) + d;
-    return textureLod(lut, logc, 0.0).rgb;
-}
-
-vec3 resolveFragment(const ivec2 uv) {
-    return texelFetch(materialParams_colorBuffer, uv, 0).rgb;
-}
-
-vec4 resolveAlphaFragment(const ivec2 uv) {
-    return texelFetch(materialParams_colorBuffer, uv, 0);
-}
-
-vec4 resolve() {
+vec4 resolveFragment(const ivec2 uv) {
 #if POST_PROCESS_OPAQUE
-    vec4 color = vec4(resolveFragment(ivec2(getUV())), 1.0);
-    if (materialParams.bloom.x > 0.0) {
-        color.rgb = bloom(color.rgb);
-    }
-    if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
-        highp vec2 uv = getUV() * frameUniforms.resolution.zw;
-        color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
-    }
-    color.rgb  = colorGrade(materialParams_lut, color.rgb);
-    if (materialParams.fxaa > 0) {
-        color.a = luminance(color.rgb);
-    }
+    return vec4(texelFetch(materialParams_colorBuffer, uv, 0).rgb, 1.0);
 #else
-    vec4 color = resolveAlphaFragment(ivec2(getUV()));
-    color.rgb /= color.a + FLT_EPS;
-    if (materialParams.bloom.x > 0.0) {
-        color.rgb = bloom(color.rgb);
-    }
-    if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
-        highp vec2 uv = getUV() * frameUniforms.resolution.zw;
-        color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
-    }
-    color.rgb  = colorGrade(materialParams_lut, color.rgb);
-    color.rgb *= color.a + FLT_EPS;
-#endif
+    vec4 color = texelFetch(materialParams_colorBuffer, uv, 0);
+    color.rgb *= 1.0 / (color.a + FLT_EPS);
     return color;
+#endif
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
-    postProcess.color = resolve();
-    if (materialParams.dithering > 0) {
-        vec4 dithered = dither(postProcess.color, materialParams.temporalNoise);
-#if POST_PROCESS_OPAQUE
-        postProcess.color.rgb = dithered.rgb;
-#else
-        postProcess.color = dithered;
-#endif
+    vec4 color = resolveFragment(ivec2(getUV()));
+
+    // Bloom
+    if (materialParams.bloom.x > 0.0) {
+        color.rgb = bloom(color.rgb);
     }
+
+    // Vignette
+    if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
+        highp vec2 uv = getUV() * frameUniforms.resolution.zw;
+        color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
+    }
+
+    // Color grading
+    color.rgb  = colorGrade(materialParams_lut, color.rgb);
+
+    // output in premultiplied alpha
+#if !POST_PROCESS_OPAQUE
+    color.rgb *= color.a + FLT_EPS;
+#endif
+
+    // dithering
+    if (materialParams.dithering > 0) {
+        color = dither(color, materialParams.temporalNoise);
+    }
+
+    // kill alpha computations when opaque / fxaa luminance
+#if POST_PROCESS_OPAQUE
+    color.a = 1.0;
+    if (materialParams.fxaa > 0) {
+        color.a = luminance(color.rgb);
+    }
+#endif
+
+    postProcess.color = color;
 }
 
 }

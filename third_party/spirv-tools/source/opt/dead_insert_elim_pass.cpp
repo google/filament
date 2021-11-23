@@ -196,7 +196,7 @@ bool DeadInsertElimPass::EliminateDeadInsertsOnePass(Function* func) {
       }
       const uint32_t id = ii->result_id();
       get_def_use_mgr()->ForEachUser(id, [&ii, this](Instruction* user) {
-        if (user->IsOpenCL100DebugInstr()) return;
+        if (user->IsCommonDebugInstr()) return;
         switch (user->opcode()) {
           case SpvOpCompositeInsert:
           case SpvOpPhi:
@@ -256,7 +256,7 @@ Pass::Status DeadInsertElimPass::Process() {
   ProcessFunction pfn = [this](Function* fp) {
     return EliminateDeadInserts(fp);
   };
-  bool modified = context()->ProcessEntryPointCallTree(pfn);
+  bool modified = context()->ProcessReachableCallTree(pfn);
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_LINUX_CONDITION_H
-#define UTILS_LINUX_CONDITION_H
+#ifndef TNT_UTILS_LINUX_CONDITION_H
+#define TNT_UTILS_LINUX_CONDITION_H
 
 #include <atomic>
 #include <chrono>
@@ -120,4 +120,4 @@ private:
 
 } // namespace utils
 
-#endif // UTILS_LINUX_CONDITION_H
+#endif // TNT_UTILS_LINUX_CONDITION_H

@@ -222,6 +222,34 @@ inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     return format;
 }
 
+constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatR8Uint:
+        case MTLPixelFormatR8Sint:
+        case MTLPixelFormatR16Uint:
+        case MTLPixelFormatR16Sint:
+        case MTLPixelFormatRG8Uint:
+        case MTLPixelFormatRG8Sint:
+        case MTLPixelFormatR32Uint:
+        case MTLPixelFormatR32Sint:
+        case MTLPixelFormatRG16Uint:
+        case MTLPixelFormatRG16Sint:
+        case MTLPixelFormatRGBA8Uint:
+        case MTLPixelFormatRGBA8Sint:
+        case MTLPixelFormatRGB10A2Uint:
+        case MTLPixelFormatRG32Uint:
+        case MTLPixelFormatRG32Sint:
+        case MTLPixelFormatRGBA16Uint:
+        case MTLPixelFormatRGBA16Sint:
+        case MTLPixelFormatRGBA32Uint:
+        case MTLPixelFormatRGBA32Sint:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 constexpr inline MTLTextureType getMetalType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_2D:
@@ -350,7 +378,7 @@ constexpr inline MTLCompareFunction getCompareFunction(SamplerCompareFunc compar
     }
 }
 
-API_AVAILABLE(macos(10.15), ios(13.0))
+API_AVAILABLE(ios(13.0))
 constexpr inline MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
     switch (swizzle) {
         case TextureSwizzle::SUBSTITUTE_ZERO:
@@ -368,7 +396,7 @@ constexpr inline MTLTextureSwizzle getSwizzle(TextureSwizzle swizzle) {
     }
 }
 
-API_AVAILABLE(macos(10.15), ios(13.0))
+API_AVAILABLE(ios(13.0))
 inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
         TextureSwizzle a) {
     return MTLTextureSwizzleChannelsMake(getSwizzle(r), getSwizzle(g), getSwizzle(b),

@@ -204,6 +204,98 @@ OpFunctionEnd
                                            defs_after + func_after, true, true);
 }
 
+TEST_F(ConvertToHalfTest, ConvertToHalfForLinkage) {
+  const std::string before =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %type_cbuff "type.cbuff"
+OpMemberName %type_cbuff 0 "c"
+OpName %cbuff "cbuff"
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+OpDecorate %cbuff DescriptorSet 0
+OpDecorate %cbuff Binding 0
+OpMemberDecorate %type_cbuff 0 Offset 0
+OpDecorate %type_cbuff Block
+OpDecorate %18 RelaxedPrecision
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%type_cbuff = OpTypeStruct %float
+%_ptr_Uniform_type_cbuff = OpTypePointer Uniform %type_cbuff
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%9 = OpTypeFunction %v4float %_ptr_Function_v4float
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+%cbuff = OpVariable %_ptr_Uniform_type_cbuff Uniform
+%main = OpFunction %v4float None %9
+%BaseColor = OpFunctionParameter %_ptr_Function_v4float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%14 = OpLoad %v4float %BaseColor
+%16 = OpAccessChain %_ptr_Uniform_float %cbuff %int_0
+%17 = OpLoad %float %16
+%18 = OpVectorTimesScalar %v4float %14 %17
+OpStore %v %18
+%19 = OpLoad %v4float %v
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpCapability Float16
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %type_cbuff "type.cbuff"
+OpMemberName %type_cbuff 0 "c"
+OpName %cbuff "cbuff"
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+OpDecorate %cbuff DescriptorSet 0
+OpDecorate %cbuff Binding 0
+OpMemberDecorate %type_cbuff 0 Offset 0
+OpDecorate %type_cbuff Block
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%type_cbuff = OpTypeStruct %float
+%_ptr_Uniform_type_cbuff = OpTypePointer Uniform %type_cbuff
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%14 = OpTypeFunction %v4float %_ptr_Function_v4float
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+%cbuff = OpVariable %_ptr_Uniform_type_cbuff Uniform
+%half = OpTypeFloat 16
+%v4half = OpTypeVector %half 4
+%main = OpFunction %v4float None %14
+%BaseColor = OpFunctionParameter %_ptr_Function_v4float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%16 = OpLoad %v4float %BaseColor
+%17 = OpAccessChain %_ptr_Uniform_float %cbuff %int_0
+%18 = OpLoad %float %17
+%22 = OpFConvert %v4half %16
+%23 = OpFConvert %half %18
+%7 = OpVectorTimesScalar %v4half %22 %23
+%24 = OpFConvert %v4float %7
+OpStore %v %24
+%19 = OpLoad %v4float %v
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<ConvertToHalfPass>(before, after, true, true);
+}
 TEST_F(ConvertToHalfTest, ConvertToHalfWithDrefSample) {
   // The resulting SPIR-V was processed with --relax-float-ops.
   //
@@ -1388,6 +1480,87 @@ TEST_F(ConvertToHalfTest, RemoveRelaxDec) {
          %18 = OpLoad %v2float %v_texcoord
          %19 = OpImageSampleImplicitLod %v4float %14 %18
                OpStore %outFragColor %19
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  auto result = SinglePassRunAndMatch<ConvertToHalfPass>(test, true);
+  EXPECT_EQ(Pass::Status::SuccessWithChange, std::get<1>(result));
+}
+
+TEST_F(ConvertToHalfTest, HandleNonRelaxedPhi) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/4452
+
+  // This test is a case with a non-relaxed phi with a relaxed operand.
+  // A convert must be inserted at the end of the block associated with
+  // the operand.
+  const std::string test =
+      R"(
+; CHECK: [[fcvt:%\w+]] = OpFConvert %v3float {{%\w+}}
+; CHECK-NEXT: OpSelectionMerge {{%\w+}} None
+; CHECK: {{%\w+}} = OpPhi %v3float [[fcvt]] {{%\w+}} {{%\w+}} {{%\w+}}
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %output_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %MaterialParams "MaterialParams"
+               OpMemberName %MaterialParams 0 "foo"
+               OpName %materialParams "materialParams"
+               OpName %output_color "output_color"
+               OpMemberDecorate %MaterialParams 0 Offset 0
+               OpDecorate %MaterialParams Block
+               OpDecorate %materialParams DescriptorSet 0
+               OpDecorate %materialParams Binding 5
+               OpDecorate %output_color Location 0
+               OpDecorate %57 RelaxedPrecision
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%MaterialParams = OpTypeStruct %float
+%_ptr_Uniform_MaterialParams = OpTypePointer Uniform %MaterialParams
+%materialParams = OpVariable %_ptr_Uniform_MaterialParams Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%output_color = OpVariable %_ptr_Output_v4float Output
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Output_float = OpTypePointer Output %float
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+  %float_0_5 = OpConstant %float 0.5
+         %61 = OpConstantComposite %v3float %float_0_5 %float_0_5 %float_0_5
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %55 = OpAccessChain %_ptr_Uniform_float %materialParams %int_0
+         %56 = OpLoad %float %55
+         %57 = OpCompositeConstruct %v3float %56 %56 %56
+         %31 = OpFOrdGreaterThan %bool %56 %float_0
+               OpSelectionMerge %33 None
+               OpBranchConditional %31 %32 %33
+         %32 = OpLabel
+         %37 = OpFMul %v3float %57 %61
+               OpBranch %33
+         %33 = OpLabel
+         %58 = OpPhi %v3float %57 %5 %37 %32
+         %45 = OpAccessChain %_ptr_Output_float %output_color %uint_0
+         %46 = OpCompositeExtract %float %58 0
+               OpStore %45 %46
+         %48 = OpAccessChain %_ptr_Output_float %output_color %uint_1
+         %49 = OpCompositeExtract %float %58 1
+               OpStore %48 %49
+         %51 = OpAccessChain %_ptr_Output_float %output_color %uint_2
+         %52 = OpCompositeExtract %float %58 2
+               OpStore %51 %52
                OpReturn
                OpFunctionEnd
 )";

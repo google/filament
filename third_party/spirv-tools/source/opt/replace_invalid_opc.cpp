@@ -71,10 +71,10 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
   function->ForEachInst(
       [model, &modified, &last_line_dbg_inst, this](Instruction* inst) {
         // Track the debug information so we can have a meaningful message.
-        if (inst->opcode() == SpvOpLabel || inst->opcode() == SpvOpNoLine) {
+        if (inst->opcode() == SpvOpLabel || inst->IsNoLine()) {
           last_line_dbg_inst = nullptr;
           return;
-        } else if (inst->opcode() == SpvOpLine) {
+        } else if (inst->IsLine()) {
           last_line_dbg_inst = inst;
           return;
         }
@@ -100,8 +100,18 @@ bool ReplaceInvalidOpcodePass::RewriteFunction(Function* function,
             ReplaceInstruction(inst, nullptr, 0, 0);
           } else {
             // Get the name of the source file.
-            Instruction* file_name = context()->get_def_use_mgr()->GetDef(
-                last_line_dbg_inst->GetSingleWordInOperand(0));
+            uint32_t file_name_id = 0;
+            if (last_line_dbg_inst->opcode() == SpvOpLine) {
+              file_name_id = last_line_dbg_inst->GetSingleWordInOperand(0);
+            } else {  // Shader100::DebugLine
+              uint32_t debug_source_id =
+                  last_line_dbg_inst->GetSingleWordInOperand(2);
+              Instruction* debug_source_inst =
+                  context()->get_def_use_mgr()->GetDef(debug_source_id);
+              file_name_id = debug_source_inst->GetSingleWordInOperand(2);
+            }
+            Instruction* file_name =
+                context()->get_def_use_mgr()->GetDef(file_name_id);
             const char* source = reinterpret_cast<const char*>(
                 &file_name->GetInOperand(0).words[0]);
 

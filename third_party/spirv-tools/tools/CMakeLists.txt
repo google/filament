@@ -48,6 +48,7 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
     add_spvtools_tool(TARGET spirv-reduce SRCS reduce/reduce.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-reduce ${SPIRV_TOOLS_FULL_VISIBILITY})
   endif()
   add_spvtools_tool(TARGET spirv-link SRCS link/linker.cpp LIBS SPIRV-Tools-link ${SPIRV_TOOLS_FULL_VISIBILITY})
+  add_spvtools_tool(TARGET spirv-lint SRCS lint/lint.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-lint SPIRV-Tools-opt ${SPIRV_TOOLS_FULL_VISIBILITY})
   add_spvtools_tool(TARGET spirv-cfg
                     SRCS cfg/cfg.cpp
                          cfg/bin_to_dot.h
@@ -56,7 +57,7 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
   target_include_directories(spirv-cfg PRIVATE ${spirv-tools_SOURCE_DIR}
                                                ${SPIRV_HEADER_INCLUDE_DIR})
   set(SPIRV_INSTALL_TARGETS spirv-as spirv-dis spirv-val spirv-opt
-                            spirv-cfg spirv-link)
+                            spirv-cfg spirv-link spirv-lint)
   if(NOT DEFINED IOS_PLATFORM)
     set(SPIRV_INSTALL_TARGETS ${SPIRV_INSTALL_TARGETS} spirv-reduce)
   endif()

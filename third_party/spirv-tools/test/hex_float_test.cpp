@@ -1325,6 +1325,76 @@ TEST(FloatProxy, Lowest) {
               Eq(std::numeric_limits<double>::lowest()));
 }
 
+template <typename T>
+struct StreamParseCase {
+  StreamParseCase(const std::string& lit, bool succ, const std::string& suffix,
+                  T value)
+      : literal(lit),
+        expect_success(succ),
+        expected_suffix(suffix),
+        expected_value(HexFloat<FloatProxy<T>>(value)) {}
+
+  std::string literal;
+  bool expect_success;
+  std::string expected_suffix;
+  HexFloat<FloatProxy<T>> expected_value;
+};
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const StreamParseCase<T>& fspc) {
+  os << "StreamParseCase(" << fspc.literal
+     << ", expect_succes:" << int(fspc.expect_success) << ","
+     << fspc.expected_suffix << "," << fspc.expected_value << ")";
+  return os;
+}
+
+using FloatStreamParseTest = ::testing::TestWithParam<StreamParseCase<float>>;
+
+TEST_P(FloatStreamParseTest, Samples) {
+  std::stringstream input(GetParam().literal);
+  HexFloat<FloatProxy<float>> parsed_value(0.0f);
+  // Hex floats must be read with the stream input operator.
+  input >> parsed_value;
+  if (GetParam().expect_success) {
+    EXPECT_FALSE(input.fail());
+    std::string suffix;
+    input >> suffix;
+    // EXPECT_EQ(suffix, GetParam().expected_suffix);
+    EXPECT_EQ(parsed_value.value().getAsFloat(),
+              GetParam().expected_value.value().getAsFloat());
+  } else {
+    EXPECT_TRUE(input.fail());
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloatExponentMissingDigits, FloatStreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        {"0x1.0p1", true, "", 2.0f},
+        {"0x1.0p1a", true, "a", 2.0f},
+        {"-0x1.0p1f", true, "f", -2.0f},
+        {"0x1.0p", false, "", 0.0f},
+        {"0x1.0pa", false, "", 0.0f},
+        {"0x1.0p!", false, "", 0.0f},
+        {"0x1.0p+", false, "", 0.0f},
+        {"0x1.0p+a", false, "", 0.0f},
+        {"0x1.0p+!", false, "", 0.0f},
+        {"0x1.0p-", false, "", 0.0f},
+        {"0x1.0p-a", false, "", 0.0f},
+        {"0x1.0p-!", false, "", 0.0f},
+        {"0x1.0p++", false, "", 0.0f},
+        {"0x1.0p+-", false, "", 0.0f},
+        {"0x1.0p-+", false, "", 0.0f},
+        {"0x1.0p--", false, "", 0.0f}}));
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloatExponentTrailingSign, FloatStreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        // Don't consume a sign after the binary exponent digits.
+        {"0x1.0p1", true, "", 2.0f},
+        {"0x1.0p1+", true, "+", 2.0f},
+        {"0x1.0p1-", true, "-", 2.0f}}));
+
 // TODO(awoloszyn): Add fp16 tests and HexFloatTraits.
 }  // namespace
 }  // namespace utils

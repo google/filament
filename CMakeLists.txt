@@ -131,27 +131,35 @@ if (WIN32)
     # __declspec(dllexport) in front of each functions).
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+    # The CMAKE_CXX_FLAGS vars can be overriden by some Visual Studio generators, so we use an alternative
+    # global method here:
     if (${USE_STATIC_CRT})
-        set(CRT_FLAGS_RELEASE "/MT")
-        set(CRT_FLAGS_DEBUG "/MTd")
+        add_compile_options(
+            $<$<CONFIG:>:/MT>
+            $<$<CONFIG:Debug>:/MTd>
+            $<$<CONFIG:Release>:/MT>
+        )
     else()
-        set(CRT_FLAGS_RELEASE "/MD")
-        set(CRT_FLAGS_DEBUG "/MDd")
+        add_compile_options(
+            $<$<CONFIG:>:/MD>
+            $<$<CONFIG:Debug>:/MDd>
+            $<$<CONFIG:Release>:/MD>
+        )
     endif()
 
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
 
     # In RELEASE, also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7")
 
     # Special settings when building on CI.
     if (${FILAMENT_WINDOWS_CI_BUILD})
@@ -494,11 +502,15 @@ function(list_licenses OUTPUT MODULES)
     foreach(module ${_MODULES})
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
-        string(APPEND CONTENT "${STR_OPENER}License and copyrights for ${module}:\n${STR_CLOSER},\n")
-        file(READ ${license_path} license_long)
-        string(REPLACE "\n" "${STR_CLOSER},\n${STR_OPENER}" license ${license_long})
-        string(APPEND CONTENT ${STR_OPENER}${license}\n${STR_CLOSER},)
-        string(APPEND CONTENT "\n\n")
+        if(EXISTS ${fullname})
+            string(APPEND CONTENT "${STR_OPENER}License and copyrights for ${module}:\n${STR_CLOSER},\n")
+            file(READ ${license_path} license_long)
+            string(REPLACE "\n" "${STR_CLOSER},\n${STR_OPENER}" license ${license_long})
+            string(APPEND CONTENT ${STR_OPENER}${license}\n${STR_CLOSER},)
+            string(APPEND CONTENT "\n\n")
+        else()
+            message(AUTHOR_WARNING "${license_path} not found. You can ignore this warning if you have devendored ${module}.")
+        endif()
     endforeach()
     configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
 endfunction(list_licenses)
@@ -514,7 +526,12 @@ function(combine_static_libs TARGET OUTPUT DEPS)
     # Loop through the dependent libraries and query their location on disk.
     set(DEPS_FILES )
     foreach(DEPENDENCY ${DEPS})
-        list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+        if(TARGET ${DEPENDENCY})
+            get_property(dep_type TARGET ${DEPENDENCY} PROPERTY TYPE)
+            if(dep_type STREQUAL "STATIC_LIBRARY")
+                list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+            endif()
+        endif()
     endforeach()
 
     add_custom_command(
@@ -683,6 +700,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/mipgen)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/resgen)
+    add_subdirectory(${TOOLS}/rgb-to-lmsr)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
 endif()

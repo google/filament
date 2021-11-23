@@ -211,8 +211,10 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         ImGui::PopStyleColor();
 
         ImGui::Checkbox("Luminance scaling", &colorGrading.luminanceScaling);
+        ImGui::Checkbox("Gamut mapping", &colorGrading.gamutMapping);
 
         ImGui::SliderFloat("Exposure", &colorGrading.exposure, -10.0f, 10.0f);
+        ImGui::SliderFloat("Night adaptation", &colorGrading.nightAdaptation, 0.0f, 1.0f);
 
         if (ImGui::CollapsingHeader("White balance")) {
             int temperature = colorGrading.temperature * 100.0f;
@@ -369,7 +371,7 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     mSettings.view.vsmShadowOptions.anisotropy = 0;
     mSettings.view.dithering = Dithering::TEMPORAL;
     mSettings.view.antiAliasing = AntiAliasing::FXAA;
-    mSettings.view.sampleCount = 4;
+    mSettings.view.msaa = { .enabled = true, .sampleCount = 4 };
     mSettings.view.ssao.enabled = true;
     mSettings.view.bloom.enabled = true;
 
@@ -379,9 +381,9 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
         .intensity(mSettings.lighting.sunlightIntensity)
         .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
-        .sunAngularRadius(1.9)
-        .sunHaloSize(10.0)
-        .sunHaloFalloff(80.0)
+        .sunAngularRadius(1.0f)
+        .sunHaloSize(2.0f)
+        .sunHaloFalloff(80.0f)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
@@ -686,9 +688,10 @@ void SimpleViewer::updateUserInterface() {
             enableFxaa(fxaa);
         ImGui::Unindent();
 
-        bool msaa = mSettings.view.sampleCount != 1;
-        ImGui::Checkbox("MSAA 4x", &msaa);
-        enableMsaa(msaa);
+        ImGui::Checkbox("MSAA 4x", &mSettings.view.msaa.enabled);
+        ImGui::Indent();
+            ImGui::Checkbox("Custom resolve", &mSettings.view.msaa.customResolve);
+        ImGui::Unindent();
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
         if (ImGui::CollapsingHeader("SSAO Options")) {
@@ -698,11 +701,16 @@ void SimpleViewer::updateUserInterface() {
             int lowpass = (int) ssao.lowPassFilter;
             bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
 
+            bool halfRes = ssao.resolution == 1.0f ? false : true;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
             ImGui::Checkbox("High quality upsampling", &upsampling);
             ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+            ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
+            ImGui::Checkbox("Half resolution", &halfRes);
+            ssao.resolution = halfRes ? 0.5f : 1.0f;
+
 
             ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
             ssao.lowPassFilter = (View::QualityLevel) lowpass;
@@ -723,6 +731,21 @@ void SimpleViewer::updateUserInterface() {
             }
         }
         ImGui::Unindent();
+    }
+
+    if (ImGui::CollapsingHeader("Dynamic Resolution")) {
+        auto& dsr = mSettings.view.dsr;
+        int quality = (int)dsr.quality;
+        ImGui::Checkbox("enabled", &dsr.enabled);
+        ImGui::Checkbox("homogeneous", &dsr.homogeneousScaling);
+        ImGui::SliderFloat("min. scale", &dsr.minScale.x, 0.25f, 1.0f);
+        ImGui::SliderFloat("max. scale", &dsr.maxScale.x, 0.25f, 1.0f);
+        ImGui::SliderInt("quality", &quality, 0, 3);
+        ImGui::SliderFloat("sharpness", &dsr.sharpness, 0.0f, 1.0f);
+        dsr.minScale.x = std::min(dsr.minScale.x, dsr.maxScale.x);
+        dsr.minScale.y = dsr.minScale.x;
+        dsr.maxScale.y = dsr.maxScale.x;
+        dsr.quality = (QualityLevel)quality;
     }
 
     auto& light = mSettings.lighting;

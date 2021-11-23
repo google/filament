@@ -32,6 +32,10 @@
 <td align="left">Low level buffer wrapper.</td>
 </tr>
 <tr>
+<td align="left"><a href="#BufferObject">BufferObject</a></td>
+<td align="left">Represents a single GPU buffer.</td>
+</tr>
+<tr>
 <td align="left"><a href="#Camera">Camera</a></td>
 <td align="left">Represents the eye through which the scene is viewed.</td>
 </tr>
@@ -174,6 +178,10 @@
 </thead>
 <tbody>
 <tr>
+<td align="left"><a href="#BufferObject%24BindingType">BufferObject$BindingType</a></td>
+<td align="left"></td>
+</tr>
+<tr>
 <td align="left"><a href="#Camera%24Fov">Camera$Fov</a></td>
 <td align="left"></td>
 </tr>
@@ -187,6 +195,14 @@
 </tr>
 <tr>
 <td align="left"><a href="#ColorGrading%24ToneMapping">ColorGrading$ToneMapping</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#CompareFunc">CompareFunc</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#CompareMode">CompareMode</a></td>
 <td align="left"></td>
 </tr>
 <tr>
@@ -282,6 +298,10 @@
 <td align="left"></td>
 </tr>
 <tr>
+<td align="left"><a href="#View%24DepthOfFieldOptions%24Filter">View$DepthOfFieldOptions$Filter</a></td>
+<td align="left"></td>
+</tr>
+<tr>
 <td align="left"><a href="#View%24QualityLevel">View$QualityLevel</a></td>
 <td align="left"></td>
 </tr>
@@ -304,6 +324,19 @@
 </li>
 </ul>
 <p>Clients should use the <a href="#Buffer">Buffer</a> helper function to contruct BufferDescriptor objects.</p>
+</div>
+<div class='classdoc'>
+<h2>class <a id='BufferObject' href='#BufferObject'>BufferObject</a></h2>
+<p>Represents a single GPU buffer.</p>
+<ul>
+<li><strong>bufferObject.setBuffer(engine, buffer, byteOffset)</strong>
+<ul>
+<li><em>engine</em> <a href="#Engine">Engine</a></li>
+<li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
+<li><em>byteOffset</em> non-negative integer</li>
+</ul>
+</li>
+</ul>
 </div>
 <div class='classdoc'>
 <h2>class <a id='Camera' href='#Camera'>Camera</a></h2>
@@ -490,6 +523,7 @@
 <li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
 </ul>
 </li>
+<li><strong>engine.getEntityManager()</strong></li>
 <li><strong>engine.getLightManager()</strong>
 <ul>
 <li><em>returns</em> an instance of <a href="#LightManager">LightManager</a></li>
@@ -536,7 +570,7 @@
 </li>
 <li><strong>engine.setDepthOfFieldOptions(overrides)</strong>
 <ul>
-<li><em>overrides</em> Dictionary with one or more of the following properties: focusDistance, cocScale, maxApertureDiameter, enabled.</li>
+<li><em>overrides</em> Dictionary with one or more of the following properties: cocScale, maxApertureDiameter, enabled.</li>
 </ul>
 </li>
 <li><strong>engine.setFogOptions(overrides)</strong>
@@ -1016,6 +1050,12 @@ This defines the following functions:</p>
 </ul>
 </div>
 <div class='enumdoc'>
+<h2>enum <a id='BufferObject$BindingType' href='#BufferObject$BindingType'>BufferObject$BindingType</a></h2>
+<ul>
+<li>VERTEX</li>
+</ul>
+</div>
+<div class='enumdoc'>
 <h2>enum <a id='Camera$Fov' href='#Camera$Fov'>Camera$Fov</a></h2>
 <ul>
 <li>VERTICAL</li>
@@ -1045,9 +1085,27 @@ This defines the following functions:</p>
 <li>ACES_LEGACY</li>
 <li>ACES</li>
 <li>FILMIC</li>
-<li>UCHIMURA</li>
-<li>REINHARD</li>
 <li>DISPLAY_RANGE</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='CompareFunc' href='#CompareFunc'>CompareFunc</a></h2>
+<ul>
+<li>LESS_EQUAL</li>
+<li>GREATER_EQUAL</li>
+<li>LESS</li>
+<li>GREATER</li>
+<li>EQUAL</li>
+<li>NOT_EQUAL</li>
+<li>ALWAYS</li>
+<li>NEVER</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='CompareMode' href='#CompareMode'>CompareMode</a></h2>
+<ul>
+<li>NONE</li>
+<li>COMPARE_TO_TEXTURE</li>
 </ul>
 </div>
 <div class='enumdoc'>
@@ -1186,6 +1244,10 @@ This defines the following functions:</p>
 <div class='enumdoc'>
 <h2>enum <a id='RenderTarget$AttachmentPoint' href='#RenderTarget$AttachmentPoint'>RenderTarget$AttachmentPoint</a></h2>
 <ul>
+<li>COLOR0</li>
+<li>COLOR1</li>
+<li>COLOR2</li>
+<li>COLOR3</li>
 <li>COLOR</li>
 <li>DEPTH</li>
 </ul>
@@ -1433,6 +1495,13 @@ This defines the following functions:</p>
 <ul>
 <li>ADD</li>
 <li>INTERPOLATE</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='View$DepthOfFieldOptions$Filter' href='#View$DepthOfFieldOptions$Filter'>View$DepthOfFieldOptions$Filter</a></h2>
+<ul>
+<li>NONE</li>
+<li>MEDIAN</li>
 </ul>
 </div>
 <div class='enumdoc'>

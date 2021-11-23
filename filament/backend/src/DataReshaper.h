@@ -17,7 +17,10 @@
 #ifndef TNT_FILAMENT_DRIVER_DATARESHAPER_H
 #define TNT_FILAMENT_DRIVER_DATARESHAPER_H
 
+#include <backend/PixelBufferDescriptor.h>
+
 #include <stddef.h>
+#include <stdint.h>
 
 #include <math/scalar.h>
 
@@ -80,7 +83,13 @@ public:
             dstComponentType* out = (dstComponentType*) dest;
             for (size_t column = 0; column < width; ++column) {
                 for (size_t channel = 0; channel < minChannelCount; ++channel) {
-                    out[channel] = in[inds[channel]] * dstMaxValue / srcMaxValue;
+                    if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
+                        out[channel] = in[inds[channel]];
+                    } else {
+                        // TODO: beware of overflows in the multiply
+                        // TODO: probably not correct for _INTEGER src/dst
+                        out[channel] = in[inds[channel]] * dstMaxValue / srcMaxValue;
+                    }
                 }
                 for (size_t channel = srcChannelCount; channel < dstChannelCount; ++channel) {
                     out[channel] = dstMaxValue;
@@ -99,6 +108,12 @@ public:
             bool flip) {
         size_t dstChannelCount;
         switch (dst->format) {
+            case PixelDataFormat::R_INTEGER: dstChannelCount = 1; break;
+            case PixelDataFormat::RG_INTEGER: dstChannelCount = 2; break;
+            case PixelDataFormat::RGB_INTEGER: dstChannelCount = 3; break;
+            case PixelDataFormat::RGBA_INTEGER: dstChannelCount = 4; break;
+            case PixelDataFormat::R: dstChannelCount = 1; break;
+            case PixelDataFormat::RG: dstChannelCount = 2; break;
             case PixelDataFormat::RGB: dstChannelCount = 3; break;
             case PixelDataFormat::RGBA: dstChannelCount = 4; break;
             default: return false;

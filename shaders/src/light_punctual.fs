@@ -30,8 +30,9 @@ uvec3 getFroxelCoords(const highp vec3 fragCoords) {
     froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.resolution.xy *
             vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
-    // go from screen-space (non-inverted) Z to normalized view-space Z (i.e. scaled by 1/zLightFar)
-    // (see Froxelizer.cpp)
+    // go from screen-space to reciprocal of normalized view-space Z (i.e. scaled by 1/zLightFar)
+    // we get away with the reciprocal because 1/z is handled by the log2() below.
+    // see Froxelizer.cpp
     highp float viewSpaceNormalizedZ = frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y;
 
     // frameUniforms.zParams.w is actually the number of z-slices, make sure it's mediump
@@ -109,7 +110,7 @@ float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
     return attenuation * 1.0 / max(distanceSquare, 1e-4);
 }
 
-float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOffset) {
+float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const highp vec2 scaleOffset) {
     float cd = dot(lightDir, l);
     float attenuation = saturate(cd * scaleOffset.x + scaleOffset.y);
     return attenuation * attenuation;
@@ -131,26 +132,23 @@ Light getLight(const uint index) {
     highp mat4 data = lightsUniforms.lights[lightIndex];
 
     highp vec4 positionFalloff = data[0];
-    vec4 color = vec4(
-        unpackHalf2x16(floatBitsToUint(data[1][0])),
-        unpackHalf2x16(floatBitsToUint(data[1][1]))
+    highp vec3 direction = data[1].xyz;
+    vec4 colorIES = vec4(
+        unpackHalf2x16(floatBitsToUint(data[2][0])),
+        unpackHalf2x16(floatBitsToUint(data[2][1]))
     );
-    vec4 directionIES = vec4(
-        unpackHalf2x16(floatBitsToUint(data[1][2])),
-        unpackHalf2x16(floatBitsToUint(data[1][3]))
-    );
-    vec2 scaleOffset = unpackHalf2x16(floatBitsToUint(data[2][0]));
-    highp float intensity = data[2][1];
-    highp uint typeShadow = floatBitsToUint(data[2][2]);
-    highp uint channels = floatBitsToUint(data[2][3]);
+    highp vec2 scaleOffset = data[2].zw;
+    highp float intensity = data[3][1];
+    highp uint typeShadow = floatBitsToUint(data[3][2]);
+    highp uint channels = floatBitsToUint(data[3][3]);
 
     // poition-to-light vector
-    highp vec3 worldPosition = vertex_worldPosition;
+    highp vec3 worldPosition = vertex_worldPosition.xyz;
     highp vec3 posToLight = positionFalloff.xyz - worldPosition;
 
     // and populate the Light structure
     Light light;
-    light.colorIntensity.rgb = color.rgb;
+    light.colorIntensity.rgb = colorIES.rgb;
     light.colorIntensity.w = computePreExposedIntensity(intensity, frameUniforms.exposure);
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
@@ -164,7 +162,7 @@ Light getLight(const uint index) {
 
     uint type = typeShadow & 0x1u;
     if (type == LIGHT_TYPE_SPOT) {
-        light.attenuation *= getAngleAttenuation(-directionIES.xyz, light.l, scaleOffset);
+        light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
         light.contactShadows = bool(typeShadow & 0x10u);
         light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
         light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
@@ -184,7 +182,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     // Fetch the light information stored in the froxel that contains the
     // current fragment
-    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord()));
+    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord2()));
 
     // Each froxel contains how many lights can influence
     // the current fragment. A froxel also contains a record offset that
@@ -213,8 +211,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                visibility = shadow(light_shadowMap, light.shadowLayer,
-                    getSpotLightSpacePosition(light.shadowIndex));
+                visibility = shadow(false, light_shadowMap, light.shadowLayer, light.shadowIndex, 0u);
             }
             if (light.contactShadows && visibility > 0.0) {
                 if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {

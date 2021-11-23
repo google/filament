@@ -26,6 +26,7 @@ namespace {
 TEST(TransformationStoreTest, BasicTest) {
   std::string shader = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main" %92 %52 %53
@@ -50,7 +51,6 @@ TEST(TransformationStoreTest, BasicTest) {
          %34 = OpTypeBool
          %35 = OpConstantFalse %34
          %60 = OpConstantNull %50
-         %61 = OpUndef %51
          %52 = OpVariable %50 Private
          %53 = OpVariable %51 Private
          %80 = OpConstantComposite %8 %21 %24
@@ -148,90 +148,107 @@ TEST(TransformationStoreTest, BasicTest) {
   //  61 - undefined
 
   // Bad: attempt to store to 11 from outside its function
-  ASSERT_FALSE(TransformationStore(
-                   11, 80, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(11, false, 0, 0, 80,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer is not available
-  ASSERT_FALSE(TransformationStore(
-                   81, 80, MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(81, false, 0, 0, 80,
+                          MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to insert before OpVariable
-  ASSERT_FALSE(TransformationStore(
-                   52, 24, MakeInstructionDescriptor(27, SpvOpVariable, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(52, false, 0, 0, 24,
+                          MakeInstructionDescriptor(27, SpvOpVariable, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id does not exist
-  ASSERT_FALSE(TransformationStore(
-                   1000, 24, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(1000, false, 0, 0, 24,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id exists but does not have a type
-  ASSERT_FALSE(TransformationStore(
-                   5, 24, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(5, false, 0, 0, 24,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id exists and has a type, but is not a pointer
-  ASSERT_FALSE(TransformationStore(
-                   24, 24, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(24, false, 0, 0, 24,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to a null pointer
-  ASSERT_FALSE(TransformationStore(
-                   60, 24, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(60, false, 0, 0, 24,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to an undefined pointer
-  ASSERT_FALSE(TransformationStore(
-                   61, 21, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(61, false, 0, 0, 21,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: %82 is not available at the program point
   ASSERT_FALSE(
-      TransformationStore(82, 80, MakeInstructionDescriptor(37, SpvOpReturn, 0))
+      TransformationStore(82, false, 0, 0, 80,
+                          MakeInstructionDescriptor(37, SpvOpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id does not exist
-  ASSERT_FALSE(TransformationStore(
-                   27, 1000, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(27, false, 0, 0, 1000,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id exists but does not have a type
-  ASSERT_FALSE(TransformationStore(
-                   27, 15, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(27, false, 0, 0, 15,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id exists but has the wrong type
-  ASSERT_FALSE(TransformationStore(
-                   27, 14, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(27, false, 0, 0, 14,
+                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to read-only variable
-  ASSERT_FALSE(TransformationStore(
-                   92, 93, MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(92, false, 0, 0, 93,
+                          MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: value is not available
-  ASSERT_FALSE(TransformationStore(
-                   27, 95, MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(27, false, 0, 0, 95,
+                          MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: variable being stored to does not have an irrelevant pointee value,
   // and the store is not in a dead block.
-  ASSERT_FALSE(TransformationStore(
-                   20, 95, MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(20, false, 0, 0, 95,
+                          MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // The described instruction does not exist.
-  ASSERT_FALSE(TransformationStore(
-                   27, 80, MakeInstructionDescriptor(1000, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationStore(27, false, 0, 0, 80,
+                          MakeInstructionDescriptor(1000, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   {
     // Store to irrelevant variable from dead block.
     TransformationStore transformation(
-        27, 80, MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
+        27, false, 0, 0, 80,
+        MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -243,7 +260,8 @@ TEST(TransformationStoreTest, BasicTest) {
   {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
-        11, 95, MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        11, false, 0, 0, 95,
+        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -255,7 +273,8 @@ TEST(TransformationStoreTest, BasicTest) {
   {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
-        46, 80, MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        46, false, 0, 0, 80,
+        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -267,7 +286,8 @@ TEST(TransformationStoreTest, BasicTest) {
   {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
-        16, 21, MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        16, false, 0, 0, 21,
+        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -279,7 +299,8 @@ TEST(TransformationStoreTest, BasicTest) {
   {
     // Store to non-irrelevant variable from dead block.
     TransformationStore transformation(
-        53, 21, MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
+        53, false, 0, 0, 21,
+        MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -290,6 +311,7 @@ TEST(TransformationStoreTest, BasicTest) {
 
   std::string after_transformation = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main" %92 %52 %53
@@ -314,7 +336,6 @@ TEST(TransformationStoreTest, BasicTest) {
          %34 = OpTypeBool
          %35 = OpConstantFalse %34
          %60 = OpConstantNull %50
-         %61 = OpUndef %51
          %52 = OpVariable %50 Private
          %53 = OpVariable %51 Private
          %80 = OpConstantComposite %8 %21 %24
@@ -414,14 +435,188 @@ TEST(TransformationStoreTest, DoNotAllowStoresToReadOnlyMemory) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(5);
 
   ASSERT_FALSE(
-      TransformationStore(15, 13, MakeInstructionDescriptor(27, SpvOpReturn, 0))
+      TransformationStore(15, false, 0, 0, 13,
+                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
-      TransformationStore(19, 50, MakeInstructionDescriptor(27, SpvOpReturn, 0))
+      TransformationStore(19, false, 0, 0, 50,
+                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
-      TransformationStore(27, 50, MakeInstructionDescriptor(27, SpvOpReturn, 0))
+      TransformationStore(27, false, 0, 0, 50,
+                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
+}
+
+TEST(TransformationStoreTest, SupportAtomicStore) {
+  const std::string shader = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypeInt 8 1
+          %9 = OpTypeInt 32 0
+         %26 = OpTypeFloat 32
+          %8 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %8
+         %11 = OpVariable %10 StorageBuffer
+         %19 = OpConstant %26 0
+         %18 = OpConstant %9 1
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 4
+         %16 = OpConstant %6 7
+         %17 = OpConstant %7 4
+         %20 = OpConstant %9 64
+         %21 = OpConstant %6 15
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %14 = OpAccessChain %13 %11 %12
+         %24 = OpAccessChain %13 %11 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  transformation_context.GetFactManager()->AddFactValueOfPointeeIsIrrelevant(
+      14);
+
+  // Bad: id 100 of memory scope instruction does not exist.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 100, 20, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: id 100 of memory semantics instruction does not exist.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 100, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: memory scope should be |OpConstant| opcode.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 5, 20, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: memory semantics should be |OpConstant| opcode.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 5, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: The memory scope instruction must have an Integer operand.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 19, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: The memory memory semantics instruction must have an Integer operand.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 19, 20, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Integer size of the memory scope must be equal to 32 bits.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 17, 20, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Integer size of memory semantics must be equal to 32 bits.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 17, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: memory scope value must be 4 (SpvScopeInvocation).
+  ASSERT_FALSE(
+      TransformationStore(14, true, 16, 20, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: memory semantics value must be either:
+  // 64 (SpvMemorySemanticsUniformMemoryMask)
+  // 256 (SpvMemorySemanticsWorkgroupMemoryMask)
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 16, 21,
+                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: The described instruction does not exist
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 20, 21,
+                          MakeInstructionDescriptor(150, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Can't insert OpAccessChain before the id 15 of memory scope.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 20, 21,
+                          MakeInstructionDescriptor(15, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Can't insert OpAccessChain before the id 20 of memory semantics.
+  ASSERT_FALSE(
+      TransformationStore(14, true, 15, 20, 21,
+                          MakeInstructionDescriptor(20, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Successful transformations.
+  {
+    TransformationStore transformation(
+        14, true, 15, 20, 21, MakeInstructionDescriptor(24, SpvOpReturn, 0));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+  }
+
+  const std::string after_transformation = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypeInt 8 1
+          %9 = OpTypeInt 32 0
+         %26 = OpTypeFloat 32
+          %8 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %8
+         %11 = OpVariable %10 StorageBuffer
+         %19 = OpConstant %26 0
+         %18 = OpConstant %9 1
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 4
+         %16 = OpConstant %6 7
+         %17 = OpConstant %7 4
+         %20 = OpConstant %9 64
+         %21 = OpConstant %6 15
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %14 = OpAccessChain %13 %11 %12
+         %24 = OpAccessChain %13 %11 %12
+               OpAtomicStore %14 %15 %20 %21
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
 }
 
 }  // namespace

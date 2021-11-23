@@ -16,16 +16,18 @@
 
 //! \file
 
-#ifndef TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
-#define TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
+#ifndef TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
+#define TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
+
+class CallbackHandler;
 
 /**
  * A CPU memory-buffer descriptor, typically used to transfer data from the CPU to the GPU.
@@ -53,8 +55,8 @@ public:
 
     //! calls the callback to advertise BufferDescriptor no-longer owns the buffer
     ~BufferDescriptor() noexcept {
-        if (callback) {
-            callback(buffer, size, user);
+        if (mCallback) {
+            mCallback(buffer, size, mUser);
         }
     }
 
@@ -62,19 +64,21 @@ public:
     BufferDescriptor& operator=(const BufferDescriptor& rhs) = delete;
 
     BufferDescriptor(BufferDescriptor&& rhs) noexcept
-        : buffer(rhs.buffer), size(rhs.size), callback(rhs.callback), user(rhs.user) {
+        : buffer(rhs.buffer), size(rhs.size),
+          mCallback(rhs.mCallback), mUser(rhs.mUser), mHandler(rhs.mHandler) {
             rhs.buffer = nullptr;
-            rhs.callback = nullptr;
+            rhs.mCallback = nullptr;
     }
 
     BufferDescriptor& operator=(BufferDescriptor&& rhs) noexcept {
         if (this != &rhs) {
             buffer = rhs.buffer;
             size = rhs.size;
-            callback = rhs.callback;
-            user = rhs.user;
+            mCallback = rhs.mCallback;
+            mUser = rhs.mUser;
+            mHandler = rhs.mHandler;
             rhs.buffer = nullptr;
-            rhs.callback = nullptr;
+            rhs.mCallback = nullptr;
         }
         return *this;
     }
@@ -88,8 +92,73 @@ public:
      */
     BufferDescriptor(void const* buffer, size_t size,
             Callback callback = nullptr, void* user = nullptr) noexcept
-                : buffer(const_cast<void*>(buffer)), size(size), callback(callback), user(user) {
+                : buffer(const_cast<void*>(buffer)), size(size), mCallback(callback), mUser(user) {
     }
+
+    /**
+     * Creates a BufferDescriptor that references a CPU memory-buffer
+     * @param buffer    Memory address of the CPU buffer to reference
+     * @param size      Size of the CPU buffer in bytes
+     * @param callback  A callback used to release the CPU buffer from this BufferDescriptor
+     * @param user      An opaque user pointer passed to the callback function when it's called
+     */
+    BufferDescriptor(void const* buffer, size_t size,
+            CallbackHandler* handler, Callback callback, void* user = nullptr) noexcept
+                : buffer(const_cast<void*>(buffer)), size(size),
+                mCallback(callback), mUser(user), mHandler(handler) {
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    /**
+     * Helper to create a BufferDescriptor that uses a KNOWN method pointer w/ object passed
+     * by pointer as the callback. e.g.:
+     *     auto bd = BufferDescriptor::make(buffer, size, &Foo::method, foo);
+     *
+     * @param buffer    Memory address of the CPU buffer to reference
+     * @param size      Size of the CPU buffer in bytes
+     * @param handler   Handler to use to dispatch the callback, or nullptr for the default handler
+     * @return          a new BufferDescriptor
+     */
+    template<typename T, void(T::*method)(void const*, size_t)>
+    static BufferDescriptor make(
+            void const* buffer, size_t size, T* data, CallbackHandler* handler = nullptr) noexcept {
+        return {
+                buffer, size,
+                handler, [](void* b, size_t s, void* u) {
+                    (*static_cast<T**>(u)->*method)(b, s);
+                }, data
+        };
+    }
+
+    /**
+     * Helper to create a BufferDescriptor that uses a functor as the callback.
+     *
+     * Caveats:
+     *      - DO NOT CALL setCallback() when using this helper.
+     *      - This make a heap allocation
+     *
+     * @param buffer    Memory address of the CPU buffer to reference
+     * @param size      Size of the CPU buffer in bytes
+     * @param functor   functor of type f(void const* buffer, size_t size)
+     * @param handler   Handler to use to dispatch the callback, or nullptr for the default handler
+     * @return          a new BufferDescriptor
+     */
+    template<typename T>
+    static BufferDescriptor make(
+            void const* buffer, size_t size, T&& functor, CallbackHandler* handler = nullptr) noexcept {
+        return {
+                buffer, size,
+                handler, [](void* b, size_t s, void* u) {
+                    T& that = *static_cast<T*>(u);
+                    that(b, s);
+                    delete &that;
+                },
+                new T(std::forward<T>(functor))
+        };
+    }
+
+    // --------------------------------------------------------------------------------------------
 
     /**
      * Set or replace the release callback function
@@ -97,21 +166,39 @@ public:
      * @param user      An opaque user pointer passed to the callbeck function when it's called
      */
     void setCallback(Callback callback, void* user = nullptr) noexcept {
-        this->callback = callback;
-        this->user = user;
+        this->mCallback = callback;
+        this->mUser = user;
+        this->mHandler = nullptr;
+    }
+
+    /**
+     * Set or replace the release callback function
+     * @param handler   The Handler to use to dispatch the callback
+     * @param callback  The new callback function
+     * @param user      An opaque user pointer passed to the callbeck function when it's called
+     */
+    void setCallback(CallbackHandler* handler, Callback callback, void* user = nullptr) noexcept {
+        mCallback = callback;
+        mUser = user;
+        mHandler = handler;
     }
 
     //! Returns whether a release callback is set
-    bool hasCallback() const noexcept { return callback != nullptr; }
+    bool hasCallback() const noexcept { return mCallback != nullptr; }
 
     //! Returns the currently set release callback function
     Callback getCallback() const noexcept {
-        return callback;
+        return mCallback;
+    }
+
+    //! Returns the handler for this callback or nullptr if the default handler is to be used.
+    CallbackHandler* getHandler() const noexcept {
+        return mHandler;
     }
 
     //! Returns the user opaque pointer associated to this BufferDescriptor
     void* getUser() const noexcept {
-        return user;
+        return mUser;
     }
 
     //! CPU mempry-buffer virtual address
@@ -122,11 +209,15 @@ public:
 
 private:
     // callback when the buffer is consumed.
-    Callback callback = nullptr;
-    void* user = nullptr;
+    Callback mCallback = nullptr;
+    void* mUser = nullptr;
+    CallbackHandler* mHandler = nullptr;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::BufferDescriptor& b);
+#endif
+
+#endif // TNT_FILAMENT_BACKEND_BUFFERDESCRIPTOR_H
