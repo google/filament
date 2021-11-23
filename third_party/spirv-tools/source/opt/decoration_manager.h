@@ -90,6 +90,10 @@ class DecorationManager {
   bool AreDecorationsTheSame(const Instruction* inst1, const Instruction* inst2,
                              bool ignore_target) const;
 
+  // Returns whether a decoration instruction for |id| with decoration
+  // |decoration| exists or not.
+  bool HasDecoration(uint32_t id, uint32_t decoration);
+
   // |f| is run on each decoration instruction for |id| with decoration
   // |decoration|. Processed are all decorations which target |id| either
   // directly or indirectly by Decoration Groups.

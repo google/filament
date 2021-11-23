@@ -308,6 +308,9 @@ int Function::GetBlockDepth(BasicBlock* bb) {
   if (block_depth_.find(bb) != block_depth_.end()) {
     return block_depth_[bb];
   }
+  // Avoid recursion. Something is wrong if the same block is encountered
+  // multiple times.
+  block_depth_[bb] = 0;
 
   BasicBlock* bb_dom = bb->immediate_dominator();
   if (!bb_dom || bb == bb_dom) {

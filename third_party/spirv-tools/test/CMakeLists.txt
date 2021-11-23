@@ -186,9 +186,11 @@ endif()
 
 
 add_subdirectory(link)
+add_subdirectory(lint)
 add_subdirectory(opt)
 add_subdirectory(reduce)
 add_subdirectory(fuzz)
 add_subdirectory(tools)
 add_subdirectory(util)
 add_subdirectory(val)
+add_subdirectory(fuzzers)

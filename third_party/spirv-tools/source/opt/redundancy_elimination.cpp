@@ -24,6 +24,10 @@ Pass::Status RedundancyEliminationPass::Process() {
   ValueNumberTable vnTable(context());
 
   for (auto& func : *get_module()) {
+    if (func.IsDeclaration()) {
+      continue;
+    }
+
     // Build the dominator tree for this function. It is how the code is
     // traversed.
     DominatorTree& dom_tree =

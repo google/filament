@@ -23,10 +23,11 @@ namespace fuzz {
 // A fuzzer pass for adding dead continue edges to the module.
 class FuzzerPassAddDeadContinues : public FuzzerPass {
  public:
-  FuzzerPassAddDeadContinues(
-      opt::IRContext* ir_context, TransformationContext* transformation_context,
-      FuzzerContext* fuzzer_context,
-      protobufs::TransformationSequence* transformations);
+  FuzzerPassAddDeadContinues(opt::IRContext* ir_context,
+                             TransformationContext* transformation_context,
+                             FuzzerContext* fuzzer_context,
+                             protobufs::TransformationSequence* transformations,
+                             bool ignore_inapplicable_transformations);
 
   void Apply() override;
 };

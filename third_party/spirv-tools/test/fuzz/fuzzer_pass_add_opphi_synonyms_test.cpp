@@ -134,7 +134,7 @@ TEST(FuzzerPassAddOpPhiSynonymsTest, HelperFunctions) {
 
   FuzzerPassAddOpPhiSynonyms fuzzer_pass(context.get(), &transformation_context,
                                          &fuzzer_context,
-                                         &transformation_sequence);
+                                         &transformation_sequence, false);
 
   SetUpIdSynonyms(transformation_context.GetFactManager());
 

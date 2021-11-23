@@ -41,6 +41,7 @@ TEST_COPTS = COMMON_COPTS + select({
 
 DEBUGINFO_GRAMMAR_JSON_FILE = "@spirv_headers//:spirv_ext_inst_debuginfo_grammar_unified1"
 CLDEBUGINFO100_GRAMMAR_JSON_FILE = "@spirv_headers//:spirv_ext_inst_opencl_debuginfo_100_grammar_unified1"
+SHDEBUGINFO100_GRAMMAR_JSON_FILE = "@spirv_headers//:spirv_ext_inst_nonsemantic_shader_debuginfo_100_grammar_unified1"
 
 def generate_core_tables(version = None):
     if not version:
@@ -195,6 +196,23 @@ def base_test(name, srcs, deps = []):
         size = "large",
         deps = [
             ":test_common",
+            "@com_google_googletest//:gtest_main",
+            "@com_google_googletest//:gtest",
+            "@com_google_effcee//:effcee",
+        ] + deps,
+    )
+
+def lint_test(name, srcs, deps = []):
+    if name[-5:] != "_test":
+        name = name + "_test"
+    native.cc_test(
+        name = "lint_" + name,
+        srcs = srcs,
+        compatible_with = [],
+        copts = TEST_COPTS,
+        size = "large",
+        deps = [
+            ":spirv_tools_lint",
             "@com_google_googletest//:gtest_main",
             "@com_google_googletest//:gtest",
             "@com_google_effcee//:effcee",

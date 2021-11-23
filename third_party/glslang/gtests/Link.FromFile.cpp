@@ -106,6 +106,8 @@ INSTANTIATE_TEST_SUITE_P(
         {"link.multiAnonBlocksValid.0.0.vert", "link.multiAnonBlocksValid.0.1.vert"},
         {"link.multiBlocksInvalid.0.0.vert", "link.multiBlocksInvalid.0.1.vert"},
         {"link.multiBlocksValid.1.0.vert", "link.multiBlocksValid.1.1.vert"},
+        {"link.tesselation.vert", "link.tesselation.frag"},
+        {"link.tesselation.tese", "link.tesselation.tesc"},
     }))
 );
 // clang-format on

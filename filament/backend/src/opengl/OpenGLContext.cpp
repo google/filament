@@ -89,11 +89,10 @@ OpenGLContext::OpenGLContext() noexcept {
         bugs.dont_use_timer_query = true;
 
         // Blits to texture arrays are failing
-        //   This bug doesn't happen anymore, but we don't know why. The standalone sample
-        //   app that was written to show this problem still does. We have tested this on
-        //   several V@0490.0 on several devices and the problem appears to have gone away.
+        //   This bug continues to reproduce, though at times we've seen it appear to "go away". The
+        //   standalone sample app that was written to show this problem still reproduces.
         //   The working hypthesis is that some other state affects this behavior.
-        bugs.disable_sidecar_blit_into_texture_array = false;
+        bugs.disable_sidecar_blit_into_texture_array = true;
 
         // early exit condition is flattened in EASU code
         bugs.split_easu = true;

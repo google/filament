@@ -16,11 +16,10 @@ void main() {
     // Run initMaterialVertex to compute material.worldPosition.
     MaterialVertexInputs material;
     initMaterialVertex(material);
-#endif
-
     // materialVertex() is guaranteed to be empty here, but we keep it to workaround some problem
     // in NVIDA drivers related to depth invariance.
     materialVertex(material);
+#endif
 
 #else // defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 
@@ -113,7 +112,7 @@ void main() {
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePositionDirectional(
+    vertex_lightSpacePosition = computeLightSpacePosition(
             vertex_worldPosition.xyz, vertex_worldNormal,
             frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif

@@ -90,6 +90,63 @@ OpFunctionEnd
                                         true);
 }
 
+TEST_F(BlockMergeTest, BlockMergeForLinkage) {
+  const std::string before =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%8 = OpTypeFunction %v4float %_ptr_Function_v4float
+%main = OpFunction %v4float None %8
+%BaseColor = OpFunctionParameter %_ptr_Function_v4float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%9 = OpLoad %v4float %BaseColor
+OpStore %v %9
+OpBranch %10
+%10 = OpLabel
+%11 = OpLoad %v4float %v
+OpBranch %12
+%12 = OpLabel
+OpReturnValue %11
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %BaseColor "BaseColor"
+OpName %bb_entry "bb.entry"
+OpName %v "v"
+OpDecorate %main LinkageAttributes "main" Export
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%8 = OpTypeFunction %v4float %_ptr_Function_v4float
+%main = OpFunction %v4float None %8
+%BaseColor = OpFunctionParameter %_ptr_Function_v4float
+%bb_entry = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%9 = OpLoad %v4float %BaseColor
+OpStore %v %9
+%11 = OpLoad %v4float %v
+OpReturnValue %11
+OpFunctionEnd
+)";
+  SinglePassRunAndCheck<BlockMergePass>(before, after, true, true);
+}
+
 TEST_F(BlockMergeTest, EmptyBlock) {
   // Note: SPIR-V hand edited to insert empty block
   // after two statements in main.
@@ -1036,6 +1093,112 @@ OpFunctionEnd
 )";
 
   SinglePassRunAndCheck<BlockMergePass>(spirv, spirv, true, true);
+}
+
+TEST_F(BlockMergeTest, DebugMerge) {
+  // Verify merge can be done completely, cleanly and validly in presence of
+  // NonSemantic.Shader.DebugInfo.100 instructions
+  const std::string text = R"(
+; CHECK: OpLoopMerge
+; CHECK-NEXT: OpBranch
+; CHECK-NOT: OpBranch
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_COLOR %out_var_SV_TARGET
+OpExecutionMode %main OriginUpperLeft
+%5 = OpString "lexblock.hlsl"
+%20 = OpString "float"
+%32 = OpString "main"
+%33 = OpString ""
+%46 = OpString "b"
+%49 = OpString "a"
+%58 = OpString "c"
+%63 = OpString "color"
+OpName %in_var_COLOR "in.var.COLOR"
+OpName %out_var_SV_TARGET "out.var.SV_TARGET"
+OpName %main "main"
+OpDecorate %in_var_COLOR Location 0
+OpDecorate %out_var_SV_TARGET Location 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%v4float = OpTypeVector %float 4
+%9 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+%float_1 = OpConstant %float 1
+%13 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+%uint = OpTypeInt 32 0
+%uint_32 = OpConstant %uint 32
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%uint_3 = OpConstant %uint 3
+%uint_0 = OpConstant %uint 0
+%uint_4 = OpConstant %uint 4
+%uint_1 = OpConstant %uint 1
+%uint_5 = OpConstant %uint 5
+%uint_12 = OpConstant %uint 12
+%uint_13 = OpConstant %uint 13
+%uint_20 = OpConstant %uint 20
+%uint_15 = OpConstant %uint 15
+%uint_17 = OpConstant %uint 17
+%uint_16 = OpConstant %uint 16
+%uint_14 = OpConstant %uint 14
+%uint_10 = OpConstant %uint 10
+%65 = OpTypeFunction %void
+%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_TARGET = OpVariable %_ptr_Output_v4float Output
+%62 = OpExtInst %void %1 DebugExpression
+%22 = OpExtInst %void %1 DebugTypeBasic %20 %uint_32 %uint_3 %uint_0
+%25 = OpExtInst %void %1 DebugTypeVector %22 %uint_4
+%27 = OpExtInst %void %1 DebugTypeFunction %uint_3 %25 %25
+%28 = OpExtInst %void %1 DebugSource %5
+%29 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %28 %uint_5
+%34 = OpExtInst %void %1 DebugFunction %32 %27 %28 %uint_12 %uint_1 %29 %33 %uint_3 %uint_13
+%37 = OpExtInst %void %1 DebugLexicalBlock %28 %uint_13 %uint_1 %34
+%52 = OpExtInst %void %1 DebugLexicalBlock %28 %uint_15 %uint_12 %37
+%54 = OpExtInst %void %1 DebugLocalVariable %46 %25 %28 %uint_17 %uint_12 %52 %uint_4
+%56 = OpExtInst %void %1 DebugLocalVariable %49 %25 %28 %uint_16 %uint_12 %52 %uint_4
+%59 = OpExtInst %void %1 DebugLocalVariable %58 %25 %28 %uint_14 %uint_10 %37 %uint_4
+%64 = OpExtInst %void %1 DebugLocalVariable %63 %25 %28 %uint_12 %uint_20 %34 %uint_4 %uint_1
+%main = OpFunction %void None %65
+%66 = OpLabel
+%69 = OpLoad %v4float %in_var_COLOR
+%168 = OpExtInst %void %1 DebugValue %64 %69 %62
+%169 = OpExtInst %void %1 DebugScope %37
+OpLine %5 14 10
+%164 = OpExtInst %void %1 DebugValue %59 %9 %62
+OpLine %5 15 3
+OpBranch %150
+%150 = OpLabel
+%165 = OpPhi %v4float %9 %66 %158 %159
+%167 = OpExtInst %void %1 DebugValue %59 %165 %62
+%170 = OpExtInst %void %1 DebugScope %37
+OpLine %5 15 12
+%171 = OpExtInst %void %1 DebugNoScope
+OpLoopMerge %160 %159 None
+OpBranch %151
+%151 = OpLabel
+OpLine %5 16 12
+%162 = OpExtInst %void %1 DebugValue %56 %9 %62
+OpLine %5 17 12
+%163 = OpExtInst %void %1 DebugValue %54 %13 %62
+OpLine %5 18 15
+%158 = OpFAdd %v4float %165 %13
+OpLine %5 18 5
+%166 = OpExtInst %void %1 DebugValue %59 %158 %62
+%172 = OpExtInst %void %1 DebugScope %37
+OpLine %5 19 3
+OpBranch %159
+%159 = OpLabel
+OpLine %5 19 3
+OpBranch %150
+%160 = OpLabel
+OpUnreachable
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<BlockMergePass>(text, true);
 }
 
 // TODO(greg-lunarg): Add tests to verify handling of these cases:

@@ -25,10 +25,11 @@ namespace fuzz {
 // synonymous with the others.
 class FuzzerPassAddOpPhiSynonyms : public FuzzerPass {
  public:
-  FuzzerPassAddOpPhiSynonyms(
-      opt::IRContext* ir_context, TransformationContext* transformation_context,
-      FuzzerContext* fuzzer_context,
-      protobufs::TransformationSequence* transformations);
+  FuzzerPassAddOpPhiSynonyms(opt::IRContext* ir_context,
+                             TransformationContext* transformation_context,
+                             FuzzerContext* fuzzer_context,
+                             protobufs::TransformationSequence* transformations,
+                             bool ignore_inapplicable_transformations);
 
   void Apply() override;
 

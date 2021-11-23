@@ -50,7 +50,7 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
   // OpSampledImage and OpImage must remain in the same basic block in which
   // they are used, because of this we will assign each one it own value number.
   if (!context()->IsCombinatorInstruction(inst) &&
-      !inst->IsOpenCL100DebugInstr()) {
+      !inst->IsCommonDebugInstr()) {
     value = TakeNextValueNumber();
     id_to_value_[inst->result_id()] = value;
     return value;

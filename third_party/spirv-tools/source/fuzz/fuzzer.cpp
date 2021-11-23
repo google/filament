@@ -90,6 +90,7 @@
 #include "source/fuzz/fuzzer_pass_swap_functions.h"
 #include "source/fuzz/fuzzer_pass_toggle_access_chain_instruction.h"
 #include "source/fuzz/fuzzer_pass_wrap_regions_in_selections.h"
+#include "source/fuzz/fuzzer_pass_wrap_vector_synonym.h"
 #include "source/fuzz/pass_management/repeated_pass_manager.h"
 #include "source/fuzz/pass_management/repeated_pass_recommender_standard.h"
 #include "source/fuzz/protobufs/spirvfuzz_protobufs.h"
@@ -109,7 +110,8 @@ Fuzzer::Fuzzer(std::unique_ptr<opt::IRContext> ir_context,
                bool enable_all_passes,
                RepeatedPassStrategy repeated_pass_strategy,
                bool validate_after_each_fuzzer_pass,
-               spv_validator_options validator_options)
+               spv_validator_options validator_options,
+               bool ignore_inapplicable_transformations /* = true */)
     : consumer_(std::move(consumer)),
       enable_all_passes_(enable_all_passes),
       validate_after_each_fuzzer_pass_(validate_after_each_fuzzer_pass),
@@ -123,7 +125,9 @@ Fuzzer::Fuzzer(std::unique_ptr<opt::IRContext> ir_context,
       pass_instances_(),
       repeated_pass_recommender_(nullptr),
       repeated_pass_manager_(nullptr),
-      final_passes_() {
+      final_passes_(),
+      ignore_inapplicable_transformations_(
+          ignore_inapplicable_transformations) {
   assert(ir_context_ && "IRContext is not initialized");
   assert(fuzzer_context_ && "FuzzerContext is not initialized");
   assert(transformation_context_ && "TransformationContext is not initialized");
@@ -214,6 +218,7 @@ Fuzzer::Fuzzer(std::unique_ptr<opt::IRContext> ir_context,
     MaybeAddRepeatedPass<FuzzerPassSwapBranchConditionalOperands>(
         &pass_instances_);
     MaybeAddRepeatedPass<FuzzerPassWrapRegionsInSelections>(&pass_instances_);
+    MaybeAddRepeatedPass<FuzzerPassWrapVectorSynonym>(&pass_instances_);
     // There is a theoretical possibility that no pass instances were created
     // until now; loop again if so.
   } while (pass_instances_.GetPasses().empty());
@@ -255,7 +260,8 @@ void Fuzzer::MaybeAddRepeatedPass(uint32_t percentage_chance_of_adding_pass,
       fuzzer_context_->ChoosePercentage(percentage_chance_of_adding_pass)) {
     pass_instances->SetPass(MakeUnique<FuzzerPassT>(
         ir_context_.get(), transformation_context_.get(), fuzzer_context_.get(),
-        &transformation_sequence_out_, std::forward<Args>(extra_args)...));
+        &transformation_sequence_out_, ignore_inapplicable_transformations_,
+        std::forward<Args>(extra_args)...));
   }
 }
 
@@ -265,7 +271,8 @@ void Fuzzer::MaybeAddFinalPass(std::vector<std::unique_ptr<FuzzerPass>>* passes,
   if (enable_all_passes_ || fuzzer_context_->ChooseEven()) {
     passes->push_back(MakeUnique<FuzzerPassT>(
         ir_context_.get(), transformation_context_.get(), fuzzer_context_.get(),
-        &transformation_sequence_out_, std::forward<Args>(extra_args)...));
+        &transformation_sequence_out_, ignore_inapplicable_transformations_,
+        std::forward<Args>(extra_args)...));
   }
 }
 

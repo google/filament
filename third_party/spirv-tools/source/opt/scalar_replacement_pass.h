@@ -142,6 +142,9 @@ class ScalarReplacementPass : public Pass {
   // of |inst| and the store is not to volatile memory.
   bool CheckStore(const Instruction* inst, uint32_t index) const;
 
+  // Returns true if the DebugDeclare can be scalarized at |index|.
+  bool CheckDebugDeclare(uint32_t index) const;
+
   // Returns true if |index| is the pointer operand of an OpImageTexelPointer
   // instruction.
   bool CheckImageTexelPointer(uint32_t index) const;

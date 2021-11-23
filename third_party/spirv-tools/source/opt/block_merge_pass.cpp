@@ -44,7 +44,7 @@ bool BlockMergePass::MergeBlocks(Function* func) {
 Pass::Status BlockMergePass::Process() {
   // Process all entry point functions.
   ProcessFunction pfn = [this](Function* fp) { return MergeBlocks(fp); };
-  bool modified = context()->ProcessEntryPointCallTree(pfn);
+  bool modified = context()->ProcessReachableCallTree(pfn);
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 

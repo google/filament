@@ -35,14 +35,14 @@ if(WIN32)
     add_subdirectory(OSDependent/Windows)
 elseif(UNIX OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
     add_subdirectory(OSDependent/Unix)
-else(WIN32)
+else()
     message("unknown platform")
-endif(WIN32)
+endif()
 
 if(EMSCRIPTEN OR ENABLE_GLSLANG_JS)
     # May be enabled on non-Emscripten builds for binary-size testing.
     add_subdirectory(OSDependent/Web)
-endif(EMSCRIPTEN OR ENABLE_GLSLANG_JS)
+endif()
 
 ################################################################################
 # GenericCodeGen
@@ -129,7 +129,7 @@ if(ENABLE_HLSL)
         HLSL/hlslTokenStream.h
         HLSL/hlslGrammar.h
         HLSL/hlslParseables.h)
-endif(ENABLE_HLSL)
+endif()
 
 add_library(MachineIndependent STATIC ${MACHINEINDEPENDENT_SOURCES} ${MACHINEINDEPENDENT_HEADERS})
 set_property(TARGET MachineIndependent PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -194,7 +194,7 @@ if(WIN32)
     source_group("MachineIndependent\\Preprocessor" REGULAR_EXPRESSION "MachineIndependent/preprocessor/*")
     source_group("HLSL" REGULAR_EXPRESSION "HLSL/*")
     source_group("CInterface" REGULAR_EXPRESSION "CInterface/*")
-endif(WIN32)
+endif()
 
 ################################################################################
 # install
@@ -225,4 +225,4 @@ if(ENABLE_GLSLANG_INSTALL)
 
     install(FILES ${GLSLANG_BUILD_INFO_H} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/glslang)
 
-endif(ENABLE_GLSLANG_INSTALL)
+endif()

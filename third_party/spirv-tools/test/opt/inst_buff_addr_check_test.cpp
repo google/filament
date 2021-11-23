@@ -615,6 +615,212 @@ OpFunctionEnd
       true, 7u, 23u);
 }
 
+TEST_F(InstBuffAddrTest, StructLoad) {
+  // #version 450
+  //   #extension GL_EXT_buffer_reference : enable
+  //   #extension GL_ARB_gpu_shader_int64 : enable
+  //   struct Test {
+  //   float a;
+  // };
+  //
+  // layout(buffer_reference, std430, buffer_reference_align = 16) buffer
+  // TestBuffer { Test test; };
+  //
+  // Test GetTest(uint64_t ptr) {
+  //   return TestBuffer(ptr).test;
+  // }
+  //
+  // void main() {
+  //   GetTest(0xe0000000);
+  // }
+
+  const std::string defs =
+      R"(
+OpCapability Shader
+OpCapability Int64
+OpCapability PhysicalStorageBufferAddresses
+; CHECK: OpExtension "SPV_KHR_storage_buffer_storage_class"
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel PhysicalStorageBuffer64 GLSL450
+OpEntryPoint Fragment %main "main"
+; CHECK: OpEntryPoint Fragment %main "main" %60 %99 %gl_FragCoord
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 450
+OpSourceExtension "GL_ARB_gpu_shader_int64"
+OpSourceExtension "GL_EXT_buffer_reference"
+OpName %main "main"
+OpName %Test "Test"
+OpMemberName %Test 0 "a"
+OpName %Test_0 "Test"
+OpMemberName %Test_0 0 "a"
+OpName %TestBuffer "TestBuffer"
+OpMemberName %TestBuffer 0 "test"
+)";
+
+  const std::string decorates =
+      R"(
+OpMemberDecorate %Test_0 0 Offset 0
+OpMemberDecorate %TestBuffer 0 Offset 0
+OpDecorate %TestBuffer Block
+; CHECK: OpDecorate %_runtimearr_ulong ArrayStride 8
+; CHECK: OpDecorate %_struct_58 Block
+; CHECK: OpMemberDecorate %_struct_58 0 Offset 0
+; CHECK: OpDecorate %60 DescriptorSet 7
+; CHECK: OpDecorate %60 Binding 2
+; CHECK: OpDecorate %_runtimearr_uint ArrayStride 4
+; CHECK: OpDecorate %_struct_97 Block
+; CHECK: OpMemberDecorate %_struct_97 0 Offset 0
+; CHECK: OpMemberDecorate %_struct_97 1 Offset 4
+; CHECK: OpDecorate %99 DescriptorSet 7
+; CHECK: OpDecorate %99 Binding 0
+; CHECK: OpDecorate %gl_FragCoord BuiltIn FragCoord
+)";
+
+  const std::string globals =
+      R"(
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%ulong = OpTypeInt 64 0
+%float = OpTypeFloat 32
+%Test = OpTypeStruct %float
+OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_TestBuffer PhysicalStorageBuffer
+%Test_0 = OpTypeStruct %float
+%TestBuffer = OpTypeStruct %Test_0
+%_ptr_PhysicalStorageBuffer_TestBuffer = OpTypePointer PhysicalStorageBuffer %TestBuffer
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%_ptr_PhysicalStorageBuffer_Test_0 = OpTypePointer PhysicalStorageBuffer %Test_0
+%ulong_18446744073172680704 = OpConstant %ulong 18446744073172680704
+; CHECK: %47 = OpTypeFunction %bool %ulong %uint
+; CHECK: %_struct_58 = OpTypeStruct %_runtimearr_ulong
+; CHECK: %60 = OpVariable %_ptr_StorageBuffer__struct_58 StorageBuffer
+; CHECK: %90 = OpTypeFunction %void %uint %uint %uint %uint
+; CHECK: %_struct_97 = OpTypeStruct %uint %_runtimearr_uint
+; CHECK: %99 = OpVariable %_ptr_StorageBuffer__struct_97 StorageBuffer
+; CHECK: %143 = OpConstantNull %Test_0
+)";
+
+  const std::string main =
+      R"(
+%main = OpFunction %void None %3
+%5 = OpLabel
+%37 = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_TestBuffer %ulong_18446744073172680704
+%38 = OpAccessChain %_ptr_PhysicalStorageBuffer_Test_0 %37 %int_0
+%39 = OpLoad %Test_0 %38 Aligned 16
+; CHECK-NOT: %39 = OpLoad %Test_0 %38 Aligned 16
+; CHECK: %43 = OpConvertPtrToU %ulong %38
+; CHECK: %80 = OpFunctionCall %bool %45 %43 %uint_4
+; CHECK: OpSelectionMerge %81 None
+; CHECK: OpBranchConditional %80 %82 %83
+; CHECK: %82 = OpLabel
+; CHECK: %84 = OpLoad %Test_0 %38 Aligned 16
+; CHECK: OpBranch %81
+; CHECK: %83 = OpLabel
+; CHECK: %85 = OpUConvert %uint %43
+; CHECK: %87 = OpShiftRightLogical %ulong %43 %uint_32
+; CHECK: %88 = OpUConvert %uint %87
+; CHECK: %142 = OpFunctionCall %void %89 %uint_37 %uint_2 %85 %88
+; CHECK: OpBranch %81
+; CHECK: %81 = OpLabel
+; CHECK: %144 = OpPhi %Test_0 %84 %82 %143 %83
+%40 = OpCopyLogical %Test %39
+; CHECK-NOT: %40 = OpCopyLogical %Test %39
+; CHECK: %40 = OpCopyLogical %Test %144
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string output_funcs =
+      R"(
+; CHECK: %45 = OpFunction %bool None %47
+; CHECK: %48 = OpFunctionParameter %ulong
+; CHECK: %49 = OpFunctionParameter %uint
+; CHECK: %50 = OpLabel
+; CHECK: OpBranch %51
+; CHECK: %51 = OpLabel
+; CHECK: %53 = OpPhi %uint %uint_1 %50 %54 %52
+; CHECK: OpLoopMerge %56 %52 None
+; CHECK: OpBranch %52
+; CHECK: %52 = OpLabel
+; CHECK: %54 = OpIAdd %uint %53 %uint_1
+; CHECK: %63 = OpAccessChain %_ptr_StorageBuffer_ulong %60 %uint_0 %54
+; CHECK: %64 = OpLoad %ulong %63
+; CHECK: %65 = OpUGreaterThan %bool %64 %48
+; CHECK: OpBranchConditional %65 %56 %51
+; CHECK: %56 = OpLabel
+; CHECK: %66 = OpISub %uint %54 %uint_1
+; CHECK: %67 = OpAccessChain %_ptr_StorageBuffer_ulong %60 %uint_0 %66
+; CHECK: %68 = OpLoad %ulong %67
+; CHECK: %69 = OpISub %ulong %48 %68
+; CHECK: %70 = OpUConvert %ulong %49
+; CHECK: %71 = OpIAdd %ulong %69 %70
+; CHECK: %72 = OpAccessChain %_ptr_StorageBuffer_ulong %60 %uint_0 %uint_0
+; CHECK: %73 = OpLoad %ulong %72
+; CHECK: %74 = OpUConvert %uint %73
+; CHECK: %75 = OpISub %uint %66 %uint_1
+; CHECK: %76 = OpIAdd %uint %75 %74
+; CHECK: %77 = OpAccessChain %_ptr_StorageBuffer_ulong %60 %uint_0 %76
+; CHECK: %78 = OpLoad %ulong %77
+; CHECK: %79 = OpULessThanEqual %bool %71 %78
+; CHECK: OpReturnValue %79
+; CHECK: OpFunctionEnd
+; CHECK: %89 = OpFunction %void None %90
+; CHECK: %91 = OpFunctionParameter %uint
+; CHECK: %92 = OpFunctionParameter %uint
+; CHECK: %93 = OpFunctionParameter %uint
+; CHECK: %94 = OpFunctionParameter %uint
+; CHECK: %95 = OpLabel
+; CHECK: %101 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_0
+; CHECK: %103 = OpAtomicIAdd %uint %101 %uint_4 %uint_0 %uint_10
+; CHECK: %104 = OpIAdd %uint %103 %uint_10
+; CHECK: %105 = OpArrayLength %uint %99 1
+; CHECK: %106 = OpULessThanEqual %bool %104 %105
+; CHECK: OpSelectionMerge %107 None
+; CHECK: OpBranchConditional %106 %108 %107
+; CHECK: %108 = OpLabel
+; CHECK: %109 = OpIAdd %uint %103 %uint_0
+; CHECK: %110 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %109
+; CHECK: OpStore %110 %uint_10
+; CHECK: %112 = OpIAdd %uint %103 %uint_1
+; CHECK: %113 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %112
+; CHECK: OpStore %113 %uint_23
+; CHECK: %114 = OpIAdd %uint %103 %uint_2
+; CHECK: %115 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %114
+; CHECK: OpStore %115 %91
+; CHECK: %117 = OpIAdd %uint %103 %uint_3
+; CHECK: %118 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %117
+; CHECK: OpStore %118 %uint_4
+; CHECK: %122 = OpLoad %v4float %gl_FragCoord
+; CHECK: %124 = OpBitcast %v4uint %122
+; CHECK: %125 = OpCompositeExtract %uint %124 0
+; CHECK: %126 = OpIAdd %uint %103 %uint_4
+; CHECK: %127 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %126
+; CHECK: OpStore %127 %125
+; CHECK: %128 = OpCompositeExtract %uint %124 1
+; CHECK: %130 = OpIAdd %uint %103 %uint_5
+; CHECK: %131 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %130
+; CHECK: OpStore %131 %128
+; CHECK: %133 = OpIAdd %uint %103 %uint_7
+; CHECK: %134 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %133
+; CHECK: OpStore %134 %92
+; CHECK: %136 = OpIAdd %uint %103 %uint_8
+; CHECK: %137 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %136
+; CHECK: OpStore %137 %93
+; CHECK: %139 = OpIAdd %uint %103 %uint_9
+; CHECK: %140 = OpAccessChain %_ptr_StorageBuffer_uint %99 %uint_1 %139
+; CHECK: OpStore %140 %94
+; CHECK: OpBranch %107
+; CHECK: %107 = OpLabel
+; CHECK: OpReturn
+; CHECK: OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndMatch<InstBuffAddrCheckPass>(
+      defs + decorates + globals + main + output_funcs, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

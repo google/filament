@@ -52,22 +52,7 @@ class TransformationReplaceIdWithSynonym : public Transformation {
 
   protobufs::Transformation ToMessage() const override;
 
-  // Returns true if |type_id_1| and |type_id_2| represent compatible types
-  // given the context of the instruction with |opcode| (i.e. we can replace
-  // an operand of |opcode| of the first type with an id of the second type
-  // and vice-versa).
-  static bool TypesAreCompatible(opt::IRContext* ir_context, SpvOp opcode,
-                                 uint32_t use_in_operand_index,
-                                 uint32_t type_id_1, uint32_t type_id_2);
-
  private:
-  // Returns true if the instruction with opcode |opcode| does not change its
-  // behaviour depending on the signedness of the operand at
-  // |use_in_operand_index|.
-  // Assumes that the operand must be the id of an integer scalar or vector.
-  static bool IsAgnosticToSignednessOfOperand(SpvOp opcode,
-                                              uint32_t use_in_operand_index);
-
   protobufs::TransformationReplaceIdWithSynonym message_;
 };
 

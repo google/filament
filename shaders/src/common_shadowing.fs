@@ -11,34 +11,16 @@
  * Normal bias is not used for VSM.
  */
 
-#if defined(HAS_VSM)
-#if defined(HAS_DIRECTIONAL_LIGHTING)
-highp vec4 computeLightSpacePositionDirectional(const highp vec3 p, const highp vec3 n,
+highp vec4 computeLightSpacePosition(highp vec3 p, const highp vec3 n,
         const highp vec3 l, const float b, const highp mat4 lightFromWorldMatrix) {
-    return mulMat4x4Float3(lightFromWorldMatrix, p);
-}
-#endif // HAS_DIRECTIONAL_LIGHTING
-#if defined(HAS_DYNAMIC_LIGHTING)
-highp vec4 computeLightSpacePositionSpot(const highp vec3 p, const highp vec3 n,
-        const highp vec3 l,  const float b, const highp mat4 lightFromWorldMatrix) {
-    return mulMat4x4Float3(lightFromWorldMatrix, p);
-}
-#endif // HAS_DYNAMIC_LIGHTING
-#else // HAS_VSM
-highp vec4 computeLightSpacePositionDirectional(const highp vec3 p, const highp vec3 n,
-        const highp vec3 l, const float b, const highp mat4 lightFromWorldMatrix) {
-    float NoL = saturate(dot(n, l));
+
+#if !defined(HAS_VSM)
+    highp float NoL = saturate(dot(n, l));
     highp float sinTheta = sqrt(1.0 - NoL * NoL);
-    highp vec3 offsetPosition = p + n * (sinTheta * b);
-    return mulMat4x4Float3(lightFromWorldMatrix, offsetPosition);
+    p += n * (sinTheta * b);
+#endif
+
+    return mulMat4x4Float3(lightFromWorldMatrix, p);
 }
-#if defined(HAS_DYNAMIC_LIGHTING)
-highp vec4 computeLightSpacePositionSpot(const highp vec3 p, const highp vec3 n,
-        const highp vec3 l, const float b, const highp mat4 lightFromWorldMatrix) {
-    highp vec4 positionLs = mulMat4x4Float3(lightFromWorldMatrix, p);
-    highp float oneOverZ = positionLs.w / positionLs.z;
-    return computeLightSpacePositionDirectional(p, n, l, b * oneOverZ, lightFromWorldMatrix);
-}
-#endif // HAS_DIRECTIONAL_LIGHTING
-#endif // HAS_VSM
+
 #endif // HAS_SHADOWING

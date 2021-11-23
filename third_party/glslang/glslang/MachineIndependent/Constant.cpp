@@ -531,7 +531,7 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TType& returnType) 
             case EbtFloat: newConstArray[i].setDConst(-unionArray[i].getDConst()); break;
             // Note: avoid UBSAN error regarding negating 0x80000000
             case EbtInt:   newConstArray[i].setIConst(
-                                unionArray[i].getIConst() == 0x80000000
+                                static_cast<unsigned int>(unionArray[i].getIConst()) == 0x80000000
                                     ? -0x7FFFFFFF - 1
                                     : -unionArray[i].getIConst());
                            break;

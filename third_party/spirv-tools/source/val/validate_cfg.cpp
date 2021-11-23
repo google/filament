@@ -199,6 +199,18 @@ spv_result_t ValidateSwitch(ValidationState_t& _, const Instruction* inst) {
   // At least two operands (selector, default), any more than that are
   // literal/target.
 
+  const auto sel_type_id = _.GetOperandTypeId(inst, 0);
+  if (!_.IsIntScalarType(sel_type_id)) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Selector type must be OpTypeInt";
+  }
+
+  const auto default_label = _.FindDef(inst->GetOperandAs<uint32_t>(1));
+  if (default_label->opcode() != SpvOpLabel) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Default must be an OpLabel instruction";
+  }
+
   // target operands must be OpLabel
   for (size_t i = 2; i < num_operands; i += 2) {
     // literal, id
@@ -647,9 +659,9 @@ spv_result_t ValidateStructuredSelections(
       // Mark the upcoming blocks as seen now, but only error out if this block
       // was missing a merge instruction and both labels hadn't been seen
       // previously.
-      const bool both_unseen =
-          seen.insert(true_label).second && seen.insert(false_label).second;
-      if (!merge && both_unseen) {
+      const bool true_label_unseen = seen.insert(true_label).second;
+      const bool false_label_unseen = seen.insert(false_label).second;
+      if (!merge && true_label_unseen && false_label_unseen) {
         return _.diag(SPV_ERROR_INVALID_CFG, terminator)
                << "Selection must be structured";
       }

@@ -3,6 +3,7 @@ load(
     "COMMON_COPTS",
     "DEBUGINFO_GRAMMAR_JSON_FILE",
     "CLDEBUGINFO100_GRAMMAR_JSON_FILE",
+    "SHDEBUGINFO100_GRAMMAR_JSON_FILE",
     "TEST_COPTS",
     "base_test",
     "generate_core_tables",
@@ -12,6 +13,7 @@ load(
     "generate_opencl_tables",
     "generate_vendor_tables",
     "link_test",
+    "lint_test",
     "opt_test",
     "reduce_test",
     "util_test",
@@ -59,11 +61,15 @@ generate_vendor_tables("debuginfo")
 
 generate_vendor_tables("opencl.debuginfo.100", "CLDEBUG100_")
 
+generate_vendor_tables("nonsemantic.shader.debuginfo.100", "SHDEBUG100_")
+
 generate_vendor_tables("nonsemantic.clspvreflection")
 
 generate_extinst_lang_headers("DebugInfo", DEBUGINFO_GRAMMAR_JSON_FILE)
 
 generate_extinst_lang_headers("OpenCLDebugInfo100", CLDEBUGINFO100_GRAMMAR_JSON_FILE)
+
+generate_extinst_lang_headers("NonSemanticShaderDebugInfo100", SHDEBUGINFO100_GRAMMAR_JSON_FILE)
 
 py_binary(
     name = "generate_registry_tables",
@@ -101,12 +107,14 @@ cc_library(
         ":gen_enum_string_mapping",
         ":gen_extinst_lang_headers_DebugInfo",
         ":gen_extinst_lang_headers_OpenCLDebugInfo100",
+        ":gen_extinst_lang_headers_NonSemanticShaderDebugInfo100",
         ":gen_glsl_tables_unified1",
         ":gen_opencl_tables_unified1",
         ":gen_registry_tables",
         ":gen_vendor_tables_debuginfo",
         ":gen_vendor_tables_nonsemantic_clspvreflection",
         ":gen_vendor_tables_opencl_debuginfo_100",
+        ":gen_vendor_tables_nonsemantic_shader_debuginfo_100",
         ":gen_vendor_tables_spv_amd_gcn_shader",
         ":gen_vendor_tables_spv_amd_shader_ballot",
         ":gen_vendor_tables_spv_amd_shader_explicit_vertex_parameter",
@@ -226,6 +234,19 @@ cc_library(
 )
 
 cc_library(
+    name = "spirv_tools_lint",
+    srcs = glob(["source/lint/*.cpp", "source/lint/*.h"]),
+    hdrs = ["include/spirv-tools/linter.hpp"],
+    copts = COMMON_COPTS,
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":spirv_tools",
+        ":spirv_tools_opt",
+    ],
+)
+
+cc_library(
     name = "tools_util",
     srcs = glob(["tools/util/*.cpp"]),
     hdrs = glob(["tools/util/*.h"]),
@@ -319,6 +340,21 @@ cc_binary(
     deps = [
         ":spirv_tools",
         ":spirv_tools_link",
+    ],
+)
+
+cc_binary(
+    name = "spirv-lint",
+    srcs = [
+        "tools/io.h",
+        "tools/lint/lint.cpp",
+    ],
+    copts = COMMON_COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":spirv_tools",
+        ":spirv_tools_lint",
+        ":tools_util",
     ],
 )
 
@@ -463,6 +499,13 @@ base_test(
     srcs = [f],
 ) for f in glob(
     ["test/link/*.cpp"],
+)]
+
+[lint_test(
+    name = f[10:-4],  # strip test/lint/, .cpp
+    srcs = [f],
+) for f in glob(
+    ["test/lint/*.cpp"],
 )]
 
 [opt_test(

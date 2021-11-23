@@ -140,20 +140,26 @@ float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
     return mean <= moments.x ? 1.0 : pMax;
 }
 
+float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
+    highp float depthScale = frameUniforms.vsmDepthScale * depth;
+    highp float minVariance = depthScale * depthScale;
+    return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
+}
+
 float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec3 position) {
     // Read the shadow map with all available filtering
-    highp vec2 moments = texture(shadowMap, vec3(position.xy, layer)).xy;
+    highp vec4 moments = texture(shadowMap, vec3(position.xy, layer));
     highp float depth = position.z;
 
     // EVSM depth warping
     depth = depth * 2.0 - 1.0;
-    depth = exp(frameUniforms.vsmExponent * depth);
 
-    highp float depthScale = frameUniforms.vsmDepthScale * depth;
-    highp float minVariance = depthScale * depthScale;
-    float lightBleedReduction = frameUniforms.vsmLightBleedReduction;
-    return chebyshevUpperBound(moments, depth, minVariance, lightBleedReduction);
+    depth = exp(frameUniforms.vsmExponent * depth);
+    float p = evaluateShadowVSM(moments.xy, depth);
+    // enable for full EVSM (needed for large blurs). RGBA16F needed.
+    //p = min(p, evaluateShadowVSM(moments.zw, -1.0/depth));
+    return p;
 }
 
 //------------------------------------------------------------------------------
@@ -167,16 +173,46 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
  */
 
 // PCF sampling
-float shadow(const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArrayShadow shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return ShadowSample_PCF(shadowMap, layer, position);
 }
 
 // VSM sampling
-float shadow(const mediump sampler2DArray shadowMap,
-        const uint layer, const highp vec4 shadowPosition) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArray shadowMap,
+        const uint layer, const uint index, const uint cascade) {
+
+    highp vec4 shadowPosition;
+
+    // This conditional is resolved at compile time
+    if (DIRECTIONAL) {
+#if defined(HAS_DIRECTIONAL_LIGHTING)
+        shadowPosition = getCascadeLightSpacePosition(cascade);
+#endif
+    } else {
+#if defined(HAS_DYNAMIC_LIGHTING)
+        shadowPosition = getSpotLightSpacePosition(index);
+#endif
+    }
+
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
     //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
     //  see: computeLightSpacePosition() in common_shadowing.fs

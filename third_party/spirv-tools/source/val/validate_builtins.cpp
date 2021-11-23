@@ -2846,7 +2846,7 @@ spv_result_t BuiltInsValidator::ValidateComputeShaderI32Vec3InputAtReference(
                << spvLogStringForEnv(_.context()->target_env)
                << " spec allows BuiltIn "
                << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN, builtin)
-               << " to be used only with GLCompute execution model. "
+               << " to be used only with GLCompute, MeshNV, or TaskNV execution model. "
                << GetReferenceDesc(decoration, built_in_inst, referenced_inst,
                                    referenced_from_inst, execution_model);
       }
@@ -2928,7 +2928,7 @@ spv_result_t BuiltInsValidator::ValidateComputeI32InputAtReference(
                << spvLogStringForEnv(_.context()->target_env)
                << " spec allows BuiltIn "
                << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN, builtin)
-               << " to be used only with GLCompute execution model. "
+               << " to be used only with GLCompute, MeshNV, or TaskNV execution model. "
                << GetReferenceDesc(decoration, built_in_inst, referenced_inst,
                                    referenced_from_inst, execution_model);
       }
@@ -3070,14 +3070,16 @@ spv_result_t BuiltInsValidator::ValidateWorkgroupSizeAtReference(
     const Instruction& referenced_from_inst) {
   if (spvIsVulkanEnv(_.context()->target_env)) {
     for (const SpvExecutionModel execution_model : execution_models_) {
-      if (execution_model != SpvExecutionModelGLCompute) {
+      if (execution_model != SpvExecutionModelGLCompute &&
+          execution_model != SpvExecutionModelTaskNV &&
+          execution_model != SpvExecutionModelMeshNV) {
         return _.diag(SPV_ERROR_INVALID_DATA, &referenced_from_inst)
                << _.VkErrorID(4425)
                << spvLogStringForEnv(_.context()->target_env)
                << " spec allows BuiltIn "
                << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
                                                 decoration.params()[0])
-               << " to be used only with GLCompute execution model. "
+               << " to be used only with GLCompute, MeshNV, or TaskNV execution model. "
                << GetReferenceDesc(decoration, built_in_inst, referenced_inst,
                                    referenced_from_inst, execution_model);
       }
@@ -3991,14 +3993,6 @@ spv_result_t BuiltInsValidator::ValidateSingleBuiltInAtDefinition(
     const Decoration& decoration, const Instruction& inst) {
   const SpvBuiltIn label = SpvBuiltIn(decoration.params()[0]);
 
-  // Builtins can only be applied to variables, structures or constants.
-  auto target_opcode = inst.opcode();
-  if (target_opcode != SpvOpTypeStruct && target_opcode != SpvOpVariable &&
-      !spvOpcodeIsConstant(target_opcode)) {
-    return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-           << "BuiltIns can only target variables, structs or constants";
-  }
-
   if (!spvIsVulkanEnv(_.context()->target_env)) {
     // Early return. All currently implemented rules are based on Vulkan spec.
     //
@@ -4190,6 +4184,7 @@ spv_result_t BuiltInsValidator::ValidateSingleBuiltInAtDefinition(
     case SpvBuiltInMeshViewIndicesNV:
     case SpvBuiltInBaryCoordNV:
     case SpvBuiltInBaryCoordNoPerspNV:
+    case SpvBuiltInCurrentRayTimeNV:
       // No validation rules (for the moment).
       break;
 
