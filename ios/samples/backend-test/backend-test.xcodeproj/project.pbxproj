@@ -3,65 +3,65 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		06F62A875BB41914867962C761A4EAF5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93394D7D4A78C56A2BD31A7DADD23EEF /* Assets.xcassets */; };
-		0D03CD8D532E395F541C52E2DC5CBA91 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EB0A767D257F3D05BE9F09604A637414 /* LaunchScreen.storyboard */; };
-		1F794C937765826F24F7B8659EDD39C9 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = AE6C78F32A0494087B0CEF322CE9292D /* main.mm */; };
-		634497C6501716CB6CFF82691FED62B7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B63A6E45E40F58037ABD8F849B42EB7E /* Main.storyboard */; };
-		803D9F3AEB828A38EE28952DB0D31801 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = B54DFEB4DB6ACC0289FA3046C904A153 /* FilamentView.mm */; };
-		96A031DD8E9466AFA6FD2D0E7309191F /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33D80A4472074C601C57C773916DF65F /* ViewController.mm */; };
-		E5EB2FE4C23A5FE68F92D999D37E5680 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FDB89AD408A508D6CB74C329C6C62CE /* AppDelegate.m */; };
+		20863805FC626BF952BA3275 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33D80A4472074C601C57C773 /* ViewController.mm */; };
+		376F63E72973F07BF618082D /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */; };
+		477A2A67D32B7A3AF2E7B2F4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */; };
+		91CCBA3BA96DC289D0E8E975 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = AE6C78F32A0494087B0CEF32 /* main.mm */; };
+		B3684DB18E82C867020294F1 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FDB89AD408A508D6CB74C32 /* AppDelegate.m */; };
+		C74DDEF71B6F3C060BB56189 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B63A6E45E40F58037ABD8F84 /* Main.storyboard */; };
+		FC9D623AC5CF31BA9FB0C47B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93394D7D4A78C56A2BD31A7D /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		056C16E7805E8D33D4C8F7B45A9CF4E1 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		13DDE7723EC1A6EFCA4D2D582CC44EE8 /* backend-test.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "backend-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		17364ECD407006EEBDC060249F28047C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		276A0ADD5B521719BBB1DA21DA1FDFD2 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		33D80A4472074C601C57C773916DF65F /* ViewController.mm */ = {isa = PBXFileReference; path = ViewController.mm; sourceTree = "<group>"; };
-		5FDB89AD408A508D6CB74C329C6C62CE /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		603475CEE63507AA04A9B21AB6D0022A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		93394D7D4A78C56A2BD31A7DADD23EEF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A283B2D6DB365368855E2D7A1ADAE875 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AE6C78F32A0494087B0CEF322CE9292D /* main.mm */ = {isa = PBXFileReference; path = main.mm; sourceTree = "<group>"; };
-		B54DFEB4DB6ACC0289FA3046C904A153 /* FilamentView.mm */ = {isa = PBXFileReference; path = FilamentView.mm; sourceTree = "<group>"; };
-		C76230D48038E8109EC121B0B9D475C9 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		056C16E7805E8D33D4C8F7B4 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "backend-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		17364ECD407006EEBDC06024 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		276A0ADD5B521719BBB1DA21 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		33D80A4472074C601C57C773 /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
+		5FDB89AD408A508D6CB74C32 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		603475CEE63507AA04A9B21A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		93394D7D4A78C56A2BD31A7D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A283B2D6DB365368855E2D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		AE6C78F32A0494087B0CEF32 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
+		C76230D48038E8109EC121B0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		05CA69F10D830E40A8FB561D4B3674F7 /* Products */ = {
+		05CA69F10D830E40A8FB561D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13DDE7723EC1A6EFCA4D2D582CC44EE8 /* backend-test.app */,
+				13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		3D2B936C924E0DB70941EE6D42812971 = {
+		3D2B936C924E0DB70941EE6D = {
 			isa = PBXGroup;
 			children = (
-				FE198F0E1EF047534F8F3128409AFF7B /* backend-test */,
-				05CA69F10D830E40A8FB561D4B3674F7 /* Products */,
+				FE198F0E1EF047534F8F3128 /* backend-test */,
+				05CA69F10D830E40A8FB561D /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		FE198F0E1EF047534F8F3128409AFF7B /* backend-test */ = {
+		FE198F0E1EF047534F8F3128 /* backend-test */ = {
 			isa = PBXGroup;
 			children = (
-				17364ECD407006EEBDC060249F28047C /* AppDelegate.h */,
-				5FDB89AD408A508D6CB74C329C6C62CE /* AppDelegate.m */,
-				93394D7D4A78C56A2BD31A7DADD23EEF /* Assets.xcassets */,
-				056C16E7805E8D33D4C8F7B45A9CF4E1 /* FilamentView.h */,
-				B54DFEB4DB6ACC0289FA3046C904A153 /* FilamentView.mm */,
-				A283B2D6DB365368855E2D7A1ADAE875 /* Info.plist */,
-				EB0A767D257F3D05BE9F09604A637414 /* LaunchScreen.storyboard */,
-				AE6C78F32A0494087B0CEF322CE9292D /* main.mm */,
-				B63A6E45E40F58037ABD8F849B42EB7E /* Main.storyboard */,
-				276A0ADD5B521719BBB1DA21DA1FDFD2 /* ViewController.h */,
-				33D80A4472074C601C57C773916DF65F /* ViewController.mm */,
+				17364ECD407006EEBDC06024 /* AppDelegate.h */,
+				5FDB89AD408A508D6CB74C32 /* AppDelegate.m */,
+				93394D7D4A78C56A2BD31A7D /* Assets.xcassets */,
+				056C16E7805E8D33D4C8F7B4 /* FilamentView.h */,
+				B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */,
+				A283B2D6DB365368855E2D7A /* Info.plist */,
+				EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */,
+				AE6C78F32A0494087B0CEF32 /* main.mm */,
+				B63A6E45E40F58037ABD8F84 /* Main.storyboard */,
+				276A0ADD5B521719BBB1DA21 /* ViewController.h */,
+				33D80A4472074C601C57C773 /* ViewController.mm */,
 			);
 			path = "backend-test";
 			sourceTree = "<group>";
@@ -69,12 +69,12 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		196E24C2A15DA6AE6F69371CA6A367C0 /* backend-test */ = {
+		196E24C2A15DA6AE6F69371C /* backend-test */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 61ACF592151E648A5C129A90463186B6 /* Build configuration list for PBXNativeTarget "backend-test" */;
+			buildConfigurationList = 61ACF592151E648A5C129A90 /* Build configuration list for PBXNativeTarget "backend-test" */;
 			buildPhases = (
-				445863ED54C294354A38828145EEC63F /* Sources */,
-				BD71575ED7ED3237FEFD94C714641FAE /* Resources */,
+				445863ED54C294354A388281 /* Sources */,
+				BD71575ED7ED3237FEFD94C7 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -82,73 +82,76 @@
 			);
 			name = "backend-test";
 			productName = "backend-test";
-			productReference = 13DDE7723EC1A6EFCA4D2D582CC44EE8 /* backend-test.app */;
+			productReference = 13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		8A7A83D59A7827D3335343C284020B80 /* Project object */ = {
+		8A7A83D59A7827D3335343C2 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1200;
+				TargetAttributes = {
+				};
 			};
-			buildConfigurationList = E89E1EEA671E49DBAC9D5A9CB3D340A3 /* Build configuration list for PBXProject "backend-test" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */;
+			compatibilityVersion = "Xcode 10.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
+				en,
 			);
-			mainGroup = 3D2B936C924E0DB70941EE6D42812971;
+			mainGroup = 3D2B936C924E0DB70941EE6D;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				196E24C2A15DA6AE6F69371CA6A367C0 /* backend-test */,
+				196E24C2A15DA6AE6F69371C /* backend-test */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		BD71575ED7ED3237FEFD94C714641FAE /* Resources */ = {
+		BD71575ED7ED3237FEFD94C7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				06F62A875BB41914867962C761A4EAF5 /* Assets.xcassets in Resources */,
-				0D03CD8D532E395F541C52E2DC5CBA91 /* LaunchScreen.storyboard in Resources */,
-				634497C6501716CB6CFF82691FED62B7 /* Main.storyboard in Resources */,
+				FC9D623AC5CF31BA9FB0C47B /* Assets.xcassets in Resources */,
+				477A2A67D32B7A3AF2E7B2F4 /* LaunchScreen.storyboard in Resources */,
+				C74DDEF71B6F3C060BB56189 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		445863ED54C294354A38828145EEC63F /* Sources */ = {
+		445863ED54C294354A388281 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E5EB2FE4C23A5FE68F92D999D37E5680 /* AppDelegate.m in Sources */,
-				803D9F3AEB828A38EE28952DB0D31801 /* FilamentView.mm in Sources */,
-				96A031DD8E9466AFA6FD2D0E7309191F /* ViewController.mm in Sources */,
-				1F794C937765826F24F7B8659EDD39C9 /* main.mm in Sources */,
+				B3684DB18E82C867020294F1 /* AppDelegate.m in Sources */,
+				376F63E72973F07BF618082D /* FilamentView.mm in Sources */,
+				20863805FC626BF952BA3275 /* ViewController.mm in Sources */,
+				91CCBA3BA96DC289D0E8E975 /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		B63A6E45E40F58037ABD8F849B42EB7E /* Main.storyboard */ = {
+		B63A6E45E40F58037ABD8F84 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				603475CEE63507AA04A9B21AB6D0022A /* Base */,
+				603475CEE63507AA04A9B21A /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		EB0A767D257F3D05BE9F09604A637414 /* LaunchScreen.storyboard */ = {
+		EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				C76230D48038E8109EC121B0B9D475C9 /* Base */,
+				C76230D48038E8109EC121B0 /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -156,7 +159,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		287974638C9ACB9CA9B2A8856FF3D23B /* OpenGL Release */ = {
+		287974638C9ACB9CA9B2A885 /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -166,6 +169,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -181,6 +185,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -199,18 +204,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				VALIDATE_PRODUCT = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
 			};
 			name = "OpenGL Release";
 		};
-		404EBB73A7A0435C20EDBABCDFFD17E4 /* OpenGL Debug */ = {
+		404EBB73A7A0435C20EDBABC /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -224,9 +230,13 @@
 				);
 				INFOPLIST_FILE = "backend-test/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -237,6 +247,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
@@ -245,7 +256,7 @@
 			};
 			name = "OpenGL Debug";
 		};
-		54FB1D2CF3B4145F58866014302FD0D5 /* OpenGL Debug */ = {
+		54FB1D2CF3B4145F58866014 /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -255,6 +266,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -270,6 +282,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -294,20 +307,20 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "OpenGL Debug";
 		};
-		5FB1C7673AA0E8727E86B454231C277C /* OpenGL Release */ = {
+		5FB1C7673AA0E8727E86B454 /* OpenGL Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -321,9 +334,13 @@
 				);
 				INFOPLIST_FILE = "backend-test/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -334,6 +351,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
@@ -342,7 +360,7 @@
 			};
 			name = "OpenGL Release";
 		};
-		64581E4E9CA579C51C57F18835480C4A /* Metal Release */ = {
+		64581E4E9CA579C51C57F188 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -352,6 +370,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -367,6 +386,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -385,18 +405,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				VALIDATE_PRODUCT = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Metal Release";
 		};
-		8889A14BBCF0426235E7B530000B3E08 /* Metal Debug */ = {
+		8889A14BBCF0426235E7B530 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -410,9 +431,13 @@
 				);
 				INFOPLIST_FILE = "backend-test/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -423,6 +448,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
@@ -431,10 +457,9 @@
 			};
 			name = "Metal Debug";
 		};
-		984F4F20FD3DBCD92D4F129047C6DFDC /* Metal Release */ = {
+		984F4F20FD3DBCD92D4F1290 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
@@ -448,9 +473,13 @@
 				);
 				INFOPLIST_FILE = "backend-test/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
 				);
 				OTHER_LDFLAGS = (
 					"-lfilament",
@@ -461,6 +490,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.backend-test";
@@ -469,7 +499,7 @@
 			};
 			name = "Metal Release";
 		};
-		BE208AFFD31FF6385AFB77E166A4A211 /* Metal Debug */ = {
+		BE208AFFD31FF6385AFB77E1 /* Metal Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -479,6 +509,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -494,6 +525,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -518,42 +550,43 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = "Metal Debug";
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		61ACF592151E648A5C129A90463186B6 /* Build configuration list for PBXNativeTarget "backend-test" */ = {
+		61ACF592151E648A5C129A90 /* Build configuration list for PBXNativeTarget "backend-test" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				8889A14BBCF0426235E7B530000B3E08 /* Metal Debug */,
-				984F4F20FD3DBCD92D4F129047C6DFDC /* Metal Release */,
-				404EBB73A7A0435C20EDBABCDFFD17E4 /* OpenGL Debug */,
-				5FB1C7673AA0E8727E86B454231C277C /* OpenGL Release */,
+				8889A14BBCF0426235E7B530 /* Metal Debug */,
+				984F4F20FD3DBCD92D4F1290 /* Metal Release */,
+				404EBB73A7A0435C20EDBABC /* OpenGL Debug */,
+				5FB1C7673AA0E8727E86B454 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "";
+			defaultConfigurationName = "Metal Debug";
 		};
-		E89E1EEA671E49DBAC9D5A9CB3D340A3 /* Build configuration list for PBXProject "backend-test" */ = {
+		E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				BE208AFFD31FF6385AFB77E166A4A211 /* Metal Debug */,
-				64581E4E9CA579C51C57F18835480C4A /* Metal Release */,
-				54FB1D2CF3B4145F58866014302FD0D5 /* OpenGL Debug */,
-				287974638C9ACB9CA9B2A8856FF3D23B /* OpenGL Release */,
+				BE208AFFD31FF6385AFB77E1 /* Metal Debug */,
+				64581E4E9CA579C51C57F188 /* Metal Release */,
+				54FB1D2CF3B4145F58866014 /* OpenGL Debug */,
+				287974638C9ACB9CA9B2A885 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = "Metal Debug";
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 8A7A83D59A7827D3335343C284020B80 /* Project object */;
+	rootObject = 8A7A83D59A7827D3335343C2 /* Project object */;
 }
