@@ -59,6 +59,10 @@ import static com.google.android.filament.Colors.LinearColor;
  * @see RenderTarget
  */
 public class View {
+    private static final AntiAliasing[] sAntiAliasingValues = AntiAliasing.values();
+    private static final Dithering[] sDitheringValues = Dithering.values();
+    private static final AmbientOcclusion[] sAmbientOcclusionValues = AmbientOcclusion.values();
+
     private long mNativeObject;
     private String mName;
     private Scene mScene;
@@ -1116,7 +1120,7 @@ public class View {
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
-        return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+        return sAntiAliasingValues[nGetAntiAliasing(getNativeObject())];
     }
 
     /**
@@ -1229,7 +1233,7 @@ public class View {
      */
     @NonNull
     public Dithering getDithering() {
-        return Dithering.values()[nGetDithering(getNativeObject())];
+        return sDitheringValues[nGetDithering(getNativeObject())];
     }
 
     /**
@@ -1449,7 +1453,7 @@ public class View {
     @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
-        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+        return sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }
 
     /**

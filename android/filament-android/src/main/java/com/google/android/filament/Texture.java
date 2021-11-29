@@ -71,6 +71,9 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
  * @see MaterialInstance#setParameter(String, Texture, TextureSampler)
  */
 public class Texture {
+    private static final Sampler[] sSamplerValues = Sampler.values();
+    private static final InternalFormat[] sInternalFormatValues = InternalFormat.values();
+
     private long mNativeObject;
 
     public Texture(long nativeTexture) {
@@ -867,7 +870,7 @@ public class Texture {
      */
     @NonNull
     public Sampler getTarget() {
-        return Sampler.values()[nGetTarget(getNativeObject())];
+        return sSamplerValues[nGetTarget(getNativeObject())];
     }
 
     /**
@@ -875,7 +878,7 @@ public class Texture {
      */
     @NonNull
     public InternalFormat getFormat() {
-        return InternalFormat.values()[nGetInternalFormat(getNativeObject())];
+        return sInternalFormatValues[nGetInternalFormat(getNativeObject())];
     }
 
     // TODO: add a setImage() version that takes an android Bitmap

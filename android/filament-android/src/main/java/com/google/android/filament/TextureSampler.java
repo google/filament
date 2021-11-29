@@ -22,6 +22,14 @@ import androidx.annotation.NonNull;
  * <code>TextureSampler</code> defines how a texture is accessed.
  */
 public class TextureSampler {
+    static final class EnumCache {
+        static final MinFilter[] sMinFilterValues = MinFilter.values();
+        static final MagFilter[] sMagFilterValues = MagFilter.values();
+        static final WrapMode[] sWrapModeValues = WrapMode.values();
+        static final CompareMode[] sCompareModeValues = CompareMode.values();
+        static final CompareFunction[] sCompareFunctionValues = CompareFunction.values();
+    }
+
     public enum WrapMode {
         /**
          * The edge of the texture extends to infinity.
@@ -202,7 +210,7 @@ public class TextureSampler {
      * @return the minification filter
      */
     public MinFilter getMinFilter() {
-        return MinFilter.values()[nGetMinFilter(mSampler)];
+        return EnumCache.sMinFilterValues[nGetMinFilter(mSampler)];
     }
 
     /**
@@ -218,7 +226,7 @@ public class TextureSampler {
      * @return the magnification filter
      */
     public MagFilter getMagFilter() {
-        return MagFilter.values()[nGetMagFilter(mSampler)];
+        return EnumCache.sMagFilterValues[nGetMagFilter(mSampler)];
     }
 
     /**
@@ -234,7 +242,7 @@ public class TextureSampler {
      * @return the wrapping mode in the s (horizontal) direction
      */
     public WrapMode getWrapModeS() {
-        return WrapMode.values()[nGetWrapModeS(mSampler)];
+        return EnumCache.sWrapModeValues[nGetWrapModeS(mSampler)];
     }
 
     /**
@@ -249,7 +257,7 @@ public class TextureSampler {
      * @return the wrapping mode in the t (vertical) direction
      */
     public WrapMode getWrapModeT() {
-        return WrapMode.values()[nGetWrapModeT(mSampler)];
+        return EnumCache.sWrapModeValues[nGetWrapModeT(mSampler)];
     }
 
     /**
@@ -264,7 +272,7 @@ public class TextureSampler {
      * @return the wrapping mode in the r (depth) direction
      */
     public WrapMode getWrapModeR() {
-        return WrapMode.values()[nGetWrapModeR(mSampler)];
+        return EnumCache.sWrapModeValues[nGetWrapModeR(mSampler)];
     }
 
     /**
@@ -297,7 +305,7 @@ public class TextureSampler {
      * @return the comparison mode
      */
     public CompareMode getCompareMode() {
-        return CompareMode.values()[nGetCompareMode(mSampler)];
+        return EnumCache.sCompareModeValues[nGetCompareMode(mSampler)];
     }
 
     /**
@@ -313,7 +321,7 @@ public class TextureSampler {
      * @return the comparison function
      */
     public CompareFunction getCompareFunction() {
-        return CompareFunction.values()[nGetCompareFunction(mSampler)];
+        return EnumCache.sCompareFunctionValues[nGetCompareFunction(mSampler)];
     }
 
     /**
