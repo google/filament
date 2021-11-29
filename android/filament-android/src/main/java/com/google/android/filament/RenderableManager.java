@@ -58,6 +58,10 @@ import java.util.Set;
  */
 public class RenderableManager {
     private static final String LOG_TAG = "Filament";
+
+    private static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
+            VertexBuffer.VertexAttribute.values();
+
     private long mNativeObject;
 
     RenderableManager(long nativeRenderableManager) {
@@ -712,15 +716,19 @@ public class RenderableManager {
     /**
      * Retrieves the set of enabled attribute slots in the given primitive's VertexBuffer.
      */
-    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
+    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(
+            @EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
         int bitSet = nGetEnabledAttributesAt(mNativeObject, i, primitiveIndex);
-        Set<VertexBuffer.VertexAttribute> requiredAttributes = EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
-        VertexBuffer.VertexAttribute[] values = VertexBuffer.VertexAttribute.values();
+        Set<VertexBuffer.VertexAttribute> requiredAttributes =
+                EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
+        VertexBuffer.VertexAttribute[] values = sVertexAttributeValues;
+
         for (int j = 0; j < values.length; j++) {
             if ((bitSet & (1 << j)) != 0) {
                 requiredAttributes.add(values[j]);
             }
         }
+
         requiredAttributes = Collections.unmodifiableSet(requiredAttributes);
         return requiredAttributes;
     }

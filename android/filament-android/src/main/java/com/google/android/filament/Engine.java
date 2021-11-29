@@ -106,7 +106,10 @@ import com.google.android.filament.proguard.UsedByReflection;
  * @see Renderer
  */
 public class Engine {
+    private static final Backend[] sBackendValues = Backend.values();
+
     private long mNativeObject;
+
     @NonNull private final TransformManager mTransformManager;
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
@@ -252,7 +255,7 @@ public class Engine {
      */
     @NonNull
     public Backend getBackend() {
-        return Backend.values()[(int) nGetBackend(getNativeObject())];
+        return sBackendValues[(int) nGetBackend(getNativeObject())];
     }
 
     // SwapChain
