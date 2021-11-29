@@ -64,6 +64,8 @@ Options:
   --relax-struct-store             Allow store from one struct type to a
                                    different type with compatible layout and
                                    members.
+  --allow-localsizeid              Allow use of the LocalSizeId decoration where it would otherwise not
+                                   be allowed by the target environment.
   --before-hlsl-legalization       Allows code patterns that are intended to be
                                    fixed by spirv-opt's legalization passes.
   --version                        Display validator version information.
@@ -153,6 +155,8 @@ int main(int argc, char** argv) {
         options.SetWorkgroupScalarBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--skip-block-layout")) {
         options.SetSkipBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--allow-localsizeid")) {
+        options.SetAllowLocalSizeId(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
         options.SetRelaxStructStore(true);
       } else if (0 == cur_arg[1]) {

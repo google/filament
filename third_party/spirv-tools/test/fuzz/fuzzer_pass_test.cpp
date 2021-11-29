@@ -29,7 +29,7 @@ class FuzzerPassMock : public FuzzerPass {
                  FuzzerContext* fuzzer_context,
                  protobufs::TransformationSequence* transformations)
       : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                   transformations) {}
+                   transformations, false) {}
 
   ~FuzzerPassMock() override = default;
 

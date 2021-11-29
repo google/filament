@@ -2567,6 +2567,39 @@ TEST_F(MergeReturnPassTest, ChainedPointerUsedAfterLoop) {
   SinglePassRunAndMatch<MergeReturnPass>(before, true);
 }
 
+TEST_F(MergeReturnPassTest, OverflowTest1) {
+  const std::string text =
+      R"(
+; CHECK: OpReturn
+; CHECK-NOT: OpReturn
+; CHECK: OpFunctionEnd
+               OpCapability ClipDistance
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %2 = OpFunction %void None %6
+    %4194303 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+               OpLoopMerge %19 %20 None
+               OpBranch %21
+         %21 = OpLabel
+               OpReturn
+         %20 = OpLabel
+               OpBranch %18
+         %19 = OpLabel
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  auto result =
+      SinglePassRunToBinary<MergeReturnPass>(text, /* skip_nop = */ true);
+  EXPECT_EQ(Pass::Status::Failure, std::get<1>(result));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

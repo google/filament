@@ -89,7 +89,7 @@ bool ReadBinaryFile(const char* filename, std::vector<T>* data) {
 
   ReadFile(fp, data);
   bool succeeded = WasFileCorrectlyRead<T>(fp, filename);
-  if (use_file) fclose(fp);
+  if (use_file && fp) fclose(fp);
   return succeeded;
 }
 
@@ -111,7 +111,7 @@ bool ReadTextFile(const char* filename, std::vector<T>* data) {
 
   ReadFile(fp, data);
   bool succeeded = WasFileCorrectlyRead<T>(fp, filename);
-  if (use_file) fclose(fp);
+  if (use_file && fp) fclose(fp);
   return succeeded;
 }
 

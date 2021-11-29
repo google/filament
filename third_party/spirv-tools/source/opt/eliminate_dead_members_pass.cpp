@@ -20,6 +20,7 @@
 namespace {
 const uint32_t kRemovedMember = 0xFFFFFFFF;
 const uint32_t kSpecConstOpOpcodeIdx = 0;
+constexpr uint32_t kArrayElementTypeIdx = 0;
 }  // namespace
 
 namespace spvtools {
@@ -64,6 +65,10 @@ void EliminateDeadMembersPass::FindLiveMembers() {
           MarkPointeeTypeAsFullUsed(inst.type_id());
           break;
         default:
+          // Ignore structured buffers as layout(offset) qualifiers cannot be
+          // applied to structure fields
+          if (inst.IsVulkanStorageBufferVariable())
+            MarkPointeeTypeAsFullUsed(inst.type_id());
           break;
       }
     }
@@ -136,18 +141,22 @@ void EliminateDeadMembersPass::MarkMembersAsLiveForStore(
 void EliminateDeadMembersPass::MarkTypeAsFullyUsed(uint32_t type_id) {
   Instruction* type_inst = get_def_use_mgr()->GetDef(type_id);
   assert(type_inst != nullptr);
-  if (type_inst->opcode() != SpvOpTypeStruct) {
-    return;
-  }
 
-  // Mark every member of the current struct as used.
-  for (uint32_t i = 0; i < type_inst->NumInOperands(); ++i) {
-    used_members_[type_id].insert(i);
-  }
-
-  // Mark any sub struct as fully used.
-  for (uint32_t i = 0; i < type_inst->NumInOperands(); ++i) {
-    MarkTypeAsFullyUsed(type_inst->GetSingleWordInOperand(i));
+  switch (type_inst->opcode()) {
+    case SpvOpTypeStruct:
+      // Mark every member and its type as fully used.
+      for (uint32_t i = 0; i < type_inst->NumInOperands(); ++i) {
+        used_members_[type_id].insert(i);
+        MarkTypeAsFullyUsed(type_inst->GetSingleWordInOperand(i));
+      }
+      break;
+    case SpvOpTypeArray:
+    case SpvOpTypeRuntimeArray:
+      MarkTypeAsFullyUsed(
+          type_inst->GetSingleWordInOperand(kArrayElementTypeIdx));
+      break;
+    default:
+      break;
   }
 }
 

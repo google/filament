@@ -24,6 +24,8 @@
 
 #include <math/mat4.h>
 
+#include <float.h>
+
 namespace filament {
 
 using namespace backend;
@@ -140,6 +142,7 @@ void FSkinningBuffer::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4f c
 
     // figure out the scales
     float4 s = { length(m[0]), length(m[1]), length(m[2]), 0.0f };
+    s = max(s, float4(FLT_EPSILON)); // avoid divide-by-zero when computing inverse scales
     if (dot(cross(m[0].xyz, m[1].xyz), m[2].xyz) < 0) {
         s[2] = -s[2];
     }

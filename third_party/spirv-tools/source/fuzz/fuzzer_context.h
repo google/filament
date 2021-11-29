@@ -142,6 +142,12 @@ class FuzzerContext {
   uint32_t GetChanceOfAddingArrayOrStructType() const {
     return chance_of_adding_array_or_struct_type_;
   }
+  uint32_t GetChanceOfAddingAtomicLoad() const {
+    return chance_of_adding_atomic_load_;
+  }
+  uint32_t GetChanceOfAddingAtomicStore() const {
+    return chance_of_adding_atomic_store_;
+  }
   uint32_t GetChanceOfAddingBitInstructionSynonym() const {
     return chance_of_adding_bit_instruction_synonym_;
   }
@@ -381,6 +387,10 @@ class FuzzerContext {
     return chance_of_wrapping_region_in_selection_;
   }
 
+  uint32_t GetChanceOfWrappingVectorSynonym() const {
+    return chance_of_wrapping_vector_synonym_;
+  }
+
   // Other functions to control transformations. Keep them in alphabetical
   // order.
   uint32_t GetMaximumEquivalenceClassSizeForDataSynonymFactClosure() const {
@@ -425,6 +435,9 @@ class FuzzerContext {
   uint32_t GetRandomIndexForCompositeInsert(uint32_t number_of_components) {
     return random_generator_->RandomUint32(number_of_components);
   }
+  uint32_t GetRandomIndexForWrappingVector(uint32_t vector_width) {
+    return random_generator_->RandomUint32(vector_width);
+  }
   int64_t GetRandomValueForStepConstantInLoop() {
     return random_generator_->RandomUint64(UINT64_MAX);
   }
@@ -462,6 +475,9 @@ class FuzzerContext {
     // Ensure that the number of unused components is non-zero.
     return random_generator_->RandomUint32(max_unused_component_count) + 1;
   }
+  uint32_t GetWidthOfWrappingVector() {
+    return 2 + random_generator_->RandomUint32(3);
+  }
   bool GoDeeperInConstantObfuscation(uint32_t depth) {
     return go_deeper_in_constant_obfuscation_(depth, random_generator_.get());
   }
@@ -482,6 +498,8 @@ class FuzzerContext {
   uint32_t chance_of_adding_another_pass_to_pass_loop_;
   uint32_t chance_of_adding_another_struct_field_;
   uint32_t chance_of_adding_array_or_struct_type_;
+  uint32_t chance_of_adding_atomic_load_;
+  uint32_t chance_of_adding_atomic_store_;
   uint32_t chance_of_adding_bit_instruction_synonym_;
   uint32_t chance_of_adding_both_branches_when_replacing_opselect_;
   uint32_t chance_of_adding_composite_extract_;
@@ -562,6 +580,7 @@ class FuzzerContext {
   uint32_t chance_of_swapping_functions_;
   uint32_t chance_of_toggling_access_chain_instruction_;
   uint32_t chance_of_wrapping_region_in_selection_;
+  uint32_t chance_of_wrapping_vector_synonym_;
 
   // Limits associated with various quantities for which random values are
   // chosen during fuzzing.

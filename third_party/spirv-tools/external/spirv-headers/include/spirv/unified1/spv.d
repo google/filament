@@ -352,6 +352,7 @@ enum ImageOperandsShift : uint
     VolatileTexelKHR = 11,
     SignExtend = 12,
     ZeroExtend = 13,
+    Offsets = 16,
 }
 
 enum ImageOperandsMask : uint
@@ -375,6 +376,7 @@ enum ImageOperandsMask : uint
     VolatileTexelKHR = 0x00000800,
     SignExtend = 0x00001000,
     ZeroExtend = 0x00002000,
+    Offsets = 0x00010000,
 }
 
 enum FPFastMathModeShift : uint
@@ -500,6 +502,10 @@ enum Decoration : uint
     RestrictPointerEXT = 5355,
     AliasedPointer = 5356,
     AliasedPointerEXT = 5356,
+    BindlessSamplerNV = 5398,
+    BindlessImageNV = 5399,
+    BoundSamplerNV = 5400,
+    BoundImageNV = 5401,
     SIMTCallINTEL = 5599,
     ReferencedIndirectlyINTEL = 5602,
     ClobberINTEL = 5607,
@@ -654,6 +660,7 @@ enum BuiltIn : uint
     HitTNV = 5332,
     HitKindKHR = 5333,
     HitKindNV = 5333,
+    CurrentRayTimeNV = 5334,
     IncomingRayFlagsKHR = 5351,
     IncomingRayFlagsNV = 5351,
     RayGeometryIndexKHR = 5352,
@@ -725,6 +732,7 @@ enum FunctionControlShift : uint
     DontInline = 1,
     Pure = 2,
     Const = 3,
+    OptNoneINTEL = 16,
 }
 
 enum FunctionControlMask : uint
@@ -734,6 +742,7 @@ enum FunctionControlMask : uint
     DontInline = 0x00000002,
     Pure = 0x00000004,
     Const = 0x00000008,
+    OptNoneINTEL = 0x00010000,
 }
 
 enum MemorySemanticsShift : uint
@@ -996,6 +1005,7 @@ enum Capability : uint
     StorageTexelBufferArrayNonUniformIndexing = 5312,
     StorageTexelBufferArrayNonUniformIndexingEXT = 5312,
     RayTracingNV = 5340,
+    RayTracingMotionBlurNV = 5341,
     VulkanMemoryModel = 5345,
     VulkanMemoryModelKHR = 5345,
     VulkanMemoryModelDeviceScope = 5346,
@@ -1010,6 +1020,7 @@ enum Capability : uint
     ShaderSMBuiltinsNV = 5373,
     FragmentShaderPixelInterlockEXT = 5378,
     DemoteToHelperInvocationEXT = 5379,
+    BindlessTextureNV = 5390,
     SubgroupShuffleINTEL = 5568,
     SubgroupBufferBlockIOINTEL = 5569,
     SubgroupImageBlockIOINTEL = 5570,
@@ -1056,6 +1067,7 @@ enum Capability : uint
     AtomicFloat32AddEXT = 6033,
     AtomicFloat64AddEXT = 6034,
     LongConstantCompositeINTEL = 6089,
+    OptNoneINTEL = 6094,
     AtomicFloat16AddEXT = 6095,
     DebugInfoModuleINTEL = 6114,
 }
@@ -1552,6 +1564,8 @@ enum Op : uint
     OpIgnoreIntersectionNV = 5335,
     OpTerminateRayNV = 5336,
     OpTraceNV = 5337,
+    OpTraceMotionNV = 5338,
+    OpTraceRayMotionNV = 5339,
     OpTypeAccelerationStructureKHR = 5341,
     OpTypeAccelerationStructureNV = 5341,
     OpExecuteCallableNV = 5344,
@@ -1564,6 +1578,13 @@ enum Op : uint
     OpEndInvocationInterlockEXT = 5365,
     OpDemoteToHelperInvocationEXT = 5380,
     OpIsHelperInvocationEXT = 5381,
+    OpConvertUToImageNV = 5391,
+    OpConvertUToSamplerNV = 5392,
+    OpConvertImageToUNV = 5393,
+    OpConvertSamplerToUNV = 5394,
+    OpConvertUToSampledImageNV = 5395,
+    OpConvertSampledImageToUNV = 5396,
+    OpSamplerImageAddressingModeNV = 5397,
     OpSubgroupShuffleINTEL = 5571,
     OpSubgroupShuffleDownINTEL = 5572,
     OpSubgroupShuffleUpINTEL = 5573,
@@ -1588,7 +1609,7 @@ enum Op : uint
     OpUSubSatINTEL = 5596,
     OpIMul32x16INTEL = 5597,
     OpUMul32x16INTEL = 5598,
-    OpConstFunctionPointerINTEL = 5600,
+    OpConstantFunctionPointerINTEL = 5600,
     OpFunctionPointerCallINTEL = 5601,
     OpAsmTargetINTEL = 5609,
     OpAsmINTEL = 5610,

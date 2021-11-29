@@ -741,6 +741,16 @@ public:
         }
     }
 
+    bool isUniform() const
+    {
+        switch (storage) {
+        case EvqUniform:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     bool isIo() const
     {
         switch (storage) {

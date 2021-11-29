@@ -3,7 +3,12 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.14.2 (currently main branch)
+## v1.14.3 (currently main branch)
+
+## v1.14.2
+
+- Metal: Fix validation error when rendering to `RenderTarget` without depth attachment.
+- engine: Fix rendering glitch with zero-scale bone transforms.
 
 ## v1.14.1
 

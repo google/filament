@@ -1224,10 +1224,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     }
 
     // Set the depth-stencil state, if a state change is needed.
-    DepthStencilState depthState {
-        .compareFunction = getMetalCompareFunction(rs.depthFunc),
-        .depthWriteEnabled = rs.depthWrite,
-    };
+    DepthStencilState depthState;
+    if (depthAttachment) {
+        depthState.compareFunction = getMetalCompareFunction(rs.depthFunc);
+        depthState.depthWriteEnabled = rs.depthWrite;
+    }
     mContext->depthStencilState.updateState(depthState);
     if (mContext->depthStencilState.stateChanged()) {
         id<MTLDepthStencilState> state =

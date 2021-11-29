@@ -92,7 +92,7 @@ void InlinePass::AddStore(uint32_t ptr_id, uint32_t val_id,
                       {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {ptr_id}},
                        {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {val_id}}}));
   if (line_inst != nullptr) {
-    newStore->dbg_line_insts().push_back(*line_inst);
+    newStore->AddDebugLine(line_inst);
   }
   newStore->SetDebugScope(dbg_scope);
   (*block_ptr)->AddInstruction(std::move(newStore));
@@ -106,7 +106,7 @@ void InlinePass::AddLoad(uint32_t type_id, uint32_t resultId, uint32_t ptr_id,
       new Instruction(context(), SpvOpLoad, type_id, resultId,
                       {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {ptr_id}}}));
   if (line_inst != nullptr) {
-    newLoad->dbg_line_insts().push_back(*line_inst);
+    newLoad->AddDebugLine(line_inst);
   }
   newLoad->SetDebugScope(dbg_scope);
   (*block_ptr)->AddInstruction(std::move(newLoad));
@@ -158,8 +158,8 @@ bool InlinePass::CloneAndMapLocals(
   auto callee_block_itr = calleeFn->begin();
   auto callee_var_itr = callee_block_itr->begin();
   while (callee_var_itr->opcode() == SpvOp::SpvOpVariable ||
-         callee_var_itr->GetOpenCL100DebugOpcode() ==
-             OpenCLDebugInfo100DebugDeclare) {
+         callee_var_itr->GetCommonDebugOpcode() ==
+             CommonDebugInfoDebugDeclare) {
     if (callee_var_itr->opcode() != SpvOp::SpvOpVariable) {
       ++callee_var_itr;
       continue;
@@ -300,8 +300,7 @@ InstructionList::iterator InlinePass::AddStoresForVariableInitializers(
     UptrVectorIterator<BasicBlock> callee_first_block_itr) {
   auto callee_itr = callee_first_block_itr->begin();
   while (callee_itr->opcode() == SpvOp::SpvOpVariable ||
-         callee_itr->GetOpenCL100DebugOpcode() ==
-             OpenCLDebugInfo100DebugDeclare) {
+         callee_itr->GetCommonDebugOpcode() == CommonDebugInfoDebugDeclare) {
     if (callee_itr->opcode() == SpvOp::SpvOpVariable &&
         callee_itr->NumInOperands() == 2) {
       assert(callee2caller.count(callee_itr->result_id()) &&
@@ -315,8 +314,7 @@ InstructionList::iterator InlinePass::AddStoresForVariableInitializers(
                context()->get_debug_info_mgr()->BuildDebugScope(
                    callee_itr->GetDebugScope(), inlined_at_ctx));
     }
-    if (callee_itr->GetOpenCL100DebugOpcode() ==
-        OpenCLDebugInfo100DebugDeclare) {
+    if (callee_itr->GetCommonDebugOpcode() == CommonDebugInfoDebugDeclare) {
       InlineSingleInstruction(
           callee2caller, new_blk_ptr->get(), &*callee_itr,
           context()->get_debug_info_mgr()->BuildDebugInlinedAtChain(
@@ -405,6 +403,14 @@ bool InlinePass::InlineEntryBlock(
       callee2caller, inlined_at_ctx, new_blk_ptr, callee_first_block);
 
   while (callee_inst_itr != callee_first_block->end()) {
+    // Don't inline function definition links, the calling function is not a
+    // definition.
+    if (callee_inst_itr->GetShader100DebugOpcode() ==
+        NonSemanticShaderDebugInfo100DebugFunctionDefinition) {
+      ++callee_inst_itr;
+      continue;
+    }
+
     if (!InlineSingleInstruction(
             callee2caller, new_blk_ptr->get(), &*callee_inst_itr,
             context()->get_debug_info_mgr()->BuildDebugInlinedAtChain(
@@ -435,6 +441,11 @@ std::unique_ptr<BasicBlock> InlinePass::InlineBasicBlocks(
     auto tail_inst_itr = callee_block_itr->end();
     for (auto inst_itr = callee_block_itr->begin(); inst_itr != tail_inst_itr;
          ++inst_itr) {
+      // Don't inline function definition links, the calling function is not a
+      // definition
+      if (inst_itr->GetShader100DebugOpcode() ==
+          NonSemanticShaderDebugInfo100DebugFunctionDefinition)
+        continue;
       if (!InlineSingleInstruction(
               callee2caller, new_blk_ptr.get(), &*inst_itr,
               context()->get_debug_info_mgr()->BuildDebugInlinedAtChain(

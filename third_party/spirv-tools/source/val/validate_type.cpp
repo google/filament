@@ -596,7 +596,7 @@ spv_result_t ValidateTypeCooperativeMatrixNV(ValidationState_t& _,
   if (!cols || !_.IsIntScalarType(cols->type_id()) ||
       !spvOpcodeIsConstant(cols->opcode())) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "OpTypeCooperativeMatrixNV Cols <id> '" << _.getIdName(rows_id)
+           << "OpTypeCooperativeMatrixNV Cols <id> '" << _.getIdName(cols_id)
            << "' is not a constant instruction with scalar integer type.";
   }
 

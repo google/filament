@@ -357,6 +357,7 @@ typedef enum SpvImageOperandsShift_ {
     SpvImageOperandsVolatileTexelKHRShift = 11,
     SpvImageOperandsSignExtendShift = 12,
     SpvImageOperandsZeroExtendShift = 13,
+    SpvImageOperandsOffsetsShift = 16,
     SpvImageOperandsMax = 0x7fffffff,
 } SpvImageOperandsShift;
 
@@ -380,6 +381,7 @@ typedef enum SpvImageOperandsMask_ {
     SpvImageOperandsVolatileTexelKHRMask = 0x00000800,
     SpvImageOperandsSignExtendMask = 0x00001000,
     SpvImageOperandsZeroExtendMask = 0x00002000,
+    SpvImageOperandsOffsetsMask = 0x00010000,
 } SpvImageOperandsMask;
 
 typedef enum SpvFPFastMathModeShift_ {
@@ -503,6 +505,10 @@ typedef enum SpvDecoration_ {
     SpvDecorationRestrictPointerEXT = 5355,
     SpvDecorationAliasedPointer = 5356,
     SpvDecorationAliasedPointerEXT = 5356,
+    SpvDecorationBindlessSamplerNV = 5398,
+    SpvDecorationBindlessImageNV = 5399,
+    SpvDecorationBoundSamplerNV = 5400,
+    SpvDecorationBoundImageNV = 5401,
     SpvDecorationSIMTCallINTEL = 5599,
     SpvDecorationReferencedIndirectlyINTEL = 5602,
     SpvDecorationClobberINTEL = 5607,
@@ -657,6 +663,7 @@ typedef enum SpvBuiltIn_ {
     SpvBuiltInHitTNV = 5332,
     SpvBuiltInHitKindKHR = 5333,
     SpvBuiltInHitKindNV = 5333,
+    SpvBuiltInCurrentRayTimeNV = 5334,
     SpvBuiltInIncomingRayFlagsKHR = 5351,
     SpvBuiltInIncomingRayFlagsNV = 5351,
     SpvBuiltInRayGeometryIndexKHR = 5352,
@@ -726,6 +733,7 @@ typedef enum SpvFunctionControlShift_ {
     SpvFunctionControlDontInlineShift = 1,
     SpvFunctionControlPureShift = 2,
     SpvFunctionControlConstShift = 3,
+    SpvFunctionControlOptNoneINTELShift = 16,
     SpvFunctionControlMax = 0x7fffffff,
 } SpvFunctionControlShift;
 
@@ -735,6 +743,7 @@ typedef enum SpvFunctionControlMask_ {
     SpvFunctionControlDontInlineMask = 0x00000002,
     SpvFunctionControlPureMask = 0x00000004,
     SpvFunctionControlConstMask = 0x00000008,
+    SpvFunctionControlOptNoneINTELMask = 0x00010000,
 } SpvFunctionControlMask;
 
 typedef enum SpvMemorySemanticsShift_ {
@@ -993,6 +1002,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityStorageTexelBufferArrayNonUniformIndexing = 5312,
     SpvCapabilityStorageTexelBufferArrayNonUniformIndexingEXT = 5312,
     SpvCapabilityRayTracingNV = 5340,
+    SpvCapabilityRayTracingMotionBlurNV = 5341,
     SpvCapabilityVulkanMemoryModel = 5345,
     SpvCapabilityVulkanMemoryModelKHR = 5345,
     SpvCapabilityVulkanMemoryModelDeviceScope = 5346,
@@ -1007,6 +1017,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityShaderSMBuiltinsNV = 5373,
     SpvCapabilityFragmentShaderPixelInterlockEXT = 5378,
     SpvCapabilityDemoteToHelperInvocationEXT = 5379,
+    SpvCapabilityBindlessTextureNV = 5390,
     SpvCapabilitySubgroupShuffleINTEL = 5568,
     SpvCapabilitySubgroupBufferBlockIOINTEL = 5569,
     SpvCapabilitySubgroupImageBlockIOINTEL = 5570,
@@ -1053,6 +1064,7 @@ typedef enum SpvCapability_ {
     SpvCapabilityAtomicFloat32AddEXT = 6033,
     SpvCapabilityAtomicFloat64AddEXT = 6034,
     SpvCapabilityLongConstantCompositeINTEL = 6089,
+    SpvCapabilityOptNoneINTEL = 6094,
     SpvCapabilityAtomicFloat16AddEXT = 6095,
     SpvCapabilityDebugInfoModuleINTEL = 6114,
     SpvCapabilityMax = 0x7fffffff,
@@ -1547,6 +1559,8 @@ typedef enum SpvOp_ {
     SpvOpIgnoreIntersectionNV = 5335,
     SpvOpTerminateRayNV = 5336,
     SpvOpTraceNV = 5337,
+    SpvOpTraceMotionNV = 5338,
+    SpvOpTraceRayMotionNV = 5339,
     SpvOpTypeAccelerationStructureKHR = 5341,
     SpvOpTypeAccelerationStructureNV = 5341,
     SpvOpExecuteCallableNV = 5344,
@@ -1559,6 +1573,13 @@ typedef enum SpvOp_ {
     SpvOpEndInvocationInterlockEXT = 5365,
     SpvOpDemoteToHelperInvocationEXT = 5380,
     SpvOpIsHelperInvocationEXT = 5381,
+    SpvOpConvertUToImageNV = 5391,
+    SpvOpConvertUToSamplerNV = 5392,
+    SpvOpConvertImageToUNV = 5393,
+    SpvOpConvertSamplerToUNV = 5394,
+    SpvOpConvertUToSampledImageNV = 5395,
+    SpvOpConvertSampledImageToUNV = 5396,
+    SpvOpSamplerImageAddressingModeNV = 5397,
     SpvOpSubgroupShuffleINTEL = 5571,
     SpvOpSubgroupShuffleDownINTEL = 5572,
     SpvOpSubgroupShuffleUpINTEL = 5573,
@@ -1583,7 +1604,7 @@ typedef enum SpvOp_ {
     SpvOpUSubSatINTEL = 5596,
     SpvOpIMul32x16INTEL = 5597,
     SpvOpUMul32x16INTEL = 5598,
-    SpvOpConstFunctionPointerINTEL = 5600,
+    SpvOpConstantFunctionPointerINTEL = 5600,
     SpvOpFunctionPointerCallINTEL = 5601,
     SpvOpAsmTargetINTEL = 5609,
     SpvOpAsmINTEL = 5610,
@@ -2192,6 +2213,8 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpIgnoreIntersectionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTerminateRayNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTraceNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpTraceMotionNV: *hasResult = false; *hasResultType = false; break;
+    case SpvOpTraceRayMotionNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTypeAccelerationStructureNV: *hasResult = true; *hasResultType = false; break;
     case SpvOpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
@@ -2203,6 +2226,13 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpEndInvocationInterlockEXT: *hasResult = false; *hasResultType = false; break;
     case SpvOpDemoteToHelperInvocationEXT: *hasResult = false; *hasResultType = false; break;
     case SpvOpIsHelperInvocationEXT: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertUToImageNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertUToSamplerNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertImageToUNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertSamplerToUNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertUToSampledImageNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConvertSampledImageToUNV: *hasResult = true; *hasResultType = true; break;
+    case SpvOpSamplerImageAddressingModeNV: *hasResult = false; *hasResultType = false; break;
     case SpvOpSubgroupShuffleINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupShuffleDownINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpSubgroupShuffleUpINTEL: *hasResult = true; *hasResultType = true; break;
@@ -2227,7 +2257,7 @@ inline void SpvHasResultAndType(SpvOp opcode, bool *hasResult, bool *hasResultTy
     case SpvOpUSubSatINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpIMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpUMul32x16INTEL: *hasResult = true; *hasResultType = true; break;
-    case SpvOpConstFunctionPointerINTEL: *hasResult = true; *hasResultType = true; break;
+    case SpvOpConstantFunctionPointerINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpFunctionPointerCallINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpAsmTargetINTEL: *hasResult = true; *hasResultType = true; break;
     case SpvOpAsmINTEL: *hasResult = true; *hasResultType = true; break;

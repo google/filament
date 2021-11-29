@@ -378,6 +378,185 @@ OpFunctionEnd)";
   SinglePassRunAndMatch<LoopUnroller>(text, true);
 }
 
+TEST_F(PassClassTest, SimpleFullyUnrollWithShaderDebugInstructions) {
+  // We must preserve the debug information including
+  // NonSemantic.Shader.DebugInfo.100 instructions and DebugLine instructions.
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "GLSL.std.450"
+%ext = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main" %3
+OpExecutionMode %2 OriginUpperLeft
+OpSource GLSL 330
+%file_name = OpString "test"
+%float_name = OpString "float"
+%main_name = OpString "main"
+%f_name = OpString "f"
+%i_name = OpString "i"
+OpName %2 "main"
+OpName %5 "x"
+OpName %3 "c"
+OpDecorate %3 Location 0
+%6 = OpTypeVoid
+%7 = OpTypeFunction %6
+%8 = OpTypeInt 32 1
+%9 = OpTypePointer Function %8
+%10 = OpConstant %8 0
+%11 = OpConstant %8 4
+%12 = OpTypeBool
+%13 = OpTypeFloat 32
+%14 = OpTypeInt 32 0
+%uint_0 = OpConstant %14 0
+%uint_1 = OpConstant %14 1
+%uint_2 = OpConstant %14 2
+%uint_3 = OpConstant %14 3
+%uint_4 = OpConstant %14 4
+%uint_5 = OpConstant %14 5
+%uint_6 = OpConstant %14 6
+%uint_7 = OpConstant %14 7
+%uint_8 = OpConstant %14 8
+%uint_10 = OpConstant %14 10
+%uint_32 = OpConstant %14 32
+%15 = OpConstant %14 4
+%16 = OpTypeArray %13 %15
+%17 = OpTypePointer Function %16
+%18 = OpConstant %13 1
+%19 = OpTypePointer Function %13
+%20 = OpConstant %8 1
+%21 = OpTypeVector %13 4
+%22 = OpTypePointer Output %21
+%3 = OpVariable %22 Output
+%null_expr = OpExtInst %6 %ext DebugExpression
+%deref = OpExtInst %6 %ext DebugOperation %uint_0
+%deref_expr = OpExtInst %6 %ext DebugExpression %deref
+%src = OpExtInst %6 %ext DebugSource %file_name
+%cu = OpExtInst %6 %ext DebugCompilationUnit %uint_1 %uint_4 %src %uint_5
+%dbg_tf = OpExtInst %6 %ext DebugTypeBasic %float_name %uint_32 %uint_3 %uint_0
+%dbg_v4f = OpExtInst %6 %ext DebugTypeVector %dbg_tf %uint_4
+%main_ty = OpExtInst %6 %ext DebugTypeFunction %uint_3 %dbg_v4f %dbg_v4f
+%dbg_main = OpExtInst %6 %ext DebugFunction %main_name %main_ty %src %uint_0 %uint_0 %cu %main_name %uint_3 %uint_10
+%bb = OpExtInst %6 %ext DebugLexicalBlock %src %uint_0 %uint_0 %dbg_main
+%dbg_f = OpExtInst %6 %ext DebugLocalVariable %f_name %dbg_v4f %src %uint_0 %uint_0 %dbg_main %uint_4
+%dbg_i = OpExtInst %6 %ext DebugLocalVariable %i_name %dbg_v4f %src %uint_1 %uint_0 %bb %uint_4
+
+; CHECK: [[f:%\w+]] = OpString "f"
+; CHECK: [[i:%\w+]] = OpString "i"
+; CHECK: [[int_0:%\w+]] = OpConstant {{%\w+}} 0
+
+; CHECK: [[null_expr:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugExpression
+; CHECK: [[deref:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugOperation %uint_0
+; CHECK: [[deref_expr:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugExpression [[deref]]
+; CHECK: [[dbg_fn:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugFunction
+; CHECK: [[dbg_bb:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLexicalBlock
+; CHECK: [[dbg_f:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLocalVariable [[f]] {{%\w+}} {{%\w+}} %uint_0 %uint_0 [[dbg_fn]]
+; CHECK: [[dbg_i:%\w+]] = OpExtInst {{%\w+}} {{%\w+}} DebugLocalVariable [[i]] {{%\w+}} {{%\w+}} %uint_1 %uint_0 [[dbg_bb]]
+
+%2 = OpFunction %6 None %7
+%23 = OpLabel
+
+; The first block has DebugDeclare and DebugValue with Deref
+;
+; CHECK: OpLabel
+; CHECK: %x = OpVariable %_ptr_Function__arr_float_uint_4_0 Function
+; CHECK: OpBranch
+; CHECK: OpLabel
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: DebugValue [[dbg_f]] [[int_0]] [[null_expr]]
+; CHECK: OpBranch
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: DebugLine {{%\w+}} %uint_1 %uint_1 %uint_1 %uint_1
+; CHECK: OpSLessThan
+; CHECK: DebugLine {{%\w+}} %uint_2 %uint_2 %uint_0 %uint_0
+; CHECK: OpBranch
+; CHECK: OpLabel
+; CHECK: DebugScope [[dbg_bb]]
+; CHECK: DebugDeclare [[dbg_f]] %x [[null_expr]]
+; CHECK: DebugValue [[dbg_i]] %x [[deref_expr]]
+; CHECK: DebugLine {{%\w+}} %uint_3 %uint_3 %uint_0 %uint_0
+;
+; CHECK: DebugLine {{%\w+}} %uint_6 %uint_6 %uint_0 %uint_0
+; CHECK: [[add:%\w+]] = OpIAdd
+; CHECK: DebugValue [[dbg_f]] [[add]] [[null_expr]]
+; CHECK: DebugLine {{%\w+}} %uint_7 %uint_7 %uint_0 %uint_0
+
+; Other blocks do not have DebugDeclare and DebugValue with Deref
+;
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: DebugLine {{%\w+}} %uint_1 %uint_1 %uint_1 %uint_1
+; CHECK: OpSLessThan
+; CHECK: DebugLine {{%\w+}} %uint_2 %uint_2 %uint_0 %uint_0
+; CHECK: OpBranch
+; CHECK: OpLabel
+;
+; CHECK: DebugScope [[dbg_bb]]
+; CHECK-NOT: DebugDeclare [[dbg_f]] %x [[null_expr]]
+; CHECK-NOT: DebugValue [[dbg_i]] %x [[deref_expr]]
+; CHECK: DebugLine {{%\w+}} %uint_3 %uint_3 %uint_0 %uint_0
+;
+; CHECK: DebugLine {{%\w+}} %uint_6 %uint_6 %uint_0 %uint_0
+; CHECK: [[add:%\w+]] = OpIAdd
+; CHECK: DebugValue [[dbg_f]] [[add]] [[null_expr]]
+; CHECK: DebugLine {{%\w+}} %uint_7 %uint_7 %uint_0 %uint_0
+;
+; CHECK-NOT: DebugDeclare [[dbg_f]] %x [[null_expr]]
+; CHECK-NOT: DebugValue [[dbg_i]] %x [[deref_expr]]
+; CHECK: DebugScope [[dbg_fn]]
+; CHECK: DebugLine {{%\w+}} %uint_8 %uint_8 %uint_0 %uint_0
+; CHECK: OpReturn
+
+%5 = OpVariable %17 Function
+OpBranch %24
+%24 = OpLabel
+%35 = OpPhi %8 %10 %23 %34 %26
+%s1 = OpExtInst %6 %ext DebugScope %dbg_main
+%d10 = OpExtInst %6 %ext DebugLine %file_name %uint_1 %uint_1 %uint_0 %uint_0
+%value0 = OpExtInst %6 %ext DebugValue %dbg_f %35 %null_expr
+OpLoopMerge %25 %26 Unroll
+OpBranch %27
+%27 = OpLabel
+%s2 = OpExtInst %6 %ext DebugScope %dbg_main
+%d1 = OpExtInst %6 %ext DebugLine %file_name %uint_1 %uint_1 %uint_1 %uint_1
+%29 = OpSLessThan %12 %35 %11
+%d2 = OpExtInst %6 %ext DebugLine %file_name %uint_2 %uint_2 %uint_0 %uint_0
+OpBranchConditional %29 %30 %25
+%30 = OpLabel
+%s3 = OpExtInst %6 %ext DebugScope %bb
+%decl0 = OpExtInst %6 %ext DebugDeclare %dbg_f %5 %null_expr
+%decl1 = OpExtInst %6 %ext DebugValue %dbg_i %5 %deref_expr
+%d3 = OpExtInst %6 %ext DebugLine %file_name %uint_3 %uint_3 %uint_0 %uint_0
+%32 = OpAccessChain %19 %5 %35
+%d4 = OpExtInst %6 %ext DebugLine %file_name %uint_4 %uint_4 %uint_0 %uint_0
+OpStore %32 %18
+%d5 = OpExtInst %6 %ext DebugLine %file_name %uint_5 %uint_5 %uint_0 %uint_0
+OpBranch %26
+%26 = OpLabel
+%s4 = OpExtInst %6 %ext DebugScope %dbg_main
+%d6 = OpExtInst %6 %ext DebugLine %file_name %uint_6 %uint_6 %uint_0 %uint_0
+%34 = OpIAdd %8 %35 %20
+%value1 = OpExtInst %6 %ext DebugValue %dbg_f %34 %null_expr
+%d7 = OpExtInst %6 %ext DebugLine %file_name %uint_7 %uint_7 %uint_0 %uint_0
+OpBranch %24
+%25 = OpLabel
+%s5 = OpExtInst %6 %ext DebugScope %dbg_main
+%d8 = OpExtInst %6 %ext DebugLine %file_name %uint_8 %uint_8 %uint_0 %uint_0
+OpReturn
+OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  Module* module = context->module();
+  EXPECT_NE(nullptr, module) << "Assembling failed for ushader:\n"
+                             << text << std::endl;
+
+  LoopUnroller loop_unroller;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER |
+                        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES);
+  SinglePassRunAndMatch<LoopUnroller>(text, true);
+}
+
 template <int factor>
 class PartialUnrollerTestPass : public Pass {
  public:

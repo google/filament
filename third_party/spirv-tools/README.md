@@ -21,7 +21,6 @@ headers, and XML registry.
 
 ## Downloads
 
-[![Build status](https://ci.appveyor.com/api/projects/status/gpue87cesrx3pi0d/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/spirv-tools/branch/master)
 <img alt="Linux" src="kokoro/img/linux.png" width="20px" height="20px" hspace="2px"/>[![Linux Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_linux_clang_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_linux_clang_release.html)
 <img alt="MacOS" src="kokoro/img/macos.png" width="20px" height="20px" hspace="2px"/>[![MacOS Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_macos_clang_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_macos_clang_release.html)
 <img alt="Windows" src="kokoro/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://storage.googleapis.com/spirv-tools/badges/build_status_windows_release.svg)](https://storage.googleapis.com/spirv-tools/badges/build_link_windows_vs2017_release.html)
@@ -44,6 +43,20 @@ following versions are ordered from oldest to newest:
 
 Use the `--version` option on each command line tool to see the software
 version.  An API call reports the software version as a C-style string.
+
+## Releases
+
+Some versions of SPIRV-Tools are tagged as stable releases (see
+[tags](https://github.com/KhronosGroup/SPIRV-Tools/tags) on github).
+These versions undergo extra testing.
+Releases are not directly related to releases (or versions) of
+[SPIRV-Headers][spirv-headers].
+Releases of SPIRV-Tools are tested against the version of SPIRV-Headers listed
+in the [DEPS](DEPS) file.
+The release generally uses the most recent compatible version of SPIRV-Headers
+available at the time of release.
+No version of SPIRV-Headers other than the one listed in the DEPS file is
+guaranteed to work with the SPIRV-Tools release.
 
 ## Supported features
 
@@ -242,6 +255,34 @@ Contributions via merge request are welcome. Changes should:
 
 We intend to maintain a linear history on the GitHub `master` branch.
 
+### Getting the source
+
+Example of getting sources, assuming SPIRV-Tools is configured as a standalone project:
+
+    git clone https://github.com/KhronosGroup/SPIRV-Tools.git   spirv-tools
+    cd spirv-tools
+
+    # Check out sources for dependencies, at versions known to work together,
+    # as listed in the DEPS file.
+    python3 utils/git-sync-deps
+
+For some kinds of development, you may need the latest sources from the third-party projects:
+
+    git clone https://github.com/KhronosGroup/SPIRV-Headers.git spirv-tools/external/spirv-headers
+    git clone https://github.com/google/googletest.git          spirv-tools/external/googletest
+    git clone https://github.com/google/effcee.git              spirv-tools/external/effcee
+    git clone https://github.com/google/re2.git                 spirv-tools/external/re2
+
+#### Dependency on Effcee
+
+Some tests depend on the [Effcee][effcee] library for stateful matching.
+Effcee itself depends on [RE2][re2].
+
+* If SPIRV-Tools is configured as part of a larger project that already uses
+  Effcee, then that project should include Effcee before SPIRV-Tools.
+* Otherwise, SPIRV-Tools expects Effcee sources to appear in `external/effcee`
+  and RE2 sources to appear in `external/re2`.
+
 ### Source code organization
 
 * `example`: demo code of using SPIRV-Tools APIs
@@ -260,14 +301,6 @@ We intend to maintain a linear history on the GitHub `master` branch.
 * `test/`: Tests, using the [googletest][googletest] framework
 * `tools/`: Command line executables
 
-Example of getting sources, assuming SPIRV-Tools is configured as a standalone project:
-
-    git clone https://github.com/KhronosGroup/SPIRV-Tools.git   spirv-tools
-    git clone https://github.com/KhronosGroup/SPIRV-Headers.git spirv-tools/external/spirv-headers
-    git clone https://github.com/google/googletest.git          spirv-tools/external/googletest
-    git clone https://github.com/google/effcee.git              spirv-tools/external/effcee
-    git clone https://github.com/google/re2.git                 spirv-tools/external/re2
-
 ### Tests
 
 The project contains a number of tests, used to drive development
@@ -281,46 +314,12 @@ tests:
   `googletest` source into the `<spirv-dir>/external/googletest` directory before
   configuring and building the project.
 
-*Note*: You must use a version of googletest that includes
-[a fix][googletest-pull-612] for [googletest issue 610][googletest-issue-610].
-The fix is included on the googletest master branch any time after 2015-11-10.
-In particular, googletest must be newer than version 1.7.0.
-
-### Dependency on Effcee
-
-Some tests depend on the [Effcee][effcee] library for stateful matching.
-Effcee itself depends on [RE2][re2].
-
-* If SPIRV-Tools is configured as part of a larger project that already uses
-  Effcee, then that project should include Effcee before SPIRV-Tools.
-* Otherwise, SPIRV-Tools expects Effcee sources to appear in `external/effcee`
-  and RE2 sources to appear in `external/re2`.
-
-
 ## Build
 
-Instead of building manually, you can also download the binaries for your
-platform directly from the [master-tot release][master-tot-release] on GitHub.
-Those binaries are automatically uploaded by the buildbots after successful
-testing and they always reflect the current top of the tree of the master
-branch.
+*Note*: Prebuilt binaries are available from the [downloads](docs/downloads.md) page.
 
-In order to build the code, you first need to sync the external repositories
-that it depends on. Assume that `<spirv-dir>` is the root directory of the
-checked out code:
-
-```sh
-cd <spirv-dir>
-git clone https://github.com/KhronosGroup/SPIRV-Headers.git external/spirv-headers
-git clone https://github.com/google/effcee.git external/effcee
-git clone https://github.com/google/re2.git external/re2
-git clone https://github.com/google/googletest.git external/googletest # optional
-
-```
-
-*Note*:
-The script `utils/git-sync-deps` can be used to checkout and/or update the
-contents of the repos under `external/` instead of manually maintaining them.
+First [get the sources](#getting-the-source).
+Then build using CMake, Bazel, Android ndk-build, or the Emscripten SDK.
 
 ### Build using CMake
 You can build the project using [CMake][cmake]:
@@ -348,7 +347,7 @@ option, like so:
 
 ```sh
 # In <spirv-dir> (the SPIRV-Tools repo root):
-git clone --depth=1 --branch v3.13.0 https://github.com/protocolbuffers/protobuf external/protobuf
+git clone --depth=1 --branch v3.13.0.1 https://github.com/protocolbuffers/protobuf external/protobuf
 
 # In your build directory:
 cmake [-G <platform-generator>] <spirv-dir> -DSPIRV_BUILD_FUZZER=ON
@@ -365,6 +364,30 @@ You can also use [Bazel](https://bazel.build/) to build the project.
 cd <spirv-dir>
 bazel build :all
 ```
+### Build a node.js package using Emscripten
+
+The SPIRV-Tools core library can be built to a WebAssembly [node.js](https://nodejs.org)
+module. The resulting `SpirvTools` WebAssembly module only exports methods to
+assemble and disassemble SPIR-V modules.
+
+First, make sure you have the [Emscripten SDK](https://emscripten.org).
+Then:
+
+```sh
+cd <spirv-dir>
+./source/wasm/build.sh
+```
+
+The resulting node package, with JavaScript and TypeScript bindings, is
+written to `<spirv-dir>/out/web`.
+
+Note: This builds the package locally. It does *not* publish it to [npm](https://npmjs.org).
+
+To test the result:
+
+```sh
+node ./test/wasm/test.js
+```
 
 ### Tools you'll need
 
@@ -378,15 +401,17 @@ suite.
 - [Bazel](https://bazel.build/) (optional): if building the source with Bazel,
 you need to install Bazel Version 0.29.1 on your machine. Other versions may
 also work, but are not verified.
+- [Emscripten SDK](https://emscripten.org) (optional): if building the
+  WebAssembly module.
 
 SPIRV-Tools is regularly tested with the following compilers:
 
 On Linux
-- GCC version 4.8.5
-- Clang version 3.8
+- GCC version 9.3
+- Clang version 10.0
 
 On MacOS
-- AppleClang 10.0
+- AppleClang 11.0
 
 On Windows
 - Visual Studio 2015
@@ -421,7 +446,7 @@ via setting `SPIRV_TOOLS_EXTRA_DEFINITIONS`. For example, by setting it to
 `/D_ITERATOR_DEBUG_LEVEL=0` on Windows, you can disable checked iterators and
 iterator debugging.
 
-### Android
+### Android ndk-build
 
 SPIR-V Tools supports building static libraries `libSPIRV-Tools.a` and
 `libSPIRV-Tools-opt.a` for Android:
@@ -442,11 +467,12 @@ $ANDROID_NDK/ndk-build -C ../android_test     \
 ```
 
 ### Updating DEPS
-Occasionally the entries in DEPS will need to be updated. This is done on demand
-when there is a request to do this, often due to downstream breakages. There is
-a script `utils/roll_deps.sh` provided, which will generate a patch with the
-updated DEPS values. This will still need to be tested in your checkout to
-confirm that there are no integration issues that need to be resolved.
+
+Occasionally the entries in [DEPS](DEPS) will need to be updated. This is done on
+demand when there is a request to do this, often due to downstream breakages.
+To update `DEPS`, run `utils/roll_deps.sh` and confirm that tests pass.
+The script requires Chromium's
+[`depot_tools`](https://chromium.googlesource.com/chromium/tools/depot_tools).
 
 ## Library
 
@@ -643,8 +669,32 @@ This is experimental.
 
 ### Tests
 
-Tests are only built when googletest is found. Use `ctest` to run all the
-tests.
+Tests are only built when googletest is found.
+
+#### Running test with CMake
+
+Use `ctest -j <num threads>` to run all the tests. To run tests using all threads:
+```shell
+ctest -j$(nproc)
+```
+
+To run a single test target, use `ctest [-j <N>] -R <test regex>`. For example,
+you can run all `opt` tests with:
+```shell
+ctest -R 'spirv-tools-test_opt'
+```
+
+#### Running test with Bazel
+
+Use `bazel test :all` to run all tests. This will run tests in parallel by default.
+
+To run a single test target, specify `:my_test_target` instead of `:all`. Test target
+names get printed when you run `bazel test :all`. For example, you can run
+`opt_def_use_test` with:
+```shell
+bazel test :opt_def_use_test
+```
+
 
 ## Future Work
 <a name="future"></a>
@@ -705,4 +755,3 @@ limitations under the License.
 [CMake]: https://cmake.org/
 [cpp-style-guide]: https://google.github.io/styleguide/cppguide.html
 [clang-sanitizers]: http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation
-[master-tot-release]: https://github.com/KhronosGroup/SPIRV-Tools/releases/tag/master-tot

@@ -3403,6 +3403,71 @@ OpFunctionEnd
   SinglePassRunAndMatch<DeadBranchElimPass>(text, true);
 }
 
+TEST_F(DeadBranchElimTest, DontTransferDecorations) {
+  // When replacing %4 with %14, we don't want %14 to inherit %4's decorations.
+  const std::string text = R"(
+; CHECK-NOT: OpDecorate {{%\w+}} RelaxedPrecision
+; CHECK: [[div:%\w+]] = OpFDiv
+; CHECK: {{%\w+}} = OpCopyObject %float [[div]]
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+          %3 = OpString "STEVEN"
+               OpDecorate %4 RelaxedPrecision
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+    %float_1 = OpConstant %float 1
+     %uint_0 = OpConstant %uint 0
+         %10 = OpTypeFunction %void
+          %2 = OpFunction %void None %10
+         %11 = OpLabel
+               OpSelectionMerge %12 None
+               OpSwitch %uint_0 %13
+         %13 = OpLabel
+         %14 = OpFDiv %float %float_1 %float_1
+               OpLine %3 0 0
+               OpBranch %12
+         %15 = OpLabel
+               OpBranch %12
+         %12 = OpLabel
+          %4 = OpPhi %float %float_1 %15 %14 %13
+         %16 = OpCopyObject %float %4
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DeadBranchElimPass>(text, true);
+}
+
+TEST_F(DeadBranchElimTest, FunctionDeclaration) {
+  // Make sure the pass works with a function declaration that is called.
+  const std::string text = R"(OpCapability Addresses
+OpCapability Linkage
+OpCapability Kernel
+OpCapability Int8
+%1 = OpExtInstImport "OpenCL.std"
+OpMemoryModel Physical64 OpenCL
+OpEntryPoint Kernel %2 "_Z23julia__1166_kernel_77094Bool"
+OpExecutionMode %2 ContractionOff
+OpSource Unknown 0
+OpDecorate %3 LinkageAttributes "julia_error_7712" Import
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%3 = OpFunction %void None %5
+OpFunctionEnd
+%2 = OpFunction %void None %5
+%6 = OpLabel
+%7 = OpFunctionCall %void %3
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<DeadBranchElimPass>(text, text, false);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 //    More complex control flow

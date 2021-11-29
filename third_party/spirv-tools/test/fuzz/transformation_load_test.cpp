@@ -26,6 +26,7 @@ namespace {
 TEST(TransformationLoadTest, BasicTest) {
   std::string shader = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main"
@@ -49,7 +50,6 @@ TEST(TransformationLoadTest, BasicTest) {
          %34 = OpTypeBool
          %35 = OpConstantFalse %34
          %60 = OpConstantNull %50
-         %61 = OpUndef %51
          %52 = OpVariable %50 Private
          %53 = OpVariable %51 Private
           %4 = OpFunction %2 None %3
@@ -129,65 +129,69 @@ TEST(TransformationLoadTest, BasicTest) {
 
   // Pointers that cannot be used:
   //  60 - null
-  //  61 - undefined
 
   // Bad: id is not fresh
-  ASSERT_FALSE(TransformationLoad(
-                   33, 33, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationLoad(33, 33, false, 0, 0,
+                         MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
   // Bad: attempt to load from 11 from outside its function
-  ASSERT_FALSE(TransformationLoad(
-                   100, 11, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationLoad(100, 11, false, 0, 0,
+                         MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer is not available
-  ASSERT_FALSE(TransformationLoad(
-                   100, 33, MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationLoad(100, 33, false, 0, 0,
+                         MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to insert before OpVariable
-  ASSERT_FALSE(TransformationLoad(
-                   100, 27, MakeInstructionDescriptor(27, SpvOpVariable, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationLoad(100, 27, false, 0, 0,
+                         MakeInstructionDescriptor(27, SpvOpVariable, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id does not exist
   ASSERT_FALSE(
-      TransformationLoad(100, 1000,
+      TransformationLoad(100, 1000, false, 0, 0,
                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
           .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id exists but does not have a type
-  ASSERT_FALSE(TransformationLoad(
-                   100, 5, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
-
-  // Bad: pointer id exists and has a type, but is not a pointer
-  ASSERT_FALSE(TransformationLoad(
-                   100, 24, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
-
-  // Bad: attempt to load from null pointer
-  ASSERT_FALSE(TransformationLoad(
-                   100, 60, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
-
-  // Bad: attempt to load from undefined pointer
-  ASSERT_FALSE(TransformationLoad(
-                   100, 61, MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
-  // Bad: %40 is not available at the program point
   ASSERT_FALSE(
-      TransformationLoad(100, 40, MakeInstructionDescriptor(37, SpvOpReturn, 0))
+      TransformationLoad(100, 5, false, 0, 0,
+                         MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
           .IsApplicable(context.get(), transformation_context));
 
-  // Bad: The described instruction does not exist
-  ASSERT_FALSE(TransformationLoad(
-                   100, 33, MakeInstructionDescriptor(1000, SpvOpReturn, 0))
+  // Bad: pointer id exists and has a type, but is not a pointer
+  ASSERT_FALSE(
+      TransformationLoad(100, 24, false, 0, 0,
+                         MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: attempt to load from null pointer
+  ASSERT_FALSE(
+      TransformationLoad(100, 60, false, 0, 0,
+                         MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: %40 is not available at the program point
+  ASSERT_FALSE(TransformationLoad(100, 40, false, 0, 0,
+                                  MakeInstructionDescriptor(37, SpvOpReturn, 0))
                    .IsApplicable(context.get(), transformation_context));
 
+  // Bad: The described instruction does not exist
+  ASSERT_FALSE(
+      TransformationLoad(100, 33, false, 0, 0,
+                         MakeInstructionDescriptor(1000, SpvOpReturn, 0))
+          .IsApplicable(context.get(), transformation_context));
+
   {
     TransformationLoad transformation(
-        100, 33, MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
+        100, 33, false, 0, 0,
+        MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -198,7 +202,8 @@ TEST(TransformationLoadTest, BasicTest) {
 
   {
     TransformationLoad transformation(
-        101, 46, MakeInstructionDescriptor(16, SpvOpReturnValue, 0));
+        101, 46, false, 0, 0,
+        MakeInstructionDescriptor(16, SpvOpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -209,7 +214,8 @@ TEST(TransformationLoadTest, BasicTest) {
 
   {
     TransformationLoad transformation(
-        102, 16, MakeInstructionDescriptor(16, SpvOpReturnValue, 0));
+        102, 16, false, 0, 0,
+        MakeInstructionDescriptor(16, SpvOpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -220,7 +226,8 @@ TEST(TransformationLoadTest, BasicTest) {
 
   {
     TransformationLoad transformation(
-        103, 40, MakeInstructionDescriptor(43, SpvOpAccessChain, 0));
+        103, 40, false, 0, 0,
+        MakeInstructionDescriptor(43, SpvOpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -231,6 +238,7 @@ TEST(TransformationLoadTest, BasicTest) {
 
   std::string after_transformation = R"(
                OpCapability Shader
+               OpCapability VariablePointers
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Fragment %4 "main"
@@ -254,7 +262,6 @@ TEST(TransformationLoadTest, BasicTest) {
          %34 = OpTypeBool
          %35 = OpConstantFalse %34
          %60 = OpConstantNull %50
-         %61 = OpUndef %51
          %52 = OpVariable %50 Private
          %53 = OpVariable %51 Private
           %4 = OpFunction %2 None %3
@@ -290,6 +297,296 @@ TEST(TransformationLoadTest, BasicTest) {
                OpReturnValue %21
                OpFunctionEnd
   )";
+  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+}
+
+TEST(TransformationLoadTest, AtomicLoadTestCase) {
+  const std::string shader = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypeInt 8 1
+          %9 = OpTypeInt 32 0
+         %26 = OpTypeFloat 32
+          %8 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %8
+         %11 = OpVariable %10 StorageBuffer
+         %19 = OpConstant %26 0
+         %18 = OpConstant %9 1
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 4
+         %16 = OpConstant %6 7
+         %17 = OpConstant %7 4
+         %20 = OpConstant %9 64
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %14 = OpAccessChain %13 %11 %12
+         %24 = OpAccessChain %13 %11 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  // Bad: id is not fresh.
+  ASSERT_FALSE(
+      TransformationLoad(14, 14, true, 15, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: id 100 of memory scope instruction does not exist.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 100, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: id 100 of memory semantics instruction does not exist.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 15, 100,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: memory scope should be |OpConstant| opcode.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 5, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: memory semantics should be |OpConstant| opcode.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 15, 5,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: The memory scope instruction must have an Integer operand.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 15, 19,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+  // Bad: The memory memory semantics instruction must have an Integer operand.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 19, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Integer size of the memory scope must be equal to 32 bits.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 17, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Integer size of memory semantics must be equal to 32 bits.
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 15, 17,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: memory scope value must be 4 (SpvScopeInvocation).
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 16, 20,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: memory semantics value must be either:
+  // 64 (SpvMemorySemanticsUniformMemoryMask)
+  // 256 (SpvMemorySemanticsWorkgroupMemoryMask)
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, true, 15, 16,
+                         MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: The described instruction does not exist
+  ASSERT_FALSE(
+      TransformationLoad(21, 14, false, 15, 20,
+                         MakeInstructionDescriptor(150, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Successful transformations.
+  {
+    TransformationLoad transformation(
+        21, 14, true, 15, 20,
+        MakeInstructionDescriptor(24, SpvOpAccessChain, 0));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+  }
+
+  const std::string after_transformation = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 320
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %7 = OpTypeInt 8 1
+          %9 = OpTypeInt 32 0
+         %26 = OpTypeFloat 32
+          %8 = OpTypeStruct %6
+         %10 = OpTypePointer StorageBuffer %8
+         %11 = OpVariable %10 StorageBuffer
+         %19 = OpConstant %26 0
+         %18 = OpConstant %9 1
+         %12 = OpConstant %6 0
+         %13 = OpTypePointer StorageBuffer %6
+         %15 = OpConstant %6 4
+         %16 = OpConstant %6 7
+         %17 = OpConstant %7 4
+         %20 = OpConstant %9 64
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %14 = OpAccessChain %13 %11 %12
+         %21 = OpAtomicLoad %6 %14 %15 %20
+         %24 = OpAccessChain %13 %11 %12
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
+}
+
+TEST(TransformationLoadTest, AtomicLoadTestCaseForWorkgroupMemory) {
+  std::string shader = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %26 = OpTypeFloat 32
+          %27 = OpTypeInt 8 1
+          %7 = OpTypeInt 32 0 ; 0 means unsigned
+          %8 = OpConstant %7 0
+         %17 = OpConstant %27 4
+         %19 = OpConstant %26 0
+          %9 = OpTypePointer Function %6
+         %13 = OpTypeStruct %6
+         %12 = OpTypePointer Workgroup %13
+         %11 = OpVariable %12 Workgroup
+         %14 = OpConstant %6 0
+         %15 = OpTypePointer Function %6
+         %51 = OpTypePointer Private %6
+         %21 = OpConstant %6 4
+         %23 = OpConstant %6 256
+         %25 = OpTypePointer Function %7
+         %50 = OpTypePointer Workgroup %6
+         %34 = OpTypeBool
+         %35 = OpConstantFalse %34
+         %53 = OpVariable %51 Private
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpSelectionMerge %37 None
+               OpBranchConditional %35 %36 %37
+         %36 = OpLabel
+         %38 = OpAccessChain %50 %11 %14
+         %40 = OpAccessChain %50 %11 %14
+               OpBranch %37
+         %37 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  const auto env = SPV_ENV_UNIVERSAL_1_3;
+  const auto consumer = nullptr;
+  const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
+  spvtools::ValidatorOptions validator_options;
+  ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
+                                               kConsoleMessageConsumer));
+  TransformationContext transformation_context(
+      MakeUnique<FactManager>(context.get()), validator_options);
+
+  // Bad: Can't insert OpAccessChain before the id 23 of memory scope.
+  ASSERT_FALSE(
+      TransformationLoad(60, 38, true, 21, 23,
+                         MakeInstructionDescriptor(23, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Bad: Can't insert OpAccessChain before the id 23 of memory semantics.
+  ASSERT_FALSE(
+      TransformationLoad(60, 38, true, 21, 23,
+                         MakeInstructionDescriptor(21, SpvOpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
+
+  // Successful transformations.
+  {
+    TransformationLoad transformation(
+        60, 38, true, 21, 23,
+        MakeInstructionDescriptor(40, SpvOpAccessChain, 0));
+    ASSERT_TRUE(
+        transformation.IsApplicable(context.get(), transformation_context));
+    ApplyAndCheckFreshIds(transformation, context.get(),
+                          &transformation_context);
+    ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
+        context.get(), validator_options, kConsoleMessageConsumer));
+  }
+
+  std::string after_transformation = R"(
+               OpCapability Shader
+               OpCapability Int8
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main"
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeInt 32 1
+          %26 = OpTypeFloat 32
+          %27 = OpTypeInt 8 1
+          %7 = OpTypeInt 32 0 ; 0 means unsigned
+          %8 = OpConstant %7 0
+         %17 = OpConstant %27 4
+         %19 = OpConstant %26 0
+          %9 = OpTypePointer Function %6
+         %13 = OpTypeStruct %6
+         %12 = OpTypePointer Workgroup %13
+         %11 = OpVariable %12 Workgroup
+         %14 = OpConstant %6 0
+         %15 = OpTypePointer Function %6
+         %51 = OpTypePointer Private %6
+         %21 = OpConstant %6 4
+         %23 = OpConstant %6 256
+         %25 = OpTypePointer Function %7
+         %50 = OpTypePointer Workgroup %6
+         %34 = OpTypeBool
+         %35 = OpConstantFalse %34
+         %53 = OpVariable %51 Private
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+               OpSelectionMerge %37 None
+               OpBranchConditional %35 %36 %37
+         %36 = OpLabel
+         %38 = OpAccessChain %50 %11 %14
+         %60 = OpAtomicLoad %6 %38 %21 %23
+         %40 = OpAccessChain %50 %11 %14
+               OpBranch %37
+         %37 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
   ASSERT_TRUE(IsEqual(env, after_transformation, context.get()));
 }
 
