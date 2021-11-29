@@ -7,7 +7,8 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.14.2
 
-- Metal: fix validation error when rendering to `RenderTarget` without depth attachment.
+- Metal: Fix validation error when rendering to `RenderTarget` without depth attachment.
+- engine: Fix rendering glitch with zero-scale bone transforms.
 
 ## v1.14.1
 
