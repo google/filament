@@ -427,10 +427,14 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     //      Project receivers, casters and view onto near plane,
     //      compute intersection of that which gives the l,r,t,b planes
 
-    // For spotlights, we store the texel size at 1 world unit
-    // The size of a texel in world unit is given by: (near/dimension) / lightspace.z,
+    // For calculating the spotlight normal bias, we need the texel size in world space at the
+    // sample location. Using Thales's theorem, we find:
+    //      texelSize(zInLightSpace) = zInLightSpace * texelSizeOnTheNearPlane / near
+    //                               = zInLightSpace * texelSizeAtOneMeter
+    //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
     // Note: this would not work with LISPSM, which warps the texture space.
-    mTexelSizeAtOneMeterWs = nearPlane / float(mShadowMapInfo.shadowDimension);
+    mTexelSizeAtOneMeterWs = (2.0f * std::tan(outerConeAngle) / float(mShadowMapInfo.shadowDimension));
+    mLightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
     if (!mShadowMapInfo.vsm) {
         mLightSpace = St;
