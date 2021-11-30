@@ -111,13 +111,12 @@ void FView::terminate(FEngine& engine) {
         FPickingQuery::put(pQuery);
     }
 
-    mPerViewUniforms.terminate(engine);
-
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mShadowUbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
+    mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
 }
 
@@ -573,8 +572,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
-    mPerViewUniforms.prepareTime(engine, userTime);
+    mPerViewUniforms.prepareTime(userTime);
     mPerViewUniforms.prepareFog(mViewingCameraInfo, mFogOptions);
+    mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
 
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);
