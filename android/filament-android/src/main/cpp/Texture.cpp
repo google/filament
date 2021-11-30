@@ -19,7 +19,7 @@
 #include <algorithm>
 #include <functional>
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <android/bitmap.h>
 #endif
 
@@ -471,7 +471,7 @@ Java_com_google_android_filament_Texture_nGeneratePrefilterMipmap(JNIEnv *env, j
 // ANDROID SPECIFIC BITS
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 #define BITMAP_CONFIG_ALPHA_8   0
 #define BITMAP_CONFIG_RGB_565   1
