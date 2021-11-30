@@ -101,6 +101,7 @@ buildscript {
     ]
 
     ext.cppFlags = [
+        "-DANDROID", // Note: this should not be required! Seems like a bug in NDK 23
         "-std=c++17",
         "-Wno-unused-command-line-argument",
         "-Wl,--hash-style=both", // Required to support API levels below 23
