@@ -59,8 +59,7 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
     }
 }
 
-void PerViewUniforms::terminate(FEngine& engine) {
-    DriverApi& driver = engine.getDriverApi();
+void PerViewUniforms::terminate(DriverApi& driver) {
     driver.destroyBufferObject(mPerViewUbh);
     driver.destroySamplerGroup(mPerViewSbh);
 }
@@ -107,19 +106,25 @@ void PerViewUniforms::prepareExposure(float ev100) noexcept {
 }
 
 void PerViewUniforms::prepareViewport(const filament::Viewport &viewport) noexcept {
-    const float w = viewport.width;
-    const float h = viewport.height;
+    const float w = float(viewport.width);
+    const float h = float(viewport.height);
     auto& s = mPerViewUb.edit();
     s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
     s.origin = float2{ viewport.left, viewport.bottom };
 }
 
-void PerViewUniforms::prepareTime(FEngine& engine, float4 const& userTime) noexcept {
+void PerViewUniforms::prepareTime(math::float4 const& userTime) noexcept {
     auto& s = mPerViewUb.edit();
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
+    const uint64_t oneSecondRemainder = mEngine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
     s.time = fraction;
     s.userTime = userTime;
+}
+
+void PerViewUniforms::prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept {
+    auto& s = mPerViewUb.edit();
+    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
+    s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
 void PerViewUniforms::prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept {

@@ -28,11 +28,14 @@
 
 #include <utils/EntityInstance.h>
 
+#include <random>
+
 namespace filament {
 
-struct FogOptions;
-struct DynamicResolutionOptions;
 struct AmbientOcclusionOptions;
+struct DynamicResolutionOptions;
+struct FogOptions;
+struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
 
 struct CameraInfo;
@@ -49,14 +52,15 @@ class PerViewUniforms {
     using TextureHandle = backend::Handle<backend::HwTexture>;
 
 public:
-    PerViewUniforms(FEngine& engine) noexcept;
+    explicit PerViewUniforms(FEngine& engine) noexcept;
 
-    void terminate(FEngine& engine);
+    void terminate(backend::DriverApi& driver);
 
     void prepareCamera(const CameraInfo& camera) noexcept;
     void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
     void prepareViewport(const filament::Viewport& viewport) noexcept;
-    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
+    void prepareTime(math::float4 const& userTime) noexcept;
+    void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
     void prepareFog(const CameraInfo& camera, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
@@ -91,6 +95,7 @@ private:
     backend::SamplerGroup mPerViewSb;
     backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
     backend::Handle<backend::HwBufferObject> mPerViewUbh;
+    std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 };
 
 } // namespace filament

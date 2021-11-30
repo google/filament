@@ -112,7 +112,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
             .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
 
             // bring PerViewUib to 2 KiB
             .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)

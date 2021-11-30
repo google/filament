@@ -131,7 +131,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float lodBias;
     float oneOverFarMinusNear;          // 1 / (f-n), always positive
     float nearOverFarMinusNear;         // n / (f-n), always positive
-    float reserved3;
+    float temporalNoise;                // noise [0,1] when TAA is used, 0 otherwise
 
     // bring PerViewUib to 2 KiB
     math::float4 padding2[58];
