@@ -23,7 +23,7 @@
 
 #include <functional>
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
 
@@ -64,7 +64,7 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
           , mThreadId(std::this_thread::get_id())
 #endif
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     char property[PROP_VALUE_MAX];
     __system_property_get("debug.filament.perfcounters", property);
     mUsePerformanceCounter = bool(atoi(property));

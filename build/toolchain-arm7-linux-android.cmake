@@ -81,7 +81,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 # for hardfp: CFLAGS must have -mhard-float
 #             LDFLAGS must have -Wl,--no-warn-mismatch
 #
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -mthumb -march=armv7-a -mcpu=cortex-a15 -mfloat-abi=softfp -mfpu=neon-vfpv4 -DANDROID -fPIE" CACHE STRING "Toolchain CFLAGS")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -mthumb -march=armv7-a -mcpu=cortex-a15 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fPIE" CACHE STRING "Toolchain CFLAGS")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" CACHE STRING "Toolchain CXXFLAGS")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    -march=armv7-a -Wl,--no-warn-mismatch -L${TOOLCHAIN}/arm-linux-androideabi/lib/armv7-a -static-libstdc++ -fPIE -pie" CACHE STRING "Toolchain LDFLAGS")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -march=armv7-a -Wl,--no-warn-mismatch -L${TOOLCHAIN}/arm-linux-androideabi/lib/armv7-a -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")
