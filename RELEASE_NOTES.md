@@ -3,7 +3,9 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.15.0 (currently main branch)
+## v1.15.1 (currently main branch)
+
+## v1.15.0
 
 - engine: Fix spotlights normal bias calculation [⚠️ **Material breakage**].
 
