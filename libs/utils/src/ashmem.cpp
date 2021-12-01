@@ -39,7 +39,7 @@
 #endif
 
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #   include <sys/ioctl.h>
 #   include <sys/stat.h>
 #   include <memory.h>
@@ -51,7 +51,7 @@
 
 namespace utils {
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 #if __ANDROID_API__ >= 26
 

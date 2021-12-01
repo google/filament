@@ -23,7 +23,7 @@
 #include <memory>
 
 // FIXME: Some platforms do not have execinfo.h (but have unwind.h)
-#if !defined(ANDROID) && !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #include <execinfo.h>
 #define HAS_EXECINFO 1
 #else

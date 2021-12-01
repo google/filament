@@ -24,7 +24,7 @@
 #define SYSTRACE_TAG_JOBSYSTEM      (1<<2)
 
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 
 #include <atomic>
 
