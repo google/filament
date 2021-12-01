@@ -19,7 +19,7 @@
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "opengl/platforms/PlatformEGLAndroid.h"
@@ -90,7 +90,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("debug.filament.backend", scratch);
     if (length > 0) {
@@ -101,7 +101,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     if (*backend == Backend::DEFAULT) {
 #if defined(__EMSCRIPTEN__)
         *backend = Backend::OPENGL;
-#elif defined(ANDROID)
+#elif defined(__ANDROID__)
         *backend = Backend::OPENGL;
 #elif defined(IOS) || defined(__APPLE__)
         *backend = Backend::METAL;
@@ -116,7 +116,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            #if defined(ANDROID)
+            #if defined(__ANDROID__)
                 return new PlatformVkAndroid();
             #elif defined(IOS)
                 return new PlatformVkCocoaTouch();
@@ -148,7 +148,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     #if defined(FILAMENT_SUPPORTS_OPENGL)
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
             return nullptr;
-        #elif defined(ANDROID)
+        #elif defined(__ANDROID__)
             return new PlatformEGLAndroid();
         #elif defined(IOS)
             return new PlatformCocoaTouchGL();

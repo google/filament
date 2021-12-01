@@ -19,14 +19,14 @@
 
 #include <utils/api_level.h>
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <mutex>
 #include <sys/system_properties.h>
 #endif
 
 namespace utils {
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 uint32_t sApiLevel = 0;
 std::once_flag sApiLevelOnceFlag;

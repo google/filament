@@ -162,7 +162,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #define PATH_MAX FILENAME_MAX
 #endif /* __SYMBIAN32__ */
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #include <android/log.h>
 #endif
 
@@ -804,7 +804,7 @@ struct mg_pollfd {
 
 typedef const void *SOCK_OPT_TYPE;
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 typedef unsigned short int in_port_t;
 #endif
 
@@ -3691,7 +3691,7 @@ mg_difftimespec(const struct timespec *ts_now, const struct timespec *ts_before)
 }
 
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 static void mg_cry_internal_impl(const struct mg_connection *conn,
                                  const char *func,
                                  unsigned line,

@@ -17,7 +17,7 @@
 #include <utils/Systrace.h>
 #include <utils/Log.h>
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 
 #include <cinttypes>
 
