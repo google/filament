@@ -25,6 +25,10 @@ option(FILAMENT_SUPPORTS_XLIB "Include XLIB support in Linux builds" ON)
 
 option(FILAMENT_SUPPORTS_WAYLAND "Include Wayland support in Linux builds" OFF)
 
+option(FILAMENT_SKIP_SDL2 "Skip dependencies of SDL2, and SDL2" OFF)
+
+option(FILAMENT_LINUX_IS_MOBILE "Treat Linux as Mobile" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -115,11 +119,11 @@ if (LINUX)
     endif()
 endif()
 
-if (ANDROID OR WEBGL OR IOS)
+if (ANDROID OR WEBGL OR IOS OR FILAMENT_LINUX_IS_MOBILE)
     set(IS_MOBILE_TARGET TRUE)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
 endif()
 
@@ -576,12 +580,14 @@ if (FILAMENT_USE_SWIFTSHADER)
     find_library(SWIFTSHADER_VK NAMES vk_swiftshader HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
     message(STATUS "Found SwiftShader VK library in: ${SWIFTSHADER_VK}.")
     add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${SWIFTSHADER_VK}\")
-elseif (FILAMENT_SUPPORTS_VULKAN AND APPLE)
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
-    if (Vulkan_LIBRARY)
-        set(Vulkan_FOUND ON)
-        message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
-        add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+elseif (FILAMENT_SUPPORTS_VULKAN)
+    if (APPLE OR FILAMENT_LINUX_IS_MOBILE)
+        find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
+        if (Vulkan_LIBRARY)
+            set(Vulkan_FOUND ON)
+            message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
+            add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+        endif()
     endif()
 endif()
 

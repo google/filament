@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
 project(sdl2 C)
 
+if (FILAMENT_SKIP_SDL2)
+    return()
+endif()
+
 # This is necessary on Windows, so the sdl2.dll lives next to the sample apps that use it
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${FILAMENT_SAMPLES_BINARY_DIR})
 
