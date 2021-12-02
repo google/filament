@@ -81,6 +81,7 @@ public class View {
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
+    private SoftShadowOptions mSoftShadowOptions;
 
     /**
      * Generic quality level.
@@ -741,7 +742,12 @@ public class View {
         /**
          * Percentage-closer filtered shadows, with contact hardening simulation.
          */
-        DPCF
+        DPCF,
+
+        /**
+         * Percentage-closer soft shadows
+         */
+        PCSS
     }
 
     /**
@@ -778,6 +784,29 @@ public class View {
          * VSM light bleeding reduction amount, between 0 and 1.
          */
         public float lightBleedReduction = 0.2f;
+    }
+
+    /**
+     * View-level options for DPCF and PCSS Shadowing.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @see View#setSoftShadowOptions
+     */
+    public static class SoftShadowOptions {
+        /**
+         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Acceptable values are greater than 0
+         */
+        public float penumbraScale = 1.0f;
+
+        /**
+         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+         * This effectively controls the strength of contact hardening effect and is useful for
+         * artistic purposes. Higher values make the shadows become softer faster.
+         * Acceptable values are equal to or greater than 1.
+         */
+        public float penumbraRatioScale = 1.0f;
     }
 
     /**
@@ -1434,6 +1463,37 @@ public class View {
     }
 
     /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType.DPCF.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
+        mSoftShadowOptions = options;
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+    }
+
+    /**
+     * Gets soft shadowing options associated with this View.
+     * @see #setSoftShadowOptions
+     * @return soft shadow options currently set.
+     */
+    @NonNull
+    public SoftShadowOptions getSoftShadowOptions() {
+        if (mSoftShadowOptions == null) {
+            mSoftShadowOptions = new SoftShadowOptions();
+        }
+        return mSoftShadowOptions;
+    }
+
+    /**
      * Activates or deactivates ambient occlusion.
      * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
@@ -1699,6 +1759,7 @@ public class View {
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
     private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

@@ -114,15 +114,6 @@ public:
     }
 
 private:
-
-    // Atlas requirements, updated in ShadowMapManager::update(),
-    // consumed in ShadowMapManager::render()
-    struct TextureAtlasRequirements {
-        uint16_t size = 0;
-        uint8_t layers = 0;
-        uint8_t levels = 0;
-    } mTextureAtlasRequirements;
-
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
             ShadowMap::SceneInfo& sceneInfo) noexcept;
@@ -195,6 +186,16 @@ private:
         float mSplitsCs[SPLIT_COUNT];
         size_t mSplitCount;
     };
+
+    // Atlas requirements, updated in ShadowMapManager::update(),
+    // consumed in ShadowMapManager::render()
+    struct TextureAtlasRequirements {
+        uint16_t size = 0;
+        uint8_t layers = 0;
+        uint8_t levels = 0;
+    } mTextureAtlasRequirements;
+
+    SoftShadowOptions mSoftShadowOptions;
 
     CascadeSplits::Params mCascadeSplitParams;
     CascadeSplits mCascadeSplits;

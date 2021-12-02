@@ -608,6 +608,10 @@ int main(int argc, char** argv) {
                 ImGui::SliderFloat("Ki", debug.getPropertyAddress<float>("d.view.pid.ki"), 0, 10);
                 ImGui::SliderFloat("Kd", debug.getPropertyAddress<float>("d.view.pid.kd"), 0, 10);
 #endif
+                bool* lispsm;
+                if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
+                    ImGui::Checkbox("Enable LiSPSM", lispsm);
+                }
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {

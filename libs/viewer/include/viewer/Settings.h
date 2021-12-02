@@ -77,7 +77,7 @@ using LightManager = filament::LightManager;
 void applySettings(const ViewSettings& settings, View* dest);
 void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene);
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view);
 void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
         Renderer* renderer);
 
@@ -191,6 +191,7 @@ struct LightSettings {
     bool enableShadows = true;
     bool enableSunlight = true;
     LightManager::ShadowOptions shadowOptions;
+    SoftShadowOptions softShadowOptions;
     float sunlightIntensity = 100000.0f;
     math::float3 sunlightDirection = {0.6, -1.0, -0.8};;
     math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});

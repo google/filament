@@ -674,7 +674,10 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
             mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
             break;
         case filament::ShadowType::DPCF:
-            mPerViewUniforms.prepareShadowDPCF(texture);
+            mPerViewUniforms.prepareShadowDPCF(texture, mSoftShadowOptions);
+            break;
+        case filament::ShadowType::PCSS:
+            mPerViewUniforms.prepareShadowPCSS(texture, mSoftShadowOptions);
             break;
     }
 }
@@ -1075,6 +1078,14 @@ void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
 
 View::VsmShadowOptions View::getVsmShadowOptions() const noexcept {
     return upcast(this)->getVsmShadowOptions();
+}
+
+void View::setSoftShadowOptions(SoftShadowOptions const& options) noexcept {
+    upcast(this)->setSoftShadowOptions(options);
+}
+
+SoftShadowOptions View::getSoftShadowOptions() const noexcept {
+    return upcast(this)->getSoftShadowOptions();
 }
 
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {

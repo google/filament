@@ -292,12 +292,24 @@ void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
                     .compareFunc = SamplerCompareFunc::GE
             }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
 }
 
-void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture) noexcept {
+void PerViewUniforms::prepareShadowDPCF(Handle <HwTexture> texture,
+        SoftShadowOptions const& options) noexcept {
     mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, { texture, { }});
     auto& s = mPerViewUb.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
+    s.shadowPenumbraRatioScale = options.penumbraRatioScale;
+}
+
+void PerViewUniforms::prepareShadowPCSS(Handle <HwTexture> texture,
+        SoftShadowOptions const& options) noexcept {
+    mPerViewSb.setSampler(PerViewSib::SHADOW_MAP, { texture, { }});
+    auto& s = mPerViewUb.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
+    s.shadowPenumbraRatioScale = options.penumbraRatioScale;
 }
 
 void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
