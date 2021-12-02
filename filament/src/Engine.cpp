@@ -962,6 +962,10 @@ bool Engine::destroy(const IndexBuffer* p) {
     return upcast(this)->destroy(upcast(p));
 }
 
+bool Engine::destroy(const SkinningBuffer* p) {
+    return upcast(this)->destroy(upcast(p));
+}
+
 bool Engine::destroy(const IndirectLight* p) {
     return upcast(this)->destroy(upcast(p));
 }
