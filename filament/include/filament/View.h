@@ -82,6 +82,7 @@ public:
     using TemporalAntiAliasingOptions = TemporalAntiAliasingOptions;
     using MultiSampleAntiAliasingOptions = MultiSampleAntiAliasingOptions;
     using VsmShadowOptions = VsmShadowOptions;
+    using SoftShadowOptions = SoftShadowOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -536,6 +537,28 @@ public:
      * @return value set by setVsmShadowOptions().
      */
     VsmShadowOptions getVsmShadowOptions() const noexcept;
+
+    /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific soft shadow parameters can be set with LightManager::setShadowOptions.
+     *
+     * Only applicable when shadow type is set to ShadowType::DPCF or ShadowType::PCSS.
+     *
+     * @param options Options for shadowing.
+     *
+     * @see setShadowType
+     *
+     * @warning This API is still experimental and subject to change.
+     */
+    void setSoftShadowOptions(SoftShadowOptions const& options) noexcept;
+
+    /**
+     * Returns the soft shadowing options associated with this View.
+     *
+     * @return value set by setSoftShadowOptions().
+     */
+    SoftShadowOptions getSoftShadowOptions() const noexcept;
 
     /**
      * Enables or disables post processing. Enabled by default.

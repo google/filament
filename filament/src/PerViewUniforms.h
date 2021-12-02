@@ -35,6 +35,7 @@ namespace filament {
 struct AmbientOcclusionOptions;
 struct DynamicResolutionOptions;
 struct FogOptions;
+struct SoftShadowOptions;
 struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
 
@@ -54,6 +55,7 @@ class PerViewUniforms {
     static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF  = 0u;
     static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_VSM  = 1u;
     static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
+    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
 
 public:
     explicit PerViewUniforms(FEngine& engine) noexcept;
@@ -83,7 +85,8 @@ public:
     // maybe these should have their own UBO, they're needed only when GENERATING the shadowmaps
     void prepareShadowVSM(TextureHandle texture, VsmShadowOptions const& options) noexcept;
     void prepareShadowPCF(TextureHandle texture) noexcept;
-    void prepareShadowDPCF(TextureHandle texture) noexcept;
+    void prepareShadowDPCF(TextureHandle texture, SoftShadowOptions const& options) noexcept;
+    void prepareShadowPCSS(TextureHandle texture, SoftShadowOptions const& options) noexcept;
 
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;

@@ -294,8 +294,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     RenderPass::RenderFlags colorRenderFlags = baseRenderFlags;
     switch (view.getShadowType()) {
         case ShadowType::PCF:   break;
-        case ShadowType::VSM:   colorRenderFlags |= RenderPass::HAS_VSM;    break;
-        case ShadowType::DPCF:  colorRenderFlags |= RenderPass::HAS_DPCF;   break;
+        case ShadowType::VSM:   colorRenderFlags |= RenderPass::HAS_VSM;            break;
+        case ShadowType::DPCF:  colorRenderFlags |= RenderPass::HAS_DPCF_OR_PCSS;   break;
+        case ShadowType::PCSS:  colorRenderFlags |= RenderPass::HAS_DPCF_OR_PCSS;   break;
     }
 
     RenderPass::RenderFlags structureRenderFlags = baseRenderFlags;

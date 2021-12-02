@@ -768,7 +768,7 @@ void SimpleViewer::updateUserInterface() {
 
 
             int shadowType = (int)mSettings.view.shadowType;
-            ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0\0");
+            ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0\0");
             mSettings.view.shadowType = (ShadowType)shadowType;
 
             if (mSettings.view.shadowType == ShadowType::VSM) {
@@ -789,6 +789,9 @@ void SimpleViewer::updateUserInterface() {
                 //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
                 //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
                 //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
+            } else if (mSettings.view.shadowType == ShadowType::DPCF || mSettings.view.shadowType == ShadowType::PCSS) {
+                ImGui::SliderFloat("Penumbra scale", &light.softShadowOptions.penumbraScale, 0.0f, 100.0f);
+                ImGui::SliderFloat("Penumbra Ratio scale", &light.softShadowOptions.penumbraRatioScale, 1.0f, 100.0f);
             }
 
             int shadowCascades = light.shadowOptions.shadowCascades;
@@ -917,6 +920,8 @@ void SimpleViewer::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
+
+    mView->setSoftShadowOptions(mSettings.lighting.softShadowOptions);
 
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);
