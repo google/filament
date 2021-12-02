@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## v1.15.0 (currently main branch)
 
 - engine: Fix spotlights normal bias calculation [⚠️ **Material breakage**].
+- libimage: Fix loading spherical harmonics on certain locals.
 
 ## v1.14.2
 
