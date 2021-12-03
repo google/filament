@@ -409,7 +409,7 @@ bool Froxelizer::update() noexcept {
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
                 }
-                assert_invariant(minp.y < maxp.y);
+                assert_invariant(minp.y <= maxp.y);
 
                 for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
                     // note: clang vectorizes this loop!

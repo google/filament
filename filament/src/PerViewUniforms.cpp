@@ -248,7 +248,9 @@ void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
 void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mPerViewUb.edit();
     froxelizer.updateUniforms(s);
+    float f = froxelizer.getLightFar();
     mPerViewSb.setSampler(PerViewSib::FROXELS, { froxelizer.getFroxelTexture() });
+    s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
 void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,

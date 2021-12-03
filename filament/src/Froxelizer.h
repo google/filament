@@ -117,6 +117,8 @@ public:
     size_t getFroxelCountZ() const noexcept { return mFroxelCountZ; }
     size_t getFroxelCount() const noexcept { return mFroxelCount; }
 
+    float getLightFar() const noexcept { return mZLightFar; }
+
     // update Records and Froxels texture with lights data. this is thread-safe.
     void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
