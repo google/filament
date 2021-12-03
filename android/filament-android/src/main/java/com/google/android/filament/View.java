@@ -770,13 +770,6 @@ public class View {
         public boolean mipmapping = false;
 
         /**
-         * EVSM exponent
-         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-         */
-        public float exponent = 5.54f;
-
-        /**
          * VSM minimum variance scale, must be positive.
          */
         public float minVarianceScale = 1.0f;
@@ -1424,7 +1417,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.exponent, options.minVarianceScale, options.lightBleedReduction);
+                options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1705,7 +1698,7 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

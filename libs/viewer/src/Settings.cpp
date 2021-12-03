@@ -230,8 +230,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else if (0 == compare(tok, jsonChunk, "mipmapping")) {
             i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
-        } else if (0 == compare(tok, jsonChunk, "exponent")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->exponent);
         } else if (0 == compare(tok, jsonChunk, "minVarianceScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->minVarianceScale);
         } else if (0 == compare(tok, jsonChunk, "lightBleedReduction")) {
@@ -1472,7 +1470,6 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
-        << "\"exponent\": " << in.exponent << ",\n"
         << "\"minVarianceScale\": " << in.minVarianceScale << ",\n"
         << "\"lightBleedReduction\": " << in.lightBleedReduction << "\n"
         << "}";
