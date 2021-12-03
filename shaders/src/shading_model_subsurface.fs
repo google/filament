@@ -17,7 +17,7 @@ vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, cons
         // specular BRDF
         float D = distribution(pixel.roughness, NoH, h);
         float V = visibility(pixel.roughness, shading_NoV, NoL);
-        vec3  F = fresnel(pixel.f0, LoH);
+        vec3  F = material.specularIntensity * fresnel(pixel.f0, LoH);
         Fr = (D * V) * F * pixel.energyCompensation;
     }
 
@@ -25,7 +25,6 @@ vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, cons
     vec3 Fd = pixel.diffuseColor * diffuse(pixel.roughness, shading_NoV, NoL, LoH);
 
     // NoL does not apply to transmitted light
-    Fr *= material.specularIntensity;
     vec3 color = (Fd + Fr) * (NoL * occlusion);
 
     // subsurface scattering
