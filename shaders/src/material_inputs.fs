@@ -99,7 +99,7 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.metallic = 0.0;
-    material.reflectance = 0.5;
+    material.reflectance = 0.0;
 #endif
     material.ambientOcclusion = 1.0;
 #endif
