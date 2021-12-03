@@ -122,7 +122,7 @@ steps:
 - Specular anti-aliasing
 - Spot and directional light shadows
 - Cascaded shadows
-- EVSM or PCF shadows
+- EVSM, DPCF, or PCF shadows
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
