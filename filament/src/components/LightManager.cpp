@@ -230,7 +230,7 @@ void FLightManager::terminate() noexcept {
 void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
     params.options = options;
-    params.options.mapSize = clamp(options.mapSize, 8u, 2048u);
+    params.options.mapSize = clamp(options.mapSize, 8u, 4096u);
     params.options.shadowCascades = clamp<uint8_t>(options.shadowCascades, 1, CONFIG_MAX_SHADOW_CASCADES);
     params.options.constantBias = clamp(options.constantBias, 0.0f, 2.0f);
     params.options.normalBias = clamp(options.normalBias, 0.0f, 3.0f);
