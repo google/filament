@@ -28,7 +28,7 @@ float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
 #endif
 
 #if defined(MATERIAL_HAS_ANISOTROPY)
-vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 anisotropicLobe(const MaterialInputs material, const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     vec3 l = light.l;
@@ -50,7 +50,12 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
     float ab = max(pixel.roughness * (1.0 - pixel.anisotropy), MIN_ROUGHNESS);
 
     // specular anisotropic BRDF
-    float D = distributionAnisotropic(at, ab, ToH, BoH, NoH);
+    float D = 0.0;    
+    if (!material.useWard) {
+        D = distributionAnisotropic(at, ab, ToH, BoH, NoH); // Filament
+    } else {
+        D = distributionAnisotropicWard(at, ab, ToH, BoH, NoH, NoL, NoV); // Ward
+    }
     float V = visibilityAnisotropic(pixel.roughness, at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
     vec3  F = fresnel(pixel.f0, LoH);
 
@@ -68,10 +73,10 @@ vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
     return (D * V) * F;
 }
 
-vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 specularLobe(const MaterialInputs material, const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
-    return anisotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    return anisotropicLobe(material, pixel, light, h, NoV, NoL, NoH, LoH);
 #else
     return isotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
 #endif
@@ -106,7 +111,7 @@ vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, cons
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
-    vec3 Fr = material.specularIntensity * specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    vec3 Fr = material.specularIntensity * specularLobe(material, pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
 #if defined(HAS_REFRACTION)
     Fd *= (1.0 - pixel.transmission);
