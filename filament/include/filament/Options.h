@@ -363,13 +363,6 @@ struct VsmShadowOptions {
     bool mipmapping = false;
 
     /**
-     * EVSM exponent.
-     * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-     * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-     */
-    float exponent = 5.54f;
-
-    /**
      * VSM minimum variance scale, must be positive.
      */
     float minVarianceScale = 0.5f;

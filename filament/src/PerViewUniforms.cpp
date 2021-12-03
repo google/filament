@@ -254,8 +254,8 @@ void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
 void PerViewUniforms::prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
         VsmShadowOptions const& options) noexcept {
     auto& s = mPerViewUb.edit();
-    s.vsmExponent = options.exponent;  // fp16: max 5.54f, fp32: max 42.0
-    s.vsmDepthScale = options.minVarianceScale * 0.01f * options.exponent;
+    s.vsmExponent = 5.54f;  // fp16: max 5.54f, fp32: max 42.0
+    s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
 
     s.lightFromWorldMatrix = shadowMappingUniforms.lightFromWorldMatrix;
