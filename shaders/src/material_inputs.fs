@@ -22,6 +22,7 @@ struct MaterialInputs {
     float ambientOcclusion;
 #endif
     vec4  emissive;
+    float specularIntensity;
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
     vec3 sheenColor;
@@ -103,6 +104,7 @@ void initMaterial(out MaterialInputs material) {
     material.ambientOcclusion = 1.0;
 #endif
     material.emissive = vec4(vec3(0.0), 1.0);
+    material.specularIntensity = 1.0;
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)

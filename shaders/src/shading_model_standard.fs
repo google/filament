@@ -98,7 +98,7 @@ vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
  * on the Cook-Torrance microfacet model, it uses cheaper terms than the surface
  * BRDF's specular lobe (see brdf.fs).
  */
-vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
+vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
     float NoV = shading_NoV;
@@ -106,7 +106,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
-    vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    vec3 Fr = material.specularIntensity * specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
 #if defined(HAS_REFRACTION)
     Fd *= (1.0 - pixel.transmission);

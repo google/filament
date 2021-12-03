@@ -5,7 +5,7 @@
  * scattering. The BTDF itself is not physically based and does not represent a
  * correct interpretation of transmission events.
  */
-vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
+vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
     float NoL = light.NoL;
@@ -25,6 +25,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     vec3 Fd = pixel.diffuseColor * diffuse(pixel.roughness, shading_NoV, NoL, LoH);
 
     // NoL does not apply to transmitted light
+    Fr *= material.specularIntensity;
     vec3 color = (Fd + Fr) * (NoL * occlusion);
 
     // subsurface scattering

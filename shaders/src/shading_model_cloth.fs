@@ -9,7 +9,7 @@
  * computation of these events is not physically based but can add necessary
  * details to a material.
  */
-vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
+vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
     float NoL = light.NoL;
     float NoH = saturate(dot(shading_normal, h));
@@ -20,7 +20,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float V = visibilityCloth(shading_NoV, NoL);
     vec3  F = pixel.f0;
     // Ignore pixel.energyCompensation since we use a different BRDF here
-    vec3 Fr = (D * V) * F;
+    vec3 Fr = material.specularIntensity * (D * V) * F;
 
     // diffuse BRDF
     float diffuse = diffuse(pixel.roughness, shading_NoV, NoL, LoH);
