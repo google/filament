@@ -51,6 +51,8 @@ public:
 
     FTexture const* getTexture() const noexcept { return mSkyboxTexture; }
 
+    void setType(SkyboxType type) noexcept;
+
     void setColor(math::float4 color) noexcept;
 
     // commits UBOs

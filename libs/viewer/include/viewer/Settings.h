@@ -23,6 +23,7 @@
 #include <filament/MaterialInstance.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
+#include <filament/Skybox.h>
 
 #include <utils/compiler.h>
 
@@ -188,6 +189,7 @@ struct LightSettings {
     math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     float iblIntensity = 30000.0f;
     float iblRotation = 0.0f;
+    Skybox::SkyboxType skyboxType = Skybox::SkyboxType::ENVIRONMENT;
 };
 
 struct ViewerOptions {

@@ -965,6 +965,10 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
         ibl->setIntensity(settings.iblIntensity);
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
     }
+    if (scene->getSkybox())
+    {
+        scene->getSkybox()->setType(settings.skyboxType);
+    }
     for (size_t i = 0; i < sceneLightCount; i++) {
         light = lm->getInstance(sceneLights[i]);
         if (lm->isSpotLight(light)) {
@@ -990,6 +994,7 @@ void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox
     }
     if (skybox) {
         skybox->setLayerMask(0xff, settings.skyboxEnabled ? 0xff : 0x00);
+        skybox->setColor(math::float4(settings.backgroundColor, 1.0f));
     }
     if (camera) {
         camera->setExposure(
