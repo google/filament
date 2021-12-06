@@ -24,7 +24,7 @@
 #include "common/NioUtils.h"
 #include "common/CallbackUtils.h"
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 #if __has_include(<android/hardware_buffer_jni.h>)
 #include <android/hardware_buffer_jni.h>
@@ -190,7 +190,7 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
     Engine* engine = (Engine*) nativeEngine;
     Stream* stream = (Stream*) nativeStream;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
     // This function is not available before NDK 15 or before Android 8.
     if (UTILS_UNLIKELY(!AHardwareBuffer_fromHardwareBuffer_fn)) {

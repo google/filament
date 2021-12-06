@@ -25,7 +25,7 @@
 #include <filament/Engine.h>
 
 struct CallbackJni {
-#ifdef ANDROID
+#ifdef __ANDROID__
     jclass handlerClass = nullptr;
     jmethodID post = nullptr;
 #endif

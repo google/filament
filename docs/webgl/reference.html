@@ -578,10 +578,20 @@
 <li><em>overrides</em> Dictionary with one or more of the following properties: distance, maximumOpacity, height, heightFalloff, color, density, inScatteringStart,</li>
 </ul>
 </li>
+<li><strong>engine.setMultiSampleAntiAliasingOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: enabled, sampleCount, customResolve.</li>
+</ul>
+</li>
 <li><strong>engine.setShadowOptions(instance, overrides)</strong>
 <ul>
 <li><em>instance</em> Instance of a light component obtained from <code>getInstance</code>.</li>
 <li><em>overrides</em> Dictionary with one or more of the following properties: mapSize, shadowCascades, constantBias, normalBias, shadowFar, shadowNearHint, shadowFarHint, stable, polygonOffsetConstant, polygonOffsetSlope, \</li>
+</ul>
+</li>
+<li><strong>engine.setTemporalAntiAliasingOptions(overrides)</strong>
+<ul>
+<li><em>overrides</em> Dictionary with one or more of the following properties: filterWidth, feedback, enabled.</li>
 </ul>
 </li>
 <li><strong>engine.setVignetteOptions(overrides)</strong>

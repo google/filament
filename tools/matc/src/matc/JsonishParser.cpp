@@ -22,6 +22,8 @@
 
 #include <string.h>
 
+#include <utils/string.h>
+
 namespace matc {
 
 static std::string resolveEscapes(const std::string&& s) {
@@ -269,7 +271,7 @@ JsonishValue* JsonishParser::parseValue() noexcept {
             return parseString();
         case NUMBER:
             consumeLexeme(NUMBER);
-            return new JsonishNumber(strtof(next->getStart(), nullptr));
+            return new JsonishNumber(utils::strtof_c(next->getStart(), nullptr));
         case BLOCK_START:
             return parseObject();
         case ARRAY_START:

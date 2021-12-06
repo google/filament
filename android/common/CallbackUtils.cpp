@@ -19,7 +19,7 @@
 #include "private/backend/VirtualMachineEnv.h"
 
 void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
-#ifdef ANDROID
+#ifdef __ANDROID__
     callbackUtils.handlerClass = env->FindClass("android/os/Handler");
     callbackUtils.handlerClass = (jclass) env->NewGlobalRef(callbackUtils.handlerClass);
     callbackUtils.post = env->GetMethodID(callbackUtils.handlerClass,
@@ -34,7 +34,7 @@ void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
 
 void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler, jobject callback) {
     if (handler && callback) {
-#ifdef ANDROID
+#ifdef __ANDROID__
         if (env->IsInstanceOf(handler, callbackUtils.handlerClass)) {
             env->CallBooleanMethod(handler, callbackUtils.post, callback);
         }
@@ -45,7 +45,7 @@ void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler,
     }
     env->DeleteGlobalRef(handler);
     env->DeleteGlobalRef(callback);
-#ifdef ANDROID
+#ifdef __ANDROID__
     env->DeleteGlobalRef(callbackUtils.handlerClass);
 #endif
     env->DeleteGlobalRef(callbackUtils.executorClass);

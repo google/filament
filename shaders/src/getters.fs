@@ -104,12 +104,11 @@ highp vec4 getSpotLightSpacePosition(uint index) {
     highp vec3 dir = shadowUniforms.shadows[index].direction;
 
     // for spotlights, the bias depends on z
-    float bias = shadowUniforms.shadows[index].normalBias;
-    highp vec4 positionLs = mulMat4x4Float3(lightFromWorldMatrix, vertex_worldPosition.xyz);
-    highp float oneOverZ = positionLs.w / positionLs.z;
+    highp float z = dot(shadowUniforms.shadows[index].lightFromWorldZ, vertex_worldPosition);
+    float bias = shadowUniforms.shadows[index].normalBias * z;
 
     return computeLightSpacePosition(vertex_worldPosition.xyz,
-            vertex_worldNormal, dir, oneOverZ * bias, lightFromWorldMatrix);
+            vertex_worldNormal, dir, bias, lightFromWorldMatrix);
 }
 #endif
 

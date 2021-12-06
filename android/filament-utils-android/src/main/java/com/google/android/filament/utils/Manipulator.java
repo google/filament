@@ -32,7 +32,9 @@ import androidx.annotation.Size;
  * @see Bookmark
  */
 public class Manipulator {
-    private long mNativeObject;
+    private static final Mode[] sModeValues = Mode.values();
+
+    private final long mNativeObject;
 
     private Manipulator(long nativeIndexBuffer) {
         mNativeObject = nativeIndexBuffer;
@@ -320,7 +322,7 @@ public class Manipulator {
     /**
      * Gets the immutable mode of the manipulator.
      */
-    public Mode getMode() { return Mode.values()[nGetMode(mNativeObject)]; }
+    public Mode getMode() { return sModeValues[nGetMode(mNativeObject)]; }
 
     /**
      * Sets the viewport dimensions in terms of pixels.

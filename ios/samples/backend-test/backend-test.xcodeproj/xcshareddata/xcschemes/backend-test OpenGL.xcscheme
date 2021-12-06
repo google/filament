@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1000"
+   LastUpgradeVersion = "1200"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "196E24C2A15DA6AE6F69371CA6A367C0"
+               BlueprintIdentifier = "196E24C2A15DA6AE6F69371C"
                BuildableName = "backend-test.app"
                BlueprintName = "backend-test"
                ReferencedContainer = "container:backend-test.xcodeproj">
@@ -26,13 +26,14 @@
       buildConfiguration = "OpenGL Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      onlyGenerateCoverageForSpecifiedTargets = "NO"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
       </Testables>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "196E24C2A15DA6AE6F69371CA6A367C0"
+            BlueprintIdentifier = "196E24C2A15DA6AE6F69371C"
             BuildableName = "backend-test.app"
             BlueprintName = "backend-test"
             ReferencedContainer = "container:backend-test.xcodeproj">
@@ -40,8 +41,6 @@
       </MacroExpansion>
       <CommandLineArguments>
       </CommandLineArguments>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </TestAction>
    <LaunchAction
       buildConfiguration = "OpenGL Debug"
@@ -57,7 +56,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "196E24C2A15DA6AE6F69371CA6A367C0"
+            BlueprintIdentifier = "196E24C2A15DA6AE6F69371C"
             BuildableName = "backend-test.app"
             BlueprintName = "backend-test"
             ReferencedContainer = "container:backend-test.xcodeproj">
@@ -65,8 +64,6 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
       </CommandLineArguments>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "OpenGL Release"
@@ -78,7 +75,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "196E24C2A15DA6AE6F69371CA6A367C0"
+            BlueprintIdentifier = "196E24C2A15DA6AE6F69371C"
             BuildableName = "backend-test.app"
             BlueprintName = "backend-test"
             ReferencedContainer = "container:backend-test.xcodeproj">

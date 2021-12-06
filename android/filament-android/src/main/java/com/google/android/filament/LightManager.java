@@ -117,6 +117,8 @@ import androidx.annotation.Size;
  * </ul>
  */
 public class LightManager {
+    private static final Type[] sTypeValues = Type.values();
+
     private long mNativeObject;
 
     LightManager(long nativeLightManager) {
@@ -781,7 +783,7 @@ public class LightManager {
 
     @NonNull
     public Type getType(@EntityInstance int i) {
-        return Type.values()[nGetType(mNativeObject, i)];
+        return sTypeValues[nGetType(mNativeObject, i)];
     }
 
     /**

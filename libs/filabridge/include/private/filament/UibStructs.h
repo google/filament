@@ -189,6 +189,8 @@ struct ShadowUib {
         math::mat4f lightFromWorldMatrix;
         math::float3 direction;
         float normalBias;
+        math::float4 lightFromWorldZ;
+
         float texelSizeAtOneMeter;
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];

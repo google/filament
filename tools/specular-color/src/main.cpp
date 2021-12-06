@@ -26,6 +26,7 @@
 #include <getopt/getopt.h>
 
 #include <utils/Path.h>
+#include <utils/string.h>
 
 #include <math/mat3.h>
 #include <math/scalar.h>
@@ -826,7 +827,7 @@ static bool parseSpectralData(std::ifstream& in, std::vector<Sample>& samples) {
         }
 
         Sample sample = { 0 };
-        sample.w = std::strtof(value.c_str(), nullptr) * 1000.0f; // um to nm
+        sample.w = utils::strtof_c(value.c_str(), nullptr) * 1000.0f; // um to nm
 
         float n;
         in >> n;
