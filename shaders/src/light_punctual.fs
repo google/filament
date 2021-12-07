@@ -233,7 +233,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
         color.rgb += customSurfaceShading(material, pixel, light, visibility);
 #else
-        color.rgb += surfaceShading(pixel, light, visibility);
+        color.rgb += surfaceShading(material, pixel, light, visibility);
 #endif
     }
 }

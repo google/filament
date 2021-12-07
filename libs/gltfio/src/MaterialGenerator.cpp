@@ -150,6 +150,11 @@ std::string shaderFromKey(const MaterialKey& config) {
     }
 
     if (!config.unlit) {
+        // This is a custom Shapr3D property that controls specular reflectance of materials on all lighting paths
+        shader += R"SHADER(
+                material.specularIntensity = 1.0;
+            )SHADER";
+
         if (config.useSpecularGlossiness) {
             shader += R"SHADER(
                 material.glossiness = materialParams.glossinessFactor;
@@ -183,6 +188,15 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        // At this point, material roughness is established and now we can compute the reflectance attribute. Our experiments show
+        // that it has to depend on roughness: if it is set to a constant nonzero value, then full rough (=1) surfaces become
+        // unrealistically reflective. However, if reflective is zero, then unrough (=0) parts of the surface that face the camera
+        // won't reflect the environment correctly (=at all). As a heuristic fix, let's make these two complementary to each other:
+        shader += R"SHADER(
+                        material.reflectance = clamp( 1.0 - material.roughness, 0.0, 1.0 );
+                    )SHADER";
+
         if (config.hasOcclusionTexture) {
             shader += "highp float2 aoUV = ${ao};\n";
             if (config.hasTextureTransforms) {

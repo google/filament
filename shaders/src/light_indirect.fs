@@ -234,7 +234,7 @@ float prefilteredImportanceSampling(float ipdf, float omegaP) {
     return mipLevel;
 }
 
-vec3 isEvaluateSpecularIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
+vec3 isEvaluateSpecularIBL(const MaterialInputs material, const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
@@ -283,7 +283,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
 
             float D = distribution(roughness, NoH, h);
             float V = visibility(roughness, NoV, NoL);
-            vec3 F = fresnel(pixel.f0, LoH);
+            vec3 F = material.specularIntensity * fresnel(pixel.f0, LoH);
             vec3 Fr = F * (D * V * NoL * ipdf * invNumSamples);
 
             indirectSpecular += (Fr * L);
@@ -293,7 +293,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     return indirectSpecular;
 }
 
-vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
+vec3 isEvaluateDiffuseIBL(const MaterialInputs material, const PixelParams pixel, vec3 n, vec3 v) {
     const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
@@ -343,7 +343,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     return indirectDiffuse * invNumSamples; // we bake 1/PI here, which cancels out
 }
 
-void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void isEvaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
@@ -367,7 +367,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     p.anisotropy = 0.0;
 #endif
 
-    vec3 clearCoatLobe = isEvaluateSpecularIBL(p, clearCoatNormal, shading_view, clearCoatNoV);
+    vec3 clearCoatLobe = isEvaluateSpecularIBL(material, p, clearCoatNormal, shading_view, clearCoatNoV);
     Fr += clearCoatLobe * (specularAO * pixel.clearCoat);
 #endif
 }
@@ -386,7 +386,7 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 #endif
 }
 
-void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
+void evaluateSheenIBL(const MaterialInputs material, const PixelParams pixel, float diffuseAO,
         const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
@@ -397,16 +397,16 @@ void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
     vec3 reflectance = pixel.sheenDFG * pixel.sheenColor;
     reflectance *= specularAO(shading_NoV, diffuseAO, pixel.sheenRoughness, cache);
 
-    Fr += reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
+    Fr += material.specularIntensity * reflectance * prefilteredRadiance(shading_reflected, pixel.sheenPerceptualRoughness);
 #endif
 #endif
 }
 
-void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
+void evaluateClearCoatIBL(const MaterialInputs material, const PixelParams pixel, float diffuseAO,
         const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     float specularAO = specularAO(shading_NoV, diffuseAO, pixel.clearCoatRoughness, cache);
-    isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
+    isEvaluateClearCoatIBL(material, pixel, specularAO, Fd, Fr);
     return;
 #endif
 
@@ -495,6 +495,7 @@ void refractionThinSphere(const PixelParams pixel,
 }
 
 void applyRefraction(
+    const MaterialInputs material, 
     const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
@@ -566,20 +567,21 @@ void applyRefraction(
     Ft *= T;
 #endif
 
-    Fr *= frameUniforms.iblLuminance;
+    Fr *= material.specularIntensity * frameUniforms.iblLuminance;
     Fd *= frameUniforms.iblLuminance;
     color.rgb += Fr + mix(Fd, Ft, pixel.transmission);
 }
 #endif
 
 void combineDiffuseAndSpecular(
+        const MaterialInputs material, 
         const PixelParams pixel,
         const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
         inout vec3 color) {
 #if defined(HAS_REFRACTION)
-    applyRefraction(pixel, n, E, Fd, Fr, color);
+    applyRefraction(material, pixel, n, E, Fd, Fr, color);
 #else
-    color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;
+    color.rgb += (Fd + material.specularIntensity * Fr) * frameUniforms.iblLuminance;
 #endif
 }
 
@@ -592,7 +594,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
-    Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
+    Fr = isEvaluateSpecularIBL(material, pixel, shading_normal, shading_view, shading_NoV);
 #endif
 
     SSAOInterpolationCache interpolationCache;
@@ -631,11 +633,11 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // sheen layer
-    evaluateSheenIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
+    evaluateSheenIBL(material, pixel, diffuseAO, interpolationCache, Fd, Fr);
 
     // clear coat layer
-    evaluateClearCoatIBL(pixel, diffuseAO, interpolationCache, Fd, Fr);
+    evaluateClearCoatIBL(material, pixel, diffuseAO, interpolationCache, Fd, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
-    combineDiffuseAndSpecular(pixel, shading_normal, E, Fd, Fr, color);
+    combineDiffuseAndSpecular(material, pixel, shading_normal, E, Fd, Fr, color);
 }

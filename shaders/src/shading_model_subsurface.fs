@@ -5,7 +5,7 @@
  * scattering. The BTDF itself is not physically based and does not represent a
  * correct interpretation of transmission events.
  */
-vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
+vec3 surfaceShading(const MaterialInputs material, const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
     float NoL = light.NoL;
@@ -17,7 +17,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
         // specular BRDF
         float D = distribution(pixel.roughness, NoH, h);
         float V = visibility(pixel.roughness, shading_NoV, NoL);
-        vec3  F = fresnel(pixel.f0, LoH);
+        vec3  F = material.specularIntensity * fresnel(pixel.f0, LoH);
         Fr = (D * V) * F * pixel.energyCompensation;
     }
 
