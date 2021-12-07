@@ -7,7 +7,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.15.1
 
-- engine: add support for DPCF (PCF shadows with contact hardening)
+- engine: add support for DPCF (PCF shadows with contact hardening).
+- engine: add support for Wayland and Vulkan.
+- engine: Fade lights out when close to light far plane.
+- Java: Add missing `Engine#destroySkinningBuffer` method.
 
 ## v1.15.0
 
