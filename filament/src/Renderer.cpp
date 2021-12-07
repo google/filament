@@ -588,7 +588,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), taaOptions, colorGradingConfig);
+        input = ppm.taa(fg, input, view.getFrameHistory(), getColorHistory(fg, view), taaOptions,
+                colorGradingConfig);
+    }
+
+    struct SaveColorHistoryData {
+        FrameGraphId<FrameGraphTexture> color;
+    };
+    if (taaOptions.enabled) {
+        fg.addPass<SaveColorHistoryData>("Save color history", [&](FrameGraph::Builder& builder,
+                auto& data) {
+            builder.sideEffect();
+            data.color = builder.sample(input);
+        }, [&view](FrameGraphResources const& resources, auto const& data, backend::DriverApi&) {
+            FrameHistory& frameHistory = view.getFrameHistory();
+            FrameHistoryEntry& current = frameHistory.getCurrent();
+            resources.detach(data.color, &current.color, &current.colorDesc);
+        });
     }
 
     // --------------------------------------------------------------------------------------------
@@ -674,6 +690,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //fg.export_graphviz(slog.d, view.getName());
 
     fg.execute(driver);
+
+    if (auto history = blackboard.get<FrameGraphTexture>("colorHistory")) {
+        blackboard.remove("colorHistory");
+    }
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
@@ -1245,6 +1265,24 @@ void FRenderer::initializeClearFlags() {
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg, FView& view) noexcept {
+    Blackboard& blackboard = fg.getBlackboard();
+
+    if (auto history = blackboard.get<FrameGraphTexture>("colorHistory")) {
+        return history;
+    }
+
+    const FrameHistory& frameHistory = view.getFrameHistory();
+    FrameHistoryEntry const& entry = frameHistory[0];
+    if (UTILS_UNLIKELY(!entry.color.handle)) {
+        return {};
+    }
+    FrameGraphId<FrameGraphTexture> history = fg.import("Color history", entry.colorDesc,
+            FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
+    blackboard["colorHistory"] = history;
+    return history;
 }
 
 // ------------------------------------------------------------------------------------------------

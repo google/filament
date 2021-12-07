@@ -187,6 +187,8 @@ private:
         return clock::now() - getUserEpoch();
     }
 
+    static FrameGraphId<FrameGraphTexture> getColorHistory(FrameGraph& fg, FView& view) noexcept;
+
     // keep a reference to our engine
     FEngine& mEngine;
     FrameSkipper mFrameSkipper;
