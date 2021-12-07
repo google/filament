@@ -221,8 +221,13 @@ class MainActivity : Activity() {
                 equirectToCubemap.destroy();
                 context.destroy();
 
+                // destroy the previous IBl
+                engine.destroyIndirectLight(modelViewer.scene.indirectLight!!);
+                engine.destroySkybox(modelViewer.scene.skybox!!);
+
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl
+                viewerContent.indirectLight = ibl
             }
         }
     }
