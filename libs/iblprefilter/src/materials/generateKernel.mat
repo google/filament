@@ -42,6 +42,7 @@ void dummy() {}
 
 // we default to highp in this shader
 precision highp float;
+precision highp int;
 
 float log4(const float x) {
     return log2(x) * 0.5;
@@ -82,7 +83,7 @@ vec4 computeWeight(const uint index, const float roughness) {
     float NoH2 = H.z * H.z;
     float NoL = saturate(2.0 * NoH2 - 1.0);
     vec3 L = vec3(2.0 * NoH * H.x, 2.0 * NoH * H.y, NoL);
-    float pdf = DistributionGGX(NoH, roughness) * 0.25;
+    float pdf = DistributionGGX(NoH, max(MIN_ROUGHNESS, roughness)) * 0.25;
     float invOmegaS = sampleCount * pdf;
     float l = -log4(invOmegaS);
     return vec4(L, l);
