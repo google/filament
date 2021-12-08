@@ -85,6 +85,7 @@ public:
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool getRefractionMode(RefractionMode* value) const noexcept;
     bool getRefractionType(RefractionType* value) const noexcept;
+    bool getReflectionsMode(ReflectionsMode* value) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
     bool hasSpecularAntiAliasing(bool* value) const noexcept;
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;

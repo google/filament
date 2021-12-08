@@ -189,6 +189,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getRequiredAttributes(&mRequiredAttributes);
     parser->getRefractionMode(&mRefractionMode);
     parser->getRefractionType(&mRefractionType);
+    parser->getReflectionsMode(&mReflectionsMode);
 
     if (mBlendingMode == BlendingMode::MASKED) {
         parser->getMaskThreshold(&mMaskThreshold);
@@ -647,6 +648,10 @@ RefractionMode Material::getRefractionMode() const noexcept {
 
 RefractionType Material::getRefractionType() const noexcept {
     return upcast(this)->getRefractionType();
+}
+
+ReflectionsMode Material::getReflectionsMode() const noexcept {
+    return upcast(this)->getReflectionsMode();
 }
 
 bool Material::hasParameter(const char* name) const noexcept {

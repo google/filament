@@ -377,6 +377,8 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 // IBL evaluation
 //------------------------------------------------------------------------------
 
+#if defined(HAS_REFLECTIONS) && REFLECTIONS_MODE == REFLECTIONS_MODE_SCREEN_SPACE
+
 #define Point3 vec3
 #define Point2 vec2
 #define Vector2 vec2
@@ -645,6 +647,8 @@ void evaluateScreenSpaceReflections(const PixelParams pixel, inout vec3 Fr) {
     }
 }
 
+#endif // screen-space reflections
+
 void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
 #if defined(SHADING_MODEL_CLOTH)
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
@@ -870,12 +874,14 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
 #endif
 
+#if defined(HAS_REFLECTIONS) && REFLECTIONS_MODE == REFLECTIONS_MODE_SCREEN_SPACE
     // Up to this point Fr is the Cubemap reflection only.
     // evaluateScreenSpaceReflections will replace the value of Fr if there's a hit.
     // TODO: do we want iblLuminance to control screen-space reflections?
     if (pixel.roughness <= 0.01f && frameUniforms.ssrEnabled > 0u) {
         evaluateScreenSpaceReflections(pixel, Fr);
     }
+#endif
 
     SSAOInterpolationCache interpolationCache;
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)

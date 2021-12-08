@@ -193,8 +193,11 @@ public:
     //! Returns the refraction mode used by this material.
     RefractionMode getRefractionMode() const noexcept;
 
-    // Return the refraction type used by this material.
+    //! Return the refraction type used by this material.
     RefractionType getRefractionType() const noexcept;
+
+    //! Returns the reflections mode used by this material.
+    ReflectionsMode getReflectionsMode() const noexcept;
 
     /**
      * Returns the number of parameters declared by this material.

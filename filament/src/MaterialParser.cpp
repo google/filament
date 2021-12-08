@@ -269,6 +269,12 @@ bool MaterialParser::getRefractionType(RefractionType* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialRefractionType, (uint8_t*)value);
 }
 
+bool MaterialParser::getReflectionsMode(ReflectionsMode* value) const noexcept {
+    static_assert(sizeof(ReflectionsMode) == sizeof(uint8_t),
+            "ReflectionsMode expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialReflectionsMode, (uint8_t*)value);
+}
+
 bool MaterialParser::getShader(ShaderBuilder& shader,
         ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,

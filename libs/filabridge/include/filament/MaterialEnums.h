@@ -101,6 +101,7 @@ enum class TransparencyMode : uint8_t {
     TWO_PASSES_TWO_SIDES
 };
 
+
 /**
  * Supported types of vertex domains.
  */
@@ -184,6 +185,14 @@ enum class RefractionMode : uint8_t {
 enum class RefractionType : uint8_t {
     SOLID           = 0, //!< refraction through solid objects (e.g. a sphere)
     THIN            = 1, //!< refraction through thin objects (e.g. window)
+};
+
+/**
+ * Reflections
+ */
+enum class ReflectionsMode : uint8_t {
+    DEFAULT         = 0, //! reflections sample from the scene's IBL only
+    SCREEN_SPACE    = 1, //! reflections sample from screen space, and fallback to the scene's IBL
 };
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t

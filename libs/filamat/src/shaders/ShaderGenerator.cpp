@@ -337,6 +337,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
     }
 
+    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionsMode != ReflectionsMode::DEFAULT);
+    if (material.reflectionsMode != ReflectionsMode::DEFAULT) {
+        CodeGenerator::generateDefine(fs, "REFLECTIONS_MODE_SCREEN_SPACE", uint32_t(ReflectionsMode::SCREEN_SPACE));
+        if (material.reflectionsMode == ReflectionsMode::SCREEN_SPACE) {
+            CodeGenerator::generateDefine(fs, "REFLECTIONS_MODE", "REFLECTIONS_MODE_SCREEN_SPACE");
+        }
+    }
+
     bool multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : !isMobileTarget(shaderModel);
     CodeGenerator::generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
