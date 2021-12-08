@@ -608,7 +608,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     struct ExportColorHistoryData {
         FrameGraphId<FrameGraphTexture> color;
     };
-    if (taaOptions.enabled) {
+    if (taaOptions.enabled || ssReflectionsOptions.enabled) {
         fg.addPass<ExportColorHistoryData>("Export color history", [&](FrameGraph::Builder& builder,
                 auto& data) {
             // We need to use sideEffect here to ensure this pass won't be culled. The "output" of
@@ -1010,10 +1010,6 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 // this point, so flushing now allows us to start the GPU earlier and reduce
                 // latency, without creating bubbles.
                 driver.flush();
-
-                FrameHistory& frameHistory = view.getFrameHistory();
-                FrameHistoryEntry& current = frameHistory.getCurrent();
-                resources.detach(data.color, &current.color, &current.colorDesc);
             }
     );
 
