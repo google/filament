@@ -810,7 +810,7 @@ void SimpleViewer::updateUserInterface() {
 
         int skyboxType = (int)mSettings.lighting.skyboxType;
         ImGui::Combo("Skybox type", &skyboxType,
-            "Solid color\0Gradient\0Environment\0\0");
+            "Solid color\0Gradient\0Environment\0Checkerboard\0\0");
         mSettings.lighting.skyboxType = (decltype(mSettings.lighting.skyboxType))skyboxType;
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 

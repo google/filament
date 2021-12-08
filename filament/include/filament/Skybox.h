@@ -67,7 +67,8 @@ public:
     enum class SkyboxType : uint8_t {
         COLOR = 0,
         GRADIENT = 1,
-        ENVIRONMENT = 2
+        ENVIRONMENT = 2,
+        CHECKERBOARD = 3
     };
 
     //! Use Builder to construct an Skybox object instance
@@ -137,9 +138,15 @@ public:
         Builder& color(math::float4 color) noexcept;
 
         /**
-        * Sets the skybox type, between solid color, gradient and environment.
+        * Sets the skybox type, between solid color, gradient, environment and checkerboard.
         */
         Builder& type(SkyboxType type) noexcept;
+
+        /**
+        * Sets the UI scale factor for the checkerboard pattern. The pattern has 8x8 pixel squares,
+        * when the scale is 1. The default value is 1.
+        */
+        Builder& uiScale(float scale) noexcept;
 
         /**
          * Creates the Skybox object and returns a pointer to it.
@@ -157,6 +164,8 @@ public:
     void setColor(math::float4 color) noexcept;
 
     void setType(SkyboxType type) noexcept;
+
+    void setUiScale(float scale) noexcept;
 
     /**
      * Sets bits in a visibility mask. By default, this is 0x1.

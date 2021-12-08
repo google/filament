@@ -16,6 +16,10 @@ material {
         {
            type : float4,
            name : color
+        },
+        {
+           type : float,
+           name : uiScaleFactor
         }
     ],
     variables : [
@@ -33,9 +37,31 @@ fragment {
 #define SHAPR_SKYBOX_TYPE_SOLID_COLOR 0
 #define SHAPR_SKYBOX_TYPE_GRADIENT 1
 #define SHAPR_SKYBOX_TYPE_ENVIRONMENT 2
+#define SHAPR_SKYBOX_TYPE_CHECKERBOARD 3
 
     float3 approxInverseSRGB(float3 srgb) {
         return pow(srgb, vec3(2.2));
+    }
+
+    // Creates a checkerboard pattern of repeats fields in uv (must be in [0,1])
+    // Source: https://github.com/mattdesl/glsl-checker
+    float checker(float2 uv, float2 repeats) {
+        float cx = floor(repeats.x * uv.x);
+        float cy = floor(repeats.y * uv.y); 
+        float result = mod(cx + cy, 2.0);
+        return sign(result);
+    }
+
+    float3 shaprCheckerboardPattern(float2 positionScaledClipSpace) {
+        const float colorLight = 1.0;
+        const float colorDark = 0.53;
+
+        // Size of a square in pixels
+        float2 squareSizePixels = float2(8.0, 8.0) * max(materialParams.uiScaleFactor, 1.0);
+
+        float pattern = checker(positionScaledClipSpace, getResolution().xy / squareSizePixels);
+        float resultColor = mix(colorLight, colorDark, pattern);
+        return float3(resultColor, resultColor, resultColor);
     }
 
     // Conversion code from: https://bottosson.github.io/posts/oklab/
@@ -116,11 +142,14 @@ fragment {
         } else if (materialParams.skyboxType == SHAPR_SKYBOX_TYPE_ENVIRONMENT) {
             sky = float4(textureLod(materialParams_skybox, variable_eyeDirection.xyz, 0.0).rgb, 1.0);
             sky.rgb *= frameUniforms.iblLuminance;
+        } else if (materialParams.skyboxType == SHAPR_SKYBOX_TYPE_CHECKERBOARD) {
+            float3 checkerboardColor = shaprCheckerboardPattern(getNormalizedViewportCoord().xy);
+            sky = float4(checkerboardColor, 1.0);
         } else {
             sky = float4(1.0, 0.0, 1.0, 1.0);
         }
 
-        if (materialParams.skyboxType == 2 && materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0f) {
+        if (materialParams.skyboxType == SHAPR_SKYBOX_TYPE_ENVIRONMENT && materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0f) {
             float3 direction = normalize(variable_eyeDirection.xyz);
             // Assume the sun is a sphere
             float3 sun = frameUniforms.lightColorIntensity.rgb *
@@ -131,7 +160,7 @@ fragment {
             sky.rgb = sky.rgb + gradient * sun;
         }
 
-        if (materialParams.skyboxType != 2) {
+        if (materialParams.skyboxType != SHAPR_SKYBOX_TYPE_ENVIRONMENT) {
             material.baseColor = float4(0.0);
             material.postLightingColor = sky;
         } else {

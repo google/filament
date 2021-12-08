@@ -55,6 +55,8 @@ public:
 
     void setColor(math::float4 color) noexcept;
 
+    void setUiScale(float scale) noexcept;
+
     // commits UBOs
     void commit(backend::DriverApi& driver) noexcept;
 

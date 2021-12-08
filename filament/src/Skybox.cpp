@@ -45,6 +45,7 @@ struct Skybox::BuilderDetails {
     float mIntensity = FIndirectLight::DEFAULT_INTENSITY;
     bool mShowSun = false;
     SkyboxType mType = Skybox::SkyboxType::ENVIRONMENT;
+    float mUiScale = 1.0f;
 };
 
 using BuilderType = Skybox;
@@ -73,6 +74,11 @@ Skybox::Builder& Skybox::Builder::color(math::float4 color) noexcept {
 
 Skybox::Builder& Skybox::Builder::type(SkyboxType type) noexcept {
     mImpl->mType = type;
+    return *this;
+}
+
+Skybox::Builder& Skybox::Builder::uiScale(float scale) noexcept {
+    mImpl->mUiScale = scale;
     return *this;
 }
 
@@ -109,6 +115,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
     pInstance->setParameter("showSun", builder->mShowSun);
     pInstance->setParameter("skyboxType", (uint32_t)builder->mType);
     pInstance->setParameter("color", builder->mColor);
+    pInstance->setParameter("uiScaleFactor", builder->mUiScale);
 
     mSkybox = engine.getEntityManager().create();
 
@@ -157,6 +164,10 @@ void FSkybox::setColor(math::float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
 }
 
+void FSkybox::setUiScale(float scale) noexcept {
+    mSkyboxMaterialInstance->setParameter("uiScaleFactor", scale);
+}
+
 void FSkybox::commit(backend::DriverApi& driver) noexcept {
     mSkyboxMaterialInstance->commit(driver);
 }
@@ -183,6 +194,10 @@ void Skybox::setColor(math::float4 color) noexcept {
 
 void Skybox::setType(SkyboxType type) noexcept {
     upcast(this)->setType(type);
+}
+
+void Skybox::setUiScale(float scale) noexcept {
+    upcast(this)->setUiScale(scale);
 }
 
 Texture const* Skybox::getTexture() const noexcept {
