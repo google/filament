@@ -588,16 +588,18 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // TAA for color pass
     if (taaOptions.enabled) {
-        input = ppm.taa(fg, input, view.getFrameHistory(), getColorHistory(fg, view), taaOptions,
-                colorGradingConfig);
+        input = ppm.taa(fg, input, view.getFrameHistory(),
+                getColorHistory(fg, view.getFrameHistory()), taaOptions, colorGradingConfig);
     }
 
-    struct SaveColorHistoryData {
+    struct ExportColorHistoryData {
         FrameGraphId<FrameGraphTexture> color;
     };
     if (taaOptions.enabled) {
-        fg.addPass<SaveColorHistoryData>("Save color history", [&](FrameGraph::Builder& builder,
+        fg.addPass<ExportColorHistoryData>("Export color history", [&](FrameGraph::Builder& builder,
                 auto& data) {
+            // We need to use sideEffect here to ensure this pass won't be culled. The "output" of
+            // this pass is going to be used during the next frame as an "import".
             builder.sideEffect();
             data.color = builder.sample(input);
         }, [&view](FrameGraphResources const& resources, auto const& data, backend::DriverApi&) {
@@ -690,10 +692,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //fg.export_graphviz(slog.d, view.getName());
 
     fg.execute(driver);
-
-    if (auto history = blackboard.get<FrameGraphTexture>("colorHistory")) {
-        blackboard.remove("colorHistory");
-    }
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
@@ -1267,22 +1265,24 @@ void FRenderer::initializeClearFlags() {
             | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
 
-FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg, FView& view) noexcept {
+FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,
+        FrameHistory const& frameHistory) noexcept {
+    // Here we import the previous frame's color output and cache it in the blackboard. This ensures
+    // we only import it once per frame even across multiple calls to getColorHistory.
     Blackboard& blackboard = fg.getBlackboard();
 
     if (auto history = blackboard.get<FrameGraphTexture>("colorHistory")) {
         return history;
     }
 
-    const FrameHistory& frameHistory = view.getFrameHistory();
     FrameHistoryEntry const& entry = frameHistory[0];
     if (UTILS_UNLIKELY(!entry.color.handle)) {
         return {};
     }
-    FrameGraphId<FrameGraphTexture> history = fg.import("Color history", entry.colorDesc,
+    FrameGraphId<FrameGraphTexture> colorHistory = fg.import("Color history", entry.colorDesc,
             FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
-    blackboard["colorHistory"] = history;
-    return history;
+    blackboard["colorHistory"] = colorHistory;
+    return colorHistory;
 }
 
 // ------------------------------------------------------------------------------------------------
