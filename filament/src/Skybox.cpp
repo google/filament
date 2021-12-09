@@ -46,6 +46,7 @@ struct Skybox::BuilderDetails {
     bool mShowSun = false;
     SkyboxType mType = Skybox::SkyboxType::ENVIRONMENT;
     float mUiScale = 1.0f;
+    UpDirectionAxis mUpDirectionAxis = UpDirectionAxis::Y_UP;
 };
 
 using BuilderType = Skybox;
@@ -87,6 +88,11 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
     return *this;
 }
 
+Skybox::Builder& Skybox::Builder::upDirectionAxis(UpDirectionAxis axis) noexcept {
+    mImpl->mUpDirectionAxis = axis;
+    return *this;
+}
+
 Skybox* Skybox::Builder::build(Engine& engine) {
     FTexture* cubemap = upcast(mImpl->mEnvironmentMap);
 
@@ -116,6 +122,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
     pInstance->setParameter("skyboxType", (uint32_t)builder->mType);
     pInstance->setParameter("color", builder->mColor);
     pInstance->setParameter("uiScaleFactor", builder->mUiScale);
+    pInstance->setParameter("upDirectionAxis", (uint32_t)builder->mUpDirectionAxis);
 
     mSkybox = engine.getEntityManager().create();
 
@@ -168,6 +175,10 @@ void FSkybox::setUiScale(float scale) noexcept {
     mSkyboxMaterialInstance->setParameter("uiScaleFactor", scale);
 }
 
+void FSkybox::setUpDirectionAxis(UpDirectionAxis axis) noexcept {
+    mSkyboxMaterialInstance->setParameter("upDirectionAxis", (uint32_t)axis);
+}
+
 void FSkybox::commit(backend::DriverApi& driver) noexcept {
     mSkyboxMaterialInstance->commit(driver);
 }
@@ -198,6 +209,10 @@ void Skybox::setType(SkyboxType type) noexcept {
 
 void Skybox::setUiScale(float scale) noexcept {
     upcast(this)->setUiScale(scale);
+}
+
+void Skybox::setUpDirectionAxis(UpDirectionAxis axis) noexcept {
+    upcast(this)->setUpDirectionAxis(axis);
 }
 
 Texture const* Skybox::getTexture() const noexcept {

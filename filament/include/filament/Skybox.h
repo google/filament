@@ -71,6 +71,11 @@ public:
         CHECKERBOARD = 3
     };
 
+    enum class UpDirectionAxis : uint8_t {
+        Y_UP = 0,
+        Z_UP = 1
+    };
+
     //! Use Builder to construct an Skybox object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
@@ -149,6 +154,12 @@ public:
         Builder& uiScale(float scale) noexcept;
 
         /**
+        * Sets the axis that points upwards. Required for supporting Filament's Y up and Shapr's
+        * Z up with the same material/shader.
+        */
+        Builder& upDirectionAxis(UpDirectionAxis axis) noexcept;
+
+        /**
          * Creates the Skybox object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Skybox with.
@@ -166,6 +177,8 @@ public:
     void setType(SkyboxType type) noexcept;
 
     void setUiScale(float scale) noexcept;
+
+    void setUpDirectionAxis(UpDirectionAxis axis) noexcept;
 
     /**
      * Sets bits in a visibility mask. By default, this is 0x1.

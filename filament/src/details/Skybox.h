@@ -57,6 +57,8 @@ public:
 
     void setUiScale(float scale) noexcept;
 
+    void setUpDirectionAxis(UpDirectionAxis axis) noexcept;
+
     // commits UBOs
     void commit(backend::DriverApi& driver) noexcept;
 
