@@ -316,8 +316,12 @@ struct TemporalAntiAliasingOptions {
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
 };
 
+/**
+ * Options for Screen-space Reflections.
+ * @see setScreenSpaceReflectionsOptions()
+ */
 struct ScreenSpaceReflectionsOptions {
-    bool enabled = true;
+    bool enabled = false;
     float thickness = 0.5f;     //!< ray thickness, in world units
     float bias = 0.01f;         //!< bias, in world units, to prevent self-intersections
     float maxDistance = 3.0f;   //!< maximum distance, in world units, to raycast

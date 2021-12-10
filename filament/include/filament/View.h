@@ -331,8 +331,18 @@ public:
      */
     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
 
+    /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
     void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept;
 
+    /**
+     * Returns screen-space reflections options.
+     *
+     * @return screen-space reflections options
+     */
     ScreenSpaceReflectionsOptions const& getScreenSpaceReflectionsOptions() const noexcept;
 
     /**
