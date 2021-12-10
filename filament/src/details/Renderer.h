@@ -159,12 +159,12 @@ private:
             FrameGraphTexture::Descriptor const& colorBufferDesc,
             ColorPassConfig const& config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
-            RenderPass::Executor const& passExecutor, FView& view) const noexcept;
+            RenderPass::Executor const& passExecutor, FView const& view) const noexcept;
 
     FrameGraphId<FrameGraphTexture> refractionPass(FrameGraph& fg,
             ColorPassConfig config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
-            RenderPass const& pass, FView& view) const noexcept;
+            RenderPass const& pass, FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);

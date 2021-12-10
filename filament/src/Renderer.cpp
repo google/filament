@@ -716,7 +716,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         ColorPassConfig config,
         PostProcessManager::ColorGradingConfig colorGradingConfig,
         RenderPass const& pass,
-        FView& view) const noexcept {
+        FView const& view) const noexcept {
 
     auto& blackboard = fg.getBlackboard();
     auto input = blackboard.get<FrameGraphTexture>("color");
@@ -833,7 +833,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
 FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char* name,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass::Executor const& passExecutor, FView& view) const noexcept {
+        RenderPass::Executor const& passExecutor, FView const& view) const noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
