@@ -57,13 +57,13 @@ private:
     friend class SkinningBuffer;
     friend class FRenderableManager;
 
-    static void makeBone(PerRenderableUibBone* out, math::mat4f const& transforms) noexcept;
-
     static void setBones(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
             RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) noexcept;
 
     static void setBones(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
             math::mat4f const* transforms, size_t boneCount, size_t offset) noexcept;
+
+    static PerRenderableUibBone makeBone(math::mat4f transform) noexcept;
 
     backend::Handle<backend::HwBufferObject> getHwHandle() const noexcept {
         return mHandle;

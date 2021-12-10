@@ -22,9 +22,8 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <math/half.h>
 #include <math/mat4.h>
-
-#include <float.h>
 
 namespace filament {
 
@@ -111,17 +110,46 @@ void FSkinningBuffer::setBones(FEngine& engine,
     setBones(engine, mHandle, transforms, count, offset);
 }
 
+static uint32_t packHalf2x16(half2 v) noexcept {
+    uint32_t lo = getBits(v[0]);
+    uint32_t hi = getBits(v[1]);
+    return (hi << 16) | lo;
+}
+
 void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> handle,
         RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) noexcept {
     auto& driverApi = engine.getDriverApi();
     size_t size = boneCount * sizeof(PerRenderableUibBone);
     PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
-        out[i].transform = mat4f(transforms[i].unitQuaternion);
-        out[i].transform[3] = float4{ transforms[i].translation, 1.0f };
+        // the transform is stored in row-major, last row is not stored.
+        mat4f transform(transforms[i].unitQuaternion);
+        transform[3] = float4{ transforms[i].translation, 1.0f };
+        out[i] = makeBone(transform);
     }
     driverApi.updateBufferObject(handle, { out, size },
             offset * sizeof(PerRenderableUibBone));
+}
+
+PerRenderableUibBone FSkinningBuffer::makeBone(mat4f transform) noexcept {
+    const mat3f cofactors = cof(transform.upperLeft());
+    transform = transpose(transform); // row-major conversion
+    return {
+            .bone = {
+                    .transform = {
+                            transform[0],
+                            transform[1],
+                            transform[2]
+                    },
+                    .cof = {
+                            packHalf2x16({ cofactors[0].x, cofactors[0].y }),
+                            packHalf2x16({ cofactors[0].z, cofactors[1].x }),
+                            packHalf2x16({ cofactors[1].y, cofactors[1].z }),
+                            packHalf2x16({ cofactors[2].x, cofactors[2].y })
+                            // cofactor[2][2] is not stored because we don't have space for it
+                    }
+            }
+    };
 }
 
 void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> handle,
@@ -130,15 +158,13 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
     size_t size = boneCount * sizeof(PerRenderableUibBone);
     PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
-        out[i].transform = transforms[i];
+        // the transform is stored in row-major, last row is not stored.
+        out[i] = makeBone(transforms[i]);
     }
     driverApi.updateBufferObject(handle, { out, size },
             offset * sizeof(PerRenderableUibBone));
 }
 
-void FSkinningBuffer::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4f const& t) noexcept {
-    out->transform = t;
-}
 
 // ------------------------------------------------------------------------------------------------
 // Trampoline calling into private implementation
