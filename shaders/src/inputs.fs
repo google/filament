@@ -2,23 +2,6 @@
 // Attributes and uniforms
 //------------------------------------------------------------------------------
 
-vec3 mapRange(vec3 t, float low, float high) {
-    return (t - vec3(low)) / (high - low);
-}
-
-highp vec3 debugThisColor;
-int shouldDebugThisColor = 0;
-
-void debugColor(vec3 color) {
-    shouldDebugThisColor = 1;
-    debugThisColor = color;
-}
-
-void debugColor(vec3 color, float low, float high) {
-    shouldDebugThisColor = 1;
-    debugThisColor = mapRange(color, low, high);
-}
-
 LAYOUT_LOCATION(4) in highp vec4 vertex_worldPosition;
 
 #if defined(HAS_ATTRIBUTE_TANGENTS)

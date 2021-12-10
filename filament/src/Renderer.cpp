@@ -841,7 +841,7 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> ssao;
-        FrameGraphId<FrameGraphTexture> ssr;
+        FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
         FrameGraphId<FrameGraphTexture> structure;
         float4 clearColor{};
         TargetBufferFlags clearFlags{};
@@ -872,6 +872,8 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 data.color = blackboard.get<FrameGraphTexture>("color");
                 data.depth = blackboard.get<FrameGraphTexture>("depth");
 
+                // TODO: we currently only allow either screen-space reflections or refractions,
+                // but not both. If SS reflections are enabled, we prefer those.
                 if (config.hasScreenSpaceReflections && colorHistory) {
                     // Screen-space reflections
                     data.ssr = builder.sample(colorHistory);
