@@ -101,7 +101,6 @@ enum class TransparencyMode : uint8_t {
     TWO_PASSES_TWO_SIDES
 };
 
-
 /**
  * Supported types of vertex domains.
  */
