@@ -540,7 +540,7 @@ void applyRefraction(
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
 #else
     vec3 Ft;
-    if (frameUniforms.ssrEnabled > 0u) {
+    if (frameUniforms.ssrDistance > 0.0f) {
         // if screen-space reflections is enabled, we can't read from the screen-space buffer, so
         // fall back to cubemap refractions
         Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
@@ -598,7 +598,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
     // evaluateScreenSpaceReflections will set the value of Fr if there's a hit.
     // TODO: do we want iblLuminance to control screen-space reflections?
-    if (pixel.roughness <= 0.01f && frameUniforms.ssrEnabled > 0u) {
+    if (pixel.roughness <= 0.01f && frameUniforms.ssrDistance > 0.0f) {
         highp vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
         hasScreenSpaceReflections = evaluateScreenSpaceReflections(r, Fr);
     }

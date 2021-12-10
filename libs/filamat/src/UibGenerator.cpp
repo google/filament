@@ -122,10 +122,9 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("ssrThickness",            1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("ssrDistance",             1, UniformInterfaceBlock::Type::FLOAT)
-            .add("ssrEnabled",              1, UniformInterfaceBlock::Type::UINT)
 
             // bring PerViewUib to 2 KiB
-            .add("padding2", 53, UniformInterfaceBlock::Type::FLOAT4)
+            .add("padding2", 54, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

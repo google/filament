@@ -138,10 +138,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     // Screen-space reflections
     math::mat4f ssrReprojection;
-    float ssrThickness;
-    float ssrBias;
-    float ssrDistance;
-    float ssrEnabled;
+    float ssrThickness;                 // ssr thickness, in world units
+    float ssrBias;                      // ssr bias, in world units
+    float ssrDistance;                  // ssr world raycast distance, 0 when ssr is off
 
     // bring PerViewUib to 2 KiB
     math::float4 padding2[53];
