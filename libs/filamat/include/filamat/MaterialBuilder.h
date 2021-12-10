@@ -190,7 +190,7 @@ public:
     using MaterialDomain = filament::MaterialDomain;
     using RefractionMode = filament::RefractionMode;
     using RefractionType = filament::RefractionType;
-    using ReflectionsMode = filament::ReflectionsMode;
+    using ReflectionMode = filament::ReflectionMode;
     using VertexAttribute = filament::VertexAttribute;
 
     using ShaderQuality = filament::ShaderQuality;
@@ -463,7 +463,7 @@ public:
     MaterialBuilder& refractionType(RefractionType refractionType) noexcept;
 
     //! Specifies how reflections should be rendered (default is DEFAULT).
-    MaterialBuilder& reflectionsMode(ReflectionsMode mode) noexcept;
+    MaterialBuilder& reflectionMode(ReflectionMode mode) noexcept;
 
     //! Specifies how transparent objects should be rendered (default is DEFAULT).
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
@@ -706,7 +706,7 @@ private:
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
     RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
-    ReflectionsMode mReflectionsMode = ReflectionsMode::DEFAULT;
+    ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;

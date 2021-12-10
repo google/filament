@@ -337,11 +337,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         }
     }
 
-    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionsMode != ReflectionsMode::DEFAULT);
-    if (material.reflectionsMode != ReflectionsMode::DEFAULT) {
-        CodeGenerator::generateDefine(fs, "REFLECTIONS_MODE_SCREEN_SPACE", uint32_t(ReflectionsMode::SCREEN_SPACE));
-        if (material.reflectionsMode == ReflectionsMode::SCREEN_SPACE) {
-            CodeGenerator::generateDefine(fs, "REFLECTIONS_MODE", "REFLECTIONS_MODE_SCREEN_SPACE");
+    CodeGenerator::generateDefine(fs, "HAS_REFLECTIONS", material.reflectionMode != ReflectionMode::DEFAULT);
+    if (material.reflectionMode != ReflectionMode::DEFAULT) {
+        CodeGenerator::generateDefine(fs, "REFLECTION_MODE_SCREEN_SPACE", uint32_t(ReflectionMode::SCREEN_SPACE));
+        if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
+            CodeGenerator::generateDefine(fs, "REFLECTION_MODE", "REFLECTION_MODE_SCREEN_SPACE");
         }
     }
 

@@ -374,8 +374,8 @@ MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexce
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::reflectionsMode(ReflectionsMode mode) noexcept {
-    mReflectionsMode = mode;
+MaterialBuilder& MaterialBuilder::reflectionMode(ReflectionMode mode) noexcept {
+    mReflectionMode = mode;
     return *this;
 }
 
@@ -485,7 +485,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAOSet = mSpecularAOSet;
     info.refractionMode = mRefractionMode;
     info.refractionType = mRefractionType;
-    info.reflectionsMode = mReflectionsMode;
+    info.reflectionMode = mReflectionMode;
     info.quality = mShaderQuality;
     info.hasCustomSurfaceShading = mCustomSurfaceShading;
 }
@@ -1032,7 +1032,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionsMode, static_cast<uint8_t>(mReflectionsMode));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
     container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
     container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);

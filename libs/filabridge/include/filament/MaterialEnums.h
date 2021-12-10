@@ -187,9 +187,9 @@ enum class RefractionType : uint8_t {
 };
 
 /**
- * Reflections
+ * Reflection mode
  */
-enum class ReflectionsMode : uint8_t {
+enum class ReflectionMode : uint8_t {
     DEFAULT         = 0, //! reflections sample from the scene's IBL only
     SCREEN_SPACE    = 1, //! reflections sample from screen space, and fallback to the scene's IBL
 };

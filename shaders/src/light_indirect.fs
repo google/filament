@@ -595,7 +595,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 
     bool hasScreenSpaceReflections = false;
-#if defined(HAS_REFLECTIONS) && REFLECTIONS_MODE == REFLECTIONS_MODE_SCREEN_SPACE
+#if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
     // evaluateScreenSpaceReflections will set the value of Fr if there's a hit.
     // TODO: do we want iblLuminance to control screen-space reflections?
     if (pixel.roughness <= 0.01f && frameUniforms.ssrEnabled > 0u) {

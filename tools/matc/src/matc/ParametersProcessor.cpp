@@ -659,17 +659,17 @@ static bool processRefractionMode(MaterialBuilder& builder, const JsonishValue& 
     return true;
 }
 
-static bool processReflectionsMode(MaterialBuilder& builder, const JsonishValue& value) {
-    static const std::unordered_map<std::string, MaterialBuilder::ReflectionsMode> strToEnum {
-            { "default", MaterialBuilder::ReflectionsMode ::DEFAULT },
-            { "screenspace", MaterialBuilder::ReflectionsMode::SCREEN_SPACE },
+static bool processReflectionMode(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::ReflectionMode> strToEnum {
+            { "default", MaterialBuilder::ReflectionMode ::DEFAULT },
+            { "screenspace", MaterialBuilder::ReflectionMode::SCREEN_SPACE },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
-        return logEnumIssue("reflections_mode", *jsonString, strToEnum);
+        return logEnumIssue("reflection_mode", *jsonString, strToEnum);
     }
 
-    builder.reflectionsMode(stringToEnum(strToEnum, jsonString->getString()));
+    builder.reflectionMode(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
@@ -742,7 +742,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["depthCulling"]                  = { &processDepthCull, Type::BOOL };
     mParameters["doubleSided"]                   = { &processDoubleSided, Type::BOOL };
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };
-    mParameters["reflections"]                   = { &processReflectionsMode, Type::STRING };
+    mParameters["reflections"]                   = { &processReflectionMode, Type::STRING };
     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
     mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
