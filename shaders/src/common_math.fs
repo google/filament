@@ -130,10 +130,6 @@ highp vec4 mulMat4x4Float3(const highp mat4 m, const highp vec3 v) {
     return v.x * m[0] + (v.y * m[1] + (v.z * m[2] + m[3]));
 }
 
-highp vec3 mulMat4x3Float3(const highp mat4 m, const highp vec3 v) {
-    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
-}
-
 /**
  * Multiplies the specified 3-component vector by the 3x3 matrix (m * v) in
  * high precision.

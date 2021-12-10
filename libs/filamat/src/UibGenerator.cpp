@@ -156,7 +156,7 @@ UniformInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
 UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name(PerRenderableUibBone::_name)
-            .add("transform", CONFIG_MAX_BONE_COUNT, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
+            .add("bones", CONFIG_MAX_BONE_COUNT, "BoneData", sizeof(PerRenderableUibBone::BoneData))
             .build();
     return uib;
 }

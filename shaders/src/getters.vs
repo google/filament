@@ -22,17 +22,32 @@ mat3 getWorldFromModelNormalMatrix() {
 
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
-    highp mat3 transform = mat3(
-        bonesUniforms.transform[i][0].xyz,
-        bonesUniforms.transform[i][1].xyz,
-        bonesUniforms.transform[i][2].xyz
-    );
-    return normalize(cofactor(transform) * n);
+
+    highp mat3 cof;
+
+    // the first 8 elements of the cofactor matrix are stored as fp16
+    highp vec2 zx = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
+    cof[0].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
+    cof[0].z = zx[0];
+    cof[1].x = zx[1];
+    cof[1].yz = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
+    cof[2].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
+
+    // the last element must be computed by hand
+    highp float a = bonesUniforms.bones[i].transform[0][0];
+    highp float b = bonesUniforms.bones[i].transform[0][1];
+    highp float d = bonesUniforms.bones[i].transform[1][0];
+    highp float e = bonesUniforms.bones[i].transform[1][1];
+
+    cof[2].z = a * e - b * d;
+
+    return normalize(cof * n);
 }
 
 vec3 mulBoneVertex(vec3 v, uint i) {
-    // last row of bonesUniforms.transform[i] is assumed to be [0,0,0,1]
-    return mulMat4x3Float3(bonesUniforms.transform[i], v);
+    // last row of bonesUniforms.transform[i] (row major) is assumed to be [0,0,0,1]
+    highp mat4x3 m = transpose(bonesUniforms.bones[i].transform);
+    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
