@@ -213,7 +213,12 @@ float ssr_random(const highp vec2 w) {
     return fract(m.z * fract(dot(w, m.xy)));
 }
 
-void evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
+/**
+ * Evaluates screen-space reflections, storing the color in Fr if there's a hit.
+ * r is the desired reflected vector.
+ * Returns true if there's a hit, false otherwise.
+ */
+bool evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
     highp vec3 wsRayDirection = r;
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
@@ -263,7 +268,9 @@ void evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
                 vec4(vsHitPoint, 1.0f);
         reprojected *= (1.0 / reprojected.w);
         Fr = texelFetch(light_ssr, int2(reprojected.x, reprojected.y), 0).rgb;
+        return true;
     }
+    return false;
 }
 
 #endif // screen-space reflections

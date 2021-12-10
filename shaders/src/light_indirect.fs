@@ -593,22 +593,30 @@ void combineDiffuseAndSpecular(
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
     vec3 Fr;
-#if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
-    vec3 E = specularDFG(pixel);
-    vec3 r = getReflectedVector(pixel, shading_normal);
-    Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
-#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    vec3 E = vec3(0.0); // TODO: fix for importance sampling
-    Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
-#endif
 
+    bool hasScreenSpaceReflections = false;
 #if defined(HAS_REFLECTIONS) && REFLECTIONS_MODE == REFLECTIONS_MODE_SCREEN_SPACE
-    // Up to this point Fr is the Cubemap reflection only.
-    // evaluateScreenSpaceReflections will replace the value of Fr if there's a hit.
+    // evaluateScreenSpaceReflections will set the value of Fr if there's a hit.
     // TODO: do we want iblLuminance to control screen-space reflections?
     if (pixel.roughness <= 0.01f && frameUniforms.ssrEnabled > 0u) {
         highp vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
-        evaluateScreenSpaceReflections(r, Fr);
+        hasScreenSpaceReflections = evaluateScreenSpaceReflections(r, Fr);
+    }
+#endif
+
+    // If screen-space reflections are turned on and there was a hit, we skip sampling the IBL down
+    // below as Fr already has the reflected color.
+
+#if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
+    vec3 E = specularDFG(pixel);
+    vec3 r = getReflectedVector(pixel, shading_normal);
+    if (!hasScreenSpaceReflections) {
+        Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+    }
+#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    vec3 E = vec3(0.0); // TODO: fix for importance sampling
+    if (!hasScreenSpaceReflections) {
+        Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
     }
 #endif
 
