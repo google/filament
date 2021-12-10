@@ -21,7 +21,7 @@ highp float linearizeDepth(highp float depth) {
     // Our far plane is at infinity, which causes a division by zero below, which in turn
     // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
     // value representable in  a 24 bit depth buffer.
-    const float preventDiv0 = 1.0 / 16777216.0;
+    const highp float preventDiv0 = 1.0 / 16777216.0;
     mat4 p = getViewFromClipMatrix();
     // this works with perspective and ortho projections, for a perspective projection
     // this resolves to -near/depth, for an ortho projection this resolves to depth*(far - near) - far
