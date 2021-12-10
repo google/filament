@@ -212,10 +212,7 @@ static_assert(sizeof(FroxelRecordUib) == 16384, "FroxelRecordUib should be exact
 // This is not the UBO proper, but just an element of a bone array.
 struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "BonesUniforms" };
-    math::quatf q = { 1, 0, 0, 0 };
-    math::float4 t = {};
-    math::float4 s = { 1, 1, 1, 0 };
-    math::float4 ns = { 1, 1, 1, 0 };
+    math::mat4f transform = {}; // the last row is not used and available for future use
 };
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "PerRenderableUibBone exceed max UBO size");

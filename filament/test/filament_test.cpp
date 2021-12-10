@@ -730,37 +730,27 @@ TEST(FilamentTest, FroxelData) {
 TEST(FilamentTest, Bones) {
 
     struct Shader {
+    private:
+        static float3 mulMat4x3Float3(const mat4f& m, const float3 v) noexcept {
+            return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+        }
+    public:
         static mat3f normal(PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 is = bone.ns.xyz;
-            return mat3f(mat3(q) * mat3::scaling(is));
+            return cof(bone.transform.upperLeft());
         }
         static  mat4f vertice(PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 t = bone.t.xyz;
-            float3 s = bone.s.xyz;
-            return mat4f(mat4::translation(t) * mat4(q) * mat4::scaling(s));
+            return {
+                    float4{ bone.transform[0].xyz, 0.0f },
+                    float4{ bone.transform[1].xyz, 0.0f },
+                    float4{ bone.transform[2].xyz, 0.0f },
+                    float4{ bone.transform[3].xyz, 1.0f }
+            };
         }
         static float3 normal(float3 n, PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 is = bone.ns.xyz;
-            // apply the inverse of the non-uniform scales
-            n *= is;
-            // apply the rigid transform
-            n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
-            return n;
+            return normalize(normal(bone) * n);
         }
-        static  float3 vertice(float3 v, PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 t = bone.t.xyz;
-            float3 s = bone.s.xyz;
-            // apply the non-uniform scales
-            v *= s;
-            // apply the rigid transform
-            v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-            // apply the translation
-            v += t;
-            return v;
+        static float3 vertice(float3 v, PerRenderableUibBone const& bone) noexcept {
+            return mulMat4x3Float3(vertice(bone), v);
         }
     };
 
@@ -773,20 +763,20 @@ TEST(FilamentTest, Bones) {
         static void expect_eq(mat4f e, mat4f a) noexcept {
             for (size_t j = 0; j < 4; j++) {
                 for (size_t i = 0; i < 4; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
+                    ASSERT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
                 }
             }
         }
         static void expect_eq(mat3f e, mat3f a) noexcept {
             for (size_t j = 0; j < 3; j++) {
                 for (size_t i = 0; i < 3; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
+                    ASSERT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
                 }
             }
         }
         static void expect_eq(float3 e, float3 a) noexcept {
             for (size_t i = 0; i < 3; i++) {
-                EXPECT_NEAR(e[i], a[i], epsilon(e[i], a[i]));
+                ASSERT_NEAR(e[i], a[i], epsilon(e[i], a[i]));
             }
         }
 
@@ -796,8 +786,7 @@ TEST(FilamentTest, Bones) {
 
             expect_eq(Shader::vertice(b), m);
 
-            mat3f n = transpose(inverse(m.upperLeft()));
-            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
+            mat3f n = cof(m.upperLeft());
             expect_eq(Shader::normal(b), n);
         }
 
@@ -807,11 +796,10 @@ TEST(FilamentTest, Bones) {
 
             expect_eq((m * v).xyz, Shader::vertice(v, b));
 
-            mat3f n = transpose(inverse(m.upperLeft()));
-            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
-            expect_eq(n * normalize(v), Shader::normal(normalize(v), b));
+            mat3f n = cof(m.upperLeft());
+            expect_eq(normalize(n * normalize(v)), Shader::normal(normalize(v), b));
 
-            float3 normal = n * normalize(v);
+            float3 normal = normalize(n * normalize(v));
             EXPECT_LE(max(abs(normal)), 1.0);
         }
     };

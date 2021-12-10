@@ -22,44 +22,31 @@ mat3 getWorldFromModelNormalMatrix() {
 
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
-    vec4 q  = bonesUniforms.bones[i + 0u];
-    vec3 is = bonesUniforms.bones[i + 3u].xyz;
-
-    // apply the inverse of the non-uniform scales
-    n *= is;
-    // apply the rigid transform (valid only for unit quaternions)
-    n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
-
-    return n;
+    highp mat3 transform = mat3(
+        bonesUniforms.transform[i][0].xyz,
+        bonesUniforms.transform[i][1].xyz,
+        bonesUniforms.transform[i][2].xyz
+    );
+    return normalize(cofactor(transform) * n);
 }
 
 vec3 mulBoneVertex(vec3 v, uint i) {
-    vec4 q = bonesUniforms.bones[i + 0u];
-    vec3 t = bonesUniforms.bones[i + 1u].xyz;
-    vec3 s = bonesUniforms.bones[i + 2u].xyz;
-
-    // apply the non-uniform scales
-    v *= s;
-    // apply the rigid transform (valid only for unit quaternions)
-    v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-    // apply the translation
-    v += t;
-
-    return v;
+    // last row of bonesUniforms.transform[i] is assumed to be [0,0,0,1]
+    return mulMat4x3Float3(bonesUniforms.transform[i], v);
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    n =   mulBoneNormal(n, ids.x * 4u) * weights.x
-        + mulBoneNormal(n, ids.y * 4u) * weights.y
-        + mulBoneNormal(n, ids.z * 4u) * weights.z
-        + mulBoneNormal(n, ids.w * 4u) * weights.w;
+    n =   mulBoneNormal(n, ids.x) * weights.x
+        + mulBoneNormal(n, ids.y) * weights.y
+        + mulBoneNormal(n, ids.z) * weights.z
+        + mulBoneNormal(n, ids.w) * weights.w;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p =   mulBoneVertex(p, ids.x * 4u) * weights.x
-        + mulBoneVertex(p, ids.y * 4u) * weights.y
-        + mulBoneVertex(p, ids.z * 4u) * weights.z
-        + mulBoneVertex(p, ids.w * 4u) * weights.w;
+    p =   mulBoneVertex(p, ids.x) * weights.x
+        + mulBoneVertex(p, ids.y) * weights.y
+        + mulBoneVertex(p, ids.z) * weights.z
+        + mulBoneVertex(p, ids.w) * weights.w;
 }
 #endif
 

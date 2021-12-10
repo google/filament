@@ -130,6 +130,10 @@ highp vec4 mulMat4x4Float3(const highp mat4 m, const highp vec3 v) {
     return v.x * m[0] + (v.y * m[1] + (v.z * m[2] + m[3]));
 }
 
+highp vec3 mulMat4x3Float3(const highp mat4 m, const highp vec3 v) {
+    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+}
+
 /**
  * Multiplies the specified 3-component vector by the 3x3 matrix (m * v) in
  * high precision.
@@ -158,4 +162,28 @@ void toTangentFrame(const highp vec4 q, out highp vec3 n, out highp vec3 t) {
     t = vec3( 1.0,  0.0,  0.0) +
         vec3(-2.0,  2.0, -2.0) * q.y * q.yxw +
         vec3(-2.0,  2.0,  2.0) * q.z * q.zwx;
+}
+
+highp mat3 cofactor(const highp mat3 m) {
+    highp float a = m[0][0];
+    highp float b = m[1][0];
+    highp float c = m[2][0];
+    highp float d = m[0][1];
+    highp float e = m[1][1];
+    highp float f = m[2][1];
+    highp float g = m[0][2];
+    highp float h = m[1][2];
+    highp float i = m[2][2];
+
+    highp mat3 cof;
+    cof[0][0] = e * i - f * h;
+    cof[0][1] = c * h - b * i;
+    cof[0][2] = b * f - c * e;
+    cof[1][0] = f * g - d * i;
+    cof[1][1] = a * i - c * g;
+    cof[1][2] = c * d - a * f;
+    cof[2][0] = d * h - e * g;
+    cof[2][1] = b * g - a * h;
+    cof[2][2] = a * e - b * d;
+    return cof;
 }

@@ -117,9 +117,8 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
     size_t size = boneCount * sizeof(PerRenderableUibBone);
     PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
-        out[i].q = transforms[i].unitQuaternion;
-        out[i].t.xyz = transforms[i].translation;
-        out[i].s = out[i].ns = { 1, 1, 1, 0 };
+        out[i].transform = mat4f(transforms[i].unitQuaternion);
+        out[i].transform[3] = float4{ transforms[i].translation, 1.0f };
     }
     driverApi.updateBufferObject(handle, { out, size },
             offset * sizeof(PerRenderableUibBone));
@@ -131,34 +130,14 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
     size_t size = boneCount * sizeof(PerRenderableUibBone);
     PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
-        FSkinningBuffer::makeBone(&out[i], transforms[i]);
+        out[i].transform = transforms[i];
     }
     driverApi.updateBufferObject(handle, { out, size },
             offset * sizeof(PerRenderableUibBone));
 }
 
 void FSkinningBuffer::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, mat4f const& t) noexcept {
-    mat4f m(t);
-
-    // figure out the scales
-    float4 s = { length(m[0]), length(m[1]), length(m[2]), 0.0f };
-    s = max(s, float4(FLT_EPSILON)); // avoid divide-by-zero when computing inverse scales
-    if (dot(cross(m[0].xyz, m[1].xyz), m[2].xyz) < 0) {
-        s[2] = -s[2];
-    }
-
-    // compute the inverse scales
-    float4 is = { 1.0f/s.x, 1.0f/s.y, 1.0f/s.z, 0.0f };
-
-    // normalize the matrix
-    m[0] *= is[0];
-    m[1] *= is[1];
-    m[2] *= is[2];
-
-    out->s = s;
-    out->q = m.toQuaternion();
-    out->t = m[3];
-    out->ns = is / max(abs(is));
+    out->transform = t;
 }
 
 // ------------------------------------------------------------------------------------------------
