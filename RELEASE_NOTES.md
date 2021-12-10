@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## v1.15.2 (currently main branch)
 
 - engine: add support for PCSS (Percentage Closer Soft Shadows)
+- engine: add experimental non-glossy screen-space reflections [⚠️ **Materials need to be rebuilt to
+  access this new feature**].
 
 ## v1.15.1
 
