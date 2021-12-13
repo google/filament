@@ -40,9 +40,11 @@ namespace filament {
 class FBufferObject;
 class FIndexBuffer;
 class FMaterialInstance;
+class FMorphTargets;
 class FRenderPrimitive;
 class FSkinningBuffer;
 class FVertexBuffer;
+class FTexture;
 
 class FRenderableManager : public RenderableManager {
 public:
@@ -106,9 +108,11 @@ public:
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
     inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
-    inline void setMorphWeights(Instance instance, const math::float4& weights) noexcept;
     inline void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset) noexcept;
+    void setMorphWeights(Instance instance, float const* weights, int count) noexcept;
+    void setMorphTargetsAt(Instance instance,
+            size_t primitiveIndex, FMorphTargets* morphTargets) noexcept;
     inline void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
 
     inline bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
@@ -123,7 +127,6 @@ public:
     inline Visibility getVisibility(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
-    inline math::float4 getMorphWeights(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
 
     struct SkinningBindingInfo {
@@ -134,6 +137,12 @@ public:
     inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
     inline uint32_t getBoneCount(Instance instance) const noexcept;
 
+    struct MorphingBindingInfo {
+        backend::Handle<backend::HwBufferObject> handle;
+        int count;
+    };
+    inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
+    inline int getMorphTargetCount(Instance instance) const noexcept;
 
     utils::Entity getEntity(Instance instance) const noexcept {
         return mManager.getEntity(instance);
@@ -165,27 +174,32 @@ private:
         uint16_t offset = 0;
         bool skinningBufferMode = false;
     };
-
     static_assert(sizeof(Bones) == 12);
+
+    struct MorphWeights {
+        backend::Handle<backend::HwBufferObject> handle;
+        int count = 0;
+    };
+    static_assert(sizeof(MorphWeights) == 8);
 
     enum {
         AABB,               // user data
         LAYERS,             // user data
-        MORPH_WEIGHTS,      // user data
         CHANNELS,           // user data
         VISIBILITY,         // user data
         PRIMITIVES,         // user data
         BONES,              // filament data, UBO storing a pointer to the bones information
+        MORPH_WEIGHTS       // filament data, UBO storing a pointer to the morph weights information
     };
 
     using Base = utils::SingleInstanceComponentManager<
             Box,                             // AABB
             uint8_t,                         // LAYERS
-            math::float4,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
-            Bones                            // BONES
+            Bones,                           // BONES
+            MorphWeights                     // MORPH_WEIGHTS
     >;
 
     struct Sim : public Base {
@@ -200,13 +214,13 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>         aabb;
-                Field<LAYERS>       layers;
+                Field<AABB>          aabb;
+                Field<LAYERS>        layers;
+                Field<CHANNELS>      channels;
+                Field<VISIBILITY>    visibility;
+                Field<PRIMITIVES>    primitives;
+                Field<BONES>         bones;
                 Field<MORPH_WEIGHTS> morphWeights;
-                Field<CHANNELS>     channels;
-                Field<VISIBILITY>   visibility;
-                Field<PRIMITIVES>   primitives;
-                Field<BONES>        bones;
             };
         };
 
@@ -325,10 +339,6 @@ uint8_t FRenderableManager::getPriority(Instance instance) const noexcept {
     return getVisibility(instance).priority;
 }
 
-math::float4 FRenderableManager::getMorphWeights(Instance instance) const noexcept {
-    return mManager[instance].morphWeights;
-}
-
 uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
     return mManager[instance].channels;
 }
@@ -346,6 +356,17 @@ FRenderableManager::getSkinningBufferInfo(Instance instance) const noexcept {
 inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {
     Bones const& bones = mManager[instance].bones;
     return bones.count;
+}
+
+FRenderableManager::MorphingBindingInfo
+FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
+    MorphWeights const& morphWeights = mManager[instance].morphWeights;
+    return { morphWeights.handle, morphWeights.count };
+}
+
+int FRenderableManager::getMorphTargetCount(Instance instance) const noexcept {
+    MorphWeights const& morphWeights = mManager[instance].morphWeights;
+    return morphWeights.count;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

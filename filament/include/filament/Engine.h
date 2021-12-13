@@ -39,6 +39,7 @@ class SkinningBuffer;
 class IndirectLight;
 class Material;
 class MaterialInstance;
+class MorphTargets;
 class Renderer;
 class RenderTarget;
 class Scene;
@@ -421,6 +422,7 @@ public:
     bool destroy(const Fence* p);               //!< Destroys a Fence object.
     bool destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.
     bool destroy(const SkinningBuffer* p);      //!< Destroys a SkinningBuffer object.
+    bool destroy(const MorphTargets* p);        //!< Destroys a MorphTargets object.
     bool destroy(const IndirectLight* p);       //!< Destroys an IndirectLight object.
 
     /**

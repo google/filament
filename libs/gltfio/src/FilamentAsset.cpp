@@ -22,6 +22,7 @@
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
 
+#include "MorphHelper.h"
 #include "Wireframe.h"
 
 using namespace filament;
@@ -41,6 +42,7 @@ FFilamentAsset::~FFilamentAsset() {
 
     delete mAnimator;
     delete mWireframe;
+    delete mMorpher;
 
     mEngine->destroy(mRoot);
     mEntityManager->destroy(mRoot);
@@ -93,6 +95,34 @@ Animator* FFilamentAsset::getAnimator() noexcept {
         mAnimator = new Animator(this, nullptr);
     }
     return mAnimator;
+}
+
+MorphHelper* FFilamentAsset::getMorpher() noexcept {
+    if (!mMorpher) {
+        if (!mResourcesLoaded) {
+            slog.e << "Cannot create animator before resource loading." << io::endl;
+            return nullptr;
+        }
+        if (!mSourceAsset) {
+            slog.e << "Cannot create animator from frozen asset." << io::endl;
+            return nullptr;
+        }
+        mMorpher = new MorphHelper(this, nullptr);
+    }
+    return mMorpher;
+}
+
+void FFilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, int count) noexcept {
+    if (getMorpher()) {
+        mMorpher->setWeights(entity, weights, count);
+    }
+}
+
+int FFilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
+    if (getMorpher()) {
+        return mMorpher->getTargetCount(entity);
+    }
+    return 0;
 }
 
 Entity FFilamentAsset::getWireframe() noexcept {
@@ -272,6 +302,14 @@ const char* FilamentAsset::getExtras(Entity entity) const noexcept {
 
 Animator* FilamentAsset::getAnimator() noexcept {
     return upcast(this)->getAnimator();
+}
+
+void FilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, int count) {
+    return upcast(this)->setMorphWeights(entity, weights, count);
+}
+
+int FilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
+    return upcast(this)->getMorphTargetCount(entity);
 }
 
 Entity FilamentAsset::getWireframe() noexcept {

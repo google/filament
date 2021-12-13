@@ -65,6 +65,7 @@ namespace gltfio {
 
 class Animator;
 class Wireframe;
+class MorphHelper;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {
@@ -194,6 +195,12 @@ struct FFilamentAsset : public FilamentAsset {
 
     Animator* getAnimator() noexcept;
 
+    MorphHelper* getMorpher() noexcept;
+
+    void setMorphWeights(utils::Entity entity , const float* weights, int count) noexcept;
+
+    int getMorphTargetCount(utils::Entity entity) noexcept;
+
     utils::Entity getWireframe() noexcept;
 
     filament::Engine* getEngine() const noexcept {
@@ -243,6 +250,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<FFilamentInstance*> mInstances;
     SkinVector mSkins; // unused for instanced assets
     Animator* mAnimator = nullptr;
+    MorphHelper* mMorpher = nullptr;
     Wireframe* mWireframe = nullptr;
     bool mResourcesLoaded = false;
     DependencyGraph mDependencyGraph;

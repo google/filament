@@ -198,6 +198,10 @@ public:
             FEngine& engine, const CameraInfo& camera,
             FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
+    void updatePrimitivesMorphTargets(
+            FEngine& engine, const CameraInfo&,
+            FScene::RenderableSoa& renderableData, Range visible) noexcept;
+
     void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }

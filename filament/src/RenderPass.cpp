@@ -381,6 +381,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
+                cmdColor.primitive.morphTargets = primitive.getMorphTargets();
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
@@ -469,6 +470,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
+                cmdDepth.primitive.morphTargets = primitive.getMorphTargets();
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
@@ -529,6 +531,7 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
         SYSTRACE_VALUE32("commandCount", last - first);
 
         auto const* const UTILS_RESTRICT soaSkinning = soa.data<FScene::SKINNING_BUFFER>();
+        auto const* const UTILS_RESTRICT soaMorphing = soa.data<FScene::MORPHING_BUFFER>();
 
         PolygonOffset dummyPolyOffset;
         PipelineState pipeline{ .polygonOffset = mPolygonOffset };
@@ -576,6 +579,16 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         skinning.handle,
                         skinning.offset * sizeof(PerRenderableUibBone),
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
+            }
+
+            auto morphing = soaMorphing[info.index];
+            if (UTILS_UNLIKELY(morphing.handle)) {
+                assert_invariant(info.morphTargets && morphing.count <= info.morphTargets->getCount());
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
+            }
+            if (UTILS_UNLIKELY(info.morphTargets)) {
+                assert_invariant(morphing.handle && morphing.count <= info.morphTargets->getCount());
+                info.morphTargets->bind(driver);
             }
             driver.draw(pipeline, info.primitiveHandle);
         }

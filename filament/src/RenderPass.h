@@ -208,19 +208,20 @@ public:
         return boolish ? std::numeric_limits<uint64_t>::max() : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 24 bytes
+    struct PrimitiveInfo { // 32 bytes
         FMaterialInstance const* mi = nullptr;                          // 8 bytes (4)
+        FMorphTargets const* morphTargets = nullptr;                    // 8 bytes (4)
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::RasterState rasterState;                               // 4 bytes
         uint16_t index = 0;                                             // 2 bytes
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[13 - sizeof(void*)] = {};                      // 5 byte (9)
+        uint8_t reserved[20 - sizeof(void*) * 2] = {};                  // 4 bytes (12)
     };
-    static_assert(sizeof(PrimitiveInfo) == 24);
+    static_assert(sizeof(PrimitiveInfo) == 32);
 
-    struct alignas(8) Command {     // 32 bytes
+    struct alignas(8) Command {     // 40 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 24 bytes
+        PrimitiveInfo primitive;    // 32 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
@@ -228,7 +229,7 @@ public:
             return ptr;
         }
     };
-    static_assert(sizeof(Command) == 32);
+    static_assert(sizeof(Command) == 40);
     static_assert(std::is_trivially_destructible_v<Command>,
             "Command isn't trivially destructible");
 

@@ -28,6 +28,7 @@
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
+#include <filament/MorphTargets.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/TextureSampler.h>
@@ -527,7 +528,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, node->weights_count); ++i) {
             weights[i] = node->weights[i];
         }
-        mRenderableManager.setMorphWeights(renderable, weights);
+        mRenderableManager.setMorphWeights(renderable, weights.v, 4);
     }
 }
 

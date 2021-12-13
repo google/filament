@@ -23,7 +23,10 @@
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
+#include "details/Texture.h"
 #include "details/Material.h"
+
+#include "private/filament/SibGenerator.h"
 
 #include <backend/DriverEnums.h>
 
@@ -316,7 +319,6 @@ void FRenderableManager::create(
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphingEnabled);
-        setMorphWeights(ci, {0, 0, 0, 0});
         mManager[ci].channels = builder->mChannels;
 
         const uint32_t count = builder->mSkinningBoneCount;
@@ -372,6 +374,16 @@ void FRenderableManager::create(
                 }
             }
         }
+
+        if (builder->mMorphingEnabled) {
+            MorphWeights& morphWeights = manager[ci].morphWeights;
+            morphWeights = MorphWeights {
+                .handle = driver.createBufferObject(
+                        sizeof(PerRenderableMorphingUib),
+                        BufferObjectBinding::UNIFORM,
+                        backend::BufferUsage::DYNAMIC),
+                .count = 0 };
+        }
     }
     engine.flushIfNeeded();
 }
@@ -415,6 +427,12 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     Bones const& bones = manager[ci].bones;
     if (bones.handle && !bones.skinningBufferMode) {
         driver.destroyBufferObject(bones.handle);
+    }
+
+    // destroy the weights structures if any
+    MorphWeights const& morphWeights = manager[ci].morphWeights;
+    if (morphWeights.handle) {
+        driver.destroyBufferObject(morphWeights.handle);
     }
 }
 
@@ -562,9 +580,39 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
     bones.offset = uint16_t(offset);
 }
 
-void FRenderableManager::setMorphWeights(Instance ci, const float4& weights) noexcept {
-    if (ci) {
-        mManager[ci].morphWeights = weights;
+static void setMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
+        float const* weights, int count) noexcept {
+    auto& driver = engine.getDriverApi();
+    auto size = sizeof(PerRenderableMorphingUib);
+    auto* UTILS_RESTRICT out = (PerRenderableMorphingUib*)driver.allocate(size);
+    memset(out, 0, size);
+    out->count = count;
+    std::transform(weights, weights + count, out->weights,
+            [](float value) { return float4(value); });
+    driver.updateBufferObject(handle, { out, size }, 0);
+}
+
+void FRenderableManager::setMorphWeights(Instance instance, float const* weights, int count) noexcept {
+    if (instance) {
+        MorphWeights& morphWeights = mManager[instance].morphWeights;
+
+        ASSERT_PRECONDITION(count < CONFIG_MAX_MORPH_TARGET_COUNT,
+                "Only %d morph targets are supported (count=%d)", CONFIG_MAX_MORPH_TARGET_COUNT, count);
+
+        if (morphWeights.handle) {
+            morphWeights.count = count;
+            filament::setMorphWeights(mEngine, morphWeights.handle, weights, count);
+        }
+    }
+}
+
+void FRenderableManager::setMorphTargetsAt(Instance instance,
+        size_t primitiveIndex, FMorphTargets* morphTargets) noexcept {
+    if (instance) {
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, 0);
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].set(morphTargets);
+        }
     }
 }
 
@@ -693,13 +741,18 @@ void RenderableManager::setBones(Instance instance,
     upcast(this)->setBones(instance, transforms, boneCount, offset);
 }
 
-void RenderableManager::setMorphWeights(Instance instance, float4 const& weights) noexcept {
-    upcast(this)->setMorphWeights(instance, weights);
-}
-
 void RenderableManager::setSkinningBuffer(Instance instance,
         SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
     upcast(this)->setSkinningBuffer(instance, upcast(skinningBuffer), count, offset);
+}
+
+void RenderableManager::setMorphWeights(Instance instance, float const* weights, int count) noexcept {
+    upcast(this)->setMorphWeights(instance, weights, count);
+}
+
+void RenderableManager::setMorphTargetsAt(Instance instance,
+        size_t primitiveIndex, MorphTargets* morphTargets) noexcept {
+    upcast(this)->setMorphTargetsAt(instance, primitiveIndex, upcast(morphTargets));
 }
 
 void RenderableManager::setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept {

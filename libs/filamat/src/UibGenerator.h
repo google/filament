@@ -28,6 +28,7 @@ public:
     static UniformInterfaceBlock const& getLightsUib() noexcept;
     static UniformInterfaceBlock const& getShadowUib() noexcept;
     static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
+    static UniformInterfaceBlock const& getPerRenderableMorphingUib() noexcept;
     static UniformInterfaceBlock const& getFroxelRecordUib() noexcept;
     // When adding an UBO here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed

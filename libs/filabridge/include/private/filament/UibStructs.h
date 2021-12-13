@@ -149,8 +149,7 @@ struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-memb
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
     math::mat4f worldFromModelMatrix;
     math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
-    alignas(16) math::float4 morphWeights;    // morph weights (we could easily have 8 using half)
-    uint32_t flags;                           // see packFlags() below
+    alignas(16) uint32_t flags;                           // see packFlags() below
     uint32_t channels;                        // 0x000000ll
     uint32_t objectId;                        // used for picking
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
@@ -226,6 +225,14 @@ struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
         "PerRenderableUibBone exceed max UBO size");
+
+struct alignas(16) PerRenderableMorphingUib {
+  static constexpr utils::StaticString _name{ "MorphingUniforms" };
+  int count;
+  math::float4 weights[CONFIG_MAX_MORPH_TARGET_COUNT];
+};
+static_assert(sizeof(PerRenderableMorphingUib) <= 16384,
+        "PerRenderableMorphingUib exceed max UBO size");
 
 } // namespace filament
 

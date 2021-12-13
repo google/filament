@@ -28,6 +28,7 @@ set(PUBLIC_HDRS
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
+        include/filament/MorphTargets.h
         include/filament/Options.h
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
@@ -69,6 +70,7 @@ set(SRCS
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
+        src/MorphTargets.cpp
         src/PerViewUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
@@ -140,6 +142,7 @@ set(PRIVATE_HDRS
         src/details/IndirectLight.h
         src/details/Material.h
         src/details/MaterialInstance.h
+        src/details/MorphTargets.h
         src/details/RenderTarget.h
         src/details/Renderer.h
         src/details/Scene.h

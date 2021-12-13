@@ -41,9 +41,11 @@ class Engine;
 class IndexBuffer;
 class Material;
 class MaterialInstance;
+class MorphTargets;
 class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
+class Texture;
 
 class FEngine;
 class FRenderPrimitive;
@@ -456,12 +458,16 @@ public:
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.
-     *
      * The renderable must be built with morphing enabled, see Builder::morphing().
      */
-    void setMorphWeights(Instance instance, math::float4 const& weights) noexcept;
+    void setMorphWeights(Instance instance, float const* weights, int count) noexcept;
+
+
+    /**
+     * Associates a MorphTargets to the given primitive.
+     */
+    void setMorphTargetsAt(Instance instance,
+            size_t primitiveIndex, MorphTargets* morphTargets) noexcept;
 
     /**
      * Gets the bounding box used for frustum culling.

@@ -138,9 +138,9 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
                     worldTransform,                 // WORLD_TRANSFORM
                     visibility,                     // VISIBILITY_STATE
                     rcm.getSkinningBufferInfo(ri),  // SKINNING_BUFFER
+                    rcm.getMorphingBufferInfo(ri),  // MORPHING_BUFFER
                     worldAABB.center,               // WORLD_AABB_CENTER
                     0,                              // VISIBLE_MASK
-                    rcm.getMorphWeights(ri),        // MORPH_WEIGHTS
                     rcm.getChannels(ri),            // CHANNELS
                     rcm.getLayerMask(ri),           // LAYERS
                     worldAABB.halfExtent,           // WORLD_AABB_EXTENT
@@ -252,10 +252,6 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
                         visibility.skinning,
                         visibility.morphing,
                         visibility.screenSpaceContactShadows));
-
-        UniformBuffer::setUniform(buffer,
-                offset + offsetof(PerRenderableUib, morphWeights),
-                sceneData.elementAt<MORPH_WEIGHTS>(i));
 
         UniformBuffer::setUniform(buffer,
                 offset + offsetof(PerRenderableUib, channels),

@@ -497,14 +497,11 @@ public class RenderableManager {
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * <p>This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.</p>
-     *
      * <p>The renderable must be built with morphing enabled.</p>
      *
      * @see Builder#morphing
      */
-    public void setMorphWeights(@EntityInstance int i, @NonNull @Size(min = 4) float[] weights) {
+    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights) {
         nSetMorphWeights(mNativeObject, i, weights);
     }
 
