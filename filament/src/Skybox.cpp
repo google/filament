@@ -47,6 +47,8 @@ struct Skybox::BuilderDetails {
     SkyboxType mType = Skybox::SkyboxType::ENVIRONMENT;
     float mUiScale = 1.0f;
     UpDirectionAxis mUpDirectionAxis = UpDirectionAxis::Y_UP;
+    float2 mCheckerboardGrays{1.0f, 0.8f};
+    float4 mGradientSettings{0.8f, 0.93f, 0.55f, 0.4f};
 };
 
 using BuilderType = Skybox;
@@ -80,6 +82,16 @@ Skybox::Builder& Skybox::Builder::type(SkyboxType type) noexcept {
 
 Skybox::Builder& Skybox::Builder::uiScale(float scale) noexcept {
     mImpl->mUiScale = scale;
+    return *this;
+}
+
+Skybox::Builder& Skybox::Builder::checkerboardGrays(math::float2 grays) noexcept {
+    mImpl->mCheckerboardGrays = grays;
+    return *this;
+}
+
+Skybox::Builder& Skybox::Builder::gradientSettings(math::float4 settings) noexcept {
+    mImpl->mGradientSettings = settings;
     return *this;
 }
 
@@ -123,6 +135,8 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
     pInstance->setParameter("color", builder->mColor);
     pInstance->setParameter("uiScaleFactor", builder->mUiScale);
     pInstance->setParameter("upDirectionAxis", (uint32_t)builder->mUpDirectionAxis);
+    pInstance->setParameter("checkerboardGrays", builder->mCheckerboardGrays);
+    pInstance->setParameter("gradientSettings", builder->mGradientSettings);
 
     mSkybox = engine.getEntityManager().create();
 
@@ -179,6 +193,10 @@ void FSkybox::setUpDirectionAxis(UpDirectionAxis axis) noexcept {
     mSkyboxMaterialInstance->setParameter("upDirectionAxis", (uint32_t)axis);
 }
 
+void FSkybox::setCheckerboardGrays(math::float2 grays) noexcept {
+    mSkyboxMaterialInstance->setParameter("checkerboardGrays", grays);
+}
+
 void FSkybox::commit(backend::DriverApi& driver) noexcept {
     mSkyboxMaterialInstance->commit(driver);
 }
@@ -213,6 +231,10 @@ void Skybox::setUiScale(float scale) noexcept {
 
 void Skybox::setUpDirectionAxis(UpDirectionAxis axis) noexcept {
     upcast(this)->setUpDirectionAxis(axis);
+}
+
+void Skybox::setCheckerboardGrays(math::float2 grays) noexcept {
+    upcast(this)->setCheckerboardGrays(grays);
 }
 
 Texture const* Skybox::getTexture() const noexcept {

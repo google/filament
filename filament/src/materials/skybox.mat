@@ -24,6 +24,14 @@ material {
         {
            type : int,
            name : upDirectionAxis
+        },
+        {
+           type : float2,
+           name : checkerboardGrays
+        },
+        {
+           type : float4,
+           name : gradientSettings
         }
     ],
     variables : [
@@ -57,8 +65,8 @@ fragment {
     }
 
     float3 shaprCheckerboardPattern(float2 positionScaledClipSpace) {
-        const float colorLight = 1.0;
-        const float colorDark = 0.53;
+        float colorLight = materialParams.checkerboardGrays.x;
+        float colorDark = materialParams.checkerboardGrays.y;
 
         // Size of a square in pixels
         float2 squareSizePixels = float2(8.0, 8.0) * max(materialParams.uiScaleFactor, 1.0);
@@ -104,10 +112,10 @@ fragment {
     }
 
     float computeGradient(float t) {
-        const float dimmingFactor = 0.6;
-        const float gradientStartHigh = 0.9;
-        const float gradientLocation = 0.4;
-        const float gradientStartLow = 0.2;
+        float dimmingFactor = materialParams.gradientSettings.x;
+        float gradientStartHigh = materialParams.gradientSettings.y;
+        float gradientLocation = materialParams.gradientSettings.z;
+        float gradientStartLow = materialParams.gradientSettings.w;
 
         float grad;
         if (t >= gradientLocation) {

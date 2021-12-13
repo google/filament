@@ -59,6 +59,8 @@ public:
 
     void setUpDirectionAxis(UpDirectionAxis axis) noexcept;
 
+    void setCheckerboardGrays(math::float2 grays) noexcept;
+
     // commits UBOs
     void commit(backend::DriverApi& driver) noexcept;
 
