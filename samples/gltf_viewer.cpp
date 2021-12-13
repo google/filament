@@ -603,9 +603,11 @@ int main(int argc, char** argv) {
                             const_cast<void*>(dataSource.data), int(dataSource.count), 0,
                             nullptr, 0.0f, 1.0f, { 0, 100 });
                 }
+#ifndef NDEBUG
                 ImGui::SliderFloat("Kp", debug.getPropertyAddress<float>("d.view.pid.kp"), 0, 2);
                 ImGui::SliderFloat("Ki", debug.getPropertyAddress<float>("d.view.pid.ki"), 0, 10);
                 ImGui::SliderFloat("Kd", debug.getPropertyAddress<float>("d.view.pid.kd"), 0, 10);
+#endif
             }
 
             if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {

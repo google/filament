@@ -343,9 +343,10 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         const mat4 MbMt = getTextureCoordsMapping();
         const mat4f St = mat4f(MbMt * S);
 
-        // note: in texelSizeWorldSpace() below, we could use Mb * Mt * F * W because
-        // L * Mp * Mv is a rigid transform (for directional lights)
-        if (USE_LISPSM) {
+        // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
+        // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
+        // if Wp[3][1] is 0, then LISPSM was cancelled.
+        if (USE_LISPSM && Wp[3][1] != 0.0f) {
             mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
         } else {
             // We know we're using an ortho projection
@@ -945,8 +946,8 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const no
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
     // The two first columns give us how a texel maps in world-space.
-    const float ures = 1.0f / mShadowMapInfo.shadowDimension;
-    const float vres = 1.0f / mShadowMapInfo.shadowDimension;
+    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
     const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
     const float3 Jx = shadowTextureToWorld[0];
     const float3 Jy = shadowTextureToWorld[1];
@@ -969,8 +970,8 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     // It might be better to do this computation in the vertex shader.
     float3 p = {0.5, 0.5, 0.0};
 
-    const float ures = 1.0f / mShadowMapInfo.shadowDimension;
-    const float vres = 1.0f / mShadowMapInfo.shadowDimension;
+    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
     const float dres = 1.0f / 65536.0f;
 
     constexpr bool JACOBIAN_ESTIMATE = false;

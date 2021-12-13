@@ -45,7 +45,7 @@
 
 #include <string>
 
-#if defined(__EMSCRIPTEN__) || defined(ANDROID) || defined(IOS)
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || defined(IOS)
 #define USE_FILESYSTEM 0
 #else
 #define USE_FILESYSTEM 1

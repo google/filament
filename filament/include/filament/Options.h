@@ -339,7 +339,8 @@ enum class Dithering : uint8_t {
  */
 enum class ShadowType : uint8_t {
     PCF,        //!< percentage-closer filtered shadows (default)
-    VSM         //!< variance shadows
+    VSM,        //!< variance shadows
+    DPCF        //!< PCF with contact hardening simulation
 };
 
 /**
@@ -360,13 +361,6 @@ struct VsmShadowOptions {
      * Whether to generate mipmaps for all VSM shadow maps.
      */
     bool mipmapping = false;
-
-    /**
-     * EVSM exponent.
-     * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-     * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-     */
-    float exponent = 5.54f;
 
     /**
      * VSM minimum variance scale, must be positive.

@@ -351,6 +351,12 @@ public class LightManager {
          * The maximum value is 125.
          */
         public float blurWidth = 0.0f;
+
+        /**
+         * Light bulb radius used for soft shadows. Currently this is only used when DPCF is
+         * enabled. (2cm by default).
+         */
+        public float shadowBulbRadius = 0.02f;
     }
 
     public static class ShadowCascades {
@@ -494,7 +500,7 @@ public class LightManager {
                     options.polygonOffsetConstant, options.polygonOffsetSlope,
                     options.screenSpaceContactShadows,
                     options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
-                    options.blurWidth);
+                    options.blurWidth, options.shadowBulbRadius);
             return this;
         }
 
@@ -1152,7 +1158,7 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, float polygonOffsetConstant, float polygonOffsetSlope, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, float polygonOffsetConstant, float polygonOffsetSlope, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth, float shadowBulbRadius);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

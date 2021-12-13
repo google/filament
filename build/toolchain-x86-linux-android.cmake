@@ -65,7 +65,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 # compiler and linker flags
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -DANDROID -fPIE" CACHE STRING "Toolchain CFLAGS")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -fPIE" CACHE STRING "Toolchain CFLAGS")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" CACHE STRING "Toolchain CXXFLAGS")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    -Wl,--no-warn-mismatch -L${TOOLCHAIN}/i686-linux-android/lib64/ -static-libstdc++ -fPIE -pie" CACHE STRING "Toolchain LDFLAGS")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-warn-mismatch -L${TOOLCHAIN}/i686-linux-android/lib64/ -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")

@@ -19,7 +19,7 @@
 #include <string>
 #include <utils/compiler.h>
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 #   include <android/log.h>
 #   ifndef UTILS_LOG_TAG
 #       define UTILS_LOG_TAG "Filament"

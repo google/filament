@@ -212,6 +212,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Ditherin
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowType* out) {
     if (0 == compare(tokens[i], jsonChunk, "PCF")) { *out = ShadowType::PCF; }
     else if (0 == compare(tokens[i], jsonChunk, "VSM")) { *out = ShadowType::VSM; }
+    else if (0 == compare(tokens[i], jsonChunk, "DPCF")) { *out = ShadowType::DPCF; }
     else {
         slog.w << "Invalid ShadowType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -229,8 +230,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else if (0 == compare(tok, jsonChunk, "mipmapping")) {
             i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
-        } else if (0 == compare(tok, jsonChunk, "exponent")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->exponent);
         } else if (0 == compare(tok, jsonChunk, "minVarianceScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->minVarianceScale);
         } else if (0 == compare(tok, jsonChunk, "lightBleedReduction")) {
@@ -1130,6 +1129,7 @@ static std::ostream& operator<<(std::ostream& out, ShadowType in) {
     switch (in) {
         case ShadowType::PCF: return out << "\"PCF\"";
         case ShadowType::VSM: return out << "\"VSM\"";
+        case ShadowType::DPCF: return out << "\"DPCF\"";
     }
     return out << "\"INVALID\"";
 }
@@ -1470,7 +1470,6 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
-        << "\"exponent\": " << in.exponent << ",\n"
         << "\"minVarianceScale\": " << in.minVarianceScale << ",\n"
         << "\"lightBleedReduction\": " << in.lightBleedReduction << "\n"
         << "}";

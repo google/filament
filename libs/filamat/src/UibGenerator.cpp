@@ -51,12 +51,15 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // directional light
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
-            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("lightFarAttenuationParams",1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("padding0",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("lightChannels",           1, UniformInterfaceBlock::Type::UINT)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
             .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
             // shadow
-            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT3)
+            .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
+            .add("reserved",                1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
             // froxels
             .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)
@@ -107,12 +110,12 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("vsmExponent",             1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmDepthScale",           1, UniformInterfaceBlock::Type::FLOAT)
             .add("vsmLightBleedReduction",  1, UniformInterfaceBlock::Type::FLOAT)
-            .add("vsmReserved0",            1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowSamplingType",      1, UniformInterfaceBlock::Type::UINT)
 
             .add("lodBias",                 1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFarMinusNear",     1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
             .add("nearOverFarMinusNear",    1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
-            .add("reserved3",               1, UniformInterfaceBlock::Type::FLOAT)
+            .add("temporalNoise",           1, UniformInterfaceBlock::Type::FLOAT, Precision::HIGH)
 
             // bring PerViewUib to 2 KiB
             .add("padding2", 58, UniformInterfaceBlock::Type::FLOAT4)

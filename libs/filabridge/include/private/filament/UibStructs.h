@@ -64,13 +64,16 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
-    math::float3 padding0;
+    math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
+    float padding0;
     uint32_t lightChannels;
 
     math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
 
-    math::float3 shadowBias; // unused, normal bias, unused
+    float shadowBulbRadiusLs;       // light radius in light-space
+    float shadowBias;               // normal bias
+    float reserved;
     float oneOverFroxelDimensionY;
 
     math::float4 zParams; // froxel Z parameters
@@ -126,12 +129,12 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float vsmExponent;
     float vsmDepthScale;
     float vsmLightBleedReduction;
-    float vsmReserved0;
+    uint32_t shadowSamplingType;                // 0: vsm, 1: dpcf
 
     float lodBias;
     float oneOverFarMinusNear;          // 1 / (f-n), always positive
     float nearOverFarMinusNear;         // n / (f-n), always positive
-    float reserved3;
+    float temporalNoise;                // noise [0,1] when TAA is used, 0 otherwise
 
     // bring PerViewUib to 2 KiB
     math::float4 padding2[58];
@@ -142,7 +145,7 @@ static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
         "PerViewUib should be exactly 2KiB");
 
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
-struct alignas(256) PerRenderableUib {
+struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "ObjectUniforms" };
     math::mat4f worldFromModelMatrix;
     math::mat3f worldFromModelNormalMatrix;   // this gets expanded to 48 bytes during the copy to the UBO
@@ -161,7 +164,7 @@ struct alignas(256) PerRenderableUib {
 };
 static_assert(sizeof(PerRenderableUib) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
 
-struct LightsUib {
+struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "LightsUniforms" };
     math::float4 positionFalloff;     // { float3(pos), 1/falloff^2 }
     math::float3 direction;           // dir
@@ -183,7 +186,7 @@ struct LightsUib {
 static_assert(sizeof(LightsUib) == 64, "the actual UBO is an array of 256 mat4");
 
 // UBO for punctual (spot light) shadows.
-struct ShadowUib {
+struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
         math::mat4f lightFromWorldMatrix;
@@ -192,19 +195,22 @@ struct ShadowUib {
         math::float4 lightFromWorldZ;
 
         float texelSizeAtOneMeter;
+        float bulbRadiusLs;
+        float nearOverFarMinusNear;
     };
     ShadowData shadows[CONFIG_MAX_SHADOW_CASTING_SPOTS];
 };
 static_assert(sizeof(ShadowUib) <= 16384, "ShadowUib exceed max UBO size");
 
 // UBO froxel record buffer.
-struct FroxelRecordUib {
+struct FroxelRecordUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "FroxelRecordUniforms" };
     math::uint4 records[1024];
 };
+static_assert(sizeof(FroxelRecordUib) == 16384, "FroxelRecordUib should be exactly 16KiB");
 
 // This is not the UBO proper, but just an element of a bone array.
-struct PerRenderableUibBone {
+struct PerRenderableUibBone { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr utils::StaticString _name{ "BonesUniforms" };
     math::quatf q = { 1, 0, 0, 0 };
     math::float4 t = {};

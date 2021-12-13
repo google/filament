@@ -31,4 +31,6 @@ struct ShadowData {
     float normalBias;
     highp vec4 lightFromWorldZ;
     float texelSizeAtOneMeter;
+    float bulbRadiusLs;
+    float nearOverFarMinusNear;
 };

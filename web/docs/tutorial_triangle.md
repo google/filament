@@ -17,7 +17,7 @@ a mobile-friendly page with a full-screen canvas.
 </head>
 <body>
     <canvas></canvas>
-    <script src="//unpkg.com/filament/filament.js"></script>
+    <script src="//unpkg.com/filament@1.14.2/filament.js"></script>
     <script src="//unpkg.com/gl-matrix@2.8.1"></script>
     <script src="triangle.js"></script>
 </body>

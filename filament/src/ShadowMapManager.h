@@ -52,7 +52,8 @@ class RenderPass;
 struct ShadowMappingUniforms {
     std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
     math::float4 cascadeSplits;
-    math::float3 shadowBias;
+    float shadowBulbRadiusLs;
+    float shadowBias;
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;

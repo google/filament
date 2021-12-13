@@ -240,6 +240,7 @@ public:
     static constexpr RenderFlags HAS_FOG                 = 0x10;
     static constexpr RenderFlags HAS_VSM                 = 0x20;
     static constexpr RenderFlags HAS_PICKING             = 0x40;
+    static constexpr RenderFlags HAS_DPCF                = 0x80;
 
     // Arena used for commands
     using Arena = utils::Arena<

@@ -95,7 +95,7 @@ FreeList::FreeList(void* begin, void* end,
 AtomicFreeList::AtomicFreeList(void* begin, void* end,
         size_t elementSize, size_t alignment, size_t extra) noexcept
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
     // on some platform (e.g. web) this returns false. we really only care about mobile though.
     assert(mHead.is_lock_free());
 #endif

@@ -334,6 +334,12 @@ public:
              */
             float blurWidth = 0.0f;
         } vsm;
+
+        /**
+         * Light bulb radius used for soft shadows. Currently this is only used when DPCF is
+         * enabled. (2cm by default).
+         */
+        float shadowBulbRadius = 0.02f;
     };
 
     struct ShadowCascades {

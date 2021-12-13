@@ -98,7 +98,9 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
     elseif (WEBGL)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
-        list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        if (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
+        endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
     else()
@@ -185,7 +187,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanUtility.h
     )
     if (LINUX)
-        list(APPEND SRCS src/vulkan/PlatformVkLinux.cpp)
+        if (FILAMENT_SUPPORTS_WAYLAND)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxWayland.cpp)
+        elseif (FILAMENT_SUPPORTS_X11)
+            list(APPEND SRCS src/vulkan/PlatformVkLinuxX11.cpp)
+        endif()
     elseif (APPLE AND NOT IOS)
         list(APPEND SRCS src/vulkan/PlatformVkCocoa.mm)
     elseif (IOS)
@@ -202,7 +208,6 @@ endif()
 # ==================================================================================================
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2 )
-
 
 # ==================================================================================================
 # Includes & target definition
