@@ -470,7 +470,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     // Store this frame's camera projection in the frame history.
-    if (taaOptions.enabled || ssReflectionsOptions.enabled) {
+    if (UTILS_UNLIKELY(taaOptions.enabled || ssReflectionsOptions.enabled)) {
         auto& history = view.getFrameHistory();
         auto const& previous = history[0];
         auto& current = history.getCurrent();

@@ -177,7 +177,7 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffse
     s.refractionLodOffset = refractionLodOffset;
 }
 
-void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f historyProjection,
+void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
     mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
             .filterMag = SamplerMagFilter::LINEAR,
