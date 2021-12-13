@@ -822,7 +822,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
     if (positionalLightCount) {
         // always allocate at least 4 entries, because the vectorized loops below rely on that
         float* const UTILS_RESTRICT distances =
-                arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
+                arena.allocate<float>((size + 3u) & ~3u, CACHELINE_SIZE);
 
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
