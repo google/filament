@@ -1938,8 +1938,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert_invariant(xoffset + width <= t->width >> level);
-    assert_invariant(yoffset + height <= t->height >> level);
+    assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
+    assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(zoffset + depth <= t->depth);
     assert_invariant(t->samples <= 1);
 
