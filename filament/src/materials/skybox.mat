@@ -175,7 +175,7 @@ fragment {
 
         if (materialParams.skyboxType != SHAPR_SKYBOX_TYPE_ENVIRONMENT) {
             material.baseColor = float4(0.0);
-            material.postLightingColor = sky;
+            material.postLightingColor = saturate(sky);
         } else {
             material.baseColor = sky;
         }
