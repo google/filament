@@ -86,12 +86,18 @@ struct ResourceLoader::Impl {
         mEngine = config.engine;
         mNormalizeSkinningWeights = config.normalizeSkinningWeights;
         mRecomputeBoundingBoxes = config.recomputeBoundingBoxes;
+        mIgnoreBindTransform = config.ignoreBindTransform;
     }
 
     Engine* mEngine;
     bool mNormalizeSkinningWeights;
     bool mRecomputeBoundingBoxes;
+    bool mIgnoreBindTransform;
     std::string mGltfPath;
+
+    // This is used to calculate skinIndex when updateBoundingBoxes, so that the correspondency between 
+    // cgltf_node* and FFilamentInstance::Skin can be retrieved
+    cgltf_skin* cgltfSkinBaseAddress;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -458,7 +464,10 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
 
     if (pImpl->mRecomputeBoundingBoxes) {
-        updateBoundingBoxes(asset, &gltf->skins[0]);
+        if (!pImpl->mIgnoreBindTransform) {
+           pImpl->cgltfSkinBaseAddress = &gltf->skins[0];
+        }
+        updateBoundingBoxes(asset);
     }
 
     Engine& engine = *pImpl->mEngine;
@@ -969,7 +978,7 @@ void ResourceLoader::normalizeSkinningWeights(FFilamentAsset* asset) const {
     }
 }
 
-void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinBaseAddress) const {
+void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     SYSTRACE_CALL();
     auto& rm = pImpl->mEngine->getRenderableManager();
     auto& tm = pImpl->mEngine->getTransformManager();
@@ -990,6 +999,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
     const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
     const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
     const bool normalizeWeight = !pImpl->mNormalizeSkinningWeights;
+    const bool ignoreBindTransform = pImpl->mIgnoreBindTransform;
     auto computeBoundingBox = [&](const SkinnedPrimitive skinnedPrim, Aabb* result) {
         Aabb aabb;
         auto prim = skinnedPrim.first;
@@ -1015,7 +1025,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
             if (attr.type == cgltf_attribute_type_position && cgltf_num_components(accessor->type) >= posAttrSize) {
                 verts.resize(accessor->count * posAttrSize);
                 cgltf_accessor_unpack_floats(accessor, &verts[0], accessor->count * posAttrSize);
-                if (!skin) {
+                if (ignoreBindTransform || !skin) {
                     for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; i++, j += posAttrSize) {
                         float3 pt(verts[j + 0], verts[j + 1], verts[j + 2]);
                         aabb.min = min(aabb.min, pt);
@@ -1024,16 +1034,18 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
                     break;
                 }
             }
-            if (attr.type == cgltf_attribute_type_joints && cgltf_num_components(accessor->type) >= skinningAttrSize) {
-                rawJoints.resize(accessor->count * skinningAttrSize);
-                cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningAttrSize);
-            }
-            if (attr.type == cgltf_attribute_type_weights && cgltf_num_components(accessor->type) >= skinningAttrSize) {
-                weights.resize(accessor->count * skinningAttrSize);
-                cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningAttrSize);
+            if (!ignoreBindTransform) {
+                if (attr.type == cgltf_attribute_type_joints && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                    rawJoints.resize(accessor->count * skinningAttrSize);
+                    cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningAttrSize);
+                }
+                if (attr.type == cgltf_attribute_type_weights && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                    weights.resize(accessor->count * skinningAttrSize);
+                    cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningAttrSize);
+                }
             }
         }
-        if (skin) {
+        if (!ignoreBindTransform && skin) {
             std::vector<size_t> jointIndices(rawJoints.begin(), rawJoints.end());
             auto primitiveCount = static_cast<size_t>(verts.size() / posAttrSize);
             for (size_t i = 0; i < primitiveCount; i++) {
@@ -1063,13 +1075,14 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
 
     // Collect all mesh primitives that we wish to find bounds for.
     std::vector<SkinnedPrimitive> skinnedPrimitives;
-    cgltf_skin* baseAddress = reinterpret_cast<cgltf_skin*>(cgltfSkinBaseAddress);
     for (auto iter : nodeMap) {
         const Skin* skin = nullptr;
-        cgltf_skin* const cgltfSkin = iter.first->skin;
-        if (cgltfSkin) {
-            int skinIndex = cgltfSkin - baseAddress;
-            skin = &asset->mSkins[skinIndex];
+        if (!ignoreBindTransform) {
+            cgltf_skin* const cgltfSkin = iter.first->skin;
+            if (cgltfSkin) {
+                int skinIndex = cgltfSkin - pImpl->cgltfSkinBaseAddress;
+                skin = &asset->mSkins[skinIndex];
+            }
         }
         const cgltf_mesh* cgltfMesh = iter.first->mesh;
         if (cgltfMesh) {

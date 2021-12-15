@@ -52,6 +52,10 @@ struct ResourceConfiguration {
     //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
     //! do not need this, but it is useful for robustness.
     bool recomputeBoundingBoxes;
+
+    //! If true, ignore bind transform for skinned primitives when compute bounding box. Only 
+    //! applicable when recomputeBoundingBoxes is set to true
+    bool ignoreBindTransform;
 };
 
 /**
@@ -151,7 +155,7 @@ private:
     bool loadResources(FFilamentAsset* asset, bool async);
     void applySparseData(FFilamentAsset* asset) const;
     void normalizeSkinningWeights(FFilamentAsset* asset) const;
-    void updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinBaseAddress) const;
+    void updateBoundingBoxes(FFilamentAsset* asset) const;
     AssetPool* mPool;
     struct Impl;
     Impl* pImpl;
