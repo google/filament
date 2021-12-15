@@ -1000,10 +1000,10 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
     const bool normalizeWeight = !pImpl->mNormalizeSkinningWeights;
     const bool ignoreBindTransform = pImpl->mIgnoreBindTransform;
-    auto computeBoundingBox = [&](const SkinnedPrimitive skinnedPrim, Aabb* result) {
+    auto computeBoundingBox = [&](const SkinnedPrimitive skinnedPrimitive, Aabb* result) {
         Aabb aabb;
-        auto prim = skinnedPrim.first;
-        auto skin = skinnedPrim.second;
+        auto prim = skinnedPrimitive.first;
+        auto skin = skinnedPrimitive.second;
         std::vector<mat4f> inverseGlobalTransforms;
         if (skin) {
             inverseGlobalTransforms.resize(skin->targets.size());
@@ -1097,10 +1097,10 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
     JobSystem* js = &pImpl->mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
     for (size_t i = 0; i < skinnedPrimitives.size(); ++i) {
-        SkinnedPrimitive skinnedPrim = skinnedPrimitives[i];
+        SkinnedPrimitive skinnedPrimitive = skinnedPrimitives[i];
         Aabb* result = &bounds[i];
-        js->run(jobs::createJob(*js, parent, [skinnedPrim, result, computeBoundingBox] {
-            computeBoundingBox(skinnedPrim, result);
+        js->run(jobs::createJob(*js, parent, [skinnedPrimitive, result, computeBoundingBox] {
+            computeBoundingBox(skinnedPrimitive, result);
         }));
     }
     js->runAndWait(parent);
