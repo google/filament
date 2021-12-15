@@ -1064,7 +1064,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
                     if (normalizeWeight) {
                         skinMatrix /= skinMatrix[3].w;
                     }
-                    auto skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
+                    float3 skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
                     aabb.min = min(aabb.min, skinnedPoint);
                     aabb.max = max(aabb.max, skinnedPoint);
                 }
