@@ -985,12 +985,12 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
         tm.setParent(tm.getInstance(e), 0);
     }
 
-    using SkinnedPrim = std::pair<cgltf_primitive*, const Skin*>;
+    using SkinnedPrimitive = std::pair<cgltf_primitive*, const Skin*>;
 
-    const size_t posDim = cgltf_num_components(cgltf_type_vec3);
-    const size_t skinningDim = cgltf_num_components(cgltf_type_vec4);
+    const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
+    const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
     const bool normalizeWeight = !pImpl->mNormalizeSkinningWeights;
-    auto computeBoundingBox = [&](const SkinnedPrim skinnedPrim, Aabb* result) {
+    auto computeBoundingBox = [&](const SkinnedPrimitive skinnedPrim, Aabb* result) {
         Aabb aabb;
         auto prim = skinnedPrim.first;
         auto skin = skinnedPrim.second;
@@ -1012,11 +1012,11 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
         for (cgltf_size slot = 0; slot < prim->attributes_count; slot++) {
             const cgltf_attribute& attr = prim->attributes[slot];
             const cgltf_accessor* accessor = attr.data;
-            if (attr.type == cgltf_attribute_type_position && cgltf_num_components(accessor->type) >= posDim) {
-                verts.resize(accessor->count * posDim);
-                cgltf_accessor_unpack_floats(accessor, &verts[0], accessor->count * posDim);
+            if (attr.type == cgltf_attribute_type_position && cgltf_num_components(accessor->type) >= posAttrSize) {
+                verts.resize(accessor->count * posAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &verts[0], accessor->count * posAttrSize);
                 if (!skin) {
-                    for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; i++, j += posDim) {
+                    for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; i++, j += posAttrSize) {
                         float3 pt(verts[j + 0], verts[j + 1], verts[j + 2]);
                         aabb.min = min(aabb.min, pt);
                         aabb.max = max(aabb.max, pt);
@@ -1024,37 +1024,37 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
                     break;
                 }
             }
-            if (attr.type == cgltf_attribute_type_joints && cgltf_num_components(accessor->type) >= skinningDim) {
-                rawJoints.resize(accessor->count * skinningDim);
-                cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningDim);
+            if (attr.type == cgltf_attribute_type_joints && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                rawJoints.resize(accessor->count * skinningAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &rawJoints[0], accessor->count * skinningAttrSize);
             }
-            if (attr.type == cgltf_attribute_type_weights && cgltf_num_components(accessor->type) >= skinningDim) {
-                weights.resize(accessor->count * skinningDim);
-                cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningDim);
+            if (attr.type == cgltf_attribute_type_weights && cgltf_num_components(accessor->type) >= skinningAttrSize) {
+                weights.resize(accessor->count * skinningAttrSize);
+                cgltf_accessor_unpack_floats(accessor, &weights[0], accessor->count * skinningAttrSize);
             }
         }
         if (skin) {
             std::vector<size_t> jointIndices(rawJoints.begin(), rawJoints.end());
-            auto primCount = static_cast<size_t>(verts.size() / posDim);
-            for (size_t i = 0; i < primCount; i++) {
-                float3 pt(verts[posDim * i], verts[posDim * i + 1], verts[posDim * i + 2]);
-                mat4f tmp = mat4f() - mat4f();
-                for (size_t j = 0; j < skinningDim; j++) {
-                    auto jointIndex = jointIndices[skinningDim * i + j];
-                    auto jointWeight = weights[skinningDim * i + j];
-                    auto jointEntity = skin->joints[jointIndex];
-                    auto globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
-                    auto inverseBindMatrix = skin->inverseBindMatrices[jointIndex];
+            auto primitiveCount = static_cast<size_t>(verts.size() / posAttrSize);
+            for (size_t i = 0; i < primitiveCount; i++) {
+                float3 point(verts[posAttrSize * i], verts[posAttrSize * i + 1], verts[posAttrSize * i + 2]);
+                mat4f tmp = mat4f(0.0f);
+                for (size_t j = 0; j < skinningAttrSize; j++) {
+                    size_t jointIndex = jointIndices[skinningAttrSize * i + j];
+                    float jointWeight = weights[skinningAttrSize * i + j];
+                    Entity jointEntity = skin->joints[jointIndex];
+                    mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
+                    mat4f inverseBindMatrix = skin->inverseBindMatrices[jointIndex];
                     tmp += jointWeight * globalJointTransform * inverseBindMatrix;
                 }
                 for (const auto& inverseGlobalTransform: inverseGlobalTransforms) {
-                    auto skinMatrix = inverseGlobalTransform * tmp;
+                    mat4f skinMatrix = inverseGlobalTransform * tmp;
                     if (normalizeWeight) {
                         skinMatrix /= skinMatrix[3].w;
                     }
-                    auto ptTransformed = (pt.x * skinMatrix[0] + pt.y * skinMatrix[1] + pt.z * skinMatrix[2] + skinMatrix[3]).xyz;
-                    aabb.min = min(aabb.min, ptTransformed);
-                    aabb.max = max(aabb.max, ptTransformed);
+                    auto skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
+                    aabb.min = min(aabb.min, skinnedPoint);
+                    aabb.max = max(aabb.max, skinnedPoint);
                 }
             }
         }
@@ -1062,7 +1062,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
     };
 
     // Collect all mesh primitives that we wish to find bounds for.
-    std::vector<SkinnedPrim> skinnedPrims;
+    std::vector<SkinnedPrimitive> skinnedPrimitives;
     cgltf_skin* baseAddress = reinterpret_cast<cgltf_skin*>(cgltfSkinBaseAddress);
     for (auto iter : nodeMap) {
         const Skin* skin = nullptr;
@@ -1074,17 +1074,17 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset, void* cgltfSkinB
         const cgltf_mesh* cgltfMesh = iter.first->mesh;
         if (cgltfMesh) {
             for (cgltf_size index = 0, nprims = cgltfMesh->primitives_count; index < nprims; ++index) {
-                skinnedPrims.push_back({&cgltfMesh->primitives[index], skin});
+                skinnedPrimitives.push_back({&cgltfMesh->primitives[index], skin});
             }
         }
     }
 
     // Kick off a bounding box job for every primitive.
-    std::vector<Aabb> bounds(skinnedPrims.size());
+    std::vector<Aabb> bounds(skinnedPrimitives.size());
     JobSystem* js = &pImpl->mEngine->getJobSystem();
     JobSystem::Job* parent = js->createJob();
-    for (size_t i = 0; i < skinnedPrims.size(); ++i) {
-        SkinnedPrim skinnedPrim = skinnedPrims[i];
+    for (size_t i = 0; i < skinnedPrimitives.size(); ++i) {
+        SkinnedPrimitive skinnedPrim = skinnedPrimitives[i];
         Aabb* result = &bounds[i];
         js->run(jobs::createJob(*js, parent, [skinnedPrim, result, computeBoundingBox] {
             computeBoundingBox(skinnedPrim, result);
