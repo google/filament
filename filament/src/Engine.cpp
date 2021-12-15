@@ -410,7 +410,7 @@ void FEngine::flush() {
 
 void FEngine::flushAndWait() {
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 
     // first make sure we've not terminated filament
     ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
@@ -421,7 +421,7 @@ void FEngine::flushAndWait() {
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
 
     // then create a fence that will trigger when we're past the finish() above
     size_t tryCount = 8;
@@ -471,7 +471,7 @@ int FEngine::loop() {
     }
 
 #if FILAMENT_ENABLE_MATDBG
-    #ifdef ANDROID
+    #ifdef __ANDROID__
         const char* portString = "8081";
     #else
         const char* portString = getenv("FILAMENT_MATDBG_PORT");
@@ -959,6 +959,10 @@ bool Engine::destroy(const VertexBuffer* p) {
 }
 
 bool Engine::destroy(const IndexBuffer* p) {
+    return upcast(this)->destroy(upcast(p));
+}
+
+bool Engine::destroy(const SkinningBuffer* p) {
     return upcast(this)->destroy(upcast(p));
 }
 

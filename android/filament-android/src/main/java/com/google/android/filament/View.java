@@ -59,6 +59,10 @@ import static com.google.android.filament.Colors.LinearColor;
  * @see RenderTarget
  */
 public class View {
+    private static final AntiAliasing[] sAntiAliasingValues = AntiAliasing.values();
+    private static final Dithering[] sDitheringValues = Dithering.values();
+    private static final AmbientOcclusion[] sAmbientOcclusionValues = AmbientOcclusion.values();
+
     private long mNativeObject;
     private String mName;
     private Scene mScene;
@@ -77,6 +81,7 @@ public class View {
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
     private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
+    private SoftShadowOptions mSoftShadowOptions;
 
     /**
      * Generic quality level.
@@ -732,7 +737,17 @@ public class View {
         /**
          * Variance shadows.
          */
-        VSM
+        VSM,
+
+        /**
+         * Percentage-closer filtered shadows, with contact hardening simulation.
+         */
+        DPCF,
+
+        /**
+         * Percentage-closer soft shadows
+         */
+        PCSS
     }
 
     /**
@@ -761,13 +776,6 @@ public class View {
         public boolean mipmapping = false;
 
         /**
-         * EVSM exponent
-         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-         */
-        public float exponent = 5.54f;
-
-        /**
          * VSM minimum variance scale, must be positive.
          */
         public float minVarianceScale = 1.0f;
@@ -776,6 +784,29 @@ public class View {
          * VSM light bleeding reduction amount, between 0 and 1.
          */
         public float lightBleedReduction = 0.2f;
+    }
+
+    /**
+     * View-level options for DPCF and PCSS Shadowing.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @see View#setSoftShadowOptions
+     */
+    public static class SoftShadowOptions {
+        /**
+         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Acceptable values are greater than 0
+         */
+        public float penumbraScale = 1.0f;
+
+        /**
+         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+         * This effectively controls the strength of contact hardening effect and is useful for
+         * artistic purposes. Higher values make the shadows become softer faster.
+         * Acceptable values are equal to or greater than 1.
+         */
+        public float penumbraRatioScale = 1.0f;
     }
 
     /**
@@ -1116,7 +1147,7 @@ public class View {
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
-        return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+        return sAntiAliasingValues[nGetAntiAliasing(getNativeObject())];
     }
 
     /**
@@ -1229,7 +1260,7 @@ public class View {
      */
     @NonNull
     public Dithering getDithering() {
-        return Dithering.values()[nGetDithering(getNativeObject())];
+        return sDitheringValues[nGetDithering(getNativeObject())];
     }
 
     /**
@@ -1415,7 +1446,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.exponent, options.minVarianceScale, options.lightBleedReduction);
+                options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1429,6 +1460,37 @@ public class View {
             mVsmShadowOptions = new VsmShadowOptions();
         }
         return mVsmShadowOptions;
+    }
+
+    /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType.DPCF.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
+        mSoftShadowOptions = options;
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+    }
+
+    /**
+     * Gets soft shadowing options associated with this View.
+     * @see #setSoftShadowOptions
+     * @return soft shadow options currently set.
+     */
+    @NonNull
+    public SoftShadowOptions getSoftShadowOptions() {
+        if (mSoftShadowOptions == null) {
+            mSoftShadowOptions = new SoftShadowOptions();
+        }
+        return mSoftShadowOptions;
     }
 
     /**
@@ -1449,7 +1511,7 @@ public class View {
     @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
-        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+        return sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }
 
     /**
@@ -1696,7 +1758,8 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

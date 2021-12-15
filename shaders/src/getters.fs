@@ -99,17 +99,15 @@ highp vec3 getNormalizedViewportCoord2() {
 }
 
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
-highp vec4 getSpotLightSpacePosition(uint index) {
+highp vec4 getSpotLightSpacePosition(uint index, highp float zLight) {
     highp mat4 lightFromWorldMatrix = shadowUniforms.shadows[index].lightFromWorldMatrix;
     highp vec3 dir = shadowUniforms.shadows[index].direction;
 
     // for spotlights, the bias depends on z
-    float bias = shadowUniforms.shadows[index].normalBias;
-    highp vec4 positionLs = mulMat4x4Float3(lightFromWorldMatrix, vertex_worldPosition.xyz);
-    highp float oneOverZ = positionLs.w / positionLs.z;
+    float bias = shadowUniforms.shadows[index].normalBias * zLight;
 
-    return computeLightSpacePosition(vertex_worldPosition.xyz,
-            vertex_worldNormal, dir, oneOverZ * bias, lightFromWorldMatrix);
+    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+            dir, bias, lightFromWorldMatrix);
 }
 #endif
 
@@ -141,7 +139,7 @@ highp vec4 getCascadeLightSpacePosition(uint cascade) {
     }
 
     return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
-        frameUniforms.lightDirection, frameUniforms.shadowBias.y,
+        frameUniforms.lightDirection, frameUniforms.shadowBias,
         frameUniforms.lightFromWorldMatrix[cascade]);
 }
 

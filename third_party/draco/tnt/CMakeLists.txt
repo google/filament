@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.19)
 
 project(draco C CXX)
 
+if (ANDROID)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DANDROID")
+endif()
+
 if (LINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()

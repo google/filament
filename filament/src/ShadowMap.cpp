@@ -343,9 +343,10 @@ void ShadowMap::updateDirectional(const FScene::LightSoa& lightData, size_t inde
         const mat4 MbMt = getTextureCoordsMapping();
         const mat4f St = mat4f(MbMt * S);
 
-        // note: in texelSizeWorldSpace() below, we could use Mb * Mt * F * W because
-        // L * Mp * Mv is a rigid transform (for directional lights)
-        if (USE_LISPSM) {
+        // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
+        // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
+        // if Wp[3][1] is 0, then LISPSM was cancelled.
+        if (USE_LISPSM && Wp[3][1] != 0.0f) {
             mTexelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F));
         } else {
             // We know we're using an ortho projection
@@ -427,10 +428,14 @@ void ShadowMap::updateSpot(const FScene::LightSoa& lightData, size_t index,
     //      Project receivers, casters and view onto near plane,
     //      compute intersection of that which gives the l,r,t,b planes
 
-    // For spotlights, we store the texel size at 1 world unit
-    // The size of a texel in world unit is given by: (near/dimension) / lightspace.z,
+    // For calculating the spotlight normal bias, we need the texel size in world space at the
+    // sample location. Using Thales's theorem, we find:
+    //      texelSize(zInLightSpace) = zInLightSpace * texelSizeOnTheNearPlane / near
+    //                               = zInLightSpace * texelSizeAtOneMeter
+    //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
     // Note: this would not work with LISPSM, which warps the texture space.
-    mTexelSizeAtOneMeterWs = nearPlane / float(mShadowMapInfo.shadowDimension);
+    mTexelSizeAtOneMeterWs = (2.0f * std::tan(outerConeAngle) / float(mShadowMapInfo.shadowDimension));
+    mLightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
     if (!mShadowMapInfo.vsm) {
         mLightSpace = St;
@@ -941,8 +946,8 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const no
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
     // The two first columns give us how a texel maps in world-space.
-    const float ures = 1.0f / mShadowMapInfo.shadowDimension;
-    const float vres = 1.0f / mShadowMapInfo.shadowDimension;
+    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
     const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
     const float3 Jx = shadowTextureToWorld[0];
     const float3 Jy = shadowTextureToWorld[1];
@@ -965,8 +970,8 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     // It might be better to do this computation in the vertex shader.
     float3 p = {0.5, 0.5, 0.0};
 
-    const float ures = 1.0f / mShadowMapInfo.shadowDimension;
-    const float vres = 1.0f / mShadowMapInfo.shadowDimension;
+    const float ures = 1.0f / float(mShadowMapInfo.shadowDimension);
+    const float vres = 1.0f / float(mShadowMapInfo.shadowDimension);
     const float dres = 1.0f / 65536.0f;
 
     constexpr bool JACOBIAN_ESTIMATE = false;

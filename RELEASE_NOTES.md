@@ -3,9 +3,30 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.14.3 (currently main branch)
+## v1.16.0 (currently main branch)
+
+- engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].
+
+## v1.15.2
+
+- engine: add support for PCSS (Percentage Closer Soft Shadows)
+
+## v1.15.1
+
+- engine: add support for DPCF (PCF shadows with contact hardening).
+- engine: add support for Wayland and Vulkan.
+- engine: Fade lights out when close to light far plane.
+- Java: Add missing `Engine#destroySkinningBuffer` method.
+
+## v1.15.0
+
+- engine: Fix spotlights normal bias calculation [⚠️ **Material breakage**].
+- libimage: Fix loading spherical harmonics on certain locals.
 
 ## v1.14.2
+
+- Metal: Fix validation error when rendering to `RenderTarget` without depth attachment.
+- engine: Fix rendering glitch with zero-scale bone transforms.
 
 ## v1.14.1
 

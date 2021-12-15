@@ -79,7 +79,7 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
         jfloat shadowFarHint, jboolean stable,
         jfloat polygonOffsetConstant, jfloat polygonOffsetSlope,
         jboolean screenSpaceContactShadows, jint stepCount,
-        jfloat maxShadowDistance, jint vsmMsaaSamples, jfloat blurWidth) {
+        jfloat maxShadowDistance, jint vsmMsaaSamples, jfloat blurWidth, jfloat shadowBulbRadius) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     LightManager::ShadowOptions shadowOptions {
             .mapSize = (uint32_t)mapSize,
@@ -98,7 +98,8 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
             .vsm = {
                     .msaaSamples = (uint8_t) vsmMsaaSamples,
                     .blurWidth = blurWidth
-            }
+            },
+            .shadowBulbRadius = shadowBulbRadius
     };
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);
     const jsize splitCount = std::min((jsize) 3, env->GetArrayLength(splitPositions));

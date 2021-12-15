@@ -29,5 +29,13 @@ struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec3 direction;
     float normalBias;
+    highp vec4 lightFromWorldZ;
     float texelSizeAtOneMeter;
+    float bulbRadiusLs;
+    float nearOverFarMinusNear;
+};
+
+struct BoneData {
+    highp mat3x4 transform;    // bone transform is mat4x3 stored in row-major (last row [0,0,0,1])
+    highp uvec4 cof;           // 8 first cofactor matrix of transform's upper left
 };

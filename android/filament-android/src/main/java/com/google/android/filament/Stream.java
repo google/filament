@@ -91,6 +91,8 @@ import java.nio.ReadOnlyBufferException;
  * @see Engine#destroyStream
  */
 public class Stream {
+    private static final StreamType[] sStreamTypeValues = StreamType.values();
+
     private long mNativeObject;
     private long mNativeEngine;
 
@@ -236,7 +238,7 @@ public class Stream {
      * Indicates whether this <code>Stream</code> is NATIVE, TEXTURE_ID, or ACQUIRED.
      */
     public StreamType getStreamType() {
-        return StreamType.values()[nGetStreamType(getNativeObject())];
+        return sStreamTypeValues[nGetStreamType(getNativeObject())];
     }
 
     /**

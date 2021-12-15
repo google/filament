@@ -166,7 +166,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         }
 
     } else {
-#if defined(ANDROID)
+#if defined(__ANDROID__)
         utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
                 << "gradle file?" << utils::io::endl;
 #else
@@ -186,7 +186,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_surface";
     ppEnabledExtensions[enabledExtensionCount++] = "VK_KHR_get_physical_device_properties2";
 #if VK_ENABLE_VALIDATION
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     ppEnabledExtensions[enabledExtensionCount++] = "VK_EXT_debug_report";
 #endif
     if (validationFeaturesSupported) {
@@ -307,7 +307,7 @@ Driver* VulkanDriver::create(VulkanPlatform* const platform,
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
-#if defined(ANDROID) || defined(IOS)
+#if defined(__ANDROID__) || defined(IOS)
     return ShaderModel::GL_ES_30;
 #else
     return ShaderModel::GL_CORE_41;

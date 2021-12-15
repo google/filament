@@ -444,7 +444,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         mi->setParameter("attachmentLevel", uint32_t(lod));
 
         if (lod == levels - 1) {
-            // this is the last lod, use a more agressive filtering because this level is also
+            // this is the last lod, use a more aggressive filtering because this level is also
             // used for the diffuse brdf by filament, and we need it to be very smooth.
             // So we set the lod offset to at least 2.
             mi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));

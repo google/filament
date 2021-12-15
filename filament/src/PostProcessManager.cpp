@@ -2177,19 +2177,17 @@ void PostProcessManager::prepareTaa(FrameHistory& frameHistory,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+        FrameGraphId<FrameGraphTexture> colorHistory,
         TemporalAntiAliasingOptions const& taaOptions,
         ColorGradingConfig colorGradingConfig) noexcept {
 
     FrameHistoryEntry const& entry = frameHistory[0];
-    FrameGraphId<FrameGraphTexture> colorHistory;
     mat4f const* historyProjection = nullptr;
-    if (UTILS_UNLIKELY(!entry.color.handle)) {
+    if (UTILS_UNLIKELY(!colorHistory)) {
         // if we don't have a history yet, just use the current color buffer as history
         colorHistory = input;
         historyProjection = &frameHistory.getCurrent().projection;
     } else {
-        colorHistory = fg.import("TAA history", entry.colorDesc,
-                FrameGraphTexture::Usage::SAMPLEABLE, entry.color);
         historyProjection = &entry.projection;
     }
 
@@ -2296,9 +2294,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     colorGradingSubpass(driver, colorGradingConfig);
                 }
                 driver.endRenderPass();
-
-                // perform TAA here using colorHistory + input -> output
-                resources.detach(data.output, &current.color, &current.colorDesc);
             });
     return colorGradingConfig.asSubpass ? taa->tonemappedOutput : taa->output;
 }

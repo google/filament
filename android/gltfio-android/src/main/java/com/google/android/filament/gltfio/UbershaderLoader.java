@@ -32,6 +32,9 @@ import androidx.annotation.Size;
  * Client applications do not need to call methods on it.</p>
  */
 public class UbershaderLoader implements MaterialProvider {
+    private static final VertexBuffer.VertexAttribute[] sVertexAttributesValues =
+            VertexBuffer.VertexAttribute.values();
+
     private long mNativeObject;
 
     /**
@@ -70,7 +73,7 @@ public class UbershaderLoader implements MaterialProvider {
     }
 
     public boolean needsDummyData(int attrib) {
-        VertexBuffer.VertexAttribute vattrib = VertexBuffer.VertexAttribute.values()[attrib];
+        VertexBuffer.VertexAttribute vattrib = sVertexAttributesValues[attrib];
         switch (vattrib) {
             case UV0:
             case UV1:
@@ -92,7 +95,8 @@ public class UbershaderLoader implements MaterialProvider {
     private static native long nCreateUbershaderLoader(long nativeEngine);
     private static native void nDestroyUbershaderLoader(long nativeProvider);
     private static native void nDestroyMaterials(long nativeProvider);
-    private static native long nCreateMaterialInstance(long nativeProvider, MaterialKey config, int[] uvmap, String label);
+    private static native long nCreateMaterialInstance(long nativeProvider,
+            MaterialKey config, int[] uvmap, String label);
     private static native int nGetMaterialCount(long nativeProvider);
     private static native void nGetMaterials(long nativeProvider, long[] result);
 }

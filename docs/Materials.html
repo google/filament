@@ -255,7 +255,7 @@ in <a href="#table_standardproperties">table&nbsp;1</a>.
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoat</strong> </td><td style="text-align:left"> Strength of the clear coat layer </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatRoughness</strong> </td><td style="text-align:left"> Perceived smoothness or roughness of the clear coat layer </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">anisotropy</strong> </td><td style="text-align:left"> Amount of anisotropy in either the tangent or bitangent direction </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:left"> Local surface direction </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">anisotropyDirection</strong> </td><td style="text-align:left"> Local surface direction in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">ambientOcclusion</strong> </td><td style="text-align:left"> Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0 </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:left"> A detail normal used to perturb the surface using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">bentNormal</strong> </td><td style="text-align:left"> A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality </td></tr>
@@ -700,7 +700,8 @@ tangent direction and negative values in the bitangent direction.
 
 The <code>anisotropyDirection</code> property defines the direction of the surface at a given point and thus
 control the shape of the specular highlights. It is specified as vector of 3 values that usually
-come from a texture, encoding the directions local to the surface.
+come from a texture, encoding the directions local to the surface in tangent space. Because the
+direction is in tangent space, the Z component should be set to 0.
 
 </p><p>
 
