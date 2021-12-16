@@ -578,7 +578,8 @@ Filament.loadClassExtensions = function() {
         const interval = asyncInterval || 30;
         const defaults = {
             normalizeSkinningWeights: true,
-            recomputeBoundingBoxes: false
+            recomputeBoundingBoxes: false,
+            ignoreBindTransform: false
         };
         config = Object.assign(defaults, config || {});
 
@@ -601,7 +602,8 @@ Filament.loadClassExtensions = function() {
         // Construct a resource loader and start decoding after all textures are fetched.
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine,
                 config.normalizeSkinningWeights,
-                config.recomputeBoundingBoxes);
+                config.recomputeBoundingBoxes,
+                config.ignoreBindTransform);
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);
 
