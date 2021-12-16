@@ -464,6 +464,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     }
 
     if (pImpl->mRecomputeBoundingBoxes) {
+        // asset->mSkins is unused for instanced assets
+        pImpl->mIgnoreBindTransform = asset->isInstanced();
         if (!pImpl->mIgnoreBindTransform) {
            pImpl->cgltfSkinBaseAddress = &gltf->skins[0];
         }

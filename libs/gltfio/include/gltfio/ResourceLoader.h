@@ -53,8 +53,8 @@ struct ResourceConfiguration {
     //! do not need this, but it is useful for robustness.
     bool recomputeBoundingBoxes;
 
-    //! If true, ignore bind transform for skinned primitives when compute bounding box. Only 
-    //! applicable when recomputeBoundingBoxes is set to true
+    //! If true, ignore bind transform for skinned primitives when compute bounding box. Implicitly true 
+    //! for instanced asset. Only applicable when recomputeBoundingBoxes is set to true
     bool ignoreBindTransform;
 };
 
