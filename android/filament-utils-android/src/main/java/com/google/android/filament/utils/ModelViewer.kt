@@ -71,6 +71,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     var normalizeSkinningWeights = true
     var recomputeBoundingBoxes = false
+    var ignoreBindTransform = false
 
     var cameraFocalLength = 28f
         set(value) {
@@ -111,7 +112,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.camera = camera
 
         assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
-        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
+        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes, ignoreBindTransform)
 
         // Always add a direct light source since it is required for shadowing.
         // We highly recommend adding an indirect light as well.
