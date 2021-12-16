@@ -96,7 +96,7 @@ struct ResourceLoader::Impl {
     std::string mGltfPath;
 
     // This is used to calculate skinIndex when updateBoundingBoxes, so that the correspondency between 
-    // cgltf_node* and FFilamentInstance::Skin can be retrieved
+    // cgltf_node* and FFilamentInstance::Skin can be retrieved. This pointer doesn't need to be freed.
     cgltf_skin* cgltfSkinBaseAddress;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
@@ -998,7 +998,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
 
     const size_t posAttrSize = cgltf_num_components(cgltf_type_vec3);
     const size_t skinningAttrSize = cgltf_num_components(cgltf_type_vec4);
-    const bool normalizeWeight = !pImpl->mNormalizeSkinningWeights;
+    const bool weightNormalized = pImpl->mNormalizeSkinningWeights;
     const bool ignoreBindTransform = pImpl->mIgnoreBindTransform;
     auto computeBoundingBox = [&](const SkinnedPrimitive skinnedPrimitive, Aabb* result) {
         Aabb aabb;
@@ -1061,7 +1061,7 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
                 }
                 for (const auto& inverseGlobalTransform: inverseGlobalTransforms) {
                     mat4f skinMatrix = inverseGlobalTransform * tmp;
-                    if (normalizeWeight) {
+                    if (!weightNormalized) {
                         skinMatrix /= skinMatrix[3].w;
                     }
                     float3 skinnedPoint = (point.x * skinMatrix[0] + point.y * skinMatrix[1] + point.z * skinMatrix[2] + skinMatrix[3]).xyz;
@@ -1080,6 +1080,8 @@ void ResourceLoader::updateBoundingBoxes(FFilamentAsset* asset) const {
         if (!ignoreBindTransform) {
             cgltf_skin* const cgltfSkin = iter.first->skin;
             if (cgltfSkin) {
+                // importSkins unpacked cgltfSkin into FFilamentInstance::SkinVector bijectively so that
+                // the unpacked Skin can be retrieved given cgltfSkin index
                 int skinIndex = cgltfSkin - pImpl->cgltfSkinBaseAddress;
                 skin = &asset->mSkins[skinIndex];
             }
