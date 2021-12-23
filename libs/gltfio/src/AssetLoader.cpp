@@ -1029,8 +1029,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         mi->setMaskThreshold(inputMat->alpha_cutoff);
     }
 
-    const float* e = inputMat->emissive_factor;
-    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
+    float3 emissiveFactor(inputMat->emissive_factor[0], inputMat->emissive_factor[1], inputMat->emissive_factor[2]);
+    if (inputMat->has_emissive_strength) {
+        emissiveFactor *= inputMat->emissive_strength.emissive_strength;
+    }
+    mi->setParameter("emissiveFactor", emissiveFactor);
 
     const float* c = mrConfig.base_color_factor;
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));
