@@ -979,6 +979,11 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     id<MTLTexture> srcTexture = color.getTexture();
     size_t miplevel = color.level;
 
+    // Clamp height and width to actual texture's height and width
+    MTLSize srcTextureSize = MTLSizeMake(srcTexture.width >> miplevel, srcTexture.height >> miplevel, 1);
+    height = std::min(static_cast<uint32_t>(srcTextureSize.height), height);
+    width = std::min(static_cast<uint32_t>(srcTextureSize.width), width);
+
     const MTLPixelFormat format = getMetalFormat(data.format, data.type);
     ASSERT_PRECONDITION(format != MTLPixelFormatInvalid,
             "The chosen combination of PixelDataFormat (%d) and PixelDataType (%d) is not supported for "
@@ -994,8 +999,8 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     MTLTextureDescriptor* textureDescriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
-                                                               width:(srcTexture.width >> miplevel)
-                                                              height:(srcTexture.height >> miplevel)
+                                                               width:srcTextureSize.width
+                                                              height:srcTextureSize.height
                                                            mipmapped:NO];
 #if defined(IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
