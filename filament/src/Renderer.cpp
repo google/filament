@@ -972,21 +972,23 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : ppm.getOneTexture());
 
-                // set screen-space reflections
-                auto const& ssrOptions = view.getScreenSpaceReflectionsOptions();
-                const bool ssrEnabled = config.hasScreenSpaceReflections && ssrOptions.enabled && data.ssr;
-                const auto& cameraInfo = view.getCameraInfo();
-                auto reprojection =
-                        historyProjection *
-                        inverse(cameraInfo.view * cameraInfo.worldOrigin);
-                view.prepareSSReflections(ssrEnabled ?
-                        resources.getTexture(data.ssr) : ppm.getOneTexture(),
-                        ssrEnabled, reprojection, ssrOptions);
+                // set screen-space reflections or screen-space refractions
+                if (data.ssr) {
+                    // We currently only allow either SS reflections or refractions.
+                    auto const& ssrOptions = view.getScreenSpaceReflectionsOptions();
+                    const bool reflections = config.hasScreenSpaceReflections && ssrOptions.enabled;
+                    const bool refractions = !config.hasScreenSpaceReflections;
 
-                // set screen-space refractions
-                if (data.ssr && !config.hasScreenSpaceReflections) {
-                    // We only allow either SS reflections or refractions.
-                    view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    if (reflections) {
+                        const auto& cameraInfo = view.getCameraInfo();
+                        auto reprojection =
+                                historyProjection *
+                                inverse(cameraInfo.view * cameraInfo.worldOrigin);
+                        view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
+                                ssrOptions);
+                    } else if (refractions) { // TODO: support both
+                        view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
+                    }
                 }
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));

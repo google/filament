@@ -73,8 +73,9 @@ public:
     void prepareStructure(TextureHandle structure) noexcept;
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
-    void prepareSSReflections(TextureHandle ssr, bool enabled, math::mat4f const& historyProjection,
+    void prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
+    void disableSSReflections() noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,
             VsmShadowOptions const& options) noexcept;
 

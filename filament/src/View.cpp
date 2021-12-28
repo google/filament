@@ -658,11 +658,14 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 
 void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset);
+    // If screen-space refractions are enabled, make sure to disable screen-space reflections.
+    // TODO: support simultaneous screen-space refractions and reflections.
+    mPerViewUniforms.disableSSReflections();
 }
 
-void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr, bool enabled,
+void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
         math::mat4f historyProjection, ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSReflections(ssr, enabled, historyProjection, ssrOptions);
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
