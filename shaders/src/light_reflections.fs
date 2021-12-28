@@ -44,12 +44,6 @@ highp float linearizeDepth(highp float depth) {
 //    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 //    POSSIBILITY OF SUCH DAMAGE.
 
-#define Point3 vec3
-#define Point2 vec2
-#define Vector2 vec2
-#define Vector3 vec3
-#define Vector4 vec4
-
 void swap(inout float a, inout float b) {
      float temp = a;
      a = b;
@@ -63,21 +57,21 @@ float distanceSquared(vec2 a, vec2 b) {
 
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
-bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToPixelMatrix,
+bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelMatrix,
         sampler2D vsZBuffer, float vsZThickness, float nearPlaneZ, float stride,
-        float jitterFraction, float maxSteps, in float maxRayTraceDistance, out Point2 hitPixel,
-        out Point3 vsHitPoint) {
+        float jitterFraction, float maxSteps, in float maxRayTraceDistance, out vec2 hitPixel,
+        out vec3 vsHitPoint) {
 
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
     // good idea)
     float rayLength = ((vsOrigin.z + vsDirection.z * maxRayTraceDistance) > nearPlaneZ) ?
                         (nearPlaneZ - vsOrigin.z) / vsDirection.z :
                         maxRayTraceDistance;
-    Point3 vsEndPoint = vsDirection * rayLength + vsOrigin;
+    vec3 vsEndPoint = vsDirection * rayLength + vsOrigin;
 
     // Project into screen space
-    Vector4 H0 = projectToPixelMatrix * Vector4(vsOrigin, 1.0);
-    Vector4 H1 = projectToPixelMatrix * Vector4(vsEndPoint, 1.0);
+    vec4 H0 = projectToPixelMatrix * vec4(vsOrigin, 1.0);
+    vec4 H1 = projectToPixelMatrix * vec4(vsEndPoint, 1.0);
 
     // There are a lot of divisions by w that can be turned into multiplications at some minor
     // precision loss...and we need to interpolate these 1/w values anyway.
@@ -88,24 +82,24 @@ bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToP
     float k1 = 1.0 / H1.w;
 
     // Switch the original points to values that interpolate linearly in 2D
-    Point3 Q0 = vsOrigin * k0;
-    Point3 Q1 = vsEndPoint * k1;
+    vec3 Q0 = vsOrigin * k0;
+    vec3 Q1 = vsEndPoint * k1;
 
     // Screen-space endpoints
-    Point2 P0 = H0.xy * k0;
-    Point2 P1 = H1.xy * k1;
+    vec2 P0 = H0.xy * k0;
+    vec2 P1 = H1.xy * k1;
 
     // TODO:
     // [Optional clipping to frustum sides here]
 
     // Initialize to off screen
-    hitPixel = Point2(-1.0, -1.0);
+    hitPixel = vec2(-1.0, -1.0);
 
     // If the line is degenerate, make it cover at least one pixel to avoid handling zero-pixel
     // extent as a special case later
     P1 += vec2((distanceSquared(P0, P1) < 0.0001) ? 0.01 : 0.0);
 
-    Vector2 delta = P1 - P0;
+    vec2 delta = P1 - P0;
 
     // Permute so that the primary iteration is in x to reduce large branches later
     bool permute = false;
@@ -122,10 +116,10 @@ bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToP
 
     float stepDirection = sign(delta.x);
     float invdx = stepDirection / delta.x;
-    Vector2 dP = Vector2(stepDirection, invdx * delta.y);
+    vec2 dP = vec2(stepDirection, invdx * delta.y);
 
     // Track the derivatives of Q and k
-    Vector3 dQ = (Q1 - Q0) * invdx;
+    vec3 dQ = (Q1 - Q0) * invdx;
     float   dk = (k1 - k0) * invdx;
 
     // Scale derivatives by the desired pixel stride
@@ -135,7 +129,7 @@ bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToP
     P0 += dP * jitterFraction; Q0 += dQ * jitterFraction; k0 += dk * jitterFraction;
 
     // Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, and k from k0 to k1
-    Point3 Q = Q0;
+    vec3 Q = Q0;
     float  k = k0;
 
     // We track the ray depth at +/- 1/2 pixel to treat pixels as clip-space solid voxels. Because
@@ -153,7 +147,7 @@ bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToP
     // We only advance the z field of Q in the inner loop, since Q.xy is never used until after the
     // loop terminates.
 
-    for (Point2 P = P0;
+    for (vec2 P = P0;
         ((P.x * stepDirection) <= end) &&
         (stepCount < maxSteps) &&
         ((rayZMax < sceneZMax - vsZThickness) ||
@@ -183,12 +177,6 @@ bool traceScreenSpaceRay(Point3 vsOrigin, Vector3 vsDirection, mat4x4 projectToP
     // Matches the new loop condition:
     return (rayZMax >= sceneZMax - vsZThickness) && (rayZMin <= sceneZMax);
 }
-
-#undef Point3
-#undef Point2
-#undef Vector2
-#undef Vector3
-#undef Vector4
 
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
 
