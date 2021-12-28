@@ -51,11 +51,6 @@ struct Vertex {
     float2 uv;
 };
 
-enum class ReflectionMode {
-    RENDERABLES,
-    CAMERA,
-};
-
 struct App {
     utils::Entity lightEntity;
     Material* meshMaterial;
@@ -70,6 +65,11 @@ struct App {
     View* offscreenView = nullptr;
     Scene* offscreenScene = nullptr;
     Camera* offscreenCamera = nullptr;
+
+    enum class ReflectionMode {
+        RENDERABLES,
+        CAMERA,
+    };
 
     ReflectionMode mode = ReflectionMode::CAMERA;
     Config config;
@@ -105,14 +105,14 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-static void setReflectionMode(App& app, ReflectionMode mode) {
+static void setReflectionMode(App& app, App::ReflectionMode mode) {
     switch (mode) {
-    case ReflectionMode::RENDERABLES:
+    case App::ReflectionMode::RENDERABLES:
         app.offscreenScene->addEntity(app.reflectedMonkey);
         app.offscreenScene->remove(app.monkeyMesh.renderable);
         app.offscreenView->setFrontFaceWindingInverted(false);
         break;
-    case ReflectionMode::CAMERA:
+    case App::ReflectionMode::CAMERA:
         app.offscreenScene->addEntity(app.monkeyMesh.renderable);
         app.offscreenScene->remove(app.reflectedMonkey);
         app.offscreenView->setFrontFaceWindingInverted(true);
@@ -173,9 +173,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'm':
                 if (arg == "camera") {
-                    app->mode = ReflectionMode::CAMERA;
+                    app->mode = App::ReflectionMode::CAMERA;
                 } else if (arg == "renderables") {
-                    app->mode = ReflectionMode::RENDERABLES;
+                    app->mode = App::ReflectionMode::RENDERABLES;
                 } else {
                     std::cerr << "Unrecognized mode. Must be 'camera'|'renderables'.\n";
                     exit(1);
@@ -286,7 +286,7 @@ int main(int argc, char** argv) {
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
         scene->addEntity(app.monkeyMesh.renderable);
 
-        // Create a reflected monkey, which is used only for ReflectionMode::RENDERABLES.
+        // Create a reflected monkey, which is used only for App::ReflectionMode::RENDERABLES.
         app.reflectedMonkey = em.create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
@@ -362,11 +362,11 @@ int main(int argc, char** argv) {
         const auto cullingProjection = camera.getCullingProjectionMatrix();
         app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection, camera.getNear(), camera.getCullingFar());
         switch (app.mode) {
-            case ReflectionMode::RENDERABLES:
+            case App::ReflectionMode::RENDERABLES:
                 tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
                 app.offscreenCamera->setModelMatrix(model);
                 break;
-            case  ReflectionMode::CAMERA:
+            case App::ReflectionMode::CAMERA:
                 app.offscreenCamera->setModelMatrix(reflection * model);
                 break;
         }
