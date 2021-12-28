@@ -258,6 +258,9 @@ public:
     }
 
     void setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options) noexcept {
+        options.thickness = std::max(0.0f, options.thickness);
+        options.bias = std::max(0.0f, options.bias);
+        options.maxDistance = std::max(0.0f, options.maxDistance);
         mScreenSpaceReflectionsOptions = options;
     }
 
