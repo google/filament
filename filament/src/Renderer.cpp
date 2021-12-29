@@ -471,11 +471,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // Store this frame's camera projection in the frame history.
     if (UTILS_UNLIKELY(taaOptions.enabled || ssReflectionsOptions.enabled)) {
+        auto projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
+        setHistoryProjection(view, projection);
+        // update frame id
         auto& history = view.getFrameHistory();
         auto const& previous = history[0];
         auto& current = history.getCurrent();
-        current.projection = cameraInfo.projection * (cameraInfo.view * cameraInfo.worldOrigin);
-        // update frame id
         current.frameId = previous.frameId + 1;
     }
 
@@ -1312,6 +1313,12 @@ void FRenderer::initializeClearFlags() {
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+void FRenderer::setHistoryProjection(FView& view, math::mat4f const& projection) {
+    auto& history = view.getFrameHistory();
+    auto& current = history.getCurrent();
+    current.projection = projection;
 }
 
 FrameGraphId<FrameGraphTexture> FRenderer::getColorHistory(FrameGraph& fg,
