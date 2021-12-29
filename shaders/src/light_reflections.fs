@@ -169,6 +169,7 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
         if (rayZMin > rayZMax) { swap(rayZMin, rayZMax); }
 
         // View-space z of the background
+        // TODO: explore if we can avoid the linearization of the depth sample here.
         sceneZMax = linearizeDepth(texelFetch(vsZBuffer, int2(hitPixel), 0).r);
     } // pixel on ray
 
