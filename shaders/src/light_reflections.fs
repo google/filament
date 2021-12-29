@@ -57,10 +57,11 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
-bool traceScreenSpaceRay(highp vec3 vsOrigin, highp vec3 vsDirection,
-        highp mat4x4 projectToPixelMatrix, highp sampler2D vsZBuffer, float vsZThickness,
-        float nearPlaneZ, float stride, float jitterFraction, highp float maxSteps,
-        float maxRayTraceDistance, out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
+bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
+        const highp mat4x4 projectToPixelMatrix, const highp sampler2D vsZBuffer,
+        const float vsZThickness, const float nearPlaneZ, const float stride,
+        const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
+        out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
     // good idea)
     highp float rayLength = ((vsOrigin.z + vsDirection.z * maxRayTraceDistance) > nearPlaneZ) ?
@@ -211,12 +212,12 @@ bool evaluateScreenSpaceReflections(vec3 r, inout vec3 Fr) {
     highp vec3 vsDirection = vsRayDirection.xyz;
     float vsZThickness = frameUniforms.ssrThickness;
     // TODO: use the actual near plane.
-    float nearPlaneZ = -0.1f;
-    float stride = 1.0;
+    const float nearPlaneZ = -0.1f;
+    const float stride = 1.0;
     // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
-    float jitterFraction = 1.0f;
+    const float jitterFraction = 1.0f;
     // TODO: set this to the larger of the viewport dimensions.
-    highp float maxSteps = 1000.0;
+    const highp float maxSteps = 1000.0;
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     highp vec2 res = vec2(textureSize(light_structure, 0).xy);
