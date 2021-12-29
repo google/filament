@@ -10,7 +10,7 @@ highp float linearizeDepth(highp float depth) {
     // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
     // value representable in  a 24 bit depth buffer.
     const highp float preventDiv0 = 1.0 / 16777216.0;
-    mat4 p = getViewFromClipMatrix();
+    highp mat4 p = getViewFromClipMatrix();
     // this works with perspective and ortho projections, for a perspective projection
     // this resolves to -near/depth, for an ortho projection this resolves to depth*(far - near) - far
     return (depth * p[2].z + p[3].z) / max(depth * p[2].w + p[3].w, preventDiv0);
@@ -44,50 +44,48 @@ highp float linearizeDepth(highp float depth) {
 //    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 //    POSSIBILITY OF SUCH DAMAGE.
 
-void swap(inout float a, inout float b) {
-     float temp = a;
+void swap(inout highp float a, inout highp float b) {
+     highp float temp = a;
      a = b;
      b = temp;
 }
 
-float distanceSquared(vec2 a, vec2 b) {
+highp float distanceSquared(highp vec2 a, highp vec2 b) {
     a -= b;
     return dot(a, a);
 }
 
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
-bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelMatrix,
-        sampler2D vsZBuffer, float vsZThickness, float nearPlaneZ, float stride,
-        float jitterFraction, float maxSteps, in float maxRayTraceDistance, out vec2 hitPixel,
-        out vec3 vsHitPoint) {
-
+bool traceScreenSpaceRay(highp vec3 vsOrigin, highp vec3 vsDirection,
+        highp mat4x4 projectToPixelMatrix, highp sampler2D vsZBuffer, float vsZThickness,
+        float nearPlaneZ, float stride, float jitterFraction, highp float maxSteps,
+        float maxRayTraceDistance, out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
     // good idea)
-    float rayLength = ((vsOrigin.z + vsDirection.z * maxRayTraceDistance) > nearPlaneZ) ?
-                        (nearPlaneZ - vsOrigin.z) / vsDirection.z :
-                        maxRayTraceDistance;
-    vec3 vsEndPoint = vsDirection * rayLength + vsOrigin;
+    highp float rayLength = ((vsOrigin.z + vsDirection.z * maxRayTraceDistance) > nearPlaneZ) ?
+            (nearPlaneZ - vsOrigin.z) / vsDirection.z : maxRayTraceDistance;
+    highp vec3 vsEndPoint = vsDirection * rayLength + vsOrigin;
 
     // Project into screen space
-    vec4 H0 = projectToPixelMatrix * vec4(vsOrigin, 1.0);
-    vec4 H1 = projectToPixelMatrix * vec4(vsEndPoint, 1.0);
+    highp vec4 H0 = projectToPixelMatrix * vec4(vsOrigin, 1.0);
+    highp vec4 H1 = projectToPixelMatrix * vec4(vsEndPoint, 1.0);
 
     // There are a lot of divisions by w that can be turned into multiplications at some minor
     // precision loss...and we need to interpolate these 1/w values anyway.
     //
     // Because the caller was required to clip to the near plane, this homogeneous division
     // (projecting from 4D to 2D) is guaranteed to succeed.
-    float k0 = 1.0 / H0.w;
-    float k1 = 1.0 / H1.w;
+    highp float k0 = 1.0 / H0.w;
+    highp float k1 = 1.0 / H1.w;
 
     // Switch the original points to values that interpolate linearly in 2D
-    vec3 Q0 = vsOrigin * k0;
-    vec3 Q1 = vsEndPoint * k1;
+    highp vec3 Q0 = vsOrigin * k0;
+    highp vec3 Q1 = vsEndPoint * k1;
 
     // Screen-space endpoints
-    vec2 P0 = H0.xy * k0;
-    vec2 P1 = H1.xy * k1;
+    highp vec2 P0 = H0.xy * k0;
+    highp vec2 P1 = H1.xy * k1;
 
     // TODO:
     // [Optional clipping to frustum sides here]
@@ -99,7 +97,7 @@ bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelM
     // extent as a special case later
     P1 += vec2((distanceSquared(P0, P1) < 0.0001) ? 0.01 : 0.0);
 
-    vec2 delta = P1 - P0;
+    highp vec2 delta = P1 - P0;
 
     // Permute so that the primary iteration is in x to reduce large branches later
     bool permute = false;
@@ -115,12 +113,12 @@ bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelM
     // From now on, "x" is the primary iteration direction and "y" is the secondary one
 
     float stepDirection = sign(delta.x);
-    float invdx = stepDirection / delta.x;
-    vec2 dP = vec2(stepDirection, invdx * delta.y);
+    highp float invdx = stepDirection / delta.x;
+    highp vec2 dP = vec2(stepDirection, invdx * delta.y);
 
     // Track the derivatives of Q and k
-    vec3 dQ = (Q1 - Q0) * invdx;
-    float   dk = (k1 - k0) * invdx;
+    highp vec3  dQ = (Q1 - Q0) * invdx;
+    highp float dk = (k1 - k0) * invdx;
 
     // Scale derivatives by the desired pixel stride
     dP *= stride; dQ *= stride; dk *= stride;
@@ -129,25 +127,26 @@ bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelM
     P0 += dP * jitterFraction; Q0 += dQ * jitterFraction; k0 += dk * jitterFraction;
 
     // Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, and k from k0 to k1
-    vec3 Q = Q0;
-    float  k = k0;
+    highp vec3  Q = Q0;
+    highp float k = k0;
 
     // We track the ray depth at +/- 1/2 pixel to treat pixels as clip-space solid voxels. Because
     // the depth at -1/2 for a given pixel will be the same as at +1/2 for the previous iteration,
     // we actually only have to compute one value per iteration.
-    float prevZMaxEstimate = vsOrigin.z;
-    float stepCount = 0.0;
-    float rayZMax = prevZMaxEstimate, rayZMin = prevZMaxEstimate;
-    float sceneZMax = rayZMax + 1e4;
+    highp float prevZMaxEstimate = vsOrigin.z;
+    highp float stepCount = 0.0;
+    highp float rayZMax = prevZMaxEstimate;
+    highp float rayZMin = prevZMaxEstimate;
+    highp float sceneZMax = rayZMax + 1e4;
 
     // P1.x is never modified after this point, so pre-scale it by the step direction for a signed
     // comparison
-    float end = P1.x * stepDirection;
+    highp float end = P1.x * stepDirection;
 
     // We only advance the z field of Q in the inner loop, since Q.xy is never used until after the
     // loop terminates.
 
-    for (vec2 P = P0;
+    for (highp vec2 P = P0;
         ((P.x * stepDirection) <= end) &&
         (stepCount < maxSteps) &&
         ((rayZMax < sceneZMax - vsZThickness) ||
@@ -180,8 +179,8 @@ bool traceScreenSpaceRay(vec3 vsOrigin, vec3 vsDirection, mat4x4 projectToPixelM
 
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
 
-mat4x4 scaleMatrix(float x, float y) {
-    mat4x4 m = mat4(1.0f);
+highp mat4 scaleMatrix(highp float x, highp float y) {
+    mat4 m = mat4(1.0f);
     m[0].x = x;
     m[1].y = y;
     m[2].z = 1.0f;
@@ -189,16 +188,10 @@ mat4x4 scaleMatrix(float x, float y) {
     return m;
 }
 
-mat4x4 translateMatrix(float x, float y) {
-    mat4x4 m = mat4(1.0f);
+highp mat4 translateMatrix(highp float x, highp float y) {
+    highp mat4x4 m = mat4(1.0f);
     m[3].xy = vec2(x, y);
     return m;
-}
-
-// random number between 0 and 1, using interleaved gradient noise
-float ssr_random(const highp vec2 w) {
-    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
-    return fract(m.z * fract(dot(w, m.xy)));
 }
 
 /**
@@ -206,8 +199,8 @@ float ssr_random(const highp vec2 w) {
  * r is the desired reflected vector.
  * Returns true if there's a hit, false otherwise.
  */
-bool evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
-    highp vec3 wsRayDirection = r;
+bool evaluateScreenSpaceReflections(vec3 r, inout vec3 Fr) {
+    vec3 wsRayDirection = r;
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
     // ray start/end in view space
@@ -216,17 +209,17 @@ bool evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
 
     highp vec3 vsOrigin = vsRayStart.xyz;
     highp vec3 vsDirection = vsRayDirection.xyz;
-    highp float vsZThickness = frameUniforms.ssrThickness;
+    float vsZThickness = frameUniforms.ssrThickness;
     // TODO: use the actual near plane.
-    highp float nearPlaneZ = -0.1f;
-    highp float stride = 1.0;
-    // TODO: jitterFraction should be a between 0 and 1, but anything < 1 gives banding artifacts.
-    highp float jitterFraction = 1.0f;
+    float nearPlaneZ = -0.1f;
+    float stride = 1.0;
+    // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
+    float jitterFraction = 1.0f;
     // TODO: set this to the larger of the viewport dimensions.
     highp float maxSteps = 1000.0;
-    highp float maxRayTraceDistance = frameUniforms.ssrDistance;
+    float maxRayTraceDistance = frameUniforms.ssrDistance;
 
-    vec2 res = vec2(textureSize(light_structure, 0).xy);
+    highp vec2 res = vec2(textureSize(light_structure, 0).xy);
     highp mat4x4 projectToPixelMatrix =
         scaleMatrix(res.x, res.y) *
         translateMatrix(0.5f, 0.5f) *
@@ -238,14 +231,14 @@ bool evaluateScreenSpaceReflections(highp vec3 r, inout vec3 Fr) {
         getClipFromViewMatrix();
 
     // Outputs from the traceScreenSpaceRay function.
-    vec2 hitPixel;  // not currently used
-    vec3 vsHitPoint;
+    highp vec2 hitPixel;  // not currently used
+    highp vec3 vsHitPoint;
 
     if (traceScreenSpaceRay(vsOrigin, vsDirection, projectToPixelMatrix, light_structure,
             vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
             maxRayTraceDistance, hitPixel, vsHitPoint)) {
-        vec2 ssrRes = vec2(textureSize(light_ssr, 0).xy);
-        vec4 reprojected = scaleMatrix(ssrRes.x, ssrRes.y) *
+        highp vec2 ssrRes = vec2(textureSize(light_ssr, 0).xy);
+        highp vec4 reprojected = scaleMatrix(ssrRes.x, ssrRes.y) *
                 translateMatrix(0.5f, 0.5f) *
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
                 scaleMatrix(0.5f, -0.5f) *
