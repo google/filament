@@ -603,7 +603,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
         hasScreenSpaceReflections = evaluateScreenSpaceReflections(r, Fr);
     }
 #else
-    const bool hasScreenSpaceReflections = true;
+    const bool hasScreenSpaceReflections = false;
 #endif
 
     // If screen-space reflections are turned on and there was a hit, we skip sampling the IBL down
