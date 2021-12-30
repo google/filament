@@ -218,14 +218,6 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     if (variant.hasSkinningOrMorphing()) {
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
-        attributes.set(VertexAttribute::MORPH_POSITION_0);
-        attributes.set(VertexAttribute::MORPH_POSITION_1);
-        attributes.set(VertexAttribute::MORPH_POSITION_2);
-        attributes.set(VertexAttribute::MORPH_POSITION_3);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_0);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_1);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_2);
-        attributes.set(VertexAttribute::MORPH_TANGENTS_3);
     }
     CodeGenerator::generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
 

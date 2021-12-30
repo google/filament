@@ -97,29 +97,14 @@ Animator* FFilamentAsset::getAnimator() noexcept {
     return mAnimator;
 }
 
-MorphHelper* FFilamentAsset::getMorpher() noexcept {
-    if (!mMorpher) {
-        if (!mResourcesLoaded) {
-            slog.e << "Cannot create animator before resource loading." << io::endl;
-            return nullptr;
-        }
-        if (!mSourceAsset) {
-            slog.e << "Cannot create animator from frozen asset." << io::endl;
-            return nullptr;
-        }
-        mMorpher = new MorphHelper(this, nullptr);
-    }
-    return mMorpher;
-}
-
 void FFilamentAsset::setMorphWeights(utils::Entity entity, const float* weights, int count) noexcept {
-    if (getMorpher()) {
+    if (mResourcesLoaded) {
         mMorpher->setWeights(entity, weights, count);
     }
 }
 
 int FFilamentAsset::getMorphTargetCount(utils::Entity entity) noexcept {
-    if (getMorpher()) {
+    if (mResourcesLoaded) {
         return mMorpher->getTargetCount(entity);
     }
     return 0;

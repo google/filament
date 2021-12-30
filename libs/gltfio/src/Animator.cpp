@@ -222,7 +222,7 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
         }
     }
 
-    mImpl->morpher = asset->getMorpher();
+    mImpl->morpher = asset->mMorpher;
 }
 
 void Animator::addInstance(FFilamentInstance* instance) {

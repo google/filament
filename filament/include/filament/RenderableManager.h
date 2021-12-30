@@ -302,9 +302,6 @@ public:
         /**
          * Controls if the renderable has vertex morphing targets, false by default.
          *
-         * This is required to enable GPU morphing for up to 4 attributes. The attached VertexBuffer
-         * must provide data in the appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc).
-         *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */

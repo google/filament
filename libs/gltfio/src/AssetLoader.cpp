@@ -521,14 +521,15 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     // node weights are provided, they override the ones specified on the mesh.
     if (numMorphTargets > 0) {
         RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
-        float4 weights(0, 0, 0, 0);
-        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, mesh->weights_count); ++i) {
+        const auto size = std::min(MAX_MORPH_TARGETS, std::max(mesh->weights_count, node->weights_count));
+        std::vector<float> weights(size);
+        for (cgltf_size i = 0, c = std::min(size, mesh->weights_count); i < c; ++i) {
             weights[i] = mesh->weights[i];
         }
-        for (cgltf_size i = 0; i < std::min(MAX_MORPH_TARGETS, node->weights_count); ++i) {
+        for (cgltf_size i = 0, c = std::min(size, node->weights_count); i < c; ++i) {
             weights[i] = node->weights[i];
         }
-        mRenderableManager.setMorphWeights(renderable, weights.v, 4);
+        mRenderableManager.setMorphWeights(renderable, weights.data(), size);
     }
 }
 
@@ -689,14 +690,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     cgltf_size targetsCount = inPrim->targets_count;
 
-    // There is no need to emit a warning if there are more than 4 targets. This is only the base
-    // VertexBuffer and more might be created by MorphHelper.
     if (targetsCount > MAX_MORPH_TARGETS) {
+        utils::slog.w << "WARNING: Exceeded max morph target count of " << MAX_MORPH_TARGETS << utils::io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
-
-    constexpr int baseTangentsAttr = (int) VertexAttribute::MORPH_TANGENTS_0;
-    constexpr int basePositionAttr = (int) VertexAttribute::MORPH_POSITION_0;
 
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
         const cgltf_morph_target& morphTarget = inPrim->targets[targetIndex];
@@ -706,17 +703,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             const cgltf_attribute_type atype = attribute.type;
             const int morphId = targetIndex + 1;
 
-            // The glTF tangent data is ignored here, but honored in ResourceLoader.
-            if (atype == cgltf_attribute_type_tangent) {
-                continue;
-            }
-
-            if (atype == cgltf_attribute_type_normal) {
-                VertexAttribute attr = (VertexAttribute) (baseTangentsAttr + targetIndex);
-                vbb.attribute(attr, slot, VertexBuffer::AttributeType::SHORT4);
-                vbb.normalized(attr);
-                outPrim->morphTangents[targetIndex] = slot;
-                addBufferSlot({&mResult->mGenerateTangents, atype, slot++, morphId});
+            // The glTF normal and tangent data are ignored here, but honored in ResourceLoader.
+            if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
                 continue;
             }
 
@@ -737,13 +725,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 slog.e << "Unsupported accessor type in " << name << io::endl;
                 return false;
             }
-            const int stride = (fatype == actualType) ? accessor->stride : 0;
-
-            VertexAttribute attr = (VertexAttribute) (basePositionAttr + targetIndex);
-            vbb.attribute(attr, slot, fatype, 0, stride);
-            vbb.normalized(attr, accessor->normalized);
-            outPrim->morphPositions[targetIndex] = slot;
-            addBufferSlot({accessor, atype, slot++, morphId});
         }
     }
 

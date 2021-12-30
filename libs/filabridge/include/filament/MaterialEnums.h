@@ -136,20 +136,10 @@ enum VertexAttribute : uint8_t {
     CUSTOM6         = 14,
     CUSTOM7         = 15,
 
-    // Aliases for vertex morphing.
-    MORPH_POSITION_0 = CUSTOM0,
-    MORPH_POSITION_1 = CUSTOM1,
-    MORPH_POSITION_2 = CUSTOM2,
-    MORPH_POSITION_3 = CUSTOM3,
-    MORPH_TANGENTS_0 = CUSTOM4,
-    MORPH_TANGENTS_1 = CUSTOM5,
-    MORPH_TANGENTS_2 = CUSTOM6,
-    MORPH_TANGENTS_3 = CUSTOM7,
-
     // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
 
-static constexpr size_t MAX_MORPH_TARGETS = 4;
+static constexpr size_t MAX_MORPH_TARGETS = 128; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
 static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 
 /**
