@@ -44,6 +44,10 @@
 #include <filament/Skybox.h>
 #include <filament/View.h>
 
+#ifndef NDEBUG
+#include <filament/DebugRegistry.h>
+#endif
+
 #include <filagui/ImGuiHelper.h>
 
 #include <filamentapp/Cube.h>
@@ -272,6 +276,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                         mClosed = true;
                     }
+#ifndef NDEBUG
+                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                        DebugRegistry& debug = mEngine->getDebugRegistry();
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+#endif
                     window->keyDown(event.key.keysym.scancode);
                     break;
                 case SDL_KEYUP:
