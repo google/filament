@@ -203,7 +203,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw,
     cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
     cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
-    cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant.key = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
@@ -380,8 +379,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         for (auto const& primitive : primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             if constexpr (isColorPass) {
-                cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.morphTargets = primitive.getMorphTargets();
+                cmdColor.primitive.primitive = &primitive;
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, mi, inverseFrontFaces);
 
@@ -469,9 +467,7 @@ void RenderPass::generateCommandsImpl(uint32_t extraFlags,
                         && blendingMode != BlendingMode::MASKED);
 
                 // unconditionally write the command
-                cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdDepth.primitive.morphTargets = primitive.getMorphTargets();
-                cmdDepth.primitive.mi = mi;
+                cmdDepth.primitive.primitive = &primitive;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
@@ -558,9 +554,9 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
-            if (UTILS_UNLIKELY(mi != info.mi)) {
+            if (UTILS_UNLIKELY(mi != info.primitive->getMaterialInstance())) {
                 // this is always taken the first time
-                mi = info.mi;
+                mi = info.primitive->getMaterialInstance();
                 ma = mi->getMaterial();
                 pipeline.scissor = mi->getScissor();
                 *pPipelinePolygonOffset = mi->getPolygonOffset();
@@ -583,14 +579,16 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
 
             auto morphing = soaMorphing[info.index];
             if (UTILS_UNLIKELY(morphing.handle)) {
-                assert_invariant(info.morphTargets && morphing.count <= info.morphTargets->getCount());
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
             }
-            if (UTILS_UNLIKELY(info.morphTargets)) {
-                assert_invariant(morphing.handle && morphing.count <= info.morphTargets->getCount());
-                info.morphTargets->bind(driver);
+
+            auto morphTargets = info.primitive->getMorphTargets();
+            if (UTILS_UNLIKELY(morphTargets)) {
+                assert_invariant(morphing.count <= morphTargets->getCount());
+                morphTargets->bind(driver);
             }
-            driver.draw(pipeline, info.primitiveHandle);
+
+            driver.draw(pipeline, info.primitive->getHwHandle());
         }
     }
 }
