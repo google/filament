@@ -211,14 +211,14 @@ bool evaluateScreenSpaceReflections(vec3 r, inout vec3 Fr) {
     const float stride = 1.0;
     // TODO: jitterFraction should be between 0 and 1, but anything < 1 gives banding artifacts.
     const float jitterFraction = 1.0f;
-    // TODO: set this to the larger of the viewport dimensions.
-    const highp float maxSteps = 1000.0;
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     highp vec2 res = vec2(textureSize(light_structure, 0).xy);
     highp mat4x4 projectToPixelMatrix =
         scaleMatrix(res.x, res.y) *
         frameUniforms.ssrProjectToPixelMatrix;
+
+    highp float maxSteps = float(max(res.x, res.y));
 
     // Outputs from the traceScreenSpaceRay function.
     highp vec2 hitPixel;  // not currently used
