@@ -594,32 +594,38 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     // specular layer
     vec3 Fr;
 
+    // screen-space reflections
 #if defined(HAS_REFLECTIONS) && REFLECTION_MODE == REFLECTION_MODE_SCREEN_SPACE
-    bool hasScreenSpaceReflections = false;
-    // evaluateScreenSpaceReflections will set the value of Fr if there's a hit.
+    vec4 ssr = vec4(0.0f);
+    // evaluateScreenSpaceReflections will set the value of ssr if there's a hit.
+    // ssr.a contains the reflection's contribution.
     // TODO: do we want iblLuminance to control screen-space reflections?
     if (pixel.roughness <= 0.01f && frameUniforms.ssrDistance > 0.0f) {
         vec3 r = getReflectedVector(pixel, shading_view, shading_normal);
-        hasScreenSpaceReflections = evaluateScreenSpaceReflections(r, Fr);
+        evaluateScreenSpaceReflections(r, ssr);
     }
 #else
-    const bool hasScreenSpaceReflections = false;
+    const vec4 ssr = vec4(0.0f);
 #endif
 
-    // If screen-space reflections are turned on and there was a hit, we skip sampling the IBL down
-    // below as Fr already has the reflected color.
+    // If screen-space reflections are turned on and have full contribution (ssr.a == 1.0f), then we
+    // skip sampling the IBL down below.
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
     vec3 r = getReflectedVector(pixel, shading_normal);
-    if (!hasScreenSpaceReflections) {
-        Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
+    vec3 ibl = vec3(0.0f);
+    if (ssr.a < 1.0f) {
+        ibl = E * prefilteredRadiance(r, pixel.perceptualRoughness);
     }
+    Fr = mix(ibl, ssr.rgb, ssr.a);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
-    if (!hasScreenSpaceReflections) {
-        Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
+    vec3 ibl = vec3(0.0f);
+    if (ssr.a < 1.0f) {
+        ibl = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
     }
+    Fr = mix(ibl, ssr.rgb, ssr.a);
 #endif
 
     SSAOInterpolationCache interpolationCache;
