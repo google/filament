@@ -188,6 +188,8 @@ private:
         return clock::now() - getUserEpoch();
     }
 
+    math::mat4f getClipSpaceToTextureSpaceMatrix() const noexcept;
+
     void setHistoryProjection(FView& view, math::mat4f const& projection);
 
     static FrameGraphId<FrameGraphTexture> getColorHistory(FrameGraph& fg,

@@ -74,6 +74,7 @@ public:
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareSSR(TextureHandle ssr, float refractionLodOffset) noexcept;
     void prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
+            math::mat4f const& projectToPixelMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
     void disableSSReflections() noexcept;
     void prepareShadowMapping(ShadowMappingUniforms const& shadowMappingUniforms,

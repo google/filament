@@ -178,6 +178,7 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffse
 }
 
 void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const& historyProjection,
+        math::mat4f const& projectToPixelMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
     mPerViewSb.setSampler(PerViewSib::SSR, ssr, {
             .filterMag = SamplerMagFilter::LINEAR,
@@ -185,6 +186,7 @@ void PerViewUniforms::prepareSSReflections(TextureHandle ssr, math::mat4f const&
     });
     auto& s = mPerViewUb.edit();
     s.ssrReprojection = historyProjection;
+    s.ssrProjectToPixelMatrix = projectToPixelMatrix;
     s.ssrThickness = ssrOptions.thickness;
     s.ssrBias = ssrOptions.bias;
     s.ssrDistance = ssrOptions.maxDistance;

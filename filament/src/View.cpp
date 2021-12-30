@@ -663,9 +663,14 @@ void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset) const n
     mPerViewUniforms.disableSSReflections();
 }
 
+void FView::disableSSReflections() const noexcept {
+    mPerViewUniforms.disableSSReflections();
+}
+
 void FView::prepareSSReflections(backend::Handle<backend::HwTexture> ssr,
-        math::mat4f historyProjection, ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, ssrOptions);
+        math::mat4f historyProjection, math::mat4f projectToPixelMatrix,
+        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
+    mPerViewUniforms.prepareSSReflections(ssr, historyProjection, projectToPixelMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {

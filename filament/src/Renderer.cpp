@@ -983,13 +983,22 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg, const char*
                     if (reflections) {
                         const auto& cameraInfo = view.getCameraInfo();
                         auto reprojection =
+                                getClipSpaceToTextureSpaceMatrix() *
                                 historyProjection *
                                 inverse(cameraInfo.view * cameraInfo.worldOrigin);
+
+                        auto projectToPixelMatrix =
+                                getClipSpaceToTextureSpaceMatrix() *
+                                cameraInfo.projection;
+
                         view.prepareSSReflections(resources.getTexture(data.ssr), reprojection,
-                                ssrOptions);
+                                projectToPixelMatrix, ssrOptions);
                     } else if (refractions) { // TODO: support both
                         view.prepareSSR(resources.getTexture(data.ssr), config.refractionLodOffset);
                     }
+                } else {
+                    // Screen-space reflections must be explicitly disabled.
+                    view.disableSSReflections();
                 }
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport));
@@ -1313,6 +1322,24 @@ void FRenderer::initializeClearFlags() {
 
     mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
             | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+math::mat4f FRenderer::getClipSpaceToTextureSpaceMatrix() const noexcept {
+    // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
+    // API-level differences.
+    const bool textureSpaceYFlipped =
+            mEngine.getBackend() == Backend::METAL || mEngine.getBackend() == Backend::VULKAN;
+    return mat4f(textureSpaceYFlipped ? mat4f::row_major_init{
+            0.5f,  0.0f,   0.0f, 0.5f,
+            0.0f, -0.5f,   0.0f, 0.5f,
+            0.0f,  0.0f,   1.0f, 0.0f,
+            0.0f,  0.0f,   0.0f, 1.0f
+    } : mat4f::row_major_init{
+            0.5f,  0.0f,   0.0f, 0.5f,
+            0.0f,  0.5f,   0.0f, 0.5f,
+            0.0f,  0.0f,   1.0f, 0.0f,
+            0.0f,  0.0f,   0.0f, 1.0f
+    });
 }
 
 void FRenderer::setHistoryProjection(FView& view, math::mat4f const& projection) {

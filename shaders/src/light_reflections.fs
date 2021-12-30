@@ -181,18 +181,12 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
 
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
 
-highp mat4 scaleMatrix(highp float x, highp float y) {
+highp mat4 scaleMatrix(const highp float x, const highp float y) {
     mat4 m = mat4(1.0f);
     m[0].x = x;
     m[1].y = y;
     m[2].z = 1.0f;
     m[3].w = 1.0f;
-    return m;
-}
-
-highp mat4 translateMatrix(highp float x, highp float y) {
-    highp mat4x4 m = mat4(1.0f);
-    m[3].xy = vec2(x, y);
     return m;
 }
 
@@ -224,13 +218,7 @@ bool evaluateScreenSpaceReflections(vec3 r, inout vec3 Fr) {
     highp vec2 res = vec2(textureSize(light_structure, 0).xy);
     highp mat4x4 projectToPixelMatrix =
         scaleMatrix(res.x, res.y) *
-        translateMatrix(0.5f, 0.5f) *
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-        scaleMatrix(0.5f, -0.5f) *  // Metal and Vulkan's texture space is y-inverted
-#else
-        scaleMatrix(0.5f, 0.5f) *
-#endif
-        getClipFromViewMatrix();
+        frameUniforms.ssrProjectToPixelMatrix;
 
     // Outputs from the traceScreenSpaceRay function.
     highp vec2 hitPixel;  // not currently used
@@ -239,18 +227,9 @@ bool evaluateScreenSpaceReflections(vec3 r, inout vec3 Fr) {
     if (traceScreenSpaceRay(vsOrigin, vsDirection, projectToPixelMatrix, light_structure,
             vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
             maxRayTraceDistance, hitPixel, vsHitPoint)) {
-        highp vec2 ssrRes = vec2(textureSize(light_ssr, 0).xy);
-        highp vec4 reprojected = scaleMatrix(ssrRes.x, ssrRes.y) *
-                translateMatrix(0.5f, 0.5f) *
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-                scaleMatrix(0.5f, -0.5f) *
-#else
-                scaleMatrix(0.5f, 0.5f) *
-#endif
-                frameUniforms.ssrReprojection *
-                vec4(vsHitPoint, 1.0f);
+        highp vec4 reprojected = frameUniforms.ssrReprojection * vec4(vsHitPoint, 1.0f);
         reprojected *= (1.0 / reprojected.w);
-        Fr = texelFetch(light_ssr, int2(reprojected.x, reprojected.y), 0).rgb;
+        Fr = textureLod(light_ssr, reprojected.xy, 0.0f).rgb;
         return true;
     }
     return false;
