@@ -47,7 +47,7 @@ private:
 
 ostream& LogStream::flush() noexcept {
     Buffer& buf = getBuffer();
-#if ANDROID
+#ifdef __ANDROID__
     switch (mPriority) {
         case LOG_DEBUG:
             __android_log_write(ANDROID_LOG_DEBUG, UTILS_LOG_TAG, buf.get());

@@ -674,7 +674,10 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
             mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
             break;
         case filament::ShadowType::DPCF:
-            mPerViewUniforms.prepareShadowDPCF(texture);
+            mPerViewUniforms.prepareShadowDPCF(texture, mSoftShadowOptions);
+            break;
+        case filament::ShadowType::PCSS:
+            mPerViewUniforms.prepareShadowPCSS(texture, mSoftShadowOptions);
             break;
     }
 }
@@ -819,7 +822,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
     if (positionalLightCount) {
         // always allocate at least 4 entries, because the vectorized loops below rely on that
         float* const UTILS_RESTRICT distances =
-                arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
+                arena.allocate<float>((size + 3u) & ~3u, CACHELINE_SIZE);
 
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
@@ -1075,6 +1078,14 @@ void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
 
 View::VsmShadowOptions View::getVsmShadowOptions() const noexcept {
     return upcast(this)->getVsmShadowOptions();
+}
+
+void View::setSoftShadowOptions(SoftShadowOptions const& options) noexcept {
+    upcast(this)->setSoftShadowOptions(options);
+}
+
+SoftShadowOptions View::getSoftShadowOptions() const noexcept {
+    return upcast(this)->getSoftShadowOptions();
 }
 
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {

@@ -340,7 +340,8 @@ enum class Dithering : uint8_t {
 enum class ShadowType : uint8_t {
     PCF,        //!< percentage-closer filtered shadows (default)
     VSM,        //!< variance shadows
-    DPCF        //!< PCF with contact hardening simulation
+    DPCF,       //!< PCF with contact hardening simulation
+    PCSS        //!< PCF with soft shadows and contact hardening
 };
 
 /**
@@ -371,6 +372,27 @@ struct VsmShadowOptions {
      * VSM light bleeding reduction amount, between 0 and 1.
      */
     float lightBleedReduction = 0.15f;
+};
+
+/**
+ * View-level options for DPCF and PCSS Shadowing.
+ * @see setSoftShadowOptions()
+ * @warning This API is still experimental and subject to change.
+ */
+struct SoftShadowOptions {
+    /**
+     * Globally scales the penumbra of all DPCF and PCSS shadows
+     * Acceptable values are greater than 0
+     */
+    float penumbraScale = 1.0f;
+
+    /**
+     * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+     * This effectively controls the strength of contact hardening effect and is useful for
+     * artistic purposes. Higher values make the shadows become softer faster.
+     * Acceptable values are equal to or greater than 1.
+     */
+    float penumbraRatioScale = 1.0f;
 };
 
 } // namespace filament

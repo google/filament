@@ -51,8 +51,8 @@ dependencies {
     implementation deps.kotlin
     implementation deps.androidx.annotations
 
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0'
+    implementation deps.coroutines.core
+    implementation deps.coroutines.android
 
     api project(':filament-android')
 

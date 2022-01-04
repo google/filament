@@ -376,7 +376,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // is used, but in that case we're pretending it is).
         const float wsTexelSize = shadowMap.getTexelSizAtOneMeterWs();
         mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
-        mShadowMappingUniforms.shadowBulbRadiusLs = options.shadowBulbRadius / wsTexelSize;
+        mShadowMappingUniforms.shadowBulbRadiusLs =
+                mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
     }
 
     // Adjust the near and far planes to tightly bound the scene.
@@ -545,8 +546,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             s.shadows[i].normalBias = normalBias * wsTexelSizeAtOneMeter;
             s.shadows[i].lightFromWorldZ = shadowMap.getLightFromWorldZ();
             s.shadows[i].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
-            s.shadows[i].bulbRadiusLs = options->shadowBulbRadius / wsTexelSizeAtOneMeter;
             s.shadows[i].nearOverFarMinusNear = n / (f - n);
+            s.shadows[i].bulbRadiusLs =
+                    mSoftShadowOptions.penumbraScale * options->shadowBulbRadius / wsTexelSizeAtOneMeter;
 
             shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         }
@@ -593,6 +595,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     auto const& vsmShadowOptions = view.getVsmShadowOptions();
     const bool useMipmapping = view.hasVSM() &&
                                ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
+
+    mSoftShadowOptions = view.getSoftShadowOptions();
 
     uint8_t mipLevels = 1u;
     if (useMipmapping) {

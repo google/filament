@@ -59,7 +59,7 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // shadow
             .add("shadowBulbRadiusLs",      1, UniformInterfaceBlock::Type::FLOAT)
             .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT)
-            .add("reserved",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("shadowPenumbraRatioScale",1, UniformInterfaceBlock::Type::FLOAT)
             .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
             // froxels
             .add("zParams",                 1, UniformInterfaceBlock::Type::FLOAT4)

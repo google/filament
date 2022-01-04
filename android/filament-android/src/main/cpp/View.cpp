@@ -160,6 +160,16 @@ Java_com_google_android_filament_View_nSetVsmShadowOptions(JNIEnv*, jclass, jlon
     view->setVsmShadowOptions(options);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetSoftShadowOptions(JNIEnv*, jclass, jlong nativeView,
+        jfloat penumbraScale, jfloat penumbraRatioScale) {
+    View* view = (View*) nativeView;
+    View::SoftShadowOptions options;
+    options.penumbraScale = penumbraScale;
+    options.penumbraRatioScale = penumbraRatioScale;
+    view->setSoftShadowOptions(options);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderQuality(JNIEnv*, jclass,

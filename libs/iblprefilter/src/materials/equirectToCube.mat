@@ -57,7 +57,7 @@ highp vec2 toEquirect(const highp vec3 s) {
 
 mediump vec3 sampleEquirect(mediump sampler2D equirect, const highp vec3 r) {
     mediump vec3 c = texture(equirect, toEquirect(r)).rgb;
-    return clamp(c, 0.0, 65536.0); // clamp to ger rid of possible +inf
+    return clamp(c, 0.0, 65536.0); // clamp to get rid of possible +inf
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
