@@ -7,7 +7,10 @@ A new header is inserted each time a *tag* is created.
 
 ## v1.15.2
 
-- engine: add support for PCSS (Percentage Closer Soft Shadows)
+- engine: add support for PCSS (Percentage Closer Soft Shadows).
+- engine: fix spotlight shadow bias.
+- samples: avoid leaking IBLs in Android sample-gltf-viewer.
+- libs: fix `libibl` on mobile.
 
 ## v1.15.1
 
