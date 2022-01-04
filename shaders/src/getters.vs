@@ -22,44 +22,46 @@ mat3 getWorldFromModelNormalMatrix() {
 
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
-    vec4 q  = bonesUniforms.bones[i + 0u];
-    vec3 is = bonesUniforms.bones[i + 3u].xyz;
 
-    // apply the inverse of the non-uniform scales
-    n *= is;
-    // apply the rigid transform (valid only for unit quaternions)
-    n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
+    highp mat3 cof;
 
-    return n;
+    // the first 8 elements of the cofactor matrix are stored as fp16
+    highp vec2 zx = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
+    cof[0].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
+    cof[0].z = zx[0];
+    cof[1].x = zx[1];
+    cof[1].yz = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
+    cof[2].xy = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
+
+    // the last element must be computed by hand
+    highp float a = bonesUniforms.bones[i].transform[0][0];
+    highp float b = bonesUniforms.bones[i].transform[0][1];
+    highp float d = bonesUniforms.bones[i].transform[1][0];
+    highp float e = bonesUniforms.bones[i].transform[1][1];
+
+    cof[2].z = a * e - b * d;
+
+    return normalize(cof * n);
 }
 
 vec3 mulBoneVertex(vec3 v, uint i) {
-    vec4 q = bonesUniforms.bones[i + 0u];
-    vec3 t = bonesUniforms.bones[i + 1u].xyz;
-    vec3 s = bonesUniforms.bones[i + 2u].xyz;
-
-    // apply the non-uniform scales
-    v *= s;
-    // apply the rigid transform (valid only for unit quaternions)
-    v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-    // apply the translation
-    v += t;
-
-    return v;
+    // last row of bonesUniforms.transform[i] (row major) is assumed to be [0,0,0,1]
+    highp mat4x3 m = transpose(bonesUniforms.bones[i].transform);
+    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    n =   mulBoneNormal(n, ids.x * 4u) * weights.x
-        + mulBoneNormal(n, ids.y * 4u) * weights.y
-        + mulBoneNormal(n, ids.z * 4u) * weights.z
-        + mulBoneNormal(n, ids.w * 4u) * weights.w;
+    n =   mulBoneNormal(n, ids.x) * weights.x
+        + mulBoneNormal(n, ids.y) * weights.y
+        + mulBoneNormal(n, ids.z) * weights.z
+        + mulBoneNormal(n, ids.w) * weights.w;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p =   mulBoneVertex(p, ids.x * 4u) * weights.x
-        + mulBoneVertex(p, ids.y * 4u) * weights.y
-        + mulBoneVertex(p, ids.z * 4u) * weights.z
-        + mulBoneVertex(p, ids.w * 4u) * weights.w;
+    p =   mulBoneVertex(p, ids.x) * weights.x
+        + mulBoneVertex(p, ids.y) * weights.y
+        + mulBoneVertex(p, ids.z) * weights.z
+        + mulBoneVertex(p, ids.w) * weights.w;
 }
 #endif
 

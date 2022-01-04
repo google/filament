@@ -239,6 +239,14 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstancedAsset(JNIEnv
     return asset;
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstance(JNIEnv* env, jclass,
+        jlong nativeLoader, jlong nativeAsset) {
+    AssetLoader* loader = (AssetLoader*) nativeLoader;
+    FilamentAsset* primary = (FilamentAsset*) nativeAsset;
+    return (jlong) loader->createInstance(primary);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nEnableDiagnostics(JNIEnv*, jclass,
         jlong nativeLoader, jboolean enable) {
