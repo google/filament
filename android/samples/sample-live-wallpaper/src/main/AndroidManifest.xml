@@ -12,6 +12,7 @@
       android:supportsRtl="true"
       android:theme="@style/AppTheme">
     <service
+        android:exported="true"
         android:name=".FilamentLiveWallpaper"
         android:label="@string/wallpaper_label"
         android:permission="android.permission.BIND_WALLPAPER">

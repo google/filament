@@ -35,6 +35,7 @@ class ColorGrading;
 class DebugRegistry;
 class Fence;
 class IndexBuffer;
+class SkinningBuffer;
 class IndirectLight;
 class Material;
 class MaterialInstance;
@@ -419,6 +420,7 @@ public:
     bool destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
     bool destroy(const Fence* p);               //!< Destroys a Fence object.
     bool destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.
+    bool destroy(const SkinningBuffer* p);      //!< Destroys a SkinningBuffer object.
     bool destroy(const IndirectLight* p);       //!< Destroys an IndirectLight object.
 
     /**

@@ -106,7 +106,10 @@ import com.google.android.filament.proguard.UsedByReflection;
  * @see Renderer
  */
 public class Engine {
+    private static final Backend[] sBackendValues = Backend.values();
+
     private long mNativeObject;
+
     @NonNull private final TransformManager mTransformManager;
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
@@ -252,7 +255,7 @@ public class Engine {
      */
     @NonNull
     public Backend getBackend() {
-        return Backend.values()[(int) nGetBackend(getNativeObject())];
+        return sBackendValues[(int) nGetBackend(getNativeObject())];
     }
 
     // SwapChain
@@ -514,6 +517,15 @@ public class Engine {
     }
 
     /**
+     * Destroys a {@link SkinningBuffer} and frees all its associated resources.
+     * @param skinningBuffer the {@link SkinningBuffer} to destroy
+     */
+    public void destroySkinningBuffer(@NonNull SkinningBuffer skinningBuffer) {
+        assertDestroy(nDestroySkinningBuffer(getNativeObject(), skinningBuffer.getNativeObject()));
+        skinningBuffer.clearNativeObject();
+    }
+
+    /**
      * Destroys a {@link IndirectLight} and frees all its associated resources.
      * @param ibl the {@link IndirectLight} to destroy
      */
@@ -690,6 +702,7 @@ public class Engine {
     private static native boolean nDestroyStream(long nativeEngine, long nativeStream);
     private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
+    private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
     private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);

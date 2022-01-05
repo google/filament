@@ -17,10 +17,11 @@
 #include <image/KtxBundle.h>
 
 #include <utils/Panic.h>
+#include <utils/string.h>
 
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace {
 
@@ -295,7 +296,7 @@ bool KtxBundle::getSphericalHarmonics(filament::math::float3* result) {
     // 3 bands, 9 RGB coefficients for a total of 27 floats.
     for (int i = 0; i < 9 * 3; i++) {
         char* next;
-        *flat++ = std::strtof(src, &next);
+        *flat++ = utils::strtof_c(src, &next);
         if (next == src) {
             return false;
         }

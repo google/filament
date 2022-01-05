@@ -52,7 +52,8 @@ class RenderPass;
 struct ShadowMappingUniforms {
     std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
     math::float4 cascadeSplits;
-    math::float3 shadowBias;
+    float shadowBulbRadiusLs;
+    float shadowBias;
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;
@@ -113,15 +114,6 @@ public:
     }
 
 private:
-
-    // Atlas requirements, updated in ShadowMapManager::update(),
-    // consumed in ShadowMapManager::render()
-    struct TextureAtlasRequirements {
-        uint16_t size = 0;
-        uint8_t layers = 0;
-        uint8_t levels = 0;
-    } mTextureAtlasRequirements;
-
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
             ShadowMap::SceneInfo& sceneInfo) noexcept;
@@ -194,6 +186,16 @@ private:
         float mSplitsCs[SPLIT_COUNT];
         size_t mSplitCount;
     };
+
+    // Atlas requirements, updated in ShadowMapManager::update(),
+    // consumed in ShadowMapManager::render()
+    struct TextureAtlasRequirements {
+        uint16_t size = 0;
+        uint8_t layers = 0;
+        uint8_t levels = 0;
+    } mTextureAtlasRequirements;
+
+    SoftShadowOptions mSoftShadowOptions;
 
     CascadeSplits::Params mCascadeSplitParams;
     CascadeSplits mCascadeSplits;

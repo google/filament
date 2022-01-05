@@ -186,7 +186,9 @@ public:
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
-    bool hasVsm() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
+    bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
+    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
     void renderShadowMaps(FrameGraph& fg, FEngine& engine, FEngine::DriverApi& driver,
@@ -342,6 +344,16 @@ public:
 
     VsmShadowOptions getVsmShadowOptions() const noexcept {
         return mVsmShadowOptions;
+    }
+
+    void setSoftShadowOptions(SoftShadowOptions options) noexcept {
+        options.penumbraScale = std::max(0.0f, options.penumbraScale);
+        options.penumbraRatioScale = std::max(1.0f, options.penumbraRatioScale);
+        mSoftShadowOptions = options;
+    }
+
+    SoftShadowOptions getSoftShadowOptions() const noexcept {
+        return mSoftShadowOptions;
     }
 
     AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
@@ -550,7 +562,8 @@ private:
     bool mHasPostProcessPass = true;
     AmbientOcclusionOptions mAmbientOcclusionOptions{};
     ShadowType mShadowType = ShadowType::PCF;
-    VsmShadowOptions mVsmShadowOptions = {}; // FIXME: this should probably be per-light
+    VsmShadowOptions mVsmShadowOptions; // FIXME: this should probably be per-light
+    SoftShadowOptions mSoftShadowOptions;
     BloomOptions mBloomOptions;
     FogOptions mFogOptions;
     DepthOfFieldOptions mDepthOfFieldOptions;

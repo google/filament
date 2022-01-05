@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "vulkan/PlatformVkLinux.h"
+#include "vulkan/PlatformVkLinuxX11.h"
 
 #include "VulkanConstants.h"
 #include "VulkanDriverFactory.h"
@@ -52,7 +52,7 @@ struct X11Functions {
     void* library = nullptr;
 } g_x11;
 
-Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
 #ifdef FILAMENT_SUPPORTS_XCB
@@ -66,7 +66,7 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]));
 }
 
-void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
+void* PlatformVkLinuxX11::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
     if (g_x11.library == nullptr) {
         g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
         ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");

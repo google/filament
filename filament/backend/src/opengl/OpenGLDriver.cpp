@@ -1907,7 +1907,7 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             for (size_t face = 0; face < 6; face++) {
                 GLenum target = getCubemapTarget(TextureCubemapFace(face));
                 glTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, glFormat, glType,
+                        width, height, glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;
@@ -1938,8 +1938,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    assert_invariant(xoffset + width <= t->width >> level);
-    assert_invariant(yoffset + height <= t->height >> level);
+    assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
+    assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(zoffset + depth <= t->depth);
     assert_invariant(t->samples <= 1);
 
@@ -1992,7 +1992,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,  uint32_t level,
             for (size_t face = 0; face < 6; face++) {
                 GLenum target = getCubemapTarget(TextureCubemapFace(face));
                 glCompressedTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, t->gl.internalFormat,
+                        width, height, t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
             }
             break;

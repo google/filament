@@ -37,6 +37,20 @@ import java.util.Set;
  * @see <a href="https://google.github.io/filament/Materials.html">Filament Materials Guide</a>
  */
 public class Material {
+    static final class EnumCache {
+        private EnumCache() { }
+
+        static final Shading[] sShadingValues = Shading.values();
+        static final Interpolation[] sInterpolationValues = Interpolation.values();
+        static final BlendingMode[] sBlendingModeValues = BlendingMode.values();
+        static final RefractionMode[] sRefractionModeValues = RefractionMode.values();
+        static final RefractionType[] sRefractionTypeValues = RefractionType.values();
+        static final VertexDomain[] sVertexDomainValues = VertexDomain.values();
+        static final CullingMode[] sCullingModeValues = CullingMode.values();
+        static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
+                VertexBuffer.VertexAttribute.values();
+    }
+
     private long mNativeObject;
     private final MaterialInstance mDefaultInstance;
 
@@ -210,6 +224,8 @@ public class Material {
 
     @UsedByNative("Material.cpp")
     public static class Parameter {
+        private static final Type[] sTypeValues = Type.values();
+
         public enum Type {
             BOOL,
             BOOL2,
@@ -275,7 +291,7 @@ public class Material {
                 @IntRange(from = 0) int type, @IntRange(from = 0) int precision,
                 @IntRange(from = 1) int count) {
             parameters.add(
-                    new Parameter(name, Type.values()[type], Precision.values()[precision], count));
+                    new Parameter(name, sTypeValues[type], Precision.values()[precision], count));
         }
     }
 
@@ -373,7 +389,7 @@ public class Material {
      * Material Models</a>
      */
     public Shading getShading() {
-        return Shading.values()[nGetShading(getNativeObject())];
+        return EnumCache.sShadingValues[nGetShading(getNativeObject())];
     }
 
     /**
@@ -384,7 +400,7 @@ public class Material {
      * Vertex and attributes: interpolation</a>
      */
     public Interpolation getInterpolation() {
-        return Interpolation.values()[nGetInterpolation(getNativeObject())];
+        return EnumCache.sInterpolationValues[nGetInterpolation(getNativeObject())];
     }
 
     /**
@@ -395,7 +411,7 @@ public class Material {
      * Blending and transparency: blending</a>
      */
     public BlendingMode getBlendingMode() {
-        return BlendingMode.values()[nGetBlendingMode(getNativeObject())];
+        return EnumCache.sBlendingModeValues[nGetBlendingMode(getNativeObject())];
     }
 
     /**
@@ -406,7 +422,7 @@ public class Material {
      * Blending and transparency: refraction</a>
      */
     public RefractionMode getRefractionMode() {
-        return RefractionMode.values()[nGetRefractionMode(getNativeObject())];
+        return EnumCache.sRefractionModeValues[nGetRefractionMode(getNativeObject())];
     }
 
     /**
@@ -417,9 +433,8 @@ public class Material {
      * Blending and transparency: refractionType</a>
      */
     public RefractionType getRefractionType() {
-        return RefractionType.values()[nGetRefractionType(getNativeObject())];
+        return EnumCache.sRefractionTypeValues[nGetRefractionType(getNativeObject())];
     }
-
 
     /**
      * Returns the vertex domain of this material.
@@ -429,7 +444,7 @@ public class Material {
      * Vertex and attributes: vertexDomain</a>
      */
     public VertexDomain getVertexDomain() {
-        return VertexDomain.values()[nGetVertexDomain(getNativeObject())];
+        return EnumCache.sVertexDomainValues[nGetVertexDomain(getNativeObject())];
     }
 
     /**
@@ -440,7 +455,7 @@ public class Material {
      * Rasterization: culling</a>
      */
     public CullingMode getCullingMode() {
-        return CullingMode.values()[nGetCullingMode(getNativeObject())];
+        return EnumCache.sCullingModeValues[nGetCullingMode(getNativeObject())];
     }
 
     /**
@@ -531,7 +546,7 @@ public class Material {
         if (mRequiredAttributes == null) {
             int bitSet = nGetRequiredAttributes(getNativeObject());
             mRequiredAttributes = EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
-            VertexBuffer.VertexAttribute[] values = VertexBuffer.VertexAttribute.values();
+            VertexBuffer.VertexAttribute[] values = EnumCache.sVertexAttributeValues;
             for (int i = 0; i < values.length; i++) {
                 if ((bitSet & (1 << i)) != 0) {
                     mRequiredAttributes.add(values[i]);

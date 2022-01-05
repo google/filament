@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_H
+#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_X11_H
+#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_X11_H
 
 #include <stdint.h>
 
@@ -32,7 +32,7 @@
 
 namespace filament {
 
-class PlatformVkLinux final : public backend::VulkanPlatform {
+class PlatformVkLinuxX11 final : public backend::VulkanPlatform {
 public:
 
     backend::Driver* createDriver(void* const sharedContext) noexcept override;
@@ -52,4 +52,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_H
+#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_LINUX_X11_H

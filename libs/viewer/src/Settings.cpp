@@ -212,6 +212,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, Ditherin
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowType* out) {
     if (0 == compare(tokens[i], jsonChunk, "PCF")) { *out = ShadowType::PCF; }
     else if (0 == compare(tokens[i], jsonChunk, "VSM")) { *out = ShadowType::VSM; }
+    else if (0 == compare(tokens[i], jsonChunk, "DPCF")) { *out = ShadowType::DPCF; }
+    else if (0 == compare(tokens[i], jsonChunk, "PCSS")) { *out = ShadowType::PCSS; }
     else {
         slog.w << "Invalid ShadowType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -229,8 +231,6 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else if (0 == compare(tok, jsonChunk, "mipmapping")) {
             i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
-        } else if (0 == compare(tok, jsonChunk, "exponent")) {
-            i = parse(tokens, i + 1, jsonChunk, &out->exponent);
         } else if (0 == compare(tok, jsonChunk, "minVarianceScale")) {
             i = parse(tokens, i + 1, jsonChunk, &out->minVarianceScale);
         } else if (0 == compare(tok, jsonChunk, "lightBleedReduction")) {
@@ -881,6 +881,30 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
+        SoftShadowOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    math::float3 splitsVector;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "penumbraScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraScale);
+        } else if (compare(tok, jsonChunk, "penumbraRatioScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraRatioScale);
+        } else {
+            slog.w << "Invalid soft shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid soft shadow options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -893,6 +917,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->enableSunlight);
         } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowOptions);
+        } else if (compare(tok, jsonChunk, "softShadowOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->softShadowOptions);
         } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
         } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
@@ -1012,7 +1038,7 @@ void applySettings(const MaterialSettings& settings, MaterialInstance* dest) {
 }
 
 void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene) {
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view) {
     auto light = lm->getInstance(sunlight);
     if (light) {
         if (settings.enableSunlight) {
@@ -1037,6 +1063,7 @@ void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Ent
         }
         lm->setShadowOptions(light, settings.shadowOptions);
     }
+    view->setSoftShadowOptions(settings.softShadowOptions);
 }
 
 static LinearColor inverseTonemapSRGB(sRGBColor x) {
@@ -1130,6 +1157,8 @@ static std::ostream& operator<<(std::ostream& out, ShadowType in) {
     switch (in) {
         case ShadowType::PCF: return out << "\"PCF\"";
         case ShadowType::VSM: return out << "\"VSM\"";
+        case ShadowType::DPCF: return out << "\"DPCF\"";
+        case ShadowType::PCSS: return out << "\"PCSS\"";
     }
     return out << "\"INVALID\"";
 }
@@ -1400,11 +1429,20 @@ static std::ostream& operator<<(std::ostream& out, const MaterialSettings& in) {
     return out << result;
 }
 
+
+static std::ostream& operator<<(std::ostream& out, const SoftShadowOptions& in) {
+    return out << "{\n"
+               << "\"penumbraScale\": " << in.penumbraScale << ",\n"
+               << "\"penumbraRatioScale\": " << in.penumbraRatioScale << "\n"
+               << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
     return out << "{\n"
         << "\"enableShadows\": " << to_string(in.enableShadows) << ",\n"
         << "\"enableSunlight\": " << to_string(in.enableSunlight) << ",\n"
         << "\"shadowOptions\": " << (in.shadowOptions) << ",\n"
+        << "\"softShadowOptions\": " << (in.softShadowOptions) << ",\n"
         << "\"sunlightIntensity\": " << (in.sunlightIntensity) << ",\n"
         << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
@@ -1470,7 +1508,6 @@ static std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
-        << "\"exponent\": " << in.exponent << ",\n"
         << "\"minVarianceScale\": " << in.minVarianceScale << ",\n"
         << "\"lightBleedReduction\": " << in.lightBleedReduction << "\n"
         << "}";

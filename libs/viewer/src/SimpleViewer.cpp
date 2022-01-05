@@ -767,26 +767,32 @@ void SimpleViewer::updateUserInterface() {
             light.shadowOptions.mapSize = mapSize;
 
 
-            bool enableVsm = mSettings.view.shadowType == ShadowType::VSM;
-            ImGui::Checkbox("Enable VSM", &enableVsm);
-            mSettings.view.shadowType = enableVsm ? ShadowType::VSM : ShadowType::PCF;
+            int shadowType = (int)mSettings.view.shadowType;
+            ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0\0");
+            mSettings.view.shadowType = (ShadowType)shadowType;
 
-            char label[32];
-            snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
-            ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
-            light.shadowOptions.vsm.msaaSamples = static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
+            if (mSettings.view.shadowType == ShadowType::VSM) {
+                char label[32];
+                snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
+                ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
+                light.shadowOptions.vsm.msaaSamples =
+                        static_cast<uint8_t>(1u << mVsmMsaaSamplesLog2);
 
-            int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
-            snprintf(label, 32, "%d", 1 << vsmAnisotropy);
-            ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
-            mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
-            ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
-            ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
+                int vsmAnisotropy = mSettings.view.vsmShadowOptions.anisotropy;
+                snprintf(label, 32, "%d", 1 << vsmAnisotropy);
+                ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3, label);
+                mSettings.view.vsmShadowOptions.anisotropy = vsmAnisotropy;
+                ImGui::Checkbox("VSM mipmapping", &mSettings.view.vsmShadowOptions.mipmapping);
+                ImGui::SliderFloat("VSM blur", &light.shadowOptions.vsm.blurWidth, 0.0f, 125.0f);
 
-            // These are not very useful in practice (defaults are good), but we keep them here for debugging
-            //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
-            //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
-            //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
+                // These are not very useful in practice (defaults are good), but we keep them here for debugging
+                //ImGui::SliderFloat("VSM exponent", &mSettings.view.vsmShadowOptions.exponent, 0.0, 6.0f);
+                //ImGui::SliderFloat("VSM Light bleed", &mSettings.view.vsmShadowOptions.lightBleedReduction, 0.0, 1.0f);
+                //ImGui::SliderFloat("VSM min variance scale", &mSettings.view.vsmShadowOptions.minVarianceScale, 0.0, 10.0f);
+            } else if (mSettings.view.shadowType == ShadowType::DPCF || mSettings.view.shadowType == ShadowType::PCSS) {
+                ImGui::SliderFloat("Penumbra scale", &light.softShadowOptions.penumbraScale, 0.0f, 100.0f);
+                ImGui::SliderFloat("Penumbra Ratio scale", &light.softShadowOptions.penumbraRatioScale, 1.0f, 100.0f);
+            }
 
             int shadowCascades = light.shadowOptions.shadowCascades;
             ImGui::SliderInt("Cascades", &shadowCascades, 1, 4);
@@ -914,6 +920,8 @@ void SimpleViewer::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mSettings.view, mView);
+
+    mView->setSoftShadowOptions(mSettings.lighting.softShadowOptions);
 
     if (light.enableSunlight) {
         mScene->addEntity(mSunlight);

@@ -126,6 +126,7 @@ public:
 
     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, FrameHistory& frameHistory,
+            FrameGraphId<FrameGraphTexture> colorHistory,
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig colorGradingConfig) noexcept;
 

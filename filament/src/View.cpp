@@ -111,13 +111,12 @@ void FView::terminate(FEngine& engine) {
         FPickingQuery::put(pQuery);
     }
 
-    mPerViewUniforms.terminate(engine);
-
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mShadowUbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
+    mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
 }
 
@@ -306,11 +305,11 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         mShadowMapManager.setShadowCascades(0, &shadowOptions);
     }
 
-    // Find all shadow-casting spot lights.
+    // Find all shadow-casting spotlights.
     size_t shadowCastingSpotCount = 0;
 
     // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
-    // shadow-casting spot lights are ignored.
+    // shadow-casting spotlights are ignored.
     for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
 
         // when we get here all the lights should be visible
@@ -457,7 +456,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(worldOriginScene, hasVsm());
+    scene->prepare(worldOriginScene, hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -573,8 +572,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
-    mPerViewUniforms.prepareTime(engine, userTime);
+    mPerViewUniforms.prepareTime(userTime);
     mPerViewUniforms.prepareFog(mViewingCameraInfo, mFogOptions);
+    mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
 
     // set uniforms and samplers
     bindPerViewUniformsAndSamplers(driver);
@@ -666,10 +666,19 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
-    if (hasVsm()) {
-        mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
-    } else {
-        mPerViewUniforms.prepareShadowPCF(texture);
+    switch (mShadowType) {
+        case filament::ShadowType::PCF:
+            mPerViewUniforms.prepareShadowPCF(texture);
+            break;
+        case filament::ShadowType::VSM:
+            mPerViewUniforms.prepareShadowVSM(texture, mVsmShadowOptions);
+            break;
+        case filament::ShadowType::DPCF:
+            mPerViewUniforms.prepareShadowDPCF(texture, mSoftShadowOptions);
+            break;
+        case filament::ShadowType::PCSS:
+            mPerViewUniforms.prepareShadowPCSS(texture, mSoftShadowOptions);
+            break;
     }
 }
 
@@ -813,7 +822,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
     if (positionalLightCount) {
         // always allocate at least 4 entries, because the vectorized loops below rely on that
         float* const UTILS_RESTRICT distances =
-                arena.allocate<float>((size + 3u) & 3u, CACHELINE_SIZE);
+                arena.allocate<float>((size + 3u) & ~3u, CACHELINE_SIZE);
 
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
@@ -1069,6 +1078,14 @@ void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
 
 View::VsmShadowOptions View::getVsmShadowOptions() const noexcept {
     return upcast(this)->getVsmShadowOptions();
+}
+
+void View::setSoftShadowOptions(SoftShadowOptions const& options) noexcept {
+    upcast(this)->setSoftShadowOptions(options);
+}
+
+SoftShadowOptions View::getSoftShadowOptions() const noexcept {
+    return upcast(this)->getSoftShadowOptions();
 }
 
 void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {

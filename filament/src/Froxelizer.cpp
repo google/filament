@@ -339,7 +339,7 @@ bool Froxelizer::update() noexcept {
 
 
         /*
-         * Now compute the bounding sphere of each froxel, which is needed for spot-lights
+         * Now compute the bounding sphere of each froxel, which is needed for spotlights
          * We intersect 3 planes of the frustum to find each 8 corners.
          * Currently the bounding sphere is computed from the bounding-box, which is probably,
          * not the best.
@@ -409,7 +409,7 @@ bool Froxelizer::update() noexcept {
                     minp.y = std::min(minp.y, py);
                     maxp.y = std::max(maxp.y, py);
                 }
-                assert_invariant(minp.y < maxp.y);
+                assert_invariant(minp.y <= maxp.y);
 
                 for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
                     // note: clang vectorizes this loop!
