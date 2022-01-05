@@ -197,7 +197,7 @@ enum class PrimitiveType : uint8_t {
     LINES          = 1,    //!< lines
     LINE_STRIP     = 3,    //!< line strip
     TRIANGLES      = 4,    //!< triangles
-    TRIANGLE_STRIP = 5, //!< triangle strip
+    TRIANGLE_STRIP = 5,    //!< triangle strip
     NONE           = 0xFF
 };
 
