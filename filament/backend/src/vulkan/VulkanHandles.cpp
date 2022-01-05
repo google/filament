@@ -283,8 +283,14 @@ void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
         case backend::PrimitiveType::LINES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             break;
+        case backend::PrimitiveType::LINE_STRIP:
+            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            break;
         case backend::PrimitiveType::TRIANGLES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case backend::PrimitiveType::TRIANGLE_STRIP:
+            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             break;
     }
 }
