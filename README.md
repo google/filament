@@ -151,9 +151,9 @@ steps:
   - [x] Points
   - [x] Lines
   - [ ] Line Loop
-  - [ ] Line Strip
+  - [x] Line Strip
   - [x] Triangles
-  - [ ] Triangle Strip
+  - [x] Triangle Strip
   - [ ] Triangle Fan
 
 - Animation
