@@ -364,10 +364,10 @@ void FRenderableManager::create(
                                 builder->mUserBoneMatrices, count, 0);
                     } else {
                         // initialize the bones to identity
-                        size_t size = count * sizeof(PerRenderableUibBone);
-                        auto* out = (PerRenderableUibBone*)driver.allocate(size);
+                        auto* out = driver.allocatePod<PerRenderableUibBone>(count);
                         std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
-                        driver.updateBufferObject(bones.handle, { out, size }, 0);
+                        driver.updateBufferObject(bones.handle, {
+                            out, count * sizeof(PerRenderableUibBone) }, 0);
                     }
                 }
             }

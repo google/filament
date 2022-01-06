@@ -203,7 +203,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
     const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
 
     // allocate space into the command stream directly
-    void* const buffer = driver.allocate(size);
+    void* const buffer = driver.allocatePod<PerRenderableUib>(visibleRenderables.size());
 
     bool hasContactShadows = false;
     auto& sceneData = mRenderableData;
