@@ -78,10 +78,10 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
 
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)
-        size_t size = mBoneCount * sizeof(PerRenderableUibBone);
-        auto* out = (PerRenderableUibBone*)driver.allocate(size);
+        auto* out = driver.allocatePod<PerRenderableUibBone>(mBoneCount);
         std::uninitialized_fill_n(out, mBoneCount, PerRenderableUibBone{});
-        driver.updateBufferObject(mHandle, { out, size }, 0);
+        driver.updateBufferObject(mHandle, {
+            out, mBoneCount * sizeof(PerRenderableUibBone) }, 0);
     }
 }
 
@@ -119,15 +119,15 @@ static uint32_t packHalf2x16(half2 v) noexcept {
 void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> handle,
         RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) noexcept {
     auto& driverApi = engine.getDriverApi();
-    size_t size = boneCount * sizeof(PerRenderableUibBone);
-    PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
+    PerRenderableUibBone* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableUibBone>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
         // the transform is stored in row-major, last row is not stored.
         mat4f transform(transforms[i].unitQuaternion);
         transform[3] = float4{ transforms[i].translation, 1.0f };
         out[i] = makeBone(transform);
     }
-    driverApi.updateBufferObject(handle, { out, size },
+    driverApi.updateBufferObject(handle, {
+                    out, boneCount * sizeof(PerRenderableUibBone) },
             offset * sizeof(PerRenderableUibBone));
 }
 
@@ -155,13 +155,13 @@ PerRenderableUibBone FSkinningBuffer::makeBone(mat4f transform) noexcept {
 void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> handle,
         mat4f const* transforms, size_t boneCount, size_t offset) noexcept {
     auto& driverApi = engine.getDriverApi();
-    size_t size = boneCount * sizeof(PerRenderableUibBone);
-    PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)driverApi.allocate(size);
+    PerRenderableUibBone* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableUibBone>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
         // the transform is stored in row-major, last row is not stored.
         out[i] = makeBone(transforms[i]);
     }
-    driverApi.updateBufferObject(handle, { out, size },
+    driverApi.updateBufferObject(handle, {
+                    out, boneCount * sizeof(PerRenderableUibBone) },
             offset * sizeof(PerRenderableUibBone));
 }
 
