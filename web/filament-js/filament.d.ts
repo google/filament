@@ -824,7 +824,9 @@ export enum PixelDataType {
 export enum RenderableManager$PrimitiveType {
     POINTS,
     LINES,
+    LINE_STRIP,
     TRIANGLES,
+    TRIANGLE_STRIP,
     NONE,
 }
 

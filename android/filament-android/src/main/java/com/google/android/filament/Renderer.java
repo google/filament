@@ -309,7 +309,7 @@ public class Renderer {
      *
      * <p><code>render()</code> generates commands for each of the following stages:</p>
      * <ul>
-     * <li>Shadow map pass, if needed (currently only a single shadow map is supported)</li>
+     * <li>Shadow map passes, if needed</li>
      * <li>Depth pre-pass</li>
      * <li>SSAO pass, if enabled</li>
      * <li>Color pass</li>

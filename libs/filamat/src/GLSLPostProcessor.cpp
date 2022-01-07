@@ -357,7 +357,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         CompilerGLSL glslCompiler(move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
-        if (tShader.getStage() == EShLangFragment && !glslOptions.es) {
+        if (!glslOptions.es) {
             // enable GL_ARB_shading_language_packing if available
             glslCompiler.add_header_line("#extension GL_ARB_shading_language_packing : enable");
         }

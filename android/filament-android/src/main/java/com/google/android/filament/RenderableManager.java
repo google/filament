@@ -96,7 +96,9 @@ public class RenderableManager {
     public enum PrimitiveType {
         POINTS(0),
         LINES(1),
-        TRIANGLES(4);
+        LINE_STRIP(3),
+        TRIANGLES(4),
+        TRIANGLE_STRIP(5);
 
         private final int mType;
         PrimitiveType(int value) { mType = value; }
