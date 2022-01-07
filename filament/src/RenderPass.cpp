@@ -577,14 +577,12 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
                         CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
             }
 
-            auto morphing = soaMorphing[info.index];
-            if (UTILS_UNLIKELY(morphing.handle)) {
-                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphing.handle);
-            }
-
+            auto morphWeights = soaMorphing[info.index];
             auto morphTargets = info.primitive->getMorphTargets();
             if (UTILS_UNLIKELY(morphTargets)) {
-                assert_invariant(morphing.count <= morphTargets->getCount());
+                assert_invariant(morphWeights.handle);
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_MORPHING, morphWeights.handle);
+                assert_invariant(morphWeights.count <= morphTargets->getCount());
                 morphTargets->bind(driver);
             }
 
