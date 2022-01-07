@@ -110,7 +110,7 @@ FMorphTargets::FMorphTargets(FEngine& engine, const Builder& builder)
             TextureUsage::DEFAULT);
 
     mSBuffer.setSampler(PerRenderPrimitiveMorphingSib::TARGETS,
-            mTbHandle, { .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST });
+            { mTbHandle, { .filterMin = SamplerMinFilter::NEAREST, .filterMag = SamplerMagFilter::NEAREST } });
 }
 
 void FMorphTargets::terminate(FEngine& engine) {
