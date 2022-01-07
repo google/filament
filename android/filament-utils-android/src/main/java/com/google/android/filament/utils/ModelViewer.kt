@@ -58,7 +58,10 @@ private const val kSensitivity = 100f
  *
  * See `sample-gltf-viewer` for a usage example.
  */
-class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
+class ModelViewer(
+    val engine: Engine,
+    private val onAttachStateChangeListener: android.view.View.OnAttachStateChangeListener?
+) : android.view.View.OnTouchListener {
     var asset: FilamentAsset? = null
         private set
 
@@ -129,7 +132,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         scene.addEntity(light)
     }
 
-    constructor(surfaceView: SurfaceView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+    constructor(surfaceView: SurfaceView, engine: Engine = Engine.create(), onAttachStateChangeListener: android.view.View.OnAttachStateChangeListener? = null, manipulator: Manipulator? = null)
+            : this(engine, onAttachStateChangeListener) {
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(surfaceView.width, surfaceView.height)
@@ -144,7 +148,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     @Suppress("unused")
-    constructor(textureView: TextureView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+    constructor(textureView: TextureView, engine: Engine = Engine.create(), onAttachStateChangeListener: android.view.View.OnAttachStateChangeListener? = null, manipulator: Manipulator? = null)
+            : this(engine, onAttachStateChangeListener) {
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(textureView.width, textureView.height)
@@ -296,27 +301,38 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     private fun addDetachListener(view: android.view.View) {
-        view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: android.view.View?) {}
-            override fun onViewDetachedFromWindow(v: android.view.View?) {
-                uiHelper.detach()
+        if (onAttachStateChangeListener != null) {
+            view.addOnAttachStateChangeListener(onAttachStateChangeListener)
+        } else {
+            view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: android.view.View?) {}
+                override fun onViewDetachedFromWindow(v: android.view.View?) {
+                    destroyResource()
+                    destroyEngine()
+                }
+            })
+        }
+    }
 
-                destroyModel()
-                assetLoader.destroy()
-                resourceLoader.destroy()
+    fun destroyResource() {
+        uiHelper.detach()
 
-                engine.destroyEntity(light)
-                engine.destroyRenderer(renderer)
-                engine.destroyView(this@ModelViewer.view)
-                engine.destroyScene(scene)
-                engine.destroyCameraComponent(camera.entity)
-                EntityManager.get().destroy(camera.entity)
+        destroyModel()
+        assetLoader.destroy()
+        resourceLoader.destroy()
 
-                EntityManager.get().destroy(light)
+        engine.destroyEntity(light)
+        engine.destroyRenderer(renderer)
+        engine.destroyView(this@ModelViewer.view)
+        engine.destroyScene(scene)
+        engine.destroyCameraComponent(camera.entity)
+        EntityManager.get().destroy(camera.entity)
 
-                engine.destroy()
-            }
-        })
+        EntityManager.get().destroy(light)
+    }
+
+    fun destroyEngine() {
+        engine.destroy()
     }
 
     /**
