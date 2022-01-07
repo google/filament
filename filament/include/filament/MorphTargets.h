@@ -27,7 +27,7 @@
 namespace filament {
 
 /**
- * MorphTargets is used to hold morphing data (weights, positions and tangents).
+ * MorphTargets is used to hold morphing data (positions and tangents).
  */
 class UTILS_PUBLIC MorphTargets : public FilamentAPI {
     struct BuilderDetails;
