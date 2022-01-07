@@ -131,7 +131,7 @@ Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
         case MATINDEX(LIT, AlphaMode::OPAQUE, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_OPAQUE); break;
         #endif
 
-        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_BLEND_DATA)
+        #if !GLTFIO_LITE || defined(GLTFRESOURCES_LITE_LIT_FADE_DATA)
         case MATINDEX(LIT, AlphaMode::BLEND, false, false, false): mMaterials[matindex] = CREATE_MATERIAL(LIT_FADE); break;
         #endif
 
